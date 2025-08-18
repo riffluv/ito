@@ -1,0 +1,7 @@
+node_modules
+
+.next/
+yarn.lock
+*.log
+.DS_Store
+無題.jpg
