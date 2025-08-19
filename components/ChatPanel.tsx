@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Stack, Text, Badge } from "@chakra-ui/react";
 import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
@@ -39,13 +39,37 @@ export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: n
   return (
     <Panel p={2} h={height} display="flex" flexDir="column">
       <Box flex="1" overflowY="auto" p={2}>
-        <Stack spacing={1}>
-          {messages.map((m) => (
-            <HStack key={m.id} align="flex-start">
-              <Text fontWeight="bold" color="blue.300">{m.sender}</Text>
-              <Text>{m.text}</Text>
-            </HStack>
-          ))}
+        <Stack spacing={2}>
+          {messages.map((m) => {
+            const isSystem = m.sender === "system";
+            const isMe = m.sender === (displayName || "匿名");
+            return (
+              <Box key={m.id} display="flex" justifyContent={isSystem ? "center" : isMe ? "flex-end" : "flex-start"}>
+                <Box maxW="82%">
+                  {isSystem ? (
+                    <HStack opacity={0.9} justify="center">
+                      <Badge variant="subtle" colorScheme="gray">system</Badge>
+                      <Text fontSize="sm" color="fgMuted">{m.text}</Text>
+                    </HStack>
+                  ) : (
+                    <Stack spacing={1} align={isMe ? "flex-end" : "flex-start"}>
+                      <Text fontSize="xs" color="fgMuted">{m.sender}</Text>
+                      <Box
+                        px={3}
+                        py={2}
+                        borderRadius="xl"
+                        bg={isMe ? "accentSubtle" : "panelSubBg"}
+                        borderWidth="1px"
+                        borderColor="borderDefault"
+                      >
+                        <Text>{m.text}</Text>
+                      </Box>
+                    </Stack>
+                  )}
+                </Box>
+              </Box>
+            );
+          })}
         </Stack>
         <div ref={bottomRef} />
       </Box>

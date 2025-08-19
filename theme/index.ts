@@ -30,43 +30,78 @@ const theme = extendTheme({
   },
   semanticTokens: {
     colors: {
-      panelBg: {
-        default: "blackAlpha.300",
-        _dark: "blackAlpha.300",
-      },
-      panelSubBg: {
-        default: "blackAlpha.400",
-        _dark: "blackAlpha.400",
-      },
-      textMuted: {
-        default: "gray.600",
-        _dark: "gray.300",
-      },
+      // Canvas & panels
+      canvasBg: { default: "#0A1020", _dark: "#0A1020" },
+      panelBg: { default: "#121A2A", _dark: "#121A2A" },
+      panelSubBg: { default: "#0F1726", _dark: "#0F1726" },
+      // Foreground
+      fgDefault: { default: "#E5ECF8", _dark: "#E5ECF8" },
+      fgMuted: { default: "#B1C0D8", _dark: "#B1C0D8" },
+      fgSubtle: { default: "#8EA0BD", _dark: "#8EA0BD" },
+      // Accent
+      accentSolid: { default: "#3999ff", _dark: "#3999ff" },
+      accentHover: { default: "#63afff", _dark: "#63afff" },
+      accentSubtle: { default: "rgba(57,153,255,0.16)", _dark: "rgba(57,153,255,0.16)" },
+      // States
+      success: { default: "#28C781", _dark: "#28C781" },
+      error: { default: "#FF5C5C", _dark: "#FF5C5C" },
+      warning: { default: "#FFC24B", _dark: "#FFC24B" },
+      // Borders & rings
+      borderDefault: { default: "rgba(255,255,255,0.08)", _dark: "rgba(255,255,255,0.08)" },
+      textMuted: { default: "gray.600", _dark: "gray.300" },
     },
   },
   textStyles: {
     hint: { fontSize: "sm", color: "textMuted" },
+    numeric: { fontVariantNumeric: "tabular-nums" },
   },
   layerStyles: {
     panel: {
       borderWidth: "1px",
       borderRadius: "md",
       bg: "panelBg",
+      borderColor: "borderDefault",
     },
     panelSub: {
       borderWidth: "1px",
       borderRadius: "md",
       bg: "panelSubBg",
+      borderColor: "borderDefault",
+    },
+    hud: {
+      borderBottomWidth: "1px",
+      borderColor: "borderDefault",
+      bg: "#0D1424",
+      backdropFilter: "saturate(120%) blur(6px)",
+    },
+    slotGuide: {
+      borderWidth: "2px",
+      borderStyle: "dashed",
+      borderColor: "accentSubtle",
+      borderRadius: "xl",
+    },
+    chip: {
+      borderRadius: "lg",
+      px: 2,
+      py: 1,
+      bg: "accentSubtle",
+      color: "fgDefault",
+      fontSize: "xs",
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
     },
   },
   shadows: {
-    outline: "0 0 0 3px rgba(57,153,255,0.6)",
+    outline: "0 0 0 3px rgba(57,153,255,0.56)",
+    card: "0 10px 30px rgba(0,0,0,0.35)",
+    cardHover: "0 16px 44px rgba(0,0,0,0.42)",
   },
   components: {
     Card: {
       baseStyle: {
-        borderRadius: "lg",
-        boxShadow: "md",
+        borderRadius:  "xl",
+        boxShadow: "card",
       },
     },
     Button: {

@@ -3,7 +3,7 @@ import { presenceSupported, attachPresence, subscribePresence } from "@/lib/fire
 
 export function usePresence(roomId: string, userId: string | null, isMember: boolean) {
   const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
-  const detachRef = useRef<null | (() => Promise<void>)>(null);
+  const detachRef = useRef<null | (() => Promise<void> | void)>(null);
 
   // Subscribe online list (only when presence supported and user ready)
   useEffect(() => {
@@ -35,9 +35,9 @@ export function usePresence(roomId: string, userId: string | null, isMember: boo
 
   // Ensure detach on unmount
   useEffect(() => {
-    return () => { try { detachRef.current?.(); } catch {} };
+    return () => { try { const r = detachRef.current?.(); if (r && typeof (r as any).then === "function") (r as Promise<void>).catch(()=>{}); } catch {} };
   }, []);
 
-  const detachNow = async () => { try { await detachRef.current?.(); } catch {} };
+  const detachNow = async () => { try { const r = detachRef.current?.(); if (r && typeof (r as any).then === "function") await (r as Promise<void>); } catch {} };
   return { onlineUids, detachNow };
 }

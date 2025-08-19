@@ -23,10 +23,11 @@ export function PlayerList({
         return (
           <HStack
             key={p.id}
-            p={2}
+            p={3}
             borderWidth="1px"
-            rounded="md"
-            bg={isMe ? "gray.700" : "blackAlpha.300"}
+            rounded="xl"
+            bg={isMe ? "#141C2E" : "panelSubBg"}
+            borderColor="borderDefault"
             justify="space-between"
             align="flex-start"
           >
@@ -39,12 +40,14 @@ export function PlayerList({
                   </Text>
                   {/* 自分だけ自分に配られた数字を見られるようにする（他人の数字は表示しない） */}
                   {isMe && typeof p.number === "number" && (
-                    <Badge colorScheme="green">#{p.number}</Badge>
+                    <Badge colorScheme="green" title="あなたの数字">
+                      <Text as="span" textStyle="numeric">#{p.number}</Text>
+                    </Badge>
                   )}
                 </HStack>
                 <Text
                   fontSize="sm"
-                  color="gray.300"
+                  color="fgMuted"
                   noOfLines={2}
                   overflowWrap="anywhere"
                 >
@@ -53,7 +56,7 @@ export function PlayerList({
               </Stack>
             </HStack>
             <HStack>
-              {p.ready && <Badge colorScheme="blue">確認済</Badge>}
+              {p.ready && <Badge colorScheme="blue">準備OK</Badge>}
             </HStack>
           </HStack>
         );

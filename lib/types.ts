@@ -21,6 +21,7 @@ export type RoomDoc = {
     failed?: boolean;
     failedAt?: number | null;
     total?: number | null;
+  proposal?: string[] | null;
   } | null;
   result?: {
     success: boolean;
