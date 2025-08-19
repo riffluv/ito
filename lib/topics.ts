@@ -1,3 +1,4 @@
+// 旧デフォルト（未使用化）：ローカル固定のお題
 export const defaultTopics = [
   "食べ物",
   "動物",
@@ -21,6 +22,63 @@ export const defaultTopics = [
   "乗り物",
 ];
 
+// itoword.md から利用する3つの版（表示候補用）。番号は付さない。
+export const topicTypeLabels = ["通常版", "レインボー版", "クラシック版"] as const;
+export type TopicType = typeof topicTypeLabels[number];
+
+export type TopicSections = {
+  normal: string[];
+  rainbow: string[];
+  classic: string[];
+};
+
+// クライアントから /itoword.md（public配下）を取得し、3セクションをパース
+export async function fetchTopicSections(): Promise<TopicSections> {
+  const res = await fetch("/itoword.md", { cache: "no-store" });
+  if (!res.ok) throw new Error(`itoword.md の取得に失敗しました (${res.status})`);
+  const text = await res.text();
+  return parseItoWordMarkdown(text);
+}
+
+export function parseItoWordMarkdown(md: string): TopicSections {
+  const lines = md.split(/\r?\n/);
+  const normal: string[] = [];
+  const rainbow: string[] = [];
+  const classic: string[] = [];
+  let cur: "none" | "normal" | "rainbow" | "classic" = "none";
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.startsWith("## ")) {
+      if (line.includes("通常版")) cur = "normal";
+      else if (line.includes("レインボー版")) cur = "rainbow";
+      else if (line.includes("クラシック版")) cur = "classic";
+      else cur = "none";
+      continue;
+    }
+    // 番号付きリストのみ抽出（例: "12. ～～"）
+    const m = line.match(/^\d+\.?\s*(.+)$/);
+    if (!m) continue;
+    const item = (m[1] || "").trim();
+    if (!item) continue;
+    if (cur === "normal") normal.push(item);
+    else if (cur === "rainbow") rainbow.push(item);
+    else if (cur === "classic") classic.push(item);
+  }
+  return { normal, rainbow, classic };
+}
+
+// 3版から指定版の配列を返す
+export function getTopicsByType(sections: TopicSections, type: TopicType): string[] {
+  switch (type) {
+    case "通常版":
+      return sections.normal;
+    case "レインボー版":
+      return sections.rainbow;
+    case "クラシック版":
+      return sections.classic;
+  }
+}
+
 export function pickTwo<T>(list: T[], seed?: string): T[] {
   if (!list || list.length === 0) return [];
   if (list.length === 1) return [list[0]];
@@ -31,6 +89,14 @@ export function pickTwo<T>(list: T[], seed?: string): T[] {
   let j = Math.floor(rnd() * (list.length - 1));
   if (j >= i) j += 1;
   return [list[i], list[j]];
+}
+
+export function pickOne<T>(list: T[], seed?: string): T | null {
+  if (!list || list.length === 0) return null;
+  let a = seed ? hashString(seed) : Math.floor(Math.random() * 2 ** 31);
+  const rnd = mulberry32(a);
+  const i = Math.floor(rnd() * list.length);
+  return list[i];
 }
 
 function mulberry32(a: number) {
@@ -50,4 +116,3 @@ function hashString(s: string): number {
   }
   return h >>> 0;
 }
-

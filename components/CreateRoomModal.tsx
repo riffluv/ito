@@ -21,7 +21,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { RoomDoc, RoomOptions, PlayerDoc } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { randomAvatar } from "@/lib/utils";
-import { defaultTopics, pickTwo } from "@/lib/topics";
+// お題候補は部屋作成後に選択（TopicDisplay側で処理）
 
 export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated?: (roomId: string) => void; }) {
   const toast = useToast();
@@ -46,7 +46,6 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
     setSubmitting(true);
     try {
       const options: RoomOptions = { allowContinueAfterFail };
-      const topicOptions = pickTwo(defaultTopics);
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
@@ -55,7 +54,8 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         topic: null,
-        topicOptions,
+        topicOptions: null,
+        topicBox: null,
         result: null,
       };
       const roomRef = await addDoc(collection(db, "rooms"), room);

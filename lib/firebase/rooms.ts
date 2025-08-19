@@ -53,3 +53,16 @@ export async function leaveRoom(roomId: string, userId: string, displayName: str
     createdAt: serverTimestamp(),
   });
 }
+
+export async function resetRoomToWaiting(roomId: string) {
+  await updateDoc(doc(db, "rooms", roomId), {
+    status: "waiting",
+    result: null,
+    deal: null,
+    order: null,
+    round: 0,
+    topic: null,
+    topicOptions: null,
+    topicBox: null,
+  });
+}
