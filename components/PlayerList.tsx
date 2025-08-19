@@ -23,18 +23,18 @@ export function PlayerList({
         return (
           <HStack
             key={p.id}
-            p={3}
+            p={2}
             borderWidth="1px"
             rounded="md"
             bg={isMe ? "gray.700" : "blackAlpha.300"}
             justify="space-between"
             align="flex-start"
           >
-            <HStack align="flex-start" spacing={3} maxW="70%">
+            <HStack align="flex-start" spacing={3} flex="1">
               <Avatar name={p.name} title={p.avatar} />
-              <Stack spacing={0} maxW="full">
-                <HStack spacing={2} align="center">
-                  <Text fontWeight="semibold" isTruncated>
+              <Stack spacing={0} maxW="full" flex="1">
+                <HStack spacing={2} align="center" flex="1">
+                  <Text fontWeight="semibold" flexShrink={0}>
                     {p.name}
                   </Text>
                   {/* 自分だけ自分に配られた数字を見られるようにする（他人の数字は表示しない） */}
@@ -42,7 +42,12 @@ export function PlayerList({
                     <Badge colorScheme="green">#{p.number}</Badge>
                   )}
                 </HStack>
-                <Text fontSize="sm" color="gray.300" noOfLines={2}>
+                <Text
+                  fontSize="sm"
+                  color="gray.300"
+                  noOfLines={2}
+                  overflowWrap="anywhere"
+                >
                   連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
                 </Text>
               </Stack>
