@@ -37,9 +37,9 @@ import {
   Button,
   Container,
   Flex,
+  Grid,
   Heading,
   HStack,
-  SimpleGrid,
   Spinner,
   Stack,
   Text,
@@ -546,7 +546,11 @@ export default function RoomPage() {
       </Flex>
 
       <Box flex="1" overflow="hidden" minH={0}>
-        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} h="100%">
+        <Grid
+          templateColumns={{ base: "1fr", md: "260px 1fr 360px" }}
+          gap={4}
+          h="100%"
+        >
           <Stack
             gridColumn={{ base: "auto", md: "span 1" }}
             overflowY="auto"
@@ -590,7 +594,7 @@ export default function RoomPage() {
           </Stack>
 
           <Box
-            gridColumn={{ base: "auto", md: "span 2" }}
+            gridColumn={{ base: "auto", md: "span 1" }}
             overflowY="auto"
             maxH="100%"
           >
@@ -669,10 +673,14 @@ export default function RoomPage() {
             )}
           </Box>
 
-          <Box gridColumn={{ base: "auto", md: "span 3" }}>
+          <Box
+            gridColumn={{ base: "auto", md: "span 1" }}
+            overflowY="auto"
+            maxH="100%"
+          >
             <ChatPanel roomId={roomId} height="clamp(240px, 40dvh, 420px)" />
           </Box>
-        </SimpleGrid>
+        </Grid>
       </Box>
     </Container>
   );
