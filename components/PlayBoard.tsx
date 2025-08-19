@@ -13,6 +13,7 @@ export function PlayBoard({
   isHost,
   failed = false,
   failedAt = null,
+  eligibleIds,
 }: {
   roomId: string;
   players: (PlayerDoc & { id: string })[];
@@ -21,15 +22,19 @@ export function PlayBoard({
   isHost: boolean;
   failed?: boolean;
   failedAt?: number | null;
+  eligibleIds: string[];
 }) {
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
 
   const me = players.find(p => p.id === meId);
   const played = useMemo(() => orderList.map(id => players.find(p => p.id === id)).filter(Boolean) as (PlayerDoc & { id: string })[], [orderList.join(","), players.map(p=>p.id).join(",")]);
-  const waiting = useMemo(() => players.filter(p => !orderList.includes(p.id)), [orderList.join(","), players.map(p=>p.id).join(",")]);
+  const waiting = useMemo(() => {
+    const set = new Set(eligibleIds);
+    return players.filter(p => set.has(p.id) && !orderList.includes(p.id));
+  }, [orderList.join(","), players.map(p=>p.id).join(","), eligibleIds.join(",")]);
 
-  const canPlay = !!me && me.number != null && !orderList.includes(me.id);
+  const canPlay = !!me && me.number != null && !orderList.includes(me.id) && eligibleIds.includes(me.id);
 
   const onPlay = async () => {
     if (!canPlay) return;

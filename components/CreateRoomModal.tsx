@@ -68,6 +68,7 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
         ready: false,
         orderIndex: 0,
         uid: user.uid,
+        lastSeen: serverTimestamp(),
       };
       await setDoc(doc(db, "rooms", roomRef.id, "players", user.uid), pdoc);
       onClose();

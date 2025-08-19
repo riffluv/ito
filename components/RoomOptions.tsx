@@ -11,7 +11,7 @@ export function RoomOptionsEditor({ value, onChange, disabled }: {
     <>
       <HStack justify="space-between">
         <FormControl display="flex" alignItems="center" w="100%">
-          <FormLabel mb="0">失敗後継続</FormLabel>
+          <FormLabel mb="0">失敗後に残りを公開</FormLabel>
           <Switch isChecked={value.allowContinueAfterFail} onChange={(e) => onChange({ ...value, allowContinueAfterFail: e.target.checked })} isDisabled={disabled} />
         </FormControl>
       </HStack>
