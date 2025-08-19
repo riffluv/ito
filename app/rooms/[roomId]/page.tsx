@@ -18,9 +18,9 @@ import {
 import { presenceSupported } from "@/lib/firebase/presence";
 import {
   leaveRoom as leaveRoomAction,
+  resetRoomToWaiting,
   setRoomOptions,
   updateLastActive,
-  resetRoomToWaiting,
 } from "@/lib/firebase/rooms";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import {
@@ -31,10 +31,21 @@ import {
 import { usePresence } from "@/lib/hooks/usePresence";
 import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
 // お題候補の提示はTopicDisplayで実施
+import { Hud } from "@/components/Hud";
+import { SortBoard } from "@/components/SortBoard";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Box, Button, Container, Flex, Grid, Heading, HStack, Spinner, Stack, Text, useToast } from "@chakra-ui/react";
-import { Hud } from "@/components/Hud";
+import {
+  Box,
+  Button,
+  Container,
+  Grid,
+  HStack,
+  Spinner,
+  Stack,
+  Text,
+  useToast,
+} from "@chakra-ui/react";
 import {
   collection,
   deleteDoc,
@@ -51,7 +62,6 @@ import {
 } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SortBoard } from "@/components/SortBoard";
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -506,7 +516,14 @@ export default function RoomPage() {
   }
 
   return (
-    <Container maxW="container.xl" h="100dvh" py={0} display="flex" flexDir="column" overflow="hidden">
+    <Container
+      maxW="container.xl"
+      h="100dvh"
+      py={0}
+      display="flex"
+      flexDir="column"
+      overflow="hidden"
+    >
       {/* 背景レイヤー */}
       <div className="stage-bg" aria-hidden>
         <div className="particles parallax-1" />
@@ -520,12 +537,22 @@ export default function RoomPage() {
         totalCount={players.length}
         remainMs={null}
         totalMs={null}
-        hostPrimary={isHost ? (
-          room.status === "waiting" ? { label: "開始", onClick: startGame } :
-          room.status === "clue" ? { label: "並べ替え開始", onClick: () => startPlayingAction(roomId), disabled: !canStartPlaying, title: startDisabledTitle } :
-          room.status === "finished" ? { label: "もう一度", onClick: resetToWaiting } :
-          null
-        ) : null}
+        hostPrimary={
+          isHost
+            ? room.status === "waiting"
+              ? { label: "開始", onClick: startGame }
+              : room.status === "clue"
+              ? {
+                  label: "並べ替え開始",
+                  onClick: () => startPlayingAction(roomId),
+                  disabled: !canStartPlaying,
+                  title: startDisabledTitle,
+                }
+              : room.status === "finished"
+              ? { label: "もう一度", onClick: resetToWaiting }
+              : null
+            : null
+        }
       />
 
       <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
@@ -555,13 +582,15 @@ export default function RoomPage() {
               />
               {isHost && (
                 <Stack mt={3}>
-                  <Button variant="outline" onClick={resetToWaiting}>リセット</Button>
+                  <Button variant="outline" onClick={resetToWaiting}>
+                    リセット
+                  </Button>
                 </Stack>
               )}
             </Panel>
 
             {isHost && room.status === "waiting" && (
-              <Button colorScheme="blue" onClick={startGame}>
+              <Button colorScheme="orange" onClick={startGame}>
                 ゲーム開始
               </Button>
             )}
@@ -601,7 +630,9 @@ export default function RoomPage() {
                   <SortBoard
                     players={players}
                     proposal={(room as any)?.deal?.players as string[]}
-                    onChange={() => { /* Firestoreへの保存は次段 */ }}
+                    onChange={() => {
+                      /* Firestoreへの保存は次段 */
+                    }}
                     onConfirm={() => {}}
                     disabled
                   />
@@ -609,7 +640,7 @@ export default function RoomPage() {
                 {isHost && (
                   <Stack>
                     <Button
-                      colorScheme="blue"
+                      colorScheme="orange"
                       onClick={() => startPlayingAction(roomId)}
                       isDisabled={!canStartPlaying}
                       title={startDisabledTitle}
@@ -644,7 +675,10 @@ export default function RoomPage() {
                     isHost &&
                     remainingCount > 0 && (
                       <HStack mt={3}>
-                        <Button onClick={continueAfterFail} colorScheme="blue">
+                        <Button
+                          onClick={continueAfterFail}
+                          colorScheme="orange"
+                        >
                           続けて並べ替える
                         </Button>
                       </HStack>
@@ -671,13 +705,20 @@ export default function RoomPage() {
             )}
           </Box>
 
-          <Box gridColumn={{ base: "auto", md: "span 1" }} overflowY="auto" maxH="100%">
+          <Box
+            gridColumn={{ base: "auto", md: "span 1" }}
+            overflowY="auto"
+            maxH="100%"
+          >
             <ChatPanel roomId={roomId} height="clamp(240px, 40dvh, 420px)" />
             <HStack mt={3}>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={async () => { await leaveRoom(); router.push("/"); }}
+                onClick={async () => {
+                  await leaveRoom();
+                  router.push("/");
+                }}
               >
                 退出してロビーへ
               </Button>

@@ -1,10 +1,10 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
-import { Avatar, Badge, HStack, Stack, Text } from "@chakra-ui/react";
-// presence が取得できなくても、一覧は常に全員表示する方針
+import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { useMemo, useState } from "react";
 
-// ロビー体験をシンプルにするため、常に全員を表示。
-// presence があればバッジでオンラインを示すが、フィルタはしない。
+// 仕様: 48pxの名簿行（コンパクト）と、クリックで拡張（ヒントや詳細）。
+// グルーピング: 未入力 / 入力中 / 準備OK（見出しはスティッキー）。
 export function PlayerList({
   players,
   online,
@@ -15,56 +15,142 @@ export function PlayerList({
   myId?: string | null;
 }) {
   const onlineSet = Array.isArray(online) ? new Set(online) : null;
-  const visible = players;
-  return (
-    <Stack spacing={2}>
-      {visible.map((p) => {
+  // 並び: 未入力 → 入力中 → 準備OK、同カテゴリ内は名前昇順
+  const groups = useMemo(() => {
+    const norm = players.map((p) => ({
+      ...p,
+      state: p.ready ? "ready" : p.clue1 ? "typing" : "empty",
+    }));
+    const by = (state: "empty" | "typing" | "ready") =>
+      norm
+        .filter((p) => p.state === state)
+        .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    return {
+      empty: by("empty"),
+      typing: by("typing"),
+      ready: by("ready"),
+    };
+  }, [
+    players.map((p) => `${p.id}:${p.ready ? 1 : 0}:${p.clue1 || ""}`).join(","),
+  ]);
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const Section = ({
+    title,
+    list,
+  }: {
+    title: string;
+    list: (PlayerDoc & { id: string })[];
+  }) => (
+    <>
+      <Box
+        position="sticky"
+        top={0}
+        zIndex={1}
+        bg="panelBg"
+        py={1}
+        mb={1}
+        borderBottomWidth="1px"
+        borderColor="borderDefault"
+      >
+        <Text
+          fontSize="xs"
+          color="fgMuted"
+          px={1}
+          letterSpacing="0.08em"
+          textTransform="uppercase"
+        >
+          {title}
+        </Text>
+      </Box>
+      {list.map((p) => {
         const isMe = myId && p.uid ? myId === p.uid : myId === p.id;
+        const isExpanded = expanded.has(p.id);
         return (
-          <HStack
+          <Box
             key={p.id}
             p={3}
             borderWidth="1px"
-            rounded="xl"
+            borderRadius="xl"
             bg={isMe ? "#141C2E" : "panelSubBg"}
             borderColor="borderDefault"
-            justify="space-between"
-            align="flex-start"
+            _hover={{ cursor: "pointer", boxShadow: "card" }}
+            onClick={() => toggle(p.id)}
           >
-            <HStack align="flex-start" spacing={3} flex="1">
-              <Avatar name={p.name} title={p.avatar} />
-              <Stack spacing={0} maxW="full" flex="1">
-                <HStack spacing={2} align="center" flex="1">
-                  <Text fontWeight="semibold" flexShrink={0}>
-                    {p.name}
-                  </Text>
-                  {/* 自分だけ自分に配られた数字を見られるようにする（他人の数字は表示しない） */}
-                  {isMe && typeof p.number === "number" && (
-                    <Badge colorScheme="green" title="あなたの数字">
-                      <Text as="span" textStyle="numeric">#{p.number}</Text>
-                    </Badge>
-                  )}
-                </HStack>
+            <HStack spacing={3} minH="48px" align="center">
+              <Avatar name={p.name} title={p.avatar} boxSize="32px" />
+              <HStack spacing={2} flex={1} minW={0} align="center">
+                <Text fontWeight="semibold" noOfLines={1} minW={0}>
+                  {p.name}
+                </Text>
+                {isMe && typeof p.number === "number" && (
+                  <Badge colorScheme="green" title="あなたの数字">
+                    <Text as="span" textStyle="numeric">
+                      #{p.number}
+                    </Text>
+                  </Badge>
+                )}
+              </HStack>
+              <HStack>
+                {p.ready ? (
+                  <Badge colorScheme="green">準備OK</Badge>
+                ) : p.clue1 ? (
+                  <Badge colorScheme="orange">入力中</Badge>
+                ) : (
+                  <Badge colorScheme="gray">未入力</Badge>
+                )}
+              </HStack>
+            </HStack>
+            {isExpanded && (
+              <Box
+                mt={2}
+                pt={2}
+                borderTopWidth="1px"
+                borderColor="borderDefault"
+              >
                 <Text
                   fontSize="sm"
                   color="fgMuted"
-                  noOfLines={2}
+                  noOfLines={3}
                   overflowWrap="anywhere"
                 >
                   連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
                 </Text>
-              </Stack>
-            </HStack>
-            <HStack>
-              {p.ready && <Badge colorScheme="blue">準備OK</Badge>}
-            </HStack>
-          </HStack>
+              </Box>
+            )}
+          </Box>
         );
       })}
-      {visible.length === 0 && (
-        <Text fontSize="sm" color="gray.400">
-          プレイヤーがいません
-        </Text>
+    </>
+  );
+
+  const total = players.length;
+  if (total === 0) {
+    return (
+      <Text fontSize="sm" color="gray.400">
+        プレイヤーがいません
+      </Text>
+    );
+  }
+  return (
+    <Stack spacing={2}>
+      {groups.empty.length > 0 && (
+        <Section title="未入力" list={groups.empty} />
+      )}
+      {groups.typing.length > 0 && (
+        <Section title="入力中" list={groups.typing} />
+      )}
+      {groups.ready.length > 0 && (
+        <Section title="準備OK" list={groups.ready} />
       )}
     </Stack>
   );

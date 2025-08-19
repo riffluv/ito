@@ -1,19 +1,19 @@
 /* 2025 viewport-safe full-height layout */
-html, body, #__next {
+html,
+body,
+#__next {
   height: 100%;
 }
-html, body {
+html,
+body {
   margin: 0;
 }
 body {
   min-height: 100dvh; /* dynamic viewport height (mobile safe) */
-  overflow: hidden;    /* prevent browser scroll; use internal scrolls */
+  overflow: hidden; /* prevent browser scroll; use internal scrolls */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  background: radial-gradient(1200px 600px at 20% 10%, rgba(57,153,255,0.12), transparent 60%),
-              radial-gradient(1000px 500px at 80% 90%, rgba(99,175,255,0.12), transparent 60%),
-              #0A1020;
-  color: #E5ECF8;
+  /* 背景色・文字色はChakra Themeのglobal stylesに委譲 */
 }
 
 * {
@@ -30,13 +30,31 @@ body {
 .stage-bg .particles {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.08), transparent 60%),
-                    radial-gradient(1.5px 1.5px at 70% 60%, rgba(255,255,255,0.06), transparent 60%),
-                    radial-gradient(1.8px 1.8px at 40% 80%, rgba(255,255,255,0.06), transparent 60%);
+  background-image: radial-gradient(
+      2px 2px at 20% 30%,
+      rgba(255, 255, 255, 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 70% 60%,
+      rgba(255, 255, 255, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      1.8px 1.8px at 40% 80%,
+      rgba(255, 255, 255, 0.06),
+      transparent 60%
+    );
   background-repeat: no-repeat;
   transform: translateZ(0);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .parallax-1 { transform: translate3d(0,0,0); will-change: transform; }
-  .parallax-2 { transform: translate3d(0,0,0); will-change: transform; }
+  .parallax-1 {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  .parallax-2 {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
 }

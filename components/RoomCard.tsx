@@ -1,6 +1,6 @@
 "use client";
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { Panel } from "@/components/ui/Panel";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 
 export function RoomCard({
   name,
@@ -13,16 +13,27 @@ export function RoomCard({
   count: number;
   onJoin: () => void;
 }) {
-  const statusLabel = count === 0 ? "待機中" : (status === "waiting" ? "待機中" : "ゲーム中");
+  const statusLabel =
+    count === 0 ? "待機中" : status === "waiting" ? "待機中" : "ゲーム中";
   return (
     <Panel>
       <Stack>
-        <Text fontWeight="bold" fontSize="lg">{name}</Text>
+        <Text fontWeight="bold" fontSize="lg">
+          {name}
+        </Text>
         <HStack justify="space-between">
-          <Text fontSize="sm" color="gray.300">状態: {statusLabel}</Text>
-          <Text fontSize="sm" color="gray.300">人数: {count}人</Text>
+          <Text fontSize="sm" color="fgMuted">
+            状態: {statusLabel}
+          </Text>
+          <Text fontSize="sm" color="fgMuted">
+            人数: {count}人
+          </Text>
         </HStack>
-        <Button colorScheme="blue" onClick={onJoin} aria-label={`${name}に参加`}>
+        <Button
+          variant="brand"
+          onClick={onJoin}
+          aria-label={`${name}に参加`}
+        >
           参加
         </Button>
       </Stack>

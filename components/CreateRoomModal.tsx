@@ -1,29 +1,43 @@
 "use client";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { db, firebaseEnabled } from "@/lib/firebase/client";
+import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
+import { randomAvatar } from "@/lib/utils";
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
   Button,
   FormControl,
   FormLabel,
   Input,
-  Switch,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Stack,
+  Switch,
   useToast,
 } from "@chakra-ui/react";
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db, firebaseEnabled } from "@/lib/firebase/client";
-import type { RoomDoc, RoomOptions, PlayerDoc } from "@/lib/types";
-import { useAuth } from "@/context/AuthContext";
-import { randomAvatar } from "@/lib/utils";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
+import { useState } from "react";
 // お題候補は部屋作成後に選択（TopicDisplay側で処理）
 
-export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated?: (roomId: string) => void; }) {
+export function CreateRoomModal({
+  isOpen,
+  onClose,
+  onCreated,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated?: (roomId: string) => void;
+}) {
   const toast = useToast();
   const { user, displayName, loading } = useAuth() as any;
   const [name, setName] = useState("");
@@ -36,7 +50,10 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
       return;
     }
     if (!user) {
-      toast({ title: "匿名ログインを完了するまでお待ちください", status: "info" });
+      toast({
+        title: "匿名ログインを完了するまでお待ちください",
+        status: "info",
+      });
       return;
     }
     if (!name.trim()) {
@@ -74,7 +91,11 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
       onClose();
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      toast({ title: "作成に失敗しました", description: e?.message, status: "error" });
+      toast({
+        title: "作成に失敗しました",
+        description: e?.message,
+        status: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -89,24 +110,44 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
         <ModalBody>
           <Stack spacing={4}>
             {!user && (
-              <Stack fontSize="sm" color="gray.300">
+              <Stack fontSize="sm" color="fgMuted">
                 <span>匿名ログインを初期化しています…</span>
                 <span>少し待ってから「作成」を押してください。</span>
               </Stack>
             )}
             <FormControl>
               <FormLabel>部屋名</FormLabel>
-              <Input placeholder="例）皆でITO" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                placeholder="例）皆でITO"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </FormControl>
-            <FormControl display="flex" alignItems="center" justifyContent="space-between">
+            <FormControl
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
               <FormLabel mb="0">失敗後に継続確認</FormLabel>
-              <Switch isChecked={allowContinueAfterFail} onChange={(e) => setAllowContinueAfterFail(e.target.checked)} />
+              <Switch
+                isChecked={allowContinueAfterFail}
+                onChange={(e) => setAllowContinueAfterFail(e.target.checked)}
+              />
             </FormControl>
           </Stack>
         </ModalBody>
         <ModalFooter>
-          <Button mr={3} onClick={onClose} variant="ghost">キャンセル</Button>
-          <Button colorScheme="blue" onClick={handleCreate} isLoading={submitting} isDisabled={submitting}>作成</Button>
+          <Button mr={3} onClick={onClose} variant="ghost">
+            キャンセル
+          </Button>
+          <Button
+            variant="brand"
+            onClick={handleCreate}
+            isLoading={submitting}
+            isDisabled={submitting}
+          >
+            作成
+          </Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

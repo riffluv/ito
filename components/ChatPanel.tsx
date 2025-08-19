@@ -1,14 +1,34 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { Box, Button, HStack, Input, Stack, Text, Badge } from "@chakra-ui/react";
-import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { Panel } from "@/components/ui/Panel";
+import { useAuth } from "@/context/AuthContext";
+import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
-import { useAuth } from "@/context/AuthContext";
-import { Panel } from "@/components/ui/Panel";
-import { sendMessage } from "@/lib/firebase/chat";
+import {
+  Badge,
+  Box,
+  Button,
+  HStack,
+  Input,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import {
+  collection,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
 
-export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: number | string }) {
+export function ChatPanel({
+  roomId,
+  height = 360,
+}: {
+  roomId: string;
+  height?: number | string;
+}) {
   const { displayName } = useAuth();
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
   const [text, setText] = useState("");
@@ -24,7 +44,10 @@ export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: n
       const list: (ChatDoc & { id: string })[] = [];
       snap.forEach((d) => list.push({ id: d.id, ...(d.data() as ChatDoc) }));
       setMessages(list);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
+      setTimeout(
+        () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+        0
+      );
     });
     return () => unsub();
   }, [roomId]);
@@ -44,16 +67,28 @@ export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: n
             const isSystem = m.sender === "system";
             const isMe = m.sender === (displayName || "匿名");
             return (
-              <Box key={m.id} display="flex" justifyContent={isSystem ? "center" : isMe ? "flex-end" : "flex-start"}>
+              <Box
+                key={m.id}
+                display="flex"
+                justifyContent={
+                  isSystem ? "center" : isMe ? "flex-end" : "flex-start"
+                }
+              >
                 <Box maxW="82%">
                   {isSystem ? (
                     <HStack opacity={0.9} justify="center">
-                      <Badge variant="subtle" colorScheme="gray">system</Badge>
-                      <Text fontSize="sm" color="fgMuted">{m.text}</Text>
+                      <Badge variant="subtle" colorScheme="gray">
+                        system
+                      </Badge>
+                      <Text fontSize="sm" color="fgMuted">
+                        {m.text}
+                      </Text>
                     </HStack>
                   ) : (
                     <Stack spacing={1} align={isMe ? "flex-end" : "flex-start"}>
-                      <Text fontSize="xs" color="fgMuted">{m.sender}</Text>
+                      <Text fontSize="xs" color="fgMuted">
+                        {m.sender}
+                      </Text>
                       <Box
                         px={3}
                         py={2}
@@ -78,9 +113,13 @@ export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: n
           placeholder="メッセージを入力"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
         />
-        <Button onClick={send} colorScheme="blue">送信</Button>
+        <Button onClick={send} colorScheme="orange">
+          送信
+        </Button>
       </HStack>
     </Panel>
   );

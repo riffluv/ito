@@ -1,8 +1,8 @@
 import { extendTheme, ThemeConfig } from "@chakra-ui/react";
 
 const config: ThemeConfig = {
-  initialColorMode: "dark",
-  useSystemColorMode: false,
+  initialColorMode: "system",
+  useSystemColorMode: true,
 };
 
 const theme = extendTheme({
@@ -16,62 +16,80 @@ const theme = extendTheme({
   },
   colors: {
     brand: {
-      50: "#e3f2ff",
-      100: "#b9dcff",
-      200: "#8ec6ff",
-      300: "#63afff",
-      400: "#3999ff",
-      500: "#1f7fe6",
-      600: "#155fb4",
-      700: "#0d4082",
-      800: "#052151",
-      900: "#000521",
+      50: "#E6FFFA",
+      100: "#B2F5EA",
+      200: "#81E6D9",
+      300: "#4FD1C5",
+      400: "#38B2AC",
+      500: "#319795",
+      600: "#2C7A7B",
+      700: "#285E61",
+      800: "#234E52",
+      900: "#1D4044",
+    },
+    // 既存orangeは必要に応じて使用可能
+    orange: {
+      50: "#FFF5EC",
+      100: "#FFE3CC",
+      200: "#FFC7A1",
+      300: "#FFAA75",
+      400: "#FF8F3D",
+      500: "#FF7A1A",
+      600: "#E86A0C",
+      700: "#BF5006",
+      800: "#8F3B05",
+      900: "#5F2703",
     },
   },
   semanticTokens: {
     colors: {
-      // Canvas & panels
-      canvasBg: { default: "#0A1020", _dark: "#0A1020" },
-      panelBg: { default: "#121A2A", _dark: "#121A2A" },
-      panelSubBg: { default: "#0F1726", _dark: "#0F1726" },
+      // Canvas & panels（ライト/ダーク双方に対応）
+      canvasBg: { default: "gray.50", _dark: "#0B0D10" },
+      panelBg: { default: "white", _dark: "#121418" },
+      panelSubBg: { default: "gray.50", _dark: "#181B20" },
       // Foreground
-      fgDefault: { default: "#E5ECF8", _dark: "#E5ECF8" },
-      fgMuted: { default: "#B1C0D8", _dark: "#B1C0D8" },
-      fgSubtle: { default: "#8EA0BD", _dark: "#8EA0BD" },
-      // Accent
-      accentSolid: { default: "#3999ff", _dark: "#3999ff" },
-      accentHover: { default: "#63afff", _dark: "#63afff" },
-      accentSubtle: { default: "rgba(57,153,255,0.16)", _dark: "rgba(57,153,255,0.16)" },
+      fgDefault: { default: "gray.800", _dark: "#E7EBF2" },
+      fgMuted: { default: "gray.600", _dark: "#A9B2BF" },
+      // Accent（Chakra公式のティール系に寄せる）
+      accentSolid: { default: "brand.500", _dark: "brand.400" },
+      accentHover: { default: "brand.600", _dark: "brand.300" },
+      accentSubtle: {
+        default: "rgba(56,178,172,0.10)", // teal.400
+        _dark: "rgba(56,178,172,0.16)",
+      },
       // States
-      success: { default: "#28C781", _dark: "#28C781" },
-      error: { default: "#FF5C5C", _dark: "#FF5C5C" },
-      warning: { default: "#FFC24B", _dark: "#FFC24B" },
+      success: { default: "#38A169", _dark: "#48BB78" },
+      error: { default: "#E53E3E", _dark: "#F56565" },
+      warning: { default: "#DD6B20", _dark: "#F6AD55" },
       // Borders & rings
-      borderDefault: { default: "rgba(255,255,255,0.08)", _dark: "rgba(255,255,255,0.08)" },
-      textMuted: { default: "gray.600", _dark: "gray.300" },
+      borderDefault: { default: "gray.200", _dark: "#2A2F37" },
     },
   },
+  fonts: {
+    heading: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    body: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+  },
   textStyles: {
-    hint: { fontSize: "sm", color: "textMuted" },
+    hint: { fontSize: "sm", color: "fgMuted" },
     numeric: { fontVariantNumeric: "tabular-nums" },
   },
   layerStyles: {
     panel: {
       borderWidth: "1px",
-      borderRadius: "md",
+      borderRadius: "xl",
       bg: "panelBg",
       borderColor: "borderDefault",
     },
     panelSub: {
       borderWidth: "1px",
-      borderRadius: "md",
+      borderRadius: "xl",
       bg: "panelSubBg",
       borderColor: "borderDefault",
     },
     hud: {
       borderBottomWidth: "1px",
       borderColor: "borderDefault",
-      bg: "#0D1424",
+      bg: "panelBg",
       backdropFilter: "saturate(120%) blur(6px)",
     },
     slotGuide: {
@@ -92,23 +110,51 @@ const theme = extendTheme({
       letterSpacing: "0.04em",
     },
   },
+  radii: {
+    xs: "6px",
+    sm: "10px",
+    md: "14px",
+    lg: "18px",
+    xl: "22px",
+    full: "9999px",
+  },
   shadows: {
-    outline: "0 0 0 3px rgba(57,153,255,0.56)",
-    card: "0 10px 30px rgba(0,0,0,0.35)",
-    cardHover: "0 16px 44px rgba(0,0,0,0.42)",
+    outline: "0 0 0 3px rgba(49,151,149,0.45)",
+    card: "0 10px 30px rgba(0,0,0,0.08)",
+    cardHover: "0 20px 48px rgba(0,0,0,0.12)",
+    glowSuccess: "0 0 0 6px rgba(72,187,120,0.18)",
+    glowFail: "0 0 0 6px rgba(245,101,101,0.18)",
   },
   components: {
     Card: {
       baseStyle: {
-        borderRadius:  "xl",
+        borderRadius: "xl",
         boxShadow: "card",
       },
     },
     Button: {
       defaultProps: {
-        colorScheme: "blue",
+        colorScheme: "teal",
+      },
+      variants: {
+        brand: {
+          bg: "accentSolid",
+          color: "white",
+          _hover: { bg: "accentHover" },
+          _active: { bg: "accentHover" },
+          borderRadius: "lg",
+        },
       },
     },
+  },
+  styles: {
+    global: (props: any) => ({
+      html: { scrollBehavior: "smooth" },
+      body: {
+        bg: "canvasBg",
+        color: "fgDefault",
+      },
+    }),
   },
 });
 
