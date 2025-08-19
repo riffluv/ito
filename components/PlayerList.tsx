@@ -1,33 +1,62 @@
 "use client";
-import { Avatar, Badge, HStack, Stack, Text } from "@chakra-ui/react";
 import type { PlayerDoc } from "@/lib/types";
+import { Avatar, Badge, HStack, Stack, Text } from "@chakra-ui/react";
 // presence が取得できなくても、一覧は常に全員表示する方針
 
 // ロビー体験をシンプルにするため、常に全員を表示。
 // presence があればバッジでオンラインを示すが、フィルタはしない。
-export function PlayerList({ players, online }: { players: (PlayerDoc & { id: string })[]; online?: string[] | undefined }) {
+export function PlayerList({
+  players,
+  online,
+  myId,
+}: {
+  players: (PlayerDoc & { id: string })[];
+  online?: string[] | undefined;
+  myId?: string | null;
+}) {
   const onlineSet = Array.isArray(online) ? new Set(online) : null;
   const visible = players;
   return (
     <Stack spacing={2}>
-      {visible.map((p) => (
-        <HStack key={p.id} p={3} borderWidth="1px" rounded="md" bg="blackAlpha.300" justify="space-between" align="flex-start">
-          <HStack align="flex-start" spacing={3} maxW="70%">
-            <Avatar name={p.name} title={p.avatar} />
-            <Stack spacing={0} maxW="full">
-              <Text fontWeight="semibold" isTruncated>{p.name}</Text>
-              <Text fontSize="sm" color="gray.300" noOfLines={2}>
-                連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
-              </Text>
-            </Stack>
+      {visible.map((p) => {
+        const isMe = myId && p.uid ? myId === p.uid : myId === p.id;
+        return (
+          <HStack
+            key={p.id}
+            p={3}
+            borderWidth="1px"
+            rounded="md"
+            bg={isMe ? "gray.700" : "blackAlpha.300"}
+            justify="space-between"
+            align="flex-start"
+          >
+            <HStack align="flex-start" spacing={3} maxW="70%">
+              <Avatar name={p.name} title={p.avatar} />
+              <Stack spacing={0} maxW="full">
+                <HStack spacing={2} align="center">
+                  <Text fontWeight="semibold" isTruncated>
+                    {p.name}
+                  </Text>
+                  {/* 自分だけ自分に配られた数字を見られるようにする（他人の数字は表示しない） */}
+                  {isMe && typeof p.number === "number" && (
+                    <Badge colorScheme="green">#{p.number}</Badge>
+                  )}
+                </HStack>
+                <Text fontSize="sm" color="gray.300" noOfLines={2}>
+                  連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
+                </Text>
+              </Stack>
+            </HStack>
+            <HStack>
+              {p.ready && <Badge colorScheme="blue">確認済</Badge>}
+            </HStack>
           </HStack>
-          <HStack>
-            {p.ready && <Badge colorScheme="blue">確認済</Badge>}
-          </HStack>
-        </HStack>
-      ))}
+        );
+      })}
       {visible.length === 0 && (
-        <Text fontSize="sm" color="gray.400">プレイヤーがいません</Text>
+        <Text fontSize="sm" color="gray.400">
+          プレイヤーがいません
+        </Text>
       )}
     </Stack>
   );
