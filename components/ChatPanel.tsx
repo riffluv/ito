@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import { addDoc, collection, limit, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
+import { Panel } from "@/components/ui/Panel";
+import { sendMessage } from "@/lib/firebase/chat";
 
-export function ChatPanel({ roomId }: { roomId: string }) {
+export function ChatPanel({ roomId, height = 360 }: { roomId: string; height?: number | string }) {
   const { displayName } = useAuth();
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
   const [text, setText] = useState("");
@@ -30,16 +32,12 @@ export function ChatPanel({ roomId }: { roomId: string }) {
   const send = async () => {
     const t = text.trim();
     if (!t) return;
-    await addDoc(collection(db, "rooms", roomId, "chat"), {
-      sender: displayName || "匿名",
-      text: t,
-      createdAt: serverTimestamp(),
-    });
+    await sendMessage(roomId, displayName || "匿名", t);
     setText("");
   };
 
   return (
-    <Box borderWidth="1px" rounded="lg" p={2} bg="blackAlpha.300" h="100%" display="flex" flexDir="column">
+    <Panel p={2} h={height} display="flex" flexDir="column">
       <Box flex="1" overflowY="auto" p={2}>
         <Stack spacing={1}>
           {messages.map((m) => (
@@ -60,6 +58,6 @@ export function ChatPanel({ roomId }: { roomId: string }) {
         />
         <Button onClick={send} colorScheme="blue">送信</Button>
       </HStack>
-    </Box>
+    </Panel>
   );
 }

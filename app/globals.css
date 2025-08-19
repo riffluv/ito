@@ -1,12 +1,18 @@
-:root {
-  --bg: #0f0f12;
-}
-
+/* 2025 viewport-safe full-height layout */
 html, body, #__next {
   height: 100%;
+}
+html, body {
+  margin: 0;
+}
+body {
+  min-height: 100dvh; /* dynamic viewport height (mobile safe) */
+  overflow: hidden;    /* prevent browser scroll; use internal scrolls */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: #0b0c10;
 }
 
 * {
   box-sizing: border-box;
 }
-

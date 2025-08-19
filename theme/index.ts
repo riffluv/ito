@@ -7,6 +7,13 @@ const config: ThemeConfig = {
 
 const theme = extendTheme({
   config,
+  breakpoints: {
+    sm: "30em",
+    md: "48em",
+    lg: "62em",
+    xl: "80em",
+    "2xl": "96em",
+  },
   colors: {
     brand: {
       50: "#e3f2ff",
@@ -19,6 +26,37 @@ const theme = extendTheme({
       700: "#0d4082",
       800: "#052151",
       900: "#000521",
+    },
+  },
+  semanticTokens: {
+    colors: {
+      panelBg: {
+        default: "blackAlpha.300",
+        _dark: "blackAlpha.300",
+      },
+      panelSubBg: {
+        default: "blackAlpha.400",
+        _dark: "blackAlpha.400",
+      },
+      textMuted: {
+        default: "gray.600",
+        _dark: "gray.300",
+      },
+    },
+  },
+  textStyles: {
+    hint: { fontSize: "sm", color: "textMuted" },
+  },
+  layerStyles: {
+    panel: {
+      borderWidth: "1px",
+      borderRadius: "md",
+      bg: "panelBg",
+    },
+    panelSub: {
+      borderWidth: "1px",
+      borderRadius: "md",
+      bg: "panelSubBg",
     },
   },
   shadows: {
@@ -40,4 +78,3 @@ const theme = extendTheme({
 });
 
 export default theme;
-

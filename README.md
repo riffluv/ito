@@ -43,3 +43,20 @@ npm run dev
 - 参加者数表示（ロビー）は簡略化しています。
 - セキュリティルールは含まれません（本番運用時は Firestore ルールの設定が必須）。
 
+## アーキテクチャ（リファクタ後の構成要点）
+
+- UIレイヤ
+  - `components/ui/Panel.tsx`: セクション枠の共通コンポーネント（見出し・アクション）
+  - 各機能UI: `TopicDisplay`/`CluePanel`/`OrderBoard`/`RevealPanel`/`ChatPanel` は `Panel` を用いて統一スタイル
+- テーマ
+  - `theme/index.ts`: `semanticTokens`（色トークン）、`layerStyles`（`panel`/`panelSub`）、`textStyles.hint` を定義
+- ゲームロジック
+  - `lib/game/random.ts`: 決定的な数字配布
+  - `lib/game/rules.ts`: 非減少判定・リビール順計算
+  - `lib/game/room.ts`: ゲーム状態遷移（開始・確定・結果確定・継続）
+- Firestore I/O ラッパ
+  - `lib/firebase/players.ts`: 連想ワード更新、順序保存、ready、presence、プレイヤー初期化
+  - `lib/firebase/chat.ts`: チャット送信
+  - `lib/firebase/rooms.ts`: ルームオプション更新、最終アクティブ更新、ホスト移譲、退出処理
+
+この分離により、UI刷新（レイアウト変更やテーマ拡張）やルール拡張（判定方法の切替）を局所的な変更で実現できます。
