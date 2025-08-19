@@ -1,6 +1,7 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
+import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db, "rooms", roomId), { options });
@@ -21,23 +22,31 @@ export async function leaveRoom(roomId: string, userId: string, displayName: str
   const others = all.filter(p => p.id !== userId);
 
   if (others.length > 0) {
-    // 既存ホストが退出する場合は移譲（ここでは常に最初の人へ）
-    // 呼び出し側でホストかどうか判断済みでも良いが、冪等性を考慮し単純移譲
-    await transferHost(roomId, others[0].id);
+    let nextHost = others[0].id;
+    try {
+      if (presenceSupported()) {
+        const uids = await fetchPresenceUids(roomId);
+        const online = others.find(p => uids.includes(p.id));
+        if (online) nextHost = online.id;
+      }
+    } catch {}
+    await transferHost(roomId, nextHost);
   }
 
-  // 自分を退室（重複Docも含めて完全削除）
+  // 自分を退室（重複Docも含めて可能な限り削除）
   try {
     const dupQ = query(collection(db, "rooms", roomId, "players"), where("uid", "==", userId));
     const dupSnap = await getDocs(dupQ);
-    await Promise.all(dupSnap.docs.map(d => deleteDoc(doc(db, "rooms", roomId, "players", d.id))));
+    const ids = new Set<string>(dupSnap.docs.map(d => d.id));
+    ids.add(userId); // 主キーのドキュメントも試す
+    await Promise.all(Array.from(ids).map(async (id) => {
+      try { await deleteDoc(doc(db, "rooms", roomId, "players", id)); } catch {}
+    }));
   } catch {
-    // フォールバック: 主Docだけ削除
-    await deleteDoc(doc(db, "rooms", roomId, "players", userId));
+    try { await deleteDoc(doc(db, "rooms", roomId, "players", userId)); } catch {}
   }
-  // ルームの最終アクティブ
+
   await updateLastActive(roomId);
-  // チャットへ退出ログ
   await addDoc(collection(db, "rooms", roomId, "chat"), {
     sender: "system",
     text: `${displayName || "匿名"} が退出しました`,

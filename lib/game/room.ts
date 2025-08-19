@@ -1,6 +1,8 @@
 import { collection, doc, getDoc, getDocs, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { applyPlay, defaultOrderState } from "@/lib/game/rules";
+import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
+import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
 // 乱数はクライアントで自分の番号計算に使用
 
 export async function startGame(roomId: string) {
@@ -15,9 +17,29 @@ export async function startGame(roomId: string) {
 export async function dealNumbers(roomId: string) {
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snap = await getDocs(collection(db, "rooms", roomId, "players"));
-  const players: { id: string; uid?: string }[] = [];
-  snap.forEach((d) => players.push({ id: d.id, ...(d.data() as any) }));
-  const ordered = players.sort((a, b) => (String(a.uid || a.id)).localeCompare(String(b.uid || b.id)));
+  const all: { id: string; uid?: string; lastSeen?: any }[] = [];
+  snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
+  // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
+  let target = all;
+  try {
+    if (presenceSupported()) {
+      const uids = await fetchPresenceUids(roomId);
+      if (Array.isArray(uids) && uids.length > 0) {
+        const set = new Set(uids);
+        target = all.filter(p => set.has(p.id));
+      } else {
+        // presenceはあるが0人 → そのまま空で配布（後続UIがブロック）
+        target = [];
+      }
+    } else {
+      const now = Date.now();
+      target = all.filter(p => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
+    }
+  } catch {
+    // フォールバック: 取得失敗時は全員
+    target = all;
+  }
+  const ordered = target.sort((a, b) => (String(a.uid || a.id)).localeCompare(String(b.uid || b.id)));
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
   await updateDoc(doc(db, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map(p => p.id) }
@@ -54,8 +76,18 @@ export async function startPlaying(roomId: string) {
   try {
     const r = await getDoc(doc(db, "rooms", roomId));
     const data: any = r.data();
-    const arr = data?.deal?.players;
-    if (Array.isArray(arr)) total = arr.length;
+    const arr: string[] | undefined = data?.deal?.players;
+    if (presenceSupported()) {
+      const uids = await fetchPresenceUids(roomId);
+      if (Array.isArray(arr)) {
+        const set = new Set(uids);
+        total = arr.filter((id) => set.has(id)).length;
+      } else {
+        total = uids.length;
+      }
+    } else if (Array.isArray(arr)) {
+      total = arr.length;
+    }
     if (total === null) {
       const snap = await getDocs(collection(db, "rooms", roomId, "players"));
       total = snap.size;

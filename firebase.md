@@ -1,44 +1,47 @@
-ウェブアプリ
-ito-web
-ウェブアプリ
-アプリのニックネーム
-ito-web
-アプリ ID
-1:374128501058:web:ae672cc7dc71a60c4e28db
-SDK の設定と構成
+# Firebase セットアップガイド（このプロジェクト用）
 
-npm
+Firebase コンソール（ホーム）で行う設定と、`.env.local` に書く内容をまとめました。ここだけ見れば最短で動かせます。
 
-CDN
+## 1. コンソールでやること（順番に）
+- プロジェクト作成（または既存プロジェクトを使用）
+- Authentication → サインイン方法 →「匿名」有効化
+- Firestore → データベースを作成（テスト/本番どちらでも可）
+- Realtime Database → データベースを作成（リージョンは任意）
+  - RTDB の URL を控える（例: `https://<PROJECT_ID>-default-rtdb.firebaseio.com`）
+  - ルールは `rtdb-setup.md` の手順に従って設定
+- プロジェクトの概要 → アプリを追加 → ウェブ（</>）を選択
+  - 表示される設定オブジェクト（apiKey など）を `.env.local` に転記（下記）
 
-Config
-npm とモジュール バンドラ（webpack や Rollup など）をすでに使用している場合は、次のコマンドを実行して最新の SDK をインストールできます。（詳細）。
+## 2. `.env.local` に書く内容（コピペして値を差し替え）
+```
+# 必須（Firebase コンソールの Web アプリ設定からコピー）
+NEXT_PUBLIC_FIREBASE_API_KEY=xxxxx
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:abcdefg
 
-npm install firebase
-次に Firebase を初期化し、使用するプロダクトの SDK の利用を開始します。
+# 任意（あるなら入れる。無ければ空でOK）
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1234567890
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXX
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+# RTDB（presence に必須）: RTDB を作成後の「データベース URL」
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+```
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyC6AZfNZYB8R53laqA9SyOrFqIe0U8Cnxs",
-  authDomain: "online-ito.firebaseapp.com",
-  projectId: "online-ito",
-  storageBucket: "online-ito.firebasestorage.app",
-  messagingSenderId: "374128501058",
-  appId: "1:374128501058:web:ae672cc7dc71a60c4e28db",
-  measurementId: "G-WV2ZJ6CP5H"
-};
+保存したら開発サーバを再起動してください。
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-注: このオプションではモジュラー JavaScript SDK を使用します。これにより SDK のサイズが小さくなります。
+## 3. RTDB のルールと確認
+- ルールは `rtdb-setup.md` の「Step 3」を参照（presence 用の最小構成）
+- 2タブで同じ部屋に入って、片方を閉じるともう片方から即座に消えることを確認
 
-ウェブ向け Firebase の詳細については、こちらをご覧ください: 使ってみる、 ウェブ SDK API リファレンス、 サンプル
+## 4. よくあるミスと対処
+- `.env.local` の値が空/誤り → アプリが Firebase を初期化できず動きません。コンソールの値を正しく貼り付けて再起動。
+- RTDB URL 未設定 → presence が無効になり、退出の反映が遅れます。URL設定後に再起動。
+- 匿名ログインが無効 → ルームや presence が読めません。Authentication で「匿名」を有効化。
+
+## 5. 参考（どの値がどこにある？）
+- `apiKey`/`authDomain`/`projectId`/`appId` など → コンソールの「アプリを追加（ウェブ）」で表示
+- `storageBucket`/`messagingSenderId`/`measurementId` → 同上（ある場合）
+- `databaseURL`（RTDB） → Realtime Database 作成後、画面上部に表示
 

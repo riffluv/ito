@@ -166,30 +166,38 @@ export default function RoomPage() {
     }
   }, [room?.deal?.seed, room?.deal && (room?.deal as any)?.players?.join(','), room?.status, user?.uid, players.map(p=>p.id+':'+(p.number??'')).join(',')]);
 
-  // presenceが無い環境では全員を対象に（従来のlastSeenに依存）
+  const presenceOn = presenceSupported();
   const onlinePlayers = useMemo(() => {
-    if (!Array.isArray(onlineUids) || onlineUids.length === 0) return players;
-    const set = new Set(onlineUids);
-    return players.filter(p => set.has(p.id));
-  }, [players.map(p=>p.id).join(','), Array.isArray(onlineUids) ? onlineUids.join(',') : '']);
+    if (presenceOn) {
+      if (!Array.isArray(onlineUids)) return players; // presence未到着
+      const set = new Set(onlineUids);
+      return players.filter((p) => set.has(p.id)); // [] -> 空
+    }
+    const now = Date.now();
+    return players.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
+  }, [presenceOn, players, onlineUids]);
 
   const allNumbersDealt = !!room?.topic
     && !!room?.deal
     && Array.isArray((room.deal as any).players)
     && onlinePlayers.every((p) => typeof p.number === 'number');
 
-  // 準備完了（ready）を基準に開始判定（Clue更新時にready=trueにする）
-  const allCluesReady = players.length > 0 && players.every((p) => p.ready === true);
+  // 準備完了（ready）はオンライン参加者のみを対象に判定
+  const allCluesReady = onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
+  const enoughPlayers = onlinePlayers.length >= 2;
 
   const canStartPlaying = isHost
     && room.status === "clue"
+    && enoughPlayers
     && allNumbersDealt
     && allCluesReady;
 
   const startDisabledTitle = !canStartPlaying
-    ? (!allNumbersDealt
-        ? 'お題選択後に数字を配ってから開始できます'
-        : (!allCluesReady ? '全員が更新（準備完了）すると開始できます' : undefined))
+    ? (!enoughPlayers
+        ? 'プレイヤーは2人以上必要です'
+        : (!allNumbersDealt
+            ? 'お題選択後に数字を配ってから開始できます'
+            : (!allCluesReady ? '全員が更新（準備完了）すると開始できます' : undefined)))
     : undefined;
 
   // ラウンドが進んだら自分のreadyをリセット
@@ -230,7 +238,7 @@ export default function RoomPage() {
         toast({ title: "ホストのみ開始できます", status: "warning" });
         return;
       }
-      if (players.length < 2) {
+      if (onlinePlayers.length < 2) {
         toast({ title: "プレイヤーは2人以上必要です", status: "info" });
         return;
       }
@@ -337,6 +345,17 @@ export default function RoomPage() {
 
   // isMember は上で算出済み
 
+  // ラウンド対象（オンラインの参加者のみ）
+  const onlineSet = new Set(Array.isArray(onlineUids) ? onlineUids : onlinePlayers.map(p=>p.id));
+  const baseIds = Array.isArray((room as any)?.deal?.players) ? (((room as any).deal.players) as string[]) : players.map(p=>p.id);
+  const eligibleIds = baseIds.filter((id) => onlineSet.has(id));
+
+  // 残りの対象数（結果画面の続行ボタンの表示制御に使用）
+  const remainingCount = useMemo(() => {
+    const played = new Set<string>((room as any)?.order?.list || []);
+    return eligibleIds.filter((id) => !played.has(id)).length;
+  }, [eligibleIds.join(','), Array.isArray((room as any)?.order?.list) ? ((room as any).order.list as string[]).join(',') : '']);
+
   // presence のアタッチ/デタッチは usePresence が管理
   if (!firebaseEnabled || loading || !room) {
     return (
@@ -380,7 +399,7 @@ export default function RoomPage() {
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} h="100%">
         <Stack gridColumn={{ base: "auto", md: "span 1" }} overflowY="auto" maxH="100%">
           <Panel title="参加者">
-            <PlayerList players={players} online={onlineUids} />
+            <PlayerList players={onlinePlayers} online={onlineUids} />
           </Panel>
 
           <Panel title="オプション">
@@ -431,7 +450,7 @@ export default function RoomPage() {
                 <Text fontWeight="bold" color={room.result?.success ? "green.300" : "red.300"}>
                   {room.result?.success ? "クリア！" : "失敗…"}
                 </Text>
-                {room.result?.success === false && room.options.allowContinueAfterFail && isHost && (
+                {room.result?.success === false && room.options.allowContinueAfterFail && isHost && remainingCount > 0 && (
                   <HStack mt={3}>
                     <Button onClick={continueAfterFail} colorScheme="blue">続けて並べ替える</Button>
                   </HStack>
@@ -450,6 +469,7 @@ export default function RoomPage() {
               isHost={isHost}
               failed={!!room.order?.failed}
               failedAt={room.order?.failedAt ?? null}
+              eligibleIds={eligibleIds}
             />
           )}
         </Box>
