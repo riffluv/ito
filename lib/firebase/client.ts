@@ -48,7 +48,7 @@ export const db = ((): any => {
   try {
     // 高速・安定化: ローカル永続キャッシュ + 自動ロングポーリング検出
     return initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }),
       ignoreUndefinedProperties: true,
       experimentalAutoDetectLongPolling: true,
     });

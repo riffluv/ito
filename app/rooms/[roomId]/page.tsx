@@ -32,19 +32,8 @@ import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
 import { defaultTopics, pickTwo } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import {
-  Box,
-  Button,
-  Container,
-  Flex,
-  Grid,
-  Heading,
-  HStack,
-  Spinner,
-  Stack,
-  Text,
-  useToast,
-} from "@chakra-ui/react";
+import { Box, Button, Container, Flex, Grid, Heading, HStack, Spinner, Stack, Text, useToast } from "@chakra-ui/react";
+import { Hud } from "@/components/Hud";
 import {
   collection,
   deleteDoc,
@@ -61,6 +50,7 @@ import {
 } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SortBoard } from "@/components/SortBoard";
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -523,31 +513,31 @@ export default function RoomPage() {
   }
 
   return (
-    <Container
-      maxW="container.xl"
-      h="100dvh"
-      py={3}
-      display="flex"
-      flexDir="column"
-      overflow="hidden"
-    >
-      <Flex justify="space-between" align="center" mb={3} shrink={0}>
-        <Heading size="md">{room.name}</Heading>
-        <HStack>
-          <Button
-            onClick={async () => {
-              await leaveRoom();
-              router.push("/");
-            }}
-          >
-            退出してロビーへ
-          </Button>
-        </HStack>
-      </Flex>
+    <Container maxW="container.xl" h="100dvh" py={0} display="flex" flexDir="column" overflow="hidden">
+      {/* 背景レイヤー */}
+      <div className="stage-bg" aria-hidden>
+        <div className="particles parallax-1" />
+      </div>
 
-      <Box flex="1" overflow="hidden" minH={0}>
+      {/* HUD */}
+      <Hud
+        roomName={room.name}
+        phase={room.status}
+        activeCount={onlinePlayers.length}
+        totalCount={players.length}
+        remainMs={null}
+        totalMs={null}
+        hostPrimary={isHost ? (
+          room.status === "waiting" ? { label: "開始", onClick: startGame } :
+          room.status === "clue" ? { label: "並べ替え開始", onClick: () => startPlayingAction(roomId), disabled: !canStartPlaying, title: startDisabledTitle } :
+          room.status === "finished" ? { label: "もう一度", onClick: resetToWaiting } :
+          null
+        ) : null}
+      />
+
+      <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
         <Grid
-          templateColumns={{ base: "1fr", md: "260px 1fr 360px" }}
+          templateColumns={{ base: "1fr", md: "280px 1fr 360px" }}
           gap={4}
           h="100%"
         >
@@ -608,6 +598,16 @@ export default function RoomPage() {
               <Stack spacing={4}>
                 <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
                 <CluePanel roomId={roomId} me={me} />
+                {/* 並べ替えの事前提案（ドラッグ操作に慣れる） */}
+                {Array.isArray((room as any)?.deal?.players) && (
+                  <SortBoard
+                    players={players}
+                    proposal={(room as any)?.deal?.players as string[]}
+                    onChange={() => { /* Firestoreへの保存は次段 */ }}
+                    onConfirm={() => {}}
+                    disabled
+                  />
+                )}
                 {isHost && (
                   <Stack>
                     <Button
@@ -673,12 +673,17 @@ export default function RoomPage() {
             )}
           </Box>
 
-          <Box
-            gridColumn={{ base: "auto", md: "span 1" }}
-            overflowY="auto"
-            maxH="100%"
-          >
+          <Box gridColumn={{ base: "auto", md: "span 1" }} overflowY="auto" maxH="100%">
             <ChatPanel roomId={roomId} height="clamp(240px, 40dvh, 420px)" />
+            <HStack mt={3}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => { await leaveRoom(); router.push("/"); }}
+              >
+                退出してロビーへ
+              </Button>
+            </HStack>
           </Box>
         </Grid>
       </Box>
