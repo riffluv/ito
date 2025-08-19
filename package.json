@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "test": "jest --config jest.config.cjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
@@ -25,6 +26,9 @@
     "@types/node": "24.3.0",
     "@types/react": "^18.2.73",
     "@types/react-dom": "^18.2.23",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "jest": "^29.6.1",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.3"
   }
 }
