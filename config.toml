@@ -1,0 +1,15 @@
+projects = { 'C:\Users\hr-hm\Desktop\manaby-todos' = { trust_level = "trusted" } , 'C:\Users\hr-hm\Desktop\codex' = { trust_level = "trusted" } }
+model_reasoning_effort = "high"
+hide_agent_reasoning = true
+show_raw_agent_reasoning = false
+
+
+
+
+approval_policy = "never"
+
+# MCPサーバーの定義（これは一例です）
+[mcp_servers.brave-search]
+command = "npx"
+args = ["-y", "mcp-brave-search-server"]
+env = { "BRAVE_API_KEY" = "YOUR_BRAVE_API_KEY" }

@@ -12,8 +12,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  NumberInput,
-  NumberInputField,
   Switch,
   Stack,
   useToast,
@@ -23,13 +21,12 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { RoomDoc, RoomOptions, PlayerDoc } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { randomAvatar } from "@/lib/utils";
+import { defaultTopics, pickTwo } from "@/lib/topics";
 
 export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated?: (roomId: string) => void; }) {
   const toast = useToast();
   const { user, displayName, loading } = useAuth() as any;
   const [name, setName] = useState("");
-  const [allowSecondClue, setAllowSecondClue] = useState(true);
-  const [passLimit, setPassLimit] = useState(2);
   const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,7 +45,8 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
     }
     setSubmitting(true);
     try {
-      const options: RoomOptions = { allowSecondClue, passLimit, allowContinueAfterFail };
+      const options: RoomOptions = { allowContinueAfterFail };
+      const topicOptions = pickTwo(defaultTopics);
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
@@ -56,6 +54,8 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
         status: "waiting",
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
+        topic: null,
+        topicOptions,
         result: null,
       };
       const roomRef = await addDoc(collection(db, "rooms"), room);
@@ -65,7 +65,6 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
         avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
         number: null,
         clue1: "",
-        clue2: "",
         ready: false,
         orderIndex: 0,
         uid: user.uid,
@@ -97,16 +96,6 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: { isOpen: boolea
             <FormControl>
               <FormLabel>部屋名</FormLabel>
               <Input placeholder="例）皆でITO" value={name} onChange={(e) => setName(e.target.value)} />
-            </FormControl>
-            <FormControl display="flex" alignItems="center" justifyContent="space-between">
-              <FormLabel mb="0">追加ヒントを許可</FormLabel>
-              <Switch isChecked={allowSecondClue} onChange={(e) => setAllowSecondClue(e.target.checked)} />
-            </FormControl>
-            <FormControl>
-              <FormLabel>パス上限</FormLabel>
-              <NumberInput value={passLimit} min={0} max={5} onChange={(_, n) => setPassLimit(isNaN(n) ? 0 : n)}>
-                <NumberInputField />
-              </NumberInput>
             </FormControl>
             <FormControl display="flex" alignItems="center" justifyContent="space-between">
               <FormLabel mb="0">失敗後に継続確認</FormLabel>

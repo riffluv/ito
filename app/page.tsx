@@ -16,14 +16,20 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { subscribePresence, presenceSupported } from "@/lib/firebase/presence";
+import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
+// presenceベースで人数を取得するため timeユーティリティは未使用
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
+import { RoomCard } from "@/components/RoomCard";
 
 export default function LobbyPage() {
   const toast = useToast();
+  const router = useRouter();
   const { user, loading, displayName, setDisplayName } = useAuth();
   const [rooms, setRooms] = useState<(RoomDoc & { id: string })[]>([]);
   const [playerCounts, setPlayerCounts] = useState<Record<string, number>>({});
@@ -32,6 +38,8 @@ export default function LobbyPage() {
   const [tempName, setTempName] = useState(displayName || "");
   const [pendingJoin, setPendingJoin] = useState<string | null>(null);
   const [afterNameCreate, setAfterNameCreate] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!firebaseEnabled || !user) return;
@@ -55,27 +63,36 @@ export default function LobbyPage() {
     return () => unsub();
   }, [firebaseEnabled, user]);
 
-  // 各ルームの参加人数（playersサブコレクション）を監視（lastSeenでアクティブ推定）
+  // 各ルームのオンライン人数（RTDB presence）を監視（未対応環境ではFirestoreのlastSeenを使用）
   useEffect(() => {
     if (!firebaseEnabled || !user) return;
-    const unsubs = rooms.map((r) =>
-      onSnapshot(collection(db, "rooms", r.id, "players"), (snap) => {
-        const now = Date.now();
-        const threshold = now - 60_000; // 60秒以内をアクティブと見なす
-        let active = 0;
-        snap.forEach((d) => {
-          const data: any = d.data();
-          const ls = data?.lastSeen;
-          // Timestamp型かDate型か数値型に対応
-          const ms = ls?.toMillis ? ls.toMillis() : (ls instanceof Date ? ls.getTime() : (typeof ls === 'number' ? ls : 0));
-          if (ms >= threshold) active += 1;
-        });
-        setPlayerCounts((prev) => ({ ...prev, [r.id]: active }));
-      })
-    );
-    return () => {
-      unsubs.forEach((u) => u());
-    };
+    if (presenceSupported()) {
+      const offs = rooms.map((r) =>
+        subscribePresence(r.id, (uids) => {
+          setPlayerCounts((prev) => ({ ...prev, [r.id]: uids.length }));
+        })
+      );
+      return () => offs.forEach((off) => off());
+    } else {
+      const unsubs = rooms.map((r) =>
+        onSnapshot(collection(db, "rooms", r.id, "players"), (snap) => {
+          const now = Date.now();
+          const seen = new Set<string>();
+          let active = 0;
+          snap.forEach((d) => {
+            const data: any = d.data();
+            const uid: string | undefined = data?.uid;
+            if (uid && seen.has(uid)) return;
+            if (isActive(data?.lastSeen, now, ACTIVE_WINDOW_MS)) {
+              active += 1;
+              if (uid) seen.add(uid);
+            }
+          });
+          setPlayerCounts((prev) => ({ ...prev, [r.id]: active }));
+        })
+      );
+      return () => unsubs.forEach((u) => u());
+    }
   }, [firebaseEnabled, user, rooms.map((r) => r.id).join(",")]);
 
   // 初回ロードでの強制名入力は行わない（作成/参加時に促す）
@@ -96,12 +113,12 @@ export default function LobbyPage() {
   }, [rooms, playerCounts]);
 
   return (
-    <Container maxW="container.lg" py={10}>
-      <Flex justify="space-between" align="center" mb={6}>
+    <Container maxW="container.lg" h="100dvh" py={4} display="flex" flexDir="column" overflow="hidden">
+      <Flex justify="space-between" align="center" mb={3} shrink={0}>
         <Heading size="lg">Online-ITO</Heading>
         <HStack>
           <HStack spacing={2} mr={2} color="gray.300">
-            <Text fontSize="sm">名前: {displayName || "未設定"}</Text>
+            <Text fontSize="sm" suppressHydrationWarning>名前: {mounted ? (displayName || "未設定") : "未設定"}</Text>
             <Button size="sm" variant="outline" onClick={() => {
               setTempName(displayName || "");
               setAfterNameCreate(false);
@@ -127,6 +144,7 @@ export default function LobbyPage() {
         </HStack>
       </Flex>
 
+      <Box flex="1" overflowY="auto" minH={0}>
       {!firebaseEnabled ? (
         <Box p={8} textAlign="center" borderWidth="1px" rounded="lg" bg="blackAlpha.300">
           <Text>Firebase設定が見つかりません。`.env.local` を設定してください。</Text>
@@ -136,29 +154,26 @@ export default function LobbyPage() {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {filteredRooms.map((r) => (
-            <Box key={r.id} p={4} borderWidth="1px" borderRadius="lg" bg="blackAlpha.400">
-              <Stack>
-                <Heading size="md">{r.name}</Heading>
-                <HStack justify="space-between">
-                  <Text fontSize="sm" color="gray.300">状態: {r.status}</Text>
-                  <Text fontSize="sm" color="gray.300">人数: {playerCounts[r.id] ?? 0}人</Text>
-                </HStack>
-                <Button
-                  colorScheme="blue"
-                  onClick={() => {
-                    if (!displayName) {
-                      setAfterNameCreate(false);
-                      setPendingJoin(r.id);
-                      nameDialog.onOpen();
-                    } else {
-                      window.location.href = `/rooms/${r.id}`;
-                    }
-                  }}
-                >
-                  参加
-                </Button>
-              </Stack>
-            </Box>
+            <RoomCard
+              key={r.id}
+              name={r.name}
+              status={r.status}
+              count={playerCounts[r.id] ?? 0}
+              onJoin={() => {
+                if (!displayName) {
+                  setAfterNameCreate(false);
+                  setPendingJoin(r.id);
+                  nameDialog.onOpen();
+                } else {
+                  const active = playerCounts[r.id] ?? 0;
+                  if (r.status !== "waiting" && active > 0) {
+                    toast({ title: "途中参加できません", description: "現在プレイ中のため入室できません", status: "info" });
+                    return;
+                  }
+                  router.push(`/rooms/${r.id}`);
+                }
+              }}
+            />
           ))}
           {filteredRooms.length === 0 && (
             <Box p={8} textAlign="center" borderWidth="1px" borderRadius="lg" bg="blackAlpha.300">
@@ -167,6 +182,7 @@ export default function LobbyPage() {
           )}
         </SimpleGrid>
       )}
+      </Box>
 
       {/* 名前入力モーダル（作成/参加時に表示） */}
       {nameDialog.isOpen && (
@@ -188,7 +204,7 @@ export default function LobbyPage() {
                     const to = `/rooms/${pendingJoin}`;
                     setPendingJoin(null);
                     setAfterNameCreate(false);
-                    window.location.href = to;
+                    router.push(to);
                   } else if (afterNameCreate) {
                     setAfterNameCreate(false);
                     createDialog.onOpen();
@@ -207,7 +223,7 @@ export default function LobbyPage() {
         onClose={createDialog.onClose}
         onCreated={async (roomId) => {
           // ルーム作成直後に遷移
-          window.location.href = `/rooms/${roomId}`;
+          router.push(`/rooms/${roomId}`);
         }}
       />
     </Container>
