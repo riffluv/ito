@@ -13,6 +13,8 @@ export type RoomDoc = {
   // お題
   topic?: string | null;
   topicOptions?: string[] | null;
+  // 選択中のカテゴリ（通常版/レインボー版/クラシック版）
+  topicBox?: "通常版" | "レインボー版" | "クラシック版" | null;
   // ホスト確定時の順序
   order?: {
     list: string[];

@@ -20,6 +20,7 @@ import {
   leaveRoom as leaveRoomAction,
   setRoomOptions,
   updateLastActive,
+  resetRoomToWaiting,
 } from "@/lib/firebase/rooms";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import {
@@ -29,7 +30,7 @@ import {
 } from "@/lib/game/room";
 import { usePresence } from "@/lib/hooks/usePresence";
 import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
-import { defaultTopics, pickTwo } from "@/lib/topics";
+// お題候補の提示はTopicDisplayで実施
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import { Box, Button, Container, Flex, Grid, Heading, HStack, Spinner, Stack, Text, useToast } from "@chakra-ui/react";
@@ -154,7 +155,6 @@ export default function RoomPage() {
         // アクティブ参加者ゼロからの参加なら部屋を待機に戻す
         if (!hasActiveMembers && room.status !== "waiting") {
           try {
-            const topicOptions = pickTwo(defaultTopics);
             await updateDoc(doc(db, "rooms", roomId), {
               status: "waiting",
               result: null,
@@ -162,7 +162,8 @@ export default function RoomPage() {
               order: null,
               round: 0,
               topic: null,
-              topicOptions,
+              topicOptions: null,
+              topicBox: null,
             });
           } catch {}
         }
@@ -329,15 +330,7 @@ export default function RoomPage() {
 
   const resetToWaiting = async () => {
     if (!isHost) return;
-    const topicOptions = pickTwo(defaultTopics);
-    await updateDoc(doc(db, "rooms", roomId), {
-      status: "waiting",
-      result: null,
-      deal: null,
-      round: 0,
-      topic: null,
-      topicOptions,
-    });
+    await resetRoomToWaiting(roomId);
   };
 
   const continueAfterFail = async () => {
@@ -560,6 +553,11 @@ export default function RoomPage() {
                 onChange={(v) => updateOptions(v)}
                 disabled={!isHost || room.status !== "waiting"}
               />
+              {isHost && (
+                <Stack mt={3}>
+                  <Button variant="outline" onClick={resetToWaiting}>リセット</Button>
+                </Stack>
+              )}
             </Panel>
 
             {isHost && room.status === "waiting" && (
