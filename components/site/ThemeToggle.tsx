@@ -18,7 +18,15 @@ export default function ThemeToggle() {
       variant="ghost"
     >
       {/* 初回は固定のアイコン（Sun）を描画してサーバーと一致させる */}
-      {mounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : <Sun size={18} />}
+      {mounted ? (
+        isDark ? (
+          <Sun size={18} />
+        ) : (
+          <Moon size={18} />
+        )
+      ) : (
+        <Sun size={18} />
+      )}
     </IconButton>
   );
 }
