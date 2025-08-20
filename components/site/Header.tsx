@@ -1,59 +1,46 @@
-"use client";
 import {
   Box,
+  Button,
+  Link as ChakraLink,
   Container,
   Flex,
   HStack,
   Heading,
-  IconButton,
-  Button,
-  useColorMode,
-  useColorModeValue,
-  Link as ChakraLink,
 } from "@chakra-ui/react";
-import { MoonIcon, SunIcon } from "@chakra-ui/icons";
 import Link from "next/link";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
-  const { colorMode, toggleColorMode } = useColorMode();
-  const bg = useColorModeValue("white", "gray.900");
-  const border = useColorModeValue("gray.200", "whiteAlpha.200");
   return (
     <Box
       as="header"
       position="sticky"
       top={0}
       zIndex="overlay"
-      bg={bg}
       borderBottomWidth="1px"
-      borderColor={border}
+      borderColor="gray.200"
     >
       <Container maxW="6xl" py={3}>
         <Flex align="center" justify="space-between">
-          <HStack spacing="3">
-            <Box boxSize="6" bgGradient="linear(to-br, brand.400, cyan.400)" rounded="md" />
+          <HStack gap="3">
+            <Box
+              boxSize="6"
+              bgGradient="linear(to-br, brand.400, cyan.400)"
+              rounded="md"
+            />
             <Heading size="md">Online ITO</Heading>
           </HStack>
-          <HStack spacing={2}>
-            <Button as={Link} href="/" variant="ghost">プレイ</Button>
-            <ChakraLink
-              as={Link}
-              href="/"
-              prefetch={false}
-              display={{ base: "none", md: "inline-flex" }}
-            >
-              Docs
+          <HStack gap={2}>
+            <Button asChild variant="ghost">
+              <Link href="/">プレイ</Link>
+            </Button>
+            <ChakraLink asChild display={{ base: "none", md: "inline-flex" }}>
+              <Link href="/">Docs</Link>
             </ChakraLink>
-            <IconButton
-              aria-label="カラーモード切替"
-              onClick={toggleColorMode}
-              icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-              variant="ghost"
-            />
+            <ThemeToggle />
           </HStack>
         </Flex>
       </Container>
     </Box>
   );
 }
-

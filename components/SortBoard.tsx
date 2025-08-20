@@ -88,12 +88,12 @@ export function SortBoard({
                     boxShadow="card"
                   >
                     <HStack justify="space-between">
-                      <Text noOfLines={1}>{p.name}</Text>
+                      <Text lineClamp={1}>{p.name}</Text>
                       <Text fontSize="xs" color="fgMuted">
                         #{idx + 1}
                       </Text>
                     </HStack>
-                    <Text mt={1} fontSize="sm" color="fgMuted" noOfLines={2}>
+                    <Text mt={1} fontSize="sm" color="fgMuted" lineClamp={2}>
                       連想: {p.clue1 || "（未設定）"}
                     </Text>
                   </Box>
@@ -118,7 +118,7 @@ export function SortBoard({
       </DndContext>
 
       <HStack mt={4} justify="flex-end">
-        <Button colorScheme="orange" onClick={onConfirm} isDisabled={disabled}>
+        <Button colorPalette="orange" onClick={onConfirm} disabled={disabled}>
           並びを確定
         </Button>
       </HStack>

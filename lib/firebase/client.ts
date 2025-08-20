@@ -1,7 +1,12 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from "firebase/firestore";
-import { getDatabase } from "firebase/database";
+import { getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,16 +18,24 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const isBrowser = typeof window !== "undefined";
-
 function isPlaceholder(v: string): boolean {
   const s = v.trim();
   // よくあるプレースホルダや全角カッコ、例示の語、キー名そのものを弾く
   if (/[（）]/.test(s)) return true;
   if (/^\(.*\)$/.test(s)) return true; // (apiKey) など半角カッコ
   if (/your_|example|例/i.test(s)) return true;
-  if (/^(apiKey|authDomain|projectId|appId|storageBucket|messagingSenderId|measurementId)$/i.test(s)) return true;
-  if (/projectid|authdomain|apikey|appid|messagingsenderid|storagebucket|measurementid/i.test(s)) return true;
+  if (
+    /^(apiKey|authDomain|projectId|appId|storageBucket|messagingSenderId|measurementId)$/i.test(
+      s
+    )
+  )
+    return true;
+  if (
+    /projectid|authdomain|apikey|appid|messagingsenderid|storagebucket|measurementid/i.test(
+      s
+    )
+  )
+    return true;
   if (/^1:1234567890:/.test(s)) return true; // テンプレの appId 例
   return false;
 }
@@ -48,7 +61,9 @@ export const db = ((): any => {
   try {
     // 高速・安定化: ローカル永続キャッシュ + 自動ロングポーリング検出
     return initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }),
+      localCache: persistentLocalCache({
+        tabManager: persistentSingleTabManager(undefined),
+      }),
       ignoreUndefinedProperties: true,
       experimentalAutoDetectLongPolling: true,
     });

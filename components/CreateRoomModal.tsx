@@ -1,24 +1,10 @@
 "use client";
+import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import {
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Stack,
-  Switch,
-  useToast,
-} from "@chakra-ui/react";
+import { Button, Dialog, Field, Input, Stack, Switch } from "@chakra-ui/react";
 import {
   addDoc,
   collection,
@@ -38,7 +24,6 @@ export function CreateRoomModal({
   onClose: () => void;
   onCreated?: (roomId: string) => void;
 }) {
-  const toast = useToast();
   const { user, displayName, loading } = useAuth() as any;
   const [name, setName] = useState("");
   const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
@@ -46,18 +31,21 @@ export function CreateRoomModal({
 
   const handleCreate = async () => {
     if (!firebaseEnabled) {
-      toast({ title: "Firebase設定が見つかりません", status: "error" });
+      toaster.create({
+        title: "Firebase設定が見つかりません",
+        type: "error",
+      });
       return;
     }
     if (!user) {
-      toast({
+      toaster.create({
         title: "匿名ログインを完了するまでお待ちください",
-        status: "info",
+        type: "info",
       });
       return;
     }
     if (!name.trim()) {
-      toast({ title: "部屋名を入力してください", status: "warning" });
+      toaster.create({ title: "部屋名を入力してください", type: "warning" });
       return;
     }
     setSubmitting(true);
@@ -91,10 +79,10 @@ export function CreateRoomModal({
       onClose();
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      toast({
+      toaster.create({
         title: "作成に失敗しました",
         description: e?.message,
-        status: "error",
+        type: "error",
       });
     } finally {
       setSubmitting(false);
@@ -102,54 +90,58 @@ export function CreateRoomModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>部屋を作る</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <Stack spacing={4}>
-            {!user && (
-              <Stack fontSize="sm" color="fgMuted">
-                <span>匿名ログインを初期化しています…</span>
-                <span>少し待ってから「作成」を押してください。</span>
-              </Stack>
-            )}
-            <FormControl>
-              <FormLabel>部屋名</FormLabel>
-              <Input
-                placeholder="例）皆でITO"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </FormControl>
-            <FormControl
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
+    <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>部屋を作る</Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            <Stack gap={4}>
+              {!user && (
+                <Stack fontSize="sm" color="fgMuted">
+                  <span>匿名ログインを初期化しています…</span>
+                  <span>少し待ってから「作成」を押してください。</span>
+                </Stack>
+              )}
+              <Field.Root>
+                <Field.Label>部屋名</Field.Label>
+                <Input
+                  placeholder="例）皆でITO"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </Field.Root>
+              <Field.Root orientation="horizontal">
+                <Field.Label mb="0">失敗後に継続確認</Field.Label>
+                <Switch.Root
+                  checked={allowContinueAfterFail}
+                  onCheckedChange={(d) => setAllowContinueAfterFail(d.checked)}
+                >
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                </Switch.Root>
+              </Field.Root>
+            </Stack>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button mr={3} onClick={onClose} variant="ghost">
+              キャンセル
+            </Button>
+            <Button
+              colorPalette="orange"
+              variant="solid"
+              onClick={handleCreate}
+              loading={submitting}
+              disabled={submitting}
             >
-              <FormLabel mb="0">失敗後に継続確認</FormLabel>
-              <Switch
-                isChecked={allowContinueAfterFail}
-                onChange={(e) => setAllowContinueAfterFail(e.target.checked)}
-              />
-            </FormControl>
-          </Stack>
-        </ModalBody>
-        <ModalFooter>
-          <Button mr={3} onClick={onClose} variant="ghost">
-            キャンセル
-          </Button>
-          <Button
-            variant="brand"
-            onClick={handleCreate}
-            isLoading={submitting}
-            isDisabled={submitting}
-          >
-            作成
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+              作成
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

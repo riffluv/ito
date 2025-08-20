@@ -1,12 +1,19 @@
 "use client";
-import { useState } from "react";
 import { Panel } from "@/components/ui/Panel";
+import { toaster } from "@/components/ui/toaster";
 import { db } from "@/lib/firebase/client";
 import { dealNumbers } from "@/lib/game/room";
+import {
+  fetchTopicSections,
+  getTopicsByType,
+  pickOne,
+  topicTypeLabels,
+  type TopicType,
+} from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
-import { Button, HStack, Stack, Text, useToast } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
-import { fetchTopicSections, getTopicsByType, pickOne, topicTypeLabels, type TopicType } from "@/lib/topics";
+import { useState } from "react";
 
 export function TopicDisplay({
   roomId,
@@ -17,7 +24,6 @@ export function TopicDisplay({
   room: RoomDoc & { id?: string };
   isHost: boolean;
 }) {
-  const toast = useToast();
   const hasTopic = !!room.topic;
   const topicBox = (room as any).topicBox as TopicType | null | undefined;
   const [changingBox, setChangingBox] = useState(false);
@@ -27,7 +33,11 @@ export function TopicDisplay({
     const sections = await fetchTopicSections();
     const pool = getTopicsByType(sections, type);
     const picked = pickOne(pool) || null;
-    await updateDoc(doc(db, "rooms", roomId), { topicBox: type, topicOptions: null, topic: picked });
+    await updateDoc(doc(db, "rooms", roomId), {
+      topicBox: type,
+      topicOptions: null,
+      topic: picked,
+    });
   };
 
   const shuffleBox = async () => {
@@ -51,18 +61,28 @@ export function TopicDisplay({
       {hasTopic ? (
         <Stack>
           <HStack justify="space-between" alignItems="center">
-            <Stack spacing={0}>
-              <Text fontWeight="bold" fontSize="lg">{room.topic}</Text>
+            <Stack gap={0}>
+              <Text fontWeight="bold" fontSize="lg">
+                {room.topic}
+              </Text>
               {!!topicBox && (
-                <Text color="gray.300" fontSize="sm">カテゴリ: {topicBox}</Text>
+                <Text color="gray.300" fontSize="sm">
+                  カテゴリ: {topicBox}
+                </Text>
               )}
             </Stack>
             <HStack>
               {isHost && !!topicBox && !room.deal && (
-                <Button size="sm" variant="outline" onClick={shuffleBox}>シャッフル</Button>
+                <Button size="sm" variant="outline" onClick={shuffleBox}>
+                  シャッフル
+                </Button>
               )}
               {isHost && (
-                <Button size="sm" variant="outline" onClick={() => setChangingBox(v => !v)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setChangingBox((v) => !v)}
+                >
                   カテゴリ変更
                 </Button>
               )}
@@ -72,12 +92,15 @@ export function TopicDisplay({
                   onClick={async () => {
                     try {
                       await dealNumbers(roomId);
-                      toast({ title: "数字を配りました", status: "success" });
+                      toaster.create({
+                        title: "数字を配りました",
+                        type: "success",
+                      });
                     } catch (e: any) {
-                      toast({
+                      toaster.create({
                         title: "数字の配布に失敗",
                         description: e?.message || String(e),
-                        status: "error",
+                        type: "error",
                       });
                     }
                   }}
@@ -89,14 +112,16 @@ export function TopicDisplay({
           </HStack>
           {changingBox && (
             <Stack>
-              <Text color="gray.300" fontSize="sm">カテゴリを選択</Text>
+              <Text color="gray.300" fontSize="sm">
+                カテゴリを選択
+              </Text>
               <HStack>
                 {topicTypeLabels.map((label) => (
                   <Button
                     key={label}
                     size="sm"
                     onClick={() => changeCategory(label)}
-                    isDisabled={!isHost}
+                    disabled={!isHost}
                     variant={isHost ? "solid" : "outline"}
                   >
                     {label}
@@ -114,14 +139,16 @@ export function TopicDisplay({
       ) : (
         <Stack>
           <Text color="gray.300">
-            {isHost ? "カテゴリを選択（ホストのみ）" : "ホストがカテゴリを選ぶまでお待ちください"}
+            {isHost
+              ? "カテゴリを選択（ホストのみ）"
+              : "ホストがカテゴリを選ぶまでお待ちください"}
           </Text>
           <HStack>
             {topicTypeLabels.map((label) => (
               <Button
                 key={label}
                 onClick={() => startBox(label)}
-                isDisabled={!isHost}
+                disabled={!isHost}
                 variant={isHost ? "solid" : "outline"}
               >
                 {label}

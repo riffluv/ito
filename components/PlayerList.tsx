@@ -1,7 +1,7 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
 import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 // 仕様: 48pxの名簿行（コンパクト）と、クリックで拡張（ヒントや詳細）。
 // グルーピング: 未入力 / 入力中 / 準備OK（見出しはスティッキー）。
@@ -34,15 +34,7 @@ export function PlayerList({
     players.map((p) => `${p.id}:${p.ready ? 1 : 0}:${p.clue1 || ""}`).join(","),
   ]);
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  // 連想ワードは常時表示に変更（トグルは廃止）
 
   const Section = ({
     title,
@@ -74,7 +66,6 @@ export function PlayerList({
       </Box>
       {list.map((p) => {
         const isMe = myId && p.uid ? myId === p.uid : myId === p.id;
-        const isExpanded = expanded.has(p.id);
         return (
           <Box
             key={p.id}
@@ -83,17 +74,18 @@ export function PlayerList({
             borderRadius="xl"
             bg={isMe ? "#141C2E" : "panelSubBg"}
             borderColor="borderDefault"
-            _hover={{ cursor: "pointer", boxShadow: "card" }}
-            onClick={() => toggle(p.id)}
+            _hover={{ boxShadow: "card" }}
           >
-            <HStack spacing={3} minH="48px" align="center">
-              <Avatar name={p.name} title={p.avatar} boxSize="32px" />
-              <HStack spacing={2} flex={1} minW={0} align="center">
-                <Text fontWeight="semibold" noOfLines={1} minW={0}>
+            <HStack gap={3} minH="48px" align="center">
+              <Avatar.Root size="sm">
+                <Avatar.Fallback name={p.name} />
+              </Avatar.Root>
+              <HStack gap={2} flex={1} minW={0} align="center">
+                <Text fontWeight="semibold" lineClamp={1} minW={0}>
                   {p.name}
                 </Text>
                 {isMe && typeof p.number === "number" && (
-                  <Badge colorScheme="green" title="あなたの数字">
+                  <Badge colorPalette="green" title="あなたの数字">
                     <Text as="span" textStyle="numeric">
                       #{p.number}
                     </Text>
@@ -102,31 +94,30 @@ export function PlayerList({
               </HStack>
               <HStack>
                 {p.ready ? (
-                  <Badge colorScheme="green">準備OK</Badge>
+                  <Badge colorPalette="green">準備OK</Badge>
                 ) : p.clue1 ? (
-                  <Badge colorScheme="orange">入力中</Badge>
+                  <Badge colorPalette="orange">入力中</Badge>
                 ) : (
-                  <Badge colorScheme="gray">未入力</Badge>
+                  <Badge colorPalette="gray">未入力</Badge>
                 )}
               </HStack>
             </HStack>
-            {isExpanded && (
-              <Box
-                mt={2}
-                pt={2}
-                borderTopWidth="1px"
-                borderColor="borderDefault"
+            <Box
+              mt={2}
+              pt={2}
+              borderTopWidth="1px"
+              borderColor="borderDefault"
+            >
+              <Text
+                fontSize="sm"
+                color="fgMuted"
+                lineClamp={3}
+                overflowWrap="anywhere"
+                title={p.clue1 || "（未設定）"}
               >
-                <Text
-                  fontSize="sm"
-                  color="fgMuted"
-                  noOfLines={3}
-                  overflowWrap="anywhere"
-                >
-                  連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
-                </Text>
-              </Box>
-            )}
+                連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
+              </Text>
+            </Box>
           </Box>
         );
       })}
@@ -142,7 +133,7 @@ export function PlayerList({
     );
   }
   return (
-    <Stack spacing={2}>
+    <Stack gap={2}>
       {groups.empty.length > 0 && (
         <Section title="未入力" list={groups.empty} />
       )}
