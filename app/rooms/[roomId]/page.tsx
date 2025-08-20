@@ -133,7 +133,9 @@ export default function RoomPage() {
 
   // RTDB presence は usePresence に集約済み
 
-  // 自動参加（自分のプレイヤードキュメントが無ければ作成）: 途中参加OK
+  // 自動参加（自分のプレイヤードキュメントが無ければ作成）
+  // ゲームが既に開始されている（waiting以外）の場合は、
+  // UI側のブロックを補完するためここでも作成を行わずロビーへリダイレクトする。
   useEffect(() => {
     if (!firebaseEnabled || !user || !room) return;
     if (leavingRef.current) return; // 退出処理中は参加を作らない
@@ -141,6 +143,21 @@ export default function RoomPage() {
       const pRef = doc(db, "rooms", roomId, "players", user.uid);
       const p = await getDoc(pRef);
       if (!p.exists()) {
+        // If the room is not in waiting state and there are active players, block join
+        if (room.status && room.status !== "waiting" && activeCount > 0) {
+          try {
+            toaster.create({
+              title: "入室できません",
+              description:
+                "ホストが既にゲームを開始しています。リセットされるまでロビーに戻ります。",
+              type: "info",
+            });
+          } catch {}
+          // Redirect to lobby
+          router.push("/");
+          return;
+        }
+
         const newPlayer: PlayerDoc = {
           name: displayName || "匿名",
           avatar: randomAvatar(displayName || user.uid.slice(0, 6)),

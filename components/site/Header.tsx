@@ -7,8 +7,9 @@ import {
   HStack,
   Heading,
 } from "@chakra-ui/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import ThemeToggle from "./ThemeToggle";
+const ThemeToggle = dynamic(() => import("./ThemeToggle"), { ssr: false });
 
 export default function Header() {
   return (

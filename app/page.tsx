@@ -196,6 +196,16 @@ export default function LobbyPage() {
                   status={r.status}
                   count={playerCounts[r.id] ?? 0}
                   onJoin={() => {
+                    // Block joining if the room is not in waiting state
+                    if (r.status && r.status !== "waiting") {
+                      toaster.create({
+                        title: "この部屋は既に開始されています",
+                        description:
+                          "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
+                        type: "info",
+                      });
+                      return;
+                    }
                     if (!displayName) {
                       setAfterNameCreate(false);
                       setPendingJoin(r.id);
