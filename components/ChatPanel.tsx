@@ -25,9 +25,11 @@ import { useEffect, useRef, useState } from "react";
 export function ChatPanel({
   roomId,
   height = 360,
+  readOnly = false,
 }: {
   roomId: string;
   height?: number | string;
+  readOnly?: boolean;
 }) {
   const { displayName } = useAuth();
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
@@ -55,6 +57,7 @@ export function ChatPanel({
   const send = async () => {
     const t = text.trim();
     if (!t) return;
+    if (readOnly) return;
     await sendMessage(roomId, displayName || "匿名", t);
     setText("");
   };
@@ -110,14 +113,15 @@ export function ChatPanel({
       </Box>
       <HStack>
         <Input
-          placeholder="メッセージを入力"
+          placeholder={readOnly ? "観戦中は投稿できません" : "メッセージを入力"}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") send();
           }}
+          disabled={readOnly}
         />
-        <Button onClick={send} colorPalette="orange">
+        <Button onClick={send} colorPalette="orange" disabled={readOnly}>
           送信
         </Button>
       </HStack>

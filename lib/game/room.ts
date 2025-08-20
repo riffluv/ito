@@ -3,14 +3,16 @@ import { db } from "@/lib/firebase/client";
 import { applyPlay, defaultOrderState } from "@/lib/game/rules";
 import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
 import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
+import { nextStatusForEvent } from "@/lib/state/guards";
 // 乱数はクライアントで自分の番号計算に使用
 
 export async function startGame(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
-    status: "clue",
-    result: null,
-    deal: null,
-  });
+  const ref = doc(db, "rooms", roomId);
+  const snap = await getDoc(ref);
+  const curr: any = snap.data();
+  const next = nextStatusForEvent(curr?.status || "waiting", { type: "START_GAME" });
+  if (!next) throw new Error("invalid transition: START_GAME");
+  await updateDoc(ref, { status: next, result: null, deal: null });
 }
 
 // ホストがトピック選択後に配札（重複なし）
@@ -26,14 +28,15 @@ export async function dealNumbers(roomId: string) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids) && uids.length > 0) {
         const set = new Set(uids);
-        target = all.filter(p => set.has(p.id));
+        target = all.filter((p) => set.has(p.id));
       } else {
-        // presenceはあるが0人 → そのまま空で配布（後続UIがブロック）
-        target = [];
+        // presenceは利用可能だが空のときは lastSeen でフォールバック
+        const now = Date.now();
+        target = all.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
       }
     } else {
       const now = Date.now();
-      target = all.filter(p => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
+      target = all.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
     }
   } catch {
     // フォールバック: 取得失敗時は全員
@@ -49,25 +52,30 @@ export async function dealNumbers(roomId: string) {
 // finalizeOrder（公開順演出）は現行フローでは未使用
 
 export async function finishRoom(roomId: string, success: boolean) {
-  await updateDoc(doc(db, "rooms", roomId), {
-    status: "finished",
-    result: { success, revealedAt: serverTimestamp() },
-  });
+  const ref = doc(db, "rooms", roomId);
+  const snap = await getDoc(ref);
+  const curr: any = snap.data();
+  const next = nextStatusForEvent(curr?.status || "waiting", { type: "FINISH" });
+  if (!next) throw new Error("invalid transition: FINISH");
+  await updateDoc(ref, { status: next, result: { success, revealedAt: serverTimestamp() } });
 }
 
 export async function continueAfterFail(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
-    status: "clue",
-    result: null,
-  });
+  const ref = doc(db, "rooms", roomId);
+  const snap = await getDoc(ref);
+  const curr: any = snap.data();
+  const next = nextStatusForEvent(curr?.status || "waiting", { type: "CONTINUE_AFTER_FAIL" });
+  if (!next) throw new Error("invalid transition: CONTINUE_AFTER_FAIL");
+  await updateDoc(ref, { status: next, result: null });
 }
 
 export async function resetRoom(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
-    status: "waiting",
-    result: null,
-    deal: null,
-  });
+  const ref = doc(db, "rooms", roomId);
+  const snap = await getDoc(ref);
+  const curr: any = snap.data();
+  const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
+  if (!next) throw new Error("invalid transition: RESET");
+  await updateDoc(ref, { status: next, result: null, deal: null });
 }
 
 // 順番出し方式の開始（ホストが実行）
@@ -76,6 +84,8 @@ export async function startPlaying(roomId: string) {
   try {
     const r = await getDoc(doc(db, "rooms", roomId));
     const data: any = r.data();
+    const next = nextStatusForEvent(data?.status || "waiting", { type: "START_PLAYING" });
+    if (!next) throw new Error("invalid transition: START_PLAYING");
     const arr: string[] | undefined = data?.deal?.players;
     if (presenceSupported()) {
       const uids = await fetchPresenceUids(roomId);

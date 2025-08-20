@@ -1,1 +1,6 @@
-{}
+{
+  "lib\\services\\roomService.ts -> @/lib/game/random": {
+    "id": "lib\\services\\roomService.ts -> @/lib/game/random",
+    "files": []
+  }
+}

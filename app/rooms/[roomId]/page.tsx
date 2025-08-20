@@ -8,290 +8,60 @@ import { RoomOptionsEditor } from "@/components/RoomOptions";
 import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
 import { useAuth } from "@/context/AuthContext";
-import { sendMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import {
-  resetPlayerState,
-  setPlayerNameAvatar,
-  updateLastSeen,
-} from "@/lib/firebase/players";
+import { resetPlayerState, setPlayerNameAvatar, updateLastSeen } from "@/lib/firebase/players";
 import { presenceSupported } from "@/lib/firebase/presence";
-import {
-  leaveRoom as leaveRoomAction,
-  resetRoomToWaiting,
-  setRoomOptions,
-  updateLastActive,
-} from "@/lib/firebase/rooms";
-import { generateDeterministicNumbers, hashString } from "@/lib/game/random";
-import {
-  continueAfterFail as continueAfterFailAction,
-  startGame as startGameAction,
-  startPlaying as startPlayingAction,
-} from "@/lib/game/room";
-import { usePresence } from "@/lib/hooks/usePresence";
-import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
-// お題候補の提示はTopicDisplayで実施
+import { leaveRoom as leaveRoomAction, resetRoomToWaiting, setRoomOptions } from "@/lib/firebase/rooms";
+import { continueAfterFail as continueAfterFailAction, startGame as startGameAction, startPlaying as startPlayingAction } from "@/lib/game/room";
 import { Hud } from "@/components/Hud";
 import { SortBoard } from "@/components/SortBoard";
 import { toaster } from "@/components/ui/toaster";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { randomAvatar } from "@/lib/utils";
-import {
-  Box,
-  Button,
-  Container,
-  Grid,
-  HStack,
-  Spinner,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import { Box, Button, Container, Grid, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRoomState } from "@/lib/hooks/useRoomState";
+import { assignNumberIfNeeded } from "@/lib/services/roomService";
+import { randomAvatar } from "@/lib/utils";
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params.roomId;
   const { user, displayName } = useAuth();
   const router = useRouter();
-  const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
-  const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
-  const [loading, setLoading] = useState(true);
-  const leavingRef = useRef(false);
-
-  // 再入室時に退出フラグをリセット（必ずコンポーネント内で実行）
-  useEffect(() => {
-    leavingRef.current = false;
-  }, [roomId, user?.uid]);
-
-  // アクティブ人数（lastSeenが直近60秒以内）
-  const activeCount = useMemo(() => {
-    const now = Date.now();
-    let active = 0;
-    players.forEach((p) => {
-      if (isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)) active += 1;
-    });
-    return active;
-  }, [
-    players.map((p) => p.id).join(","),
-    players.map((p: any) => toMillis(p?.lastSeen)).join(","),
-  ]);
-
-  // 参加メンバーかの判定（早めに計算）
-  const isMember = useMemo(
-    () => !!(user && players.some((p) => p.id === user.uid)),
-    [user?.uid, players.map((p) => p.id).join(",")]
+  const uid = user?.uid || null;
+  const { room, players, onlineUids, onlinePlayers, loading, isHost, detachNow, leavingRef } = useRoomState(
+    roomId,
+    uid
   );
 
-  // presence（オンライン）
-  const { onlineUids, detachNow } = usePresence(
-    roomId,
-    user?.uid || null,
-    isMember
-  );
-
-  // サブスクライブ
-  useEffect(() => {
-    if (!firebaseEnabled) return;
-    const unsubRoom = onSnapshot(doc(db, "rooms", roomId), (snap) => {
-      if (!snap.exists()) {
-        setRoom(null);
-        return;
-      }
-      setRoom({ id: snap.id, ...(snap.data() as RoomDoc) });
-    });
-    const unsubPlayers = onSnapshot(
-      query(collection(db, "rooms", roomId, "players"), orderBy("uid", "asc")),
-      (snap) => {
-        const list: (PlayerDoc & { id: string })[] = [];
-        snap.forEach((d) =>
-          list.push({ id: d.id, ...(d.data() as PlayerDoc) })
-        );
-        setPlayers(list);
-        setLoading(false);
-      }
-    );
-    return () => {
-      unsubRoom();
-      unsubPlayers();
-    };
-  }, [roomId]);
-
-  // RTDB presence は usePresence に集約済み
-
-  // 自動参加（自分のプレイヤードキュメントが無ければ作成）
-  // ゲームが既に開始されている（waiting以外）の場合は、
-  // UI側のブロックを補完するためここでも作成を行わずロビーへリダイレクトする。
-  useEffect(() => {
-    if (!firebaseEnabled || !user || !room) return;
-    if (leavingRef.current) return; // 退出処理中は参加を作らない
-    (async () => {
-      const pRef = doc(db, "rooms", roomId, "players", user.uid);
-      const p = await getDoc(pRef);
-      if (!p.exists()) {
-        // If the room is not in waiting state and there are active players, block join
-        if (room.status && room.status !== "waiting" && activeCount > 0) {
-          try {
-            toaster.create({
-              title: "入室できません",
-              description:
-                "ホストが既にゲームを開始しています。リセットされるまでロビーに戻ります。",
-              type: "info",
-            });
-          } catch {}
-          // Redirect to lobby
-          router.push("/");
-          return;
-        }
-
-        const newPlayer: PlayerDoc = {
-          name: displayName || "匿名",
-          avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
-          number: null,
-          clue1: "",
-          ready: false,
-          orderIndex: 0,
-          uid: user.uid,
-          lastSeen: serverTimestamp(),
-        };
-        await setDoc(pRef, newPlayer);
-        // presence の開始は usePresence 側に委譲
-        await updateLastActive(roomId);
-        await sendMessage(roomId, "system", `${newPlayer.name} が参加しました`);
-        // 進行中に途中参加した場合、deal.playersやorder.totalを更新
-        try {
-          const roomRef = doc(db, "rooms", roomId);
-          const snap = await getDoc(roomRef);
-          const data: any = snap.data();
-          const currDeal = data?.deal || null;
-          const playersArr: string[] = Array.isArray(currDeal?.players)
-            ? (currDeal.players as string[])
-            : [];
-          if (!playersArr.includes(user.uid)) {
-            playersArr.push(user.uid);
-          }
-          const patch: any = {
-            deal: { ...(currDeal || {}), players: playersArr },
-          };
-          if (data?.status === "playing") {
-            const total =
-              typeof data?.order?.total === "number"
-                ? data.order.total + 1
-                : playersArr.length;
-            patch.order = { ...(data?.order || {}), total };
-          }
-          await updateDoc(roomRef, patch);
-        } catch {}
-      }
-      // 重複プレイヤーDocの自動クリーン（古い実装の残り）
-      const dupQ = query(
-        collection(db, "rooms", roomId, "players"),
-        where("uid", "==", user.uid)
-      );
-      const dupSnap = await getDocs(dupQ);
-      for (const d of dupSnap.docs) {
-        if (d.id !== user.uid) {
-          await deleteDoc(doc(db, "rooms", roomId, "players", d.id));
-        }
-      }
-    })();
-  }, [
-    user?.uid,
-    displayName,
-    roomId,
-    room?.status,
-    Array.isArray(onlineUids) ? onlineUids.join(",") : "",
-    activeCount,
-  ]);
-
-  const meId = user?.uid || "";
+  const meId = uid || "";
   const me = players.find((p) => p.id === meId);
-  const isHost = !!(room && user && room.hostId === user.uid);
-  // const isAllReady = players.length > 0 && players.every((p) => p.ready);
 
-  // deal.players と seed に基づき、各自が自分の番号を設定（重複なし）
+  // 入室ガード: 自分がメンバーでないかつ待機中でない場合はロビーへ戻す
+  const isMember = !!(uid && players.some((p) => p.id === uid));
   useEffect(() => {
-    if (!room || (room.status !== "clue" && room.status !== "playing")) return;
-    if (!user) return;
-    const deal: any = room.deal;
-    if (!deal || !deal.seed) return;
-    const my = players.find((p) => p.id === user.uid);
-    if (!my) return;
-    const meRef = doc(db, "rooms", roomId, "players", user.uid);
-    const min = deal.min || 1;
-    const max = deal.max || 100;
-    if (room.status === "clue") {
-      if (!Array.isArray(deal.players)) return;
-      const idx = (deal.players as string[]).indexOf(user.uid);
-      if (idx < 0) return; // 今回の配布対象外（途中参加など）
-      const nums = generateDeterministicNumbers(
-        deal.players.length,
-        min,
-        max,
-        deal.seed
-      );
-      const myNum = nums[idx];
-      if (my.number !== myNum) {
-        updateDoc(meRef, {
-          number: myNum,
-          clue1: my.clue1 || "",
-          ready: false,
-          orderIndex: 0,
-        }).catch(() => void 0);
-      }
-    } else if (room.status === "playing") {
-      // 途中参加: 既存プレイヤーの数字は保持し、空き番号から自分の番号を決める
-      if (typeof my.number === "number") return;
-      const used = new Set<number>();
-      players.forEach((p) => {
-        if (typeof p.number === "number") used.add(p.number);
-      });
-      const available: number[] = [];
-      for (let n = min; n <= max; n++) if (!used.has(n)) available.push(n);
-      if (available.length === 0) return;
-      const h = hashString(String(deal.seed) + ":" + user.uid);
-      const pick = available[h % available.length];
-      updateDoc(meRef, {
-        number: pick,
-        clue1: my.clue1 || "",
-        ready: false,
-        orderIndex: 0,
-      }).catch(() => void 0);
+    if (!room || !uid) return;
+    if (!isMember && room.status !== "waiting") {
+      try {
+        toaster.create({
+          title: "入室できません",
+          description: "ゲーム進行中です。ホストがリセットすると入室可能になります。",
+          type: "info",
+        });
+      } catch {}
+      router.replace("/");
     }
-  }, [
-    room?.deal?.seed,
-    room?.deal && (room?.deal as any)?.players?.join(","),
-    room?.status,
-    user?.uid,
-    players.map((p) => p.id + ":" + (p.number ?? "")).join(","),
-  ]);
+  }, [room?.status, uid, isMember]);
 
-  const presenceOn = presenceSupported();
-  const onlinePlayers = useMemo(() => {
-    if (presenceOn) {
-      if (!Array.isArray(onlineUids)) return players; // presence未到着
-      const set = new Set(onlineUids);
-      return players.filter((p) => set.has(p.id)); // [] -> 空
-    }
-    const now = Date.now();
-    return players.filter((p) =>
-      isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
-    );
-  }, [presenceOn, players, onlineUids]);
+  // 数字配布後（またはplayingで未割当の場合）、自分の番号を割当（決定的）
+  useEffect(() => {
+    if (!room || !uid) return;
+    if (!room.deal || !room.deal.seed) return;
+    // clue/playing の両方に対して安全に割当
+    assignNumberIfNeeded(roomId, uid).catch(() => void 0);
+  }, [room?.deal?.seed, room?.status, uid]);
 
   const allNumbersDealt =
     !!room?.topic &&
@@ -324,34 +94,34 @@ export default function RoomPage() {
   // ラウンドが進んだら自分のreadyをリセット
   const [seenRound, setSeenRound] = useState<number>(0);
   useEffect(() => {
-    if (!room || !user) return;
+    if (!room || !uid) return;
     const r = room.round || 0;
     if (r !== seenRound) {
       setSeenRound(r);
-      const meRef = doc(db, "rooms", roomId, "players", user.uid);
+      const meRef = doc(db, "rooms", roomId, "players", uid);
       updateDoc(meRef, { ready: false }).catch(() => void 0);
     }
-  }, [room?.round, user?.uid]);
+  }, [room?.round, uid]);
 
   // プレゼンス: ハートビートでlastSeen更新（presence未対応環境のみ）
   useEffect(() => {
-    if (!user) return;
+    if (!uid) return;
     if (presenceSupported()) return;
-    const tick = () => updateLastSeen(roomId, user.uid).catch(() => void 0);
+    const tick = () => updateLastSeen(roomId, uid).catch(() => void 0);
     const id = setInterval(tick, 15000);
     tick();
     return () => clearInterval(id);
-  }, [user?.uid, roomId]);
+  }, [uid, roomId]);
 
   // waitingに戻ったら自分のフィールドを初期化
   useEffect(() => {
-    if (!room || room.status !== "waiting" || !user) return;
-    const me = players.find((p) => p.id === user.uid);
+    if (!room || room.status !== "waiting" || !uid) return;
+    const me = players.find((p) => p.id === uid);
     if (!me) return;
     if (me.number !== null || me.clue1 || me.ready || me.orderIndex !== 0) {
-      resetPlayerState(roomId, user.uid).catch(() => void 0);
+      resetPlayerState(roomId, uid).catch(() => void 0);
     }
-  }, [room?.status, user?.uid]);
+  }, [room?.status, uid]);
 
   const startGame = async () => {
     try {
@@ -399,26 +169,26 @@ export default function RoomPage() {
 
   // 表示名が変わったら、入室中の自分のプレイヤーDocにも反映
   useEffect(() => {
-    if (!user) return;
+    if (!uid) return;
     if (displayName) {
       setPlayerNameAvatar(
         roomId,
-        user.uid,
+        uid,
         displayName,
         randomAvatar(displayName)
       ).catch(() => void 0);
     }
-  }, [displayName, user?.uid, roomId]);
+  }, [displayName, uid, roomId]);
 
   const leaveRoom = async () => {
-    if (!user) return;
+    if (!uid) return;
     try {
       leavingRef.current = true;
       // presence detach（即時反映）
       try {
         await detachNow();
       } catch {}
-      await leaveRoomAction(roomId, user.uid, displayName);
+      await leaveRoomAction(roomId, uid, displayName);
     } catch {}
   };
 
@@ -426,21 +196,21 @@ export default function RoomPage() {
 
   useEffect(() => {
     const handler = () => {
-      if (!user) return;
+      if (!uid) return;
       leavingRef.current = true;
       const run = async () => {
         try {
           try {
             await detachNow();
           } catch {}
-          const others = players.filter((p) => p.id !== user.uid);
-          if (room && room.hostId === user.uid && others.length > 0) {
+          const others = players.filter((p) => p.id !== uid);
+          if (room && room.hostId === uid && others.length > 0) {
             await updateDoc(doc(db, "rooms", roomId), { hostId: others[0].id });
           }
           // 自分の重複Docも含めて削除
           const dupQ = query(
             collection(db, "rooms", roomId, "players"),
-            where("uid", "==", user.uid)
+            where("uid", "==", uid)
           );
           const dupSnap = await getDocs(dupQ);
           await Promise.all(
@@ -457,13 +227,13 @@ export default function RoomPage() {
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [user?.uid, roomId, players.map((p) => p.id).join(","), room?.hostId]);
+  }, [uid, roomId, players.map((p) => p.id).join(","), room?.hostId]);
 
   // ルームページのアンマウント時にもベストエフォートで退室処理
   useEffect(() => {
     return () => {
-      const uid = user?.uid;
-      if (!uid) return;
+      const my = uid;
+      if (!my) return;
       leavingRef.current = true;
       const cleanup = async () => {
         try {
@@ -472,7 +242,7 @@ export default function RoomPage() {
           } catch {}
           const dupQ = query(
             collection(db, "rooms", roomId, "players"),
-            where("uid", "==", uid)
+            where("uid", "==", my)
           );
           const dupSnap = await getDocs(dupQ);
           await Promise.all(
@@ -487,7 +257,7 @@ export default function RoomPage() {
       };
       cleanup();
     };
-  }, [user?.uid, roomId]);
+  }, [uid, roomId]);
 
   // isMember は上で算出済み
 
@@ -589,7 +359,7 @@ export default function RoomPage() {
             overflowY="auto"
             maxH="100%"
           >
-            <Panel title="参加者">
+            <Panel title={`参加者人数: ${onlinePlayers.length}/${players.length}`}>
               <PlayerList
                 players={onlinePlayers}
                 online={onlineUids}

@@ -3,6 +3,8 @@ import { db } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
 
+const ROOM_TTL_MS = 60 * 60 * 1000; // 60分後に自動削除させたい場合の目安
+
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db, "rooms", roomId), { options });
 }
@@ -52,6 +54,18 @@ export async function leaveRoom(roomId: string, userId: string, displayName: str
     text: `${displayName || "匿名"} が退出しました`,
     createdAt: serverTimestamp(),
   });
+
+  // 残り参加者がいなければソフトクローズ
+  const afterSnap = await getDocs(collection(db, "rooms", roomId, "players"));
+  const remaining = afterSnap.size;
+  if (remaining === 0) {
+    const expires = new Date(Date.now() + ROOM_TTL_MS);
+    await updateDoc(doc(db, "rooms", roomId), {
+      closedAt: serverTimestamp(),
+      expiresAt: expires,
+      lastActiveAt: serverTimestamp(),
+    });
+  }
 }
 
 export async function resetRoomToWaiting(roomId: string) {
@@ -64,5 +78,7 @@ export async function resetRoomToWaiting(roomId: string) {
     topic: null,
     topicOptions: null,
     topicBox: null,
+    closedAt: null,
+    expiresAt: null,
   });
 }

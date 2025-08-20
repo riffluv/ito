@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST="{\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\":{\"id\":\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\",\"files\":[]}}"

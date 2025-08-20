@@ -10,10 +10,12 @@ export function CluePanel({
   roomId,
   me,
   label = "連想ワード",
+  readOnly = false,
 }: {
   roomId: string;
   me: PlayerDoc & { id: string };
   label?: string;
+  readOnly?: boolean;
 }) {
   const [text, setText] = useState<string>(me?.clue1 || "");
   useEffect(() => setText(me?.clue1 || ""), [me?.clue1]);
@@ -24,6 +26,7 @@ export function CluePanel({
       toaster.create({ title: `${label}を入力してください`, type: "warning" });
       return;
     }
+    if (readOnly) return;
     await updateClue1(roomId, me.id, value);
     toaster.create({ title: `${label}を更新しました`, type: "success" });
   };
@@ -59,8 +62,9 @@ export function CluePanel({
                 submit();
               }
             }}
+            disabled={readOnly}
           />
-          <Button onClick={submit} colorPalette="orange">
+          <Button onClick={submit} colorPalette="orange" disabled={readOnly}>
             更新
           </Button>
         </HStack>
