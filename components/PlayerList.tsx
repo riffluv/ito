@@ -102,12 +102,7 @@ export function PlayerList({
                 )}
               </HStack>
             </HStack>
-            <Box
-              mt={2}
-              pt={2}
-              borderTopWidth="1px"
-              borderColor="borderDefault"
-            >
+            <Box mt={2} pt={2} borderTopWidth="1px" borderColor="borderDefault">
               <Text
                 fontSize="sm"
                 color="fgMuted"
