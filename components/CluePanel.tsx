@@ -1,16 +1,9 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
+import { toaster } from "@/components/ui/toaster";
 import { updateClue1 } from "@/lib/firebase/players";
 import type { PlayerDoc } from "@/lib/types";
-import {
-  Button,
-  Heading,
-  HStack,
-  Input,
-  Stack,
-  Text,
-  useToast,
-} from "@chakra-ui/react";
+import { Button, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 
 export function CluePanel({
@@ -22,23 +15,22 @@ export function CluePanel({
   me: PlayerDoc & { id: string };
   label?: string;
 }) {
-  const toast = useToast();
   const [text, setText] = useState<string>(me?.clue1 || "");
   useEffect(() => setText(me?.clue1 || ""), [me?.clue1]);
 
   const submit = async () => {
     const value = text.trim();
     if (!value) {
-      toast({ title: `${label}を入力してください`, status: "warning" });
+      toaster.create({ title: `${label}を入力してください`, type: "warning" });
       return;
     }
     await updateClue1(roomId, me.id, value);
-    toast({ title: `${label}を更新しました`, status: "success" });
+    toaster.create({ title: `${label}を更新しました`, type: "success" });
   };
 
   return (
     <Panel title={label}>
-      <Stack spacing={3}>
+      <Stack gap={3}>
         <div
           style={
             {
@@ -68,7 +60,7 @@ export function CluePanel({
               }
             }}
           />
-          <Button onClick={submit} colorScheme="orange">
+          <Button onClick={submit} colorPalette="orange">
             更新
           </Button>
         </HStack>

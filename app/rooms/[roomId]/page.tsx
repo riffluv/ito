@@ -22,7 +22,7 @@ import {
   setRoomOptions,
   updateLastActive,
 } from "@/lib/firebase/rooms";
-import { generateDeterministicNumbers } from "@/lib/game/random";
+import { generateDeterministicNumbers, hashString } from "@/lib/game/random";
 import {
   continueAfterFail as continueAfterFailAction,
   startGame as startGameAction,
@@ -33,6 +33,7 @@ import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
 // お題候補の提示はTopicDisplayで実施
 import { Hud } from "@/components/Hud";
 import { SortBoard } from "@/components/SortBoard";
+import { toaster } from "@/components/ui/toaster";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import {
@@ -44,7 +45,6 @@ import {
   Spinner,
   Stack,
   Text,
-  useToast,
 } from "@chakra-ui/react";
 import {
   collection,
@@ -67,7 +67,6 @@ export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params.roomId;
   const { user, displayName } = useAuth();
-  const toast = useToast();
   const router = useRouter();
   const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
@@ -134,20 +133,14 @@ export default function RoomPage() {
 
   // RTDB presence は usePresence に集約済み
 
-  // 自動参加（自分のプレイヤードキュメントが無ければ作成）
+  // 自動参加（自分のプレイヤードキュメントが無ければ作成）: 途中参加OK
   useEffect(() => {
     if (!firebaseEnabled || !user || !room) return;
     if (leavingRef.current) return; // 退出処理中は参加を作らない
     (async () => {
       const pRef = doc(db, "rooms", roomId, "players", user.uid);
       const p = await getDoc(pRef);
-      // 途中参加は不可: waiting 以外では新規作成しない
       if (!p.exists()) {
-        // 例外: アクティブな参加者がいない場合は再開用に参加を許可（presence/lastSeen併用）
-        const hasActiveMembers =
-          (Array.isArray(onlineUids) && onlineUids.length > 0) ||
-          activeCount > 0;
-        if (room.status !== "waiting" && hasActiveMembers) return;
         const newPlayer: PlayerDoc = {
           name: displayName || "匿名",
           avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
@@ -162,21 +155,30 @@ export default function RoomPage() {
         // presence の開始は usePresence 側に委譲
         await updateLastActive(roomId);
         await sendMessage(roomId, "system", `${newPlayer.name} が参加しました`);
-        // アクティブ参加者ゼロからの参加なら部屋を待機に戻す
-        if (!hasActiveMembers && room.status !== "waiting") {
-          try {
-            await updateDoc(doc(db, "rooms", roomId), {
-              status: "waiting",
-              result: null,
-              deal: null,
-              order: null,
-              round: 0,
-              topic: null,
-              topicOptions: null,
-              topicBox: null,
-            });
-          } catch {}
-        }
+        // 進行中に途中参加した場合、deal.playersやorder.totalを更新
+        try {
+          const roomRef = doc(db, "rooms", roomId);
+          const snap = await getDoc(roomRef);
+          const data: any = snap.data();
+          const currDeal = data?.deal || null;
+          const playersArr: string[] = Array.isArray(currDeal?.players)
+            ? (currDeal.players as string[])
+            : [];
+          if (!playersArr.includes(user.uid)) {
+            playersArr.push(user.uid);
+          }
+          const patch: any = {
+            deal: { ...(currDeal || {}), players: playersArr },
+          };
+          if (data?.status === "playing") {
+            const total =
+              typeof data?.order?.total === "number"
+                ? data.order.total + 1
+                : playersArr.length;
+            patch.order = { ...(data?.order || {}), total };
+          }
+          await updateDoc(roomRef, patch);
+        } catch {}
       }
       // 重複プレイヤーDocの自動クリーン（古い実装の残り）
       const dupQ = query(
@@ -202,29 +204,52 @@ export default function RoomPage() {
   const meId = user?.uid || "";
   const me = players.find((p) => p.id === meId);
   const isHost = !!(room && user && room.hostId === user.uid);
-  const isAllReady = players.length > 0 && players.every((p) => p.ready);
+  // const isAllReady = players.length > 0 && players.every((p) => p.ready);
 
   // deal.players と seed に基づき、各自が自分の番号を設定（重複なし）
   useEffect(() => {
-    if (!room || room.status !== "clue") return;
+    if (!room || (room.status !== "clue" && room.status !== "playing")) return;
     if (!user) return;
     const deal: any = room.deal;
-    if (!deal || !Array.isArray(deal.players) || !deal.seed) return;
-    const meRef = doc(db, "rooms", roomId, "players", user.uid);
-    const idx = (deal.players as string[]).indexOf(user.uid);
-    if (idx < 0) return; // 今回の配布対象外（途中参加など）
+    if (!deal || !deal.seed) return;
     const my = players.find((p) => p.id === user.uid);
     if (!my) return;
-    const nums = generateDeterministicNumbers(
-      deal.players.length,
-      deal.min || 1,
-      deal.max || 100,
-      deal.seed
-    );
-    const myNum = nums[idx];
-    if (my.number !== myNum) {
+    const meRef = doc(db, "rooms", roomId, "players", user.uid);
+    const min = deal.min || 1;
+    const max = deal.max || 100;
+    if (room.status === "clue") {
+      if (!Array.isArray(deal.players)) return;
+      const idx = (deal.players as string[]).indexOf(user.uid);
+      if (idx < 0) return; // 今回の配布対象外（途中参加など）
+      const nums = generateDeterministicNumbers(
+        deal.players.length,
+        min,
+        max,
+        deal.seed
+      );
+      const myNum = nums[idx];
+      if (my.number !== myNum) {
+        updateDoc(meRef, {
+          number: myNum,
+          clue1: my.clue1 || "",
+          ready: false,
+          orderIndex: 0,
+        }).catch(() => void 0);
+      }
+    } else if (room.status === "playing") {
+      // 途中参加: 既存プレイヤーの数字は保持し、空き番号から自分の番号を決める
+      if (typeof my.number === "number") return;
+      const used = new Set<number>();
+      players.forEach((p) => {
+        if (typeof p.number === "number") used.add(p.number);
+      });
+      const available: number[] = [];
+      for (let n = min; n <= max; n++) if (!used.has(n)) available.push(n);
+      if (available.length === 0) return;
+      const h = hashString(String(deal.seed) + ":" + user.uid);
+      const pick = available[h % available.length];
       updateDoc(meRef, {
-        number: myNum,
+        number: pick,
         clue1: my.clue1 || "",
         ready: false,
         orderIndex: 0,
@@ -314,24 +339,24 @@ export default function RoomPage() {
   const startGame = async () => {
     try {
       if (!room || !isHost) {
-        toast({ title: "ホストのみ開始できます", status: "warning" });
+        toaster.create({ title: "ホストのみ開始できます", type: "warning" });
         return;
       }
       if (onlinePlayers.length < 2) {
-        toast({ title: "プレイヤーは2人以上必要です", status: "info" });
+        toaster.create({ title: "プレイヤーは2人以上必要です", type: "info" });
         return;
       }
       await updateDoc(doc(db, "rooms", roomId), {
         round: (room.round || 0) + 1,
       });
       await startGameAction(roomId);
-      toast({ title: "ゲーム開始", status: "success" });
+      toaster.create({ title: "ゲーム開始", type: "success" });
     } catch (e: any) {
       console.error(e);
-      toast({
+      toaster.create({
         title: "ゲーム開始に失敗しました",
         description: e?.message || "権限またはFirestoreルールをご確認ください",
-        status: "error",
+        type: "error",
       });
     }
   };
@@ -454,7 +479,12 @@ export default function RoomPage() {
     Array.isArray(onlineUids) ? onlineUids : onlinePlayers.map((p) => p.id)
   );
   const baseIds = Array.isArray((room as any)?.deal?.players)
-    ? ((room as any).deal.players as string[])
+    ? Array.from(
+        new Set<string>([
+          ...(((room as any).deal.players as string[]) || []),
+          ...players.map((p) => p.id),
+        ])
+      )
     : players.map((p) => p.id);
   const eligibleIds = baseIds.filter((id) => onlineSet.has(id));
 
@@ -489,31 +519,7 @@ export default function RoomPage() {
       </Container>
     );
   }
-  if (
-    room.status !== "waiting" &&
-    !isMember &&
-    ((Array.isArray(onlineUids) && onlineUids.length > 0) || activeCount > 0)
-  ) {
-    return (
-      <Container
-        maxW="container.md"
-        h="100dvh"
-        py={3}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Panel title="入室できません">
-          <Stack>
-            <Text>この部屋は現在ゲーム進行中のため、途中参加できません。</Text>
-            <HStack>
-              <Button onClick={() => router.push("/")}>ロビーへ戻る</Button>
-            </HStack>
-          </Stack>
-        </Panel>
-      </Container>
-    );
-  }
+  // 途中参加OKのため、ブロック画面は表示しない
 
   return (
     <Container
@@ -590,7 +596,7 @@ export default function RoomPage() {
             </Panel>
 
             {isHost && room.status === "waiting" && (
-              <Button colorScheme="orange" onClick={startGame}>
+              <Button colorPalette="orange" onClick={startGame}>
                 ゲーム開始
               </Button>
             )}
@@ -622,7 +628,7 @@ export default function RoomPage() {
             )}
 
             {room.status === "clue" && me && (
-              <Stack spacing={4}>
+              <Stack gap={4}>
                 <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
                 <CluePanel roomId={roomId} me={me} />
                 {/* 並べ替えの事前提案（ドラッグ操作に慣れる） */}
@@ -640,9 +646,9 @@ export default function RoomPage() {
                 {isHost && (
                   <Stack>
                     <Button
-                      colorScheme="orange"
+                      colorPalette="orange"
                       onClick={() => startPlayingAction(roomId)}
-                      isDisabled={!canStartPlaying}
+                      disabled={!canStartPlaying}
                       title={startDisabledTitle}
                     >
                       順番出しを開始
@@ -662,7 +668,7 @@ export default function RoomPage() {
             )}
 
             {room.status === "finished" && (
-              <Stack spacing={4}>
+              <Stack gap={4}>
                 <Panel title="結果">
                   <Text
                     fontWeight="bold"
@@ -677,7 +683,7 @@ export default function RoomPage() {
                       <HStack mt={3}>
                         <Button
                           onClick={continueAfterFail}
-                          colorScheme="orange"
+                          colorPalette="orange"
                         >
                           続けて並べ替える
                         </Button>

@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Typecheck - tsserver",
+			"type": "shell",
+			"command": "node -v ; npm -v ; npm run -s typecheck || npm run -s build:types || echo done",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

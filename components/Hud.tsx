@@ -50,24 +50,30 @@ export function Hud({
   return (
     <Box layerStyle="hud" position="sticky" top={0} zIndex={10} px={3} py={2}>
       <HStack>
-        <HStack minW={0} spacing={3}>
-          <Text fontWeight="bold" noOfLines={1}>
+        <HStack minW={0} gap={3}>
+          <Text fontWeight="bold" lineClamp={1}>
             {roomName}
           </Text>
-          <Badge variant="subtle" colorScheme="gray" borderRadius="md" px={2}>
+          <Badge variant="subtle" colorPalette="gray" borderRadius="md" px={2}>
             {phaseLabel}
           </Badge>
         </HStack>
         <Spacer />
-        <HStack spacing={3} minW={{ base: 0, md: 300 }} flex={1} maxW={480}>
-          <HStack spacing={2}>
-            <AvatarGroup size="xs" max={3}>
+        <HStack gap={3} minW={{ base: 0, md: 300 }} flex={1} maxW={480}>
+          <HStack gap={2}>
+            <AvatarGroup size="xs">
               {/* 実アバターはサーバーデータ未連携のためダミー表示。将来、HUD props にアバター配列を追加して置換する */}
-              <Avatar name="A" />
-              <Avatar name="B" />
-              <Avatar name="C" />
+              <Avatar.Root size="xs">
+                <Avatar.Fallback name="A" />
+              </Avatar.Root>
+              <Avatar.Root size="xs">
+                <Avatar.Fallback name="B" />
+              </Avatar.Root>
+              <Avatar.Root size="xs">
+                <Avatar.Fallback name="C" />
+              </Avatar.Root>
             </AvatarGroup>
-            <Badge borderRadius="full" px={2} colorScheme="gray">
+            <Badge borderRadius="full" px={2} colorPalette="gray">
               +{Math.max(0, (totalCount || 0) - 3)}
             </Badge>
           </HStack>
@@ -76,28 +82,31 @@ export function Hud({
           </Text>
           <Box flex={1}>
             {typeof pct === "number" && (
-              <Progress
-                size="xs"
+              <Progress.Root
                 value={pct}
-                colorScheme="orange"
-                borderRadius="full"
-                bg="panelSubBg"
-              />
+                size="xs"
+                colorPalette="orange"
+                rounded="full"
+              >
+                <Progress.Track bg="panelSubBg">
+                  <Progress.Range />
+                </Progress.Track>
+              </Progress.Root>
             )}
           </Box>
         </HStack>
         <Spacer />
         {hostPrimary ? (
           <Button
-            colorScheme="orange"
+            colorPalette="orange"
             onClick={hostPrimary.onClick}
-            isDisabled={hostPrimary.disabled}
+            disabled={hostPrimary.disabled}
             title={hostPrimary.title}
           >
             {hostPrimary.label}
           </Button>
         ) : (
-          <Button variant="outline" isDisabled opacity={0.6}>
+          <Button variant="outline" disabled opacity={0.6}>
             操作不可
           </Button>
         )}

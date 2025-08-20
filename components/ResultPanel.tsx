@@ -1,7 +1,7 @@
 "use client";
-import { HStack, Stack, Text } from "@chakra-ui/react";
-import type { PlayerDoc } from "@/lib/types";
 import { Panel } from "@/components/ui/Panel";
+import type { PlayerDoc } from "@/lib/types";
+import { HStack, Stack, Text } from "@chakra-ui/react";
 
 export function ResultPanel({
   players,
@@ -24,10 +24,27 @@ export function ResultPanel({
         ) : (
           <Stack>
             {played.map((p, idx) => (
-              <HStack key={p.id} justify="space-between" p={2} borderWidth="1px" rounded="md">
-                <Text>#{idx + 1} {p.name}</Text>
-                <Text color="gray.200" flex={1} textAlign="center" noOfLines={1}>連想: {p.clue1 || "（未設定）"}</Text>
-                <Text fontWeight="bold" color="yellow.300">{p.number ?? "?"}</Text>
+              <HStack
+                key={p.id}
+                justify="space-between"
+                p={2}
+                borderWidth="1px"
+                rounded="md"
+              >
+                <Text>
+                  #{idx + 1} {p.name}
+                </Text>
+                <Text
+                  color="gray.200"
+                  flex={1}
+                  textAlign="center"
+                  lineClamp={1}
+                >
+                  連想: {p.clue1 || "（未設定）"}
+                </Text>
+                <Text fontWeight="bold" color="yellow.300">
+                  {p.number ?? "?"}
+                </Text>
               </HStack>
             ))}
           </Stack>
@@ -36,4 +53,3 @@ export function ResultPanel({
     </Panel>
   );
 }
-

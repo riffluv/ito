@@ -1,8 +1,9 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
+import { toaster } from "@/components/ui/toaster";
 import { playCard } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
-import { Button, HStack, Stack, Text, useToast } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
 export function PlayBoard({
@@ -24,7 +25,6 @@ export function PlayBoard({
   failedAt?: number | null;
   eligibleIds: string[];
 }) {
-  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
 
   const me = players.find((p) => p.id === meId);
@@ -56,10 +56,10 @@ export function PlayBoard({
     try {
       await playCard(roomId, meId);
     } catch (e: any) {
-      toast({
+      toaster.create({
         title: "出せませんでした",
         description: e?.message,
-        status: "error",
+        type: "error",
       });
     } finally {
       setSubmitting(false);
@@ -124,14 +124,14 @@ export function PlayBoard({
                   {p.id === meId ? (
                     <Button
                       onClick={onPlay}
-                      colorScheme="orange"
-                      isLoading={submitting}
-                      isDisabled={!canPlay}
+                      colorPalette="orange"
+                      loading={submitting}
+                      disabled={!canPlay}
                     >
                       出す
                     </Button>
                   ) : (
-                    <Button variant="outline" isDisabled>
+                    <Button variant="outline" disabled>
                       出す
                     </Button>
                   )}

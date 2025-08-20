@@ -62,7 +62,7 @@ export function ChatPanel({
   return (
     <Panel p={2} h={height} display="flex" flexDir="column">
       <Box flex="1" overflowY="auto" p={2}>
-        <Stack spacing={2}>
+        <Stack gap={2}>
           {messages.map((m) => {
             const isSystem = m.sender === "system";
             const isMe = m.sender === (displayName || "匿名");
@@ -77,7 +77,7 @@ export function ChatPanel({
                 <Box maxW="82%">
                   {isSystem ? (
                     <HStack opacity={0.9} justify="center">
-                      <Badge variant="subtle" colorScheme="gray">
+                      <Badge variant="subtle" colorPalette="gray">
                         system
                       </Badge>
                       <Text fontSize="sm" color="fgMuted">
@@ -85,7 +85,7 @@ export function ChatPanel({
                       </Text>
                     </HStack>
                   ) : (
-                    <Stack spacing={1} align={isMe ? "flex-end" : "flex-start"}>
+                    <Stack gap={1} align={isMe ? "flex-end" : "flex-start"}>
                       <Text fontSize="xs" color="fgMuted">
                         {m.sender}
                       </Text>
@@ -117,7 +117,7 @@ export function ChatPanel({
             if (e.key === "Enter") send();
           }}
         />
-        <Button onClick={send} colorScheme="orange">
+        <Button onClick={send} colorPalette="orange">
           送信
         </Button>
       </HStack>

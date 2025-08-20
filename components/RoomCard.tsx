@@ -30,7 +30,8 @@ export function RoomCard({
           </Text>
         </HStack>
         <Button
-          variant="brand"
+          colorPalette="brand"
+          variant="solid"
           onClick={onJoin}
           aria-label={`${name}に参加`}
         >
