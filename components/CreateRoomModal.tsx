@@ -13,6 +13,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 // お題候補は部屋作成後に選択（TopicDisplay側で処理）
 
 export function CreateRoomModal({
@@ -25,6 +26,7 @@ export function CreateRoomModal({
   onCreated?: (roomId: string) => void;
 }) {
   const { user, displayName, loading } = useAuth() as any;
+  const router = useRouter();
   const [name, setName] = useState("");
   const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -58,6 +60,8 @@ export function CreateRoomModal({
         status: "waiting",
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
+        closedAt: null,
+        expiresAt: null,
         topic: null,
         topicOptions: null,
         topicBox: null,
@@ -77,6 +81,11 @@ export function CreateRoomModal({
       };
       await setDoc(doc(db, "rooms", roomRef.id, "players", user.uid), pdoc);
       onClose();
+      try {
+        (window as any).requestIdleCallback?.(() => {
+          try { (router as any)?.prefetch?.(`/rooms/${roomRef.id}`); } catch {}
+        });
+      } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
       toaster.create({

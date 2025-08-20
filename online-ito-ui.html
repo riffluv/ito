@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>on-lineito — Game UI Mock</title>
+  <style>
+    /* -------------------------------
+       Modern Dark UI (Chakra-inspired)
+       Single-file HTML + CSS + JS
+       ------------------------------- */
+    :root{
+      --bg: #0e1116;
+      --bg-elev: #131822;
+      --surface: #171c26;
+      --surface-2: #1b2230;
+      --border: #232b3a;
+      --text: #e6edf3;
+      --muted: #9aa7b2;
+      --accent: #2fc0a0;  /* teal-ish (Chakra vibe) */
+      --accent-2: #319795;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-lg: 22px;
+      --ring: 0 0 0 3px rgba(47,192,160,.35);
+    }
+
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; background:var(--bg); color:var(--text); margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", sans-serif; }
+
+    /* Subtle hero gradient */
+    body::before{
+      content:"";
+      position:fixed; inset:-20vmax -20vmax auto auto;
+      width:60vmax; height:60vmax; pointer-events:none;
+      background: radial-gradient(closest-side at 65% 40%, rgba(49,151,149,.18), transparent 60%),
+                  radial-gradient(closest-side at 30% 60%, rgba(79,209,197,.12), transparent 60%);
+      filter: blur(40px);
+      z-index:-1;
+    }
+
+    a{ color:var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    /* Header */
+    header{
+      position: sticky; top:0; z-index: 20;
+      backdrop-filter: saturate(1.2) blur(6px);
+      background: linear-gradient(180deg, rgba(18,22,30,.9), rgba(18,22,30,.75));
+      border-bottom:1px solid var(--border);
+    }
+    .header-inner{
+      max-width: 1200px; margin:0 auto; padding:16px 20px;
+      display:flex; align-items:center; justify-content:flex-start; gap:12px;
+    }
+    .brand{
+      font-size: 18px; font-weight: 700; letter-spacing:.3px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand-dot{
+      width:10px; height:10px; border-radius:999px; background:var(--accent);
+      box-shadow:0 0 16px rgba(47,192,160,.8), 0 0 40px rgba(47,192,160,.4);
+    }
+
+    /* Layout */
+    .container{
+      max-width: 1200px; margin: 28px auto 64px; padding: 0 20px;
+      display:grid; grid-template-columns: 280px 1fr 320px; gap: 20px;
+    }
+    @media (max-width: 1080px){
+      .container{ grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card{
+      background: linear-gradient(180deg, var(--surface), var(--surface-2));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-header{
+      padding: 14px 16px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .card-title{ font-weight:700; }
+    .card-body{ padding: 16px; }
+    .muted{ color: var(--muted); }
+
+    /* Section Titles */
+    .section-title{ font-weight:700; margin: 0 0 10px; }
+
+    /* Participants */
+    .pill{
+      font-size:12px; color:#c7d1d8; background:#0f131a; border:1px solid var(--border);
+      padding:3px 8px; border-radius:999px;
+    }
+    .user{
+      display:grid; grid-template-columns: 44px 1fr auto; gap:12px; align-items:center;
+      padding:12px; border:1px solid var(--border); border-radius: var(--radius-sm);
+      background: #141b25;
+    }
+    .user + .user{ margin-top:10px; }
+    .avatar{
+      width:44px; height:44px; border-radius:50%;
+      display:grid; place-items:center; font-weight:700;
+      background: linear-gradient(135deg, rgba(47,192,160,.2), rgba(47,192,160,.05));
+      border:1px solid var(--border);
+    }
+    .user-name{ font-weight:700; }
+    .user-status{ font-size:12px; color:#c9d4dc; }
+    .mini-pill{ font-size:12px; padding:2px 6px; border-radius:999px; background:#0f131a; border:1px solid var(--border); }
+
+    /* Options */
+    .option-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .toggle{
+      inline-size: 52px; block-size: 28px; border-radius:999px; background:#0f131a;
+      border:1px solid var(--border); position:relative; cursor:pointer; transition:.25s ease;
+    }
+    .toggle::after{
+      content:""; position:absolute; inset:3px auto 3px 3px; width:22px; border-radius:999px;
+      background:#263246; transition:.25s ease;
+      box-shadow: 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(0,0,0,.4);
+    }
+    .toggle[data-on="true"]{ background: rgba(47,192,160,.25); border-color: rgba(47,192,160,.8); box-shadow: inset 0 0 0 1px rgba(47,192,160,.25); }
+    .toggle[data-on="true"]::after{ inset:3px 3px 3px auto; background:#2fc0a0; }
+
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#141b25; color:var(--text);
+      padding:10px 14px; border-radius: 12px; cursor:pointer; font-weight:600; letter-spacing:.2px;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .btn:hover{ background:#172030; border-color:#2a3447; }
+    .btn:active{ transform: translateY(1px); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; }
+
+    .btn-ghost{ background: transparent; }
+    .btn-primary{
+      background: linear-gradient(180deg, #2fc0a0, #2aa68c);
+      border-color: transparent; color:#06110f; text-shadow:0 1px 0 rgba(255,255,255,.25);
+      box-shadow: 0 8px 20px rgba(47,192,160,.26);
+    }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-danger{ background: linear-gradient(180deg, #ef4444, #d93636); border-color: transparent; }
+
+    /* Center column */
+    .segmented{
+      display:flex; gap:10px; flex-wrap: wrap;
+      background:#0f131a; border:1px solid var(--border); border-radius:12px; padding:6px;
+    }
+    .segmented .seg{
+      padding:8px 12px; border-radius:10px; border:1px solid transparent; cursor:pointer;
+      color:var(--muted); background:transparent; font-weight:600;
+      transition: background .2s ease, color .2s ease, border .2s ease;
+    }
+    .segmented .seg.active{
+      background: linear-gradient(180deg, rgba(47,192,160,.22), rgba(47,192,160,.08));
+      color:var(--text); border-color: rgba(47,192,160,.35);
+      box-shadow: inset 0 0 0 1px rgba(47,192,160,.15);
+    }
+    .field{ display:flex; gap:10px; align-items:center; }
+    .input, textarea{
+      flex:1; background:#0f131a; border:1px solid var(--border); color:var(--text);
+      padding:12px 12px; border-radius:12px; outline:none; transition: box-shadow .2s, border .2s;
+      min-width:0;
+    }
+    .input:focus, textarea:focus{ box-shadow: var(--ring); border-color: rgba(47,192,160,.5); }
+    .hint{ margin-top:10px; color:var(--muted); font-size: 14px; }
+
+    .big-primary{
+      width:100%; margin-top:14px; padding:14px 16px; font-size:16px;
+    }
+
+    /* Chat (right column) */
+    .chat-feed{
+      display:flex; flex-direction:column; gap:10px; max-height:360px; overflow:auto;
+      padding-right:4px;
+    }
+    .bubble{
+      background:#121927; border:1px solid var(--border); padding:10px 12px; border-radius:12px; width:max-content; max-width:100%;
+    }
+    .bubble.me{ background: rgba(47,192,160,.12); border-color: rgba(47,192,160,.35); margin-left:auto; }
+    .chat-input{ display:flex; gap:10px; }
+
+    /* Footer strip */
+    .strip{
+      margin-top:10px; border-top:1px solid var(--border); padding-top:12px; font-size:14px; color: var(--muted);
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed; left:50%; bottom:24px; transform: translateX(-50%) translateY(20px);
+      background:#111723; border:1px solid var(--border); color:var(--text);
+      padding:12px 16px; border-radius:12px; box-shadow: var(--shadow); opacity:0; pointer-events:none;
+      transition: .3s ease;
+    }
+    .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+    /* Tiny helpers */
+    .row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .grow{ flex:1; }
+    .space{ height:12px; }
+
+  </style>
+</head>
+<body>
+  <!-- Header (ONLY brand text as requested) -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        on-lineito
+      </div>
+    </div>
+  </header>
+
+  <main class="container" aria-label="game ui">
+    <!-- LEFT: Participants & Options -->
+    <section class="card" id="panel-left">
+      <div class="card-header">
+        <div class="row">
+          <h2 class="card-title">参加者</h2>
+          <span class="pill">未入力</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- user item -->
+        <div class="user">
+          <div class="avatar">9</div>
+          <div>
+            <div class="row" style="justify-content:space-between">
+              <div class="user-name">9999sfsfs</div>
+            </div>
+            <div class="user-status muted">連想ワード:（未設定）</div>
+          </div>
+          <span class="mini-pill">未入力</span>
+        </div>
+
+        <div class="user">
+          <div class="avatar">匿名</div>
+          <div>
+            <div class="user-name">匿名</div>
+            <div class="user-status muted">連想ワード:（未設定）</div>
+          </div>
+          <span class="mini-pill">未入力</span>
+        </div>
+
+        <div class="space"></div>
+        <h3 class="section-title">オプション</h3>
+        <div class="option-row">
+          <div>
+            <div>失敗後に残りを公開</div>
+            <div class="muted" style="font-size:12px">（全員に公開）</div>
+          </div>
+          <div role="switch" aria-checked="false" tabindex="0" class="toggle" id="opt-reveal"></div>
+        </div>
+
+        <div class="space"></div>
+        <button class="btn btn-ghost" id="btn-reset">リセット</button>
+      </div>
+    </section>
+
+    <!-- CENTER: Topic & Word -->
+    <section class="card" id="panel-center">
+      <div class="card-header">
+        <h2 class="card-title">お題</h2>
+      </div>
+      <div class="card-body">
+        <div class="muted" style="margin-bottom:8px">カテゴリを選択（ホストのみ）</div>
+        <div class="segmented" role="tablist" aria-label="カテゴリ">
+          <button class="seg active" role="tab" aria-selected="true">通常版</button>
+          <button class="seg" role="tab" aria-selected="false">レインボー版</button>
+          <button class="seg" role="tab" aria-selected="false">クラシック版</button>
+        </div>
+
+        <div class="space"></div>
+        <h3 class="section-title">連想ワード</h3>
+        <div class="muted" style="margin-bottom:6px">あなたの数字（自分にだけ表示）</div>
+        <div class="field">
+          <input class="input" id="my-number" value="？" aria-label="あなたの数字" />
+          <button class="btn" id="btn-update">更新</button>
+        </div>
+        <div class="hint">連想ワードは全員に表示されます。チャットで相談しながら自由に変更できます。</div>
+
+        <button class="btn btn-primary big-primary" id="btn-start">順番出しを開始</button>
+
+        <div class="strip">未準備のプレイヤー: <span id="unready">匿名, 9999sfsfs</span></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Chat -->
+    <section class="card" id="panel-right">
+      <div class="card-header">
+        <h2 class="card-title">チャット</h2>
+      </div>
+      <div class="card-body">
+        <div class="chat-feed" id="feed" aria-live="polite">
+          <div class="bubble">部屋に参加しました。</div>
+          <div class="bubble me">よろしく！</div>
+        </div>
+
+        <div class="space"></div>
+        <div class="chat-input">
+          <input class="input" id="chat-input" placeholder="メッセージを入力" />
+          <button class="btn" id="chat-send">送信</button>
+        </div>
+
+        <div class="strip"><a href="#" id="leave">退出してロビーへ</a></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ----------------------------
+    // Small interactive behaviors
+    // ----------------------------
+
+    // Segmented control
+    const segs = document.querySelectorAll('.segmented .seg');
+    segs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        segs.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-selected', 'true');
+        showToast('カテゴリ: ' + btn.textContent.trim());
+      });
+    });
+
+    // Toggle switch
+    const reveal = document.getElementById('opt-reveal');
+    const toggle = () => {
+      const on = reveal.getAttribute('data-on') === 'true';
+      reveal.setAttribute('data-on', String(!on));
+      reveal.setAttribute('aria-checked', String(!on));
+      showToast(!on ? '「失敗後に残りを公開」をON' : '「失敗後に残りを公開」をOFF');
+    };
+    reveal.addEventListener('click', toggle);
+    reveal.addEventListener('keydown', e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle()));
+
+    // Update number
+    document.getElementById('btn-update').addEventListener('click', () => {
+      const input = document.getElementById('my-number');
+      input.value = input.value || '？';
+      showToast('あなたの数字を更新: ' + input.value);
+    });
+
+    // Start ordering
+    document.getElementById('btn-start').addEventListener('click', () => {
+      showToast('順番出しを開始しました');
+    });
+
+    // Reset
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      document.getElementById('my-number').value = '？';
+      reveal.setAttribute('data-on', 'false');
+      reveal.setAttribute('aria-checked', 'false');
+      segs.forEach((b,i)=>{ b.classList.toggle('active', i===0); b.setAttribute('aria-selected', i===0 ? 'true':'false'); });
+      showToast('設定をリセットしました');
+    });
+
+    // Chat
+    const feed = document.getElementById('feed');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+    const send = () => {
+      const msg = input.value.trim();
+      if(!msg) return;
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble me';
+      bubble.textContent = msg;
+      feed.appendChild(bubble);
+      input.value = '';
+      feed.scrollTop = feed.scrollHeight;
+    };
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); send(); } });
+
+    // Leave link
+    document.getElementById('leave').addEventListener('click', (e)=>{
+      e.preventDefault();
+      showToast('ロビーへ戻ります…（UIデモ）');
+    });
+
+    // Toast util
+    const toastEl = document.getElementById('toast');
+    let toastTimer;
+    function showToast(text){
+      toastEl.textContent = text;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 2200);
+    }
+  </script>
+</body>
+</html>

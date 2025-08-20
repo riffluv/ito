@@ -1,7 +1,5 @@
 "use client";
 import { toaster } from "@/components/ui/toaster";
-import { presenceSupported, subscribePresence } from "@/lib/firebase/presence";
-import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
 import {
   Box,
   Button,
@@ -26,12 +24,13 @@ import Hero from "@/components/site/Hero";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
+import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 
 export default function LobbyPage() {
   const router = useRouter();
   const { user, loading, displayName, setDisplayName } = useAuth();
   const [rooms, setRooms] = useState<(RoomDoc & { id: string })[]>([]);
-  const [playerCounts, setPlayerCounts] = useState<Record<string, number>>({});
+  const [playerCountsState, setPlayerCountsState] = useState<Record<string, number>>({});
   const nameDialog = useDisclosure({ defaultOpen: false });
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
@@ -64,37 +63,12 @@ export default function LobbyPage() {
     return () => unsub();
   }, [firebaseEnabled, user]);
 
-  // 各ルームのオンライン人数（RTDB presence）を監視（未対応環境ではFirestoreのlastSeenを使用）
+  // オンライン人数を一括購読（presence優先、fallback: Firestore lastSeen）
+  const roomIds = useMemo(() => rooms.map((r) => r.id), [rooms]);
+  const lobbyCounts = useLobbyCounts(roomIds);
   useEffect(() => {
-    if (!firebaseEnabled || !user) return;
-    if (presenceSupported()) {
-      const offs = rooms.map((r) =>
-        subscribePresence(r.id, (uids) => {
-          setPlayerCounts((prev) => ({ ...prev, [r.id]: uids.length }));
-        })
-      );
-      return () => offs.forEach((off) => off());
-    } else {
-      const unsubs = rooms.map((r) =>
-        onSnapshot(collection(db, "rooms", r.id, "players"), (snap) => {
-          const now = Date.now();
-          const seen = new Set<string>();
-          let active = 0;
-          snap.forEach((d) => {
-            const data: any = d.data();
-            const uid: string | undefined = data?.uid;
-            if (uid && seen.has(uid)) return;
-            if (isActive(data?.lastSeen, now, ACTIVE_WINDOW_MS)) {
-              active += 1;
-              if (uid) seen.add(uid);
-            }
-          });
-          setPlayerCounts((prev) => ({ ...prev, [r.id]: active }));
-        })
-      );
-      return () => unsubs.forEach((u) => u());
-    }
-  }, [firebaseEnabled, user, rooms.map((r) => r.id).join(",")]);
+    setPlayerCountsState(lobbyCounts);
+  }, [lobbyCounts]);
 
   // 初回ロードでの強制名入力は行わない（作成/参加時に促す）
 
@@ -108,7 +82,9 @@ export default function LobbyPage() {
     const now = Date.now();
     const grace = 5 * 60 * 1000;
     return rooms.filter((r) => {
-      const active = playerCounts[r.id] ?? 0;
+      // ソフトクローズ済みは表示しない
+      if ((r as any).closedAt) return false;
+      const active = playerCountsState[r.id] ?? 0;
       const la = r.lastActiveAt as any;
       const ms = la?.toMillis
         ? la.toMillis()
@@ -120,7 +96,7 @@ export default function LobbyPage() {
       const recent = ms > 0 && now - ms <= grace;
       return active > 0 || recent;
     });
-  }, [rooms, playerCounts]);
+  }, [rooms, playerCountsState]);
 
   return (
     <>
@@ -194,9 +170,9 @@ export default function LobbyPage() {
                   key={r.id}
                   name={r.name}
                   status={r.status}
-                  count={playerCounts[r.id] ?? 0}
+                  count={playerCountsState[r.id] ?? 0}
                   onJoin={() => {
-                    // Block joining if the room is not in waiting state
+                    // 待機中のみ入室可
                     if (r.status && r.status !== "waiting") {
                       toaster.create({
                         title: "この部屋は既に開始されています",

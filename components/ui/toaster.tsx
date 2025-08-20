@@ -14,12 +14,28 @@ export function Toaster() {
       {(toast) => {
         const { title, description, ...rest } = toast as any;
         return (
-          <Toast.Root {...rest}>
+          <Toast.Root
+            {...rest}
+            style={{
+              minWidth: 280,
+              maxWidth: 420,
+              width: "max-content",
+              alignItems: "flex-start",
+            }}
+          >
             <Toast.Indicator />
-            {title ? <Toast.Title>{title as any}</Toast.Title> : null}
-            {description ? (
-              <Toast.Description>{description as any}</Toast.Description>
-            ) : null}
+            <div style={{ display: "grid", gap: 2 }}>
+              {title ? (
+                <Toast.Title style={{ wordBreak: "break-word" }}>
+                  {title as any}
+                </Toast.Title>
+              ) : null}
+              {description ? (
+                <Toast.Description style={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>
+                  {description as any}
+                </Toast.Description>
+              ) : null}
+            </div>
             <Toast.CloseTrigger />
           </Toast.Root>
         );

@@ -71,6 +71,23 @@ export const system = createSystem(defaultConfig, {
     // v3では layerStyles/textStyles は recipes/slot recipes 推奨だが、
     // シンプルに tokens と semanticTokens で代替し、個所ごとに css で指定する方針。
     // 必要に応じて CLI snippets の recipes に置換可能。
+    styles: {
+      layerStyles: {
+        panel: {
+          bg: { base: "panelBg", _dark: "panelBg" },
+          borderWidth: "1px",
+          borderColor: "borderDefault",
+          borderRadius: "lg",
+          boxShadow: { base: "sm", _dark: "sm" },
+        },
+        hud: {
+          bg: { base: "panelBg", _dark: "panelBg" },
+          borderBottomWidth: "1px",
+          borderColor: "borderDefault",
+          boxShadow: { base: "md", _dark: "md" },
+        },
+      },
+    },
   },
 });
 

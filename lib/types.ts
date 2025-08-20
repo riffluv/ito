@@ -10,6 +10,9 @@ export type RoomDoc = {
   status: "waiting" | "clue" | "reveal" | "finished" | "playing";
   createdAt?: any;
   lastActiveAt?: any;
+  // ソフトクローズ管理
+  closedAt?: any | null;
+  expiresAt?: any | null;
   // お題
   topic?: string | null;
   topicOptions?: string[] | null;

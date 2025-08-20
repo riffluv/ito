@@ -1,14 +1,376 @@
-index.js:627 Uncaught Error: (0 , _chakra_ui_react__WEBPACK_IMPORTED_MODULE_0__.extendTheme) is not a function
-    at eval (webpack-internal:///(rsc)/./theme/index.ts:11:76)
-    at (rsc)/./theme/index.ts (file://C:\Users\hr-hm\Desktop\codex\.next\server\app\page.js:579:1)
-    at __webpack_require__ (file://C:\Users\hr-hm\Desktop\codex\.next\server\webpack-runtime.js:33:43)
-    at eval (webpack-internal:///(rsc)/./app/layout.tsx:11:64)
-    at (rsc)/./app/layout.tsx (file://C:\Users\hr-hm\Desktop\codex\.next\server\app\page.js:481:1)
-    at Function.__webpack_require__ (file://C:\Users\hr-hm\Desktop\codex\.next\server\webpack-runtime.js:33:43)
-    at async e7 (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:396747)
-    at async tS (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:400444)
-    at async tw (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:401005)
-    at async tO (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:2130)
-    at async (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:2722)
+GET http://localhost:3000/ 500 (Internal Server Error)
+performFullReload @ webpack-internal:///…oader-client.js:102
+handleApplyUpdates @ webpack-internal:///…oader-client.js:117
+eval @ webpack-internal:///…oader-client.js:147
+Promise.then
+tryApplyUpdates @ webpack-internal:///…oader-client.js:146
+handleHotUpdate @ webpack-internal:///…oader-client.js:174
+processMessage @ webpack-internal:///…oader-client.js:237
+handler @ webpack-internal:///…oader-client.js:395
 content.js:1 Uncaught (in promise) The message port closed before a response was received.
+（匿名） @ content.js:1
 content.js:1 Uncaught (in promise) The message port closed before a response was received.
+（匿名） @ content.js:1
+page.tsx:99 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+at invokeGuardedCallback (react-dom.development.js:20689:29)
+at beginWork (react-dom.development.js:26949:7)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+callCallback @ react-dom.development.js:20565
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+page.tsx:99 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+at invokeGuardedCallback (react-dom.development.js:20689:29)
+at beginWork (react-dom.development.js:26949:7)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at recoverFromConcurrentError (react-dom.development.js:24597:20)
+at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+callCallback @ react-dom.development.js:20565
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at recoverFromConcurrentError (react-dom.development.js:24597:20)
+at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at recoverFromConcurrentError (react-dom.development.js:24597:20)
+at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at recoverFromConcurrentError (react-dom.development.js:24597:20)
+at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
+at LobbyPage (page.tsx:99:14)
+at renderWithHooks (react-dom.development.js:11121:18)
+at mountIndeterminateComponent (react-dom.development.js:16869:13)
+at beginWork$1 (react-dom.development.js:18458:16)
+at beginWork (react-dom.development.js:26927:14)
+at performUnitOfWork (react-dom.development.js:25748:12)
+at workLoopSync (react-dom.development.js:25464:5)
+at renderRootSync (react-dom.development.js:25419:7)
+at recoverFromConcurrentError (react-dom.development.js:24597:20)
+at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+at workLoop (scheduler.development.js:256:34)
+at flushWork (scheduler.development.js:225:14)
+at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+LobbyPage @ page.tsx:99
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> component:
+
+    at LobbyPage (webpack-internal:///(app-pages-browser)/./app/page.tsx:45:78)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at V (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:54:24)
+    at J (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:47:47)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:19:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ReactDevOverlay.
+window.console.error @ app-index.js:33
+logCapturedError @ react-dom.development.js:15295
+callback @ react-dom.development.js:15357
+callCallback @ react-dom.development.js:8696
+commitCallbacks @ react-dom.development.js:8743
+commitClassCallbacks @ react-dom.development.js:21323
+commitLayoutEffectOnFiber @ react-dom.development.js:21425
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21437
+commitLayoutEffects @ react-dom.development.js:22912
+commitRootImpl @ react-dom.development.js:26226
+commitRoot @ react-dom.development.js:26077
+commitRootWhenReady @ react-dom.development.js:24749
+finishConcurrentRender @ react-dom.development.js:24714
+performConcurrentWorkOnRoot @ react-dom.development.js:24559
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
