@@ -13,8 +13,7 @@ export function RoomCard({
   count: number;
   onJoin: () => void;
 }) {
-  const statusLabel =
-    count === 0 ? "待機中" : status === "waiting" ? "待機中" : "ゲーム中";
+  const statusLabel = status === "waiting" ? "待機中" : "ゲーム中";
   return (
     <Panel>
       <Stack>

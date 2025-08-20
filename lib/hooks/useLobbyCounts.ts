@@ -1,10 +1,14 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import {
+  MAX_CLOCK_SKEW_MS,
+  PRESENCE_STALE_MS,
+  presenceSupported,
+} from "@/lib/firebase/presence";
+import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
 import { off, onValue, ref } from "firebase/database";
 import { collection, onSnapshot } from "firebase/firestore";
-import { rtdb, db, firebaseEnabled } from "@/lib/firebase/client";
-import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
-import { presenceSupported } from "@/lib/firebase/presence";
+import { useEffect, useMemo, useState } from "react";
 
 export function useLobbyCounts(roomIds: string[]) {
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -31,11 +35,21 @@ export function useLobbyCounts(roomIds: string[]) {
       const offs = roomIds.map((id) => {
         const roomRef = ref(rtdb!, `presence/${id}`);
         const handler = (snap: any) => {
-          const users = (snap.val() || {}) as Record<string, Record<string, any>>; // uid -> connId -> {}
+          const users = (snap.val() || {}) as Record<
+            string,
+            Record<string, any>
+          >; // uid -> connId -> { ts }
           let n = 0;
+          const now = Date.now();
           for (const uid of Object.keys(users)) {
             const conns = users[uid] || {};
-            if (Object.keys(conns).length > 0) n += 1;
+            const isOnline = Object.values(conns).some((c: any) => {
+              const ts = typeof c?.ts === "number" ? c.ts : 0;
+              if (ts <= 0) return false;
+              if (ts - now > MAX_CLOCK_SKEW_MS) return false;
+              return now - ts <= PRESENCE_STALE_MS;
+            });
+            if (isOnline) n += 1;
           }
           setCounts((prev) => ({ ...prev, [id]: n }));
         };

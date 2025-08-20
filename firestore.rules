@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // rooms コレクション
+    match /rooms/{roomId} {
+      allow read: if true; // 公開
+
+      // 作成は認証ユーザーのみ
+      allow create: if request.auth != null &&
+        // minimal validation
+        request.resource.data.name is string &&
+        request.resource.data.hostId == request.auth.uid;
+
+      // 更新はルームのホストに限定（status/closedAt など重要フィールド）
+      allow update: if request.auth != null && isHost(roomId);
+
+      // 削除はホストまたは管理者（要カスタムクレーム）
+      allow delete: if request.auth != null && (isHost(roomId) || isAdmin());
+
+      // players サブコレクション
+      match /players/{playerId} {
+        // プレイヤーは自身のドキュメントのみ作成/更新/削除可能
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.uid
+          && isWaiting(roomId);
+        allow read: if true;
+        allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+        allow delete: if request.auth != null && request.auth.uid == resource.data.uid;
+      }
+
+      // chat サブコレクション
+      match /chat/{msgId} {
+        allow read: if true;
+        // chat は認証ユーザーのみ投稿可能。送信者の一致を要求
+        allow create: if request.auth != null
+          && request.resource.data.sender is string
+          && ((request.resource.data.sender == "system") || (request.resource.data.sender == request.auth.token.name || request.resource.data.sender == request.auth.uid))
+          && request.resource.data.createdAt == request.time;
+        allow delete: if false;
+        allow update: if false;
+      }
+    }
+
+    function isWaiting(roomId){
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.status == "waiting";
+    }
+    function isHost(roomId){
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.hostId == request.auth.uid;
+    }
+    function isAdmin(){
+      return request.auth.token.admin == true;
+    }
+  }
+}

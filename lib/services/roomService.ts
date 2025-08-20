@@ -1,19 +1,19 @@
+import { db } from "@/lib/firebase/client";
+import { hashString } from "@/lib/game/random";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { randomAvatar } from "@/lib/utils";
 import {
   collection,
   deleteDoc,
   doc,
   getDoc,
   getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
   where,
-  query,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { randomAvatar } from "@/lib/utils";
-import { hashString } from "@/lib/game/random";
 
 export async function ensureMember({
   roomId,
@@ -118,7 +118,9 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
     }
   } else if (room.status === "playing") {
     if (typeof me.number === "number") return;
-    const playersSnap = await getDocs(collection(db, "rooms", roomId, "players"));
+    const playersSnap = await getDocs(
+      collection(db, "rooms", roomId, "players")
+    );
     const used = new Set<number>();
     playersSnap.forEach((d) => {
       const v: any = d.data();
@@ -139,7 +141,9 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
 }
 
 export async function updateLastActive(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), { lastActiveAt: serverTimestamp() });
+  await updateDoc(doc(db, "rooms", roomId), {
+    lastActiveAt: serverTimestamp(),
+  });
 }
 
 export async function joinRoomFully({
@@ -156,7 +160,16 @@ export async function joinRoomFully({
     await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
     await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
     await updateLastActive(roomId).catch(() => void 0);
+    try {
+      const { addDoc, collection, serverTimestamp } = await import(
+        "firebase/firestore"
+      );
+      await addDoc(collection(db, "rooms", roomId, "chat"), {
+        sender: "system",
+        text: `${displayName || "匿名"} が参加しました`,
+        createdAt: serverTimestamp(),
+      } as any);
+    } catch {}
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
 }
-

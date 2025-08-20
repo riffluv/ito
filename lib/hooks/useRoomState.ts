@@ -1,12 +1,18 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { usePresence } from "@/lib/hooks/usePresence";
-import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
 import { joinRoomFully } from "@/lib/services/roomService";
 import { sanitizePlayer, sanitizeRoom } from "@/lib/state/sanitize";
+import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type RoomState = {
   room: (RoomDoc & { id: string }) | null;
@@ -18,7 +24,11 @@ export type RoomState = {
   isHost: boolean;
 };
 
-export function useRoomState(roomId: string, uid: string | null) {
+export function useRoomState(
+  roomId: string,
+  uid: string | null,
+  displayName?: string | null
+) {
   const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +70,7 @@ export function useRoomState(roomId: string, uid: string | null) {
   );
 
   // presence attach + list
-  const { onlineUids, detachNow } = usePresence(roomId, uid || null, isMember);
+  const { onlineUids, detachNow } = usePresence(roomId, uid || null);
 
   // auto-join (always allow late join; numbers assigned according to phase)
   useEffect(() => {
@@ -69,7 +79,9 @@ export function useRoomState(roomId: string, uid: string | null) {
     if (leavingRef.current) return;
     // 待機中のみ自動参加を作成
     if (room.status === "waiting") {
-      joinRoomFully({ roomId, uid, displayName: undefined }).catch(() => void 0);
+      joinRoomFully({ roomId, uid, displayName: displayName }).catch(
+        () => void 0
+      );
     }
   }, [roomId, uid || "", room?.status]);
 
@@ -80,8 +92,21 @@ export function useRoomState(roomId: string, uid: string | null) {
       return players.filter((p) => set.has(p.id));
     }
     const now = Date.now();
-    return players.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
-  }, [presenceOn, players, Array.isArray(onlineUids) ? onlineUids.join(",") : ""]);
+    const base = players.filter((p) =>
+      isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+    );
+    // フォールバック時は自分自身を確実に含める（lastSeen更新前の瞬間的な欠落を補完）
+    if (uid) {
+      const me = players.find((p) => p.id === uid);
+      if (me && !base.some((p) => p.id === uid)) base.push(me);
+    }
+    return base;
+  }, [
+    presenceOn,
+    players,
+    uid || "",
+    Array.isArray(onlineUids) ? onlineUids.join(",") : "",
+  ]);
 
   const isHost = useMemo(
     () => !!(room && uid && room.hostId === uid),

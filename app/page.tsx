@@ -14,7 +14,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+// firestore imports removed (unused in lobby page)
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 // presenceベースで人数を取得するため timeユーティリティは未使用
@@ -22,15 +22,14 @@ import { CreateRoomModal } from "@/components/CreateRoomModal";
 import { RoomCard } from "@/components/RoomCard";
 import Hero from "@/components/site/Hero";
 import { useAuth } from "@/context/AuthContext";
-import { db, firebaseEnabled } from "@/lib/firebase/client";
-import type { RoomDoc } from "@/lib/types";
+import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
+import { useRooms } from "@/lib/hooks/useRooms";
 
 export default function LobbyPage() {
   const router = useRouter();
   const { user, loading, displayName, setDisplayName } = useAuth();
-  const [rooms, setRooms] = useState<(RoomDoc & { id: string })[]>([]);
-  const [playerCountsState, setPlayerCountsState] = useState<Record<string, number>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const nameDialog = useDisclosure({ defaultOpen: false });
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
@@ -41,33 +40,27 @@ export default function LobbyPage() {
     setMounted(true);
   }, []);
 
+  const {
+    rooms,
+    loading: roomsLoading,
+    error: roomsError,
+  } = useRooms(!!(firebaseEnabled && user));
   useEffect(() => {
-    if (!firebaseEnabled || !user) return;
-    const q = query(collection(db, "rooms"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list: (RoomDoc & { id: string })[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...(d.data() as RoomDoc) }));
-        setRooms(list);
-      },
-      (err) => {
-        console.error("rooms snapshot error", err);
-        toaster.create({
-          title: "Firestoreの読み取りに失敗しました",
-          description: err?.message || "権限またはルールを確認してください",
-          type: "error",
-        });
-      }
-    );
-    return () => unsub();
-  }, [firebaseEnabled, user]);
+    if (!roomsError) return;
+    console.error("rooms snapshot error", roomsError);
+    toaster.create({
+      title: "Firestoreの読み取りに失敗しました",
+      description:
+        (roomsError as any)?.message || "権限またはルールを確認してください",
+      type: "error",
+    });
+  }, [roomsError?.message]);
 
   // オンライン人数を一括購読（presence優先、fallback: Firestore lastSeen）
   const roomIds = useMemo(() => rooms.map((r) => r.id), [rooms]);
   const lobbyCounts = useLobbyCounts(roomIds);
   useEffect(() => {
-    setPlayerCountsState(lobbyCounts);
+    setCounts(lobbyCounts);
   }, [lobbyCounts]);
 
   // 初回ロードでの強制名入力は行わない（作成/参加時に促す）
@@ -84,7 +77,7 @@ export default function LobbyPage() {
     return rooms.filter((r) => {
       // ソフトクローズ済みは表示しない
       if ((r as any).closedAt) return false;
-      const active = playerCountsState[r.id] ?? 0;
+      const active = counts[r.id] ?? 0;
       const la = r.lastActiveAt as any;
       const ms = la?.toMillis
         ? la.toMillis()
@@ -96,7 +89,7 @@ export default function LobbyPage() {
       const recent = ms > 0 && now - ms <= grace;
       return active > 0 || recent;
     });
-  }, [rooms, playerCountsState]);
+  }, [rooms, counts]);
 
   return (
     <>
@@ -161,7 +154,7 @@ export default function LobbyPage() {
                 Firebase設定が見つかりません。`.env.local` を設定してください。
               </Text>
             </Box>
-          ) : loading ? (
+          ) : roomsLoading ? (
             <Spinner />
           ) : (
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -170,7 +163,7 @@ export default function LobbyPage() {
                   key={r.id}
                   name={r.name}
                   status={r.status}
-                  count={playerCountsState[r.id] ?? 0}
+                  count={counts[r.id] ?? 0}
                   onJoin={() => {
                     // 待機中のみ入室可
                     if (r.status && r.status !== "waiting") {

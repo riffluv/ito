@@ -1,29 +1,59 @@
 "use client";
 import { ChatPanel } from "@/components/ChatPanel";
 import { CluePanel } from "@/components/CluePanel";
+import { Hud } from "@/components/Hud";
 import { PlayBoard } from "@/components/PlayBoard";
 import { PlayerList } from "@/components/PlayerList";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RoomOptionsEditor } from "@/components/RoomOptions";
+import { SortBoard } from "@/components/SortBoard";
 import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
+import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import { resetPlayerState, setPlayerNameAvatar, updateLastSeen } from "@/lib/firebase/players";
+import {
+  resetPlayerState,
+  setPlayerNameAvatar,
+  updateLastSeen,
+} from "@/lib/firebase/players";
 import { presenceSupported } from "@/lib/firebase/presence";
-import { leaveRoom as leaveRoomAction, resetRoomToWaiting, setRoomOptions } from "@/lib/firebase/rooms";
-import { continueAfterFail as continueAfterFailAction, startGame as startGameAction, startPlaying as startPlayingAction } from "@/lib/game/room";
-import { Hud } from "@/components/Hud";
-import { SortBoard } from "@/components/SortBoard";
-import { toaster } from "@/components/ui/toaster";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { Box, Button, Container, Grid, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import {
+  leaveRoom as leaveRoomAction,
+  resetRoomToWaiting,
+  setRoomOptions,
+} from "@/lib/firebase/rooms";
+import {
+  continueAfterFail as continueAfterFailAction,
+  startGame as startGameAction,
+  startPlaying as startPlayingAction,
+} from "@/lib/game/room";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
+import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
+import {
+  Box,
+  Button,
+  Container,
+  Grid,
+  HStack,
+  Spinner,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -31,10 +61,16 @@ export default function RoomPage() {
   const { user, displayName } = useAuth();
   const router = useRouter();
   const uid = user?.uid || null;
-  const { room, players, onlineUids, onlinePlayers, loading, isHost, detachNow, leavingRef } = useRoomState(
-    roomId,
-    uid
-  );
+  const {
+    room,
+    players,
+    onlineUids,
+    onlinePlayers,
+    loading,
+    isHost,
+    detachNow,
+    leavingRef,
+  } = useRoomState(roomId, uid, displayName);
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
@@ -47,7 +83,8 @@ export default function RoomPage() {
       try {
         toaster.create({
           title: "入室できません",
-          description: "ゲーム進行中です。ホストがリセットすると入室可能になります。",
+          description:
+            "ゲーム進行中です。ホストがリセットすると入室可能になります。",
           type: "info",
         });
       } catch {}
@@ -74,12 +111,13 @@ export default function RoomPage() {
     onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
   const enoughPlayers = onlinePlayers.length >= 2;
 
-  const canStartPlaying =
+  const canStartPlaying = Boolean(
     isHost &&
-    room.status === "clue" &&
-    enoughPlayers &&
-    allNumbersDealt &&
-    allCluesReady;
+      room?.status === "clue" &&
+      enoughPlayers &&
+      allNumbersDealt &&
+      allCluesReady
+  );
 
   const startDisabledTitle = !canStartPlaying
     ? !enoughPlayers
@@ -108,7 +146,7 @@ export default function RoomPage() {
     if (!uid) return;
     if (presenceSupported()) return;
     const tick = () => updateLastSeen(roomId, uid).catch(() => void 0);
-    const id = setInterval(tick, 15000);
+    const id = setInterval(tick, 30000);
     tick();
     return () => clearInterval(id);
   }, [uid, roomId]);
@@ -197,6 +235,7 @@ export default function RoomPage() {
   useEffect(() => {
     const handler = () => {
       if (!uid) return;
+      if (leavingRef.current) return;
       leavingRef.current = true;
       const run = async () => {
         try {
@@ -234,6 +273,7 @@ export default function RoomPage() {
     return () => {
       const my = uid;
       if (!my) return;
+      if (leavingRef.current) return;
       leavingRef.current = true;
       const cleanup = async () => {
         try {
@@ -359,12 +399,10 @@ export default function RoomPage() {
             overflowY="auto"
             maxH="100%"
           >
-            <Panel title={`参加者人数: ${onlinePlayers.length}/${players.length}`}>
-              <PlayerList
-                players={onlinePlayers}
-                online={onlineUids}
-                myId={meId}
-              />
+            <Panel
+              title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+            >
+              <PlayerList players={players} online={onlineUids} myId={meId} />
             </Panel>
 
             <Panel title="オプション">
@@ -391,14 +429,6 @@ export default function RoomPage() {
             {room.status === "finished" && (
               <Stack>
                 {isHost && <Button onClick={resetToWaiting}>もう一度</Button>}
-                <Button
-                  onClick={async () => {
-                    await leaveRoom();
-                    router.push("/");
-                  }}
-                >
-                  退出してロビーへ
-                </Button>
               </Stack>
             )}
           </Stack>

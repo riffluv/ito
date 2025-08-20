@@ -1,11 +1,20 @@
-import { onDisconnect, onValue, ref, remove, set, serverTimestamp, off, get } from "firebase/database";
-import { rtdb, firebaseEnabled } from "@/lib/firebase/client";
+import { firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import {
+  get,
+  off,
+  onDisconnect,
+  onValue,
+  ref,
+  remove,
+  set,
+  update,
+} from "firebase/database";
 
 // ルーム配下: presence/<roomId>/<uid>/<connId> = { online: true, ts }
 // 同一uidの複数タブでも衝突しないよう、接続単位で管理する
 const ROOM_PATH = (roomId: string) => `presence/${roomId}`;
-const USER_PATH = (roomId: string, uid: string) => `presence/${roomId}/${uid}`;
-const CONN_PATH = (roomId: string, uid: string, connId: string) => `presence/${roomId}/${uid}/${connId}`;
+const CONN_PATH = (roomId: string, uid: string, connId: string) =>
+  `presence/${roomId}/${uid}/${connId}`;
 
 export type PresenceConn = { online?: boolean; ts?: any };
 export type PresenceUserMap = Record<string, PresenceConn>; // connId -> PresenceConn
@@ -15,39 +24,71 @@ export function presenceSupported(): boolean {
   return !!(firebaseEnabled && rtdb);
 }
 
+// presence の心拍とオフライン判定
+export const PRESENCE_HEARTBEAT_MS = 30_000; // 30s ごとに ts を更新
+export const PRESENCE_STALE_MS = 90_000; // 90s 以上更新が無ければオフライン扱い
+// クライアント時計ずれが大きい端末の未来時刻を無視するための上限
+export const MAX_CLOCK_SKEW_MS = 60_000; // ts が now より 60s 以上未来なら無効扱い
+
 export async function attachPresence(roomId: string, uid: string) {
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
-  const connId = (() => Math.random().toString(36).slice(2) + Date.now().toString(36))();
+  const connId = (() =>
+    Math.random().toString(36).slice(2) + Date.now().toString(36))();
   const meConnRef = ref(db, CONN_PATH(roomId, uid, connId));
   // onlineマーク（onDisconnectで自動削除）
-  await set(meConnRef, { online: true, ts: serverTimestamp() });
-  try { await onDisconnect(meConnRef).remove(); } catch {}
+  await set(meConnRef, { online: true, ts: Date.now() });
+  try {
+    await onDisconnect(meConnRef).remove();
+  } catch {}
+  // 心拍: ts を定期更新（存在チェックだけではゴーストが残るため）
+  const timer = setInterval(() => {
+    try {
+      update(meConnRef, { ts: Date.now() });
+    } catch {}
+  }, PRESENCE_HEARTBEAT_MS);
   // 明示的に解除するための関数を返す
   return async () => {
-    try { await remove(meConnRef); } catch {}
+    try {
+      clearInterval(timer);
+    } catch {}
+    try {
+      await remove(meConnRef);
+    } catch {}
   };
 }
 
-export function subscribePresence(roomId: string, cb: (uids: string[], raw?: PresenceRoomMap) => void) {
+export function subscribePresence(
+  roomId: string,
+  cb: (uids: string[], raw?: PresenceRoomMap) => void
+) {
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
   const roomRef = ref(db, ROOM_PATH(roomId));
   const handler = (snap: any) => {
     const val = (snap.val() || {}) as PresenceRoomMap;
+    const now = Date.now();
     const uids = Object.keys(val).filter((uid) => {
       const conns = val[uid] || {};
-      // 1つでも接続があればオンラインとみなす
-      return Object.keys(conns).length > 0;
+      // いずれかの接続で ts が鮮度内ならオンライン
+      return Object.values(conns).some((c: any) => {
+        const ts = typeof c?.ts === "number" ? c.ts : 0;
+        if (ts <= 0) return false;
+        // 未来に大きく進んだ ts は無効扱い（時計ズレ対策）
+        if (ts - now > MAX_CLOCK_SKEW_MS) return false;
+        return now - ts <= PRESENCE_STALE_MS;
+      });
     });
     cb(uids, val as any);
   };
   const onErr = () => {
     // 読み取り権限エラーや一時的な接続エラー時は空扱いにして継続
-    try { cb([], {} as any); } catch {}
+    try {
+      cb([], {} as any);
+    } catch {}
   };
   onValue(roomRef, handler, onErr as any);
-  return () => off(roomRef, 'value', handler);
+  return () => off(roomRef, "value", handler);
 }
 
 export async function fetchPresenceUids(roomId: string): Promise<string[]> {
@@ -55,9 +96,15 @@ export async function fetchPresenceUids(roomId: string): Promise<string[]> {
   try {
     const snap = await get(ref(rtdb!, ROOM_PATH(roomId)));
     const val = (snap.val() || {}) as PresenceRoomMap;
+    const now = Date.now();
     return Object.keys(val).filter((uid) => {
       const conns = val[uid] || {};
-      return Object.keys(conns).length > 0;
+      return Object.values(conns).some((c: any) => {
+        const ts = typeof c?.ts === "number" ? c.ts : 0;
+        if (ts <= 0) return false;
+        if (ts - now > MAX_CLOCK_SKEW_MS) return false;
+        return now - ts <= PRESENCE_STALE_MS;
+      });
     });
   } catch {
     return [];

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\":{\"id\":\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\",\"files\":[]}}"
+self.__REACT_LOADABLE_MANIFEST="{\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\":{\"id\":\"lib\\\\services\\\\roomService.ts -> @/lib/game/random\",\"files\":[]},\"lib\\\\services\\\\roomService.ts -> firebase/firestore\":{\"id\":\"lib\\\\services\\\\roomService.ts -> firebase/firestore\",\"files\":[]}}"
