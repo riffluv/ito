@@ -14,7 +14,6 @@ export function PlayerList({
   online?: string[] | undefined;
   myId?: string | null;
 }) {
-  const onlineSet = Array.isArray(online) ? new Set(online) : null;
   // 並び: 未入力 → 入力中 → 準備OK、同カテゴリ内は名前昇順
   const groups = useMemo(() => {
     const norm = players.map((p) => ({
@@ -93,7 +92,9 @@ export function PlayerList({
                 )}
               </HStack>
               <HStack>
-                {p.ready ? (
+                {Array.isArray(online) && online.includes(p.id) ? (
+                  <Badge colorPalette="green">オンライン</Badge>
+                ) : p.ready ? (
                   <Badge colorPalette="green">準備OK</Badge>
                 ) : p.clue1 ? (
                   <Badge colorPalette="orange">入力中</Badge>

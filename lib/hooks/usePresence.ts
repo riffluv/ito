@@ -1,7 +1,11 @@
+import {
+  attachPresence,
+  presenceSupported,
+  subscribePresence,
+} from "@/lib/firebase/presence";
 import { useEffect, useRef, useState } from "react";
-import { presenceSupported, attachPresence, subscribePresence } from "@/lib/firebase/presence";
 
-export function usePresence(roomId: string, userId: string | null, isMember: boolean) {
+export function usePresence(roomId: string, userId: string | null) {
   const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
 
@@ -13,13 +17,13 @@ export function usePresence(roomId: string, userId: string | null, isMember: boo
     return () => off();
   }, [roomId]);
 
-  // Attach/detach my presence when I'm a member
+  // Attach/detach my presence as soon as userId is available
   useEffect(() => {
     if (!presenceSupported()) return;
     let cancelled = false;
     (async () => {
       try {
-        if (userId && isMember) {
+        if (userId) {
           if (!detachRef.current) {
             const detach = await attachPresence(roomId, userId);
             if (!cancelled) detachRef.current = detach;
@@ -30,14 +34,28 @@ export function usePresence(roomId: string, userId: string | null, isMember: boo
         }
       } catch {}
     })();
-    return () => { cancelled = true; };
-  }, [roomId, userId, isMember]);
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, userId]);
 
   // Ensure detach on unmount
   useEffect(() => {
-    return () => { try { const r = detachRef.current?.(); if (r && typeof (r as any).then === "function") (r as Promise<void>).catch(()=>{}); } catch {} };
+    return () => {
+      try {
+        const r = detachRef.current?.();
+        if (r && typeof (r as any).then === "function")
+          (r as Promise<void>).catch(() => {});
+      } catch {}
+    };
   }, []);
 
-  const detachNow = async () => { try { const r = detachRef.current?.(); if (r && typeof (r as any).then === "function") await (r as Promise<void>); } catch {} };
+  const detachNow = async () => {
+    try {
+      const r = detachRef.current?.();
+      if (r && typeof (r as any).then === "function")
+        await (r as Promise<void>);
+    } catch {}
+  };
   return { onlineUids, detachNow };
 }
