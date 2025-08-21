@@ -3,7 +3,8 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { CluePanel } from "@/components/CluePanel";
 import { Hud } from "@/components/Hud";
 import { PlayBoard } from "@/components/PlayBoard";
-import { PlayerList } from "@/components/PlayerList";
+// import { PlayerList } from "@/components/PlayerList";
+import { Participants } from "@/components/Participants";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RoomOptionsEditor } from "@/components/RoomOptions";
 import { SortBoard } from "@/components/SortBoard";
@@ -402,7 +403,7 @@ export default function RoomPage() {
             <Panel
               title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
             >
-              <PlayerList players={players} online={onlineUids} myId={meId} />
+              <Participants players={onlinePlayers} />
             </Panel>
 
             <Panel title="オプション">

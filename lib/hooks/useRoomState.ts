@@ -1,17 +1,10 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import { usePresence } from "@/lib/hooks/usePresence";
+import { useParticipants } from "@/lib/hooks/useParticipants";
 import { joinRoomFully } from "@/lib/services/roomService";
-import { sanitizePlayer, sanitizeRoom } from "@/lib/state/sanitize";
-import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import { sanitizeRoom } from "@/lib/state/sanitize";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type RoomState = {
@@ -39,7 +32,7 @@ export function useRoomState(
     leavingRef.current = false;
   }, [roomId, uid || ""]);
 
-  // subscribe room and players
+  // subscribe room
   useEffect(() => {
     if (!firebaseEnabled) return;
     const unsubRoom = onSnapshot(doc(db, "rooms", roomId), (snap) => {
@@ -49,18 +42,8 @@ export function useRoomState(
       }
       setRoom({ id: snap.id, ...sanitizeRoom(snap.data()) });
     });
-    const unsubPlayers = onSnapshot(
-      query(collection(db, "rooms", roomId, "players"), orderBy("uid", "asc")),
-      (snap) => {
-        const list: (PlayerDoc & { id: string })[] = [];
-        snap.forEach((d) => list.push(sanitizePlayer(d.id, d.data())));
-        setPlayers(list);
-        setLoading(false);
-      }
-    );
     return () => {
       unsubRoom();
-      unsubPlayers();
     };
   }, [roomId]);
 
@@ -69,8 +52,18 @@ export function useRoomState(
     [uid || "", players.map((p) => p.id).join(",")]
   );
 
-  // presence attach + list
-  const { onlineUids, detachNow } = usePresence(roomId, uid || null);
+  // participants: Firestore players + RTDB presence
+  const {
+    players: fetchedPlayers,
+    onlineUids,
+    participants,
+    detach,
+    loading: partLoading,
+  } = useParticipants(roomId, uid || null);
+  useEffect(() => {
+    setPlayers(fetchedPlayers);
+    setLoading(partLoading === true);
+  }, [fetchedPlayers, partLoading]);
 
   // auto-join (always allow late join; numbers assigned according to phase)
   useEffect(() => {
@@ -85,28 +78,7 @@ export function useRoomState(
     }
   }, [roomId, uid || "", room?.status]);
 
-  const presenceOn = Array.isArray(onlineUids);
-  const onlinePlayers = useMemo(() => {
-    if (presenceOn) {
-      const set = new Set(onlineUids);
-      return players.filter((p) => set.has(p.id));
-    }
-    const now = Date.now();
-    const base = players.filter((p) =>
-      isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
-    );
-    // フォールバック時は自分自身を確実に含める（lastSeen更新前の瞬間的な欠落を補完）
-    if (uid) {
-      const me = players.find((p) => p.id === uid);
-      if (me && !base.some((p) => p.id === uid)) base.push(me);
-    }
-    return base;
-  }, [
-    presenceOn,
-    players,
-    uid || "",
-    Array.isArray(onlineUids) ? onlineUids.join(",") : "",
-  ]);
+  const onlinePlayers = participants;
 
   const isHost = useMemo(
     () => !!(room && uid && room.hostId === uid),
@@ -124,5 +96,6 @@ export function useRoomState(
     isHost,
   };
 
+  const detachNow = detach;
   return { ...state, detachNow, leavingRef } as const;
 }

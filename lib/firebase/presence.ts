@@ -36,11 +36,11 @@ export async function attachPresence(roomId: string, uid: string) {
   const connId = (() =>
     Math.random().toString(36).slice(2) + Date.now().toString(36))();
   const meConnRef = ref(db, CONN_PATH(roomId, uid, connId));
-  // onlineマーク（onDisconnectで自動削除）
-  await set(meConnRef, { online: true, ts: Date.now() });
+  // onDisconnect を先にキューしてから online マーク
   try {
     await onDisconnect(meConnRef).remove();
   } catch {}
+  await set(meConnRef, { online: true, ts: Date.now() });
   // 心拍: ts を定期更新（存在チェックだけではゴーストが残るため）
   const timer = setInterval(() => {
     try {
