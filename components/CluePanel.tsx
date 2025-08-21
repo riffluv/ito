@@ -1,6 +1,6 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import { updateClue1 } from "@/lib/firebase/players";
 import type { PlayerDoc } from "@/lib/types";
 import { Button, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
@@ -23,12 +23,12 @@ export function CluePanel({
   const submit = async () => {
     const value = text.trim();
     if (!value) {
-      toaster.create({ title: `${label}を入力してください`, type: "warning" });
+      notify({ title: `${label}を入力してください`, type: "warning" });
       return;
     }
     if (readOnly) return;
     await updateClue1(roomId, me.id, value);
-    toaster.create({ title: `${label}を更新しました`, type: "success" });
+    notify({ title: `${label}を更新しました`, type: "success" });
   };
 
   return (

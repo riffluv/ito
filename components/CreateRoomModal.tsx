@@ -1,5 +1,5 @@
 "use client";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
@@ -12,8 +12,8 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 // お題候補は部屋作成後に選択（TopicDisplay側で処理）
 
 export function CreateRoomModal({
@@ -25,7 +25,7 @@ export function CreateRoomModal({
   onClose: () => void;
   onCreated?: (roomId: string) => void;
 }) {
-  const { user, displayName, loading } = useAuth() as any;
+  const { user, displayName } = useAuth() as any;
   const router = useRouter();
   const [name, setName] = useState("");
   const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
@@ -33,21 +33,18 @@ export function CreateRoomModal({
 
   const handleCreate = async () => {
     if (!firebaseEnabled) {
-      toaster.create({
-        title: "Firebase設定が見つかりません",
-        type: "error",
-      });
+      notify({ title: "Firebase設定が見つかりません", type: "error" });
       return;
     }
     if (!user) {
-      toaster.create({
+      notify({
         title: "匿名ログインを完了するまでお待ちください",
         type: "info",
       });
       return;
     }
     if (!name.trim()) {
-      toaster.create({ title: "部屋名を入力してください", type: "warning" });
+      notify({ title: "部屋名を入力してください", type: "warning" });
       return;
     }
     setSubmitting(true);
@@ -83,12 +80,14 @@ export function CreateRoomModal({
       onClose();
       try {
         (window as any).requestIdleCallback?.(() => {
-          try { (router as any)?.prefetch?.(`/rooms/${roomRef.id}`); } catch {}
+          try {
+            (router as any)?.prefetch?.(`/rooms/${roomRef.id}`);
+          } catch {}
         });
       } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      toaster.create({
+      notify({
         title: "作成に失敗しました",
         description: e?.message,
         type: "error",

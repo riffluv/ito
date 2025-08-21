@@ -1,5 +1,5 @@
 "use client";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import {
   Box,
   Button,
@@ -49,7 +49,7 @@ export default function LobbyPage() {
   useEffect(() => {
     if (!roomsError) return;
     console.error("rooms snapshot error", roomsError);
-    toaster.create({
+    notify({
       title: "Firestoreの読み取りに失敗しました",
       description:
         (roomsError as any)?.message || "権限またはルールを確認してください",
@@ -165,7 +165,7 @@ export default function LobbyPage() {
                   onJoin={() => {
                     // 待機中のみ入室可
                     if (r.status && r.status !== "waiting") {
-                      toaster.create({
+                      notify({
                         title: "この部屋は既に開始されています",
                         description:
                           "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
@@ -229,7 +229,7 @@ export default function LobbyPage() {
                   colorPalette="blue"
                   onClick={() => {
                     if (!tempName.trim()) {
-                      toaster.create({
+                      notify({
                         title: "名前を入力してください",
                         type: "warning",
                       });

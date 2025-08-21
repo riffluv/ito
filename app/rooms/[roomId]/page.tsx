@@ -10,7 +10,7 @@ import { RoomOptionsEditor } from "@/components/RoomOptions";
 import { SortBoard } from "@/components/SortBoard";
 import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -82,7 +82,7 @@ export default function RoomPage() {
     if (!room || !uid) return;
     if (!isMember && room.status !== "waiting") {
       try {
-        toaster.create({
+        notify({
           title: "入室できません",
           description:
             "ゲーム進行中です。ホストがリセットすると入室可能になります。",
@@ -165,21 +165,21 @@ export default function RoomPage() {
   const startGame = async () => {
     try {
       if (!room || !isHost) {
-        toaster.create({ title: "ホストのみ開始できます", type: "warning" });
+        notify({ title: "ホストのみ開始できます", type: "warning" });
         return;
       }
       if (onlinePlayers.length < 2) {
-        toaster.create({ title: "プレイヤーは2人以上必要です", type: "info" });
+        notify({ title: "プレイヤーは2人以上必要です", type: "info" });
         return;
       }
       await updateDoc(doc(db, "rooms", roomId), {
         round: (room.round || 0) + 1,
       });
       await startGameAction(roomId);
-      toaster.create({ title: "ゲーム開始", type: "success" });
+      notify({ title: "ゲーム開始", type: "success" });
     } catch (e: any) {
       console.error(e);
-      toaster.create({
+      notify({
         title: "ゲーム開始に失敗しました",
         description: e?.message || "権限またはFirestoreルールをご確認ください",
         type: "error",

@@ -1,6 +1,6 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import { playCard } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
@@ -11,7 +11,7 @@ export function PlayBoard({
   players,
   meId,
   orderList,
-  isHost,
+  isHost: _isHost,
   failed = false,
   failedAt = null,
   eligibleIds,
@@ -56,7 +56,7 @@ export function PlayBoard({
     try {
       await playCard(roomId, meId);
     } catch (e: any) {
-      toaster.create({
+      notify({
         title: "出せませんでした",
         description: e?.message,
         type: "error",
