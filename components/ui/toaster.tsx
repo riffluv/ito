@@ -29,18 +29,12 @@ export function Toaster() {
           rounded="md"
           borderWidth="1px"
           shadow="md"
-          display="inline-flex"
-          // 強制的に横書き・改行を有効化
-          style={{ writingMode: "horizontal-tb", textOrientation: "mixed" }}
-          whiteSpace="normal"
-          wordBreak="break-word"
-          alignItems="center"
           w="auto"
           minW={{ base: "240px", md: "280px" }}
           maxW={{ base: "calc(100vw - 32px)", md: "360px" }}
         >
           <Toast.Indicator mr="2" />
-          <div>
+          <div style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
             {toast.title ? <Toast.Title>{toast.title}</Toast.Title> : null}
             {toast.description ? (
               <Toast.Description>{toast.description}</Toast.Description>
