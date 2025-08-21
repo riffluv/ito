@@ -29,7 +29,6 @@ import { useRooms } from "@/lib/hooks/useRooms";
 export default function LobbyPage() {
   const router = useRouter();
   const { user, loading, displayName, setDisplayName } = useAuth();
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const nameDialog = useDisclosure({ defaultOpen: false });
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
@@ -45,6 +44,8 @@ export default function LobbyPage() {
     loading: roomsLoading,
     error: roomsError,
   } = useRooms(!!(firebaseEnabled && user));
+
+  // ...existing code... (debug logging removed)
   useEffect(() => {
     if (!roomsError) return;
     console.error("rooms snapshot error", roomsError);
@@ -59,9 +60,6 @@ export default function LobbyPage() {
   // オンライン人数を一括購読（presence優先、fallback: Firestore lastSeen）
   const roomIds = useMemo(() => rooms.map((r) => r.id), [rooms]);
   const lobbyCounts = useLobbyCounts(roomIds, !!(firebaseEnabled && user));
-  useEffect(() => {
-    setCounts(lobbyCounts);
-  }, [lobbyCounts]);
 
   // 初回ロードでの強制名入力は行わない（作成/参加時に促す）
 
@@ -77,7 +75,7 @@ export default function LobbyPage() {
     return rooms.filter((r) => {
       // ソフトクローズ済みは表示しない
       if ((r as any).closedAt) return false;
-      const active = counts[r.id] ?? 0;
+      const active = lobbyCounts[r.id] ?? 0;
       const la = r.lastActiveAt as any;
       const ms = la?.toMillis
         ? la.toMillis()
@@ -89,7 +87,7 @@ export default function LobbyPage() {
       const recent = ms > 0 && now - ms <= grace;
       return active > 0 || recent;
     });
-  }, [rooms, counts]);
+  }, [rooms, lobbyCounts]);
 
   return (
     <>
@@ -163,7 +161,7 @@ export default function LobbyPage() {
                   key={r.id}
                   name={r.name}
                   status={r.status}
-                  count={counts[r.id] ?? 0}
+                  count={lobbyCounts[r.id] ?? 0}
                   onJoin={() => {
                     // 待機中のみ入室可
                     if (r.status && r.status !== "waiting") {

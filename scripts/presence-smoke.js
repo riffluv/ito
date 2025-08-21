@@ -12,11 +12,21 @@
   a test user who can write.
 */
 
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, push, set, remove, onValue, serverTimestamp } = require('firebase/database');
+const { initializeApp } = require("firebase/app");
+const {
+  getDatabase,
+  ref,
+  push,
+  set,
+  remove,
+  onValue,
+  serverTimestamp,
+} = require("firebase/database");
 
 if (process.argv.length < 5) {
-  console.error('Usage: node scripts/presence-smoke.js <databaseURL> <roomId> <uid>');
+  console.error(
+    "Usage: node scripts/presence-smoke.js <databaseURL> <roomId> <uid>"
+  );
   process.exit(2);
 }
 
@@ -38,7 +48,7 @@ async function main() {
   const db = getDatabase(app);
 
   const base = `presence/${roomId}/${uid}`;
-  console.log('Base path:', base);
+  console.log("Base path:", base);
 
   // push two connections
   const aRef = push(ref(db, base));
@@ -47,52 +57,65 @@ async function main() {
   await set(aRef, { online: true, ts: serverTimestamp() });
   await set(bRef, { online: true, ts: serverTimestamp() });
 
-  console.log('Added two connections, waiting for RTDB to settle...');
+  console.log("Added two connections, waiting for RTDB to settle...");
   await sleep(1500);
 
   // read once
   let latest = null;
   await new Promise((resolve) => {
-    onValue(ref(db, base), (snap) => {
-      const v = snap.val() || {};
-      const keys = Object.keys(v);
-      console.log('Current keys:', keys);
-      latest = keys;
-      resolve();
-    }, { onlyOnce: true });
+    onValue(
+      ref(db, base),
+      (snap) => {
+        const v = snap.val() || {};
+        const keys = Object.keys(v);
+        console.log("Current keys:", keys);
+        latest = keys;
+        resolve();
+      },
+      { onlyOnce: true }
+    );
   });
 
   if (!latest || latest.length < 2) {
-    console.error('Expected at least 2 connections, got', latest && latest.length);
+    console.error(
+      "Expected at least 2 connections, got",
+      latest && latest.length
+    );
     process.exit(1);
   }
 
-  console.log('Now removing one connection...');
+  console.log("Now removing one connection...");
   await remove(aRef);
   await sleep(1000);
 
   await new Promise((resolve) => {
-    onValue(ref(db, base), (snap) => {
-      const v = snap.val() || {};
-      const keys = Object.keys(v);
-      console.log('After remove, keys:', keys);
-      if (keys.length === 1) {
-        console.log('Smoke test OK');
-        resolve();
-      } else {
-        console.error('After remove expected 1, got', keys.length);
-        resolve();
-      }
-    }, { onlyOnce: true });
+    onValue(
+      ref(db, base),
+      (snap) => {
+        const v = snap.val() || {};
+        const keys = Object.keys(v);
+        console.log("After remove, keys:", keys);
+        if (keys.length === 1) {
+          console.log("Smoke test OK");
+          resolve();
+        } else {
+          console.error("After remove expected 1, got", keys.length);
+          resolve();
+        }
+      },
+      { onlyOnce: true }
+    );
   });
 
   // cleanup
-  try { await remove(bRef); } catch {};
-  console.log('Cleanup done.');
+  try {
+    await remove(bRef);
+  } catch {}
+  console.log("Cleanup done.");
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error('Error in smoke test:', err);
+  console.error("Error in smoke test:", err);
   process.exit(1);
 });
