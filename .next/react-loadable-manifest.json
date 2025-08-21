@@ -1,4 +1,10 @@
 {
+  "components\\site\\Header.tsx -> ./ThemeToggle": {
+    "id": "components\\site\\Header.tsx -> ./ThemeToggle",
+    "files": [
+      "static/chunks/_app-pages-browser_components_site_ThemeToggle_tsx.js"
+    ]
+  },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
     "id": "lib\\services\\roomService.ts -> @/lib/game/random",
     "files": []

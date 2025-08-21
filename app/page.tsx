@@ -2,18 +2,19 @@
 import { notify } from "@/components/ui/notify";
 import {
   Box,
-  Button,
   Container,
   Flex,
   Heading,
   HStack,
   Input,
+  ScrollArea,
   SimpleGrid,
   Spinner,
   Stack,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 // firestore imports removed (unused in lobby page)
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -107,7 +108,7 @@ export default function LobbyPage() {
               <Text fontSize="sm" suppressHydrationWarning>
                 名前: {mounted ? displayName || "未設定" : "未設定"}
               </Text>
-              <Button
+              <AppButton
                 size="sm"
                 variant="outline"
                 onClick={() => {
@@ -118,9 +119,9 @@ export default function LobbyPage() {
                 }}
               >
                 変更
-              </Button>
+              </AppButton>
             </HStack>
-            <Button
+            <AppButton
               colorPalette="brand"
               variant="solid"
               disabled={loading}
@@ -135,11 +136,13 @@ export default function LobbyPage() {
               }}
             >
               部屋を作る
-            </Button>
+            </AppButton>
           </HStack>
         </Flex>
 
-        <Box flex="1" overflowY="auto" minH={0}>
+        <ScrollArea.Root style={{ flex: 1, minHeight: 0 }}>
+          <ScrollArea.Viewport>
+            <ScrollArea.Content>
           {!firebaseEnabled ? (
             <Box
               p={8}
@@ -198,7 +201,13 @@ export default function LobbyPage() {
               )}
             </SimpleGrid>
           )}
-        </Box>
+            </ScrollArea.Content>
+          </ScrollArea.Viewport>
+          <ScrollArea.Scrollbar>
+            <ScrollArea.Thumb />
+          </ScrollArea.Scrollbar>
+          <ScrollArea.Corner />
+        </ScrollArea.Root>
 
         {/* 名前入力モーダル（作成/参加時に表示） */}
         {nameDialog.open && (
@@ -225,7 +234,7 @@ export default function LobbyPage() {
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
                 />
-                <Button
+                <AppButton
                   colorPalette="blue"
                   onClick={() => {
                     if (!tempName.trim()) {
@@ -249,7 +258,7 @@ export default function LobbyPage() {
                   }}
                 >
                   決定
-                </Button>
+                </AppButton>
               </Stack>
             </Box>
           </Box>

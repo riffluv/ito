@@ -7,3 +7,4 @@ yarn.lock
 無題.jpg
 #. Local environment variables (keep out of repo)
 .env.local
+.env

@@ -45,6 +45,12 @@ export default function ThemeToggle() {
         title={label}
         onClick={handleClick}
         variant="ghost"
+        rounded="full"
+        _focusVisible={{
+          outline: "2px solid",
+          outlineColor: "{colors.brand.400}",
+          outlineOffset: "2px",
+        }}
       >
         {icon}
       </IconButton>

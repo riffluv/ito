@@ -1,21 +1,92 @@
-GET http://localhost:3000/ 500 (Internal Server Error)
-performFullReload @ webpack-internal:///…oader-client.js:102
-handleApplyUpdates @ webpack-internal:///…oader-client.js:117
-eval @ webpack-internal:///…oader-client.js:147
-Promise.then
-tryApplyUpdates @ webpack-internal:///…oader-client.js:146
-handleHotUpdate @ webpack-internal:///…oader-client.js:174
-processMessage @ webpack-internal:///…oader-client.js:237
-handler @ webpack-internal:///…oader-client.js:395
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-（匿名） @ content.js:1
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-（匿名） @ content.js:1
-page.tsx:99 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`chakra(div)`). To locate the bad setState() call inside `chakra(div)`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at AppCard (webpack-internal:///(app-pages-browser)/./components/ui/AppCard.tsx:15:11)
+at RoomCard (webpack-internal:///(app-pages-browser)/./components/RoomCard.tsx:16:11)
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at Grid2 (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/components/grid/grid.js:13:13)
+at SimpleGrid2 (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/components/simple-grid/simple-grid.js:19:13)
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-content.js:18:105)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:145:21)
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-viewport.js:18:105)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:145:21)
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-root.js:26:90)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:107:34)
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-recipe-context.js:60:34)
+at LobbyPage (webpack-internal:///(app-pages-browser)/./app/page.tsx:48:78)
+at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+at div
+at div
+at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+at V (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:54:24)
+at J (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:47:47)
+at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:20:11)
+at body
+at html
+at RootLayout (Server)
+at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
+printWarning @ react-dom.development.js:94
+error @ react-dom.development.js:68
+warnAboutRenderPhaseUpdatesInDEV @ react-dom.development.js:26990
+scheduleUpdateOnFiber @ react-dom.development.js:24395
+dispatchReducerAction @ react-dom.development.js:13001
+eval @ hot-reloader-client.js:361
+eval @ use-error-handler.js:62
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+factory.js:298 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
 at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
 at invokeGuardedCallback (react-dom.development.js:20689:29)
@@ -27,10 +98,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 callCallback @ react-dom.development.js:20565
 invokeGuardedCallbackImpl @ react-dom.development.js:20614
 invokeGuardedCallback @ react-dom.development.js:20689
@@ -42,11 +115,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24504
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+redirect-boundary.js:57 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -55,10 +130,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -67,11 +144,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24504
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+not-found-boundary.js:37 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -80,10 +159,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -92,11 +173,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24504
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+redirect-boundary.js:57 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -105,10 +188,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -117,11 +202,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24504
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+not-found-boundary.js:37 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -130,10 +217,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -142,11 +231,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24504
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-page.tsx:99 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+factory.js:298 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
 at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
 at invokeGuardedCallback (react-dom.development.js:20689:29)
@@ -159,10 +250,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 callCallback @ react-dom.development.js:20565
 invokeGuardedCallbackImpl @ react-dom.development.js:20614
 invokeGuardedCallback @ react-dom.development.js:20689
@@ -175,11 +268,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24542
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+redirect-boundary.js:57 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -189,10 +284,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -202,11 +299,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24542
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+not-found-boundary.js:37 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -216,10 +315,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -229,11 +330,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24542
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-redirect-boundary.js:57 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+redirect-boundary.js:57 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -243,10 +346,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -256,11 +361,13 @@ performConcurrentWorkOnRoot @ react-dom.development.js:24542
 workLoop @ scheduler.development.js:256
 flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
-not-found-boundary.js:37 Uncaught ReferenceError: playerCounts is not defined
-at LobbyPage (page.tsx:99:14)
+not-found-boundary.js:37 Uncaught TypeError: cvaA.merge is not a function
+at mergeCva (factory.js:298:17)
+at eval (factory.js:152:27)
+at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
 at renderWithHooks (react-dom.development.js:11121:18)
-at mountIndeterminateComponent (react-dom.development.js:16869:13)
-at beginWork$1 (react-dom.development.js:18458:16)
+at updateForwardRef (react-dom.development.js:15854:20)
+at beginWork$1 (react-dom.development.js:18521:16)
 at beginWork (react-dom.development.js:26927:14)
 at performUnitOfWork (react-dom.development.js:25748:12)
 at workLoopSync (react-dom.development.js:25464:5)
@@ -270,10 +377,12 @@ at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
 at workLoop (scheduler.development.js:256:34)
 at flushWork (scheduler.development.js:225:14)
 at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-LobbyPage @ page.tsx:99
+mergeCva @ factory.js:298
+eval @ factory.js:152
+eval @ emotion-element-489459f2.browser.development.esm.js:56
 renderWithHooks @ react-dom.development.js:11121
-mountIndeterminateComponent @ react-dom.development.js:16869
-beginWork$1 @ react-dom.development.js:18458
+updateForwardRef @ react-dom.development.js:15854
+beginWork$1 @ react-dom.development.js:18521
 beginWork @ react-dom.development.js:26927
 performUnitOfWork @ react-dom.development.js:25748
 workLoopSync @ react-dom.development.js:25464
@@ -285,7 +394,32 @@ flushWork @ scheduler.development.js:225
 performWorkUntilDeadline @ scheduler.development.js:534
 app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> component:
 
-    at LobbyPage (webpack-internal:///(app-pages-browser)/./app/page.tsx:45:78)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at AppCard (webpack-internal:///(app-pages-browser)/./components/ui/AppCard.tsx:15:11)
+    at RoomCard (webpack-internal:///(app-pages-browser)/./components/RoomCard.tsx:16:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at Grid2 (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/components/grid/grid.js:13:13)
+    at SimpleGrid2 (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/components/simple-grid/simple-grid.js:19:13)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-content.js:18:105)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:145:21)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-viewport.js:18:105)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:145:21)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/scroll-area/scroll-area-root.js:26:90)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-slot-recipe-context.js:107:34)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/create-recipe-context.js:60:34)
+    at LobbyPage (webpack-internal:///(app-pages-browser)/./app/page.tsx:48:78)
     at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
     at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
     at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
@@ -298,11 +432,14 @@ app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> componen
     at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
     at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
     at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at div
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
     at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
     at V (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:54:24)
     at J (webpack-internal:///(app-pages-browser)/./node_modules/next-themes/dist/index.mjs:47:47)
     at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:19:11)
+    at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:20:11)
     at body
     at html
     at RootLayout (Server)
@@ -319,10 +456,10 @@ app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> componen
     at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
     at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
     at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
 
 React will try to recreate this component tree from scratch using the error boundary you provided, ReactDevOverlay.
 window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
 logCapturedError @ react-dom.development.js:15295
 callback @ react-dom.development.js:15357
 callCallback @ react-dom.development.js:8696
@@ -361,8 +498,6 @@ recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
 commitLayoutEffectOnFiber @ react-dom.development.js:21577
 recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
 commitLayoutEffectOnFiber @ react-dom.development.js:21577
-recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
-commitLayoutEffectOnFiber @ react-dom.development.js:21418
 recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
 commitLayoutEffectOnFiber @ react-dom.development.js:21437
 commitLayoutEffects @ react-dom.development.js:22912

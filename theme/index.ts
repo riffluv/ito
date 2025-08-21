@@ -14,10 +14,12 @@ export const system = createSystem(defaultConfig, {
       },
       fonts: {
         heading: {
-          value: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+          value:
+            "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
         },
         body: {
-          value: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+          value:
+            "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
         },
       },
       radii: {
@@ -58,14 +60,24 @@ export const system = createSystem(defaultConfig, {
     semanticTokens: {
       colors: {
         canvasBg: { value: { base: "gray.50", _dark: "#0B0D10" } },
-        panelBg: { value: { base: "white", _dark: "#121418" } },
-        panelSubBg: { value: { base: "gray.50", _dark: "#181B20" } },
-        fgDefault: { value: { base: "gray.800", _dark: "#E7EBF2" } },
-        fgMuted: { value: { base: "gray.600", _dark: "#A9B2BF" } },
-        borderDefault: { value: { base: "gray.200", _dark: "#2A2F37" } },
+        panelBg: { value: { base: "white", _dark: "#11151A" } },
+        panelSubBg: { value: { base: "gray.50", _dark: "#161A20" } },
+        fgDefault: { value: { base: "gray.800", _dark: "#E8EDF4" } },
+        fgMuted: { value: { base: "gray.600", _dark: "#A9B4C2" } },
+        borderDefault: { value: { base: "gray.200", _dark: "whiteAlpha.200" } },
         accent: {
           value: { base: "{colors.brand.500}", _dark: "{colors.brand.400}" },
         },
+        accentSubtle: {
+          value: {
+            base: "{colors.brand.50}",
+            _dark: "{colors.brand.900}",
+          },
+        },
+        cardHoverBg: {
+          value: { base: "gray.100", _dark: "whiteAlpha.100" },
+        },
+        link: { value: { base: "blue.600", _dark: "blue.300" } },
       },
     },
     // v3では layerStyles/textStyles は recipes/slot recipes 推奨だが、

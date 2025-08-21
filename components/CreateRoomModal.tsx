@@ -4,7 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Button, Dialog, Field, Input, Stack, Switch } from "@chakra-ui/react";
+import { Dialog, Field, Input, Stack, Switch } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import {
   addDoc,
   collection,
@@ -135,10 +136,10 @@ export function CreateRoomModal({
             </Stack>
           </Dialog.Body>
           <Dialog.Footer>
-            <Button mr={3} onClick={onClose} variant="ghost">
+            <AppButton mr={3} onClick={onClose} variant="ghost">
               キャンセル
-            </Button>
-            <Button
+            </AppButton>
+            <AppButton
               colorPalette="orange"
               variant="solid"
               onClick={handleCreate}
@@ -146,7 +147,7 @@ export function CreateRoomModal({
               disabled={submitting}
             >
               作成
-            </Button>
+            </AppButton>
           </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Positioner>

@@ -1,17 +1,14 @@
-import {
-  Box,
-  Button,
-  Link as ChakraLink,
-  Container,
-  Flex,
-  HStack,
-  Heading,
-} from "@chakra-ui/react";
+"use client";
+import { Box, Link as ChakraLink, Container, Flex, HStack, Heading } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 const ThemeToggle = dynamic(() => import("./ThemeToggle"), { ssr: false });
 
 export default function Header() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   return (
     <Box
       as="header"
@@ -19,7 +16,9 @@ export default function Header() {
       top={0}
       zIndex="overlay"
       borderBottomWidth="1px"
-      borderColor="gray.200"
+      borderColor="borderDefault"
+      bg="panelBg"
+      style={{ backdropFilter: "saturate(180%) blur(8px)" }}
     >
       <Container maxW="6xl" py={3}>
         <Flex align="center" justify="space-between">
@@ -32,9 +31,13 @@ export default function Header() {
             <Heading size="md">Online ITO</Heading>
           </HStack>
           <HStack gap={2}>
-            <Button asChild variant="ghost">
+            <AppButton
+              asChild
+              variant={isHome ? "solid" : "ghost"}
+              aria-label="プレイページへ"
+            >
               <Link href="/">プレイ</Link>
-            </Button>
+            </AppButton>
             <ChakraLink asChild display={{ base: "none", md: "inline-flex" }}>
               <Link href="/">Docs</Link>
             </ChakraLink>

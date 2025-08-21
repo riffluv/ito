@@ -1,6 +1,7 @@
 "use client";
-import { Panel } from "@/components/ui/Panel";
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { AppCard } from "@/components/ui/AppCard";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 
 export function RoomCard({
   name,
@@ -15,7 +16,7 @@ export function RoomCard({
 }) {
   const statusLabel = status === "waiting" ? "待機中" : "ゲーム中";
   return (
-    <Panel>
+    <AppCard role="group" interactive className="animate-fadeInUp">
       <Stack>
         <Text fontWeight="bold" fontSize="lg">
           {name}
@@ -28,15 +29,15 @@ export function RoomCard({
             人数: {count}人
           </Text>
         </HStack>
-        <Button
+        <AppButton
           colorPalette="brand"
           variant="solid"
           onClick={onJoin}
           aria-label={`${name}に参加`}
         >
           参加
-        </Button>
+        </AppButton>
       </Stack>
-    </Panel>
+    </AppCard>
   );
 }
