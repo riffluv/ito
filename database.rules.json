@@ -2,7 +2,7 @@
   "rules": {
     "presence": {
       "$roomId": {
-        "/.read": "auth != null",
+        ".read": "auth != null",
         "$uid": {
           "$connId": {
             ".write": "auth != null && auth.uid === $uid",

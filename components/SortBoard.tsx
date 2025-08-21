@@ -39,10 +39,7 @@ export function SortBoard({
     })
   );
   const ids = proposal;
-  const map = useMemo(
-    () => new Map(players.map((p) => [p.id, p])),
-    [players.map((p) => p.id).join(",")]
-  );
+  const map = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const onDragEnd = (e: DragEndEvent) => {

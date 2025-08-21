@@ -58,7 +58,7 @@ export default function LobbyPage() {
 
   // オンライン人数を一括購読（presence優先、fallback: Firestore lastSeen）
   const roomIds = useMemo(() => rooms.map((r) => r.id), [rooms]);
-  const lobbyCounts = useLobbyCounts(roomIds);
+  const lobbyCounts = useLobbyCounts(roomIds, !!(firebaseEnabled && user));
   useEffect(() => {
     setCounts(lobbyCounts);
   }, [lobbyCounts]);
