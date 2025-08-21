@@ -3,9 +3,12 @@ import {
   get,
   off,
   onDisconnect,
+  onValue as onRtdbValue,
   onValue,
+  push,
   ref,
   remove,
+  serverTimestamp,
   set,
   update,
 } from "firebase/database";
@@ -33,27 +36,69 @@ export const MAX_CLOCK_SKEW_MS = 60_000; // ts が now より 60s 以上未来�
 export async function attachPresence(roomId: string, uid: string) {
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
-  const connId = (() =>
-    Math.random().toString(36).slice(2) + Date.now().toString(36))();
-  const meConnRef = ref(db, CONN_PATH(roomId, uid, connId));
-  // onDisconnect を先にキューしてから online マーク
-  try {
-    await onDisconnect(meConnRef).remove();
-  } catch {}
-  await set(meConnRef, { online: true, ts: Date.now() });
-  // 心拍: ts を定期更新（存在チェックだけではゴーストが残るため）
-  const timer = setInterval(() => {
-    try {
-      update(meConnRef, { ts: Date.now() });
-    } catch {}
-  }, PRESENCE_HEARTBEAT_MS);
+  // 接続状態を監視し、接続ごとに push で一意キーを作成
+  const connectedRef = ref(db, "/.info/connected");
+  let meConnPath: string | null = null;
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
+
+  const startHeartbeat = (path: string) => {
+    if (heartbeat) {
+      try {
+        clearInterval(heartbeat);
+      } catch {}
+      heartbeat = null;
+    }
+    const meConnRef = ref(db, path);
+    heartbeat = setInterval(() => {
+      try {
+        // サーバ時刻で更新（ローカル時計への依存を排除）
+        update(meConnRef, { ts: serverTimestamp() as any }).catch(() => {});
+      } catch {}
+    }, PRESENCE_HEARTBEAT_MS);
+  };
+
+  const stopHeartbeat = () => {
+    if (heartbeat) {
+      try {
+        clearInterval(heartbeat);
+      } catch {}
+      heartbeat = null;
+    }
+  };
+
+  const connectedHandler = async (snap: any) => {
+    const isConnected = !!snap.val();
+    if (isConnected) {
+      // 新しい接続ノードを作成
+      const baseRef = ref(db, ROOM_PATH(roomId) + "/" + uid);
+      const meRef = push(baseRef);
+      // push() の toJSON() はフル URL を返すことがあり、ref(db, fullUrl) は無効になる。
+      // ここでは connId を取り出して相対パスを保持する（ref() に渡すため）。
+      const connId = meRef.key;
+      meConnPath = connId ? CONN_PATH(roomId, uid, connId) : null;
+      try {
+        await onDisconnect(meRef).remove();
+      } catch {}
+      try {
+        await set(meRef, { online: true, ts: serverTimestamp() as any });
+      } catch {}
+      if (meConnPath) startHeartbeat(meConnPath);
+    } else {
+      // 切断検知: ハートビート停止（onDisconnect がサーバ側で削除する）
+      stopHeartbeat();
+    }
+  };
+
+  onRtdbValue(connectedRef, connectedHandler);
+
   // 明示的に解除するための関数を返す
   return async () => {
     try {
-      clearInterval(timer);
+      off(connectedRef, "value", connectedHandler as any);
     } catch {}
+    stopHeartbeat();
     try {
-      await remove(meConnRef);
+      if (meConnPath) await remove(ref(db, meConnPath));
     } catch {}
   };
 }
@@ -72,6 +117,8 @@ export function subscribePresence(
       const conns = val[uid] || {};
       // いずれかの接続で ts が鮮度内ならオンライン
       return Object.values(conns).some((c: any) => {
+        // serverTimestamp() 直後は数値でない可能性があるため online:true で即時オンライン扱い
+        if (c?.online === true && typeof c?.ts !== "number") return true;
         const ts = typeof c?.ts === "number" ? c.ts : 0;
         if (ts <= 0) return false;
         // 未来に大きく進んだ ts は無効扱い（時計ズレ対策）

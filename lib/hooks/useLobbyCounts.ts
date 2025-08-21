@@ -47,6 +47,7 @@ export function useLobbyCounts(roomIds: string[], enabled: boolean) {
           for (const uid of Object.keys(users)) {
             const conns = users[uid] || {};
             const isOnline = Object.values(conns).some((c: any) => {
+              if (c?.online === true && typeof c?.ts !== "number") return true;
               const ts = typeof c?.ts === "number" ? c.ts : 0;
               if (ts <= 0) return false;
               if (ts - now > MAX_CLOCK_SKEW_MS) return false;
