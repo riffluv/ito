@@ -1,6 +1,6 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
-import { toaster } from "@/components/ui/toaster";
+import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import { dealNumbers } from "@/lib/game/room";
 import {
@@ -92,12 +92,9 @@ export function TopicDisplay({
                   onClick={async () => {
                     try {
                       await dealNumbers(roomId);
-                      toaster.create({
-                        title: "数字を配りました",
-                        type: "success",
-                      });
+                      notify({ title: "数字を配りました", type: "success" });
                     } catch (e: any) {
-                      toaster.create({
+                      notify({
                         title: "数字の配布に失敗",
                         description: e?.message || String(e),
                         type: "error",

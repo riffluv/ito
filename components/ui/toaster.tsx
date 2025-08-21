@@ -1,45 +1,23 @@
 "use client";
-import {
-  Toaster as ChakraToaster,
-  Toast,
-  createToaster,
-} from "@chakra-ui/react";
+// Single no-op toaster stub to completely disable visual toasts while preserving the
+// API surface used across the codebase (so existing `toaster.create(...)` calls do nothing).
+// This prevents runtime errors and keeps call sites unchanged.
 
-// v3: Export a singleton toaster and a renderer component
-export const toaster = createToaster({ placement: "top-end" });
+export const toaster = {
+  create: (_opts: any) => undefined,
+  dismiss: (_id?: any) => undefined,
+  promise: async (p: Promise<any>, _opts?: any) => {
+    try {
+      return await p;
+    } catch (err) {
+      // swallow errors from the wrapped promise to preserve previous behaviour where
+      // callers may have awaited toaster.promise(...). Consumers should not rely on UI side-effects.
+      return undefined;
+    }
+  },
+};
 
-export function Toaster() {
-  return (
-    <ChakraToaster toaster={toaster}>
-      {(toast) => {
-        const { title, description, ...rest } = toast as any;
-        return (
-          <Toast.Root
-            {...rest}
-            style={{
-              minWidth: 280,
-              maxWidth: 420,
-              width: "max-content",
-              alignItems: "flex-start",
-            }}
-          >
-            <Toast.Indicator />
-            <div style={{ display: "grid", gap: 2 }}>
-              {title ? (
-                <Toast.Title style={{ wordBreak: "break-word" }}>
-                  {title as any}
-                </Toast.Title>
-              ) : null}
-              {description ? (
-                <Toast.Description style={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>
-                  {description as any}
-                </Toast.Description>
-              ) : null}
-            </div>
-            <Toast.CloseTrigger />
-          </Toast.Root>
-        );
-      }}
-    </ChakraToaster>
-  );
+export function Toaster(): null {
+  // Intentionally render nothing — the app should not show any toasts.
+  return null;
 }

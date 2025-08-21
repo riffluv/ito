@@ -1,5 +1,6 @@
 "use client";
-import { IconButton, Tooltip } from "@chakra-ui/react";
+import { notify } from "@/components/ui/notify";
+import { IconButton } from "@chakra-ui/react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
@@ -31,19 +32,35 @@ export default function ThemeToggle() {
   // 初回は Sun を描画してサーバーHTMLと一致させる。マウント後は実際の状態に応じたアイコンを描画。
   const icon = mounted && !isDark ? <Moon size={18} /> : <Sun size={18} />;
 
+  const handleClick = useCallback(() => {
+    handleToggle();
+    // keep ARIA live region; no visual toast
+    notify({ title: label, type: "info", duration: 1500 });
+  }, [handleToggle, label]);
+
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <IconButton
-          aria-label={label}
-          title={label}
-          onClick={handleToggle}
-          variant="ghost"
-        >
-          {icon}
-        </IconButton>
-      </Tooltip.Trigger>
-      <Tooltip.Content>{label}</Tooltip.Content>
-    </Tooltip.Root>
+    <>
+      <IconButton
+        aria-label={label}
+        title={label}
+        onClick={handleClick}
+        variant="ghost"
+      >
+        {icon}
+      </IconButton>
+      {/* aria-live fallback for screen readers */}
+      <div
+        aria-live="polite"
+        style={{
+          position: "absolute",
+          left: -9999,
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+        }}
+      >
+        {label}
+      </div>
+    </>
   );
 }
