@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "presence": {
+      "$roomId": {
+        "/.read": "auth != null",
+        "$uid": {
+          "$connId": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['online','ts']) || newData.val() === null"
+          }
+        }
+      }
+    }
+  }
+}
