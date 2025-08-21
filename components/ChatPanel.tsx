@@ -4,15 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
-import {
-  Badge,
-  Box,
-  Button,
-  HStack,
-  Input,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Badge, Box, HStack, Input, ScrollArea, Stack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import {
   collection,
   limit,
@@ -64,8 +57,11 @@ export function ChatPanel({
 
   return (
     <Panel p={2} h={height} display="flex" flexDir="column">
-      <Box flex="1" overflowY="auto" p={2}>
-        <Stack gap={2}>
+      <ScrollArea.Root style={{ flex: 1 }}>
+        <ScrollArea.Viewport>
+          <ScrollArea.Content>
+            <Box p={2}>
+              <Stack gap={2}>
           {messages.map((m) => {
             const isSystem = m.sender === "system";
             const isMe = m.sender === (displayName || "匿名");
@@ -108,9 +104,16 @@ export function ChatPanel({
               </Box>
             );
           })}
-        </Stack>
-        <div ref={bottomRef} />
-      </Box>
+              </Stack>
+              <div ref={bottomRef} />
+            </Box>
+          </ScrollArea.Content>
+        </ScrollArea.Viewport>
+        <ScrollArea.Scrollbar>
+          <ScrollArea.Thumb />
+        </ScrollArea.Scrollbar>
+        <ScrollArea.Corner />
+      </ScrollArea.Root>
       <HStack>
         <Input
           placeholder={readOnly ? "観戦中は投稿できません" : "メッセージを入力"}
@@ -121,9 +124,9 @@ export function ChatPanel({
           }}
           disabled={readOnly}
         />
-        <Button onClick={send} colorPalette="orange" disabled={readOnly}>
+        <AppButton onClick={send} colorPalette="orange" disabled={readOnly}>
           送信
-        </Button>
+        </AppButton>
       </HStack>
     </Panel>
   );

@@ -2,6 +2,7 @@
 import { ChatPanel } from "@/components/ChatPanel";
 import { CluePanel } from "@/components/CluePanel";
 import { Hud } from "@/components/Hud";
+import PhaseHeader from "@/components/site/PhaseHeader";
 import { PlayBoard } from "@/components/PlayBoard";
 // import { PlayerList } from "@/components/PlayerList";
 import { Participants } from "@/components/Participants";
@@ -10,6 +11,7 @@ import { RoomOptionsEditor } from "@/components/RoomOptions";
 import { SortBoard } from "@/components/SortBoard";
 import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
+import PhaseTips from "@/components/site/PhaseTips";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
@@ -33,16 +35,8 @@ import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import {
-  Box,
-  Button,
-  Container,
-  Grid,
-  HStack,
-  Spinner,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Container, Grid, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import {
   collection,
   deleteDoc,
@@ -391,6 +385,7 @@ export default function RoomPage() {
             : null
         }
       />
+      <PhaseHeader phase={room.status as any} />
 
       <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
         <Grid
@@ -417,22 +412,22 @@ export default function RoomPage() {
               />
               {isHost && (
                 <Stack mt={3}>
-                  <Button variant="outline" onClick={resetToWaiting}>
+                  <AppButton variant="outline" onClick={resetToWaiting}>
                     リセット
-                  </Button>
+                  </AppButton>
                 </Stack>
               )}
             </Panel>
 
             {isHost && room.status === "waiting" && (
-              <Button colorPalette="orange" onClick={startGame}>
+              <AppButton colorPalette="orange" onClick={startGame}>
                 ゲーム開始
-              </Button>
+              </AppButton>
             )}
 
             {room.status === "finished" && (
               <Stack>
-                {isHost && <Button onClick={resetToWaiting}>もう一度</Button>}
+                {isHost && <AppButton onClick={resetToWaiting}>もう一度</AppButton>}
               </Stack>
             )}
           </Stack>
@@ -445,6 +440,7 @@ export default function RoomPage() {
             {room.status === "waiting" && (
               <Panel>
                 <Text>ホストがゲーム開始するまでお待ちください</Text>
+                <PhaseTips phase="waiting" />
               </Panel>
             )}
 
@@ -452,6 +448,9 @@ export default function RoomPage() {
               <Stack gap={4}>
                 <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
                 <CluePanel roomId={roomId} me={me} />
+                <Panel title="ヒント">
+                  <PhaseTips phase="clue" />
+                </Panel>
                 {/* 並べ替えの事前提案（ドラッグ操作に慣れる） */}
                 {Array.isArray((room as any)?.deal?.players) && (
                   <SortBoard
@@ -466,14 +465,15 @@ export default function RoomPage() {
                 )}
                 {isHost && (
                   <Stack>
-                    <Button
+                    <AppButton
                       colorPalette="orange"
                       onClick={() => startPlayingAction(roomId)}
                       disabled={!canStartPlaying}
                       title={startDisabledTitle}
+                      aria-disabled={!canStartPlaying}
                     >
                       順番出しを開始
-                    </Button>
+                    </AppButton>
                     {!canStartPlaying && (
                       <Text fontSize="sm" color="gray.300">
                         未準備のプレイヤー:{" "}
@@ -502,12 +502,12 @@ export default function RoomPage() {
                     isHost &&
                     remainingCount > 0 && (
                       <HStack mt={3}>
-                        <Button
+                        <AppButton
                           onClick={continueAfterFail}
                           colorPalette="orange"
                         >
                           続けて並べ替える
-                        </Button>
+                        </AppButton>
                       </HStack>
                     )}
                 </Panel>
@@ -519,16 +519,21 @@ export default function RoomPage() {
             )}
 
             {room.status === "playing" && (
-              <PlayBoard
-                roomId={roomId}
-                players={players}
-                meId={meId}
-                orderList={room.order?.list || []}
-                isHost={isHost}
-                failed={!!room.order?.failed}
-                failedAt={room.order?.failedAt ?? null}
-                eligibleIds={eligibleIds}
-              />
+              <>
+                <Panel title="コツ">
+                  <PhaseTips phase="playing" />
+                </Panel>
+                <PlayBoard
+                  roomId={roomId}
+                  players={players}
+                  meId={meId}
+                  orderList={room.order?.list || []}
+                  isHost={isHost}
+                  failed={!!room.order?.failed}
+                  failedAt={room.order?.failedAt ?? null}
+                  eligibleIds={eligibleIds}
+                />
+              </>
             )}
           </Box>
 
@@ -539,7 +544,7 @@ export default function RoomPage() {
           >
             <ChatPanel roomId={roomId} height="clamp(240px, 40dvh, 420px)" />
             <HStack mt={3}>
-              <Button
+              <AppButton
                 size="sm"
                 variant="ghost"
                 onClick={async () => {
@@ -548,7 +553,7 @@ export default function RoomPage() {
                 }}
               >
                 退出してロビーへ
-              </Button>
+              </AppButton>
             </HStack>
           </Box>
         </Grid>
