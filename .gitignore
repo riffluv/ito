@@ -5,3 +5,5 @@ yarn.lock
 *.log
 .DS_Store
 無題.jpg
+#. Local environment variables (keep out of repo)
+.env.local
