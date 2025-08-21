@@ -10,7 +10,7 @@ import { off, onValue, ref } from "firebase/database";
 import { collection, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 
-export function useLobbyCounts(roomIds: string[]) {
+export function useLobbyCounts(roomIds: string[], enabled: boolean) {
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   // roomIds キー以外の値をクリーンに保つ
@@ -24,7 +24,10 @@ export function useLobbyCounts(roomIds: string[]) {
   }, [roomKey]);
 
   useEffect(() => {
-    if (!firebaseEnabled) return;
+    if (!firebaseEnabled || !enabled) {
+      setCounts({});
+      return;
+    }
     if (roomIds.length === 0) {
       setCounts({});
       return;
@@ -79,7 +82,7 @@ export function useLobbyCounts(roomIds: string[]) {
       })
     );
     return () => unsubs.forEach((u) => u());
-  }, [firebaseEnabled, roomKey]);
+  }, [firebaseEnabled, enabled, roomKey]);
 
   return counts;
 }
