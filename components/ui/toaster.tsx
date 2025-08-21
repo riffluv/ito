@@ -1,23 +1,54 @@
 "use client";
-// Single no-op toaster stub to completely disable visual toasts while preserving the
-// API surface used across the codebase (so existing `toaster.create(...)` calls do nothing).
-// This prevents runtime errors and keeps call sites unchanged.
+import {
+  Toaster as ChakraToaster,
+  Toast,
+  createToaster,
+} from "@chakra-ui/react";
 
-export const toaster = {
-  create: (_opts: any) => undefined,
-  dismiss: (_id?: any) => undefined,
-  promise: async (p: Promise<any>, _opts?: any) => {
-    try {
-      return await p;
-    } catch (err) {
-      // swallow errors from the wrapped promise to preserve previous behaviour where
-      // callers may have awaited toaster.promise(...). Consumers should not rely on UI side-effects.
-      return undefined;
-    }
-  },
-};
+// Chakra UI v3 official toaster instance.
+// Keep placement centralized to avoid layout interference with app content.
+export const toaster = createToaster({
+  placement: "bottom-end", // show toasts at bottom-right
+  max: 3,
+  overlap: false,
+  gap: 12,
+  // provide slight offsets from viewport edges
+  offsets: { top: "16px", right: "16px", bottom: "16px", left: "16px" },
+});
 
-export function Toaster(): null {
-  // Intentionally render nothing — the app should not show any toasts.
-  return null;
+// Render Chakra's toaster using the canonical Toast composition without custom CSS.
+// Keeping the default composition minimizes layout/style regressions.
+export function Toaster() {
+  return (
+    <ChakraToaster toaster={toaster}>
+      {(toast) => (
+        <Toast.Root
+          key={toast.id}
+          px="3"
+          py="2"
+          rounded="md"
+          borderWidth="1px"
+          shadow="md"
+          display="inline-flex"
+          // 強制的に横書き・改行を有効化
+          style={{ writingMode: "horizontal-tb", textOrientation: "mixed" }}
+          whiteSpace="normal"
+          wordBreak="break-word"
+          alignItems="center"
+          w="auto"
+          minW={{ base: "240px", md: "280px" }}
+          maxW={{ base: "calc(100vw - 32px)", md: "360px" }}
+        >
+          <Toast.Indicator mr="2" />
+          <div>
+            {toast.title ? <Toast.Title>{toast.title}</Toast.Title> : null}
+            {toast.description ? (
+              <Toast.Description>{toast.description}</Toast.Description>
+            ) : null}
+          </div>
+          <Toast.CloseTrigger />
+        </Toast.Root>
+      )}
+    </ChakraToaster>
+  );
 }
