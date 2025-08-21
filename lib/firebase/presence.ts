@@ -110,3 +110,21 @@ export async function fetchPresenceUids(roomId: string): Promise<string[]> {
     return [];
   }
 }
+
+// 自分の uid 配下に残っている全ての connId を削除（多重タブやクラッシュ時の残骸対策）
+export async function forceDetachAll(roomId: string, uid: string) {
+  if (!presenceSupported()) return;
+  try {
+    const baseRef = ref(rtdb!, ROOM_PATH(roomId) + "/" + uid);
+    const snap = await get(baseRef);
+    const val = snap.val() as Record<string, any> | null;
+    if (!val) return;
+    const tasks: Promise<any>[] = [];
+    for (const connId of Object.keys(val)) {
+      tasks.push(
+        remove(ref(rtdb!, CONN_PATH(roomId, uid, connId))).catch(() => {})
+      );
+    }
+    await Promise.all(tasks);
+  } catch {}
+}

@@ -18,7 +18,7 @@ import {
   setPlayerNameAvatar,
   updateLastSeen,
 } from "@/lib/firebase/players";
-import { presenceSupported } from "@/lib/firebase/presence";
+import { forceDetachAll, presenceSupported } from "@/lib/firebase/presence";
 import {
   leaveRoom as leaveRoomAction,
   resetRoomToWaiting,
@@ -226,6 +226,7 @@ export default function RoomPage() {
       // presence detach（即時反映）
       try {
         await detachNow();
+        await forceDetachAll(roomId, uid);
       } catch {}
       await leaveRoomAction(roomId, uid, displayName);
     } catch {}
@@ -242,6 +243,7 @@ export default function RoomPage() {
         try {
           try {
             await detachNow();
+            await forceDetachAll(roomId, uid);
           } catch {}
           const others = players.filter((p) => p.id !== uid);
           if (room && room.hostId === uid && others.length > 0) {
@@ -280,6 +282,7 @@ export default function RoomPage() {
         try {
           try {
             await detachNow();
+            await forceDetachAll(roomId, my);
           } catch {}
           const dupQ = query(
             collection(db, "rooms", roomId, "players"),
