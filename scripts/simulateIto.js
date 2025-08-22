@@ -93,3 +93,64 @@ function simulate(playersCount) {
 }
 
 [3, 4, 5, 6].forEach(simulate);
+
+// targeted scenario: 5 players, plays: p1 (1st), p2 (2nd), p3 (3rd causes failure), then check p4/p5
+function targetedScenario() {
+  const players = ["p1", "p2", "p3", "p4", "p5"];
+  const numbers = { p1: 1, p2: 5, p3: 3, p4: 10, p5: 20 };
+  console.log(
+    "\nTargeted scenario (allowContinue=false): p1->p2->p3 fails at 3, should stop"
+  );
+  let order = defaultOrderState();
+  let allowContinue = false;
+  for (const pid of players) {
+    const { next, violation } = applyPlay({
+      order,
+      playerId: pid,
+      myNum: numbers[pid],
+      allowContinue,
+    });
+    order = next;
+    console.log(
+      "Played",
+      pid,
+      "num",
+      numbers[pid],
+      "violation",
+      violation,
+      "order list",
+      order.list
+    );
+    if (order.failed) break;
+  }
+  console.log("Final order:", order);
+
+  console.log(
+    "\nTargeted scenario (allowContinue=true): p1->p2->p3 fails at 3, but continue to p4/p5"
+  );
+  order = defaultOrderState();
+  allowContinue = true;
+  for (const pid of players) {
+    const { next, violation } = applyPlay({
+      order,
+      playerId: pid,
+      myNum: numbers[pid],
+      allowContinue,
+    });
+    order = next;
+    console.log(
+      "Played",
+      pid,
+      "num",
+      numbers[pid],
+      "violation",
+      violation,
+      "order list",
+      order.list
+    );
+    if (order.failed && !allowContinue) break;
+  }
+  console.log("Final order:", order);
+}
+
+targetedScenario();

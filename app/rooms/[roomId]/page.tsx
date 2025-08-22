@@ -2,17 +2,18 @@
 import { ChatPanel } from "@/components/ChatPanel";
 import { CluePanel } from "@/components/CluePanel";
 import { Hud } from "@/components/Hud";
-import PhaseHeader from "@/components/site/PhaseHeader";
 import { PlayBoard } from "@/components/PlayBoard";
+import PhaseHeader from "@/components/site/PhaseHeader";
 // import { PlayerList } from "@/components/PlayerList";
 import { Participants } from "@/components/Participants";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RoomOptionsEditor } from "@/components/RoomOptions";
+import PhaseTips from "@/components/site/PhaseTips";
 import { SortBoard } from "@/components/SortBoard";
 import { TopicDisplay } from "@/components/TopicDisplay";
-import { Panel } from "@/components/ui/Panel";
-import PhaseTips from "@/components/site/PhaseTips";
+import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { Panel } from "@/components/ui/Panel";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -28,28 +29,26 @@ import {
 } from "@/lib/firebase/rooms";
 import {
   continueAfterFail as continueAfterFailAction,
+  setOrderProposal,
   startGame as startGameAction,
   startPlaying as startPlayingAction,
-  setOrderProposal,
   submitSortedOrder,
 } from "@/lib/game/room";
-import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
+import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Box, Container, Grid, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
 import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+  Box,
+  Container,
+  Grid,
+  HStack,
+  Spinner,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -207,14 +206,22 @@ export default function RoomPage() {
   const [proposal, setProposal] = useState<string[]>(() => {
     const base = (room as any)?.order?.proposal as string[] | undefined;
     const dealList = (room as any)?.deal?.players as string[] | undefined;
-    return base && base.length > 0 ? base : dealList || players.map((p) => p.id);
+    return base && base.length > 0
+      ? base
+      : dealList || players.map((p) => p.id);
   });
   // 部屋・プレイヤーの変化で提案初期化
   useEffect(() => {
     const base = (room as any)?.order?.proposal as string[] | undefined;
     const dealList = (room as any)?.deal?.players as string[] | undefined;
-    setProposal(base && base.length > 0 ? base : dealList || players.map((p) => p.id));
-  }, [room?.id, (room as any)?.deal?.players?.length, players.map((p) => p.id).join(",")]);
+    setProposal(
+      base && base.length > 0 ? base : dealList || players.map((p) => p.id)
+    );
+  }, [
+    room?.id,
+    (room as any)?.deal?.players?.length,
+    players.map((p) => p.id).join(","),
+  ]);
 
   // 表示名が変わったら、入室中の自分のプレイヤーDocにも反映
   useEffect(() => {
@@ -344,7 +351,11 @@ export default function RoomPage() {
 
       <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
         <Grid
-          templateColumns={{ base: "1fr", md: "340px 1fr 360px", lg: "360px 1fr 400px" }}
+          templateColumns={{
+            base: "1fr",
+            md: "340px 1fr 360px",
+            lg: "360px 1fr 400px",
+          }}
           gap={4}
           h="100%"
         >
@@ -382,7 +393,9 @@ export default function RoomPage() {
 
             {room.status === "finished" && (
               <Stack>
-                {isHost && <AppButton onClick={resetToWaiting}>もう一度</AppButton>}
+                {isHost && (
+                  <AppButton onClick={resetToWaiting}>もう一度</AppButton>
+                )}
               </Stack>
             )}
           </Stack>
@@ -420,7 +433,10 @@ export default function RoomPage() {
                         onConfirm={async () => {
                           try {
                             await submitSortedOrder(roomId, proposal);
-                            notify({ title: "並び順で判定しました", type: "success" });
+                            notify({
+                              title: "並び順で判定しました",
+                              type: "success",
+                            });
                           } catch (e: any) {
                             notify({
                               title: "確定に失敗しました",
@@ -469,8 +485,11 @@ export default function RoomPage() {
                   >
                     {room.result?.success ? "クリア！" : "失敗…"}
                   </Text>
+                  <Text fontSize="sm" color="gray.400" mt={2}>
+                    失敗しても残りのプレイヤーは最後までカードを出せます。ホストは再挑戦（並べ替え）できます。
+                  </Text>
+
                   {room.result?.success === false &&
-                    room.options.allowContinueAfterFail &&
                     isHost &&
                     remainingCount > 0 && (
                       <HStack mt={3}>
@@ -533,4 +552,3 @@ export default function RoomPage() {
     </Container>
   );
 }
-  

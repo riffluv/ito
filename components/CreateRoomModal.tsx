@@ -1,11 +1,11 @@
 "use client";
+import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Dialog, Field, Input, Stack, Switch } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
+import { Dialog, Field, Input, Stack } from "@chakra-ui/react";
 import {
   addDoc,
   collection,
@@ -123,16 +123,7 @@ export function CreateRoomModal({
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field.Root>
-              <Field.Root orientation="horizontal">
-                <Field.Label mb="0">失敗後に継続確認</Field.Label>
-                <Switch.Root
-                  checked={allowContinueAfterFail}
-                  onCheckedChange={(d) => setAllowContinueAfterFail(d.checked)}
-                >
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                </Switch.Root>
-              </Field.Root>
+              {/* 継続オプションは UI から削除しました（ホスト操作で制御します） */}
             </Stack>
           </Dialog.Body>
           <Dialog.Footer>

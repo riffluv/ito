@@ -76,36 +76,12 @@ export async function leaveRoom(
     } catch {}
   }
 
-  await updateLastActive(roomId);
+  // 退室ログ（system）
   await addDoc(collection(db!, "rooms", roomId, "chat"), {
     sender: "system",
     text: `${displayName || "匿名"} が退出しました`,
     createdAt: serverTimestamp(),
   });
-
-  // 最後の1人が抜けたらソフトクローズ（ロビーに出さない）かつ待機へ戻す
-  try {
-    const remain = await getDocs(collection(db!, "rooms", roomId, "players"));
-    if (remain.empty) {
-      // 状態と一時データをクリア
-      await resetRoomToWaiting(roomId);
-      await updateDoc(doc(db!, "rooms", roomId), {
-        closedAt: serverTimestamp(),
-      });
-    }
-  } catch {}
-
-  // 残り参加者がいなければソフトクローズ
-  const afterSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
-  const remaining = afterSnap.size;
-  if (remaining === 0) {
-    const expires = new Date(Date.now() + ROOM_TTL_MS);
-    await updateDoc(doc(db!, "rooms", roomId), {
-      closedAt: serverTimestamp(),
-      expiresAt: expires,
-      lastActiveAt: serverTimestamp(),
-    });
-  }
 }
 
 export async function resetRoomToWaiting(roomId: string) {

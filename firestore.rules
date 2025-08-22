@@ -30,11 +30,19 @@ service cloud.firestore {
       // chat サブコレクション
       match /chat/{msgId} {
         allow read: if true;
-        // chat は認証ユーザーのみ投稿可能。送信者の一致を要求
+        // 作成: 認証済み かつ
+        //  - system メッセージ もしくは uid が本人
+        //  - createdAt は timestamp
+        //  - text は文字列（長さ<= 500 目安）
         allow create: if request.auth != null
           && request.resource.data.sender is string
-          && ((request.resource.data.sender == "system") || (request.resource.data.sender == request.auth.token.name || request.resource.data.sender == request.auth.uid))
-          && request.resource.data.createdAt == request.time;
+          && (
+            request.resource.data.sender == "system" ||
+            (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+          )
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt is timestamp;
         allow delete: if false;
         allow update: if false;
       }

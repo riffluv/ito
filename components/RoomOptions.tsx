@@ -1,7 +1,7 @@
 "use client";
-import type { RoomOptions } from "@/lib/types";
-import { Field, HStack, Switch, Stack } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
+import type { RoomOptions } from "@/lib/types";
+import { Field, HStack, Stack } from "@chakra-ui/react";
 
 export function RoomOptionsEditor({
   value,
@@ -14,21 +14,9 @@ export function RoomOptionsEditor({
 }) {
   return (
     <Stack gap={3}>
-      <HStack justify="space-between" w="100%">
-        <Field.Root orientation="horizontal" w="100%">
-          <Field.Label>失敗後に残りを公開</Field.Label>
-          <Switch.Root
-            checked={value.allowContinueAfterFail}
-            onCheckedChange={(e) =>
-              onChange({ ...value, allowContinueAfterFail: e.checked })
-            }
-            disabled={disabled}
-          >
-            <Switch.HiddenInput />
-            <Switch.Control />
-          </Switch.Root>
-        </Field.Root>
-      </HStack>
+      {/* allowContinueAfterFail オプションは廃止。ホスト操作で継続可否を制御します */}
+
+      {/* '失敗後の動作' は continueMode を廃止し、allowContinueAfterFail のトグルで制御します */}
 
       <Field.Root>
         <Field.Label>クリア方式</Field.Label>

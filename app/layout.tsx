@@ -1,5 +1,5 @@
 import Header from "@/components/site/Header";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import React from "react";
 import "./globals.css";
 import Providers from "./providers";
@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Online ITO",
   description: "Co-op number ordering party game",
   icons: [{ rel: "icon", url: "/icon.svg" }],
+};
+
+export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0B0D10" },
