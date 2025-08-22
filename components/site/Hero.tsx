@@ -1,6 +1,6 @@
 "use client";
-import { Box, Container, Heading, HStack, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
+import { Box, Container, HStack, Text } from "@chakra-ui/react";
 
 type Props = {
   onPlay?: () => void;
@@ -22,23 +22,26 @@ export default function Hero({ onPlay, onRules }: Props) {
       borderColor="borderDefault"
     >
       <Container maxW="6xl" position="relative">
-        <Heading
-          size={{ base: "2xl", md: "3xl" }}
-          lineHeight="1.1"
-          bgGradient="linear(to-r, brand.400, orange.400)"
-          bgClip="text"
-          letterSpacing="tight"
-        >
-          みんなで“数の感覚”を合わせるオンラインITO
-        </Heading>
+        {/* hero heading removed per request to avoid transparent selectable text */}
         <Text mt="4" fontSize={{ base: "md", md: "lg" }} color="fgMuted">
           シンプルで直感的、アクセシブル。Chakra UIベースの軽快なUIでプレイ。
         </Text>
         <HStack mt="8" gap="4">
-          <AppButton visual="soft" palette="orange" size="lg" onClick={onPlay} minW="10.5rem">
+          <AppButton
+            visual="soft"
+            palette="orange"
+            size="lg"
+            onClick={onPlay}
+            minW="10.5rem"
+          >
             今すぐプレイ
           </AppButton>
-          <AppButton size="lg" variant="subtle" onClick={onRules} minW="10.5rem">
+          <AppButton
+            size="lg"
+            variant="subtle"
+            onClick={onRules}
+            minW="10.5rem"
+          >
             ルールを見る
           </AppButton>
         </HStack>

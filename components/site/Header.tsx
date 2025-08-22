@@ -1,6 +1,13 @@
 "use client";
-import { Box, Link as ChakraLink, Container, Flex, HStack, Heading } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
+import {
+  Box,
+  Link as ChakraLink,
+  Container,
+  Flex,
+  HStack,
+  Heading,
+} from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,7 +35,9 @@ export default function Header() {
               bgGradient="linear(to-br, brand.400, cyan.400)"
               rounded="md"
             />
-            <Heading size="sm" letterSpacing="tight">Online ITO</Heading>
+            <Heading size="lg" letterSpacing="tight">
+              Online ITO
+            </Heading>
           </HStack>
           <HStack gap={2}>
             <AppButton
