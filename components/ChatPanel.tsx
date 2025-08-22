@@ -31,7 +31,7 @@ export function ChatPanel({
 
   useEffect(() => {
     const q = query(
-      collection(db, "rooms", roomId, "chat"),
+      collection(db!, "rooms", roomId, "chat"),
       orderBy("createdAt", "asc"),
       limit(200)
     );

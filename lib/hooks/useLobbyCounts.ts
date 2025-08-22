@@ -66,7 +66,7 @@ export function useLobbyCounts(roomIds: string[], enabled: boolean) {
 
     // フォールバック: Firestore の lastSeen を使用
     const unsubs = roomIds.map((id) =>
-      onSnapshot(collection(db, "rooms", id, "players"), (snap) => {
+      onSnapshot(collection(db!, "rooms", id, "players"), (snap) => {
         const now = Date.now();
         const seen = new Set<string>();
         let active = 0;

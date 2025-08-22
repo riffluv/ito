@@ -4,6 +4,8 @@ import {
   Box,
   Container,
   Flex,
+  Grid,
+  GridItem,
   Heading,
   HStack,
   Input,
@@ -20,8 +22,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 // presenceベースで人数を取得するため timeユーティリティは未使用
 import { CreateRoomModal } from "@/components/CreateRoomModal";
+import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import Hero from "@/components/site/Hero";
+// import LobbyLeftRail from "@/components/site/LobbyLeftRail";
+import LobbyRightRail from "@/components/site/LobbyRightRail";
+import LobbySkeletons from "@/components/site/LobbySkeletons";
+import EmptyState from "@/components/site/EmptyState";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
@@ -36,9 +43,13 @@ export default function LobbyPage() {
   const [pendingJoin, setPendingJoin] = useState<string | null>(null);
   const [afterNameCreate, setAfterNameCreate] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
+  // 検索機能は一時的に無効化（将来のために残置）
+  // const [search, setSearch] = useState("");
+  const waitingOnly = true;
   useEffect(() => {
     setMounted(true);
   }, []);
+  // フィルターの永続化は現在停止
 
   const {
     rooms,
@@ -73,7 +84,7 @@ export default function LobbyPage() {
   const filteredRooms = useMemo(() => {
     const now = Date.now();
     const grace = 5 * 60 * 1000;
-    return rooms.filter((r) => {
+    const base = rooms.filter((r) => {
       // ソフトクローズ済みは表示しない
       if ((r as any).closedAt) return false;
       const active = lobbyCounts[r.id] ?? 0;
@@ -88,181 +99,157 @@ export default function LobbyPage() {
       const recent = ms > 0 && now - ms <= grace;
       return active > 0 || recent;
     });
-  }, [rooms, lobbyCounts]);
+    // filter by waitingOnly
+    const byStatus = waitingOnly
+      ? base.filter((r) => !r.status || r.status === "waiting")
+      : base;
+    return byStatus;
+  }, [rooms, lobbyCounts, waitingOnly]);
+
+  const openCreateFlow = () => {
+    if (!displayName) {
+      setAfterNameCreate(true);
+      setPendingJoin(null);
+      nameDialog.onOpen();
+    } else {
+      createDialog.onOpen();
+    }
+  };
+
+  const openJoinFlow = (roomId: string) => {
+    if (!displayName) {
+      setAfterNameCreate(false);
+      setPendingJoin(roomId);
+      nameDialog.onOpen();
+    } else {
+      router.push(`/rooms/${roomId}`);
+    }
+  };
 
   return (
     <>
-      <Hero />
-      <Container
-        maxW="container.lg"
-        h="100dvh"
-        py={4}
-        display="flex"
-        flexDir="column"
-        overflow="hidden"
-      >
-        <Flex justify="space-between" align="center" mb={3} shrink={0}>
-          <Heading size="lg">Online-ITO</Heading>
+      <Hero
+        onPlay={openCreateFlow}
+        onRules={() => router.push("/")}
+      />
+      <Container maxW="6xl" py={8}>
+        <Flex justify="space-between" align="center" mb={4}>
+          <Heading size="lg" letterSpacing="tight">Online-ITO</Heading>
           <HStack>
             <HStack gap={2} mr={2} color="gray.300">
               <Text fontSize="sm" suppressHydrationWarning>
                 名前: {mounted ? displayName || "未設定" : "未設定"}
               </Text>
-              <AppButton
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setTempName(displayName || "");
-                  setAfterNameCreate(false);
-                  setPendingJoin(null);
-                  nameDialog.onOpen();
-                }}
-              >
+              <AppButton size="sm" variant="subtle" onClick={() => {
+                setTempName(displayName || "");
+                setAfterNameCreate(false);
+                setPendingJoin(null);
+                nameDialog.onOpen();
+              }} minW="6.5rem">
                 変更
               </AppButton>
             </HStack>
-            <AppButton
-              colorPalette="brand"
-              variant="solid"
-              disabled={loading}
-              onClick={() => {
-                if (!displayName) {
-                  setAfterNameCreate(true);
-                  setPendingJoin(null);
-                  nameDialog.onOpen();
-                } else {
-                  createDialog.onOpen();
-                }
-              }}
-            >
-              部屋を作る
-            </AppButton>
+            {/* メインCTAはHeroに集約するため、ここでの作成ボタンは削除 */}
           </HStack>
         </Flex>
 
-        <ScrollArea.Root style={{ flex: 1, minHeight: 0 }}>
-          <ScrollArea.Viewport>
-            <ScrollArea.Content>
-          {!firebaseEnabled ? (
-            <Box
-              p={8}
-              textAlign="center"
-              borderWidth="1px"
-              rounded="lg"
-              bg="blackAlpha.300"
-            >
-              <Text>
-                Firebase設定が見つかりません。`.env.local` を設定してください。
-              </Text>
-            </Box>
-          ) : roomsLoading ? (
-            <Spinner />
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              {filteredRooms.map((r) => (
-                <RoomCard
-                  key={r.id}
-                  name={r.name}
-                  status={r.status}
-                  count={lobbyCounts[r.id] ?? 0}
-                  onJoin={() => {
-                    // 待機中のみ入室可
-                    if (r.status && r.status !== "waiting") {
-                      notify({
-                        title: "この部屋は既に開始されています",
-                        description:
-                          "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
-                        type: "info",
-                      });
-                      return;
-                    }
-                    if (!displayName) {
-                      setAfterNameCreate(false);
-                      setPendingJoin(r.id);
-                      nameDialog.onOpen();
-                    } else {
-                      router.push(`/rooms/${r.id}`);
-                    }
-                  }}
-                />
-              ))}
-              {filteredRooms.length === 0 && (
-                <Box
-                  p={8}
-                  textAlign="center"
-                  borderWidth="1px"
-                  borderRadius="lg"
-                  bg="blackAlpha.300"
-                >
-                  <Text>
-                    公開ルームがありません。最初の部屋を作りましょう！
-                  </Text>
-                </Box>
-              )}
-            </SimpleGrid>
-          )}
-            </ScrollArea.Content>
-          </ScrollArea.Viewport>
-          <ScrollArea.Scrollbar>
-            <ScrollArea.Thumb />
-          </ScrollArea.Scrollbar>
-          <ScrollArea.Corner />
-        </ScrollArea.Root>
+        <Grid
+          templateColumns={{ base: "1fr", lg: "1fr 320px" }}
+          gap={{ base: 6, lg: 8 }}
+          alignItems="start"
+        >
 
-        {/* 名前入力モーダル（作成/参加時に表示） */}
-        {nameDialog.open && (
-          <Box
-            position="fixed"
-            inset={0}
-            bg="blackAlpha.700"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Box
-              bg="gray.800"
-              p={6}
-              rounded="lg"
-              minW={{ base: "90%", md: "lg" }}
-            >
-              <Heading size="md" mb={3}>
-                プレイヤー名を入力
-              </Heading>
-              <Stack direction={{ base: "column", md: "row" }}>
-                <Input
-                  placeholder="例）たろう"
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                />
-                <AppButton
-                  colorPalette="blue"
-                  onClick={() => {
-                    if (!tempName.trim()) {
-                      notify({
-                        title: "名前を入力してください",
-                        type: "warning",
-                      });
-                      return;
-                    }
-                    setDisplayName(tempName.trim());
-                    nameDialog.onClose();
-                    if (pendingJoin) {
-                      const to = `/rooms/${pendingJoin}`;
-                      setPendingJoin(null);
-                      setAfterNameCreate(false);
-                      router.push(to);
-                    } else if (afterNameCreate) {
-                      setAfterNameCreate(false);
-                      createDialog.onOpen();
-                    }
-                  }}
-                >
-                  決定
-                </AppButton>
-              </Stack>
-            </Box>
-          </Box>
-        )}
+          <GridItem minW={0}>
+            <ScrollArea.Root style={{ height: "calc(100dvh - 240px)" }}>
+              <ScrollArea.Viewport>
+                <ScrollArea.Content>
+                  {!firebaseEnabled ? (
+                    <Box
+                      p={8}
+                      textAlign="center"
+                      borderWidth="1px"
+                      rounded="lg"
+                      bg="blackAlpha.300"
+                    >
+                      <Text>
+                        Firebase設定が見つかりません。`.env.local` を設定してください。
+                      </Text>
+                    </Box>
+                  ) : roomsLoading ? (
+                    <LobbySkeletons />
+                  ) : (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                      {filteredRooms.map((r) => (
+                        <RoomCard
+                          key={r.id}
+                          name={r.name}
+                          status={r.status}
+                          count={lobbyCounts[r.id] ?? 0}
+                          onJoin={() => {
+                            if (r.status && r.status !== "waiting") {
+                              notify({
+                                title: "この部屋は既に開始されています",
+                                description:
+                                  "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
+                                type: "info",
+                              });
+                              return;
+                            }
+                            openJoinFlow(r.id);
+                          }}
+                        />
+                      ))}
+                      {filteredRooms.length === 0 && (
+                        <EmptyState
+                          onCreate={() => {
+                            if (!displayName) {
+                              setAfterNameCreate(true);
+                              setPendingJoin(null);
+                              nameDialog.onOpen();
+                            } else {
+                              createDialog.onOpen();
+                            }
+                          }}
+                        />
+                      )}
+                    </SimpleGrid>
+                  )}
+                </ScrollArea.Content>
+              </ScrollArea.Viewport>
+              <ScrollArea.Scrollbar>
+                <ScrollArea.Thumb />
+              </ScrollArea.Scrollbar>
+              <ScrollArea.Corner />
+            </ScrollArea.Root>
+          </GridItem>
+
+          <GridItem display={{ base: "none", lg: "block" }}>
+            <LobbyRightRail />
+          </GridItem>
+        </Grid>
+
+        <NameDialog
+          isOpen={nameDialog.open}
+          defaultValue={tempName}
+          onCancel={() => nameDialog.onClose()}
+          onSubmit={(val) => {
+            if (!val) {
+              notify({ title: "名前を入力してください", type: "warning" });
+              return;
+            }
+            setDisplayName(val);
+            nameDialog.onClose();
+            if (pendingJoin) {
+              const to = `/rooms/${pendingJoin}`;
+              setPendingJoin(null);
+              setAfterNameCreate(false);
+              router.push(to);
+            } else if (afterNameCreate) {
+              setAfterNameCreate(false);
+              createDialog.onOpen();
+            }
+          }}
+        />
 
         <CreateRoomModal
           isOpen={createDialog.open}

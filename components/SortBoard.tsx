@@ -2,7 +2,8 @@
 import { SortableItem } from "@/components/sortable/SortableItem";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc } from "@/lib/types";
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import { Box, HStack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import {
   DndContext,
   DragEndEvent,
@@ -115,9 +116,9 @@ export function SortBoard({
       </DndContext>
 
       <HStack mt={4} justify="flex-end">
-        <Button colorPalette="orange" onClick={onConfirm} disabled={disabled}>
+        <AppButton colorPalette="orange" onClick={onConfirm} disabled={disabled}>
           並びを確定
-        </Button>
+        </AppButton>
       </HStack>
     </Panel>
   );

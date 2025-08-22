@@ -1,13 +1,14 @@
 import { collection, doc, getDoc, getDocs, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { applyPlay, defaultOrderState } from "@/lib/game/rules";
+import { applyPlay, defaultOrderState, evaluateSorted } from "@/lib/game/rules";
+import { requireDb } from "@/lib/firebase/require";
 import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
 import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
 import { nextStatusForEvent } from "@/lib/state/guards";
 // 乱数はクライアントで自分の番号計算に使用
 
 export async function startGame(roomId: string) {
-  const ref = doc(db, "rooms", roomId);
+  const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "START_GAME" });
@@ -18,7 +19,7 @@ export async function startGame(roomId: string) {
 // ホストがトピック選択後に配札（重複なし）
 export async function dealNumbers(roomId: string) {
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const snap = await getDocs(collection(db, "rooms", roomId, "players"));
+  const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: { id: string; uid?: string; lastSeen?: any }[] = [];
   snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
   // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
@@ -44,7 +45,7 @@ export async function dealNumbers(roomId: string) {
   }
   const ordered = target.sort((a, b) => (String(a.uid || a.id)).localeCompare(String(b.uid || b.id)));
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
-  await updateDoc(doc(db, "rooms", roomId), {
+  await updateDoc(doc(db!, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map(p => p.id) }
   });
 }
@@ -52,7 +53,7 @@ export async function dealNumbers(roomId: string) {
 // finalizeOrder（公開順演出）は現行フローでは未使用
 
 export async function finishRoom(roomId: string, success: boolean) {
-  const ref = doc(db, "rooms", roomId);
+  const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "FINISH" });
@@ -61,7 +62,7 @@ export async function finishRoom(roomId: string, success: boolean) {
 }
 
 export async function continueAfterFail(roomId: string) {
-  const ref = doc(db, "rooms", roomId);
+  const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "CONTINUE_AFTER_FAIL" });
@@ -70,7 +71,7 @@ export async function continueAfterFail(roomId: string) {
 }
 
 export async function resetRoom(roomId: string) {
-  const ref = doc(db, "rooms", roomId);
+  const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
@@ -82,7 +83,7 @@ export async function resetRoom(roomId: string) {
 export async function startPlaying(roomId: string) {
   let total: number | null = null;
   try {
-    const r = await getDoc(doc(db, "rooms", roomId));
+    const r = await getDoc(doc(db!, "rooms", roomId));
     const data: any = r.data();
     const next = nextStatusForEvent(data?.status || "waiting", { type: "START_PLAYING" });
     if (!next) throw new Error("invalid transition: START_PLAYING");
@@ -99,11 +100,11 @@ export async function startPlaying(roomId: string) {
       total = arr.length;
     }
     if (total === null) {
-      const snap = await getDocs(collection(db, "rooms", roomId, "players"));
+      const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
       total = snap.size;
     }
   } catch {}
-  await updateDoc(doc(db, "rooms", roomId), {
+  await updateDoc(doc(db!, "rooms", roomId), {
     status: "playing",
     order: { ...defaultOrderState(), decidedAt: serverTimestamp(), total },
     result: null,
@@ -112,9 +113,9 @@ export async function startPlaying(roomId: string) {
 
 // 自分のカードを場に出す（昇順チェックを行い、失敗なら即終了）
 export async function playCard(roomId: string, playerId: string) {
-  const roomRef = doc(db, "rooms", roomId);
-  const meRef = doc(db, "rooms", roomId, "players", playerId);
-  await runTransaction(db, async (tx) => {
+  const roomRef = doc(db!, "rooms", roomId);
+  const meRef = doc(db!, "rooms", roomId, "players", playerId);
+  await runTransaction(db!, async (tx) => {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
     const room: any = roomSnap.data();
@@ -159,3 +160,45 @@ export async function playCard(roomId: string, playerId: string) {
 }
 
 // chooseAfterFail は不要（失敗後は自動継続または即終了）
+
+// 並べ替え提案を保存（ルームの order.proposal に保存）
+export async function setOrderProposal(roomId: string, proposal: string[]) {
+  const _db = requireDb()
+  await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
+}
+
+// 並び替えで一括判定モード: 提出された順序で昇順チェックし、結果を確定
+export async function submitSortedOrder(roomId: string, list: string[]) {
+  const _db = requireDb()
+  await runTransaction(_db, async (tx) => {
+    const roomRef = doc(_db, "rooms", roomId);
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists()) throw new Error("room not found");
+    const room: any = roomSnap.data();
+    const mode: string = room?.options?.resolveMode || "sequential";
+    const status: string = room?.status || "waiting";
+    if (mode !== "sort-submit") throw new Error("このルームでは一括判定は無効です");
+    if (status !== "clue") throw new Error("現在は提出できません");
+    // プレイヤーの数字を取得して昇順チェック（純関数へ）
+    const numbers: Record<string, number | null | undefined> = {};
+    for (const pid of list) {
+      const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
+      numbers[pid] = (pSnap.data() as any)?.number;
+    }
+    const { success, failedAt, last } = evaluateSorted(list, numbers);
+    const order = {
+      list,
+      lastNumber: last,
+      failed: !success,
+      failedAt: failedAt,
+      decidedAt: serverTimestamp(),
+      total: list.length,
+    } as any;
+
+    tx.update(roomRef, {
+      status: "finished",
+      order,
+      result: { success, revealedAt: serverTimestamp() },
+    });
+  });
+}

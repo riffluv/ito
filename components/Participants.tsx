@@ -1,6 +1,7 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
-import { Avatar, Badge, HStack, List, Stack, Text } from "@chakra-ui/react";
+import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { CheckCircle2 } from "lucide-react";
 
 export function Participants({
   players,
@@ -15,27 +16,47 @@ export function Participants({
     );
   }
   return (
-    <List.Root gap="2">
+    <Stack as="ul" role="list" gap="2" pl={0} m={0} style={{ listStyle: "none" }}>
       {players.map((p) => (
-        <List.Item key={p.id}>
-          <HStack gap={3} p={2} borderWidth="1px" borderRadius="lg">
+        <Box as="li" key={p.id}>
+          <HStack
+            gap={3}
+            p={2}
+            borderWidth="1px"
+            borderRadius="lg"
+            h={{ base: 14, md: 14 }}
+            align="center"
+          >
             <Avatar.Root size="sm">
               <Avatar.Fallback name={p.name} />
             </Avatar.Root>
-            <Stack gap={0} flex={1} minW={0}>
-              <Text fontWeight="semibold" lineClamp={1}>
+            <Stack gap={0.5} flex={1} minW={0}>
+              <Text
+                fontWeight="semibold"
+                title={p.name}
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+              >
                 {p.name}
               </Text>
-              {p.clue1 && (
-                <Text fontSize="xs" color="fgMuted" lineClamp={1}>
-                  連想: {p.clue1}
-                </Text>
-              )}
+              <Text
+                fontSize="xs"
+                color="fgMuted"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                title={p.clue1 || undefined}
+              >
+                {p.clue1 ? `連想: ${p.clue1}` : "\u00A0"}
+              </Text>
             </Stack>
-            <Badge colorPalette="green">在室</Badge>
+            <Badge colorPalette="green" flexShrink={0} display="inline-flex" alignItems="center" gap={1}>
+              <CheckCircle2 size={14} /> 在室
+            </Badge>
           </HStack>
-        </List.Item>
+        </Box>
       ))}
-    </List.Root>
+    </Stack>
   );
 }

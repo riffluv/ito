@@ -28,12 +28,12 @@ export default function Header() {
               bgGradient="linear(to-br, brand.400, cyan.400)"
               rounded="md"
             />
-            <Heading size="md">Online ITO</Heading>
+            <Heading size="sm" letterSpacing="tight">Online ITO</Heading>
           </HStack>
           <HStack gap={2}>
             <AppButton
               asChild
-              variant={isHome ? "solid" : "ghost"}
+              variant={isHome ? "solid" : "subtle"}
               aria-label="プレイページへ"
             >
               <Link href="/">プレイ</Link>

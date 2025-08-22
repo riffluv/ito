@@ -53,3 +53,20 @@ export function applyPlay({
   }
   return { next, violation };
 }
+
+// 並べ替え一括判定の純関数
+// list の順に numbers[id] を参照し、昇順であるかを判定
+export function evaluateSorted(
+  list: string[],
+  numbers: Record<string, number | null | undefined>
+): { success: boolean; failedAt: number | null; last: number | null } {
+  let last: number | null = null
+  for (let i = 0; i < list.length; i++) {
+    const id = list[i]
+    const n = numbers[id]
+    if (typeof n !== "number") return { success: false, failedAt: i + 1, last }
+    if (last !== null && n < last) return { success: false, failedAt: i + 1, last: n }
+    last = n
+  }
+  return { success: true, failedAt: null, last }
+}

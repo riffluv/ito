@@ -11,7 +11,13 @@ export function sanitizeRoom(input: any): RoomDoc {
   return {
     name: String(input?.name || "Untitled"),
     hostId: String(input?.hostId || ""),
-    options: { allowContinueAfterFail: !!options.allowContinueAfterFail },
+    options: {
+      allowContinueAfterFail: !!options.allowContinueAfterFail,
+      resolveMode:
+        options.resolveMode === "sort-submit" || options.resolveMode === "sequential"
+          ? options.resolveMode
+          : "sequential",
+    },
     status,
     createdAt: input?.createdAt,
     lastActiveAt: input?.lastActiveAt,

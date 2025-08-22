@@ -1,11 +1,12 @@
-import { getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getDatabase } from "firebase/database";
+import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getDatabase, type Database } from "firebase/database";
 import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentSingleTabManager,
+  type Firestore,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -50,14 +51,14 @@ export const firebaseEnabled =
   hasValue(firebaseConfig.projectId) &&
   hasValue(firebaseConfig.appId);
 
-export const app = ((): any => {
-  if (!firebaseEnabled) return null as any;
+export const app: FirebaseApp | null = ((): FirebaseApp | null => {
+  if (!firebaseEnabled) return null;
   const apps = getApps();
   return apps.length ? apps[0] : initializeApp(firebaseConfig);
 })();
 
-export const db = ((): any => {
-  if (!firebaseEnabled || !app) return null as any;
+export const db: Firestore | null = ((): Firestore | null => {
+  if (!firebaseEnabled || !app) return null;
   try {
     // 高速・安定化: ローカル永続キャッシュ + 自動ロングポーリング検出
     return initializeFirestore(app, {
@@ -71,13 +72,13 @@ export const db = ((): any => {
     return getFirestore(app);
   }
 })();
-export const auth = firebaseEnabled && app ? getAuth(app) : (null as any);
+export const auth: Auth | null = firebaseEnabled && app ? getAuth(app) : null;
 // RTDBはdatabaseURL未設定だと初期化時に例外になる可能性があるため、try/catchで安全化
-export const rtdb = (() => {
-  if (!firebaseEnabled || !app) return null as any;
+export const rtdb: Database | null = (() => {
+  if (!firebaseEnabled || !app) return null;
   try {
     return getDatabase(app);
   } catch {
-    return null as any;
+    return null;
   }
 })();

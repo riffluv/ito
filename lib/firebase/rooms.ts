@@ -16,17 +16,17 @@ import {
 const ROOM_TTL_MS = 60 * 60 * 1000; // 60分後に自動削除させたい場合の目安
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
-  await updateDoc(doc(db, "rooms", roomId), { options });
+  await updateDoc(doc(db!, "rooms", roomId), { options });
 }
 
 export async function updateLastActive(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
+  await updateDoc(doc(db!, "rooms", roomId), {
     lastActiveAt: serverTimestamp(),
   });
 }
 
 export async function transferHost(roomId: string, newHostId: string) {
-  await updateDoc(doc(db, "rooms", roomId), { hostId: newHostId });
+  await updateDoc(doc(db!, "rooms", roomId), { hostId: newHostId });
 }
 
 export async function leaveRoom(
@@ -35,7 +35,7 @@ export async function leaveRoom(
   displayName: string | null | undefined
 ) {
   // 参加者一覧からホスト移譲先を決定
-  const playersSnap = await getDocs(collection(db, "rooms", roomId, "players"));
+  const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all = playersSnap.docs.map((d) => ({
     id: d.id,
     ...(d.data() as any),
@@ -57,7 +57,7 @@ export async function leaveRoom(
   // 自分を退室（重複Docも含めて可能な限り削除）
   try {
     const dupQ = query(
-      collection(db, "rooms", roomId, "players"),
+      collection(db!, "rooms", roomId, "players"),
       where("uid", "==", userId)
     );
     const dupSnap = await getDocs(dupQ);
@@ -66,18 +66,18 @@ export async function leaveRoom(
     await Promise.all(
       Array.from(ids).map(async (id) => {
         try {
-          await deleteDoc(doc(db, "rooms", roomId, "players", id));
+          await deleteDoc(doc(db!, "rooms", roomId, "players", id));
         } catch {}
       })
     );
   } catch {
     try {
-      await deleteDoc(doc(db, "rooms", roomId, "players", userId));
+      await deleteDoc(doc(db!, "rooms", roomId, "players", userId));
     } catch {}
   }
 
   await updateLastActive(roomId);
-  await addDoc(collection(db, "rooms", roomId, "chat"), {
+  await addDoc(collection(db!, "rooms", roomId, "chat"), {
     sender: "system",
     text: `${displayName || "匿名"} が退出しました`,
     createdAt: serverTimestamp(),
@@ -85,22 +85,22 @@ export async function leaveRoom(
 
   // 最後の1人が抜けたらソフトクローズ（ロビーに出さない）かつ待機へ戻す
   try {
-    const remain = await getDocs(collection(db, "rooms", roomId, "players"));
+    const remain = await getDocs(collection(db!, "rooms", roomId, "players"));
     if (remain.empty) {
       // 状態と一時データをクリア
       await resetRoomToWaiting(roomId);
-      await updateDoc(doc(db, "rooms", roomId), {
+      await updateDoc(doc(db!, "rooms", roomId), {
         closedAt: serverTimestamp(),
       });
     }
   } catch {}
 
   // 残り参加者がいなければソフトクローズ
-  const afterSnap = await getDocs(collection(db, "rooms", roomId, "players"));
+  const afterSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const remaining = afterSnap.size;
   if (remaining === 0) {
     const expires = new Date(Date.now() + ROOM_TTL_MS);
-    await updateDoc(doc(db, "rooms", roomId), {
+    await updateDoc(doc(db!, "rooms", roomId), {
       closedAt: serverTimestamp(),
       expiresAt: expires,
       lastActiveAt: serverTimestamp(),
@@ -109,7 +109,7 @@ export async function leaveRoom(
 }
 
 export async function resetRoomToWaiting(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
+  await updateDoc(doc(db!, "rooms", roomId), {
     status: "waiting",
     result: null,
     deal: null,

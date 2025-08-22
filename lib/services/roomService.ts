@@ -24,7 +24,7 @@ export async function ensureMember({
   uid: string;
   displayName: string | null | undefined;
 }): Promise<{ joined: boolean } | { joined: false }> {
-  const meRef = doc(db, "rooms", roomId, "players", uid);
+  const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
   if (!meSnap.exists()) {
     const p: PlayerDoc = {
@@ -44,22 +44,22 @@ export async function ensureMember({
 }
 
 export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
-  const dupQ = query(
-    collection(db, "rooms", roomId, "players"),
-    where("uid", "==", uid)
-  );
+    const dupQ = query(
+      collection(db!, "rooms", roomId, "players"),
+      where("uid", "==", uid)
+    );
   const dupSnap = await getDocs(dupQ);
   for (const d of dupSnap.docs) {
     if (d.id !== uid) {
       try {
-        await deleteDoc(doc(db, "rooms", roomId, "players", d.id));
+        await deleteDoc(doc(db!, "rooms", roomId, "players", d.id));
       } catch {}
     }
   }
 }
 
 export async function addLateJoinerToDeal(roomId: string, uid: string) {
-  const roomRef = doc(db, "rooms", roomId);
+  const roomRef = doc(db!, "rooms", roomId);
   const snap = await getDoc(roomRef);
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc & any;
@@ -81,10 +81,10 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
 }
 
 export async function assignNumberIfNeeded(roomId: string, uid: string) {
-  const roomRef = doc(db, "rooms", roomId);
+  const roomRef = doc(db!, "rooms", roomId);
   const [roomSnap, meSnap] = await Promise.all([
     getDoc(roomRef),
-    getDoc(doc(db, "rooms", roomId, "players", uid)),
+    getDoc(doc(db!, "rooms", roomId, "players", uid)),
   ]);
   if (!roomSnap.exists() || !meSnap.exists()) return;
   const room: any = roomSnap.data();
@@ -109,7 +109,7 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
     );
     const myNum = nums[idx];
     if (me.number !== myNum) {
-      await updateDoc(doc(db, "rooms", roomId, "players", uid), {
+      await updateDoc(doc(db!, "rooms", roomId, "players", uid), {
         number: myNum,
         clue1: me.clue1 || "",
         ready: false,
@@ -119,7 +119,7 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
   } else if (room.status === "playing") {
     if (typeof me.number === "number") return;
     const playersSnap = await getDocs(
-      collection(db, "rooms", roomId, "players")
+      collection(db!, "rooms", roomId, "players")
     );
     const used = new Set<number>();
     playersSnap.forEach((d) => {
@@ -131,7 +131,7 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
     if (available.length === 0) return;
     const h = hashString(String(deal.seed) + ":" + uid);
     const pick = available[h % available.length];
-    await updateDoc(doc(db, "rooms", roomId, "players", uid), {
+    await updateDoc(doc(db!, "rooms", roomId, "players", uid), {
       number: pick,
       clue1: me.clue1 || "",
       ready: false,
@@ -141,7 +141,7 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
 }
 
 export async function updateLastActive(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), {
+  await updateDoc(doc(db!, "rooms", roomId), {
     lastActiveAt: serverTimestamp(),
   });
 }
@@ -164,7 +164,7 @@ export async function joinRoomFully({
       const { addDoc, collection, serverTimestamp } = await import(
         "firebase/firestore"
       );
-      await addDoc(collection(db, "rooms", roomId, "chat"), {
+      await addDoc(collection(db!, "rooms", roomId, "chat"), {
         sender: "system",
         text: `${displayName || "匿名"} が参加しました`,
         createdAt: serverTimestamp(),
