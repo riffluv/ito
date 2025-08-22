@@ -7,26 +7,26 @@ export const cardRecipe = defineRecipe({
     color: "fgDefault",
     borderWidth: "1px",
     borderColor: "borderDefault",
-    rounded: "xl",
-    shadow: "sm",
-    p: 5,
-    transition: "all 0.2s ease",
+    rounded: "lg",
+    shadow: "xs",
+    p: 6,
+    transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease",
   },
   variants: {
     interactive: {
       true: {
         _hover: {
-          shadow: "md",
+          shadow: "sm",
           borderColor: "accent",
           bg: "cardHoverBg",
-          transform: "translateY(-1px)",
+          transform: "translateY(-1px) scale(1.01)",
         },
       },
       false: {},
     },
     density: {
-      compact: { p: 4 },
-      comfortable: { p: 5 },
+      compact: { p: 5 },
+      comfortable: { p: 6 },
     },
     selected: {
       true: { borderColor: "accent", shadow: "md" },

@@ -1,4 +1,4 @@
-import { applyPlay, defaultOrderState } from "../lib/game/rules";
+import { applyPlay, defaultOrderState, evaluateSorted } from "../lib/game/rules";
 
 test("applyPlay ascending no violation", () => {
   const order = defaultOrderState();
@@ -42,3 +42,16 @@ test("applyPlay violation detection", () => {
   expect(res.violation).toBe(true);
   expect(res.next.failed).toBe(true);
 });
+
+test("evaluateSorted success and failure points", () => {
+  const ids = ["a", "b", "c", "d"]
+  const numsOk = { a: 1, b: 5, c: 9, d: 12 }
+  const ok = evaluateSorted(ids, numsOk)
+  expect(ok.success).toBe(true)
+  expect(ok.failedAt).toBe(null)
+
+  const numsNg = { a: 1, b: 10, c: 3, d: 12 }
+  const ng = evaluateSorted(ids, numsNg)
+  expect(ng.success).toBe(false)
+  expect(ng.failedAt).toBe(3)
+})

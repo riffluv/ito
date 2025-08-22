@@ -3,7 +3,8 @@ import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
 import { playCard } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { HStack, Stack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import { useMemo, useState } from "react";
 
 export function PlayBoard({
@@ -122,18 +123,18 @@ export function PlayBoard({
                 >
                   <Text>{p.name}</Text>
                   {p.id === meId ? (
-                    <Button
+                    <AppButton
                       onClick={onPlay}
                       colorPalette="orange"
                       loading={submitting}
                       disabled={!canPlay}
                     >
                       出す
-                    </Button>
+                    </AppButton>
                   ) : (
-                    <Button variant="outline" disabled>
+                    <AppButton variant="outline" disabled>
                       出す
-                    </Button>
+                    </AppButton>
                   )}
                 </HStack>
               ))}

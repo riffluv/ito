@@ -30,8 +30,11 @@ import {
   continueAfterFail as continueAfterFailAction,
   startGame as startGameAction,
   startPlaying as startPlayingAction,
+  setOrderProposal,
+  submitSortedOrder,
 } from "@/lib/game/room";
 import { useRoomState } from "@/lib/hooks/useRoomState";
+import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
@@ -131,7 +134,7 @@ export default function RoomPage() {
     const r = room.round || 0;
     if (r !== seenRound) {
       setSeenRound(r);
-      const meRef = doc(db, "rooms", roomId, "players", uid);
+      const meRef = doc(db!, "rooms", roomId, "players", uid);
       updateDoc(meRef, { ready: false }).catch(() => void 0);
     }
   }, [room?.round, uid]);
@@ -166,7 +169,7 @@ export default function RoomPage() {
         notify({ title: "プレイヤーは2人以上必要です", type: "info" });
         return;
       }
-      await updateDoc(doc(db, "rooms", roomId), {
+      await updateDoc(doc(db!, "rooms", roomId), {
         round: (room.round || 0) + 1,
       });
       await startGameAction(roomId);
@@ -189,7 +192,7 @@ export default function RoomPage() {
   };
 
   const continueAfterFail = async () => {
-    await updateDoc(doc(db, "rooms", roomId), {
+    await updateDoc(doc(db!, "rooms", roomId), {
       round: (room?.round || 0) + 1,
     });
     await continueAfterFailAction(roomId);
@@ -199,6 +202,19 @@ export default function RoomPage() {
     if (!isHost || !room) return;
     await setRoomOptions(roomId, partial);
   };
+
+  // 並べ替え一括判定モード: 提案順序のローカル状態
+  const [proposal, setProposal] = useState<string[]>(() => {
+    const base = (room as any)?.order?.proposal as string[] | undefined;
+    const dealList = (room as any)?.deal?.players as string[] | undefined;
+    return base && base.length > 0 ? base : dealList || players.map((p) => p.id);
+  });
+  // 部屋・プレイヤーの変化で提案初期化
+  useEffect(() => {
+    const base = (room as any)?.order?.proposal as string[] | undefined;
+    const dealList = (room as any)?.deal?.players as string[] | undefined;
+    setProposal(base && base.length > 0 ? base : dealList || players.map((p) => p.id));
+  }, [room?.id, (room as any)?.deal?.players?.length, players.map((p) => p.id).join(",")]);
 
   // 表示名が変わったら、入室中の自分のプレイヤーDocにも反映
   useEffect(() => {
@@ -226,76 +242,15 @@ export default function RoomPage() {
     } catch {}
   };
 
-  // 終了はサーバー側トランザクションが判定
-
-  useEffect(() => {
-    const handler = () => {
-      if (!uid) return;
-      if (leavingRef.current) return;
-      leavingRef.current = true;
-      const run = async () => {
-        try {
-          try {
-            await detachNow();
-            await forceDetachAll(roomId, uid);
-          } catch {}
-          const others = players.filter((p) => p.id !== uid);
-          if (room && room.hostId === uid && others.length > 0) {
-            await updateDoc(doc(db, "rooms", roomId), { hostId: others[0].id });
-          }
-          // 自分の重複Docも含めて削除
-          const dupQ = query(
-            collection(db, "rooms", roomId, "players"),
-            where("uid", "==", uid)
-          );
-          const dupSnap = await getDocs(dupQ);
-          await Promise.all(
-            dupSnap.docs.map((d) =>
-              deleteDoc(doc(db, "rooms", roomId, "players", d.id))
-            )
-          );
-          await updateDoc(doc(db, "rooms", roomId), {
-            lastActiveAt: serverTimestamp(),
-          });
-        } catch {}
-      };
-      run();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [uid, roomId, players.map((p) => p.id).join(","), room?.hostId]);
-
-  // ルームページのアンマウント時にもベストエフォートで退室処理
-  useEffect(() => {
-    return () => {
-      const my = uid;
-      if (!my) return;
-      if (leavingRef.current) return;
-      leavingRef.current = true;
-      const cleanup = async () => {
-        try {
-          try {
-            await detachNow();
-            await forceDetachAll(roomId, my);
-          } catch {}
-          const dupQ = query(
-            collection(db, "rooms", roomId, "players"),
-            where("uid", "==", my)
-          );
-          const dupSnap = await getDocs(dupQ);
-          await Promise.all(
-            dupSnap.docs.map((d) =>
-              deleteDoc(doc(db, "rooms", roomId, "players", d.id))
-            )
-          );
-          await updateDoc(doc(db, "rooms", roomId), {
-            lastActiveAt: serverTimestamp(),
-          });
-        } catch {}
-      };
-      cleanup();
-    };
-  }, [uid, roomId]);
+  // 退出時処理をフックで一元化
+  useLeaveCleanup({
+    enabled: true,
+    roomId,
+    uid,
+    displayName,
+    detachNow,
+    leavingRef,
+  });
 
   // isMember は上で算出済み
 
@@ -389,7 +344,7 @@ export default function RoomPage() {
 
       <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
         <Grid
-          templateColumns={{ base: "1fr", md: "280px 1fr 360px" }}
+          templateColumns={{ base: "1fr", md: "340px 1fr 360px", lg: "360px 1fr 400px" }}
           gap={4}
           h="100%"
         >
@@ -451,39 +406,56 @@ export default function RoomPage() {
                 <Panel title="ヒント">
                   <PhaseTips phase="clue" />
                 </Panel>
-                {/* 並べ替えの事前提案（ドラッグ操作に慣れる） */}
                 {Array.isArray((room as any)?.deal?.players) && (
-                  <SortBoard
-                    players={players}
-                    proposal={(room as any)?.deal?.players as string[]}
-                    onChange={() => {
-                      /* Firestoreへの保存は次段 */
-                    }}
-                    onConfirm={() => {}}
-                    disabled
-                  />
-                )}
-                {isHost && (
-                  <Stack>
-                    <AppButton
-                      colorPalette="orange"
-                      onClick={() => startPlayingAction(roomId)}
-                      disabled={!canStartPlaying}
-                      title={startDisabledTitle}
-                      aria-disabled={!canStartPlaying}
-                    >
-                      順番出しを開始
-                    </AppButton>
-                    {!canStartPlaying && (
-                      <Text fontSize="sm" color="gray.300">
-                        未準備のプレイヤー:{" "}
-                        {players
-                          .filter((p) => !p.ready)
-                          .map((p) => p.name)
-                          .join(", ") || "なし"}
-                      </Text>
+                  <>
+                    {room.options.resolveMode === "sort-submit" ? (
+                      <SortBoard
+                        players={players}
+                        proposal={proposal}
+                        onChange={(list) => {
+                          setProposal(list);
+                          // ベストエフォートで共有
+                          setOrderProposal(roomId, list).catch(() => void 0);
+                        }}
+                        onConfirm={async () => {
+                          try {
+                            await submitSortedOrder(roomId, proposal);
+                            notify({ title: "並び順で判定しました", type: "success" });
+                          } catch (e: any) {
+                            notify({
+                              title: "確定に失敗しました",
+                              description: e?.message || String(e),
+                              type: "error",
+                            });
+                          }
+                        }}
+                        disabled={!isHost || !canStartPlaying}
+                      />
+                    ) : (
+                      isHost && (
+                        <Stack>
+                          <AppButton
+                            colorPalette="orange"
+                            onClick={() => startPlayingAction(roomId)}
+                            disabled={!canStartPlaying}
+                            title={startDisabledTitle}
+                            aria-disabled={!canStartPlaying}
+                          >
+                            順番出しを開始
+                          </AppButton>
+                          {!canStartPlaying && (
+                            <Text fontSize="sm" color="gray.300">
+                              未準備のプレイヤー:{" "}
+                              {players
+                                .filter((p) => !p.ready)
+                                .map((p) => p.name)
+                                .join(", ") || "なし"}
+                            </Text>
+                          )}
+                        </Stack>
+                      )
                     )}
-                  </Stack>
+                  </>
                 )}
               </Stack>
             )}
@@ -561,3 +533,4 @@ export default function RoomPage() {
     </Container>
   );
 }
+  

@@ -2,7 +2,7 @@
 import { Box, Heading, HStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-export function Panel({ title, actions, children, p = 5, gap = 4, ...rest }: {
+export function Panel({ title, actions, children, p = 6, gap = 5, ...rest }: {
   title?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;

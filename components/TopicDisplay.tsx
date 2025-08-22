@@ -33,7 +33,7 @@ export function TopicDisplay({
     const sections = await fetchTopicSections();
     const pool = getTopicsByType(sections, type);
     const picked = pickOne(pool) || null;
-    await updateDoc(doc(db, "rooms", roomId), {
+    await updateDoc(doc(db!, "rooms", roomId), {
       topicBox: type,
       topicOptions: null,
       topic: picked,
@@ -46,7 +46,7 @@ export function TopicDisplay({
     const sections = await fetchTopicSections();
     const pool = getTopicsByType(sections, topicBox);
     const picked = pickOne(pool) || null;
-    await updateDoc(doc(db, "rooms", roomId), { topic: picked });
+    await updateDoc(doc(db!, "rooms", roomId), { topic: picked });
   };
 
   const changeCategory = async (type: TopicType) => {

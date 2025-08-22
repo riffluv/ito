@@ -5,7 +5,7 @@ import {
   presenceSupported,
   subscribePresence,
 } from "@/lib/firebase/presence";
-import { sanitizePlayer } from "@/lib/state/sanitize";
+import { playerConverter } from "@/lib/firebase/converters";
 import type { PlayerDoc } from "@/lib/types";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -36,10 +36,13 @@ export function useParticipants(
     setLoading(true);
     setError(null);
     const unsub = onSnapshot(
-      query(collection(db, "rooms", roomId, "players"), orderBy("uid", "asc")),
+      query(
+        collection(db!, "rooms", roomId, "players").withConverter(playerConverter),
+        orderBy("uid", "asc")
+      ),
       (snap) => {
         const list: (PlayerDoc & { id: string })[] = [];
-        snap.forEach((d) => list.push(sanitizePlayer(d.id, d.data())));
+        snap.forEach((d) => list.push(d.data() as any));
         setPlayers(list);
         setLoading(false);
       },

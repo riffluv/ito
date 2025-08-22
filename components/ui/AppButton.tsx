@@ -2,7 +2,7 @@
 import { chakra, useRecipe, Button as CButton } from "@chakra-ui/react"
 import { buttonRecipe } from "../../theme/recipes/button.recipe"
 
-type Visual = "solid" | "outline" | "ghost"
+type Visual = "solid" | "outline" | "ghost" | "subtle" | "soft" | "link"
 type Palette = "brand" | "orange" | "gray"
 
 type AppButtonProps = React.ComponentProps<typeof CButton> & {

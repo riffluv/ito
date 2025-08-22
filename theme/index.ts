@@ -23,11 +23,12 @@ export const system = createSystem(defaultConfig, {
         },
       },
       radii: {
-        xs: { value: "6px" },
-        sm: { value: "10px" },
-        md: { value: "14px" },
-        lg: { value: "18px" },
-        xl: { value: "22px" },
+        // シャープで現代的なトーン（Chakra公式に近い 4/8/12/16 ステップ）
+        xs: { value: "4px" },
+        sm: { value: "6px" },
+        md: { value: "8px" },
+        lg: { value: "12px" },
+        xl: { value: "16px" },
         full: { value: "9999px" },
       },
       colors: {

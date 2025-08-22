@@ -1,5 +1,7 @@
 export type RoomOptions = {
   allowContinueAfterFail: boolean;
+  // クリア方式: 順番に出す or 並び替え一括判定
+  resolveMode?: "sequential" | "sort-submit";
 };
 
 export type RoomDoc = {

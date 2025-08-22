@@ -65,7 +65,7 @@ export function CreateRoomModal({
         topicBox: null,
         result: null,
       };
-      const roomRef = await addDoc(collection(db, "rooms"), room);
+      const roomRef = await addDoc(collection(db!, "rooms"), room);
       // 自分をプレイヤーとして登録
       const pdoc: PlayerDoc = {
         name: displayName || "匿名",
@@ -77,7 +77,7 @@ export function CreateRoomModal({
         uid: user.uid,
         lastSeen: serverTimestamp(),
       };
-      await setDoc(doc(db, "rooms", roomRef.id, "players", user.uid), pdoc);
+      await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
       onClose();
       try {
         (window as any).requestIdleCallback?.(() => {

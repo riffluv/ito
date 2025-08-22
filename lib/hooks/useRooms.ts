@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
+import { roomConverter } from "@/lib/firebase/converters";
 
 export type UseRoomsResult = {
   rooms: (RoomDoc & { id: string })[];
@@ -24,12 +25,15 @@ export function useRooms(enabled: boolean): UseRoomsResult {
     }
     setLoading(true);
     setError(null);
-    const q = query(collection(db, "rooms"), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db!, "rooms").withConverter(roomConverter),
+      orderBy("createdAt", "desc")
+    );
     const unsub = onSnapshot(
       q,
       (snap) => {
         const list: (RoomDoc & { id: string })[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...(d.data() as RoomDoc) }));
+        snap.forEach((d) => list.push(d.data() as any));
         setRooms(list);
         setLoading(false);
       },
@@ -43,4 +47,3 @@ export function useRooms(enabled: boolean): UseRoomsResult {
 
   return useMemo(() => ({ rooms, loading, error }), [rooms, loading, error]);
 }
-

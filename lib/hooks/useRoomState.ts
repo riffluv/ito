@@ -35,7 +35,7 @@ export function useRoomState(
   // subscribe room
   useEffect(() => {
     if (!firebaseEnabled) return;
-    const unsubRoom = onSnapshot(doc(db, "rooms", roomId), (snap) => {
+    const unsubRoom = onSnapshot(doc(db!, "rooms", roomId), (snap) => {
       if (!snap.exists()) {
         setRoom(null);
         return;
