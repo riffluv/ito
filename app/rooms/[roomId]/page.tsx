@@ -14,6 +14,7 @@ import { TopicDisplay } from "@/components/TopicDisplay";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { Panel } from "@/components/ui/Panel";
+import Tooltip from "@/components/ui/Tooltip";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -483,22 +484,27 @@ export default function RoomPage() {
                     fontWeight="bold"
                     color={room.result?.success ? "green.300" : "red.300"}
                   >
-                    {room.result?.success ? "クリア！" : "失敗…"}
+                    {room.result?.success ? "クリア！" : "失敗です！！"}
                   </Text>
                   <Text fontSize="sm" color="gray.400" mt={2}>
-                    失敗しても残りのプレイヤーは最後までカードを出せます。ホストは再挑戦（並べ替え）できます。
+                    {room.result?.success ? "" : "どんまい！また遊んでね！！"}
                   </Text>
 
                   {room.result?.success === false &&
                     isHost &&
                     remainingCount > 0 && (
                       <HStack mt={3}>
-                        <AppButton
-                          onClick={continueAfterFail}
-                          colorPalette="orange"
+                        <Tooltip
+                          content="失敗しても残りのプレイヤーは最後まで出せます。並べ替えで再挑戦します."
+                          showArrow
                         >
-                          続けて並べ替える
-                        </AppButton>
+                          <AppButton
+                            onClick={continueAfterFail}
+                            colorPalette="orange"
+                          >
+                            続けて並べ替える
+                          </AppButton>
+                        </Tooltip>
                       </HStack>
                     )}
                 </Panel>
