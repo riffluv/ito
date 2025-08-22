@@ -1,10 +1,10 @@
 "use client";
+import { AppButton } from "@/components/ui/AppButton";
 import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
 import { playCard } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
 import { useMemo, useState } from "react";
 
 export function PlayBoard({
@@ -76,7 +76,7 @@ export function PlayBoard({
           </Text>
         ) : (
           <Text color="red.300" fontWeight="bold">
-            失敗扱いです。最後まで出して数字を確認しましょう。
+            失敗！！　最後までカード出して数字を確認しましょう。
           </Text>
         )}
 
