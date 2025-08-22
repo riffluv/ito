@@ -40,6 +40,7 @@ export default function LobbyPage() {
   const [pendingJoin, setPendingJoin] = useState<string | null>(null);
   const [afterNameCreate, setAfterNameCreate] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
+  const [showSkeletons, setShowSkeletons] = useState(false);
   // 検索機能は一時的に無効化（将来のために残置）
   // const [search, setSearch] = useState("");
   const waitingOnly = true;
@@ -53,6 +54,21 @@ export default function LobbyPage() {
     loading: roomsLoading,
     error: roomsError,
   } = useRooms(!!(firebaseEnabled && user));
+
+  // Prevent a very short flash of skeletons on slow clients/roundtrips by
+  // delaying showing the skeletons. If loading completes quickly the
+  // skeletons never appear.
+  useEffect(() => {
+    let t: number | undefined;
+    if (roomsLoading) {
+      t = window.setTimeout(() => setShowSkeletons(true), 150);
+    } else {
+      setShowSkeletons(false);
+    }
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [roomsLoading]);
 
   // ...existing code... (debug logging removed)
   useEffect(() => {
@@ -176,7 +192,7 @@ export default function LobbyPage() {
                         を設定してください。
                       </Text>
                     </Box>
-                  ) : roomsLoading ? (
+                  ) : roomsLoading && showSkeletons ? (
                     <LobbySkeletons />
                   ) : (
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
