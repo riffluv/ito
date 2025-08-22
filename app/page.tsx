@@ -128,7 +128,7 @@ export default function LobbyPage() {
       <Hero onPlay={openCreateFlow} onRules={() => router.push("/")} />
       <Container maxW="6xl" py={8}>
         <Flex justify="space-between" align="center" mb={4}>
-          <Heading size="lg" letterSpacing="tight">
+          <Heading size="2xl" letterSpacing="tight">
             Online-ITO
           </Heading>
           <HStack>
