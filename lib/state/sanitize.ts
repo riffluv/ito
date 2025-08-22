@@ -3,7 +3,11 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 export function sanitizeRoom(input: any): RoomDoc {
   const status = ((): RoomDoc["status"] => {
     const s = input?.status;
-    return s === "waiting" || s === "clue" || s === "playing" || s === "reveal" || s === "finished"
+    return s === "waiting" ||
+      s === "clue" ||
+      s === "playing" ||
+      s === "reveal" ||
+      s === "finished"
       ? s
       : "waiting";
   })();
@@ -14,7 +18,8 @@ export function sanitizeRoom(input: any): RoomDoc {
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
       resolveMode:
-        options.resolveMode === "sort-submit" || options.resolveMode === "sequential"
+        options.resolveMode === "sort-submit" ||
+        options.resolveMode === "sequential"
           ? options.resolveMode
           : "sequential",
     },
@@ -24,7 +29,9 @@ export function sanitizeRoom(input: any): RoomDoc {
     closedAt: input?.closedAt ?? null,
     expiresAt: input?.expiresAt ?? null,
     topic: input?.topic ?? null,
-    topicOptions: Array.isArray(input?.topicOptions) ? input.topicOptions.map((x: any) => String(x)) : null,
+    topicOptions: Array.isArray(input?.topicOptions)
+      ? input.topicOptions.map((x: any) => String(x))
+      : null,
     topicBox: input?.topicBox ?? null,
     order: input?.order ?? null,
     result: input?.result ?? null,
@@ -33,7 +40,10 @@ export function sanitizeRoom(input: any): RoomDoc {
   };
 }
 
-export function sanitizePlayer(id: string, input: any): PlayerDoc & { id: string } {
+export function sanitizePlayer(
+  id: string,
+  input: any
+): PlayerDoc & { id: string } {
   return {
     id,
     name: String(input?.name || "匿名"),

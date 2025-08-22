@@ -1,4 +1,5 @@
 "use client";
+import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import {
   Box,
@@ -8,15 +9,11 @@ import {
   GridItem,
   Heading,
   HStack,
-  Input,
   ScrollArea,
   SimpleGrid,
-  Spinner,
-  Stack,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
 // firestore imports removed (unused in lobby page)
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -26,9 +23,9 @@ import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import Hero from "@/components/site/Hero";
 // import LobbyLeftRail from "@/components/site/LobbyLeftRail";
+import EmptyState from "@/components/site/EmptyState";
 import LobbyRightRail from "@/components/site/LobbyRightRail";
 import LobbySkeletons from "@/components/site/LobbySkeletons";
-import EmptyState from "@/components/site/EmptyState";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
@@ -128,24 +125,28 @@ export default function LobbyPage() {
 
   return (
     <>
-      <Hero
-        onPlay={openCreateFlow}
-        onRules={() => router.push("/")}
-      />
+      <Hero onPlay={openCreateFlow} onRules={() => router.push("/")} />
       <Container maxW="6xl" py={8}>
         <Flex justify="space-between" align="center" mb={4}>
-          <Heading size="lg" letterSpacing="tight">Online-ITO</Heading>
+          <Heading size="lg" letterSpacing="tight">
+            Online-ITO
+          </Heading>
           <HStack>
             <HStack gap={2} mr={2} color="gray.300">
               <Text fontSize="sm" suppressHydrationWarning>
                 名前: {mounted ? displayName || "未設定" : "未設定"}
               </Text>
-              <AppButton size="sm" variant="subtle" onClick={() => {
-                setTempName(displayName || "");
-                setAfterNameCreate(false);
-                setPendingJoin(null);
-                nameDialog.onOpen();
-              }} minW="6.5rem">
+              <AppButton
+                size="sm"
+                variant="subtle"
+                onClick={() => {
+                  setTempName(displayName || "");
+                  setAfterNameCreate(false);
+                  setPendingJoin(null);
+                  nameDialog.onOpen();
+                }}
+                minW="6.5rem"
+              >
                 変更
               </AppButton>
             </HStack>
@@ -158,7 +159,6 @@ export default function LobbyPage() {
           gap={{ base: 6, lg: 8 }}
           alignItems="start"
         >
-
           <GridItem minW={0}>
             <ScrollArea.Root style={{ height: "calc(100dvh - 240px)" }}>
               <ScrollArea.Viewport>
@@ -172,7 +172,8 @@ export default function LobbyPage() {
                       bg="blackAlpha.300"
                     >
                       <Text>
-                        Firebase設定が見つかりません。`.env.local` を設定してください。
+                        Firebase設定が見つかりません。`.env.local`
+                        を設定してください。
                       </Text>
                     </Box>
                   ) : roomsLoading ? (

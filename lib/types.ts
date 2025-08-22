@@ -28,7 +28,7 @@ export type RoomDoc = {
     failed?: boolean;
     failedAt?: number | null;
     total?: number | null;
-  proposal?: string[] | null;
+    proposal?: string[] | null;
   } | null;
   result?: {
     success: boolean;
@@ -56,6 +56,7 @@ export type PlayerDoc = {
 
 export type ChatDoc = {
   sender: string;
+  uid?: string | null;
   text: string;
   createdAt?: any;
 };

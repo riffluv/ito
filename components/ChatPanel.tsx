@@ -6,13 +6,7 @@ import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
 import { Badge, Box, HStack, Input, ScrollArea, Stack, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
-import {
-  collection,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import { collection, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 
 export function ChatPanel({
@@ -24,16 +18,17 @@ export function ChatPanel({
   height?: number | string;
   readOnly?: boolean;
 }) {
-  const { displayName } = useAuth();
+  const { user, displayName } = useAuth() as any;
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastSentAt = useRef<number>(0);
 
   useEffect(() => {
     const q = query(
       collection(db!, "rooms", roomId, "chat"),
       orderBy("createdAt", "asc"),
-      limit(200)
+      limitToLast(100)
     );
     const unsub = onSnapshot(q, (snap) => {
       const list: (ChatDoc & { id: string })[] = [];
@@ -47,11 +42,17 @@ export function ChatPanel({
     return () => unsub();
   }, [roomId]);
 
+
   const send = async () => {
     const t = text.trim();
     if (!t) return;
     if (readOnly) return;
-    await sendMessage(roomId, displayName || "匿名", t);
+    const now = Date.now();
+    if (now - lastSentAt.current < 600) return; // ローカルクールダウン
+    lastSentAt.current = now;
+    const clipped = t.slice(0, 500);
+    if (!user?.uid) return;
+    await sendMessage(roomId, user.uid, displayName || "匿名", clipped);
     setText("");
   };
 
@@ -61,6 +62,7 @@ export function ChatPanel({
         <ScrollArea.Viewport>
           <ScrollArea.Content>
             <Box p={2}>
+              {/* 履歴は最新100件のみ表示（ページングは行わない方針） */}
               <Stack gap={2}>
           {messages.map((m) => {
             const isSystem = m.sender === "system";

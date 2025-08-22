@@ -1,5 +1,12 @@
 // ゲーム進行用の純粋ロジック
 
+/**
+ * OrderState represents the current public ordering state of a round.
+ * - `list`: player ids in the order they were played
+ * - `lastNumber`: last played numeric value
+ * - `failed`: whether a violation (non-ascending) occurred
+ * - `failedAt`: 1-based index where failure occurred
+ */
 export type OrderState = {
   list: string[];
   lastNumber: number | null;
@@ -18,6 +25,12 @@ export function defaultOrderState(): OrderState {
   };
 }
 
+/**
+ * applyPlay returns the next OrderState when `playerId` plays `myNum`.
+ * It marks `failed`/`failedAt` when a descending number is observed.
+ * `allowContinue` is preserved in the signature for historical reasons but
+ * currently just results in the same flagging behavior.
+ */
 export function applyPlay({
   order,
   playerId,
@@ -41,15 +54,11 @@ export function applyPlay({
     list: [...order.list, playerId],
     lastNumber: myNum,
   };
-  const violation = !alreadyFailed && order.lastNumber !== null && myNum < order.lastNumber;
+  const violation =
+    !alreadyFailed && order.lastNumber !== null && myNum < order.lastNumber;
   if (violation) {
-    if (allowContinue) {
-      next.failed = true;
-      next.failedAt = next.list.length;
-    } else {
-      next.failed = true;
-      next.failedAt = next.list.length;
-    }
+    next.failed = true;
+    next.failedAt = next.list.length;
   }
   return { next, violation };
 }
@@ -60,13 +69,46 @@ export function evaluateSorted(
   list: string[],
   numbers: Record<string, number | null | undefined>
 ): { success: boolean; failedAt: number | null; last: number | null } {
-  let last: number | null = null
+  let last: number | null = null;
   for (let i = 0; i < list.length; i++) {
-    const id = list[i]
-    const n = numbers[id]
-    if (typeof n !== "number") return { success: false, failedAt: i + 1, last }
-    if (last !== null && n < last) return { success: false, failedAt: i + 1, last: n }
-    last = n
+    const id = list[i];
+    const n = numbers[id];
+    if (typeof n !== "number") return { success: false, failedAt: i + 1, last };
+    if (last !== null && n < last)
+      return { success: false, failedAt: i + 1, last: n };
+    last = n;
   }
-  return { success: true, failedAt: null, last }
+  return { success: true, failedAt: null, last };
+}
+
+// 決定ロジック: 次の状態で部屋を終了すべきかを判定する純関数
+export function shouldFinishAfterPlay({
+  nextListLength,
+  total,
+  presenceCount,
+  nextFailed,
+  allowContinue,
+}: {
+  nextListLength: number;
+  total: number | null | undefined;
+  presenceCount: number | null | undefined;
+  nextFailed: boolean;
+  allowContinue: boolean;
+}): boolean {
+  // 失敗が起きても、既定では最後までプレイを続けられるようにする。
+  // 即時終了は total / presence による判定のみに限定する。
+  const totalNum = typeof total === "number" ? total : null;
+  // 全員が出し終わっていれば終了
+  if (totalNum !== null && nextListLength >= totalNum) return true;
+
+  // presence 情報があり、オンライン人数に到達していれば終了
+  if (
+    typeof presenceCount === "number" &&
+    presenceCount !== null &&
+    nextListLength >= presenceCount
+  )
+    return true;
+
+  // それ以外は継続
+  return false;
 }

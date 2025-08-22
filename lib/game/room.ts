@@ -1,17 +1,32 @@
-import { collection, doc, getDoc, getDocs, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { applyPlay, defaultOrderState, evaluateSorted } from "@/lib/game/rules";
+import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { requireDb } from "@/lib/firebase/require";
-import { presenceSupported, fetchPresenceUids } from "@/lib/firebase/presence";
-import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
+import {
+  applyPlay,
+  defaultOrderState,
+  evaluateSorted,
+  shouldFinishAfterPlay,
+} from "@/lib/game/rules";
 import { nextStatusForEvent } from "@/lib/state/guards";
+import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  runTransaction,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 // 乱数はクライアントで自分の番号計算に使用
 
 export async function startGame(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
-  const next = nextStatusForEvent(curr?.status || "waiting", { type: "START_GAME" });
+  const next = nextStatusForEvent(curr?.status || "waiting", {
+    type: "START_GAME",
+  });
   if (!next) throw new Error("invalid transition: START_GAME");
   await updateDoc(ref, { status: next, result: null, deal: null });
 }
@@ -33,20 +48,26 @@ export async function dealNumbers(roomId: string) {
       } else {
         // presenceは利用可能だが空のときは lastSeen でフォールバック
         const now = Date.now();
-        target = all.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
+        target = all.filter((p) =>
+          isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+        );
       }
     } else {
       const now = Date.now();
-      target = all.filter((p) => isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS));
+      target = all.filter((p) =>
+        isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+      );
     }
   } catch {
     // フォールバック: 取得失敗時は全員
     target = all;
   }
-  const ordered = target.sort((a, b) => (String(a.uid || a.id)).localeCompare(String(b.uid || b.id)));
+  const ordered = target.sort((a, b) =>
+    String(a.uid || a.id).localeCompare(String(b.uid || b.id))
+  );
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
   await updateDoc(doc(db!, "rooms", roomId), {
-    deal: { seed, min: 1, max: 100, players: ordered.map(p => p.id) }
+    deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
   });
 }
 
@@ -56,16 +77,23 @@ export async function finishRoom(roomId: string, success: boolean) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
-  const next = nextStatusForEvent(curr?.status || "waiting", { type: "FINISH" });
+  const next = nextStatusForEvent(curr?.status || "waiting", {
+    type: "FINISH",
+  });
   if (!next) throw new Error("invalid transition: FINISH");
-  await updateDoc(ref, { status: next, result: { success, revealedAt: serverTimestamp() } });
+  await updateDoc(ref, {
+    status: next,
+    result: { success, revealedAt: serverTimestamp() },
+  });
 }
 
 export async function continueAfterFail(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
-  const next = nextStatusForEvent(curr?.status || "waiting", { type: "CONTINUE_AFTER_FAIL" });
+  const next = nextStatusForEvent(curr?.status || "waiting", {
+    type: "CONTINUE_AFTER_FAIL",
+  });
   if (!next) throw new Error("invalid transition: CONTINUE_AFTER_FAIL");
   await updateDoc(ref, { status: next, result: null });
 }
@@ -85,7 +113,9 @@ export async function startPlaying(roomId: string) {
   try {
     const r = await getDoc(doc(db!, "rooms", roomId));
     const data: any = r.data();
-    const next = nextStatusForEvent(data?.status || "waiting", { type: "START_PLAYING" });
+    const next = nextStatusForEvent(data?.status || "waiting", {
+      type: "START_PLAYING",
+    });
     if (!next) throw new Error("invalid transition: START_PLAYING");
     const arr: string[] | undefined = data?.deal?.players;
     if (presenceSupported()) {
@@ -115,6 +145,18 @@ export async function startPlaying(roomId: string) {
 export async function playCard(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
   const meRef = doc(db!, "rooms", roomId, "players", playerId);
+
+  // presence count取得（可能なら）を先に行い、トランザクション内で参照する
+  let presenceCount: number | null = null;
+  try {
+    if (presenceSupported()) {
+      const uids = await fetchPresenceUids(roomId);
+      if (Array.isArray(uids)) presenceCount = uids.length;
+    }
+  } catch {
+    presenceCount = null;
+  }
+
   await runTransaction(db!, async (tx) => {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
@@ -139,19 +181,28 @@ export async function playCard(roomId: string, playerId: string) {
 
     if (currentOrder.list.includes(playerId)) return; // 二重出し防止
 
-    const { next } = applyPlay({ order: currentOrder as any, playerId, myNum, allowContinue });
+    const { next } = applyPlay({
+      order: currentOrder as any,
+      playerId,
+      myNum,
+      allowContinue,
+    });
 
-    const total = typeof next.total === "number" ? next.total : null;
-    const isAllPlayed = total !== null && next.list.length === total;
+    const shouldFinish = shouldFinishAfterPlay({
+      nextListLength: next.list.length,
+      total: next.total ?? room?.order?.total ?? null,
+      presenceCount,
+      nextFailed: !!next.failed,
+      allowContinue,
+    });
 
-    if (next.failed && !allowContinue) {
-      tx.update(roomRef, { status: "finished", order: next, result: { success: false, revealedAt: serverTimestamp() } });
-      return;
-    }
-
-    if (isAllPlayed) {
+    if (shouldFinish) {
       const success = !next.failed;
-      tx.update(roomRef, { status: "finished", order: next, result: { success, revealedAt: serverTimestamp() } });
+      tx.update(roomRef, {
+        status: "finished",
+        order: next,
+        result: { success, revealedAt: serverTimestamp() },
+      });
       return;
     }
 
@@ -163,13 +214,13 @@ export async function playCard(roomId: string, playerId: string) {
 
 // 並べ替え提案を保存（ルームの order.proposal に保存）
 export async function setOrderProposal(roomId: string, proposal: string[]) {
-  const _db = requireDb()
+  const _db = requireDb();
   await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
 }
 
 // 並び替えで一括判定モード: 提出された順序で昇順チェックし、結果を確定
 export async function submitSortedOrder(roomId: string, list: string[]) {
-  const _db = requireDb()
+  const _db = requireDb();
   await runTransaction(_db, async (tx) => {
     const roomRef = doc(_db, "rooms", roomId);
     const roomSnap = await tx.get(roomRef);
@@ -177,7 +228,8 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     const room: any = roomSnap.data();
     const mode: string = room?.options?.resolveMode || "sequential";
     const status: string = room?.status || "waiting";
-    if (mode !== "sort-submit") throw new Error("このルームでは一括判定は無効です");
+    if (mode !== "sort-submit")
+      throw new Error("このルームでは一括判定は無効です");
     if (status !== "clue") throw new Error("現在は提出できません");
     // プレイヤーの数字を取得して昇順チェック（純関数へ）
     const numbers: Record<string, number | null | undefined> = {};
