@@ -28,7 +28,7 @@ export function TopicDisplay({
   const topicBox = (room as any).topicBox as TopicType | null | undefined;
   const [changingBox, setChangingBox] = useState(false);
   // Only allow host actions when in clue phase (game started)
-  const canHostAct = Boolean(isHost && (room.status === "clue"));
+  const canHostAct = Boolean(isHost && room.status === "clue");
 
   const startBox = async (type: TopicType) => {
     if (!canHostAct) return;
@@ -75,42 +75,42 @@ export function TopicDisplay({
               )}
             </Stack>
             <HStack>
-                {isHost && !!topicBox && room.status === "clue" && !room.deal && (
-                  <Button size="sm" variant="outline" onClick={shuffleBox}>
-                    シャッフル
-                  </Button>
-                )}
-                {isHost && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setChangingBox((v) => !v)}
-                    disabled={!canHostAct}
-                  >
-                    カテゴリ変更
-                  </Button>
-                )}
-                {isHost && (
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      if (!canHostAct) return;
-                      try {
-                        await dealNumbers(roomId);
-                        notify({ title: "数字を配りました", type: "success" });
-                      } catch (e: any) {
-                        notify({
-                          title: "数字の配布に失敗",
-                          description: e?.message || String(e),
-                          type: "error",
-                        });
-                      }
-                    }}
-                    disabled={!canHostAct}
-                  >
-                    数字を配る
-                  </Button>
-                )}
+              {isHost && !!topicBox && room.status === "clue" && !room.deal && (
+                <Button size="sm" variant="outline" onClick={shuffleBox}>
+                  シャッフル
+                </Button>
+              )}
+              {isHost && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setChangingBox((v) => !v)}
+                  disabled={!canHostAct}
+                >
+                  カテゴリ変更
+                </Button>
+              )}
+              {isHost && (
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (!canHostAct) return;
+                    try {
+                      await dealNumbers(roomId);
+                      notify({ title: "数字を配りました", type: "success" });
+                    } catch (e: any) {
+                      notify({
+                        title: "数字の配布に失敗",
+                        description: e?.message || String(e),
+                        type: "error",
+                      });
+                    }
+                  }}
+                  disabled={!canHostAct}
+                >
+                  数字を配る
+                </Button>
+              )}
             </HStack>
           </HStack>
           {changingBox && (

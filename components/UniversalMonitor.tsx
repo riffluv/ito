@@ -40,7 +40,8 @@ export default function UniversalMonitor({
           fontSize: 14,
         }}
       >
-        ラウンド {room?.round ?? 1} | カテゴリ: {(room as any)?.topicBox ?? "未選択"}
+        ラウンド {room?.round ?? 1} | カテゴリ:{" "}
+        {(room as any)?.topicBox ?? "未選択"}
       </Box>
 
       <Box style={{ padding: "28px 20px", textAlign: "center" }}>
@@ -51,7 +52,11 @@ export default function UniversalMonitor({
           </Box>
         )}
 
-        <Text fontSize={{ base: "lg", md: "2.25rem" }} fontWeight="800" style={{ color: "#7bd3b6" }}>
+        <Text
+          fontSize={{ base: "lg", md: "2.25rem" }}
+          fontWeight="800"
+          style={{ color: "#7bd3b6" }}
+        >
           {room.topic
             ? `お題：${room.topic}`
             : room.status === "waiting"
