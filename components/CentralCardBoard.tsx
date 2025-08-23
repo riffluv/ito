@@ -108,7 +108,8 @@ export function CentralCardBoard({
           minWidth: 140,
           minHeight: 160,
           borderRadius: 12,
-          background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -190,7 +191,8 @@ export function CentralCardBoard({
           }}
         >
           {/* committed plays */}
-          {orderList && orderList.length > 0 &&
+          {orderList &&
+            orderList.length > 0 &&
             orderList.map((id, idx) => renderCard(id, idx))}
 
           {/* proposals (not yet committed) */}
