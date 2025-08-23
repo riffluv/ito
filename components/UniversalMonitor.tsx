@@ -45,29 +45,31 @@ export default function UniversalMonitor({
       </Box>
 
       <Box style={{ padding: "28px 20px", textAlign: "center" }}>
-        {/* Topic selection is allowed only after game start (clue phase) */}
-        {room.status === "clue" && (
-          <Box mb={4}>
-            <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
+        {/* Show the topic selector only for the host during clue phase; when shown, hide the separate header text to avoid duplicate boxes */}
+        {room.status === "clue" && isHost ? (
+          <Box>
+            <TopicDisplay roomId={roomId} room={room} isHost={isHost} inline />
           </Box>
+        ) : (
+          <>
+            <Text
+              fontSize={{ base: "lg", md: "2.25rem" }}
+              fontWeight="800"
+              style={{ color: "#7bd3b6" }}
+            >
+              {room.topic
+                ? `お題：${room.topic}`
+                : room.status === "waiting"
+                ? "ゲーム開始後にお題を選択できます"
+                : "お題が未設定です"}
+            </Text>
+            <Text fontSize="sm" color="fgMuted" mt={2}>
+              {room.status === "clue" && "カードを並べてください（ミスすると失敗）"}
+              {room.status === "waiting" &&
+                "ホストがゲームを開始するとお題選択が可能になります"}
+            </Text>
+          </>
         )}
-
-        <Text
-          fontSize={{ base: "lg", md: "2.25rem" }}
-          fontWeight="800"
-          style={{ color: "#7bd3b6" }}
-        >
-          {room.topic
-            ? `お題：${room.topic}`
-            : room.status === "waiting"
-            ? "ゲーム開始後にお題を選択できます"
-            : "お題が未設定です"}
-        </Text>
-        <Text fontSize="sm" color="fgMuted" mt={2}>
-          {room.status === "clue" && "カードを並べてください（ミスすると失敗）"}
-          {room.status === "waiting" &&
-            "ホストがゲームを開始するとお題選択が可能になります"}
-        </Text>
       </Box>
 
       {room.status === "finished" && (
