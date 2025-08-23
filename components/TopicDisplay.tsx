@@ -11,7 +11,7 @@ import {
   type TopicType,
 } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
-import { Button, HStack, Stack, Text, Box } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 
@@ -142,7 +142,9 @@ export function TopicDisplay({
   ) : (
     <Stack>
       <Text color="gray.300">
-        {isHost ? "カテゴリを選択（ホストのみ）" : "ホストがカテゴリを選ぶまでお待ちください"}
+        {isHost
+          ? "カテゴリを選択（ホストのみ）"
+          : "ホストがカテゴリを選ぶまでお待ちください"}
       </Text>
       <HStack>
         {topicTypeLabels.map((label) => (

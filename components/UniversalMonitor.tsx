@@ -64,7 +64,8 @@ export default function UniversalMonitor({
                 : "お題が未設定です"}
             </Text>
             <Text fontSize="sm" color="fgMuted" mt={2}>
-              {room.status === "clue" && "カードを並べてください（ミスすると失敗）"}
+              {room.status === "clue" &&
+                "カードを並べてください（ミスすると失敗）"}
               {room.status === "waiting" &&
                 "ホストがゲームを開始するとお題選択が可能になります"}
             </Text>
