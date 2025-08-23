@@ -8,13 +8,13 @@ import {
   HStack,
   Heading,
 } from "@chakra-ui/react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-const ThemeToggle = dynamic(() => import("./ThemeToggle"), { ssr: false });
+import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
   return (
     <Box
@@ -41,11 +41,19 @@ export default function Header() {
           </HStack>
           <HStack gap={2}>
             <AppButton
-              asChild
               variant={isHome ? "solid" : "subtle"}
               aria-label="プレイページへ"
+              onClick={() => {
+                try {
+                  if (typeof window !== "undefined") {
+                    const lr = window.localStorage.getItem("lastRoom");
+                    if (lr) return router.push(`/rooms/${lr}`);
+                  }
+                } catch {}
+                router.push("/");
+              }}
             >
-              <Link href="/">プレイ</Link>
+              プレイ
             </AppButton>
             <ChakraLink asChild display={{ base: "none", md: "inline-flex" }}>
               <Link href="/">Docs</Link>
