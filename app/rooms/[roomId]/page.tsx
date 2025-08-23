@@ -34,7 +34,14 @@ import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Box, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import {
+  Box,
+  HStack,
+  Spinner,
+  Stack,
+  Text,
+  useBreakpointValue,
+} from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -144,6 +151,24 @@ export default function RoomPage() {
     tick();
     return () => clearInterval(id);
   }, [uid, roomId]);
+
+  // ホスト向けトースト: 全員の連想ワードが確定した瞬間にわかりやすく通知
+  useEffect(() => {
+    if (!isHost) return;
+    if (!room) return;
+    // allCluesReady が true になった瞬間に一度だけ通知
+    if (allCluesReady) {
+      try {
+        notify({
+          title: "全員が連想ワードを決定しました",
+          description: "出せます",
+          type: "success",
+          duration: 5000,
+          id: `clues-ready-${roomId}-${room.round || 0}`,
+        });
+      } catch {}
+    }
+  }, [allCluesReady, isHost, roomId, room?.round, room]);
 
   // waitingに戻ったら自分のフィールドを初期化
   useEffect(() => {
@@ -271,6 +296,24 @@ export default function RoomPage() {
   ]);
 
   // presence のアタッチ/デタッチは usePresence が管理
+  // Host primary action object (reused for HUD or left column)
+  const hostPrimaryAction = isHost
+    ? room?.status === "waiting"
+      ? { label: "開始", onClick: startGame }
+      : room?.status === "clue"
+      ? {
+          label: "並べ替えフェーズへ",
+          onClick: () => startPlayingAction(roomId),
+          disabled: !canStartPlaying,
+          title: startDisabledTitle,
+        }
+      : room?.status === "finished"
+      ? { label: "もう一度", onClick: resetToWaiting }
+      : null
+    : null;
+
+  const showHostInHud = useBreakpointValue({ base: true, md: false });
+
   if (!firebaseEnabled || loading || !room) {
     return (
       <Box
@@ -324,22 +367,7 @@ export default function RoomPage() {
           totalCount={players.length}
           remainMs={null}
           totalMs={null}
-          hostPrimary={
-            isHost
-              ? room.status === "waiting"
-                ? { label: "開始", onClick: startGame }
-                : room.status === "clue"
-                ? {
-                    label: "並べ替え開始",
-                    onClick: () => startPlayingAction(roomId),
-                    disabled: !canStartPlaying,
-                    title: startDisabledTitle,
-                  }
-                : room.status === "finished"
-                ? { label: "もう一度", onClick: resetToWaiting }
-                : null
-              : null
-          }
+          hostPrimary={showHostInHud ? hostPrimaryAction : null}
         />
         <PhaseHeader phase={room.status as any} />
       </Box>
@@ -362,6 +390,19 @@ export default function RoomPage() {
         <Panel title={`参加者人数: ${onlinePlayers.length}/${players.length}`}>
           <Participants players={onlinePlayers} />
         </Panel>
+        {/* Host actions moved here on larger screens for better reachability */}
+        {!showHostInHud && hostPrimaryAction && (
+          <HStack>
+            <AppButton
+              colorPalette="orange"
+              onClick={hostPrimaryAction.onClick}
+              disabled={(hostPrimaryAction as any).disabled}
+              title={(hostPrimaryAction as any).title}
+            >
+              {(hostPrimaryAction as any).label}
+            </AppButton>
+          </HStack>
+        )}
         <Panel title="オプション">
           <RoomOptionsEditor
             value={room.options}
@@ -377,16 +418,6 @@ export default function RoomPage() {
           )}
         </Panel>
         {/* TopicDisplay moved into UniversalMonitor to act as the main monitor */}
-        {isHost && room.status === "waiting" && (
-          <AppButton colorPalette="orange" onClick={startGame}>
-            ゲーム開始
-          </AppButton>
-        )}
-        {room.status === "finished" && (
-          <Stack>
-            {isHost && <AppButton onClick={resetToWaiting}>もう一度</AppButton>}
-          </Stack>
-        )}
       </Stack>
 
       {/* center */}
@@ -509,11 +540,7 @@ export default function RoomPage() {
             下部の場パネルで「出す」を実行してください。
           </Text>
         )}
-        {room.status === "finished" && (
-          <AppButton size="sm" onClick={resetToWaiting} variant="outline">
-            もう一度
-          </AppButton>
-        )}
+        {/* finished のリセット等は HUD のホスト用ボタンで提供します（重複表示を避ける） */}
       </Box>
     </Box>
   );
