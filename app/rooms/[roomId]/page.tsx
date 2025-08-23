@@ -2,12 +2,11 @@
 import { ChatPanel } from "@/components/ChatPanel";
 import { CluePanel } from "@/components/CluePanel";
 import { Hud } from "@/components/Hud";
-import { PlayBoard } from "@/components/PlayBoard";
-import PhaseHeader from "@/components/site/PhaseHeader";
-// import { PlayerList } from "@/components/PlayerList";
 import { Participants } from "@/components/Participants";
+import { PlayBoard } from "@/components/PlayBoard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RoomOptionsEditor } from "@/components/RoomOptions";
+import PhaseHeader from "@/components/site/PhaseHeader";
 import PhaseTips from "@/components/site/PhaseTips";
 import { SortBoard } from "@/components/SortBoard";
 import { TopicDisplay } from "@/components/TopicDisplay";
@@ -40,15 +39,7 @@ import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import {
-  Box,
-  Container,
-  Grid,
-  HStack,
-  Spinner,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Box, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -306,12 +297,12 @@ export default function RoomPage() {
   // presence のアタッチ/デタッチは usePresence が管理
   if (!firebaseEnabled || loading || !room) {
     return (
-      <Container
-        maxW="container.xl"
+      <Box
         h="100dvh"
         display="flex"
         alignItems="center"
         justifyContent="center"
+        px={4}
       >
         {!firebaseEnabled ? (
           <Text>
@@ -320,255 +311,303 @@ export default function RoomPage() {
         ) : (
           <Spinner />
         )}
-      </Container>
+      </Box>
     );
   }
   // 途中参加OKのため、ブロック画面は表示しない
 
+  // フルスクリーン AppShell グリッド
   return (
-    <Container
-      maxW="container.xl"
+    <Box
       h="100dvh"
-      py={0}
-      display="flex"
-      flexDir="column"
+      display="grid"
+      gridTemplateRows={{ base: "56px 1fr auto", md: "56px 1fr 160px" }}
+      gridTemplateColumns={{ base: "1fr", md: "280px 1fr 340px" }}
+      gridTemplateAreas={{
+        base: `'header' 'center' 'hand'`,
+        md: `'header header header' 'left center right' 'hand hand hand'`,
+      }}
+      gap={{ base: 2, md: 3 }}
+      px={{ base: 2, md: 3 }}
+      py={{ base: 2, md: 3 }}
       overflow="hidden"
     >
-      {/* 背景レイヤー */}
-      <div className="stage-bg" aria-hidden>
-        <div className="particles parallax-1" />
-      </div>
-
-      {/* HUD */}
-      <Hud
-        roomName={room.name}
-        phase={room.status}
-        activeCount={onlinePlayers.length}
-        totalCount={players.length}
-        remainMs={null}
-        totalMs={null}
-        hostPrimary={
-          isHost
-            ? room.status === "waiting"
-              ? { label: "開始", onClick: startGame }
-              : room.status === "clue"
-              ? {
-                  label: "並べ替え開始",
-                  onClick: () => startPlayingAction(roomId),
-                  disabled: !canStartPlaying,
-                  title: startDisabledTitle,
-                }
-              : room.status === "finished"
-              ? { label: "もう一度", onClick: resetToWaiting }
+      {/* header area */}
+      <Box
+        gridArea="header"
+        display="flex"
+        flexDir="column"
+        gap={2}
+        overflow="visible"
+        minH={0}
+      >
+        <Hud
+          roomName={room.name}
+          phase={room.status}
+          activeCount={onlinePlayers.length}
+          totalCount={players.length}
+          remainMs={null}
+          totalMs={null}
+          hostPrimary={
+            isHost
+              ? room.status === "waiting"
+                ? { label: "開始", onClick: startGame }
+                : room.status === "clue"
+                ? {
+                    label: "並べ替え開始",
+                    onClick: () => startPlayingAction(roomId),
+                    disabled: !canStartPlaying,
+                    title: startDisabledTitle,
+                  }
+                : room.status === "finished"
+                ? { label: "もう一度", onClick: resetToWaiting }
+                : null
               : null
-            : null
+          }
+        />
+        <PhaseHeader phase={room.status as any} />
+      </Box>
+
+      {/* left column */}
+      <Stack
+        gridArea="left"
+        overflowY="auto"
+        minH={0}
+        gap={3}
+        role="region"
+        aria-label="参加者とオプション"
+        style={
+          {
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+          } as any
         }
-      />
-      <PhaseHeader phase={room.status as any} />
-
-      <Box flex="1" overflow="hidden" minH={0} px={{ base: 3, md: 4 }} py={3}>
-        <Grid
-          templateColumns={{
-            base: "1fr",
-            md: "340px 1fr 360px",
-            lg: "360px 1fr 400px",
-          }}
-          gap={4}
-          h="100%"
-        >
-          <Stack
-            gridColumn={{ base: "auto", md: "span 1" }}
-            overflowY="auto"
-            maxH="100%"
-          >
-            <Panel
-              title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
-            >
-              <Participants players={onlinePlayers} />
-            </Panel>
-
-            <Panel title="オプション">
-              <RoomOptionsEditor
-                value={room.options}
-                onChange={(v) => updateOptions(v)}
-                disabled={!isHost || room.status !== "waiting"}
-              />
-              {isHost && (
-                <Stack mt={3}>
-                  <AppButton variant="outline" onClick={resetToWaiting}>
-                    リセット
-                  </AppButton>
-                </Stack>
-              )}
-            </Panel>
-
-            {isHost && room.status === "waiting" && (
-              <AppButton colorPalette="orange" onClick={startGame}>
-                ゲーム開始
+      >
+        <Panel title={`参加者人数: ${onlinePlayers.length}/${players.length}`}>
+          <Participants players={onlinePlayers} />
+        </Panel>
+        <Panel title="オプション">
+          <RoomOptionsEditor
+            value={room.options}
+            onChange={(v) => updateOptions(v)}
+            disabled={!isHost || room.status !== "waiting"}
+          />
+          {isHost && (
+            <Stack mt={3}>
+              <AppButton variant="outline" onClick={resetToWaiting}>
+                リセット
               </AppButton>
-            )}
-
-            {room.status === "finished" && (
-              <Stack>
-                {isHost && (
-                  <AppButton onClick={resetToWaiting}>もう一度</AppButton>
-                )}
-              </Stack>
-            )}
+            </Stack>
+          )}
+        </Panel>
+        {isHost && room.status === "waiting" && (
+          <AppButton colorPalette="orange" onClick={startGame}>
+            ゲーム開始
+          </AppButton>
+        )}
+        {room.status === "finished" && (
+          <Stack>
+            {isHost && <AppButton onClick={resetToWaiting}>もう一度</AppButton>}
           </Stack>
+        )}
+      </Stack>
 
-          <Box
-            gridColumn={{ base: "auto", md: "span 1" }}
-            overflowY="auto"
-            maxH="100%"
-          >
-            {room.status === "waiting" && (
-              <Panel>
-                <Text>ホストがゲーム開始するまでお待ちください</Text>
-                <PhaseTips phase="waiting" />
-              </Panel>
-            )}
-
-            {room.status === "clue" && me && (
-              <Stack gap={4}>
-                <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
-                <CluePanel roomId={roomId} me={me} />
-                {/* ヒントパネルを削除（UIが圧迫されるため） */}
-                {Array.isArray((room as any)?.deal?.players) && (
-                  <>
-                    {room.options.resolveMode === "sort-submit" ? (
-                      <SortBoard
-                        players={players}
-                        proposal={proposal}
-                        onChange={(list) => {
-                          setProposal(list);
-                          // ベストエフォートで共有
-                          setOrderProposal(roomId, list).catch(() => void 0);
-                        }}
-                        onConfirm={async () => {
-                          try {
-                            await submitSortedOrder(roomId, proposal);
-                            notify({
-                              title: "並び順で判定しました",
-                              type: "success",
-                            });
-                          } catch (e: any) {
-                            notify({
-                              title: "確定に失敗しました",
-                              description: e?.message || String(e),
-                              type: "error",
-                            });
-                          }
-                        }}
-                        disabled={!isHost || !canStartPlaying}
-                      />
-                    ) : (
-                      isHost && (
-                        <Stack>
-                          <AppButton
-                            colorPalette="orange"
-                            onClick={() => startPlayingAction(roomId)}
-                            disabled={!canStartPlaying}
-                            title={startDisabledTitle}
-                            aria-disabled={!canStartPlaying}
-                          >
-                            順番出しを開始
-                          </AppButton>
-                          {!canStartPlaying && (
-                            <Text fontSize="sm" color="gray.300">
-                              未準備のプレイヤー:{" "}
-                              {players
-                                .filter((p) => !p.ready)
-                                .map((p) => p.name)
-                                .join(", ") || "なし"}
-                            </Text>
-                          )}
-                        </Stack>
-                      )
-                    )}
-                  </>
-                )}
-              </Stack>
-            )}
-
-            {room.status === "finished" && (
-              <Stack gap={4}>
-                <Panel title="結果">
-                  <Text
-                    fontWeight="bold"
-                    color={room.result?.success ? "green.300" : "red.300"}
-                  >
-                    {room.result?.success ? "クリア！" : "失敗です！！"}
-                  </Text>
-                  <Text fontSize="sm" color="gray.400" mt={2}>
-                    {room.result?.success ? "" : "どんまい！また遊んでね！！"}
-                  </Text>
-
-                  {room.result?.success === false &&
-                    isHost &&
-                    remainingCount > 0 && (
-                      <HStack mt={3}>
-                        <Tooltip
-                          content="失敗しても残りのプレイヤーは最後まで出せます。並べ替えで再挑戦します."
-                          showArrow
-                        >
-                          <AppButton
-                            onClick={continueAfterFail}
-                            colorPalette="orange"
-                          >
-                            続けて並べ替える
-                          </AppButton>
-                        </Tooltip>
-                      </HStack>
-                    )}
-                </Panel>
-                <ResultPanel
-                  players={players}
-                  orderList={room.order?.list || []}
-                />
-              </Stack>
-            )}
-
-            {room.status === "playing" && (
+      {/* center */}
+      <Box
+        gridArea="center"
+        overflowY="auto"
+        minH={0}
+        display="flex"
+        flexDir="column"
+        gap={4}
+        role="region"
+        aria-label="共有ボード"
+        style={
+          {
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+          } as any
+        }
+      >
+        {room.status === "waiting" && (
+          <Panel>
+            <Text>ホストがゲーム開始するまでお待ちください</Text>
+            <PhaseTips phase="waiting" />
+          </Panel>
+        )}
+        {room.status === "clue" && me && (
+          <>
+            <TopicDisplay roomId={roomId} room={room} isHost={isHost} />
+            <CluePanel roomId={roomId} me={me} />
+            {Array.isArray((room as any)?.deal?.players) && (
               <>
-                <Panel title="コツ">
-                  <PhaseTips phase="playing" />
-                </Panel>
-                <PlayBoard
-                  roomId={roomId}
-                  players={players}
-                  meId={meId}
-                  orderList={room.order?.list || []}
-                  isHost={isHost}
-                  failed={!!room.order?.failed}
-                  failedAt={room.order?.failedAt ?? null}
-                  eligibleIds={eligibleIds}
-                />
+                {room.options.resolveMode === "sort-submit" ? (
+                  <SortBoard
+                    players={players}
+                    proposal={proposal}
+                    onChange={(list) => {
+                      setProposal(list);
+                      setOrderProposal(roomId, list).catch(() => void 0);
+                    }}
+                    onConfirm={async () => {
+                      try {
+                        await submitSortedOrder(roomId, proposal);
+                        notify({
+                          title: "並び順で判定しました",
+                          type: "success",
+                        });
+                      } catch (e: any) {
+                        notify({
+                          title: "確定に失敗しました",
+                          description: e?.message || String(e),
+                          type: "error",
+                        });
+                      }
+                    }}
+                    disabled={!isHost || !canStartPlaying}
+                  />
+                ) : (
+                  isHost && (
+                    <Stack>
+                      <AppButton
+                        colorPalette="orange"
+                        onClick={() => startPlayingAction(roomId)}
+                        disabled={!canStartPlaying}
+                        title={startDisabledTitle}
+                        aria-disabled={!canStartPlaying}
+                      >
+                        順番出しを開始
+                      </AppButton>
+                      {!canStartPlaying && (
+                        <Text fontSize="sm" color="gray.300">
+                          未準備のプレイヤー:{" "}
+                          {players
+                            .filter((p) => !p.ready)
+                            .map((p) => p.name)
+                            .join(", ") || "なし"}
+                        </Text>
+                      )}
+                    </Stack>
+                  )
+                )}
               </>
             )}
-          </Box>
-
-          <Box
-            gridColumn={{ base: "auto", md: "span 1" }}
-            overflowY="auto"
-            maxH="100%"
-          >
-            <ChatPanel roomId={roomId} height="clamp(240px, 40dvh, 420px)" />
-            <HStack mt={3}>
-              <AppButton
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  await leaveRoom();
-                  router.push("/");
-                }}
+          </>
+        )}
+        {room.status === "finished" && (
+          <>
+            <Panel title="結果">
+              <Text
+                fontWeight="bold"
+                color={room.result?.success ? "green.300" : "red.300"}
               >
-                退出してロビーへ
-              </AppButton>
-            </HStack>
-          </Box>
-        </Grid>
+                {room.result?.success ? "クリア！" : "失敗です！！"}
+              </Text>
+              <Text fontSize="sm" color="gray.400" mt={2}>
+                {room.result?.success ? "" : "どんまい！また遊んでね！！"}
+              </Text>
+              {room.result?.success === false &&
+                isHost &&
+                remainingCount > 0 && (
+                  <HStack mt={3}>
+                    <Tooltip
+                      content="失敗しても残りのプレイヤーは最後まで出せます。並べ替えで再挑戦します."
+                      showArrow
+                    >
+                      <AppButton
+                        onClick={continueAfterFail}
+                        colorPalette="orange"
+                      >
+                        続けて並べ替える
+                      </AppButton>
+                    </Tooltip>
+                  </HStack>
+                )}
+            </Panel>
+            <ResultPanel players={players} orderList={room.order?.list || []} />
+          </>
+        )}
+        {room.status === "playing" && (
+          <>
+            <Panel title="コツ">
+              <PhaseTips phase="playing" />
+            </Panel>
+            <PlayBoard
+              roomId={roomId}
+              players={players}
+              meId={meId}
+              orderList={room.order?.list || []}
+              isHost={isHost}
+              failed={!!room.order?.failed}
+              failedAt={room.order?.failedAt ?? null}
+              eligibleIds={eligibleIds}
+            />
+          </>
+        )}
       </Box>
-    </Container>
+
+      {/* right */}
+      <Box
+        gridArea="right"
+        overflowY="auto"
+        minH={0}
+        role="region"
+        aria-label="チャット"
+        display={{ base: "none", md: "block" }}
+        style={
+          {
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+          } as any
+        }
+      >
+        <ChatPanel roomId={roomId} height="auto" />
+        <HStack mt={3}>
+          <AppButton
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              await leaveRoom();
+              router.push("/");
+            }}
+          >
+            退出してロビーへ
+          </AppButton>
+        </HStack>
+      </Box>
+
+      {/* hand (自分の操作列) */}
+      <Box
+        gridArea="hand"
+        borderTopWidth="1px"
+        borderColor="borderDefault"
+        py={2}
+        display="flex"
+        flexDir="row"
+        alignItems="center"
+        gap={4}
+        overflow="hidden"
+        minH={0}
+        role="region"
+        aria-label="自分の操作"
+      >
+        {/* 最低限の自分の数字と CluePanel のハイライトを縮約表示する余地: 今はフェーズに応じた簡易ボタンのみ */}
+        {room.status === "clue" && me && (
+          <Box flex={1} minW={0}>
+            <CluePanel roomId={roomId} me={me} label="連想" />
+          </Box>
+        )}
+        {room.status === "playing" && (
+          <Text fontSize="sm" color="fgMuted">
+            下部の場パネルで「出す」を実行してください。
+          </Text>
+        )}
+        {room.status === "finished" && (
+          <AppButton size="sm" onClick={resetToWaiting} variant="outline">
+            もう一度
+          </AppButton>
+        )}
+      </Box>
+    </Box>
   );
 }

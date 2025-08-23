@@ -1,9 +1,9 @@
-import Header from "@/components/site/Header";
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import React from "react";
+import ClientFrame from "./ClientFrame";
 import "./globals.css";
 import Providers from "./providers";
-import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -20,6 +20,8 @@ export const viewport: Viewport = {
   ],
 };
 
+// Client 専用の判定は app/ClientFrame.tsx に分離
+
 export default function RootLayout({
   children,
 }: {
@@ -28,23 +30,16 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning className={inter.className}>
       <head>
-        {/* System forms/controls に配色ヒントを与える */}
         <meta name="color-scheme" content="dark light" />
       </head>
       <body>
-        <a
-          href="#main"
-          style={{
-            position: "absolute",
-            left: -9999,
-            top: 0,
-          }}
-        >
+        <a href="#main" style={{ position: "absolute", left: -9999, top: 0 }}>
           本文へスキップ
         </a>
+        {/* Client コンポーネント内でパス判定するためラッパーを分離 */}
         <Providers>
-          <Header />
-          <div id="main">{children}</div>
+          {/* ClientFrame 内で /rooms/ 判定し Header を条件表示 */}
+          <ClientFrame>{children}</ClientFrame>
         </Providers>
       </body>
     </html>
