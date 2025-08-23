@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ITO - The Ultimate Party Game</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -50,7 +52,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
+            background:
                 radial-gradient(circle at 20% 80%, var(--primary) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, var(--secondary) 0%, transparent 50%),
                 radial-gradient(circle at 40% 40%, var(--purple) 0%, transparent 50%);
@@ -60,8 +62,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+            }
         }
 
         /* Game Container */
@@ -108,8 +117,13 @@
         }
 
         @keyframes shimmer {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            0% {
+                transform: translateX(-100%) translateY(-100%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(100%) translateY(100%) rotate(45deg);
+            }
         }
 
         .logo {
@@ -381,15 +395,13 @@
 
         .card-board {
             min-height: 200px;
-            background: 
+            background:
                 radial-gradient(circle at 30% 70%, rgba(78, 205, 196, 0.1) 0%, transparent 50%),
-                repeating-linear-gradient(
-                    45deg,
+                repeating-linear-gradient(45deg,
                     rgba(255, 255, 255, 0.02) 0px,
                     rgba(255, 255, 255, 0.02) 10px,
                     transparent 10px,
-                    transparent 20px
-                );
+                    transparent 20px);
             border: 2px dashed rgba(255, 255, 255, 0.2);
             border-radius: var(--card-radius);
             display: flex;
@@ -440,7 +452,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            box-shadow: 
+            box-shadow:
                 0 10px 30px rgba(0, 0, 0, 0.3),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
@@ -463,7 +475,7 @@
 
         .game-card:hover {
             transform: translateY(-8px) scale(1.05);
-            box-shadow: 
+            box-shadow:
                 0 20px 40px rgba(0, 0, 0, 0.4),
                 0 0 30px var(--secondary);
             border-color: var(--secondary);
@@ -565,7 +577,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 
+            box-shadow:
                 0 15px 35px rgba(255, 107, 53, 0.4),
                 0 0 40px rgba(255, 230, 109, 0.3);
             position: relative;
@@ -575,7 +587,7 @@
 
         .my-card:hover {
             transform: translateY(-10px) scale(1.08);
-            box-shadow: 
+            box-shadow:
                 0 25px 50px rgba(255, 107, 53, 0.5),
                 0 0 60px rgba(255, 230, 109, 0.4);
         }
@@ -713,11 +725,17 @@
         }
 
         @keyframes pulse {
-            from { opacity: 0.6; }
-            to { opacity: 1; }
+            from {
+                opacity: 0.6;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- Game Container -->
     <div class="game-container">
@@ -804,13 +822,8 @@
                 </div>
             </div>
             <div class="word-input-section">
-                <input 
-                    type="text" 
-                    class="word-input" 
-                    id="wordInput" 
-                    placeholder="💭 連想ワードを入力（例：ピカチュウ、悟空）"
-                    maxlength="20"
-                >
+                <input type="text" class="word-input" id="wordInput" placeholder="💭 連想ワードを入力（例：ピカチュウ、悟空）"
+                    maxlength="20">
                 <button class="btn btn-secondary" id="submitWordBtn">送信</button>
                 <div class="status-badge status-waiting" id="wordStatus">未入力</div>
             </div>
@@ -824,9 +837,9 @@
         // ===== ゲーム状態管理 =====
         const gameState = {
             players: [
-                {id: 1, name: "あき", number: null, word: "", played: false},
-                {id: 2, name: "chrome通常", number: null, word: "", played: false},
-                {id: 3, name: "エッジです。", number: null, word: "", played: false}
+                { id: 1, name: "あき", number: null, word: "", played: false },
+                { id: 2, name: "chrome通常", number: null, word: "", played: false },
+                { id: 3, name: "エッジです。", number: null, word: "", played: false }
             ],
             currentPlayer: 1, // あなた
             timer: 40,
@@ -859,7 +872,7 @@
             notification.textContent = message;
             notification.className = `notification ${type}`;
             notification.classList.add('show');
-            
+
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
@@ -878,13 +891,13 @@
             for (let i = min; i <= max; i++) {
                 numbers.push(i);
             }
-            
+
             // Fisher-Yates shuffle
             for (let i = numbers.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
             }
-            
+
             return numbers.slice(0, count);
         }
 
@@ -894,13 +907,13 @@
             card.dataset.playerId = player.id;
             card.dataset.number = player.number;
             card.draggable = false;
-            
+
             card.innerHTML = `
                 <div class="card-number">${player.number}</div>
                 <div class="card-order"></div>
                 <div class="card-player">${player.name}</div>
             `;
-            
+
             return card;
         }
 
@@ -929,16 +942,16 @@
             if (gameState.timerInterval) {
                 clearInterval(gameState.timerInterval);
             }
-            
+
             gameState.timer = 40;
             elements.timerDisplay.textContent = gameState.timer;
             elements.timerProgress.style.width = '100%';
-            
+
             gameState.timerInterval = setInterval(() => {
                 gameState.timer--;
                 elements.timerDisplay.textContent = gameState.timer;
                 elements.timerProgress.style.width = `${(gameState.timer / 40) * 100}%`;
-                
+
                 if (gameState.timer <= 0) {
                     gameState.timer = 40; // リセット
                     elements.timerDisplay.textContent = gameState.timer;
@@ -948,23 +961,23 @@
         }
 
         // ===== メインゲーム機能 =====
-        
+
         // カード配布
         document.getElementById('dealBtn').addEventListener('click', () => {
             const numbers = generateUniqueNumbers(1, 100, gameState.players.length);
-            
+
             gameState.players.forEach((player, index) => {
                 player.number = numbers[index];
                 player.played = false;
                 player.word = "";
                 updatePlayerStatus(player.id, '配布済み', 'ready');
             });
-            
+
             // 自分のカードを表示
             const myPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
             elements.myCardNumber.textContent = myPlayer.number;
             elements.myCard.classList.remove('card-hidden');
-            
+
             // ボードをリセット
             elements.cardBoard.innerHTML = '';
             elements.hintsContainer.innerHTML = '';
@@ -972,7 +985,7 @@
             elements.wordStatus.textContent = '未入力';
             elements.wordStatus.className = 'status-badge status-waiting';
             document.getElementById('takeBackBtn').disabled = true;
-            
+
             showNotification('🎴 カードが配られました！', 'success');
             startTimer();
         });
@@ -980,13 +993,13 @@
         // カードを出す
         function playCard(player) {
             if (!player.number || player.played) return;
-            
+
             player.played = true;
             const card = createGameCard(player, true);
             elements.cardBoard.appendChild(card);
             updateCardOrders();
             updatePlayerStatus(player.id, '出した', 'playing');
-            
+
             if (player.id === gameState.currentPlayer) {
                 document.getElementById('takeBackBtn').disabled = false;
                 showNotification('✨ カードを出しました！', 'success');
@@ -1022,7 +1035,7 @@
         elements.cardBoard.addEventListener('drop', (e) => {
             e.preventDefault();
             elements.cardBoard.classList.remove('drag-over');
-            
+
             const myPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
             if (myPlayer && !myPlayer.played) {
                 playCard(myPlayer);
@@ -1033,7 +1046,7 @@
         document.getElementById('takeBackBtn').addEventListener('click', () => {
             const cards = elements.cardBoard.querySelectorAll('.game-card');
             const lastCard = cards[cards.length - 1];
-            
+
             if (lastCard) {
                 const playerId = parseInt(lastCard.dataset.playerId);
                 if (playerId === gameState.currentPlayer) {
@@ -1052,7 +1065,7 @@
         document.getElementById('undoBtn').addEventListener('click', () => {
             const cards = elements.cardBoard.querySelectorAll('.game-card');
             const lastCard = cards[cards.length - 1];
-            
+
             if (lastCard) {
                 const playerId = parseInt(lastCard.dataset.playerId);
                 const player = gameState.players.find(p => p.id === playerId);
@@ -1060,11 +1073,11 @@
                 lastCard.remove();
                 updateCardOrders();
                 updatePlayerStatus(playerId, '配布済み', 'ready');
-                
+
                 if (playerId === gameState.currentPlayer) {
                     document.getElementById('takeBackBtn').disabled = true;
                 }
-                
+
                 showNotification('↩️ 最後のカードを取り消しました', 'info');
             }
         });
@@ -1072,7 +1085,7 @@
         // カードをめくる
         document.getElementById('revealBtn').addEventListener('click', () => {
             const cards = elements.cardBoard.querySelectorAll('.game-card');
-            
+
             if (cards.length === 0) {
                 showNotification('❌ まだカードが出されていません', 'error');
                 return;
@@ -1121,7 +1134,7 @@
             myPlayer.word = word;
             elements.wordStatus.textContent = word;
             elements.wordStatus.className = 'status-badge status-ready';
-            
+
             updateHints();
             showNotification('💭 ワードを送信しました！', 'success');
         });
@@ -1145,13 +1158,13 @@
                 "お題：楽器の"音の高さ"",
                 "お題：建物の"高さ""
             ];
-            
+
             const currentTopic = elements.topicDisplay.textContent;
             let newTopic;
             do {
                 newTopic = topics[Math.floor(Math.random() * topics.length)];
             } while (newTopic === currentTopic);
-            
+
             elements.topicDisplay.textContent = newTopic;
             showNotification('🎯 お題が変更されました', 'info');
         });
@@ -1203,7 +1216,7 @@
             }
 
             showNotification('🤖 BOT自動プレイ開始', 'info');
-            
+
             botInterval = setInterval(() => {
                 const availablePlayers = otherPlayers.filter(p => !p.played && p.number);
                 if (availablePlayers.length === 0) {
@@ -1213,14 +1226,14 @@
                 }
 
                 const randomPlayer = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
-                
+
                 // BOTのワード設定（サンプル）
                 if (!randomPlayer.word) {
                     const sampleWords = ['強敵', '中級', '初級', '最強', '普通'];
                     randomPlayer.word = sampleWords[Math.floor(Math.random() * sampleWords.length)];
                     updateHints();
                 }
-                
+
                 playCard(randomPlayer);
             }, 2000);
         });
@@ -1230,4 +1243,5 @@
         showNotification('🎮 ITO ゲームへようこそ！', 'success');
     </script>
 </body>
+
 </html>
