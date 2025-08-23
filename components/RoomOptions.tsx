@@ -18,24 +18,17 @@ export function RoomOptionsEditor({
 
       {/* '失敗後の動作' は continueMode を廃止し、allowContinueAfterFail のトグルで制御します */}
 
+      {/* クリア方式は '順番に出す' のみをサポートする（'並べ替えで一括判定' を廃止） */}
       <Field.Root>
         <Field.Label>クリア方式</Field.Label>
         <HStack>
           <AppButton
             size="sm"
-            variant={value.resolveMode === "sort-submit" ? "ghost" : "solid"}
+            variant="solid"
             onClick={() => onChange({ ...value, resolveMode: "sequential" })}
             disabled={disabled}
           >
             順番に出す（従来）
-          </AppButton>
-          <AppButton
-            size="sm"
-            variant={value.resolveMode === "sort-submit" ? "solid" : "ghost"}
-            onClick={() => onChange({ ...value, resolveMode: "sort-submit" })}
-            disabled={disabled}
-          >
-            並べ替えで一括判定
           </AppButton>
         </HStack>
       </Field.Root>

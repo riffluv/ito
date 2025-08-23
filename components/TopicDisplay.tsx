@@ -27,9 +27,11 @@ export function TopicDisplay({
   const hasTopic = !!room.topic;
   const topicBox = (room as any).topicBox as TopicType | null | undefined;
   const [changingBox, setChangingBox] = useState(false);
+  // Only allow host actions when in clue phase (game started)
+  const canHostAct = Boolean(isHost && (room.status === "clue"));
 
   const startBox = async (type: TopicType) => {
-    if (!isHost) return;
+    if (!canHostAct) return;
     const sections = await fetchTopicSections();
     const pool = getTopicsByType(sections, type);
     const picked = pickOne(pool) || null;
@@ -41,7 +43,7 @@ export function TopicDisplay({
   };
 
   const shuffleBox = async () => {
-    if (!isHost) return;
+    if (!canHostAct) return;
     if (!topicBox) return;
     const sections = await fetchTopicSections();
     const pool = getTopicsByType(sections, topicBox);
@@ -50,6 +52,7 @@ export function TopicDisplay({
   };
 
   const changeCategory = async (type: TopicType) => {
+    if (!canHostAct) return;
     await startBox(type);
     setChangingBox(false);
   };
@@ -72,39 +75,42 @@ export function TopicDisplay({
               )}
             </Stack>
             <HStack>
-              {isHost && !!topicBox && !room.deal && (
-                <Button size="sm" variant="outline" onClick={shuffleBox}>
-                  シャッフル
-                </Button>
-              )}
-              {isHost && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setChangingBox((v) => !v)}
-                >
-                  カテゴリ変更
-                </Button>
-              )}
-              {isHost && (
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await dealNumbers(roomId);
-                      notify({ title: "数字を配りました", type: "success" });
-                    } catch (e: any) {
-                      notify({
-                        title: "数字の配布に失敗",
-                        description: e?.message || String(e),
-                        type: "error",
-                      });
-                    }
-                  }}
-                >
-                  数字を配る
-                </Button>
-              )}
+                {isHost && !!topicBox && room.status === "clue" && !room.deal && (
+                  <Button size="sm" variant="outline" onClick={shuffleBox}>
+                    シャッフル
+                  </Button>
+                )}
+                {isHost && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setChangingBox((v) => !v)}
+                    disabled={!canHostAct}
+                  >
+                    カテゴリ変更
+                  </Button>
+                )}
+                {isHost && (
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!canHostAct) return;
+                      try {
+                        await dealNumbers(roomId);
+                        notify({ title: "数字を配りました", type: "success" });
+                      } catch (e: any) {
+                        notify({
+                          title: "数字の配布に失敗",
+                          description: e?.message || String(e),
+                          type: "error",
+                        });
+                      }
+                    }}
+                    disabled={!canHostAct}
+                  >
+                    数字を配る
+                  </Button>
+                )}
             </HStack>
           </HStack>
           {changingBox && (
@@ -118,8 +124,8 @@ export function TopicDisplay({
                     key={label}
                     size="sm"
                     onClick={() => changeCategory(label)}
-                    disabled={!isHost}
-                    variant={isHost ? "solid" : "outline"}
+                    disabled={!canHostAct}
+                    variant={canHostAct ? "solid" : "outline"}
                   >
                     {label}
                   </Button>
