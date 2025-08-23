@@ -41,8 +41,31 @@ export function CluePanel({
               borderWidth: 1,
               borderRadius: 8,
               background: "var(--chakra-colors-panelSubBg)",
+              userSelect: "none",
             } as any
           }
+          draggable={true}
+          onDragStart={(e: React.DragEvent) => {
+            try {
+              e.dataTransfer.setData("text/plain", me.id);
+              e.dataTransfer.effectAllowed = "move";
+              // try to set drag image to the element itself for visual feedback
+              try {
+                const el = e.currentTarget as Element;
+                // offset center
+                (e.dataTransfer as any).setDragImage(el, 40, 40);
+              } catch {}
+              // visual: reduce opacity
+              try {
+                (e.currentTarget as HTMLElement).style.opacity = "0.6";
+              } catch {}
+            } catch {}
+          }}
+          onDragEnd={(e: React.DragEvent) => {
+            try {
+              (e.currentTarget as HTMLElement).style.opacity = "1";
+            } catch {}
+          }}
         >
           <Text fontSize="sm" color="gray.300">
             あなたの数字（自分にだけ表示）

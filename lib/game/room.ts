@@ -218,6 +218,77 @@ export async function setOrderProposal(roomId: string, proposal: string[]) {
   await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
 }
 
+// ドロップ時にクライアントが即時にカードを場に出して判定する（clue フェーズ用）
+export async function commitPlayFromClue(roomId: string, playerId: string) {
+  const roomRef = doc(db!, "rooms", roomId);
+  const meRef = doc(db!, "rooms", roomId, "players", playerId);
+
+  // presence count取得（可能なら）を先に行い、トランザクション内で参照する
+  let presenceCount: number | null = null;
+  try {
+    if (presenceSupported()) {
+      const uids = await fetchPresenceUids(roomId);
+      if (Array.isArray(uids)) presenceCount = uids.length;
+    }
+  } catch {
+    presenceCount = null;
+  }
+
+  await runTransaction(db!, async (tx) => {
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists()) throw new Error("room not found");
+    const room: any = roomSnap.data();
+    // clue フェーズでのみ即時判定を受け付ける
+    if (room.status !== "clue") return;
+    const allowContinue: boolean = !!room?.options?.allowContinueAfterFail;
+
+    const meSnap = await tx.get(meRef);
+    if (!meSnap.exists()) throw new Error("player not found");
+    const me: any = meSnap.data();
+    const myNum: number | null = me?.number ?? null;
+    if (typeof myNum !== "number") throw new Error("number not set");
+
+    const currentOrder = {
+      list: room?.order?.list || [],
+      lastNumber: room?.order?.lastNumber ?? null,
+      failed: !!room?.order?.failed,
+      failedAt: room?.order?.failedAt ?? null,
+      decidedAt: room?.order?.decidedAt || serverTimestamp(),
+      total: room?.order?.total ?? null,
+    };
+
+    if (currentOrder.list.includes(playerId)) return; // 二重出し防止
+
+    const { next } = applyPlay({
+      order: currentOrder as any,
+      playerId,
+      myNum,
+      allowContinue,
+    });
+
+    const shouldFinish = shouldFinishAfterPlay({
+      nextListLength: next.list.length,
+      total: next.total ?? room?.order?.total ?? null,
+      presenceCount,
+      nextFailed: !!next.failed,
+      allowContinue,
+    });
+
+    if (shouldFinish) {
+      const success = !next.failed;
+      tx.update(roomRef, {
+        status: "finished",
+        order: next,
+        result: { success, revealedAt: serverTimestamp() },
+      });
+      return;
+    }
+
+    // clue フェーズのまま order を更新して、全員に反映させる
+    tx.update(roomRef, { order: next });
+  });
+}
+
 // 並び替えで一括判定モード: 提出された順序で昇順チェックし、結果を確定
 export async function submitSortedOrder(roomId: string, list: string[]) {
   const _db = requireDb();

@@ -1,7 +1,8 @@
 export type RoomOptions = {
   allowContinueAfterFail: boolean;
   // クリア方式: 順番に出す or 並び替え一括判定
-  resolveMode?: "sequential" | "sort-submit";
+  // resolveMode: 現在は順番出しのみサポート
+  resolveMode?: "sequential";
 };
 
 export type RoomDoc = {
