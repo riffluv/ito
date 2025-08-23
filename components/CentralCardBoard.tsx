@@ -145,35 +145,20 @@ export function CentralCardBoard({
             🎯 カードボード（出した順）
           </div>
         </div>
-        {/* overlay when clues not ready */}
-        {roomStatus === "clue" && cluesReady === false && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 12,
-              borderRadius: 12,
-              background: "rgba(4,6,8,0.6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 5,
-              pointerEvents: "none",
-            }}
-          >
-            <Text color="white" fontWeight="700">
-              全員が連想ワードを決定するまでお待ちください
-            </Text>
-          </div>
-        )}
+        {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
         <div
           onDragOver={(e) => {
             e.preventDefault();
-            setIsOver(true);
+            // only show hover highlight when drops are allowed
+            if (!(roomStatus === "clue" && cluesReady === false)) {
+              setIsOver(true);
+            }
           }}
           onDragLeave={() => setIsOver(false)}
           onDrop={onDrop}
           style={{
+            position: "relative",
             minHeight: 220,
             border: isOver
               ? "2px dashed var(--chakra-colors-accent)"
@@ -190,6 +175,7 @@ export function CentralCardBoard({
             transition: "all 150ms ease",
           }}
         >
+          {/* no overlay: the placeholder area will display a waiting message instead */}
           {/* committed plays */}
           {orderList &&
             orderList.length > 0 &&
@@ -206,9 +192,17 @@ export function CentralCardBoard({
           {(!orderList || orderList.length === 0) &&
           (!proposal || proposal.length === 0) &&
           pending.length === 0 ? (
-            <Text color="gray.400">
-              まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
-            </Text>
+            roomStatus === "clue" && cluesReady === false ? (
+              <div role="status" aria-live="polite">
+                <Text fontWeight={700} color="fgMuted">
+                  全員が連想ワードを決定するまでお待ちください
+                </Text>
+              </div>
+            ) : (
+              <Text color="gray.400">
+                まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
+              </Text>
+            )
           ) : null}
 
           {pending && pending.length > 0

@@ -75,11 +75,6 @@ export function TopicDisplay({
           )}
         </Stack>
         <HStack>
-          {isHost && !!topicBox && room.status === "clue" && !room.deal && (
-            <Button size="sm" variant="outline" onClick={shuffleBox}>
-              シャッフル
-            </Button>
-          )}
           {isHost && (
             <Button
               size="sm"
