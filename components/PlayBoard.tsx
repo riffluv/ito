@@ -68,7 +68,7 @@ export function PlayBoard({
   };
 
   return (
-    <Panel title="順番に出す">
+    <Panel title="順番に出す" role="region" aria-label="場（出した順）">
       <Stack>
         {!failed ? (
           <Text color="gray.300">

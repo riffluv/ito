@@ -22,6 +22,17 @@ export const system = createSystem(defaultConfig, {
             "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
         },
       },
+      fontSizes: {
+        // fluid typography: clamp(min, vw-based, max)
+        xs: { value: "clamp(0.72rem, 0.68rem + 0.2vw, 0.78rem)" },
+        sm: { value: "clamp(0.8rem, 0.76rem + 0.25vw, 0.9rem)" },
+        md: { value: "clamp(0.94rem, 0.88rem + 0.35vw, 1.05rem)" },
+        lg: { value: "clamp(1.05rem, 0.98rem + 0.4vw, 1.25rem)" },
+        xl: { value: "clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem)" },
+        "2xl": { value: "clamp(1.5rem, 1.35rem + 0.9vw, 1.9rem)" },
+        "3xl": { value: "clamp(1.85rem, 1.6rem + 1.2vw, 2.4rem)" },
+        "4xl": { value: "clamp(2.25rem, 2rem + 1.8vw, 3rem)" },
+      },
       radii: {
         // シャープで現代的なトーン（Chakra公式に近い 4/8/12/16 ステップ）
         xs: { value: "4px" },
@@ -87,3 +98,6 @@ export const system = createSystem(defaultConfig, {
 });
 
 export default system;
+// 高DPI / メディアクエリ指針:
+// - 画像は image-set() を利用しデバイスピクセル密度に応じた最適画像を配信。
+// - 高精細向け微調整例: sx={{ '@media (min-resolution: 2dppx)': { shadow: 'md' } }}
