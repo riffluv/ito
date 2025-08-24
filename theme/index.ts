@@ -368,16 +368,16 @@ const config = defineConfig({
             state: "default",
             css: {
               front: {
-                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                bgGradient: "linear(135deg,#1F2732,#242F3A)",
                 borderColor: "borderDefault",
-                boxShadow: "md",
-                color: "#E2E8F0",
+                boxShadow: "sm",
+                color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                bgGradient: "linear(135deg,#1F2732,#242F3A)",
                 borderColor: "borderDefault",
-                boxShadow: "md",
-                color: "#112025",
+                boxShadow: "sm",
+                color: "fgDefault",
               },
             },
           },
@@ -386,16 +386,16 @@ const config = defineConfig({
             state: "success",
             css: {
               front: {
-                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                bgGradient: "linear(135deg,#1F2732,#1A202C)",
                 borderColor: "teal.300",
-                boxShadow: "glow",
-                color: "#E2E8F0",
+                boxShadow: "0 0 0 2px rgba(56,178,172,0.65), 0 0 22px -4px rgba(56,178,172,0.75), 0 0 60px -10px rgba(56,178,172,0.55)",
+                color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#38B2AC,#2C7A7B)",
+                bgGradient: "linear(135deg,#2C7A7B,#38B2AC)",
                 borderColor: "teal.300",
-                boxShadow: "glow",
-                color: "#112025",
+                boxShadow: "0 0 0 2px rgba(56,178,172,0.75), 0 0 28px -6px rgba(56,178,172,0.85), 0 0 70px -12px rgba(56,178,172,0.6)",
+                color: "fgDefault",
               },
             },
           },
@@ -404,16 +404,16 @@ const config = defineConfig({
             state: "fail",
             css: {
               front: {
-                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                bgGradient: "linear(135deg,#321F1F,#3A2424)",
                 borderColor: "red.300",
-                boxShadow: "glowDanger",
-                color: "#E2E8F0",
+                boxShadow: "0 0 0 2px rgba(255,80,80,0.55), 0 0 22px -4px rgba(255,80,80,0.7)",
+                color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#742A2A,#E53E3E)",
+                bgGradient: "linear(135deg,#5B2525,#E53E3E)",
                 borderColor: "red.300",
-                boxShadow: "glowDanger",
-                color: "#112025",
+                boxShadow: "0 0 0 2px rgba(255,80,80,0.65), 0 0 28px -6px rgba(255,80,80,0.75)",
+                color: "fgDefault",
               },
             },
           },
@@ -422,10 +422,9 @@ const config = defineConfig({
             state: "default",
             css: {
               frame: {
-                bgGradient:
-                  "linear(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
-                border: "1px solid rgba(255,255,255,0.04)",
-                boxShadow: "inset 0 -6px 18px rgba(0,0,0,0.2)",
+                bg: "panelSubBg",
+                border: "1px solid {colors.gray.700}",
+                boxShadow: "xs",
               },
             },
           },
@@ -434,10 +433,10 @@ const config = defineConfig({
             state: "success",
             css: {
               frame: {
-                bgGradient:
-                  "linear(180deg, rgba(56,178,172,0.25), rgba(0,0,0,0.08))",
+                bg: "rgba(56,178,172,0.10)",
+                border: "2px solid rgba(56,178,172,0.6)",
                 boxShadow:
-                  "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5), inset 0 -6px 18px rgba(0,0,0,0.25)",
+                  "0 0 0 2px rgba(56,178,172,0.75), 0 0 30px -6px rgba(56,178,172,0.85), 0 0 80px -12px rgba(56,178,172,0.55)",
               },
             },
           },
@@ -446,10 +445,10 @@ const config = defineConfig({
             state: "fail",
             css: {
               frame: {
-                bgGradient:
-                  "linear(180deg, rgba(220,50,50,0.45), rgba(0,0,0,0.15))",
+                bg: "rgba(255,80,80,0.10)",
+                border: "2px solid rgba(255,80,80,0.55)",
                 boxShadow:
-                  "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)",
+                  "0 0 0 2px rgba(255,80,80,0.55), 0 0 30px -6px rgba(255,80,80,0.7)",
               },
             },
           },
