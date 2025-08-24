@@ -49,6 +49,7 @@ export default function UniversalMonitor({
         {room.status === "clue" && isHost ? (
           <Box>
             <TopicDisplay roomId={roomId} room={room} isHost={isHost} inline />
+            {/* Host primary controls can be added here if needed */}
           </Box>
         ) : (
           <>
@@ -70,6 +71,12 @@ export default function UniversalMonitor({
                 "ホストがゲームを開始するとお題選択が可能になります"}
             </Text>
           </>
+        )}
+        {/* If host, expose primary actions (start/next) in the monitor for easier access */}
+        {isHost && (
+          <Box style={{ textAlign: "center", padding: "12px 0" }}>
+            {/* The actual handlers are wired in page.tsx; this is a placeholder area for host controls */}
+          </Box>
         )}
       </Box>
 
