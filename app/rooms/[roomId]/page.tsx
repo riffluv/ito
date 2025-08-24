@@ -332,6 +332,7 @@ export default function RoomPage() {
     <Box
       h="100dvh"
       display="grid"
+      className="room-grid"
       gridTemplateRows={{ base: "56px 1fr auto", md: "56px 1fr 160px" }}
       gridTemplateColumns={{ base: "1fr", md: "280px 1fr 340px" }}
       gridTemplateAreas={{
