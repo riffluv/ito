@@ -1,8 +1,17 @@
-import { createSystem, defaultConfig } from "@chakra-ui/react";
+import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
-// Chakra UI v3: System ベースのテーマ設定（簡略化して型エラーを回避）
-export const system = createSystem(defaultConfig, {
+// Chakra UI v3: System ベース設定 (defineConfig 形式) + 2025 CSS 設計拡張
+const config = defineConfig({
   preflight: true,
+  // container queries & custom selectors
+  conditions: {
+    cqSm: "@container (min-width: 32rem)",
+    cqMd: "@container (min-width: 48rem)",
+    cqLg: "@container (min-width: 64rem)",
+    hover: "@media (hover: hover)",
+    reducedMotion: "@media (prefers-reduced-motion: reduce)",
+  },
+  strictTokens: true, // 型生成完了後 true に昇格
   theme: {
     tokens: {
       breakpoints: {
@@ -68,6 +77,38 @@ export const system = createSystem(defaultConfig, {
           900: { value: "#5F2703" },
         },
       },
+      shadows: {
+        xs: { value: "0 1px 2px rgba(0,0,0,0.12)" },
+        sm: { value: "0 2px 4px -1px rgba(0,0,0,0.18)" },
+        md: { value: "0 4px 10px -2px rgba(0,0,0,0.28)" },
+        glow: {
+          value:
+            "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5)",
+        },
+        glowDanger: {
+          value:
+            "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6)",
+        },
+      },
+      animations: {
+        fadeIn: { value: "fadeIn 180ms ease-out" },
+        scaleIn: { value: "scaleIn 160ms ease-out" },
+      },
+      easings: {
+        standard: { value: "cubic-bezier(.4,0,.2,1)" },
+        emphasized: { value: "cubic-bezier(.2,0,.1,1)" },
+      },
+      durations: {
+        fast: { value: "120ms" },
+        normal: { value: "200ms" },
+        slow: { value: "320ms" },
+      },
+      gradients: {
+        accentSoft: { value: "linear(90deg,#ff9a58,#ffcf67)" },
+        dangerStrong: {
+          value: "linear(90deg,rgba(255,70,70,0.9),rgba(120,0,0,0.9))",
+        },
+      },
     },
     semanticTokens: {
       colors: {
@@ -90,12 +131,292 @@ export const system = createSystem(defaultConfig, {
           value: { base: "gray.100", _dark: "whiteAlpha.100" },
         },
         link: { value: { base: "blue.600", _dark: "blue.300" } },
+        // focus ring token (Chakra v3 semantic palette 仕様に近似)
+        focusRing: {
+          value: { base: "{colors.brand.400}", _dark: "{colors.brand.300}" },
+        },
+        // 状態色 (今後 colorPalette による上書きを想定)
+        dangerSolid: { value: { base: "red.500", _dark: "red.400" } },
+        successSolid: { value: { base: "green.500", _dark: "green.400" } },
+      },
+      shadows: {
+        interactive: { value: { base: "{shadows.sm}", _dark: "{shadows.sm}" } },
+        elevated: { value: { base: "{shadows.md}", _dark: "{shadows.md}" } },
+      },
+      gradients: {
+        accentSoft: { value: { base: "{gradients.accentSoft}" } },
+        dangerStrong: { value: { base: "{gradients.dangerStrong}" } },
+      },
+    },
+    recipes: {
+      button: {
+        className: "app-btn",
+        base: {
+          fontWeight: "semibold",
+          rounded: "md",
+          transition: "all 0.2s ease",
+          letterSpacing: "tight",
+          lineHeight: 1.2,
+          _focusVisible: {
+            outline: "2px solid",
+            outlineOffset: "2px",
+          },
+        },
+        variants: {
+          size: {
+            sm: { px: 3, py: 2, fontSize: "sm", minW: "6.5rem" },
+            md: { px: 4, py: 2.5, fontSize: "sm", minW: "8rem" },
+            lg: { px: 5, py: 3, fontSize: "md", minW: "10rem" },
+          },
+          density: {
+            compact: { py: 2 },
+            comfortable: { py: 2.5 },
+          },
+          visual: {
+            solid: { boxShadow: "xs" },
+            outline: { boxShadow: "none", _hover: { boxShadow: "xs" } },
+            ghost: { boxShadow: "none" },
+            subtle: {
+              bg: "accentSubtle",
+              color: "accent",
+              _hover: {
+                bg: { base: "{colors.brand.100}", _dark: "{colors.brand.800}" },
+              },
+              _active: {
+                bg: { base: "{colors.brand.200}", _dark: "{colors.brand.700}" },
+              },
+            },
+            soft: {
+              bg: { base: "{colors.orange.50}", _dark: "{colors.orange.900}" },
+              color: {
+                base: "{colors.orange.600}",
+                _dark: "{colors.orange.300}",
+              },
+              shadow: "xs",
+              _hover: {
+                bg: {
+                  base: "{colors.orange.100}",
+                  _dark: "{colors.orange.800}",
+                },
+                shadow: "sm",
+              },
+              _active: {
+                bg: {
+                  base: "{colors.orange.200}",
+                  _dark: "{colors.orange.700}",
+                },
+              },
+            },
+            link: {
+              color: "link",
+              px: 0,
+              py: 0,
+              rounded: "none",
+              _hover: { textDecoration: "underline" },
+            },
+          },
+          palette: {
+            brand: { _focusVisible: { outlineColor: "{colors.brand.400}" } },
+            orange: { _focusVisible: { outlineColor: "{colors.orange.400}" } },
+            gray: { _focusVisible: { outlineColor: "{colors.gray.400}" } },
+          },
+        },
+        // defaultVariants: { size: "md", density: "comfortable", visual: "solid", palette: "brand" },
+      },
+      card: {
+        className: "app-card",
+        base: {
+          bg: "panelBg",
+          color: "fgDefault",
+          borderWidth: "1px",
+          borderColor: "borderDefault",
+          rounded: "lg",
+          shadow: "xs",
+          p: 6,
+          transition:
+            "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease",
+        },
+        variants: {
+          interactive: {
+            true: {
+              _hover: {
+                shadow: "sm",
+                borderColor: "accent",
+                bg: "cardHoverBg",
+                transform: "translateY(-1px) scale(1.01)",
+              },
+            },
+            false: {},
+          },
+          density: {
+            compact: { p: 5 },
+            comfortable: { p: 6 },
+          },
+          selected: {
+            true: { borderColor: "accent", shadow: "md" },
+            false: {},
+          },
+        },
+        // defaultVariants: { interactive: false, density: "comfortable", selected: false },
+      },
+    },
+    slotRecipes: {
+      gameCard: {
+        slots: ["container", "inner", "front", "back", "frame"],
+        base: {
+          container: {
+            perspective: "1000px",
+            position: "relative",
+            width: "140px",
+            height: "180px",
+          },
+          inner: {
+            position: "absolute",
+            inset: 0,
+            transformStyle: "preserve-3d",
+            transition: "transform {durations.normal} {easings.standard}",
+          },
+          front: {
+            p: 3,
+            borderRadius: "16px",
+            borderWidth: "2px",
+            fontWeight: 700,
+            position: "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+          },
+          back: {
+            p: 3,
+            borderRadius: "16px",
+            borderWidth: "2px",
+            fontWeight: 900,
+            position: "absolute",
+            inset: 0,
+            transform: "rotateY(180deg)",
+            backfaceVisibility: "hidden",
+          },
+          frame: {
+            p: 3,
+            minW: "140px",
+            minH: "160px",
+            borderRadius: "12px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        },
+        variants: {
+          variant: {
+            flip: {},
+            flat: {},
+          },
+          state: {
+            default: {},
+            success: {},
+            fail: {},
+          },
+        },
+        compoundVariants: [
+          {
+            variant: "flip",
+            state: "default",
+            css: {
+              front: {
+                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                borderColor: "borderDefault",
+                boxShadow: "md",
+                color: "#E2E8F0",
+              },
+              back: {
+                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                borderColor: "borderDefault",
+                boxShadow: "md",
+                color: "#112025",
+              },
+            },
+          },
+          {
+            variant: "flip",
+            state: "success",
+            css: {
+              front: {
+                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                borderColor: "teal.300",
+                boxShadow: "glow",
+                color: "#E2E8F0",
+              },
+              back: {
+                bgGradient: "linear(135deg,#38B2AC,#2C7A7B)",
+                borderColor: "teal.300",
+                boxShadow: "glow",
+                color: "#112025",
+              },
+            },
+          },
+          {
+            variant: "flip",
+            state: "fail",
+            css: {
+              front: {
+                bgGradient: "linear(135deg,#2D3748,#1A202C)",
+                borderColor: "red.300",
+                boxShadow: "glowDanger",
+                color: "#E2E8F0",
+              },
+              back: {
+                bgGradient: "linear(135deg,#742A2A,#E53E3E)",
+                borderColor: "red.300",
+                boxShadow: "glowDanger",
+                color: "#112025",
+              },
+            },
+          },
+          {
+            variant: "flat",
+            state: "default",
+            css: {
+              frame: {
+                bgGradient:
+                  "linear(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
+                border: "1px solid rgba(255,255,255,0.04)",
+                boxShadow: "inset 0 -6px 18px rgba(0,0,0,0.2)",
+              },
+            },
+          },
+          {
+            variant: "flat",
+            state: "success",
+            css: {
+              frame: {
+                bgGradient:
+                  "linear(180deg, rgba(56,178,172,0.25), rgba(0,0,0,0.08))",
+                boxShadow:
+                  "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5), inset 0 -6px 18px rgba(0,0,0,0.25)",
+              },
+            },
+          },
+          {
+            variant: "flat",
+            state: "fail",
+            css: {
+              frame: {
+                bgGradient:
+                  "linear(180deg, rgba(220,50,50,0.45), rgba(0,0,0,0.15))",
+                boxShadow:
+                  "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)",
+              },
+            },
+          },
+        ],
       },
     },
     // v3では layerStyles/textStyles は recipes/slot recipes 推奨だが、
     // ここでは tokens/semanticTokens をメインに定義
   },
 });
+
+export const system = createSystem(defaultConfig, config);
 
 export default system;
 // 高DPI / メディアクエリ指針:

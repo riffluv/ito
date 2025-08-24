@@ -85,6 +85,31 @@ export function TopicDisplay({
               カテゴリ変更
             </Button>
           )}
+          {isHost && topicBox && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                if (!canHostAct) return;
+                try {
+                  await shuffleBox();
+                  notify({
+                    title: "お題をシャッフルしました",
+                    type: "success",
+                  });
+                } catch (e: any) {
+                  notify({
+                    title: "シャッフル失敗",
+                    description: e?.message || String(e),
+                    type: "error",
+                  });
+                }
+              }}
+              disabled={!canHostAct}
+            >
+              シャッフル
+            </Button>
+          )}
           {isHost && (
             <Button
               size="sm"
