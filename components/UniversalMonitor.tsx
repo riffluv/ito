@@ -1,6 +1,9 @@
 "use client";
 import { TopicDisplay } from "@/components/TopicDisplay";
+import { AppButton } from "@/components/ui/AppButton";
+import { notify } from "@/components/ui/notify";
 import { Panel } from "@/components/ui/Panel";
+import { submitSortedOrder } from "@/lib/game/room";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Box, HStack, Text } from "@chakra-ui/react";
 
@@ -73,11 +76,51 @@ export default function UniversalMonitor({
           </>
         )}
         {/* If host, expose primary actions (start/next) in the monitor for easier access */}
-        {isHost && (
-          <Box style={{ textAlign: "center", padding: "12px 0" }}>
-            {/* The actual handlers are wired in page.tsx; this is a placeholder area for host controls */}
-          </Box>
-        )}
+        {isHost &&
+          room.status === "clue" &&
+          room.options?.resolveMode === "sort-submit" && (
+            <Box style={{ textAlign: "center", padding: "12px 0" }}>
+              <AppButton
+                colorPalette="teal"
+                size="sm"
+                onClick={async () => {
+                  const proposal: string[] =
+                    (room as any)?.order?.proposal || [];
+                  const playerIds = players.map((p) => p.id);
+                  if (proposal.length === 0) {
+                    notify({
+                      title: "まだカードが場にありません",
+                      type: "info",
+                    });
+                    return;
+                  }
+                  // 全員のカードが含まれているか（オンラインでない人を含む? 今は数字配布された全員=proposal長とplayerIdsの割当済み人数を比較）
+                  const assigned = players
+                    .filter((p) => typeof (p as any).number === "number")
+                    .map((p) => p.id);
+                  if (assigned.length !== proposal.length) {
+                    notify({
+                      title: "まだ全員のカードが場に出ていません",
+                      type: "warning",
+                    });
+                    return;
+                  }
+                  try {
+                    await submitSortedOrder(roomId, proposal);
+                    notify({ title: "一括判定を実行", type: "success" });
+                  } catch (err: any) {
+                    notify({
+                      title: "一括判定失敗",
+                      description: err?.message,
+                      type: "error",
+                    });
+                  }
+                }}
+              >
+                せーので判定！
+              </AppButton>
+            </Box>
+          )}
       </Box>
 
       {room.status === "finished" && (

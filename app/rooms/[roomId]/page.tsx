@@ -135,23 +135,39 @@ export default function RoomPage() {
     return () => clearInterval(id);
   }, [uid, roomId]);
 
-  // ホスト向けトースト: 全員の連想ワードが確定した瞬間にわかりやすく通知
+  // ホスト向けトースト: 連想ワード完了通知（モードごとにメッセージ差し替え・一度だけ）
   useEffect(() => {
-    if (!isHost) return;
-    if (!room) return;
-    // allCluesReady が true になった瞬間に一度だけ通知
-    if (allCluesReady) {
-      try {
-        notify({
-          title: "全員が連想ワードを決定しました",
-          description: "出せます",
-          type: "success",
-          duration: 5000,
-          id: `clues-ready-${roomId}-${room.round || 0}`,
-        });
-      } catch {}
-    }
-  }, [allCluesReady, isHost, roomId, room?.round, room]);
+    if (!isHost || !room) return;
+    if (!allCluesReady) return;
+    if (room.status !== "clue") return;
+    const mode = room.options?.resolveMode || "sequential";
+    const id = `clues-ready-${mode}-${roomId}-${room.round || 0}`;
+    // sequential: すぐ出し始められる
+    // sort-submit: 並べてホストが「せーので判定」ボタンを押す流れを促す
+    try {
+      notify({
+        id,
+        type: "success",
+        title:
+          mode === "sequential"
+            ? "全員が連想ワードを決定しました"
+            : "全員の連想ワードが揃いました",
+        description:
+          mode === "sequential"
+            ? "昇順だと思う順でカードを場へドラッグしてください"
+            : "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
+        duration: 6000,
+      });
+    } catch {}
+  }, [
+    allCluesReady,
+    isHost,
+    room?.options?.resolveMode,
+    room?.round,
+    room?.status,
+    roomId,
+    room,
+  ]);
 
   // waitingに戻ったら自分のフィールドを初期化
   useEffect(() => {
@@ -433,6 +449,8 @@ export default function RoomPage() {
             cluesReady={allCluesReady}
             failed={!!room.order?.failed}
             failedAt={room.order?.failedAt}
+            proposal={room.order?.proposal || []}
+            resolveMode={room.options?.resolveMode}
           />
         </div>
       </Box>

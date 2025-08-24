@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO - ゲーム画面モックアップ (インタラクティブ版)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+        :root {
+            --bg-color: #10142D;
+            --panel-bg-color: rgba(23, 29, 66, 0.8);
+            --border-color: rgba(107, 207, 255, 0.3);
+            --neon-cyan: #6BFFFF;
+            --neon-pink: #FF6BF4;
+            --success-color: #32FF7E;
+            --text-color: #E0E0E0;
+            --text-dark-color: #A0A0C0;
+            --font-display: 'Orbitron', sans-serif;
+            --font-body: 'M PLUS Rounded 1c', sans-serif;
+            --danger-color: #FF4757;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(107, 255, 255, 0.15) 0%, transparent 30%),
+                radial-gradient(circle at 85% 75%, rgba(255, 107, 244, 0.15) 0%, transparent 40%);
+            background-attachment: fixed;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 95vh;
+            max-height: 850px;
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: auto 1fr auto;
+            grid-template-areas:
+                "header header header"
+                "players main sidebar"
+                "my-hand my-hand my-hand";
+            gap: 15px;
+            padding: 15px;
+        }
+
+        /* --- Header --- */
+        .game-header {
+            grid-area: header;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .theme-title {
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: 28px;
+            color: white;
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+        .game-status {
+            font-size: 14px;
+            color: var(--neon-cyan);
+            height: 20px;
+            margin-top: 5px;
+        }
+
+        /* --- Player List (Left) --- */
+        .player-list {
+            grid-area: players;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            background-color: var(--panel-bg-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        .player-list h3 {
+            font-family: var(--font-display);
+            color: var(--neon-cyan);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        .player-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        .player-avatar {
+            width: 35px; height: 35px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: 700; margin-right: 10px; border: 2px solid;
+        }
+        .player-avatar[data-initial="あ"] { background-color: #E74C3C; border-color: #F1948A; }
+        .player-avatar[data-initial="c"] { background-color: #3498DB; border-color: #85C1E9; }
+        .player-avatar[data-initial="エ"] { background-color: #F1C40F; border-color: #F7DC6F; }
+        .player-info p { font-weight: 700; font-size: 15px; }
+        .player-status-icon {
+            margin-left: auto; width: 20px; height: 20px;
+            font-size: 12px; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center;
+            background: #444; color: #aaa;
+            transition: all 0.3s;
+        }
+        .player-item.submitted .player-status-icon {
+            background: var(--success-color); color: #10142D;
+            content: '✔';
+        }
+
+        /* --- Main Board (Center) --- */
+        .main-board {
+            grid-area: main;
+            background-color: var(--panel-bg-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .cards-on-board {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            width: 100%;
+            flex-grow: 1;
+        }
+        .ito-card {
+            width: 130px; height: 180px;
+            position: relative;
+            perspective: 1000px;
+            cursor: grab;
+            transition: transform 0.2s ease-out;
+        }
+        .ito-card.dragging {
+             transform: scale(1.05);
+             opacity: 0.7;
+             cursor: grabbing;
+        }
+        .card-inner {
+            width: 100%; height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .ito-card.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 12px; display: flex; flex-direction: column;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .card-front {
+            background: linear-gradient(135deg, #2D3748, #1A202C);
+            justify-content: space-between;
+        }
+        .card-back {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            transform: rotateY(180deg);
+            justify-content: center;
+            align-items: center;
+        }
+        .card-back .card-number {
+            font-family: var(--font-display); font-size: 50px;
+            color: white; text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .card-hint {
+            font-size: 14px; text-align: center; color: var(--text-color);
+            background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;
+            min-height: 40px; line-height: 1.4; flex-grow: 1;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-player {
+            font-size: 12px; text-align: center; padding-top: 5px;
+            color: var(--text-dark-color);
+        }
+        .ito-card.error .card-front { border-color: var(--danger-color); box-shadow: 0 0 20px var(--danger-color); }
+        .ito-card.success .card-front { border-color: var(--success-color); box-shadow: 0 0 20px var(--success-color); }
+        
+        .judge-button-wrapper {
+            height: 50px; /* 判定ボタン用のスペース確保 */
+        }
+        #judge-btn {
+            padding: 12px 30px; font-size: 18px; font-weight: 700;
+            border-radius: 50px; border: none; cursor: pointer;
+            background: linear-gradient(45deg, var(--neon-pink), var(--neon-cyan));
+            color: var(--bg-color); text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            transition: all 0.3s;
+            opacity: 0; visibility: hidden; transform: translateY(20px);
+        }
+        #judge-btn.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        #judge-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--neon-cyan); }
+        #judge-btn:disabled { background: #555; cursor: not-allowed; }
+
+        .result-overlay {
+            position: absolute; inset: 0; display: flex;
+            justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, 0.7); border-radius: 12px;
+            opacity: 0; visibility: hidden; transition: all 0.5s;
+        }
+        .result-overlay.show { opacity: 1; visibility: visible; }
+        .result-text {
+            font-family: var(--font-display); font-size: 80px;
+            transform: scale(0.5); opacity: 0;
+            animation: result-appear 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .result-text.success { color: var(--success-color); text-shadow: 0 0 20px var(--success-color); }
+        .result-text.failure { color: var(--danger-color); text-shadow: 0 0 20px var(--danger-color); }
+
+        @keyframes result-appear { to { transform: scale(1); opacity: 1; } }
+
+        /* --- Sidebar (Right) --- */
+        .sidebar {
+            grid-area: sidebar;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .chat-box {
+            background-color: var(--panel-bg-color); border-radius: 12px;
+            border: 1px solid var(--border-color); padding: 15px;
+            flex-grow: 1; display: flex; flex-direction: column;
+        }
+        .chat-box h3 {
+            font-family: var(--font-display); color: var(--neon-cyan);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px; margin-bottom: 10px; font-size: 18px;
+        }
+        .chat-messages { flex-grow: 1; overflow-y: auto; font-size: 13px; }
+        .chat-messages p { margin-bottom: 8px; }
+        .chat-messages .system { color: var(--text-dark-color); }
+        .chat-input { display: flex; margin-top: 10px; }
+        .chat-input input {
+            flex-grow: 1; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color); border-radius: 6px 0 0 6px;
+            padding: 8px; color: var(--text-color); outline: none;
+        }
+        .chat-input button {
+            background: var(--neon-cyan); color: var(--bg-color); border: none;
+            padding: 0 15px; font-weight: 700; cursor: pointer;
+            border-radius: 0 6px 6px 0;
+        }
+
+        /* --- My Hand Area (Bottom) --- */
+        .my-hand-area {
+            grid-area: my-hand;
+            background-color: rgba(107, 255, 255, 0.05);
+            border-top: 1px solid var(--border-color);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .my-hand-area.hidden {
+            opacity: 0;
+            transform: translateY(100%);
+            padding: 0;
+            height: 0;
+            visibility: hidden;
+        }
+        .my-card-display {
+            width: 120px; height: 160px;
+            background: linear-gradient(135deg, #2D3748, #1A202C);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .my-card-display .label { font-size: 12px; color: var(--text-dark-color); }
+        .my-card-display .number {
+            font-family: var(--font-display);
+            font-size: 60px;
+            color: white;
+            text-shadow: 0 0 15px var(--neon-cyan);
+        }
+        .hint-input-wrapper {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        #hint-input {
+            width: 300px; padding: 12px; font-size: 16px;
+            background: rgba(0,0,0,0.3); color: var(--text-color);
+            border: 1px solid var(--border-color); border-radius: 8px;
+        }
+        #submit-card-btn {
+            padding: 12px; font-size: 16px; font-weight: 700;
+            border-radius: 8px; border: none; cursor: pointer;
+            background: var(--neon-pink); color: white;
+            transition: all 0.3s;
+        }
+        #submit-card-btn:hover { background: #FF94F8; transform: translateY(-2px); }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <header class="game-header">
+            <h2 class="theme-title">お題：歌・曲の人気</h2>
+            <p class="game-status" id="game-status-text">あなたの連想ワードを入力して場に出してください</p>
+        </header>
+
+        <aside class="player-list" id="player-list">
+            <h3>参加者 3/3</h3>
+            <div class="player-item" data-player="ああ">
+                <div class="player-avatar" data-initial="あ">あ</div>
+                <div class="player-info"><p>ああ</p></div>
+                <div class="player-status-icon"></div>
+            </div>
+            <div class="player-item" data-player="chrome遊覧">
+                <div class="player-avatar" data-initial="c">c</div>
+                <div class="player-info"><p>chrome遊覧</p></div>
+                <div class="player-status-icon">✔</div>
+            </div>
+            <div class="player-item" data-player="エッジです。">
+                <div class="player-avatar" data-initial="エ">エ</div>
+                <div class="player-info"><p>エッジです。</p></div>
+                <div class="player-status-icon">✔</div>
+            </div>
+        </aside>
+
+        <main class="main-board">
+            <div class="cards-on-board" id="board">
+                 <!-- 他のプレイヤーのカードがここに入る -->
+            </div>
+            <div class="judge-button-wrapper">
+                 <button id="judge-btn" disabled>せーので判定！</button>
+            </div>
+            <div class="result-overlay" id="result-overlay"></div>
+        </main>
+
+        <aside class="sidebar">
+            <div class="chat-box">
+                <h3>チャット</h3>
+                <div class="chat-messages" id="chat-messages">
+                    <p><span class="system">system: 全員のカードが出揃ったら、ドラッグ＆ドロップで並び替えてください。</span></p>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="メッセージを入力">
+                    <button>送信</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="my-hand-area" id="my-hand-area">
+            <div class="my-card-display">
+                <span class="label">YOUR NUMBER</span>
+                <span class="number" id="my-number">8</span>
+            </div>
+            <div class="hint-input-wrapper">
+                <input type="text" id="hint-input" placeholder="例：校歌">
+                <button id="submit-card-btn">ワードを決定して場に出す</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const board = document.getElementById('board');
+        const myHandArea = document.getElementById('my-hand-area');
+        const submitCardBtn = document.getElementById('submit-card-btn');
+        const hintInput = document.getElementById('hint-input');
+        const myNumberDisplay = document.getElementById('my-number');
+        const judgeBtn = document.getElementById('judge-btn');
+        const gameStatusText = document.getElementById('game-status-text');
+        const playerList = document.getElementById('player-list');
+        const chatMessages = document.getElementById('chat-messages');
+        const resultOverlay = document.getElementById('result-overlay');
+
+        // --- Game State & Data ---
+        // 自分のデータ（プレイヤー"ああ"を自分と仮定）
+        const myData = { player: 'ああ', number: 8 };
+        myNumberDisplay.textContent = myData.number;
+
+        // 他のプレイヤーのデータ（事前に提出済みと仮定）
+        let otherPlayersCards = [
+            { player: 'chrome遊覧', number: 17, hint: '有名アニメの主題歌' },
+            { player: 'エッジです。', number: 27, hint: '誰もが知る童謡' }
+        ];
+
+        let allCardsOnBoard = [];
+
+        // --- Functions ---
+        const createCardElement = (cardData, isFlipped = false) => {
+            const card = document.createElement('div');
+            card.className = 'ito-card';
+            card.draggable = true;
+            card.dataset.player = cardData.player;
+            card.dataset.number = cardData.number;
+
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-face card-front">
+                        <div class="card-hint">${cardData.hint}</div>
+                        <div class="card-player">${cardData.player}</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-number">${cardData.number}</div>
+                    </div>
+                </div>
+            `;
+            if (isFlipped) card.classList.add('is-flipped');
+            return card;
+        };
+
+        const addChatMessage = (type, message) => {
+            const p = document.createElement('p');
+            if (type === 'system') {
+                p.innerHTML = `<span class="system">system: ${message}</span>`;
+            } else {
+                p.innerHTML = `<span>${message}</span>`;
+            }
+            chatMessages.appendChild(p);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        };
+
+        const updatePlayerStatus = (playerName) => {
+            const playerItem = playerList.querySelector(`.player-item[data-player="${playerName}"]`);
+            if (playerItem) {
+                playerItem.classList.add('submitted');
+                playerItem.querySelector('.player-status-icon').textContent = '✔';
+            }
+        };
+
+        const checkAllSubmitted = () => {
+            // 自分を含めて3人全員が提出したか
+            return allCardsOnBoard.length === 3;
+        };
+        
+        // --- Event Listeners & Initial Setup ---
+
+        // 他のプレイヤーのカードを初期表示
+        otherPlayersCards.forEach(cardData => {
+            const cardEl = createCardElement(cardData);
+            board.appendChild(cardEl);
+            allCardsOnBoard.push(cardData);
+            updatePlayerStatus(cardData.player);
+        });
+
+        // 自分のカードを提出する処理
+        submitCardBtn.addEventListener('click', () => {
+            const hint = hintInput.value.trim();
+            if (hint === '') {
+                alert('連想ワードを入力してください。');
+                return;
+            }
+
+            const myCardData = { ...myData, hint };
+            const myCardEl = createCardElement(myCardData);
+            board.appendChild(myCardEl);
+            allCardsOnBoard.push(myCardData);
+            
+            myHandArea.classList.add('hidden');
+            updatePlayerStatus(myData.player);
+            addChatMessage('system', `あなたがカード「${hint}」を出しました。`);
+
+            if (checkAllSubmitted()) {
+                gameStatusText.textContent = '全員のカードが出ました！相談して小さい順に並び替えよう。';
+                judgeBtn.disabled = false;
+                judgeBtn.classList.add('show');
+            }
+        });
+
+        // ドラッグ＆ドロップの処理
+        let draggingElement = null;
+
+        board.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('ito-card')) {
+                draggingElement = e.target;
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+        });
+
+        board.addEventListener('dragend', (e) => {
+            if (draggingElement) {
+                draggingElement.classList.remove('dragging');
+                draggingElement = null;
+            }
+        });
+
+        board.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(board, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                 if (afterElement == null) {
+                    board.appendChild(draggable);
+                } else {
+                    board.insertBefore(draggable, afterElement);
+                }
+            }
+        });
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.ito-card:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // 判定ボタンの処理
+        judgeBtn.addEventListener('click', () => {
+            judgeBtn.disabled = true;
+            judgeBtn.classList.remove('show');
+            gameStatusText.textContent = '判定中...';
+
+            const cardsInOrder = [...board.querySelectorAll('.ito-card')];
+            let isSuccess = true;
+            let lastNumber = -1;
+
+            cardsInOrder.forEach((cardEl, index) => {
+                setTimeout(() => {
+                    if (!isSuccess) return;
+
+                    cardEl.classList.add('is-flipped');
+                    const currentNumber = parseInt(cardEl.dataset.number, 10);
+
+                    if (currentNumber > lastNumber) {
+                        cardEl.classList.add('success');
+                        lastNumber = currentNumber;
+                        if (index === cardsInOrder.length - 1) {
+                            // 全て成功
+                            showResult(true);
+                        }
+                    } else {
+                        // 失敗
+                        isSuccess = false;
+                        cardEl.classList.add('error');
+                        // 失敗の原因となった前のカードもハイライト
+                        if (index > 0) {
+                            cardsInOrder[index-1].classList.add('error');
+                        }
+                        showResult(false);
+                    }
+                }, index * 800); // 0.8秒ごとにカードをめくる
+            });
+        });
+
+        const showResult = (success) => {
+            setTimeout(() => {
+                resultOverlay.classList.add('show');
+                if (success) {
+                    resultOverlay.innerHTML = `<h1 class="result-text success">SUCCESS !!</h1>`;
+                    gameStatusText.textContent = 'チャレンジ成功！おめでとう！';
+                } else {
+                    resultOverlay.innerHTML = `<h1 class="result-text failure">FAILURE !!</h1>`;
+                    gameStatusText.textContent = 'チャレンジ失敗...！';
+                }
+            }, 500);
+        }
+    });
+    </script>
+</body>
+</html>

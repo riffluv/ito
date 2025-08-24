@@ -191,6 +191,31 @@ export async function setOrderProposal(roomId: string, proposal: string[]) {
   await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
 }
 
+// sort-submit モード: プレイヤーが自分のカードを場(提案配列)に置く
+export async function addCardToProposal(roomId: string, playerId: string) {
+  const roomRef = doc(db!, "rooms", roomId);
+  const playerRef = doc(db!, "rooms", roomId, "players", playerId);
+  await runTransaction(db!, async (tx) => {
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists()) throw new Error("room not found");
+    const room: any = roomSnap.data();
+    if (room.status !== "clue") return; // clue 中のみ
+    if (room?.options?.resolveMode !== "sort-submit") return; // モード確認
+    const pSnap = await tx.get(playerRef);
+    if (!pSnap.exists()) throw new Error("player not found");
+    const player: any = pSnap.data();
+    if (typeof player.number !== "number") throw new Error("number not set");
+    const current: string[] = room?.order?.proposal || [];
+    if (current.includes(playerId)) return; // 重複防止
+    const next = [...current, playerId];
+    // order オブジェクトが未作成の場合の安全な merge
+    tx.update(roomRef, {
+      "order.proposal": next,
+      order: { ...(room.order || {}), proposal: next },
+    });
+  });
+}
+
 // ドロップ時にクライアントが即時にカードを場に出して判定する（clue フェーズ用）
 export async function commitPlayFromClue(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);

@@ -1,10 +1,17 @@
 "use client";
+import { SortableItem } from "@/components/sortable/SortableItem";
 import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
-import { commitPlayFromClue } from "@/lib/game/room";
+import {
+  addCardToProposal,
+  commitPlayFromClue,
+  setOrderProposal,
+} from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, Text } from "@chakra-ui/react";
-import React, { useEffect, useState } from "react";
+import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
+import { SortableContext, arrayMove } from "@dnd-kit/sortable";
+import React, { useEffect, useMemo, useState } from "react";
 
 export function CentralCardBoard({
   roomId,
@@ -17,6 +24,7 @@ export function CentralCardBoard({
   cluesReady,
   failed,
   failedAt,
+  resolveMode,
 }: {
   roomId: string;
   players: (PlayerDoc & { id: string })[];
@@ -28,6 +36,7 @@ export function CentralCardBoard({
   cluesReady?: boolean;
   failed?: boolean;
   failedAt?: number | null;
+  resolveMode?: string;
 }) {
   const map = new Map(players.map((p) => [p.id, p]));
   const [pending, setPending] = useState<string[]>([]);
@@ -53,24 +62,16 @@ export function CentralCardBoard({
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
-
-    // clue phase: only allow drop when all players have decided their clues
-    if (roomStatus === "clue") {
-      if (!cluesReady) {
-        notify({
-          title: "全員が連想ワードを決定してから出してください",
-          type: "info",
-        });
-        return;
-      }
+    if (roomStatus !== "clue") {
+      notify({ title: "今はカードを出せません", type: "info" });
+      return;
+    }
+    if (resolveMode === "sort-submit") {
+      // 判定はまだ行わない。proposal に追加。
       try {
-        await commitPlayFromClue(roomId, meId);
-        // optimistic local pending until server updates reflect the new order
+        await addCardToProposal(roomId, meId);
         setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-        notify({
-          title: "カードを場に置きました（判定実行）",
-          type: "success",
-        });
+        notify({ title: "カードを場に置きました", type: "success" });
       } catch (err: any) {
         notify({
           title: "配置に失敗しました",
@@ -80,8 +81,25 @@ export function CentralCardBoard({
       }
       return;
     }
-    // Other phases: block
-    notify({ title: "今はカードを出せません", type: "info" });
+    // 従来モード: 全員の連想ワード確定後に即判定
+    if (!cluesReady) {
+      notify({
+        title: "全員が連想ワードを決定してから出してください",
+        type: "info",
+      });
+      return;
+    }
+    try {
+      await commitPlayFromClue(roomId, meId);
+      setPending((p) => (p.includes(pid) ? p : [...p, pid]));
+      notify({ title: "カードを場に置きました（判定実行）", type: "success" });
+    } catch (err: any) {
+      notify({
+        title: "配置に失敗しました",
+        description: err?.message,
+        type: "error",
+      });
+    }
   };
 
   // helper to render a card box
@@ -92,7 +110,10 @@ export function CentralCardBoard({
       (orderList || []).includes(id) ||
       pending.includes(id) ||
       (proposal || []).includes(id);
-    const showNumber = typeof number === "number" && isPlaced;
+    let showNumber = typeof number === "number" && isPlaced;
+    if (resolveMode === "sort-submit" && roomStatus !== "finished") {
+      showNumber = false; // 判定前は伏せ
+    }
     const violation =
       failed &&
       typeof failedAt === "number" &&
@@ -120,10 +141,14 @@ export function CentralCardBoard({
         }}
       >
         {typeof idx === "number" && <Text fontSize="sm">#{idx + 1}</Text>}
-        <Text fontWeight="900" fontSize="2xl">
-          {showNumber ? number : "?"}
+        <Text fontWeight="900" fontSize="xl" textAlign="center">
+          {resolveMode === "sort-submit" && roomStatus !== "finished"
+            ? p?.clue1 || "(連想待ち)"
+            : showNumber
+            ? number
+            : "?"}
         </Text>
-        <Text mt={2} fontSize="sm" color="fgMuted">
+        <Text mt={2} fontSize="xs" color="fgMuted">
           {p?.name ?? "(不明)"}
         </Text>
         {violation && (
@@ -133,6 +158,23 @@ export function CentralCardBoard({
         )}
       </Box>
     );
+  };
+
+  // sort-submit 用 DnD 並べ替え
+  const activeProposal = useMemo(() => proposal || [], [proposal?.join(",")]);
+  const onDragEnd = async (e: DragEndEvent) => {
+    if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = activeProposal.indexOf(String(active.id));
+    const newIndex = activeProposal.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(activeProposal, oldIndex, newIndex);
+    try {
+      await setOrderProposal(roomId, reordered);
+    } catch {
+      /* ignore */
+    }
   };
 
   return (
@@ -202,24 +244,46 @@ export function CentralCardBoard({
             transition: "all 150ms ease",
           }}
         >
-          {/* no overlay: the placeholder area will display a waiting message instead */}
-          {/* committed plays */}
-          {orderList &&
-            orderList.length > 0 &&
-            orderList.map((id, idx) => renderCard(id, idx))}
-
-          {/* proposals (not yet committed) */}
-          {proposal && proposal.length > 0
-            ? proposal
-                .filter((id) => !orderList?.includes(id))
-                .map((id) => renderCard(id))
-            : null}
+          {resolveMode === "sort-submit" && roomStatus === "clue" ? (
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={onDragEnd}
+            >
+              <SortableContext items={activeProposal}>
+                {activeProposal.length > 0 &&
+                  activeProposal.map((id, idx) => (
+                    <SortableItem id={id} key={id}>
+                      {renderCard(id, idx)}
+                    </SortableItem>
+                  ))}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <>
+              {orderList &&
+                orderList.length > 0 &&
+                orderList.map((id, idx) => renderCard(id, idx))}
+              {proposal && proposal.length > 0
+                ? proposal
+                    .filter((id) => !orderList?.includes(id))
+                    .map((id) => renderCard(id))
+                : null}
+            </>
+          )}
 
           {/* optimistic local pending (fallback) */}
-          {(!orderList || orderList.length === 0) &&
-          (!proposal || proposal.length === 0) &&
-          pending.length === 0 ? (
-            roomStatus === "clue" && cluesReady === false ? (
+          {resolveMode === "sort-submit" &&
+            roomStatus === "clue" &&
+            activeProposal.length === 0 && (
+              <Text color="gray.400">
+                自分のカードをドラッグして場に置き、連想ワードで相談しましょう。
+              </Text>
+            )}
+          {resolveMode !== "sort-submit" &&
+            (!orderList || orderList.length === 0) &&
+            (!proposal || proposal.length === 0) &&
+            pending.length === 0 &&
+            (roomStatus === "clue" && cluesReady === false ? (
               <div role="status" aria-live="polite">
                 <Text fontWeight={700} color="fgMuted">
                   全員が連想ワードを決定するまでお待ちください
@@ -229,10 +293,9 @@ export function CentralCardBoard({
               <Text color="gray.400">
                 まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
               </Text>
-            )
-          ) : null}
+            ))}
 
-          {pending && pending.length > 0
+          {resolveMode !== "sort-submit" && pending && pending.length > 0
             ? pending
                 .filter((id) => !(orderList || []).includes(id))
                 .filter((id) => !(proposal || []).includes(id))

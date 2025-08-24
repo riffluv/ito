@@ -93,3 +93,17 @@ test("evaluateSorted success and failure points", () => {
   expect(ng.success).toBe(false);
   expect(ng.failedAt).toBe(3);
 });
+
+test("evaluateSorted empty list", () => {
+  const res = evaluateSorted([], {} as any);
+  expect(res.success).toBe(true);
+  expect(res.failedAt).toBe(null);
+});
+
+test("evaluateSorted allows equal (non-strict ascending)", () => {
+  const ids = ["p1", "p2", "p3"];
+  const nums = { p1: 5, p2: 5, p3: 7 } as any;
+  const res = evaluateSorted(ids, nums);
+  expect(res.success).toBe(true);
+  expect(res.failedAt).toBe(null);
+});

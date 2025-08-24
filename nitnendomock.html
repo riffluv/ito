@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ITO PARTY – 任天堂系パーティUIデモ</title>
+  <style>
+    /* =============================
+       任天堂ライク / 製品レベルのUIスキン（改）
+       - 配る演出 / 自分カードのフリップ / 成功・失敗オーバーレイ
+       - メインスクリーンを高く（共通スクリーン）
+       ============================= */
+
+    :root{
+      --bg1:#10131a; --bg2:#131a26; --accent:#ff5d57; --accent-2:#ffd166; --mint:#30e3ca; --blue:#59a5ff; --violet:#9b6cff; --card:#0f1520; --muted:#ced7e4;
+      --ok:#2ecc71; --warn:#ff9f1c; --danger:#ff4757; --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.12);
+      --shadow: 0 10px 25px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.2);
+      --radius:22px;
+    }
+
+    html,body{height:100%}
+    body{margin:0;color:#f6f7fb;font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+      background:
+        radial-gradient(1200px 800px at 80% -10%, rgba(255,93,87,.35), transparent 60%),
+        radial-gradient(1000px 700px at 10% -20%, rgba(48,227,202,.35), transparent 60%),
+        radial-gradient(1400px 900px at 50% 120%, rgba(89,165,255,.35), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+
+    .blob{position:absolute;filter:blur(40px);opacity:.6;pointer-events:none}
+    .blob.one{width:520px;height:520px;left:-120px;top:-120px;background:conic-gradient(from 90deg,var(--mint),var(--violet),var(--blue));border-radius:60% 40% 55% 45%/60% 45% 55% 40%;animation:blob 18s ease-in-out infinite}
+    .blob.two{width:420px;height:420px;right:-80px;bottom:-80px;background:conic-gradient(from 230deg,var(--accent),var(--accent-2),var(--blue));border-radius:50% 50% 40% 60%/50% 60% 40% 50%;animation:blob 22s ease-in-out infinite reverse}
+    @keyframes blob{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(20px,-20px) rotate(40deg)}}
+
+    .app{position:relative;display:grid;grid-template-rows:auto 1fr auto;gap:16px;height:100vh;padding:18px 18px 16px}
+
+    .topbar{display:flex;align-items:center;gap:14px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glass-2);border-radius:calc(var(--radius) - 6px);padding:12px 14px;box-shadow:var(--shadow)}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px}
+    .logo-badge{width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,var(--accent),#ff8080);box-shadow: inset 0 2px 10px rgba(255,255,255,.2), 0 8px 18px rgba(255,93,87,.4)}
+    .logo-badge svg{filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+    .logo-title{font-size:20px}
+    .top-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+    .btn{appearance:none;border:none;cursor:pointer;border-radius:16px;padding:10px 14px;font-weight:700;letter-spacing:.2px;color:#0c0f14;background:#fff;transition:transform .1s ease, box-shadow .2s ease;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(2px)}
+    .btn.primary{background:linear-gradient(180deg,#fff6,#fff9), linear-gradient(135deg,var(--accent),#ff7e75);color:#1a0f0f}
+    .btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2)}
+
+    .content{display:grid;grid-template-columns:300px 1fr 320px;gap:16px;min-height:0}
+    @media(max-width:1200px){.content{grid-template-columns:260px 1fr 280px}}
+    @media(max-width:980px){.content{grid-template-columns:1fr;grid-auto-rows:minmax(180px,auto)}}
+
+    .panel{position:relative;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--glass-2);border-radius:var(--radius);box-shadow:var(--shadow);min-height:160px}
+    .panel-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px dashed rgba(255,255,255,.08)}
+    .panel-title{font-weight:800}
+    .panel-body{padding:12px 16px}
+
+    .players{display:grid;grid-template-columns:1fr;gap:10px;padding:10px 12px 18px}
+    .player{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:10px 12px;border-radius:16px;transition:transform .15s}
+    .player:hover{transform:translateX(2px)}
+    .avatar{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#111;font-weight:900;background:linear-gradient(135deg,var(--accent-2),#fff)}
+    .status{margin-left:auto;font-size:12px;padding:4px 8px;border-radius:999px;background:rgba(48,227,202,.2);border:1px solid rgba(48,227,202,.4);color:#b9fff0}
+
+    /* 中央：ゲームボード（共通スクリーン） */
+    .board{display:grid;grid-template-rows:auto 1fr auto;min-height:0}
+
+    .theme-card{margin:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:calc(var(--radius) - 4px);padding:14px 16px;background:
+      linear-gradient(120deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 12px 24px rgba(0,0,0,.22);
+    }
+    .theme-left{display:flex;align-items:center;gap:14px}
+    .theme-badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--blue),#7bc3ff);box-shadow: inset 0 2px 8px rgba(255,255,255,.2)}
+    .theme-title{font-size:18px;font-weight:900}
+    .theme-sub{opacity:.9;color:var(--muted);font-weight:700}
+
+    .style-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,var(--mint),#8ff3e5);color:#0d1316}
+
+    .board-surface{position:relative;display:grid;place-items:center;margin:0 14px 14px;border-radius:calc(var(--radius) - 4px);border:1px dashed rgba(255,255,255,.15);background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 12px, rgba(255,255,255,.06) 12px 24px),
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.06));
+      overflow:hidden;min-height:clamp(480px, 60vh, 820px)
+    }
+    .board-surface .label{position:absolute;top:8px;left:12px;font-size:12px;opacity:.7}
+
+    .slot-wrap{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;padding:36px}
+    .slot{width:140px;height:180px;border-radius:18px;background:linear-gradient(135deg,#121827,#0b1020);border:1px solid rgba(255,255,255,.14);box-shadow:0 20px 30px rgba(0,0,0,.35);display:grid;place-items:center;position:relative}
+    .slot[data-state="filled"]{background:linear-gradient(135deg,#1b2338,#0f1426)}
+    .card{width:104px;height:150px;border-radius:16px;background:linear-gradient(135deg,#fff,#f1f5ff);color:#14171f;display:grid;place-items:center;font-weight:900;font-size:34px;box-shadow:0 14px 24px rgba(0,0,0,.25);transform:translateY(6px);transition:transform .18s ease, filter .18s ease}
+    .card:hover{transform:translateY(0) scale(1.02)}
+    .card[data-style="chip"]{width:108px;height:108px;border-radius:50%;font-size:28px;background:radial-gradient(circle at 30% 30%, #fff, #eef2ff)}
+    .card[data-style="neon"]{background:#0f1224;color:#7af1de;border:1px solid rgba(122,241,222,.6);box-shadow:0 0 20px rgba(122,241,222,.35), inset 0 0 10px rgba(122,241,222,.2)}
+
+    .board-footer{display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:10px 14px;border-top:1px dashed rgba(255,255,255,.08)}
+
+    /* デッキ（配る演出の起点） */
+    .deck{position:absolute;left:20px;bottom:18px;width:120px;height:80px;display:grid;place-items:center}
+    .stack{position:absolute;width:86px;height:126px;border-radius:14px;background:linear-gradient(135deg,#fff,#f1f5ff);box-shadow:0 12px 20px rgba(0,0,0,.25);transform:translate(var(--x,0), var(--y,0)) rotate(var(--r,0deg))}
+    .stack:nth-child(1){--x:-10px;--y:-6px;--r:-6deg;opacity:.6}
+    .stack:nth-child(2){--x:6px;--y:4px;--r:4deg;opacity:.8}
+    .stack:nth-child(3){--x:0;--y:0;--r:0deg}
+    .deck .label{position:absolute;bottom:-2px;left:0;font-size:11px;opacity:.7}
+
+    /* 配るフライングカード */
+    .fly-card{position:fixed;z-index:120;width:86px;height:126px;border-radius:14px;background:linear-gradient(135deg,#fff,#f1f5ff);box-shadow:0 12px 20px rgba(0,0,0,.3);transition:transform .45s cubic-bezier(.2,.7,.2,1), opacity .45s}
+
+    /* 右：チャット */
+    .chat{display:grid;grid-template-rows:auto 1fr auto}
+    .chat-list{padding:10px 14px;display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:140px}
+    .bubble{max-width:85%;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);box-shadow:0 6px 12px rgba(0,0,0,.25);animation:pop .18s ease}
+    .bubble.me{margin-left:auto;background:linear-gradient(135deg,var(--mint),#7af1de);color:#0b1314}
+    @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+    .chat-input{display:flex;gap:10px;padding:10px 14px;border-top:1px dashed rgba(255,255,255,.08)}
+    .input{flex:1;border:none;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.12);color:#fff;outline:none}
+
+    /* 下部：自分カード（フリップ）& ヒント */
+    .dock{display:grid;grid-template-columns:420px 1fr 320px;gap:16px}
+    @media(max-width:980px){.dock{grid-template-columns:1fr;grid-auto-rows:auto}}
+
+    .mycard{display:flex;align-items:center;gap:16px;background:var(--glass);border:1px solid var(--glass-2);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
+    .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;background:linear-gradient(135deg,var(--accent),#ff7e75);color:#1b0e0e;font-weight:900;box-shadow:0 8px 18px rgba(255,93,87,.35)}
+
+    .card3d{position:relative;width:96px;height:140px;perspective:1000px}
+    .card3d .face{position:absolute;inset:0;border-radius:14px;display:grid;place-items:center;font-weight:900;font-size:32px;backface-visibility:hidden}
+    .card3d .front{background:linear-gradient(135deg,#0f1527,#0a0f20);border:1px solid rgba(255,255,255,.14);color:#9fb4ff}
+    .card3d .back{background:linear-gradient(135deg,#fff,#f1f5ff);color:#0b0f16;transform:rotateY(180deg)}
+    .card3d.flip .front{transform:rotateY(180deg)}
+    .card3d.flip .back{transform:rotateY(0)}
+
+    .hint-box{display:flex;gap:10px;align-items:center}
+    .hint-input{flex:1;min-width:120px;border:none;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.12);color:#fff;outline:none}
+
+    .cta{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue),#8ac2ff);border:0;color:#07121e;font-weight:900;border-radius:18px;box-shadow:0 12px 0 rgba(0,0,0,.3);padding:16px;cursor:pointer;transition:transform .1s}
+    .cta:active{transform:translateY(2px)}
+
+    /* モーダル */
+    .modal{position:fixed;inset:0;background:rgba(10,12,18,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100}
+    .modal.open{display:flex}
+    .modal-card{width:min(720px,92vw);background:var(--card);border:1px solid rgba(255,255,255,.14);border-radius:20px;box-shadow:var(--shadow)}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px dashed rgba(255,255,255,.08)}
+    .modal-body{padding:16px 18px;max-height:60vh;overflow:auto;line-height:1.7;color:#e9eef7}
+    .modal-body h3{margin:14px 0 6px;font-size:18px}
+    .modal-actions{display:flex;justify-content:flex-end;padding:10px 16px;border-top:1px dashed rgba(255,255,255,.08)}
+
+    /* 成功 / 失敗 オーバーレイ */
+    .result{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:180;background:rgba(10,12,18,.5);backdrop-filter:blur(4px)}
+    .result.open{display:flex}
+    .result .badge{padding:22px 34px;border-radius:22px;font-weight:900;font-size:64px;letter-spacing:.06em;box-shadow:0 18px 30px rgba(0,0,0,.35)}
+    .result.success .badge{background:linear-gradient(135deg,#4af58b,#2ecc71);color:#05250f}
+    .result.fail .badge{background:linear-gradient(135deg,#ff6b6b,#ff2b2b);color:#2b0707;animation:shake .45s}
+    @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+
+    canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:200}
+
+    .tag{font-size:12px;opacity:.85}
+    *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent}
+    *::-webkit-scrollbar{height:8px;width:8px}
+    *::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:999px}
+  </style>
+</head>
+<body>
+  <div class="blob one"></div>
+  <div class="blob two"></div>
+  <canvas id="confetti"></canvas>
+
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="logo">
+        <div class="logo-badge" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.2 4.8 5.2.6-3.8 3.7 1 5.2L12 13.6 7.4 16.3l1-5.2L4.6 7.4l5.2-.6L12 2z" fill="white"/></svg>
+        </div>
+        <div class="logo-title">ITO PARTY</div>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost" id="btnRules">ルール</button>
+        <button class="btn ghost" id="btnTheme">カテゴリ変更</button>
+        <button class="btn primary" id="btnDeal">数字を配る</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="panel">
+        <div class="panel-header"><div class="panel-title">参加人数 <span id="playerCount" class="tag"></span></div></div>
+        <div class="players" id="playerList"></div>
+      </section>
+
+      <section class="panel board">
+        <div class="theme-card">
+          <div class="theme-left">
+            <div class="theme-badge">🎲</div>
+            <div>
+              <div class="theme-title">お題: <span id="themeText">恋人にしたい職業の人気</span></div>
+              <div class="theme-sub">カテゴリ: <span id="themeCat">通常版</span></div>
+            </div>
+          </div>
+          <div class="style-tabs" id="styleTabs" title="カードの種類">
+            <button class="tab active" data-style="classic">クラシック</button>
+            <button class="tab" data-style="chip">チップ</button>
+            <button class="tab" data-style="neon">ネオン</button>
+          </div>
+        </div>
+        <div class="board-surface">
+          <span class="label">共通スクリーン</span>
+          <div class="slot-wrap" id="slotWrap"></div>
+          <div class="deck" id="deck">
+            <div class="stack"></div>
+            <div class="stack"></div>
+            <div class="stack"></div>
+            <div class="label">DECK</div>
+          </div>
+        </div>
+        <div class="board-footer"><span class="tag">カードボード（出した順）</span></div>
+      </section>
+
+      <section class="panel chat">
+        <div class="panel-header"><div class="panel-title">ログ / チャット</div></div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="chat-input"><input id="chatInput" class="input" placeholder="メッセージを入力" /><button class="btn primary" id="chatSend">送信</button></div>
+      </section>
+    </div>
+
+    <div class="dock">
+      <div class="mycard">
+        <span class="pill">あなたのカード</span>
+        <div class="card3d" id="myCard">
+          <div class="face front">？</div>
+          <div class="face back" id="myCardNum">--</div>
+        </div>
+        <button class="btn ghost" id="flipMyCard">めくる</button>
+      </div>
+      <div class="mycard hint-box">
+        <input id="hintInput" class="hint-input" placeholder="たとえやイメージ（例: 近所の公園 &gt; 富士山）"/>
+        <button class="btn ghost" id="hintShare">ヒントを送る</button>
+      </div>
+      <button class="cta" id="btnPlay">この順で出す！</button>
+    </div>
+  </div>
+
+  <div class="modal" id="modalRules" aria-hidden="true" role="dialog">
+    <div class="modal-card" role="document">
+      <div class="modal-head"><strong>ITO – かんたんルール</strong><button class="btn ghost" data-close="rules">閉じる</button></div>
+      <div class="modal-body" id="rulesBody"></div>
+      <div class="modal-actions"><button class="btn primary" data-close="rules">OK</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modalTheme" aria-hidden="true" role="dialog">
+    <div class="modal-card">
+      <div class="modal-head"><strong>カテゴリ / お題の変更</strong><button class="btn ghost" data-close="theme">閉じる</button></div>
+      <div class="modal-body">
+        <div style="display:grid;gap:10px">
+          <label>カテゴリ<select id="selectCat" class="input" style="margin-top:6px"><option>通常版</option><option>スパイシー</option><option>しりとり</option><option>食べ物しばり</option><option>フリーテーマ</option></select></label>
+          <label>お題<input id="inputTheme" class="input" style="margin-top:6px" placeholder="例: 怖いもの / 好きな食べ物" /></label>
+          <small class="tag">※ わかりやすい具体例になるテーマにすると成功率UP！</small>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn primary" id="saveTheme">保存</button></div>
+    </div>
+  </div>
+
+  <div class="result" id="result"><div class="badge" id="resultBadge">成功！</div></div>
+
+  <script>
+    // ===== 状態 =====
+    const state = {
+      players: [
+        { id: 'p1', name: 'ああ', color: '#ffd166', ready: true },
+        { id: 'p2', name: 'chrome通常', color: '#7af1de', ready: true },
+        { id: 'p3', name: 'エッジです。', color: '#8ac2ff', ready: true },
+      ],
+      myId: 'p2',
+      myNumber: null,
+      theme: '恋人にしたい職業の人気',
+      category: '通常版',
+      cardStyle: 'classic',
+      deck: Array.from({length:100}, (_,i)=>i+1),
+      board: [null,null,null,null,null,null],
+      chat: []
+    };
+
+    const el = {
+      playerList: document.getElementById('playerList'),
+      playerCount: document.getElementById('playerCount'),
+      slotWrap: document.getElementById('slotWrap'),
+      themeText: document.getElementById('themeText'),
+      themeCat: document.getElementById('themeCat'),
+      chatList: document.getElementById('chatList'),
+      chatInput: document.getElementById('chatInput'),
+      myCard: document.getElementById('myCard'),
+      myCardNum: document.getElementById('myCardNum'),
+      result: document.getElementById('result'),
+      resultBadge: document.getElementById('resultBadge'),
+      deck: document.getElementById('deck'),
+    };
+
+    function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+
+    // ===== レンダリング =====
+    function renderPlayers(){
+      el.playerList.innerHTML = '';
+      state.players.forEach(p=>{
+        const row = document.createElement('div');
+        row.className = 'player';
+        row.innerHTML = `
+          <div class="avatar" style="background:linear-gradient(135deg, ${p.color}, #fff)">${p.name.slice(0,1)}</div>
+          <div><div style="font-weight:800">${p.name}</div><div class="tag">連携: 参加中</div></div>
+          <span class="status">在室</span>
+        `;
+        el.playerList.appendChild(row);
+      });
+      el.playerCount.textContent = `${state.players.length} / ${state.players.length}`;
+    }
+
+    function renderBoard(){
+      el.slotWrap.innerHTML = '';
+      const slotsNeeded = Math.max(6, state.players.length);
+      Array.from({length: slotsNeeded}, (_,i)=>i).forEach(i=>{
+        const s = document.createElement('div'); s.className = 'slot'; s.dataset.idx=i;
+        const inner = document.createElement('div'); inner.className='card'; inner.dataset.style = state.cardStyle; inner.textContent = state.board[i] ?? '?';
+        s.appendChild(inner); el.slotWrap.appendChild(s);
+      })
+    }
+
+    function pushChat(text, me=false){
+      state.chat.push({text, me});
+      const b = document.createElement('div'); b.className = 'bubble'+(me?' me':''); b.textContent = text; el.chatList.appendChild(b); el.chatList.scrollTop = el.chatList.scrollHeight;
+    }
+
+    // ===== ルール（要約） =====
+    const RULES_HTML = `
+      <p>ITO は <b>協力型のパーティゲーム</b>。各自 1〜100 の数字カードを持ち、<b>数字を言わずにお題で表現</b>し合い、<b>全員のカードを小さい順</b>に並べれば成功！</p>
+      <h3>流れ</h3>
+      <ol>
+        <li>各プレイヤーに 1 枚ずつカード（1〜100）を配る。</li>
+        <li>お題カードを 1 枚引いてテーマを決める（例: 怖いもの / 好きな食べ物）。</li>
+        <li>各自、数字は言わずに <b>お題に沿った比喩</b>でヒント。</li>
+        <li>相談しながら「小さいと思う順」にカードを場へ。</li>
+        <li>全て出し終え、<b>昇順</b>なら成功。崩れていたら失敗。</li>
+      </ol>`;
+
+    // ===== 配る演出 =====
+    function flyCard(fromEl, toEl, onend){
+      const f = document.createElement('div'); f.className='fly-card'; document.body.appendChild(f);
+      const fr = fromEl.getBoundingClientRect(); const tr = toEl.getBoundingClientRect();
+      const sx = fr.left + fr.width/2 - 43; const sy = fr.top + fr.height/2 - 63;
+      const tx = tr.left + tr.width/2 - 43; const ty = tr.top + tr.height/2 - 63;
+      f.style.transform = `translate(${sx}px, ${sy}px)`; // start
+      requestAnimationFrame(()=>{ f.style.transform = `translate(${tx}px, ${ty}px)`; f.style.opacity = 0.9; });
+      f.addEventListener('transitionend', ()=>{ f.remove(); onend && onend(); }, {once:true});
+    }
+
+    function dealNumbersAnimated(){
+      const deck = shuffle([...state.deck]);
+      state.players.forEach((p,i)=> p.num = deck[i]);
+      const targets = [...document.querySelectorAll('.players .player .avatar')];
+      // 自分のカード表示要素
+      const my = state.players.find(p=>p.id===state.myId);
+      const meTarget = el.myCard; // dockのカード
+
+      // 順に配る
+      targets.forEach((t,idx)=>{
+        setTimeout(()=>{
+          flyCard(el.deck, t);
+          if(state.players[idx].id===state.myId){
+            // 自分の数字をセット→フリップ
+            setTimeout(()=>{
+              state.myNumber = my.num; el.myCardNum.textContent = my.num; el.myCard.classList.add('flip');
+            }, 420);
+          }
+        }, idx*180);
+      });
+
+      pushChat('数字を配りました（各自ヒントで伝えてね）');
+    }
+
+    // ===== 進行 =====
+    function shareHint(){
+      const input = document.getElementById('hintInput');
+      const t = input.value.trim(); if(!t) return; pushChat(`ヒント: ${t}`, true); input.value='';
+    }
+
+    function autoFillOthersAndJudge(){
+      // 簡易デモ：全員のカードを場に出す→成功/失敗判定
+      const nums = state.players.map(p=>p.num);
+      let order = [...nums].sort((a,b)=>a-b);
+      // たまに失敗を演出（隣を入れ替え）
+      if(Math.random()<0.35 && order.length>2){ const i = Math.floor(Math.random()*(order.length-1)); [order[i],order[i+1]]=[order[i+1],order[i]]; }
+      // 盤面へ
+      state.board = order.slice(0, Math.max(6, state.players.length));
+      renderBoard();
+      // 判定
+      const success = order.every((v,i)=> v === [...nums].sort((a,b)=>a-b)[i]);
+      showResult(success);
+    }
+
+    function showResult(success){
+      const r = el.result; const b = el.resultBadge;
+      r.className = 'result open ' + (success? 'success':'fail');
+      b.textContent = success ? '成功！' : '失敗！';
+      if(success) confetti();
+      setTimeout(()=>{ r.classList.remove('open'); }, 1600);
+    }
+
+    function confetti(){
+      const c = document.getElementById('confetti'); const ctx = c.getContext('2d'); const dpr = window.devicePixelRatio || 1;
+      c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+      const pieces = Array.from({length:140}, ()=>({x:Math.random()*innerWidth,y:-20-Math.random()*40,r:4+Math.random()*6,s:2+Math.random()*3,a:1,color:['#ffd166','#ff5d57','#7af1de','#8ac2ff','#9b6cff'][Math.floor(Math.random()*5)]}));
+      let start = performance.now();
+      (function loop(now){ const t=now-start; ctx.clearRect(0,0,innerWidth,innerHeight); pieces.forEach(p=>{p.y+=p.s; p.x+=Math.sin((p.y+p.r)*.05); p.a-=.008; ctx.globalAlpha=Math.max(p.a,0); ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();}); ctx.globalAlpha=1; if(t<1200) requestAnimationFrame(loop); })(start);
+    }
+
+    // ===== モーダル & タブ =====
+    const modalRules = document.getElementById('modalRules');
+    const modalTheme = document.getElementById('modalTheme');
+    document.getElementById('btnRules').onclick = ()=>{ document.getElementById('rulesBody').innerHTML = RULES_HTML; modalRules.classList.add('open'); };
+    document.querySelectorAll('[data-close="rules"]').forEach(b=> b.onclick = ()=> modalRules.classList.remove('open'));
+    document.getElementById('btnTheme').onclick = ()=>{ document.getElementById('selectCat').value = state.category; document.getElementById('inputTheme').value = state.theme; modalTheme.classList.add('open'); };
+    document.querySelectorAll('[data-close="theme"]').forEach(b=> b.onclick = ()=> modalTheme.classList.remove('open'));
+    document.getElementById('saveTheme').onclick = ()=>{ state.category = document.getElementById('selectCat').value; state.theme = document.getElementById('inputTheme').value || state.theme; el.themeText.textContent = state.theme; el.themeCat.textContent = state.category; modalTheme.classList.remove('open'); };
+
+    document.getElementById('styleTabs').addEventListener('click', (e)=>{
+      if(e.target.closest('.tab')){
+        document.querySelectorAll('.style-tabs .tab').forEach(t=>t.classList.remove('active'));
+        const btn = e.target.closest('.tab'); btn.classList.add('active'); state.cardStyle = btn.dataset.style; renderBoard();
+      }
+    })
+
+    // ===== イベント =====
+    document.getElementById('btnDeal').onclick = dealNumbersAnimated;
+    document.getElementById('hintShare').onclick = shareHint;
+    document.getElementById('btnPlay').onclick = autoFillOthersAndJudge;
+    document.getElementById('chatSend').onclick = ()=>{ const v = el.chatInput.value.trim(); if(!v) return; pushChat(v, true); el.chatInput.value=''; };
+    el.chatInput.addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('chatSend').click(); })
+    document.getElementById('flipMyCard').onclick = ()=> el.myCard.classList.toggle('flip');
+
+    // ===== 初期表示 =====
+    function init(){ renderPlayers(); renderBoard(); pushChat('ようこそ！「数字を配る」で配布演出→「この順で出す！」で判定が見られます。'); }
+    init();
+  </script>
+</body>
+</html>
