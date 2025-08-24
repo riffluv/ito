@@ -27,6 +27,13 @@ export default function BoardArea({
         gap={4}
         alignItems="center"
         flexWrap="wrap"
+        justifyContent="center" // 単数枚時も中央に配置
+        perspective="1200px" // flip variant の立体歪みを軽減
+        css={{
+          "& .gamecard-inner": {
+            transformStyle: "preserve-3d",
+          },
+        }}
         bg={
           isOver
             ? "rgba(78,205,196,0.04)"

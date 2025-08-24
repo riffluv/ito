@@ -444,7 +444,7 @@ export default function RoomPage() {
       hand={
         <>
           {room.status === "clue" && me && (
-            <Box flex={1} minW={0} display="flex" alignItems="center" gap={4}>
+            <Box minW={0} display="flex" alignItems="center" gap={4} mx="auto">
               <SelfNumberCard value={me.number} draggableId={me.id} />
               <Box>
                 <CluePanel roomId={roomId} me={me} label="連想" />
