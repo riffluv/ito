@@ -1,4 +1,9 @@
 "use client";
+import {
+  ROOM_GRID_COLUMNS_MD,
+  ROOM_GRID_ROWS_BASE,
+  ROOM_GRID_ROWS_MD,
+} from "@/theme/layout";
 import { Box, SystemStyleObject } from "@chakra-ui/react";
 import { ReactNode } from "react";
 
@@ -33,8 +38,8 @@ export function AppShell({
       display="grid"
       className="room-grid" /* (container query styles removed in globals.css) */
       /* 固定 56px 行は fluid clamp フォント + Windows DPI でオーバーフローし内部スクロールを誘発 → auto 化 */
-      gridTemplateRows={{ base: "auto 1fr auto", md: "auto 1fr minmax(140px,160px)" }}
-      gridTemplateColumns={{ base: "1fr", md: "280px 1fr 340px" }}
+      gridTemplateRows={{ base: ROOM_GRID_ROWS_BASE, md: ROOM_GRID_ROWS_MD }}
+      gridTemplateColumns={{ base: "1fr", md: ROOM_GRID_COLUMNS_MD }}
       gridTemplateAreas={{
         base: `'header' 'center' 'hand'`,
         md: `'header header header' 'left center right' 'hand hand hand'`,

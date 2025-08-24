@@ -18,6 +18,7 @@
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
       "@/theme": ["theme/index"],
+      "@/theme/*": ["theme/*"],
       "@/context/*": ["context/*"]
     },
     "esModuleInterop": true,

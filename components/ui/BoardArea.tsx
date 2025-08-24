@@ -1,19 +1,23 @@
 "use client";
+import { LAYOUT } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
-import React from "react";
 
 export type BoardAreaProps = BoxProps & {
   isOver?: boolean;
 };
 
-export default function BoardArea({ isOver, children, ...rest }: BoardAreaProps) {
+export default function BoardArea({
+  isOver,
+  children,
+  ...rest
+}: BoardAreaProps) {
   return (
     <Box position="relative">
       <Box
         role="region"
         aria-label="カード配置エリア"
         position="relative"
-        minH="220px"
+        minH={`${LAYOUT.BOARD_MIN_HEIGHT}px`}
         borderWidth="2px"
         borderStyle="dashed"
         borderColor={isOver ? "accent" : "whiteAlpha.200"}
@@ -36,4 +40,3 @@ export default function BoardArea({ isOver, children, ...rest }: BoardAreaProps)
     </Box>
   );
 }
-
