@@ -1,8 +1,11 @@
 export type RoomOptions = {
   allowContinueAfterFail: boolean;
-  // クリア方式: 順番に出す or 並び替え一括判定
-  // resolveMode: 現在は順番出しのみサポート
-  resolveMode?: "sequential";
+  /**
+   * クリア方式 (resolveMode)
+   * - "sequential": 従来の 1 枚ずつ昇順で出して随時判定
+   * - "sort-submit": 全員がカード(伏せ/連想ワード表示)を場に置き、相談しながら並べ替えてホストが一括判定
+   */
+  resolveMode?: "sequential" | "sort-submit";
 };
 
 export type RoomDoc = {
