@@ -28,7 +28,17 @@ export function GameCard({
 
   if (variant === "flip") {
     return (
-      <Box css={styles.container} role="group" aria-label="card">
+      <Box
+        css={styles.container}
+        role="group"
+        aria-label="card"
+        tabIndex={0}
+        _focusVisible={{
+          outline: "2px solid",
+          outlineColor: "focusRing",
+          outlineOffset: 2,
+        }}
+      >
         <Box
           css={styles.inner}
           style={{ transform: flipTransform }}
@@ -63,7 +73,15 @@ export function GameCard({
   }
 
   return (
-    <Box css={styles.frame}>
+    <Box
+      css={styles.frame}
+      tabIndex={0}
+      _focusVisible={{
+        outline: "2px solid",
+        outlineColor: "focusRing",
+        outlineOffset: 2,
+      }}
+    >
       {typeof index === "number" && (
         <Text fontSize="sm" color="fgMuted">
           #{index + 1}

@@ -36,7 +36,7 @@ export default function UniversalMonitor({
         py={2}
         roundedTopLeft={8}
         roundedTopRight={8}
-        color="#0f1724"
+        color="panelBannerFg"
         fontWeight={700}
         fontSize="sm"
       >

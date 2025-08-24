@@ -152,6 +152,8 @@ const config = defineConfig({
         sidebarLeft: { value: "280px" },
         sidebarRight: { value: "340px" },
         handRow: { value: "160px" },
+        // perspective token (3D flip 用) ※ px: モーション自然さ考慮し将来 fluid 化検討
+        perspectiveCard: { value: "1200px" },
       },
     },
     semanticTokens: {
@@ -182,6 +184,9 @@ const config = defineConfig({
         // 状態色 (今後 colorPalette による上書きを想定)
         dangerSolid: { value: { base: "red.500", _dark: "red.400" } },
         successSolid: { value: { base: "green.500", _dark: "green.400" } },
+        // Banner / Self number foreground brand-ish
+        panelBannerFg: { value: { base: "#0f1724", _dark: "#0f1724" } },
+        selfNumberFg: { value: { base: "#0F3460", _dark: "#0F3460" } },
       },
       shadows: {
         interactive: { value: { base: "{shadows.sm}", _dark: "{shadows.sm}" } },
@@ -320,6 +325,10 @@ const config = defineConfig({
             inset: 0,
             transformStyle: "preserve-3d",
             transition: "transform {durations.normal} {easings.standard}",
+            _focusVisible: {
+              outline: "2px solid {colors.focusRing}",
+              outlineOffset: "2px",
+            },
           },
           front: {
             p: 3,
@@ -329,6 +338,10 @@ const config = defineConfig({
             position: "absolute",
             inset: 0,
             backfaceVisibility: "hidden",
+            _focusVisible: {
+              outline: "2px solid {colors.focusRing}",
+              outlineOffset: "2px",
+            },
           },
           back: {
             p: 3,
@@ -339,6 +352,10 @@ const config = defineConfig({
             inset: 0,
             transform: "rotateY(180deg)",
             backfaceVisibility: "hidden",
+            _focusVisible: {
+              outline: "2px solid {colors.focusRing}",
+              outlineOffset: "2px",
+            },
           },
           frame: {
             p: 3,
@@ -349,6 +366,10 @@ const config = defineConfig({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            _focusVisible: {
+              outline: "2px solid {colors.focusRing}",
+              outlineOffset: "2px",
+            },
           },
         },
         variants: {
