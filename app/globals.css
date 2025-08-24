@@ -78,13 +78,6 @@ body {
   }
 }
 
-/* Container queries for room grid */
-.room-grid {
-  container-type: inline-size;
-}
-@container (min-width: 900px) {
-  .room-grid {
-    grid-template-columns: 280px 1fr 340px !important;
-    grid-template-areas: 'header header header' 'left center right' 'hand hand hand' !important;
-  }
-}
+/* room-grid: 以前は container query で columns/areas を !important 上書きしていたが
+   Chakra の breakpoint (md) props と競合し初期描画で再レイアウト→高さずれを誘発したため削除。
+   レスポンシブ制御は React コンポーネント (AppShell) の props に統一。 */
