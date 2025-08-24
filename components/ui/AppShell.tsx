@@ -28,10 +28,12 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <Box
-      h="100dvh"
+      /* Full viewport height; allow slight expansion for DPI rounding */
+      minH="100dvh"
       display="grid"
-      className="room-grid" /* container query 用 */
-      gridTemplateRows={{ base: "56px 1fr auto", md: "56px 1fr 160px" }}
+      className="room-grid" /* (container query styles removed in globals.css) */
+      /* 固定 56px 行は fluid clamp フォント + Windows DPI でオーバーフローし内部スクロールを誘発 → auto 化 */
+      gridTemplateRows={{ base: "auto 1fr auto", md: "auto 1fr minmax(140px,160px)" }}
       gridTemplateColumns={{ base: "1fr", md: "280px 1fr 340px" }}
       gridTemplateAreas={{
         base: `'header' 'center' 'hand'`,
@@ -48,7 +50,7 @@ export function AppShell({
         display="flex"
         flexDir="column"
         gap={2}
-        minH={0}
+        /* header intrinsic height */
         overflow="visible"
         as="header"
         role="banner"
