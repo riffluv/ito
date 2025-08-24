@@ -1,7 +1,6 @@
 "use client";
-import { Box, Text } from "@chakra-ui/react";
-import { gameCardRecipe } from "../../theme/recipes/gameCard";
-import React from "react";
+"use client";
+import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
 
 export type GameCardProps = {
   index?: number | null;
@@ -22,30 +21,21 @@ export function GameCard({
   variant = "flat",
   flipped = false,
 }: GameCardProps) {
-  const recipe = gameCardRecipe({ state, variant });
+  const recipe = useSlotRecipe({ key: "gameCard" });
+  const styles: any = recipe({ state, variant });
+
+  // reduced motion 対応: CSS prefers-reduced-motion を利用し inner の transition を打ち消し
+  const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
   if (variant === "flip") {
     return (
-      <Box style={(recipe as any).container} position="relative" w="140px" h="180px">
+      <Box css={styles.container} role="group" aria-label="card">
         <Box
-          position="absolute"
-          inset={0}
-          style={{ ...(recipe as any).inner, transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
+          css={styles.inner}
+          style={{ transform: flipTransform }}
+          aria-live="polite"
         >
-          {/* Clue side */}
-          <Box
-            p={(recipe as any).front?.p}
-            borderRadius={(recipe as any).front?.borderRadius}
-            bgGradient={(recipe as any).front?.bgGradient}
-            borderWidth={(recipe as any).front?.borderWidth}
-            borderColor={(recipe as any).front?.borderColor}
-            boxShadow={(recipe as any).front?.boxShadow}
-            color={(recipe as any).front?.color}
-            fontWeight={(recipe as any).front?.fontWeight}
-            position={(recipe as any).front?.position}
-            inset={(recipe as any).front?.inset}
-            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-          >
+          <Box css={styles.front}>
             <Text fontSize="xs" color="fgMuted" mb={1}>
               #{typeof index === "number" ? index + 1 : "?"}
             </Text>
@@ -56,22 +46,7 @@ export function GameCard({
               {name ?? "(不明)"}
             </Text>
           </Box>
-
-          {/* Number side */}
-          <Box
-            p={(recipe as any).back?.p}
-            borderRadius={(recipe as any).back?.borderRadius}
-            bgGradient={(recipe as any).back?.bgGradient}
-            borderWidth={(recipe as any).back?.borderWidth}
-            borderColor={(recipe as any).back?.borderColor}
-            boxShadow={(recipe as any).back?.boxShadow}
-            color={(recipe as any).back?.color}
-            fontWeight={(recipe as any).back?.fontWeight}
-            position={(recipe as any).back?.position}
-            inset={(recipe as any).back?.inset}
-            transform={(recipe as any).back?.transform}
-            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-          >
+          <Box css={styles.back}>
             <Text fontSize="xs" color="rgba(0,0,0,0.55)" mb={1}>
               #{typeof index === "number" ? index + 1 : "?"}
             </Text>
@@ -87,9 +62,8 @@ export function GameCard({
     );
   }
 
-  // flat variant
   return (
-    <Box p={(recipe as any).frame?.p} minW={(recipe as any).frame?.minW} minH={(recipe as any).frame?.minH} borderRadius={(recipe as any).frame?.borderRadius} bgGradient={(recipe as any).frame?.bgGradient} display={(recipe as any).frame?.display} flexDir={(recipe as any).frame?.flexDirection} alignItems={(recipe as any).frame?.alignItems} justifyContent={(recipe as any).frame?.justifyContent} border={(recipe as any).frame?.border} boxShadow={(recipe as any).frame?.boxShadow}>
+    <Box css={styles.frame}>
       {typeof index === "number" && (
         <Text fontSize="sm" color="fgMuted">
           #{index + 1}
