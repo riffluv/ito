@@ -1,14 +1,5 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
-import {
-  Box,
-  Link as ChakraLink,
-  Container,
-  Flex,
-  HStack,
-  Heading,
-} from "@chakra-ui/react";
-import Link from "next/link";
+import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 
@@ -40,24 +31,6 @@ export default function Header() {
             </Heading>
           </HStack>
           <HStack gap={2}>
-            <AppButton
-              variant={isHome ? "solid" : "subtle"}
-              aria-label="プレイページへ"
-              onClick={() => {
-                try {
-                  if (typeof window !== "undefined") {
-                    const lr = window.localStorage.getItem("lastRoom");
-                    if (lr) return router.push(`/rooms/${lr}`);
-                  }
-                } catch {}
-                router.push("/");
-              }}
-            >
-              プレイ
-            </AppButton>
-            <ChakraLink asChild display={{ base: "none", md: "inline-flex" }}>
-              <Link href="/">Docs</Link>
-            </ChakraLink>
             <ThemeToggle />
           </HStack>
         </Flex>
