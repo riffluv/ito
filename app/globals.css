@@ -77,3 +77,14 @@ body {
     animation: pulse 1.5s ease-in-out infinite;
   }
 }
+
+/* Container queries for room grid */
+.room-grid {
+  container-type: inline-size;
+}
+@container (min-width: 900px) {
+  .room-grid {
+    grid-template-columns: 280px 1fr 340px !important;
+    grid-template-areas: 'header header header' 'left center right' 'hand hand hand' !important;
+  }
+}
