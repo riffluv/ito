@@ -5,13 +5,14 @@ import { notify } from "@/components/ui/notify";
 import {
   addCardToProposal,
   commitPlayFromClue,
+  finalizeReveal,
   setOrderProposal,
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, Text } from "@chakra-ui/react";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export function CentralCardBoard({
   roomId,
@@ -38,6 +39,40 @@ export function CentralCardBoard({
   failedAt?: number | null;
   resolveMode?: string;
 }) {
+  // --- Reveal Animation (sort-submit 判定後) ---
+  const [revealAnimating, setRevealAnimating] = useState(false);
+  const [revealIndex, setRevealIndex] = useState(0); // 次にフリップする index (既に revealIndex 個がオープン)
+  const [initialRevealTick, setInitialRevealTick] = useState(0); // reveal入り直後 1tick は全カード正面固定
+  const prevStatusRef = useRef(roomStatus);
+
+  useEffect(() => {
+    // clue -> finished への遷移タイミングで開始 (sort-submit のみ)
+    const prev = prevStatusRef.current;
+    const startedReveal =
+      resolveMode === "sort-submit" &&
+      prev === "clue" &&
+      roomStatus === "reveal" &&
+      (orderList?.length || 0) > 0;
+    if (startedReveal) {
+      setRevealAnimating(true);
+      setRevealIndex(0);
+      setInitialRevealTick(0);
+    }
+    prevStatusRef.current = roomStatus;
+  }, [roomStatus, resolveMode, orderList?.join(",")]);
+
+  useEffect(() => {
+    if (!revealAnimating) return;
+    setInitialRevealTick((t) => t + 1);
+    const total = orderList?.length || 0;
+    if (revealIndex >= total) {
+      setRevealAnimating(false);
+      finalizeReveal(roomId).catch(() => void 0);
+      return;
+    }
+    const t = setTimeout(() => setRevealIndex((i) => i + 1), 800); // 0.8s 間隔
+    return () => clearTimeout(t);
+  }, [revealAnimating, revealIndex, orderList?.length]);
   const map = new Map(players.map((p) => [p.id, p]));
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
@@ -114,11 +149,140 @@ export function CentralCardBoard({
     if (resolveMode === "sort-submit" && roomStatus !== "finished") {
       showNumber = false; // 判定前は伏せ
     }
+    // 判定後アニメーション中: revealIndex 未満のみ数字を表示
+    if (revealAnimating && typeof idx === "number") {
+      showNumber = idx < revealIndex; // まだのカードは clue 表示にする
+    }
+    const isFlippedNow =
+      roomStatus === "finished" ||
+      (roomStatus === "reveal" && typeof idx === "number" && idx < revealIndex);
     const violation =
+      isFlippedNow &&
       failed &&
       typeof failedAt === "number" &&
       idx !== undefined &&
-      failedAt === idx + 1; // 1-based failedAt
+      (failedAt === idx + 1 || failedAt === idx + 2); // 失敗カード(=idx+1)と直前カード(=idx+2)
+    const isSuccessFlipped =
+      isFlippedNow &&
+      !violation &&
+      (roomStatus === "reveal" || roomStatus === "finished");
+
+    // persistent flip デザイン: reveal / finished 後も同一 UI
+    const persistentFlip =
+      resolveMode === "sort-submit" && typeof idx === "number";
+    const flipped =
+      persistentFlip &&
+      (roomStatus === "finished"
+        ? true
+        : roomStatus === "reveal" && idx < revealIndex);
+    const suppressTransition = roomStatus === "reveal" && initialRevealTick < 1; // 初回 tick は一斉回転防止
+
+    if (persistentFlip) {
+      return (
+        <Box
+          key={id}
+          style={{
+            perspective: "1000px",
+            position: "relative",
+            width: 140,
+            height: 180,
+          }}
+        >
+          <Box
+            style={{
+              position: "absolute",
+              inset: 0,
+              transformStyle: "preserve-3d",
+              transition: suppressTransition ? "none" : "transform 0.6s",
+              transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            {/* front: clue side */}
+            <Box
+              p={3}
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 16,
+                background: "linear-gradient(135deg,#2D3748,#1A202C)",
+                border: violation
+                  ? "3px solid #FEB2B2"
+                  : isSuccessFlipped
+                  ? "3px solid #81E6D9"
+                  : "2px solid #2d3748",
+                boxShadow: violation
+                  ? "0 0 26px -4px rgba(229,62,62,0.65)"
+                  : isSuccessFlipped
+                  ? "0 0 22px -4px rgba(56,178,172,0.55)"
+                  : "0 6px 18px -4px rgba(0,0,0,0.4)",
+                color: "#E2E8F0",
+                fontWeight: 700,
+              }}
+            >
+              <Text fontSize="xs" color="fgMuted" mb={1}>
+                #{typeof idx === "number" ? idx + 1 : "?"}
+              </Text>
+              <Text fontWeight="900" fontSize="md" textAlign="center">
+                {p?.clue1 || "(連想なし)"}
+              </Text>
+              <Text mt={2} fontSize="xs" color="fgMuted">
+                {p?.name ?? "(不明)"}
+              </Text>
+            </Box>
+            {/* back: number side (同一デザイン継続) */}
+            <Box
+              p={3}
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                position: "absolute",
+                inset: 0,
+                transform: "rotateY(180deg)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 16,
+                background: violation
+                  ? "linear-gradient(135deg,#742A2A,#E53E3E)"
+                  : isSuccessFlipped
+                  ? "linear-gradient(135deg,#38B2AC,#2C7A7B)"
+                  : "linear-gradient(135deg,#4FD1C5,#285E61)",
+                border: violation
+                  ? "3px solid #FEB2B2"
+                  : isSuccessFlipped
+                  ? "3px solid #81E6D9"
+                  : "2px solid #234E52",
+                boxShadow: violation
+                  ? "0 0 32px -2px rgba(229,62,62,0.8)"
+                  : isSuccessFlipped
+                  ? "0 0 28px -4px rgba(56,178,172,0.8)"
+                  : "0 10px 35px rgba(72,187,167,0.5)",
+                color: "#112025",
+                fontWeight: 900,
+              }}
+            >
+              <Text fontSize="xs" color="rgba(0,0,0,0.55)" mb={1}>
+                #{typeof idx === "number" ? idx + 1 : "?"}
+              </Text>
+              <Text fontWeight="900" fontSize="3xl">
+                {typeof number === "number" ? number : "?"}
+              </Text>
+              <Text mt={2} fontSize="xs" color="rgba(0,0,0,0.6)">
+                {p?.name ?? "(不明)"}
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+    }
+
     return (
       <Box
         key={id}
@@ -128,7 +292,9 @@ export function CentralCardBoard({
           minHeight: 160,
           borderRadius: 12,
           background: violation
-            ? "linear-gradient(180deg, rgba(200,40,40,0.35), rgba(0,0,0,0.1))"
+            ? "linear-gradient(180deg, rgba(220,50,50,0.45), rgba(0,0,0,0.15))"
+            : isFlippedNow && showNumber
+            ? "linear-gradient(180deg, rgba(56,178,172,0.25), rgba(0,0,0,0.08))"
             : "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
           display: "flex",
           flexDirection: "column",
@@ -136,7 +302,9 @@ export function CentralCardBoard({
           justifyContent: "center",
           border: "1px solid rgba(255,255,255,0.04)",
           boxShadow: violation
-            ? "0 0 0 2px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)"
+            ? "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)"
+            : isFlippedNow && showNumber
+            ? "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5), inset 0 -6px 18px rgba(0,0,0,0.25)"
             : "inset 0 -6px 18px rgba(0,0,0,0.2)",
         }}
       >
@@ -146,6 +314,8 @@ export function CentralCardBoard({
             ? p?.clue1 || "(連想待ち)"
             : showNumber
             ? number
+            : p?.clue1 && resolveMode === "sort-submit"
+            ? p?.clue1
             : "?"}
         </Text>
         <Text mt={2} fontSize="xs" color="fgMuted">
@@ -193,7 +363,7 @@ export function CentralCardBoard({
             🎯 カードボード（出した順）
           </div>
         </div>
-        {failed && (
+        {failed && roomStatus === "finished" && (
           <div
             style={{
               position: "absolute",

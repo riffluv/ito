@@ -316,10 +316,24 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       total: list.length,
     } as any;
 
+    // アニメーションを挟むため status は一旦 "reveal" にする
     tx.update(roomRef, {
-      status: "finished",
+      status: "reveal",
       order,
-      result: { success, revealedAt: serverTimestamp() },
+      result: { success: !!success, revealedAt: serverTimestamp() },
     });
+  });
+}
+
+// reveal フェーズ完了後に最終確定 (UI のアニメーション完了イベントで呼ぶ)
+export async function finalizeReveal(roomId: string) {
+  const _db = requireDb();
+  const roomRef = doc(_db, "rooms", roomId);
+  await runTransaction(_db, async (tx) => {
+    const snap = await tx.get(roomRef);
+    if (!snap.exists()) return;
+    const room: any = snap.data();
+    if (room.status !== "reveal") return; // 予期しない呼び出しは無視
+    tx.update(roomRef, { status: "finished" });
   });
 }
