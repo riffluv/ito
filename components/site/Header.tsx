@@ -1,4 +1,5 @@
 "use client";
+import { DevPresetSwitcher } from "@/components/DevPresetSwitcher";
 import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
@@ -30,7 +31,8 @@ export default function Header() {
               Online ITO
             </Heading>
           </HStack>
-          <HStack gap={2}>
+          <HStack gap={4}>
+            <DevPresetSwitcher compact />
             <ThemeToggle />
           </HStack>
         </Flex>

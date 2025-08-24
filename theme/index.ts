@@ -89,6 +89,7 @@ const config = defineConfig({
           value:
             "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6)",
         },
+        selfNumber: { value: "0 15px 35px rgba(255,107,53,0.3)" },
       },
       animations: {
         fadeIn: { value: "fadeIn 180ms ease-out" },
@@ -108,6 +109,7 @@ const config = defineConfig({
         dangerStrong: {
           value: "linear(90deg,rgba(255,70,70,0.9),rgba(120,0,0,0.9))",
         },
+        playerNumber: { value: "linear(145deg,#FF8A50,#FFD97A)" },
       },
     },
     semanticTokens: {
@@ -146,6 +148,7 @@ const config = defineConfig({
       gradients: {
         accentSoft: { value: { base: "{gradients.accentSoft}" } },
         dangerStrong: { value: { base: "{gradients.dangerStrong}" } },
+        playerNumber: { value: { base: "{gradients.playerNumber}" } },
       },
     },
     recipes: {
@@ -406,6 +409,80 @@ const config = defineConfig({
                 boxShadow:
                   "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)",
               },
+            },
+          },
+        ],
+      },
+      panel: {
+        // Panel コンポーネント用 slot recipe (Header/Body/Actions/Footer)
+        slots: ["container", "header", "title", "actions", "body", "footer"],
+        base: {
+          container: {
+            bg: "panelBg",
+            color: "fgDefault",
+            borderWidth: "1px",
+            borderColor: "borderDefault",
+            rounded: "xl",
+            shadow: "xs",
+            display: "flex",
+            flexDirection: "column",
+            position: "relative",
+          },
+          header: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 4,
+            mb: 4,
+            minH: "2rem",
+          },
+          title: { fontWeight: 600, fontSize: "sm", lineHeight: 1.3 },
+          actions: { display: "flex", alignItems: "center", gap: 2 },
+          body: { flex: 1 },
+          footer: {
+            mt: 4,
+            pt: 3,
+            borderTopWidth: "1px",
+            borderColor: "borderDefault",
+          },
+        },
+        variants: {
+          density: {
+            comfortable: { container: { p: 6 }, header: { mb: 5 } },
+            compact: { container: { p: 4 }, header: { mb: 3 } },
+          },
+          variant: {
+            surface: {},
+            subtle: {
+              container: {
+                bg: "panelSubBg",
+              },
+            },
+            outlined: {
+              container: {
+                bg: "transparent",
+                borderColor: "{colors.gray.300}",
+              },
+            },
+            accent: {
+              container: {
+                bg: "accentSubtle",
+                borderColor: "accent",
+              },
+              title: { color: "accent" },
+            },
+          },
+          elevated: {
+            true: { container: { shadow: "md" } },
+            false: {},
+          },
+        },
+        compoundVariants: [
+          {
+            variant: "accent",
+            elevated: true,
+            css: {
+              container: { shadow: "glow" },
             },
           },
         ],

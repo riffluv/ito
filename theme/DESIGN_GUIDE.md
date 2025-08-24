@@ -56,6 +56,27 @@
   - ビューポート依存 (ヒーローセクションなど) は従来ブレークポイント。
   - 内部リスト/カードレイアウトはコンテナクエリ優先。
 
+  ### 2025 戦略アップデート（このリファクタで適用した方針）
+
+  | 項目                     | 目的                                       | 採用内容                                                                                             |
+  | ------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+  | AppShell 導入            | レイアウト宣言の再利用と責務分離           | `components/ui/AppShell.tsx` でグリッド + エリアスロット化 (`header / left / center / right / hand`) |
+  | ScrollRegion 抽象        | スクロール挙動・アクセシビリティ一貫化     | `components/ui/ScrollRegion.tsx` に overflow/overscroll/momentum/tabsIndex 制御集約                  |
+  | Container Query 条件利用 | ビューポート依存から脱却し内部リサイズ適応 | `conditions` (`cqSm`,`cqMd`,`cqLg`) を利用し `_cqMd` などで gap/レイアウト変更（段階的）             |
+  | Inline style 削減        | 可読性と型補完向上                         | style属性で書かれていた `overscrollBehavior`, `WebkitOverflowScrolling` を ScrollRegion に移管       |
+  | セマンティック領域       | スクリーンリーダー構造の明確化             | AppShell スロットに `role` / `aria-label` をオプション渡しで指定可能に                               |
+  | 動画的モーション最適化   | モーション軽減時のチラつき抑制             | flip系 transition を今後 `reducedMotion` 条件で短縮 (TODO)                                           |
+  | 色/影の集中管理          | デザインスケール安定                       | パネル/カード影を tokens(`shadows.*`) + semanticTokens 経由に統一（残存 inline は次段階で除去予定）  |
+  | レンダリング最適化       | 余計な再レンダー抑制                       | 大型ページ内: レイアウト構造を memo 不要な stateless にし、状態 hook 群は page ロジック側に留める    |
+
+  今後の追加TODO（次フェーズ）:
+  1. `GameCard` のモーションを `reducedMotion` 条件付きで CSS 変数に抽象化
+  2. `Panel` を slot recipe 化し Header / Body / Footer スロットサポート
+  3. `Hud` の layerStyle 定義（現状 layerStyle 未使用）
+  4. `colorPalette` 利用域拡大（Board 状態色を palette 化）
+  5. `@starting-style` を利用した初期フェードイン最適化（対応ブラウザ確認後）
+  6. Subgrid (主要ブラウザ安定後) でカードリストの整列簡略化
+
 ## ルール表示/演出
 
 - 逐次判定（sequential）と一括判定（sort-submit）を UI と state で明確に分離。
@@ -81,6 +102,73 @@
   - `feat(theme):` 新トークン/recipe追加
   - `refactor(ui):` inline style の recipe 置換
   - `docs(design):` ガイド更新
+
+## デザインプリセット (ThemePreset) ワークフロー
+
+将来モックデザインを高速に適用するため、`ThemePresetContext` を導入しました。
+
+### 目的
+
+1. 配色・雰囲気 (brand palette / semantic tokens) を安全に差し替え。
+2. 既存コンポーネントの variant/state コードを触らずに新デザイン適用。
+3. デザイナーと開発の往復を `/design/preview` 一覧で同期。
+
+### 仕組み概要
+
+```
+ThemePresetProvider
+  ├─ presets[]: { name, description, colorPalette?, tokens? }
+  ├─ active: 現在のプリセット
+  ├─ setActiveByName(name)
+  └─ registerPreset(preset)
+```
+
+`colorPalette` は Chakra v3 の subtree palette 置換を想定（現段階: data-attr でマーカーのみ / 段階的拡張）。`tokens` は semantic token 一時上書き構想（実装は今後）。
+
+### 追加手順 (モック受領 → 実装)
+
+1. モック解析: 配色 (primary, accent, surface, elevated, danger 等) を抽出し brand パレット 50-900 にマッピング案を作る。
+2. 既存 tokens / semanticTokens に存在しない用途色があれば命名ルールに沿って追加案を PR 化。
+3. `context/ThemePresetContext.tsx` 内 `initialPresets` に新しい preset オブジェクトを追加、またはランタイムで `registerPreset` を利用するユーティリティを一時実装。
+4. `/design/preview` ページで `DevPresetSwitcher` を使って切替し視覚差異をデザイナーに共有。
+5. 過剰な inline 調整が必要なら tokens/recipes に欠けている抽象レイヤーを追加 (例: `panel.borderColor.muted`, `gameCard.bg.highlight`)。
+6. 承認後、preset 名を `default` に差し替えるか、環境変数 (例: `NEXT_PUBLIC_THEME_PRESET`) で本番選択を制御。
+
+### 命名指針 (プリセット)
+
+`name`: kebab-case 推奨 (`warm`, `cool-dark`, `festival2025`)。
+短命イベント (季節テーマ) は prefix (`season-`) を検討し整理容易性確保。
+
+### 将来拡張 TODO (Preset)
+
+- colorPalette を Chakra v3 の subtree injection API で実際に適用し要素配下だけ差し替え。
+- semanticTokens override を `<ThemePresetBoundary tokens={{ canvasBg: ... }}>` のような境界コンポーネントで提供。
+- プリセット差異を Visual Regression (Storybook + Chromatic など) で snapshot 化。
+
+## デザインプレビュー (/design/preview)
+
+主要コンポーネントの variant/state とトークン試料を一覧表示する内部ページ。`DevPresetSwitcher` によりリアルタイムでプリセット切替を確認。開発/承認フロー:
+
+1. `npm run dev` でローカル起動し `/design/preview` にアクセス。
+2. プリセットを切替 (右上 Switcher) → 差分をスクリーンショット化。
+3. デザイナー feedback を issues 化（不足トークン/影/角丸など）
+4. tokens / recipe 拡張 → 再プレビュー。
+
+### 追加候補セクション
+
+- ボタン (後日 recipes 化想定)
+- フォーム要素 (input/select) の focusRing / エラー色
+- 通知トーストの色バリアント
+
+## テスト戦略 (Design System)
+
+最小限の型/単体テストで以下を保障:
+
+1. `ThemePresetContext` が register + 切替を行える。
+2. 主要 recipe の variant キーが意図しないリネームで壊れた場合 type error になる (typegen の CI チェック)。
+3. 重要標準トークン (focusRing, canvasBg, panelBg) が undefined でないことの smoke テスト。
+
+将来的に Storybook + 戦略的 snapshot (Playwright / Chromatic) を組込み、視覚回 regress を抑止。
 
 ## 参考
 
