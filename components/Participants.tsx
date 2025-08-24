@@ -16,7 +16,7 @@ export function Participants({
     );
   }
   return (
-    <Stack as="ul" role="list" gap="2" pl={0} m={0} style={{ listStyle: "none" }}>
+    <Stack as="ul" role="list" gap="2" pl={0} m={0} listStyleType="none">
       {players.map((p) => (
         <Box as="li" key={p.id}>
           <HStack

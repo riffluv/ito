@@ -21,33 +21,23 @@ export default function UniversalMonitor({
   if (!room) return null;
 
   return (
-    <Panel
-      style={{
-        minHeight: 300,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        padding: 0,
-        overflow: "hidden",
-      }}
-    >
+    <Panel minH={300} display="flex" flexDir="column" justifyContent="flex-start" p={0} overflow="hidden">
       {/* top banner */}
       <Box
-        style={{
-          background: "linear-gradient(90deg,#ff9a58,#ffcf67)",
-          padding: "8px 16px",
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
-          color: "#0f1724",
-          fontWeight: 700,
-          fontSize: 14,
-        }}
+        bgGradient="linear(90deg,#ff9a58,#ffcf67)"
+        px={4}
+        py={2}
+        roundedTopLeft={8}
+        roundedTopRight={8}
+        color="#0f1724"
+        fontWeight={700}
+        fontSize="14px"
       >
         ラウンド {room?.round ?? 1} | カテゴリ:{" "}
         {(room as any)?.topicBox ?? "未選択"}
       </Box>
 
-      <Box style={{ padding: "28px 20px", textAlign: "center" }}>
+      <Box px={5} py={7} textAlign="center">
         {/* Show the topic selector only for the host during clue phase; when shown, hide the separate header text to avoid duplicate boxes */}
         {room.status === "clue" && isHost ? (
           <Box>
@@ -59,7 +49,7 @@ export default function UniversalMonitor({
             <Text
               fontSize={{ base: "lg", md: "2.25rem" }}
               fontWeight="800"
-              style={{ color: "#7bd3b6" }}
+              color="accent"
             >
               {room.topic
                 ? `お題：${room.topic}`
@@ -79,7 +69,7 @@ export default function UniversalMonitor({
         {isHost &&
           room.status === "clue" &&
           room.options?.resolveMode === "sort-submit" && (
-            <Box style={{ textAlign: "center", padding: "12px 0" }}>
+            <Box textAlign="center" py={3}>
               <AppButton
                 colorPalette="teal"
                 size="sm"

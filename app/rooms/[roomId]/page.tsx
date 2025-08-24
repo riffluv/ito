@@ -430,15 +430,15 @@ export default function RoomPage() {
         }
       >
         {/* 中央は縦に: (1) 万能モニター(固定高さ) (2) カードボード (残りを埋める) */}
-        <div style={{ flex: "0 0 auto" }}>
+        <Box flex="0 0 auto">
           <UniversalMonitor
             room={room}
             players={players}
             roomId={roomId}
             isHost={isHost}
           />
-        </div>
-        <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
+        </Box>
+        <Box flex="1 1 auto" overflowY="auto">
           <CentralCardBoard
             roomId={roomId}
             players={players}
@@ -452,7 +452,7 @@ export default function RoomPage() {
             proposal={room.order?.proposal || []}
             resolveMode={room.options?.resolveMode}
           />
-        </div>
+        </Box>
       </Box>
 
       {/* right */}
@@ -503,29 +503,28 @@ export default function RoomPage() {
         {/* 最低限の自分の数字と CluePanel のハイライトを縮約表示する余地: 今はフェーズに応じた簡易ボタンのみ */}
         {room.status === "clue" && me && (
           <Box flex={1} minW={0} display="flex" alignItems="center" gap={4}>
-            <div
-              draggable={true}
+            <Box
+              as="div"
+              draggable
               onDragStart={(e: React.DragEvent) => {
                 try {
                   e.dataTransfer.setData("text/plain", me.id);
                 } catch {}
               }}
-              style={{
-                width: 100,
-                height: 140,
-                borderRadius: 12,
-                background: "linear-gradient(145deg,#FF8A50,#FFD97A)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 15px 35px rgba(255,107,53,0.3)",
-                color: "#0F3460",
-                fontWeight: 900,
-                fontSize: 28,
-              }}
+              w="100px"
+              h="140px"
+              rounded="12px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              boxShadow="0 15px 35px rgba(255,107,53,0.3)"
+              color="#0F3460"
+              fontWeight={900}
+              fontSize="28px"
+              bgGradient="linear(145deg,#FF8A50,#FFD97A)"
             >
               {me.number ?? "?"}
-            </div>
+            </Box>
             <Box>
               <CluePanel roomId={roomId} me={me} label="連想" />
             </Box>

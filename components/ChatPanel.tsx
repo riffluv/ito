@@ -58,7 +58,8 @@ export function ChatPanel({
 
   return (
     <Panel p={2} h={height} display="flex" flexDir="column">
-      <ScrollArea.Root style={{ flex: 1 }}>
+      <Box flex={1} minH={0}>
+      <ScrollArea.Root>
         <ScrollArea.Viewport>
           <ScrollArea.Content>
             <Box p={2}>
@@ -116,6 +117,7 @@ export function ChatPanel({
         </ScrollArea.Scrollbar>
         <ScrollArea.Corner />
       </ScrollArea.Root>
+      </Box>
       <HStack>
         <Input
           placeholder={readOnly ? "観戦中は投稿できません" : "メッセージを入力"}
