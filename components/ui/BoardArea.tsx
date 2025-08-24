@@ -21,14 +21,14 @@ export default function BoardArea({
         borderWidth="2px"
         borderStyle="dashed"
         borderColor={isOver ? "accent" : "whiteAlpha.200"}
-        rounded="12px"
+        rounded="lg"
         p={4}
         display="flex"
         gap={4}
         alignItems="center"
         flexWrap="wrap"
         justifyContent="center" // 単数枚時も中央に配置
-        perspective="1200px" // flip variant の立体歪みを軽減
+        perspective="{sizes.perspectiveCard}" // flip variant の立体歪みを軽減 (token)
         css={{
           "& .gamecard-inner": {
             transformStyle: "preserve-3d",

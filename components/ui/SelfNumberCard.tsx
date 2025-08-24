@@ -35,12 +35,18 @@ export function SelfNumberCard({
       alignItems="center"
       justifyContent="center"
       boxShadow="selfNumber"
-      color="#0F3460"
+      color="selfNumberFg"
       fontWeight={900}
       fontSize={{ base: "2xl", md: "3xl" }}
       bgGradient="playerNumber"
       userSelect="none"
       aria-label="自分の数字カード"
+      tabIndex={0}
+      _focusVisible={{
+        outline: "2px solid",
+        outlineColor: "focusRing",
+        outlineOffset: 2,
+      }}
     >
       {value ?? "?"}
     </Box>
