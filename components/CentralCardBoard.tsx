@@ -42,7 +42,6 @@ export function CentralCardBoard({
   // --- Reveal Animation (sort-submit 判定後) ---
   const [revealAnimating, setRevealAnimating] = useState(false);
   const [revealIndex, setRevealIndex] = useState(0); // 次にフリップする index (既に revealIndex 個がオープン)
-  const [initialRevealTick, setInitialRevealTick] = useState(0); // reveal入り直後 1tick は全カード正面固定
   const prevStatusRef = useRef(roomStatus);
 
   useEffect(() => {
@@ -55,27 +54,58 @@ export function CentralCardBoard({
       (orderList?.length || 0) > 0;
     if (startedReveal) {
       setRevealAnimating(true);
+      // 0 から開始し、別 effect で最初のフリップを短 delay で行う
       setRevealIndex(0);
-      setInitialRevealTick(0);
     }
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderList?.join(",")]);
 
   useEffect(() => {
     if (!revealAnimating) return;
-    setInitialRevealTick((t) => t + 1);
     const total = orderList?.length || 0;
     if (revealIndex >= total) {
       setRevealAnimating(false);
       finalizeReveal(roomId).catch(() => void 0);
       return;
     }
-    const t = setTimeout(() => setRevealIndex((i) => i + 1), 800); // 0.8s 間隔
+    // 最初の 1 枚は短い待機で即フリップして「固まった」印象を避ける
+    const delay = revealIndex === 0 ? 120 : 800; // ms
+    const t = setTimeout(
+      () =>
+        setRevealIndex((i) => {
+          if (i >= total) return i;
+          return i + 1;
+        }),
+      delay
+    );
     return () => clearTimeout(t);
-  }, [revealAnimating, revealIndex, orderList?.length]);
+  }, [revealAnimating, revealIndex, orderList?.length, roomId]);
   const map = new Map(players.map((p) => [p.id, p]));
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
+
+  // sequential モード向けのローカル評価: サーバ更新を待たずに即時に失敗を検出して表示するため
+  const currentPlaced = useMemo(() => {
+    const base = orderList || [];
+    const extra = pending.filter((id) => !base.includes(id));
+    return [...base, ...extra];
+  }, [orderList?.join(","), pending.join(",")]);
+  const localFailedAt = useMemo(() => {
+    if (resolveMode === "sort-submit") return null;
+    for (let i = 0; i < (currentPlaced.length || 0) - 1; i++) {
+      const a = map.get(currentPlaced[i]) as any;
+      const b = map.get(currentPlaced[i + 1]) as any;
+      if (
+        !a ||
+        !b ||
+        typeof a.number !== "number" ||
+        typeof b.number !== "number"
+      )
+        continue;
+      if (a.number > b.number) return i + 1; // 1-based
+    }
+    return null;
+  }, [currentPlaced.join(","), players.map((p) => p.number).join(",")]);
 
   // If server-side orderList contains an id, clear it from pending
   useEffect(() => {
@@ -156,16 +186,31 @@ export function CentralCardBoard({
     const isFlippedNow =
       roomStatus === "finished" ||
       (roomStatus === "reveal" && typeof idx === "number" && idx < revealIndex);
-    const violation =
-      isFlippedNow &&
-      failed &&
-      typeof failedAt === "number" &&
-      idx !== undefined &&
-      (failedAt === idx + 1 || failedAt === idx + 2); // 失敗カード(=idx+1)と直前カード(=idx+2)
-    const isSuccessFlipped =
-      isFlippedNow &&
-      !violation &&
-      (roomStatus === "reveal" || roomStatus === "finished");
+    // Unified color logic for both modes:
+    // - Determine an effective failure index (client-local detection takes precedence)
+    // - For sequential: failure is considered confirmed immediately when effectiveFailedAt exists
+    // - For sort-submit: failure is confirmed only once the reveal has reached the failing card (or finished)
+    const effectiveFailedAt = localFailedAt ?? failedAt;
+    const failureConfirmed = (() => {
+      if (typeof effectiveFailedAt !== "number") return false;
+      if (resolveMode === "sort-submit") {
+        // during reveal, confirm when revealIndex has reached the failing card
+        if (roomStatus === "finished") return !!failed;
+        return revealIndex >= effectiveFailedAt;
+      }
+      return true; // sequential: confirmed immediately
+    })();
+
+    // For sort-submit a card is "revealed" when it's been flipped; for sequential any placed card is visible
+    const cardIsRevealed =
+      resolveMode === "sort-submit"
+        ? typeof idx === "number" &&
+          (roomStatus === "finished" ||
+            (roomStatus === "reveal" && idx < revealIndex))
+        : isPlaced;
+
+    const shouldShowGreen = cardIsRevealed && !failureConfirmed;
+    const shouldShowRed = cardIsRevealed && failureConfirmed;
 
     // persistent flip デザイン: reveal / finished 後も同一 UI
     const persistentFlip =
@@ -175,7 +220,7 @@ export function CentralCardBoard({
       (roomStatus === "finished"
         ? true
         : roomStatus === "reveal" && idx < revealIndex);
-    const suppressTransition = roomStatus === "reveal" && initialRevealTick < 1; // 初回 tick は一斉回転防止
+    // 一斉フレームでの transform 適用によるチラつきを避けるため、最初のカードのみ短 delay でフリップさせたので追加の suppress は不要
 
     if (persistentFlip) {
       return (
@@ -193,7 +238,7 @@ export function CentralCardBoard({
               position: "absolute",
               inset: 0,
               transformStyle: "preserve-3d",
-              transition: suppressTransition ? "none" : "transform 0.6s",
+              transition: "transform 0.6s",
               transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
             }}
           >
@@ -211,14 +256,14 @@ export function CentralCardBoard({
                 justifyContent: "center",
                 borderRadius: 16,
                 background: "linear-gradient(135deg,#2D3748,#1A202C)",
-                border: violation
+                border: shouldShowRed
                   ? "3px solid #FEB2B2"
-                  : isSuccessFlipped
+                  : shouldShowGreen
                   ? "3px solid #81E6D9"
                   : "2px solid #2d3748",
-                boxShadow: violation
+                boxShadow: shouldShowRed
                   ? "0 0 26px -4px rgba(229,62,62,0.65)"
-                  : isSuccessFlipped
+                  : shouldShowGreen
                   ? "0 0 22px -4px rgba(56,178,172,0.55)"
                   : "0 6px 18px -4px rgba(0,0,0,0.4)",
                 color: "#E2E8F0",
@@ -249,19 +294,19 @@ export function CentralCardBoard({
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 16,
-                background: violation
+                background: shouldShowRed
                   ? "linear-gradient(135deg,#742A2A,#E53E3E)"
-                  : isSuccessFlipped
+                  : shouldShowGreen
                   ? "linear-gradient(135deg,#38B2AC,#2C7A7B)"
-                  : "linear-gradient(135deg,#4FD1C5,#285E61)",
-                border: violation
+                  : "linear-gradient(135deg,#2D3748,#1A202C)",
+                border: shouldShowRed
                   ? "3px solid #FEB2B2"
-                  : isSuccessFlipped
+                  : shouldShowGreen
                   ? "3px solid #81E6D9"
                   : "2px solid #234E52",
-                boxShadow: violation
+                boxShadow: shouldShowRed
                   ? "0 0 32px -2px rgba(229,62,62,0.8)"
-                  : isSuccessFlipped
+                  : shouldShowGreen
                   ? "0 0 28px -4px rgba(56,178,172,0.8)"
                   : "0 10px 35px rgba(72,187,167,0.5)",
                 color: "#112025",
@@ -291,9 +336,9 @@ export function CentralCardBoard({
           minWidth: 140,
           minHeight: 160,
           borderRadius: 12,
-          background: violation
+          background: shouldShowRed
             ? "linear-gradient(180deg, rgba(220,50,50,0.45), rgba(0,0,0,0.15))"
-            : isFlippedNow && showNumber
+            : shouldShowGreen
             ? "linear-gradient(180deg, rgba(56,178,172,0.25), rgba(0,0,0,0.08))"
             : "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
           display: "flex",
@@ -301,9 +346,9 @@ export function CentralCardBoard({
           alignItems: "center",
           justifyContent: "center",
           border: "1px solid rgba(255,255,255,0.04)",
-          boxShadow: violation
+          boxShadow: shouldShowRed
             ? "0 0 0 2px rgba(255,80,80,0.7), 0 0 22px -4px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)"
-            : isFlippedNow && showNumber
+            : shouldShowGreen
             ? "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5), inset 0 -6px 18px rgba(0,0,0,0.25)"
             : "inset 0 -6px 18px rgba(0,0,0,0.2)",
         }}
@@ -321,11 +366,15 @@ export function CentralCardBoard({
         <Text mt={2} fontSize="xs" color="fgMuted">
           {p?.name ?? "(不明)"}
         </Text>
-        {violation && (
-          <Text mt={2} fontSize="xs" color="red.300" fontWeight="bold">
-            ← ここで失敗！
-          </Text>
-        )}
+        {/* show failure origin arrow only when the failing card is visible */}
+        {typeof effectiveFailedAt === "number" &&
+          typeof idx === "number" &&
+          effectiveFailedAt === idx + 1 &&
+          cardIsRevealed && (
+            <Text mt={2} fontSize="xs" color="red.300" fontWeight="bold">
+              ← ここで失敗！
+            </Text>
+          )}
       </Box>
     );
   };
