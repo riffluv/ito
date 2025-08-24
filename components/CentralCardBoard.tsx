@@ -1,5 +1,7 @@
 "use client";
 import { SortableItem } from "@/components/sortable/SortableItem";
+import BoardArea from "@/components/ui/BoardArea";
+import GameCard from "@/components/ui/GameCard";
 import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
 import {
@@ -10,8 +12,6 @@ import {
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, Text } from "@chakra-ui/react";
-import GameCard from "@/components/ui/GameCard";
-import BoardArea from "@/components/ui/BoardArea";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -234,7 +234,9 @@ export function CentralCardBoard({
           name={p?.name}
           clue={p?.clue1}
           number={typeof number === "number" ? number : null}
-          state={shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"}
+          state={
+            shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
+          }
         />
       );
     }
@@ -252,7 +254,9 @@ export function CentralCardBoard({
               : p?.clue1
           }
           number={showNumber && typeof number === "number" ? number : null}
-          state={shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"}
+          state={
+            shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
+          }
         />
         {typeof effectiveFailedAt === "number" &&
           typeof idx === "number" &&
@@ -284,7 +288,7 @@ export function CentralCardBoard({
   };
 
   return (
-    <Panel title="カードボード（出した順）">
+    <Panel>
       <Box position="relative">
         <Box textAlign="center" mb={2}>
           <Box
