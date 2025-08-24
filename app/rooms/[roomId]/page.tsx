@@ -27,7 +27,6 @@ import {
 import {
   continueAfterFail as continueAfterFailAction,
   startGame as startGameAction,
-  startPlaying as startPlayingAction,
 } from "@/lib/game/room";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
@@ -112,23 +111,7 @@ export default function RoomPage() {
     onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
   const enoughPlayers = onlinePlayers.length >= 2;
 
-  const canStartPlaying = Boolean(
-    isHost &&
-      room?.status === "clue" &&
-      enoughPlayers &&
-      allNumbersDealt &&
-      allCluesReady
-  );
-
-  const startDisabledTitle = !canStartPlaying
-    ? !enoughPlayers
-      ? "プレイヤーは2人以上必要です"
-      : !allNumbersDealt
-      ? "お題選択後に数字を配ってから開始できます"
-      : !allCluesReady
-      ? "全員が更新（準備完了）すると開始できます"
-      : undefined
-    : undefined;
+  // playing フェーズ廃止につき canStartPlaying ロジックは削除
 
   // ラウンドが進んだら自分のreadyをリセット
   const [seenRound, setSeenRound] = useState<number>(0);
@@ -300,13 +283,6 @@ export default function RoomPage() {
   const hostPrimaryAction = isHost
     ? room?.status === "waiting"
       ? { label: "開始", onClick: startGame }
-      : room?.status === "clue"
-      ? {
-          label: "並べ替えフェーズへ",
-          onClick: () => startPlayingAction(roomId),
-          disabled: !canStartPlaying,
-          title: startDisabledTitle,
-        }
       : room?.status === "finished"
       ? { label: "もう一度", onClick: resetToWaiting }
       : null

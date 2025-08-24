@@ -1,7 +1,7 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
-import { commitPlayFromClue, playCard } from "@/lib/game/room";
+import { commitPlayFromClue } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, Text } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
@@ -54,20 +54,7 @@ export function CentralCardBoard({
       return;
     }
 
-    // If room is playing, perform server play
-    if (roomStatus === "playing") {
-      try {
-        await playCard(roomId, meId);
-      } catch (err: any) {
-        notify({
-          title: "カードを出せませんでした（サーバ）",
-          description: err?.message,
-          type: "error",
-        });
-      }
-      return;
-    }
-    // If in clue phase, only allow drop when all players have decided their clues
+    // clue phase: only allow drop when all players have decided their clues
     if (roomStatus === "clue") {
       if (!cluesReady) {
         notify({
@@ -93,6 +80,8 @@ export function CentralCardBoard({
       }
       return;
     }
+    // Other phases: block
+    notify({ title: "今はカードを出せません", type: "info" });
   };
 
   // helper to render a card box

@@ -3,7 +3,6 @@ import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { requireDb } from "@/lib/firebase/require";
 import {
   applyPlay,
-  defaultOrderState,
   evaluateSorted,
   shouldFinishAfterPlay,
 } from "@/lib/game/rules";
@@ -108,37 +107,10 @@ export async function resetRoom(roomId: string) {
 }
 
 // 順番出し方式の開始（ホストが実行）
-export async function startPlaying(roomId: string) {
-  let total: number | null = null;
-  try {
-    const r = await getDoc(doc(db!, "rooms", roomId));
-    const data: any = r.data();
-    const next = nextStatusForEvent(data?.status || "waiting", {
-      type: "START_PLAYING",
-    });
-    if (!next) throw new Error("invalid transition: START_PLAYING");
-    const arr: string[] | undefined = data?.deal?.players;
-    if (presenceSupported()) {
-      const uids = await fetchPresenceUids(roomId);
-      if (Array.isArray(arr)) {
-        const set = new Set(uids);
-        total = arr.filter((id) => set.has(id)).length;
-      } else {
-        total = uids.length;
-      }
-    } else if (Array.isArray(arr)) {
-      total = arr.length;
-    }
-    if (total === null) {
-      const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
-      total = snap.size;
-    }
-  } catch {}
-  await updateDoc(doc(db!, "rooms", roomId), {
-    status: "playing",
-    order: { ...defaultOrderState(), decidedAt: serverTimestamp(), total },
-    result: null,
-  });
+// startPlaying deprecated: simplified flow keeps status 'clue' throughout plays
+export async function startPlaying(_roomId: string) {
+  // No-op for backward compatibility
+  return;
 }
 
 // 自分のカードを場に出す（昇順チェックを行い、失敗なら即終了）
@@ -161,7 +133,8 @@ export async function playCard(roomId: string, playerId: string) {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
     const room: any = roomSnap.data();
-    if (room.status !== "playing") return;
+    // Accept plays in 'clue' (legacy 'playing' also allowed for backward compatibility)
+    if (room.status !== "clue" && room.status !== "playing") return;
     const allowContinue: boolean = !!room?.options?.allowContinueAfterFail;
 
     const meSnap = await tx.get(meRef);
@@ -238,8 +211,8 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
     const room: any = roomSnap.data();
-    // clue フェーズでのみ即時判定を受け付ける
-    if (room.status !== "clue") return;
+    // clue フェーズ（または legacy playing）でのみ即時判定を受け付ける
+    if (room.status !== "clue" && room.status !== "playing") return;
     const allowContinue: boolean = !!room?.options?.allowContinueAfterFail;
 
     const meSnap = await tx.get(meRef);
