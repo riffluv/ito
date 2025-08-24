@@ -23,7 +23,6 @@ export function GameCard({
 }: GameCardProps) {
   const recipe = useSlotRecipe({ key: "gameCard" });
   const styles: any = recipe({ state, variant });
-
   // reduced motion 対応: CSS prefers-reduced-motion を利用し inner の transition を打ち消し
   const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
@@ -34,6 +33,7 @@ export function GameCard({
           css={styles.inner}
           style={{ transform: flipTransform }}
           aria-live="polite"
+          className="gamecard-inner"
         >
           <Box css={styles.front}>
             <Text fontSize="xs" color="fgMuted" mb={1}>
@@ -80,3 +80,15 @@ export function GameCard({
 }
 
 export default GameCard;
+
+// グローバル: reduced-motion で .gamecard-inner の transition を無効化
+// 既存グローバルCSSがある場合はそちらに吸収しても良い
+if (typeof document !== "undefined") {
+  const id = "gamecard-reduced-motion-style";
+  if (!document.getElementById(id)) {
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `@media (prefers-reduced-motion: reduce){ .gamecard-inner { transition: none !important; } }`;
+    document.head.appendChild(style);
+  }
+}

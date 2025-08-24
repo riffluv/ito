@@ -1,32 +1,45 @@
 "use client";
-import { Box, Heading, HStack } from "@chakra-ui/react";
+import { Box, Heading, chakra, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-export function Panel({ title, actions, children, p = 6, gap = 5, ...rest }: {
+export interface PanelProps
+  extends Omit<React.ComponentProps<typeof Box>, "title"> {
   title?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
-  p?: number | string;
-  gap?: number | string;
-} & Omit<React.ComponentProps<typeof Box>, "title">) {
+  density?: "comfortable" | "compact";
+  variant?: "surface" | "subtle" | "outlined" | "accent";
+  elevated?: boolean;
+}
+
+export function Panel(props: PanelProps) {
+  const {
+    title,
+    actions,
+    children,
+    density = "comfortable",
+    variant = "surface",
+    elevated = false,
+    ...rest
+  } = props;
+  const panelRecipe = useSlotRecipe({ key: "panel" });
+  const styles = panelRecipe({ density, variant, elevated });
+
   return (
-    <Box
-      p={p}
-      bg="panelBg"
-      color="fgDefault"
-      borderWidth="1px"
-      borderColor="borderDefault"
-      rounded="xl"
-      shadow="sm"
-      {...rest}
-    >
+    <Box css={styles.container} {...rest}>
       {(title || actions) && (
-        <HStack justify="space-between" mb={gap}>
-          {title ? <Heading size="sm">{title}</Heading> : <span />}
-          {actions}
-        </HStack>
+        <Box css={styles.header}>
+          {title ? (
+            <Heading as={chakra.h3} css={styles.title}>
+              {title}
+            </Heading>
+          ) : (
+            <span />
+          )}
+          {actions && <Box css={styles.actions}>{actions}</Box>}
+        </Box>
       )}
-      {children}
+      <Box css={styles.body}>{children}</Box>
     </Box>
   );
 }

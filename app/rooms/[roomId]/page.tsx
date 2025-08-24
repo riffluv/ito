@@ -1,15 +1,34 @@
 "use client";
-import { ChatPanel } from "@/components/ChatPanel";
-import { CluePanel } from "@/components/CluePanel";
-import { Hud } from "@/components/Hud";
-import { Participants } from "@/components/Participants";
-import { RoomOptionsEditor } from "@/components/RoomOptions";
 import PhaseHeader from "@/components/site/PhaseHeader";
+import dynamic from "next/dynamic";
+// dynamic imports (chunk split + 初期JS削減)
+const ChatPanel = dynamic(
+  () => import("@/components/ChatPanel").then((m) => m.ChatPanel),
+  { ssr: false, loading: () => null }
+);
+const CluePanel = dynamic(
+  () => import("@/components/CluePanel").then((m) => m.CluePanel),
+  { ssr: false, loading: () => null }
+);
+const Hud = dynamic(() => import("@/components/Hud").then((m) => m.Hud), {
+  ssr: false,
+});
+const Participants = dynamic(
+  () => import("@/components/Participants").then((m) => m.Participants),
+  { ssr: false }
+);
+const RoomOptionsEditor = dynamic(
+  () => import("@/components/RoomOptions").then((m) => m.RoomOptionsEditor),
+  { ssr: false }
+);
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
 import { AppButton } from "@/components/ui/AppButton";
+import AppShell from "@/components/ui/AppShell";
 import { notify } from "@/components/ui/notify";
 import { Panel } from "@/components/ui/Panel";
+import { ScrollRegion } from "@/components/ui/ScrollRegion";
+import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
@@ -300,8 +319,8 @@ export default function RoomPage() {
     ? room?.status === "waiting"
       ? { label: "開始", onClick: startGame }
       : room?.status === "finished"
-      ? { label: "もう一度", onClick: resetToWaiting }
-      : null
+        ? { label: "もう一度", onClick: resetToWaiting }
+        : null
     : null;
 
   const showHostInHud = useBreakpointValue({ base: true, md: false });
@@ -329,215 +348,117 @@ export default function RoomPage() {
 
   // フルスクリーン AppShell グリッド
   return (
-    <Box
-      h="100dvh"
-      display="grid"
-      className="room-grid"
-      gridTemplateRows={{ base: "56px 1fr auto", md: "56px 1fr 160px" }}
-      gridTemplateColumns={{ base: "1fr", md: "280px 1fr 340px" }}
-      gridTemplateAreas={{
-        base: `'header' 'center' 'hand'`,
-        md: `'header header header' 'left center right' 'hand hand hand'`,
-      }}
-      gap={{ base: 2, md: 3 }}
-      px={{ base: 2, md: 3 }}
-      py={{ base: 2, md: 3 }}
-      overflow="hidden"
-    >
-      {/* header area */}
-      <Box
-        gridArea="header"
-        display="flex"
-        flexDir="column"
-        gap={2}
-        overflow="visible"
-        minH={0}
-      >
-        <Hud
-          roomName={room.name}
-          phase={room.status}
-          activeCount={onlinePlayers.length}
-          totalCount={players.length}
-          remainMs={null}
-          totalMs={null}
-          hostPrimary={showHostInHud ? hostPrimaryAction : null}
-        />
-        <PhaseHeader phase={room.status as any} />
-      </Box>
-
-      {/* left column */}
-      <Stack
-        gridArea="left"
-        overflowY="auto"
-        minH={0}
-        gap={3}
-        role="region"
-        aria-label="参加者とオプション"
-        style={
-          {
-            WebkitOverflowScrolling: "touch",
-            overscrollBehavior: "contain",
-          } as any
-        }
-      >
-        <Panel title={`参加者人数: ${onlinePlayers.length}/${players.length}`}>
-          <Participants players={onlinePlayers} />
-        </Panel>
-        {/* Host actions moved here on larger screens for better reachability */}
-        {!showHostInHud && hostPrimaryAction && (
-          <HStack>
+    <AppShell
+      header={
+        <>
+          <Hud
+            roomName={room.name}
+            phase={room.status}
+            activeCount={onlinePlayers.length}
+            totalCount={players.length}
+            remainMs={null}
+            totalMs={null}
+            hostPrimary={showHostInHud ? hostPrimaryAction : null}
+          />
+          <PhaseHeader phase={room.status as any} />
+        </>
+      }
+      left={
+        <ScrollRegion withContainer aria-label="参加者とオプション">
+          <Panel
+            title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+          >
+            <Participants players={onlinePlayers} />
+          </Panel>
+          {!showHostInHud && hostPrimaryAction && (
+            <HStack>
+              <AppButton
+                colorPalette="orange"
+                onClick={hostPrimaryAction.onClick}
+                disabled={(hostPrimaryAction as any).disabled}
+                title={(hostPrimaryAction as any).title}
+              >
+                {(hostPrimaryAction as any).label}
+              </AppButton>
+            </HStack>
+          )}
+          <Panel title="オプション">
+            <RoomOptionsEditor
+              value={room.options}
+              onChange={(v) => updateOptions(v)}
+              disabled={!isHost || room.status !== "waiting"}
+            />
+            {isHost && (
+              <Stack mt={3}>
+                <AppButton variant="outline" onClick={resetToWaiting}>
+                  リセット
+                </AppButton>
+              </Stack>
+            )}
+          </Panel>
+        </ScrollRegion>
+      }
+      center={
+        <>
+          <Box flex="0 0 auto">
+            <UniversalMonitor
+              room={room}
+              players={players}
+              roomId={roomId}
+              isHost={isHost}
+            />
+          </Box>
+          <ScrollRegion withContainer flex="1 1 auto" aria-label="カードボード">
+            <CentralCardBoard
+              roomId={roomId}
+              players={players}
+              orderList={room.order?.list || []}
+              meId={meId}
+              eligibleIds={eligibleIds}
+              roomStatus={room.status}
+              cluesReady={allCluesReady}
+              failed={!!room.order?.failed}
+              failedAt={room.order?.failedAt}
+              proposal={room.order?.proposal || []}
+              resolveMode={room.options?.resolveMode}
+            />
+          </ScrollRegion>
+        </>
+      }
+      right={
+        <ScrollRegion aria-label="チャット">
+          <ChatPanel roomId={roomId} height="auto" />
+          <HStack mt={3}>
             <AppButton
-              colorPalette="orange"
-              onClick={hostPrimaryAction.onClick}
-              disabled={(hostPrimaryAction as any).disabled}
-              title={(hostPrimaryAction as any).title}
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                await leaveRoom();
+                router.push("/");
+              }}
             >
-              {(hostPrimaryAction as any).label}
+              退出してロビーへ
             </AppButton>
           </HStack>
-        )}
-        <Panel title="オプション">
-          <RoomOptionsEditor
-            value={room.options}
-            onChange={(v) => updateOptions(v)}
-            disabled={!isHost || room.status !== "waiting"}
-          />
-          {isHost && (
-            <Stack mt={3}>
-              <AppButton variant="outline" onClick={resetToWaiting}>
-                リセット
-              </AppButton>
-            </Stack>
+        </ScrollRegion>
+      }
+      hand={
+        <>
+          {room.status === "clue" && me && (
+            <Box flex={1} minW={0} display="flex" alignItems="center" gap={4}>
+              <SelfNumberCard value={me.number} draggableId={me.id} />
+              <Box>
+                <CluePanel roomId={roomId} me={me} label="連想" />
+              </Box>
+            </Box>
           )}
-        </Panel>
-        {/* TopicDisplay moved into UniversalMonitor to act as the main monitor */}
-      </Stack>
-
-      {/* center */}
-      <Box
-        gridArea="center"
-        overflowY="hidden"
-        minH={0}
-        display="flex"
-        flexDir="column"
-        gap={2}
-        role="region"
-        aria-label="共有ボード"
-        style={
-          {
-            WebkitOverflowScrolling: "touch",
-            overscrollBehavior: "contain",
-          } as any
-        }
-      >
-        {/* 中央は縦に: (1) 万能モニター(固定高さ) (2) カードボード (残りを埋める) */}
-        <Box flex="0 0 auto">
-          <UniversalMonitor
-            room={room}
-            players={players}
-            roomId={roomId}
-            isHost={isHost}
-          />
-        </Box>
-        <Box flex="1 1 auto" overflowY="auto">
-          <CentralCardBoard
-            roomId={roomId}
-            players={players}
-            orderList={room.order?.list || []}
-            meId={meId}
-            eligibleIds={eligibleIds}
-            roomStatus={room.status}
-            cluesReady={allCluesReady}
-            failed={!!room.order?.failed}
-            failedAt={room.order?.failedAt}
-            proposal={room.order?.proposal || []}
-            resolveMode={room.options?.resolveMode}
-          />
-        </Box>
-      </Box>
-
-      {/* right */}
-      <Box
-        gridArea="right"
-        overflowY="auto"
-        minH={0}
-        role="region"
-        aria-label="チャット"
-        display={{ base: "none", md: "block" }}
-        style={
-          {
-            WebkitOverflowScrolling: "touch",
-            overscrollBehavior: "contain",
-          } as any
-        }
-      >
-        <ChatPanel roomId={roomId} height="auto" />
-        <HStack mt={3}>
-          <AppButton
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              await leaveRoom();
-              router.push("/");
-            }}
-          >
-            退出してロビーへ
-          </AppButton>
-        </HStack>
-      </Box>
-
-      {/* hand (自分の操作列) */}
-      <Box
-        gridArea="hand"
-        borderTopWidth="1px"
-        borderColor="borderDefault"
-        py={2}
-        display="flex"
-        flexDir="row"
-        alignItems="center"
-        gap={4}
-        overflow="hidden"
-        minH={0}
-        role="region"
-        aria-label="自分の操作"
-      >
-        {/* 最低限の自分の数字と CluePanel のハイライトを縮約表示する余地: 今はフェーズに応じた簡易ボタンのみ */}
-        {room.status === "clue" && me && (
-          <Box flex={1} minW={0} display="flex" alignItems="center" gap={4}>
-            <Box
-              as="div"
-              draggable
-              onDragStart={(e: React.DragEvent) => {
-                try {
-                  e.dataTransfer.setData("text/plain", me.id);
-                } catch {}
-              }}
-              w="100px"
-              h="140px"
-              rounded="12px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              boxShadow="0 15px 35px rgba(255,107,53,0.3)"
-              color="#0F3460"
-              fontWeight={900}
-              fontSize="28px"
-              bgGradient="linear(145deg,#FF8A50,#FFD97A)"
-            >
-              {me.number ?? "?"}
-            </Box>
-            <Box>
-              <CluePanel roomId={roomId} me={me} label="連想" />
-            </Box>
-          </Box>
-        )}
-        {room.status === "playing" && (
-          <Text fontSize="sm" color="fgMuted">
-            下部の場パネルで「出す」を実行してください。
-          </Text>
-        )}
-        {/* finished のリセット等は HUD のホスト用ボタンで提供します（重複表示を避ける） */}
-      </Box>
-    </Box>
+          {room.status === "playing" && (
+            <Text fontSize="sm" color="fgMuted">
+              下部の場パネルで「出す」を実行してください。
+            </Text>
+          )}
+        </>
+      }
+    />
   );
 }
