@@ -1,5 +1,4 @@
 "use client";
-import PhaseHeader from "@/components/site/PhaseHeader";
 import dynamic from "next/dynamic";
 // dynamic imports (chunk split + 初期JS削減)
 const ChatPanel = dynamic(
@@ -360,7 +359,7 @@ export default function RoomPage() {
             totalMs={null}
             hostPrimary={showHostInHud ? hostPrimaryAction : null}
           />
-          <PhaseHeader phase={room.status as any} />
+          {/* HUD 内フェーズバッジに統一済み */}
         </>
       }
       left={

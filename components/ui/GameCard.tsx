@@ -47,13 +47,13 @@ export function GameCard({
             </Text>
           </Box>
           <Box css={styles.back}>
-            <Text fontSize="xs" color="rgba(0,0,0,0.55)" mb={1}>
+            <Text fontSize="xs" color="fgMuted" mb={1}>
               #{typeof index === "number" ? index + 1 : "?"}
             </Text>
             <Text fontWeight="900" fontSize="3xl" textAlign="center">
               {typeof number === "number" ? number : "?"}
             </Text>
-            <Text mt={2} fontSize="xs" color="rgba(0,0,0,0.6)">
+            <Text mt={2} fontSize="xs" color="fgMuted">
               {name ?? "(不明)"}
             </Text>
           </Box>

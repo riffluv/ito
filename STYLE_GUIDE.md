@@ -123,4 +123,78 @@ Avoid fixed heights; use min/max and flex.
 
 ---
 
-最終更新: 2025-08-24
+## 16. GameCard v2 デザイン指針 (2025-08)
+
+ゲーム内カード (gameCard slot recipe) の最新版仕様。AI / デザイナーが派生案を作る際はこの境界条件を守る。
+
+### バリアント / ステート軸
+
+1. displayVariant: `flip` | `flat`
+2. state: `default` | `success` | `fail`
+
+内部ロジックは `CentralCardBoard` が state を決定し、視覚は slotRecipe の compoundVariants で分岐。React 側で無理に className を増やさず token/variant で完結させる。
+
+### 共通原則
+
+- Text color: `fgDefault` か `fgMuted`。rgba 直書き禁止。
+- 背景: デフォルトは `panelSubBg` ベース。成功/失敗は過度な彩度でなく輝度差 + 多層 shadow。
+- 枠線: `borderDefault`。成功/失敗で色変更せず、光で示す (色覚多様性対応)。
+- 半径: radii.lg 固定 (変えたい場合は recipe variant を新設)。
+- 影レイヤ設計: 外側へ行くほど広く薄く。内側 (最初) は core glow。最大 3 レイヤ (success) / 2 レイヤ (fail) / 1 レイヤ (default)。
+
+### success (強い光)
+
+- 目的: 瞬時に成功集合を視認。
+- シャドウ構成例 (外側へ):
+	1. 0 0 0 1px 色: `teal.400` (コアエッジ) or semantic success ring
+	2. 0 0 8px 2px `teal.500` (soft core)
+	3. 0 0 24px 6px `teal.300` (ambient spread)
+- 背景: デフォルト背景 + subtle ティールグラデ。過度な純色塗りつぶし禁止。
+
+### fail (暗く + 簡素)
+
+- 目的: 情報は伝えつつノイズを下げる (成功を主役化)。
+- シャドウ: 2 レイヤまで。
+	1. 0 0 0 1px `red.600` (edge)
+	2. 0 0 12px 4px `red.700 / 40%` (soft glow) — 透明度で強度調整。
+- 背景: 一段暗い neutral グラデ + ごく薄い赤系ティント。テキストコントラスト比 >= 4.5:1 を維持。
+
+### default
+
+- 背景: `panelSubBg`。
+- シャドウ: 0〜1 レイヤ (sm)。インタラクションホバー時のみ +1 layer を検討 (未実装)。
+
+### flip vs flat
+
+| 差分          | flip                                | flat                              |
+| ------------- | ----------------------------------- | --------------------------------- |
+| 背面存在      | 有 (裏面は muted)                   | 無 (単面表示)                     |
+| デフォルト影  | より控えめ (動き + 読みやすさ優先) | やや強め (静的パネル性)           |
+| success 光強度| 中 (動作中眩しすぎ防止)            | 強 (最も視認させたい場面)         |
+| fail 暗さ     | flip は少し明るめ (可読性)         | flat は一段暗く背景退行          |
+
+### 禁止事項 / アンチパターン
+
+- success/fail を背景純色全面ベタ塗り。=> コントラスト低下と状態過剰強調。
+- success/fail で文字色を白/黒強制。=> token 逸脱。token が十分な readable 配色を提供。
+- 影 4+ レイヤ。=> パフォーマンス低下 / 視覚ノイズ。
+- inline style で色調整。=> recipe へ還元。
+
+### 拡張のしかた
+
+新たな状態 (例: `highlight`, `locked`) が必要なら `state` variant に追加し、compoundVariants を最小追加。既存 success/fail のシャドウ数より多くしない。必要な tokens が無ければ semanticTokens に追加し typegen を実行。
+
+### アクセシビリティ
+
+- success/fail は彩度でなく光/暗さ差を主手段とし、色相変化は補助。
+- focus-visible: outline と shadow を併用 (現時点未実装 TODO)。
+
+### 今後の TODO
+
+- Hover / Focus レイヤ差分設計
+- Reduced motion 時の flip アニメ最適化
+- Visual regression (Storybook + Chromatic) 差分スナップ
+
+---
+
+最終更新: 2025-08-24 (GameCard v2 追加)

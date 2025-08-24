@@ -38,7 +38,16 @@ export function Hud({
   }[phase];
 
   return (
-    <Box layerStyle="hud" position="sticky" top={0} zIndex={10} px={3} py={2}>
+    <Box
+      layerStyle="hud"
+      position="sticky"
+      top={0}
+      zIndex={10}
+      px={3}
+      py={2}
+      aria-label="現在のゲームフェーズと進行状況"
+      role="region"
+    >
       <HStack>
         <HStack minW={0} gap={3}>
           <Badge variant="subtle" colorPalette="gray" borderRadius="md" px={2}>
