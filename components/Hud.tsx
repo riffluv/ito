@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Box, Button, HStack, Progress, Spacer, Text } from "@chakra-ui/react";
+import { Badge, Box, HStack, Progress, Spacer } from "@chakra-ui/react";
 
 export type HudProps = {
   roomName: string;
@@ -61,20 +61,7 @@ export function Hud({
           )}
         </Box>
         <Spacer />
-        {hostPrimary ? (
-          <Button
-            colorPalette="orange"
-            onClick={hostPrimary.onClick}
-            disabled={hostPrimary.disabled}
-            title={hostPrimary.title}
-          >
-            {hostPrimary.label}
-          </Button>
-        ) : (
-          <Button variant="outline" disabled opacity={0.6}>
-            操作不可
-          </Button>
-        )}
+        {/* hostPrimary controls intentionally removed to simplify header UI */}
       </HStack>
     </Box>
   );
