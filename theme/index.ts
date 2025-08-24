@@ -388,13 +388,15 @@ const config = defineConfig({
               front: {
                 bgGradient: "linear(135deg,#1F2732,#1A202C)",
                 borderColor: "teal.300",
-                boxShadow: "0 0 0 2px rgba(56,178,172,0.65), 0 0 22px -4px rgba(56,178,172,0.75), 0 0 60px -10px rgba(56,178,172,0.55)",
+                boxShadow:
+                  "0 0 0 2px rgba(56,178,172,0.65), 0 0 22px -4px rgba(56,178,172,0.75), 0 0 60px -10px rgba(56,178,172,0.55)",
                 color: "fgDefault",
               },
               back: {
                 bgGradient: "linear(135deg,#2C7A7B,#38B2AC)",
                 borderColor: "teal.300",
-                boxShadow: "0 0 0 2px rgba(56,178,172,0.75), 0 0 28px -6px rgba(56,178,172,0.85), 0 0 70px -12px rgba(56,178,172,0.6)",
+                boxShadow:
+                  "0 0 0 2px rgba(56,178,172,0.75), 0 0 28px -6px rgba(56,178,172,0.85), 0 0 70px -12px rgba(56,178,172,0.6)",
                 color: "fgDefault",
               },
             },
@@ -406,13 +408,15 @@ const config = defineConfig({
               front: {
                 bgGradient: "linear(135deg,#321F1F,#3A2424)",
                 borderColor: "red.300",
-                boxShadow: "0 0 0 2px rgba(255,80,80,0.55), 0 0 22px -4px rgba(255,80,80,0.7)",
+                boxShadow:
+                  "0 0 0 2px rgba(255,80,80,0.55), 0 0 22px -4px rgba(255,80,80,0.7)",
                 color: "fgDefault",
               },
               back: {
                 bgGradient: "linear(135deg,#5B2525,#E53E3E)",
                 borderColor: "red.300",
-                boxShadow: "0 0 0 2px rgba(255,80,80,0.65), 0 0 28px -6px rgba(255,80,80,0.75)",
+                boxShadow:
+                  "0 0 0 2px rgba(255,80,80,0.65), 0 0 28px -6px rgba(255,80,80,0.75)",
                 color: "fgDefault",
               },
             },
