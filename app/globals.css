@@ -1,4 +1,8 @@
-/* 2025 viewport-safe full-height layout */
+/* ================================================================
+  Global Base (Minimal) - 2025
+  Purpose: Reset + viewport + shared micro animations only.
+  Policy: Layout sizing & responsive logic live in React/Chakra components.
+  ================================================================ */
 html,
 body,
 #__next {
@@ -10,7 +14,7 @@ body {
 }
 body {
   min-height: 100dvh; /* dynamic viewport height (mobile safe) */
-  overflow: hidden; /* prevent browser scroll; use internal scrolls */
+  overflow: hidden; /* limit scrolling to internal ScrollRegion components */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* 背景色・文字色はChakra Themeのglobal stylesに委譲 */
@@ -30,7 +34,8 @@ body {
 .stage-bg .particles {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       2px 2px at 20% 30%,
       rgba(255, 255, 255, 0.08),
       transparent 60%
@@ -62,22 +67,35 @@ body {
 /* micro animations: motion-safe only */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   .animate-fadeInUp {
     animation: fadeInUp 260ms ease-out both;
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
   .animate-pulse {
     animation: pulse 1.5s ease-in-out infinite;
   }
 }
 
-/* room-grid: 以前は container query で columns/areas を !important 上書きしていたが
-   Chakra の breakpoint (md) props と競合し初期描画で再レイアウト→高さずれを誘発したため削除。
-   レスポンシブ制御は React コンポーネント (AppShell) の props に統一。 */
+/* Layout governance note:
+  room-grid container queries removed (competed with Chakra breakpoints).
+  All structural sizing handled by AppShell + layout.ts constants.
+  DPI / Zoom: Auto rows + minH 100dvh reduces overflow at 125%-150% Windows scale.
+*/

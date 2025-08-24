@@ -1,0 +1,20 @@
+{
+  "extends": ["stylelint-config-standard", "stylelint-config-recess-order"],
+  "ignoreFiles": ["**/node_modules/**", "**/dist/**"],
+  "rules": {
+    "color-function-notation": null,
+    "alpha-value-notation": null,
+    "selector-class-pattern": null,
+    "declaration-block-no-redundant-longhand-properties": true,
+    "font-weight-notation": "numeric",
+    "keyframes-name-pattern": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "declaration-block-single-line-max-declarations": 2,
+    "selector-id-pattern": null,
+    "value-keyword-case": null,
+    "order/properties-order": null,
+    "no-descending-specificity": null
+  }
+}
