@@ -21,7 +21,14 @@ export default function UniversalMonitor({
   if (!room) return null;
 
   return (
-    <Panel minH={300} display="flex" flexDir="column" justifyContent="flex-start" p={0} overflow="hidden">
+    <Panel
+      minH={300}
+      display="flex"
+      flexDir="column"
+      justifyContent="flex-start"
+      p={0}
+      overflow="hidden"
+    >
       {/* top banner */}
       <Box
         bgGradient="linear(90deg,#ff9a58,#ffcf67)"
@@ -31,7 +38,7 @@ export default function UniversalMonitor({
         roundedTopRight={8}
         color="#0f1724"
         fontWeight={700}
-        fontSize="14px"
+        fontSize="sm"
       >
         ラウンド {room?.round ?? 1} | カテゴリ:{" "}
         {(room as any)?.topicBox ?? "未選択"}
@@ -54,8 +61,8 @@ export default function UniversalMonitor({
               {room.topic
                 ? `お題：${room.topic}`
                 : room.status === "waiting"
-                ? "ゲーム開始後にお題を選択できます"
-                : "お題が未設定です"}
+                  ? "ゲーム開始後にお題を選択できます"
+                  : "お題が未設定です"}
             </Text>
             <Text fontSize="sm" color="fgMuted" mt={2}>
               {room.status === "clue" &&

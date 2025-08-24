@@ -28,16 +28,16 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w="100px"
-      h="140px"
-      rounded="12px"
+      w={{ base: "88px", md: "96px" }}
+      h={{ base: "124px", md: "136px" }}
+      rounded="lg"
       display="flex"
       alignItems="center"
       justifyContent="center"
       boxShadow="selfNumber"
       color="#0F3460"
       fontWeight={900}
-      fontSize="28px"
+      fontSize={{ base: "2xl", md: "3xl" }}
       bgGradient="playerNumber"
       userSelect="none"
       aria-label="自分の数字カード"
