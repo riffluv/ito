@@ -15,6 +15,8 @@ export function CentralCardBoard({
   roomStatus,
   proposal,
   cluesReady,
+  failed,
+  failedAt,
 }: {
   roomId: string;
   players: (PlayerDoc & { id: string })[];
@@ -24,6 +26,8 @@ export function CentralCardBoard({
   roomStatus?: string;
   proposal?: string[];
   cluesReady?: boolean;
+  failed?: boolean;
+  failedAt?: number | null;
 }) {
   const map = new Map(players.map((p) => [p.id, p]));
   const [pending, setPending] = useState<string[]>([]);
@@ -100,6 +104,11 @@ export function CentralCardBoard({
       pending.includes(id) ||
       (proposal || []).includes(id);
     const showNumber = typeof number === "number" && isPlaced;
+    const violation =
+      failed &&
+      typeof failedAt === "number" &&
+      idx !== undefined &&
+      failedAt === idx + 1; // 1-based failedAt
     return (
       <Box
         key={id}
@@ -108,14 +117,17 @@ export function CentralCardBoard({
           minWidth: 140,
           minHeight: 160,
           borderRadius: 12,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
+          background: violation
+            ? "linear-gradient(180deg, rgba(200,40,40,0.35), rgba(0,0,0,0.1))"
+            : "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02))",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           border: "1px solid rgba(255,255,255,0.04)",
-          boxShadow: "inset 0 -6px 18px rgba(0,0,0,0.2)",
+          boxShadow: violation
+            ? "0 0 0 2px rgba(255,80,80,0.6), inset 0 -6px 18px rgba(0,0,0,0.4)"
+            : "inset 0 -6px 18px rgba(0,0,0,0.2)",
         }}
       >
         {typeof idx === "number" && <Text fontSize="sm">#{idx + 1}</Text>}
@@ -125,6 +137,11 @@ export function CentralCardBoard({
         <Text mt={2} fontSize="sm" color="fgMuted">
           {p?.name ?? "(不明)"}
         </Text>
+        {violation && (
+          <Text mt={2} fontSize="xs" color="red.300" fontWeight="bold">
+            ← ここで失敗！
+          </Text>
+        )}
       </Box>
     );
   };
@@ -145,6 +162,27 @@ export function CentralCardBoard({
             🎯 カードボード（出した順）
           </div>
         </div>
+        {failed && (
+          <div
+            style={{
+              position: "absolute",
+              top: -10,
+              right: 0,
+              transform: "translateY(-100%)",
+              background:
+                "linear-gradient(90deg, rgba(255,70,70,0.9), rgba(120,0,0,0.9))",
+              padding: "6px 14px",
+              borderRadius: 12,
+              fontWeight: 800,
+              color: "#fff",
+              letterSpacing: 1,
+              boxShadow: "0 4px 18px -4px rgba(255,0,0,0.4)",
+              zIndex: 10,
+            }}
+          >
+            失敗！昇順が崩れました（#{failedAt} 枚目）
+          </div>
+        )}
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
         <div
@@ -211,6 +249,14 @@ export function CentralCardBoard({
                 .filter((id) => !(proposal || []).includes(id))
                 .map((id) => renderCard(id))
             : null}
+          {/* 失敗後も継続可能: 下部に説明 */}
+          {failed && (
+            <div style={{ flexBasis: "100%" }}>
+              <Text fontSize="sm" color="red.300">
+                失敗後も全員のカードが出揃うまで並べ続けます。
+              </Text>
+            </div>
+          )}
         </div>
       </div>
     </Panel>

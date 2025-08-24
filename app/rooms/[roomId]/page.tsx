@@ -455,6 +455,8 @@ export default function RoomPage() {
             eligibleIds={eligibleIds}
             roomStatus={room.status}
             cluesReady={allCluesReady}
+            failed={!!room.order?.failed}
+            failedAt={room.order?.failedAt}
           />
         </div>
       </Box>
