@@ -107,6 +107,7 @@ export function AppShell({
           display="flex"
           flexDir="row"
           alignItems="center"
+          justifyContent="center" /* 中央揃え: 手札カード + 入力フォームを中央配置 */
           gap={4}
           overflow="hidden"
           minH={0}
