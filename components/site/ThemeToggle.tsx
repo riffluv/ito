@@ -1,6 +1,6 @@
 "use client";
 import { notify } from "@/components/ui/notify";
-import { IconButton } from "@chakra-ui/react";
+import { IconButton, VisuallyHidden } from "@chakra-ui/react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
@@ -54,19 +54,8 @@ export default function ThemeToggle() {
       >
         {icon}
       </IconButton>
-      {/* aria-live fallback for screen readers */}
-      <div
-        aria-live="polite"
-        style={{
-          position: "absolute",
-          left: -9999,
-          width: 1,
-          height: 1,
-          overflow: "hidden",
-        }}
-      >
-        {label}
-      </div>
+      {/* aria-live for SRs without visual noise */}
+      <VisuallyHidden aria-live="polite">{label}</VisuallyHidden>
     </>
   );
 }

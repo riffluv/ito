@@ -3,6 +3,7 @@ import {
   Toaster as ChakraToaster,
   Toast,
   createToaster,
+  Box,
 } from "@chakra-ui/react";
 
 // Chakra UI v3 official toaster instance.
@@ -34,10 +35,14 @@ export function Toaster() {
           maxW={{ base: "calc(100vw - 32px)", md: "360px" }}
         >
           <Toast.Indicator mr="2" />
-          <div style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+          <div>
             {toast.title ? <Toast.Title>{toast.title}</Toast.Title> : null}
             {toast.description ? (
-              <Toast.Description>{toast.description}</Toast.Description>
+              <Toast.Description>
+                <Box whiteSpace="normal" wordBreak="break-word">
+                  {toast.description}
+                </Box>
+              </Toast.Description>
             ) : null}
           </div>
           <Toast.CloseTrigger />
