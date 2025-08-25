@@ -15,7 +15,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <Box
               bg="canvasBg"
               color="fgDefault"
-              minH="100dvh"
+              minH="100vh"
               _dark={{ bg: "canvasBg", color: "fgDefault" }}
             >
               {children}

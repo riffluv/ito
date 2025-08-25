@@ -105,10 +105,10 @@ export default function LobbyPage() {
       const ms = la?.toMillis
         ? la.toMillis()
         : la instanceof Date
-        ? la.getTime()
-        : typeof la === "number"
-        ? la
-        : 0;
+          ? la.getTime()
+          : typeof la === "number"
+            ? la
+            : 0;
       const recent = ms > 0 && now - ms <= grace;
       return active > 0 || recent;
     });
@@ -176,7 +176,7 @@ export default function LobbyPage() {
           alignItems="start"
         >
           <GridItem minW={0}>
-            <ScrollArea.Root style={{ height: "calc(100dvh - 240px)" }}>
+            <ScrollArea.Root style={{ height: "clamp(400px, 60vh, 600px)" }}>
               <ScrollArea.Viewport>
                 <ScrollArea.Content>
                   {!firebaseEnabled ? (
