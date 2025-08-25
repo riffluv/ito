@@ -313,7 +313,8 @@ export function CentralCardBoard({
         {/* 統合演出を下部に移動済み - 中央オーバーレイは除去 */}
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
-        <Box flex="1" display="flex" flexDir="column" minH={0}>
+        {/* 🎯 カード配置エリア - 必要最小限の高さに最適化 */}
+        <Box flex="0 0 auto" h="160px" display="flex" flexDir="column">
           <BoardArea
             onDragOver={(e) => {
               e.preventDefault();
@@ -393,23 +394,23 @@ export function CentralCardBoard({
                   .filter((id) => !(proposal || []).includes(id))
                   .map((id) => renderCard(id))
               : null}
-            {/* 失敗後も継続可能: 下部に説明 */}
-            {failed && (
-              <Box flexBasis="100%">
-                <Text fontSize="sm" color="red.300">
-                  失敗後も全員のカードが出揃うまで並べ続けます。
-                </Text>
-              </Box>
-            )}
           </BoardArea>
+        </Box>
 
-          {/* 🎉 カード下部に自然配置の成功/失敗演出 */}
+        {/* 🎯 演出専用エリア - 固定高さでCLS回避 */}
+        <Box
+          flex="0 0 auto"
+          h="120px"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          mt={3}
+        >
           {roomStatus === "finished" && (
-            <Box mt={4} textAlign="center" flex="0 0 auto">
+            <>
               {failed ? (
-                // 💥 失敗演出 - カード下部配置
+                // 💥 失敗演出 - elevation-basedデザイン
                 <Box
-                  bgGradient="linear(135deg, rgba(255,70,70,0.95), rgba(180,0,0,0.95))"
                   px={6}
                   py={4}
                   rounded="xl"
@@ -420,6 +421,7 @@ export function CentralCardBoard({
                   boxShadow={
                     "0 0 40px -8px rgba(255,70,70,0.8), 0 0 20px -4px rgba(255,70,70,0.9), 0 10px 30px -8px rgba(0,0,0,0.3)"
                   }
+                  bg="rgba(255,70,70,0.95)"
                   css={{
                     animation: "shake 0.6s ease-in-out",
                     "@keyframes shake": {
@@ -441,7 +443,7 @@ export function CentralCardBoard({
                   </Text>
                 </Box>
               ) : (
-                // 🎉 成功演出 - クリーンな elevation-based デザイン
+                // 🎉 成功演出 - elevation-basedデザイン
                 <Box
                   px={8}
                   py={5}
@@ -481,7 +483,7 @@ export function CentralCardBoard({
                   </Text>
                 </Box>
               )}
-            </Box>
+            </>
           )}
         </Box>
       </Box>
