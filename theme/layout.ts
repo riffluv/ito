@@ -17,7 +17,7 @@ export const DPI_ADAPTIVE_LAYOUT = {
   HEADER_HEIGHT_FLUID: "clamp(48px, 4vh, 64px)",
   SIDEBAR_WIDTH_FLUID: "clamp(240px, 22vw, 300px)",
   RIGHT_PANEL_WIDTH_FLUID: "clamp(280px, 26vw, 360px)",
-  HAND_MIN_HEIGHT_FLUID: "clamp(80px, 8vh, 120px)", // 手札エリア高さをさらに削減
+  HAND_MIN_HEIGHT_FLUID: "clamp(70px, 6vh, 100px)", // 手札エリア高さを最小化
 
   // 固定値 (後方互換性)
   HEADER_HEIGHT: 60,

@@ -36,11 +36,7 @@
   :root {
     --adaptive-scale: 0.92; /* 125%DPI時の微調整 */
     --game-header-height: clamp(44px, 3.5vh, 58px);
-    --game-hand-min-height: clamp(
-      80px,
-      8vh,
-      120px
-    ); /* 手札エリアをさらに縮小 */
+    --game-hand-min-height: clamp(70px, 6vh, 100px); /* 手札エリアを最小化 */
   }
 
   .crisp-edges {

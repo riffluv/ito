@@ -28,8 +28,8 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w={{ base: "88px", md: "96px" }}
-      h={{ base: "124px", md: "136px" }}
+      w={{ base: "80px", md: "88px" }}
+      h={{ base: "110px", md: "120px" }}
       rounded="lg"
       display="flex"
       alignItems="center"
