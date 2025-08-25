@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import {
   collection,
@@ -107,7 +108,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           py={2}
                           borderRadius="xl"
                           bg={isMe ? "accentSubtle" : "panelSubBg"}
-                          borderWidth="1px"
+                          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
                           borderColor="borderDefault"
                           boxShadow="xs"
                         >
@@ -127,7 +128,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
       {/* 入力フォーム: 固定高さ */}
       <Box
         flex="0 0 auto"
-        borderTopWidth="1px"
+        borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         p={3}
         bg="panelBg"

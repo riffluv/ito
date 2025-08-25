@@ -8,6 +8,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 type Props = {
   search: string;
@@ -26,7 +27,7 @@ export default function LobbyLeftRail({
 }: Props) {
   return (
     <Box as="aside" position="sticky" top="80px">
-      <Box borderWidth="1px" rounded="xl" p={4} bg="panelBg">
+      <Box borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH} rounded="xl" p={4} bg="panelBg">
         <Text fontWeight="bold" mb={2}>
           クイックアクション
         </Text>
@@ -35,7 +36,7 @@ export default function LobbyLeftRail({
         </AppButton>
       </Box>
 
-      <Box borderWidth="1px" rounded="xl" p={4} mt={4} bg="panelBg">
+      <Box borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH} rounded="xl" p={4} mt={4} bg="panelBg">
         <Text fontWeight="bold" mb={2}>
           ルームフィルター
         </Text>

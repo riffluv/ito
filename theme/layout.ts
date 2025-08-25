@@ -45,6 +45,9 @@ export const UNIFIED_LAYOUT = {
 
   // ボード要素（DPI適応）
   BOARD_MIN_HEIGHT: "clamp(240px, 28vh, 320px)",
+  
+  // モニター要素（コンパクト化対応）
+  MONITOR_MIN_HEIGHT: "clamp(160px, 18vh, 200px)", // 180px固定値の代替
 
   // コンポーネント間スペーシング（統一制御）
   SPACING: {
@@ -62,7 +65,7 @@ export const UNIFIED_LAYOUT = {
 
 // === 後方互換性サポート ===
 
-// DPI_ADAPTIVE_LAYOUT (既存コード用)
+// DPI_ADAPTIVE_LAYOUT (⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください)
 export const DPI_ADAPTIVE_LAYOUT = {
   HEADER_HEIGHT_FLUID: UNIFIED_LAYOUT.HEADER_HEIGHT,
   SIDEBAR_WIDTH_FLUID: UNIFIED_LAYOUT.SIDEBAR_WIDTH,
@@ -98,6 +101,7 @@ export const DPI_ADAPTIVE_LAYOUT = {
 } as const;
 
 export const PREDICTABLE_LAYOUT = {
+  // ⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください
   // 固定サイズ (px)
   HEADER_HEIGHT: 96, // ヘッダー固定高さ（黄金比対応）
   SIDEBAR_WIDTH: 280, // 左サイドバー幅
@@ -135,7 +139,7 @@ export const px = (value: number) => `${value}px`;
 export const spacing = (size: keyof typeof PREDICTABLE_LAYOUT.SPACING) =>
   `${PREDICTABLE_LAYOUT.SPACING[size]}px`;
 
-// 後方互換性のため既存の LAYOUT も維持
+// 後方互換性のため既存の LAYOUT も維持 (⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください)
 export const LAYOUT = {
   HEADER_MIN_HEIGHT: PREDICTABLE_LAYOUT.HEADER_HEIGHT,
   SIDEBAR_WIDTH: PREDICTABLE_LAYOUT.SIDEBAR_WIDTH,
