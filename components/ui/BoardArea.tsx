@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
 
 export type BoardAreaProps = BoxProps & {
@@ -11,19 +12,20 @@ export default function BoardArea({
   ...rest
 }: BoardAreaProps) {
   return (
-    <Box position="relative">
+    <Box position="relative" h="100%" display="flex" flexDir="column">
       <Box
         role="region"
         aria-label="カード配置エリア"
         position="relative"
-        minH="300px" /* TODO: 統一システムに移行 */
-        borderWidth="2px"
+        flex="1" /* 利用可能な高さをフル活用 */
+        minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} /* 最低限の高さを保証 */
+        borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderStyle="dashed"
         borderColor={isOver ? "accent" : "whiteAlpha.200"}
         rounded="lg"
-        p={4}
+        p={4} /* Chakra UIのスペーシングトークンを使用 */
         display="flex"
-        gap={4}
+        gap={4} /* 統一されたカード間スペーシング */
         alignItems="center"
         flexWrap="wrap"
         justifyContent="center" // 単数枚時も中央に配置
