@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
@@ -17,8 +18,19 @@ export default function Header() {
       borderColor="borderDefault"
       bg="panelBg"
       style={{ backdropFilter: "saturate(180%) blur(8px)" }}
+      h={UNIFIED_LAYOUT.HEADER_HEIGHT}
+      display="flex"
+      alignItems="center"
+      css={{
+        "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
+        // 125% DPI最適化
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
+          height: UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
+        },
+      }}
     >
-      <Container maxW="6xl" py={3}>
+      <Container maxW="6xl" px={4}>
         <Flex align="center" justify="space-between">
           <HStack gap="3">
             <Box

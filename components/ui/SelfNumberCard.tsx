@@ -1,5 +1,4 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 
 export interface SelfNumberCardProps {
