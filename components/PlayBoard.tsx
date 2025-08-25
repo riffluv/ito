@@ -4,6 +4,7 @@ import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
 import { playCard } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
@@ -91,9 +92,9 @@ export function PlayBoard({
                   key={p.id}
                   justify="space-between"
                   p={2}
-                  borderWidth="1px"
                   rounded="md"
-                  bg={failed && failedAt === idx + 1 ? "red.900" : undefined}
+                  bg={failed && failedAt === idx + 1 ? "red.900" : "panelSubBg"}
+                  boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                 >
                   <Text>
                     #{idx + 1} {p.name}
@@ -118,8 +119,9 @@ export function PlayBoard({
                   key={p.id}
                   justify="space-between"
                   p={2}
-                  borderWidth="1px"
                   rounded="md"
+                  bg="panelSubBg"
+                  boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                 >
                   <Text>{p.name}</Text>
                   {p.id === meId ? (

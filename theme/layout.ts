@@ -40,8 +40,24 @@ export const UNIFIED_LAYOUT = {
     MIN_HEIGHT: "clamp(36px, 3.5vh, 48px)",
   },
 
-  // ボーダー（統一）
-  BORDER_WIDTH: "1px",
+  // 🔄 BORDER MANAGEMENT SYSTEM - コンテキストアウェア設計
+  // 競合リスクを回避し、将来の拡張性を保証
+  BORDER: {
+    WIDTH: {
+      NONE: "0px", // 完全borderless
+      THIN: "1px", // 標準的なborder
+      MEDIUM: "2px", // 強調用border
+      THICK: "3px", // 装飾用border
+    },
+    // コンテキスト別戦略
+    CONTEXT: {
+      LAYOUT: "0px", // レイアウト分離は elevation 优先
+      INTERACTIVE: "0px", // ホバー時のみ動的表示
+      SEMANTIC: "1px", // 意味的分離がUX必須
+      DECORATIVE: "1px", // 装飾的要素
+      FORM: "1px", // フォーム要素（UX上必須）
+    },
+  },
 
   // ボード要素（DPI適応）
   BOARD_MIN_HEIGHT: "clamp(240px, 28vh, 320px)",
@@ -66,6 +82,78 @@ export const UNIFIED_LAYOUT = {
     HEADER: 100,
     MODAL: 1000,
     TOAST: 2000,
+  },
+
+  // 🎮 ELEVATION SYSTEM - モダンゲームUI 2025
+  // borderの代替手法: shadow + background + spacing
+  ELEVATION: {
+    // カード階層
+    CARD: {
+      FLAT: "none", // borderlessカード
+      RAISED: "0 1px 3px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)", // 軽い浮遊感
+      FLOATING:
+        "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)", // ホバー時
+      ELEVATED:
+        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)", // モーダル要素
+    },
+    // パネル階層
+    PANEL: {
+      BASE: "none", // 基本パネルはborderless
+      SUBTLE: "0 1px 2px 0 rgba(0,0,0,0.05)", // 微細なshadow
+      DISTINCT: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)", // 明確な分離
+    },
+    // ゲーム要素
+    GAME: {
+      HAND_CARD:
+        "0 2px 8px -2px rgba(0,0,0,0.12), 0 4px 12px -4px rgba(0,0,0,0.08)", // 手札カード
+      BOARD_CARD: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)", // 場のカード
+      ACTIVE_AREA: "inset 0 1px 2px 0 rgba(0,0,0,0.06)", // アクティブエリア（内側shadow）
+    },
+  },
+
+  // 🎨 SURFACE SYSTEM - 背景による領域区別
+  SURFACE: {
+    // 基本階層
+    BASE: "bg.canvas", // アプリ背景
+    PANEL: "bg.panel", // パネル背景
+    PANEL_SUBTLE: "bg.panel/50", // 微細なパネル背景
+    ELEVATED: "bg.elevated", // 浮遊要素背景
+    // ゲーム専用
+    GAME_AREA: "bg.panel", // ゲームエリア
+    HAND_AREA: "bg.panel/30", // 手札エリア
+    BOARD_AREA: "transparent", // カードボード（背景なし）
+  },
+
+  // 🔄 LEGACY COMPATIBILITY - 段階的移行サポート
+  // @deprecated Use BORDER.CONTEXT instead
+  BORDER_WIDTH: "1px", // 既存コードとの互換性維持
+
+  // 📋 COMPONENT BORDER STRATEGY - コンポーネント別戦略
+  // 将来のborder要求に対して予測可能な対応を保証
+  COMPONENT_BORDERS: {
+    // レイアウトコンポーネント: elevation 優先
+    LAYOUT: {
+      HEADER: "LAYOUT", // 0px, elevation使用
+      SIDEBAR: "LAYOUT", // 0px, elevation使用
+      FOOTER: "LAYOUT", // 0px, elevation使用
+      PANELS: "LAYOUT", // 0px, elevation使用
+    },
+    // ゲーム要素: コンテキスト別
+    GAME: {
+      CARD_DEFAULT: "INTERACTIVE", // 0px, ホバー時のみ
+      CARD_SELECTED: "SEMANTIC", // 1px, 選択状態表示
+      BOARD_AREA: "INTERACTIVE", // 0px, ドロップ時のみ
+      CHAT_MESSAGE: "LAYOUT", // 0px, elevation使用
+    },
+    // UI要素: UX必須は保持
+    FORM: {
+      INPUT: "FORM", // 1px, UX上必須
+      BUTTON: "INTERACTIVE", // 0px, ホバー時のみ
+      SELECT: "FORM", // 1px, UX上必須
+    },
+    // 特殊ケース
+    TOAST: "SEMANTIC", // 1px, 通知の明確化
+    MODAL: "SEMANTIC", // 1px, モーダル境界
   },
 
   // DPIスケール検出
@@ -180,6 +268,48 @@ export type UnifiedLayoutConstants = typeof UNIFIED_LAYOUT;
 export const getLayoutValue = <T extends keyof UnifiedLayoutConstants>(
   key: T
 ): UnifiedLayoutConstants[T] => UNIFIED_LAYOUT[key];
+
+// 🎯 Context-Aware Border Management
+type BorderContext = keyof typeof UNIFIED_LAYOUT.BORDER.CONTEXT;
+type ComponentBorderKey =
+  | keyof typeof UNIFIED_LAYOUT.COMPONENT_BORDERS.LAYOUT
+  | keyof typeof UNIFIED_LAYOUT.COMPONENT_BORDERS.GAME
+  | keyof typeof UNIFIED_LAYOUT.COMPONENT_BORDERS.FORM;
+
+/**
+ * コンポーネント用のborderWidth取得
+ * 設計意図を明確にし、将来の変更に対応
+ */
+export const getBorderWidth = (context: BorderContext): string => {
+  return UNIFIED_LAYOUT.BORDER.CONTEXT[context];
+};
+
+/**
+ * 動的borderWidth取得（条件付きborder用）
+ * 例: ドラッグオーバー時、ホバー時、選択時
+ */
+export const getDynamicBorder = ({
+  isActive,
+  activeContext,
+  defaultContext = "LAYOUT",
+}: {
+  isActive: boolean;
+  activeContext: BorderContext;
+  defaultContext?: BorderContext;
+}): string => {
+  return isActive
+    ? getBorderWidth(activeContext)
+    : getBorderWidth(defaultContext);
+};
+
+/**
+ * レガシーBORDER_WIDTHとの互換性維持
+ * 段階的移行をサポート
+ */
+export const getLegacyBorderWidth = (): string => {
+  console.warn("⚠️ BORDER_WIDTH is deprecated. Use getBorderWidth() instead.");
+  return UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+};
 
 // DPIスケール対応ヘルパー
 export const getDpiValue = <T extends keyof typeof UNIFIED_LAYOUT.DPI_125>(

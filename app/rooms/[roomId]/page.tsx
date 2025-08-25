@@ -440,21 +440,18 @@ export default function RoomPage() {
 
             {/* 🎮 ゲーム制御セクション - 下部・固定（レイアウトシフト防止） */}
             {isHost && (
-              <Box 
-                flex="0 0 auto"
-                p={4}
-                bg="panelBg"
-              >
-                <Panel 
-                  title="🎮 ゲーム制御" 
-                  variant="accent"
-                  elevated={true}
-                >
+              <Box flex="0 0 auto" p={4} bg="panelBg">
+                <Panel title="🎮 ゲーム制御" variant="accent" elevated={true}>
                   {/* 固定高さコンテナでレイアウトシフトを防止 */}
-                  <Box minH="120px" display="flex" flexDir="column" justifyContent="center">
+                  <Box
+                    minH="120px"
+                    display="flex"
+                    flexDir="column"
+                    justifyContent="center"
+                  >
                     <Stack gap={3}>
                       {/* メインアクションボタン（開始・もう一度） */}
-                      {(!showHostInHud && hostPrimaryAction) && (
+                      {!showHostInHud && hostPrimaryAction && (
                         <AppButton
                           w="100%"
                           colorPalette="orange"
@@ -466,7 +463,7 @@ export default function RoomPage() {
                           {(hostPrimaryAction as any).label}
                         </AppButton>
                       )}
-                      
+
                       {/* リセットボタン - 常に表示で一貫性維持 */}
                       <AppButton
                         variant="outline"
@@ -521,12 +518,7 @@ export default function RoomPage() {
             </Box>
 
             {/* 退出ボタン: 固定位置 */}
-            <Box
-              flex="0 0 auto"
-              p={3}
-              borderTopWidth="1px"
-              borderColor="borderDefault"
-            >
+            <Box flex="0 0 auto" p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
               <AppButton
                 size="sm"
                 variant="ghost"
@@ -589,13 +581,12 @@ export default function RoomPage() {
 
                   {/* 🎮 ホスト操作: 一括判定ボタン */}
                   {isHost && room.options?.resolveMode === "sort-submit" && (
-                    <Box 
-                      px={3} 
-                      py={2} 
-                      borderLeftWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-                      borderColor="borderDefault"
-                      bg="accentSubtle"
+                    <Box
+                      px={3}
+                      py={2}
+                      bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
                       rounded="md"
+                      boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
                     >
                       <Button
                         colorPalette="teal"
@@ -612,7 +603,9 @@ export default function RoomPage() {
                             return;
                           }
                           const assigned = players
-                            .filter((p) => typeof (p as any).number === "number")
+                            .filter(
+                              (p) => typeof (p as any).number === "number"
+                            )
                             .map((p) => p.id);
                           if (assigned.length !== proposal.length) {
                             notify({
@@ -623,7 +616,10 @@ export default function RoomPage() {
                           }
                           try {
                             await submitSortedOrder(roomId, proposal);
-                            notify({ title: "一括判定を実行", type: "success" });
+                            notify({
+                              title: "一括判定を実行",
+                              type: "success",
+                            });
                           } catch (err: any) {
                             notify({
                               title: "一括判定失敗",

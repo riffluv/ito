@@ -3,7 +3,16 @@ import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
 import { updateClue1 } from "@/lib/firebase/players";
 import type { PlayerDoc } from "@/lib/types";
-import { Button, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
+import {
+  Box,
+  Button,
+  Heading,
+  HStack,
+  Input,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 
 export function CluePanel({
@@ -34,17 +43,14 @@ export function CluePanel({
   return (
     <Panel title={label}>
       <Stack gap={3}>
-        <div
-          style={
-            {
-              padding: 12,
-              borderWidth: 1,
-              borderRadius: 8,
-              background: "var(--chakra-colors-panelSubBg)",
-              userSelect: "none",
-            } as any
-          }
+        <Box
+          p={3}
+          borderRadius="md"
+          bg="panelSubBg"
+          userSelect="none"
           draggable={true}
+          boxShadow={UNIFIED_LAYOUT.ELEVATION.GAME.HAND_CARD}
+          cursor="move"
           onDragStart={(e: React.DragEvent) => {
             try {
               e.dataTransfer.setData("text/plain", me.id);
@@ -73,7 +79,7 @@ export function CluePanel({
           <Heading size="lg" color="yellow.300">
             {me.number ?? "?"}
           </Heading>
-        </div>
+        </Box>
         <HStack>
           <Input
             placeholder={`${label}（いつでも変更可）`}

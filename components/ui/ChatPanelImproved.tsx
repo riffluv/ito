@@ -108,9 +108,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           py={2}
                           borderRadius="xl"
                           bg={isMe ? "accentSubtle" : "panelSubBg"}
-                          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-                          borderColor="borderDefault"
-                          boxShadow="xs"
+                          boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                         >
                           <Text fontSize="sm">{m.text}</Text>
                         </Box>
@@ -126,13 +124,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
       </Box>
 
       {/* 入力フォーム: 固定高さ */}
-      <Box
-        flex="0 0 auto"
-        borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-        borderColor="borderDefault"
-        p={3}
-        bg="panelBg"
-      >
+      <Box flex="0 0 auto" p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
         <HStack gap={2}>
           <Input
             placeholder={

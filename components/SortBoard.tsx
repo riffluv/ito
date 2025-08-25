@@ -1,9 +1,10 @@
 "use client";
 import { SortableItem } from "@/components/sortable/SortableItem";
+import { AppButton } from "@/components/ui/AppButton";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
 import {
   DndContext,
   DragEndEvent,
@@ -79,11 +80,9 @@ export function SortBoard({
                 <SortableItem key={id} id={id} disabled={disabled}>
                   <Box
                     p={3}
-                    borderWidth="1px"
-                    borderColor="borderDefault"
                     borderRadius="xl"
                     bg="panelSubBg"
-                    boxShadow="card"
+                    boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                   >
                     <HStack justify="space-between">
                       <Text lineClamp={1}>{p.name}</Text>
@@ -116,7 +115,11 @@ export function SortBoard({
       </DndContext>
 
       <HStack mt={4} justify="flex-end">
-        <AppButton colorPalette="orange" onClick={onConfirm} disabled={disabled}>
+        <AppButton
+          colorPalette="orange"
+          onClick={onConfirm}
+          disabled={disabled}
+        >
           並びを確定
         </AppButton>
       </HStack>

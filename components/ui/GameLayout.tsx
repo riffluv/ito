@@ -61,14 +61,12 @@ export function GameLayout({
       <Box
         flex="0 0 auto"
         h="var(--unified-header-height)"
-        borderBottomWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-        borderColor="borderDefault"
-        bg="panelBg"
+        bg={UNIFIED_LAYOUT.SURFACE.PANEL}
         px={0} /* パディング除去：外側で制御 */
         py={0} /* パディング除去：外側で制御 */
         display="flex"
         alignItems="center"
-        boxShadow="interactive"
+        boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
         // テキスト最適化
         css={{
           "-webkit-font-smoothing": "antialiased",
@@ -86,12 +84,11 @@ export function GameLayout({
           <Box
             w="var(--unified-sidebar-width)"
             flex="0 0 var(--unified-sidebar-width)"
-            borderRightWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-            borderColor="borderDefault"
-            bg="panelBg"
+            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
             display={{ base: "none", md: "flex" }}
             flexDir="column"
             overflow="hidden"
+            boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
           >
             {sidebar}
           </Box>
@@ -114,12 +111,11 @@ export function GameLayout({
           <Box
             w="var(--unified-right-panel-width)"
             flex="0 0 var(--unified-right-panel-width)"
-            borderLeftWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-            borderColor="borderDefault"
-            bg="panelBg"
+            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
             display={{ base: "none", md: "flex" }}
             flexDir="column"
             overflow="hidden"
+            boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
           >
             {rightPanel}
           </Box>
@@ -130,17 +126,15 @@ export function GameLayout({
       <Box
         flex="0 0 auto"
         h="var(--unified-hand-area-height)" // minHではなくhで固定高さ
-        borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-        borderColor="borderDefault"
-        bg="panelBg"
+        bg={UNIFIED_LAYOUT.SURFACE.HAND_AREA}
         px={0} /* パディング除去：外側で制御 */
         py={0} /* パディング除去：外側で制御 */
         display="flex"
         alignItems="center"
         justifyContent="center"
         gap={4}
-        boxShadow="elevated"
-        overflow="hidden" // コンテンツがはみ出ないように
+        boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
+        overflow="hidden" // コンテンツがはみ出さないように
       >
         {handArea || (
           <Box h="1px" w="100%" /> // 空の場合のプレースホルダー

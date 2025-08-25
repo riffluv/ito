@@ -23,10 +23,11 @@ export function Participants({
           <HStack
             gap={3}
             p={2}
-            borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
             borderRadius="lg"
             h={{ base: 14, md: 14 }}
             align="center"
+            boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
           >
             <Avatar.Root size="sm">
               <Avatar.Fallback name={p.name} />

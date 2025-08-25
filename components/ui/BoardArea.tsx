@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, getDynamicBorder } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
 
 export type BoardAreaProps = BoxProps & {
@@ -19,9 +19,13 @@ export default function BoardArea({
         position="relative"
         flex="1" /* 利用可能な高さをフル活用 */
         minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} /* 最低限の高さを保証 */
-        borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderStyle="dashed"
-        borderColor={isOver ? "accent" : "whiteAlpha.200"}
+        borderColor={isOver ? "accent" : "transparent"}
+        borderWidth={getDynamicBorder({
+          isActive: !!isOver,
+          activeContext: "SEMANTIC",
+          defaultContext: "LAYOUT",
+        })}
         rounded="lg"
         p={4} /* Chakra UIのスペーシングトークンを使用 */
         display="flex"

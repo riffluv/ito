@@ -1,5 +1,6 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { useMemo } from "react";
 
@@ -47,11 +48,9 @@ export function PlayerList({
         position="sticky"
         top={0}
         zIndex={1}
-        bg="panelBg"
+        bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
         py={1}
         mb={1}
-        borderBottomWidth="1px"
-        borderColor="borderDefault"
       >
         <Text
           fontSize="xs"
@@ -69,11 +68,10 @@ export function PlayerList({
           <Box
             key={p.id}
             p={3}
-            borderWidth="1px"
             borderRadius="xl"
             bg={isMe ? "#141C2E" : "panelSubBg"}
-            borderColor="borderDefault"
-            _hover={{ boxShadow: "card" }}
+            boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+            _hover={{ boxShadow: UNIFIED_LAYOUT.ELEVATION.CARD.FLOATING }}
           >
             <HStack gap={3} minH="48px" align="center">
               <Avatar.Root size="sm">
@@ -103,7 +101,12 @@ export function PlayerList({
                 )}
               </HStack>
             </HStack>
-            <Box mt={2} pt={2} borderTopWidth="1px" borderColor="borderDefault">
+            <Box
+              mt={2}
+              pt={2}
+              bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
+              borderRadius="md"
+            >
               <Text
                 fontSize="sm"
                 color="fgMuted"

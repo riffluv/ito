@@ -1,23 +1,21 @@
-import { defineRecipe } from "@chakra-ui/react"
+import { defineRecipe } from "@chakra-ui/react";
 
 export const cardRecipe = defineRecipe({
   className: "app-card",
   base: {
     bg: "panelBg",
     color: "fgDefault",
-    borderWidth: "1px",
-    borderColor: "borderDefault",
     rounded: "lg",
     shadow: "xs",
     p: 6,
-    transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease",
+    transition:
+      "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease",
   },
   variants: {
     interactive: {
       true: {
         _hover: {
           shadow: "sm",
-          borderColor: "accent",
           bg: "cardHoverBg",
           transform: "translateY(-1px) scale(1.01)",
         },
@@ -29,11 +27,15 @@ export const cardRecipe = defineRecipe({
       comfortable: { p: 6 },
     },
     selected: {
-      true: { borderColor: "accent", shadow: "md" },
+      true: { shadow: "md", bg: "accentSubtle" },
       false: {},
     },
   },
-  defaultVariants: { interactive: false, density: "comfortable", selected: false },
-})
+  defaultVariants: {
+    interactive: false,
+    density: "comfortable",
+    selected: false,
+  },
+});
 
-export default cardRecipe
+export default cardRecipe;
