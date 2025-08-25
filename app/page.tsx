@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 import { useRooms } from "@/lib/hooks/useRooms";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 export default function LobbyPage() {
   const router = useRouter();
@@ -180,7 +181,7 @@ export default function LobbyPage() {
                     <Box
                       p={8}
                       textAlign="center"
-                      borderWidth="1px"
+                      borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
                       rounded="lg"
                       bg="blackAlpha.300"
                     >

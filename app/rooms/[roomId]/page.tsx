@@ -45,6 +45,7 @@ import {
   startGame as startGameAction,
   submitSortedOrder,
 } from "@/lib/game/room";
+import { topicControls, topicTypeLabels } from "@/lib/game/topicControls";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
@@ -442,14 +443,87 @@ export default function RoomPage() {
             {isHost && (
               <Box flex="0 0 auto" p={4} bg="panelBg">
                 <Panel title="🎮 ゲーム制御" variant="accent" elevated={true}>
-                  {/* 固定高さコンテナでレイアウトシフトを防止 */}
+                  {/* 拡張された固定高さコンテナでお題制御も含める */}
                   <Box
-                    minH="120px"
+                    minH="200px"
                     display="flex"
                     flexDir="column"
                     justifyContent="center"
                   >
                     <Stack gap={3}>
+                      {/* お題制御セクション（ゲーム中のみ表示） */}
+                      {room.status === "clue" && (
+                        <Box
+                          p={2}
+                          bg="panelSubBg"
+                          rounded="md"
+                          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+                          borderColor="gray.600"
+                        >
+                          <Text fontSize="xs" color="gray.300" mb={2}>
+                            📋 お題管理
+                          </Text>
+                          <Stack gap={2}>
+                            {/* カテゴリ選択ボタン（お題未選択時） */}
+                            {!room.topic && (
+                              <>
+                                <Text fontSize="xs" color="gray.400">
+                                  カテゴリ選択:
+                                </Text>
+                                <Flex wrap="wrap" gap={1}>
+                                  {topicTypeLabels.map((label) => (
+                                    <Button
+                                      key={label}
+                                      size="xs"
+                                      variant="outline"
+                                      onClick={() =>
+                                        topicControls.selectCategory(
+                                          roomId,
+                                          label
+                                        )
+                                      }
+                                      flex="1"
+                                      minW="60px"
+                                    >
+                                      {label.replace("版", "")}
+                                    </Button>
+                                  ))}
+                                </Flex>
+                              </>
+                            )}
+
+                            {/* お題制御ボタン（お題選択後） */}
+                            {room.topic && (
+                              <HStack>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() =>
+                                    topicControls.shuffleTopic(
+                                      roomId,
+                                      (room as any).topicBox
+                                    )
+                                  }
+                                  flex="1"
+                                >
+                                  🔄 シャッフル
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() =>
+                                    topicControls.dealNumbers(roomId)
+                                  }
+                                  flex="1"
+                                >
+                                  🎲 数字配布
+                                </Button>
+                              </HStack>
+                            )}
+                          </Stack>
+                        </Box>
+                      )}
+
                       {/* メインアクションボタン（開始・もう一度） */}
                       {!showHostInHud && hostPrimaryAction && (
                         <AppButton
@@ -484,12 +558,7 @@ export default function RoomPage() {
           <Box h="100%" display="flex" flexDir="column">
             {/* モニター: 固定高さ - パディング統一 */}
             <Box flex="0 0 auto" p={0} /* パディング除去：内部で制御 */>
-              <UniversalMonitor
-                room={room}
-                players={players}
-                roomId={roomId}
-                isHost={isHost}
-              />
+              <UniversalMonitor room={room} players={players} />
             </Box>
 
             {/* カードボード: 残り高さを使用 */}
