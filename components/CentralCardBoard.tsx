@@ -310,25 +310,7 @@ export function CentralCardBoard({
             🎯 カードボード（出した順）
           </Box>
         </Box>
-        {failed && roomStatus === "finished" && (
-          <Box
-            position="absolute"
-            top={-10}
-            right={0}
-            transform="translateY(-100%)"
-            bgGradient="linear(90deg, rgba(255,70,70,0.9), rgba(120,0,0,0.9))"
-            px={3.5}
-            py={1.5}
-            rounded="12px"
-            fontWeight={800}
-            color="#fff"
-            letterSpacing={1}
-            boxShadow="0 4px 18px -4px rgba(255,0,0,0.4)"
-            zIndex={10}
-          >
-            失敗！昇順が崩れました（#{failedAt} 枚目）
-          </Box>
-        )}
+        {/* 統合演出を下部に移動済み - 中央オーバーレイは除去 */}
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
         <Box flex="1" display="flex" flexDir="column" minH={0}>
@@ -420,6 +402,87 @@ export function CentralCardBoard({
               </Box>
             )}
           </BoardArea>
+
+          {/* 🎉 カード下部に自然配置の成功/失敗演出 */}
+          {roomStatus === "finished" && (
+            <Box mt={4} textAlign="center" flex="0 0 auto">
+              {failed ? (
+                // 💥 失敗演出 - カード下部配置
+                <Box
+                  bgGradient="linear(135deg, rgba(255,70,70,0.95), rgba(180,0,0,0.95))"
+                  px={6}
+                  py={4}
+                  rounded="xl"
+                  fontWeight={800}
+                  fontSize={{ base: "xl", md: "2xl" }}
+                  color="white"
+                  letterSpacing={1}
+                  boxShadow={
+                    "0 0 40px -8px rgba(255,70,70,0.8), 0 0 20px -4px rgba(255,70,70,0.9), 0 10px 30px -8px rgba(0,0,0,0.3)"
+                  }
+                  css={{
+                    animation: "shake 0.6s ease-in-out",
+                    "@keyframes shake": {
+                      "0%, 100%": { transform: "translateX(0)" },
+                      "10%, 30%, 50%, 70%, 90%": {
+                        transform: "translateX(-6px)",
+                      },
+                      "20%, 40%, 60%, 80%": { transform: "translateX(6px)" },
+                    },
+                  }}
+                >
+                  💥 FAILED 💥
+                  <Text
+                    fontSize={{ base: "sm", md: "md" }}
+                    mt={1}
+                    opacity={0.9}
+                  >
+                    #{failedAt} 枚目で昇順が崩れました
+                  </Text>
+                </Box>
+              ) : (
+                // 🎉 成功演出 - クリーンな elevation-based デザイン
+                <Box
+                  px={8}
+                  py={5}
+                  rounded="2xl"
+                  fontWeight={800}
+                  fontSize={{ base: "2xl", md: "3xl" }}
+                  color="teal.300"
+                  letterSpacing={2}
+                  boxShadow={
+                    "0 0 60px -10px rgba(56,178,172,0.9), 0 0 40px -8px rgba(56,178,172,0.8), 0 20px 50px -12px rgba(0,0,0,0.3)"
+                  }
+                  css={{
+                    animation: "celebrate 0.8s ease-out",
+                    "@keyframes celebrate": {
+                      "0%": {
+                        transform: "scale(0.8) rotate(-5deg)",
+                        opacity: 0,
+                      },
+                      "50%": {
+                        transform: "scale(1.05) rotate(1deg)",
+                        opacity: 1,
+                      },
+                      "100%": {
+                        transform: "scale(1) rotate(0deg)",
+                        opacity: 1,
+                      },
+                    },
+                  }}
+                >
+                  🎉 SUCCESS!! 🎉
+                  <Text
+                    fontSize={{ base: "md", md: "lg" }}
+                    mt={2}
+                    opacity={0.9}
+                  >
+                    完璧な順序でクリア！
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          )}
         </Box>
       </Box>
     </Panel>

@@ -562,8 +562,8 @@ export default function RoomPage() {
               <UniversalMonitor room={room} players={players} />
             </Box>
 
-            {/* カードボード: 残り高さを使用 */}
-            <Box flex="1 1 0" minH={0} overflowY="auto" overflowX="hidden">
+            {/* カードボード: 残り高さを使用 - ゲーム画面規範準拠 */}
+            <Box flex="1 1 0" minH={0} overflow="hidden">
               <CentralCardBoard
                 roomId={roomId}
                 players={players}
