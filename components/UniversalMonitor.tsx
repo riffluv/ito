@@ -3,7 +3,7 @@ import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, HStack, Text } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 
 export default function UniversalMonitor({
   room,
@@ -41,11 +41,15 @@ export default function UniversalMonitor({
         {(room as any)?.topicBox ?? "未選択"}
       </Box>
 
+      {/* 
+        固定高さエリア - CLS防止のため高さ変動を完全に排除
+        成功/失敗演出はCentralCardBoard内で統合的に実装
+      */}
       <Box
         px={5}
         py={3}
         textAlign="center"
-        minH="120px"
+        h="120px" // minH → h に変更で固定高さ化
         display="flex"
         alignItems="center"
         justifyContent="center"
@@ -54,20 +58,6 @@ export default function UniversalMonitor({
           <TopicDisplay room={room} inline />
         </Box>
       </Box>
-
-      {room.status === "finished" && (
-        <Box mt={3}>
-          <HStack justifyContent="center">
-            <Text
-              fontWeight="bold"
-              fontSize={{ base: "xl", md: "3xl" }}
-              color={room.result?.success ? "green.300" : "red.300"}
-            >
-              {room.result?.success ? "クリア！" : "失敗です！！"}
-            </Text>
-          </HStack>
-        </Box>
-      )}
     </Panel>
   );
 }
