@@ -1,5 +1,6 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { CheckCircle2 } from "lucide-react";
 
@@ -22,7 +23,7 @@ export function Participants({
           <HStack
             gap={3}
             p={2}
-            borderWidth="1px"
+            borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
             borderRadius="lg"
             h={{ base: 14, md: 14 }}
             align="center"

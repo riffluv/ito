@@ -289,7 +289,7 @@ export function CentralCardBoard({
   };
 
   return (
-    <Panel density="compact" p={4} /* 統一スペーシング：16px */ h="100%" display="flex" flexDir="column">
+    <Panel density="compact" p={4} /* 統一スペーシング：UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING相当 */ h="100%" display="flex" flexDir="column">
       <Box position="relative" flex="1" display="flex" flexDir="column">
         <Box textAlign="center" mb={4} flex="0 0 auto">
           <Box

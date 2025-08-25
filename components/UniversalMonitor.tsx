@@ -2,6 +2,7 @@
 import { TopicDisplay } from "@/components/TopicDisplay";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, HStack, Text } from "@chakra-ui/react";
 
 export default function UniversalMonitor({
@@ -19,12 +20,12 @@ export default function UniversalMonitor({
 
   return (
     <Panel
-      minH={180} /* コンパクト化：240px⇒180px */
+      minH={UNIFIED_LAYOUT.MONITOR_MIN_HEIGHT} /* コンパクト化：統一システム対応 */
       display="flex"
       flexDir="column"
       justifyContent="flex-start"
       density="compact"
-      p={4} /* 統一スペーシング：16px */
+      p={4} /* 統一スペーシング：UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING相当 */
       overflow="hidden"
     >
       {/* top banner */}
