@@ -556,7 +556,12 @@ export default function RoomPage() {
           </Box>
         }
         main={
-          <Box h="100%" display="flex" flexDir="column">
+          <Box
+            h="100%"
+            display="flex"
+            flexDir="column"
+            gap={3} /* elevation-based分離 */
+          >
             {/* モニター: 固定高さ - パディング統一 */}
             <Box flex="0 0 auto" p={0} /* パディング除去：内部で制御 */>
               <UniversalMonitor room={room} players={players} />
