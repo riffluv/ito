@@ -352,10 +352,15 @@ export function CentralCardBoard({
             </DndContext>
           ) : (
             <>
+              {/* orderListのカードを表示 */}
               {orderList &&
                 orderList.length > 0 &&
                 orderList.map((id, idx) => renderCard(id, idx))}
-              {proposal && proposal.length > 0
+              {/* proposalからの追加カード表示（判定終了後は表示しない） */}
+              {proposal &&
+              proposal.length > 0 &&
+              roomStatus !== "finished" &&
+              roomStatus !== "reveal"
                 ? proposal
                     .filter((id) => !orderList?.includes(id))
                     .map((id) => renderCard(id))
@@ -387,7 +392,12 @@ export function CentralCardBoard({
               </Text>
             ))}
 
-          {resolveMode !== "sort-submit" && pending && pending.length > 0
+          {/* ローカルのpendingカード表示（判定終了後は表示しない） */}
+          {resolveMode !== "sort-submit" &&
+          pending &&
+          pending.length > 0 &&
+          roomStatus !== "finished" &&
+          roomStatus !== "reveal"
             ? pending
                 .filter((id) => !(orderList || []).includes(id))
                 .filter((id) => !(proposal || []).includes(id))
