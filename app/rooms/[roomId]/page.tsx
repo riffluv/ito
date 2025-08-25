@@ -56,6 +56,7 @@ import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import {
   Box,
+  Flex,
   HStack,
   Input,
   Spinner,
@@ -470,15 +471,35 @@ export default function RoomPage() {
         </Box>
       }
       handArea={
-        <>
+        <Box w="100%" h="100%" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
           {room.status === "clue" && me ? (
-            <HStack gap={6} align="center" justify="space-between" w="100%">
-              <HStack gap={4} align="center">
+            <Flex
+              w="100%"
+              h="100%"
+              align="center"
+              justify="space-between"
+              gap={{ base: 2, md: 4 }}
+              direction={{ base: "column", lg: "row" }}
+              minH={0}
+            >
+              {/* 左側: カードと入力エリア */}
+              <Flex
+                align="center"
+                gap={{ base: 2, md: 4 }}
+                flex="1"
+                minW={0}
+                direction={{ base: "row", md: "row" }}
+              >
                 <SelfNumberCard value={me.number} draggableId={me.id} />
 
                 {/* コンパクトなClue入力エリア */}
-                <HStack gap={2} align="center">
-                  <Text fontSize="sm" color="fgMuted" flexShrink={0}>
+                <Flex align="center" gap={2} minW={0} flex="1">
+                  <Text
+                    fontSize="sm"
+                    color="fgMuted"
+                    flexShrink={0}
+                    display={{ base: "none", md: "block" }}
+                  >
                     連想:
                   </Text>
                   <Input
@@ -491,53 +512,57 @@ export default function RoomPage() {
                       }
                     }}
                     size="sm"
-                    w="200px"
+                    w={{ base: "120px", md: "160px", lg: "200px" }}
                     bg="panelSubBg"
+                    flex="1"
+                    maxW="200px"
                   />
-                </HStack>
-              </HStack>
+                </Flex>
+              </Flex>
 
-              {/* せーので判定ボタンを手札エリア右側に配置 */}
+              {/* 右側: ホストボタン */}
               {isHost && room.options?.resolveMode === "sort-submit" && (
-                <AppButton
-                  colorPalette="teal"
-                  size="sm"
-                  onClick={async () => {
-                    const proposal: string[] =
-                      (room as any)?.order?.proposal || [];
-                    if (proposal.length === 0) {
-                      notify({
-                        title: "まだカードが場にありません",
-                        type: "info",
-                      });
-                      return;
-                    }
-                    const assigned = players
-                      .filter((p) => typeof (p as any).number === "number")
-                      .map((p) => p.id);
-                    if (assigned.length !== proposal.length) {
-                      notify({
-                        title: "まだ全員のカードが場に出ていません",
-                        type: "warning",
-                      });
-                      return;
-                    }
-                    try {
-                      await submitSortedOrder(roomId, proposal);
-                      notify({ title: "一括判定を実行", type: "success" });
-                    } catch (err: any) {
-                      notify({
-                        title: "一括判定失敗",
-                        description: err?.message,
-                        type: "error",
-                      });
-                    }
-                  }}
-                >
-                  せーので判定！
-                </AppButton>
+                <Box flexShrink={0}>
+                  <AppButton
+                    colorPalette="teal"
+                    size="sm"
+                    onClick={async () => {
+                      const proposal: string[] =
+                        (room as any)?.order?.proposal || [];
+                      if (proposal.length === 0) {
+                        notify({
+                          title: "まだカードが場にありません",
+                          type: "info",
+                        });
+                        return;
+                      }
+                      const assigned = players
+                        .filter((p) => typeof (p as any).number === "number")
+                        .map((p) => p.id);
+                      if (assigned.length !== proposal.length) {
+                        notify({
+                          title: "まだ全員のカードが場に出ていません",
+                          type: "warning",
+                        });
+                        return;
+                      }
+                      try {
+                        await submitSortedOrder(roomId, proposal);
+                        notify({ title: "一括判定を実行", type: "success" });
+                      } catch (err: any) {
+                        notify({
+                          title: "一括判定失敗",
+                          description: err?.message,
+                          type: "error",
+                        });
+                      }
+                    }}
+                  >
+                    せーので判定！
+                  </AppButton>
+                </Box>
               )}
-            </HStack>
+            </Flex>
           ) : room.status === "playing" ? (
             <Text fontSize="sm" color="fgMuted" textAlign="center">
               下部の場パネルで「出す」を実行してください。
@@ -551,7 +576,7 @@ export default function RoomPage() {
               ゲーム準備中...
             </Text>
           )}
-        </>
+        </Box>
       }
     />
   );

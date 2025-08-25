@@ -126,20 +126,21 @@ export function GameLayout({
         )}
       </Box>
 
-      {/* 手札エリア: 統一システムによる流動高さ - 常に表示 */}
+      {/* 手札エリア: 統一システムによる固定高さ - 常に表示 */}
       <Box
         flex="0 0 auto"
+        h="var(--unified-hand-area-height)" // minHではなくhで固定高さ
         borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         bg="panelBg"
         px={3}
         py={3}
-        minH="var(--unified-hand-area-height)"
         display="flex"
         alignItems="center"
         justifyContent="center"
         gap={4}
         boxShadow="elevated"
+        overflow="hidden" // コンテンツがはみ出ないように
       >
         {handArea || (
           <Box h="1px" w="100%" /> // 空の場合のプレースホルダー
