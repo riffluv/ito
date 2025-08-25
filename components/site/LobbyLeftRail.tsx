@@ -1,14 +1,7 @@
 "use client";
-import {
-  Box,
-  Field,
-  Input,
-  Stack,
-  Switch,
-  Text,
-} from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { Box, Field, Input, Stack, Switch, Text } from "@chakra-ui/react";
 
 type Props = {
   search: string;
@@ -27,16 +20,32 @@ export default function LobbyLeftRail({
 }: Props) {
   return (
     <Box as="aside" position="sticky" top="80px">
-      <Box borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH} rounded="xl" p={4} bg="panelBg">
+      <Box
+        borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+        rounded="xl"
+        p={4}
+        bg="panelBg"
+      >
         <Text fontWeight="bold" mb={2}>
           クイックアクション
         </Text>
-        <AppButton colorPalette="orange" w="full" onClick={onCreate} minW="unset">
+        <AppButton
+          colorPalette="orange"
+          w="full"
+          onClick={onCreate}
+          minW="unset"
+        >
           新しい部屋を作る
         </AppButton>
       </Box>
 
-      <Box borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH} rounded="xl" p={4} mt={4} bg="panelBg">
+      <Box
+        borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+        rounded="xl"
+        p={4}
+        mt={4}
+        bg="panelBg"
+      >
         <Text fontWeight="bold" mb={2}>
           ルームフィルター
         </Text>

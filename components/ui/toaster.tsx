@@ -1,9 +1,10 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import {
+  Box,
   Toaster as ChakraToaster,
   Toast,
   createToaster,
-  Box,
 } from "@chakra-ui/react";
 
 // Chakra UI v3 official toaster instance.
@@ -28,7 +29,7 @@ export function Toaster() {
           px="3"
           py="2"
           rounded="md"
-          borderWidth="1px"
+          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
           shadow="md"
           w="auto"
           minW={{ base: "240px", md: "280px" }}

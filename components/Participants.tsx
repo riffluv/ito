@@ -52,7 +52,13 @@ export function Participants({
                 {p.clue1 ? `連想: ${p.clue1}` : "\u00A0"}
               </Text>
             </Stack>
-            <Badge colorPalette="green" flexShrink={0} display="inline-flex" alignItems="center" gap={1}>
+            <Badge
+              colorPalette="green"
+              flexShrink={0}
+              display="inline-flex"
+              alignItems="center"
+              gap={1}
+            >
               <CheckCircle2 size={14} /> 在室
             </Badge>
           </HStack>
