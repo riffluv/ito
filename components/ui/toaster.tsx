@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { getBorderWidth } from "@/theme/layout";
 import {
   Box,
   Toaster as ChakraToaster,
@@ -29,7 +29,7 @@ export function Toaster() {
           px="3"
           py="2"
           rounded="md"
-          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+          borderWidth={getBorderWidth("SEMANTIC")}
           shadow="md"
           w="auto"
           minW={{ base: "240px", md: "280px" }}

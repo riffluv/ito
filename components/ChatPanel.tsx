@@ -1,12 +1,27 @@
 "use client";
+import { AppButton } from "@/components/ui/AppButton";
 import { Panel } from "@/components/ui/Panel";
 import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
-import { Badge, Box, HStack, Input, ScrollArea, Stack, Text } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
-import { collection, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
+import {
+  Badge,
+  Box,
+  HStack,
+  Input,
+  ScrollArea,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import {
+  collection,
+  limitToLast,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 
 export function ChatPanel({
@@ -42,7 +57,6 @@ export function ChatPanel({
     return () => unsub();
   }, [roomId]);
 
-
   const send = async () => {
     const t = text.trim();
     if (!t) return;
@@ -59,64 +73,66 @@ export function ChatPanel({
   return (
     <Panel p={2} h={height} display="flex" flexDir="column">
       <Box flex={1} minH={0}>
-      <ScrollArea.Root>
-        <ScrollArea.Viewport>
-          <ScrollArea.Content>
-            <Box p={2}>
-              {/* 履歴は最新100件のみ表示（ページングは行わない方針） */}
-              <Stack gap={2}>
-          {messages.map((m) => {
-            const isSystem = m.sender === "system";
-            const isMe = m.sender === (displayName || "匿名");
-            return (
-              <Box
-                key={m.id}
-                display="flex"
-                justifyContent={
-                  isSystem ? "center" : isMe ? "flex-end" : "flex-start"
-                }
-              >
-                <Box maxW="82%">
-                  {isSystem ? (
-                    <HStack opacity={0.9} justify="center">
-                      <Badge variant="subtle" colorPalette="gray">
-                        system
-                      </Badge>
-                      <Text fontSize="sm" color="fgMuted">
-                        {m.text}
-                      </Text>
-                    </HStack>
-                  ) : (
-                    <Stack gap={1} align={isMe ? "flex-end" : "flex-start"}>
-                      <Text fontSize="xs" color="fgMuted">
-                        {m.sender}
-                      </Text>
+        <ScrollArea.Root>
+          <ScrollArea.Viewport>
+            <ScrollArea.Content>
+              <Box p={2}>
+                {/* 履歴は最新100件のみ表示（ページングは行わない方針） */}
+                <Stack gap={2}>
+                  {messages.map((m) => {
+                    const isSystem = m.sender === "system";
+                    const isMe = m.sender === (displayName || "匿名");
+                    return (
                       <Box
-                        px={3}
-                        py={2}
-                        borderRadius="xl"
-                        bg={isMe ? "accentSubtle" : "panelSubBg"}
-                        borderWidth="1px"
-                        borderColor="borderDefault"
+                        key={m.id}
+                        display="flex"
+                        justifyContent={
+                          isSystem ? "center" : isMe ? "flex-end" : "flex-start"
+                        }
                       >
-                        <Text>{m.text}</Text>
+                        <Box maxW="82%">
+                          {isSystem ? (
+                            <HStack opacity={0.9} justify="center">
+                              <Badge variant="subtle" colorPalette="gray">
+                                system
+                              </Badge>
+                              <Text fontSize="sm" color="fgMuted">
+                                {m.text}
+                              </Text>
+                            </HStack>
+                          ) : (
+                            <Stack
+                              gap={1}
+                              align={isMe ? "flex-end" : "flex-start"}
+                            >
+                              <Text fontSize="xs" color="fgMuted">
+                                {m.sender}
+                              </Text>
+                              <Box
+                                px={3}
+                                py={2}
+                                borderRadius="xl"
+                                bg={isMe ? "accentSubtle" : "panelSubBg"}
+                                boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+                              >
+                                <Text>{m.text}</Text>
+                              </Box>
+                            </Stack>
+                          )}
+                        </Box>
                       </Box>
-                    </Stack>
-                  )}
-                </Box>
+                    );
+                  })}
+                </Stack>
+                <div ref={bottomRef} />
               </Box>
-            );
-          })}
-              </Stack>
-              <div ref={bottomRef} />
-            </Box>
-          </ScrollArea.Content>
-        </ScrollArea.Viewport>
-        <ScrollArea.Scrollbar>
-          <ScrollArea.Thumb />
-        </ScrollArea.Scrollbar>
-        <ScrollArea.Corner />
-      </ScrollArea.Root>
+            </ScrollArea.Content>
+          </ScrollArea.Viewport>
+          <ScrollArea.Scrollbar>
+            <ScrollArea.Thumb />
+          </ScrollArea.Scrollbar>
+          <ScrollArea.Corner />
+        </ScrollArea.Root>
       </Box>
       <HStack>
         <Input

@@ -1,6 +1,7 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Stack, Text } from "@chakra-ui/react";
 
 export function ResultPanel({
@@ -27,8 +28,9 @@ export function ResultPanel({
               <Box
                 key={p.id}
                 p={2}
-                borderWidth="1px"
                 rounded="md"
+                bg="panelSubBg"
+                boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                 display="grid"
                 gridTemplateColumns={{
                   base: "1fr 1fr auto",
