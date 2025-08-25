@@ -95,10 +95,10 @@ export const LAYOUT = {
   BOARD_MIN_HEIGHT: PREDICTABLE_LAYOUT.BOARD_MIN_HEIGHT,
 } as const;
 
-// レガシー Grid 定数 (段階的廃止予定)
-export const ROOM_GRID_COLUMNS_MD = `${LAYOUT.SIDEBAR_WIDTH}px 1fr ${LAYOUT.RIGHT_PANEL_WIDTH}px`;
-export const ROOM_GRID_ROWS_BASE = `auto 1fr auto`;
-export const ROOM_GRID_ROWS_MD = `auto 1fr minmax(${LAYOUT.HAND_MIN_HEIGHT}px, 160px)`;
+// レガシー Grid 定数 (削除済み - GameLayoutシステムに移行)
+// export const ROOM_GRID_COLUMNS_MD = `${LAYOUT.SIDEBAR_WIDTH}px 1fr ${LAYOUT.RIGHT_PANEL_WIDTH}px`;
+// export const ROOM_GRID_ROWS_BASE = `auto 1fr auto`;
+// export const ROOM_GRID_ROWS_MD = `auto 1fr minmax(${LAYOUT.HAND_MIN_HEIGHT}px, 160px)`;
 
 export type LayoutConstants = typeof LAYOUT;
 export type PredictableLayoutConstants = typeof PREDICTABLE_LAYOUT;
