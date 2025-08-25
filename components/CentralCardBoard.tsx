@@ -11,6 +11,7 @@ import {
   setOrderProposal,
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
@@ -313,8 +314,14 @@ export function CentralCardBoard({
         {/* 統合演出を下部に移動済み - 中央オーバーレイは除去 */}
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
-        {/* 🎯 カード配置エリア - 必要最小限の高さに最適化 */}
-        <Box flex="0 0 auto" h="160px" display="flex" flexDir="column">
+        {/* 🎯 カード配置エリア - 統一レイアウトシステム使用 */}
+        <Box
+          flex="0 0 auto"
+          h={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT}
+          display="flex"
+          flexDir="column"
+          position="relative"
+        >
           <BoardArea
             onDragOver={(e) => {
               e.preventDefault();
@@ -395,19 +402,16 @@ export function CentralCardBoard({
                   .map((id) => renderCard(id))
               : null}
           </BoardArea>
-        </Box>
 
-        {/* 🎯 演出専用エリア - 固定高さでCLS回避 */}
-        <Box
-          flex="0 0 auto"
-          h="120px"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          mt={3}
-        >
+          {/* 🎯 SUCCESS/FAILED演出 - 縦々エリア内のオーバーレイ */}
           {roomStatus === "finished" && (
-            <>
+            <Box
+              position="absolute"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              zIndex={10}
+            >
               {failed ? (
                 // 💥 失敗演出 - elevation-basedデザイン
                 <Box
@@ -418,12 +422,11 @@ export function CentralCardBoard({
                   fontSize={{ base: "xl", md: "2xl" }}
                   color="white"
                   letterSpacing={1}
-                  boxShadow={
-                    "0 0 40px -8px rgba(255,70,70,0.8), 0 0 20px -4px rgba(255,70,70,0.9), 0 10px 30px -8px rgba(0,0,0,0.3)"
-                  }
+                  boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.ELEVATED}
                   bg="rgba(255,70,70,0.95)"
+                  transform="translateX(0)"
+                  animation="shake 0.6s ease-in-out"
                   css={{
-                    animation: "shake 0.6s ease-in-out",
                     "@keyframes shake": {
                       "0%, 100%": { transform: "translateX(0)" },
                       "10%, 30%, 50%, 70%, 90%": {
@@ -452,11 +455,11 @@ export function CentralCardBoard({
                   fontSize={{ base: "2xl", md: "3xl" }}
                   color="teal.300"
                   letterSpacing={2}
-                  boxShadow={
-                    "0 0 60px -10px rgba(56,178,172,0.9), 0 0 40px -8px rgba(56,178,172,0.8), 0 20px 50px -12px rgba(0,0,0,0.3)"
-                  }
+                  boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.ELEVATED}
+                  transform="scale(1) rotate(0deg)"
+                  opacity={1}
+                  animation="celebrate 0.8s ease-out"
                   css={{
-                    animation: "celebrate 0.8s ease-out",
                     "@keyframes celebrate": {
                       "0%": {
                         transform: "scale(0.8) rotate(-5deg)",
@@ -483,7 +486,7 @@ export function CentralCardBoard({
                   </Text>
                 </Box>
               )}
-            </>
+            </Box>
           )}
         </Box>
       </Box>

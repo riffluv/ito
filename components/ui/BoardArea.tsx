@@ -12,13 +12,20 @@ export default function BoardArea({
   ...rest
 }: BoardAreaProps) {
   return (
-    <Box position="relative" h="100%" display="flex" flexDir="column">
+    <Box
+      position="relative"
+      h={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT}
+      display="flex"
+      flexDir="column"
+    >
       <Box
         role="region"
         aria-label="カード配置エリア"
         position="relative"
-        flex="1" /* 利用可能な高さをフル活用 */
-        minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} /* 最低限の高さを保証 */
+        h={
+          UNIFIED_LAYOUT.BOARD_MIN_HEIGHT
+        } /* 8人分のカード配置に十分な統一高さ */
+        p={4} /* カードの上下左右スペーシング */
         borderStyle="dashed"
         borderColor={isOver ? "accent" : "transparent"}
         borderWidth={getDynamicBorder({
@@ -27,13 +34,12 @@ export default function BoardArea({
           defaultContext: "LAYOUT",
         })}
         rounded="lg"
-        p={4} /* Chakra UIのスペーシングトークンを使用 */
         display="flex"
         gap={4} /* 統一されたカード間スペーシング */
         alignItems="center"
         flexWrap="wrap"
         justifyContent="center" // 単数枚時も中央に配置
-        perspective="{sizes.perspectiveCard}" // flip variant の立体歪みを軽減 (token)
+        perspective="1000px" // 3Dカードアニメーション用
         css={{
           "& .gamecard-inner": {
             transformStyle: "preserve-3d",

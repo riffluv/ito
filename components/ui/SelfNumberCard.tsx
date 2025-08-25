@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 
 export interface SelfNumberCardProps {
@@ -29,8 +30,8 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w="80px" // トランプ型の幅
-      h="120px" // トランプ型の高さ（縦長）
+      w={UNIFIED_LAYOUT.CARD.MIN_WIDTH} // 統一システムによるゲーム感向上サイズ
+      h={UNIFIED_LAYOUT.CARD.MIN_HEIGHT} // 統一システムによるゲーム感向上サイズ
       rounded="lg"
       display="flex"
       alignItems="center"

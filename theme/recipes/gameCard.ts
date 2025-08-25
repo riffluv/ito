@@ -26,8 +26,8 @@ export function gameCardRecipe({
       container: {
         perspective: "1000px",
         position: "relative" as const,
-        width: "140px",
-        height: "180px",
+        width: "90px", // 統一システムに合わせて調整
+        height: "140px", // 統一システムに合わせて調整
       },
       inner: {
         position: "absolute" as const,
@@ -58,8 +58,6 @@ export function gameCardRecipe({
               : "linear(135deg,#2D3748,#1A202C)",
         borderWidth: "2px",
         borderColor: accentBorder,
-        borderWidth: "2px",
-        borderColor: accentBorder,
         boxShadow:
           state === "fail"
             ? "0 0 32px -2px rgba(229,62,62,0.8)"
@@ -77,12 +75,12 @@ export function gameCardRecipe({
     } as const;
   }
 
-  // flat variant
+  // flat variant - ゲーム感向上のためサイズ拡大
   return {
     frame: {
       p: 3,
-      minW: "140px",
-      minH: "160px",
+      minW: "90px", // 統一システムに合わせて拡大
+      minH: "140px", // 統一システムに合わせて拡大
       borderRadius: "12px",
       bgGradient:
         state === "fail"
