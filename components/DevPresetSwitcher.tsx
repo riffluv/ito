@@ -14,24 +14,25 @@ export function DevPresetSwitcher(props: { compact?: boolean }) {
   if (names.length <= 1) return null;
 
   const select = (
-    <Box
-      as="select"
+    <select
       value={activeName}
       onChange={(e: any) => setActiveByName(e.target.value)}
-      fontSize={props.compact ? "xs" : "sm"}
-      p="2px 8px"
-      borderWidth="1px"
-      borderColor="borderDefault"
-      borderRadius="md"
-      bg="panelBg"
-      color="fgDefault"
+      style={{
+        fontSize: props.compact ? '0.75rem' : '0.875rem',
+        padding: '2px 8px',
+        borderWidth: '1px',
+        borderColor: 'var(--chakra-colors-border-default)',
+        borderRadius: '0.375rem',
+        backgroundColor: 'var(--chakra-colors-panel-bg)',
+        color: 'var(--chakra-colors-fg-default)',
+      }}
     >
       {names.map((n) => (
         <option key={n} value={n}>
           {n}
         </option>
       ))}
-    </Box>
+    </select>
   );
 
   if (props.compact) return select;

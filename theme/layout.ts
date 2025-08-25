@@ -15,7 +15,7 @@
 // === プライマリレイアウト定数 ===
 export const UNIFIED_LAYOUT = {
   // ビューポート適応サイズ (DPI最適化)
-  HEADER_HEIGHT: "clamp(48px, 4vh, 64px)",
+  HEADER_HEIGHT: "clamp(80px, 8vh, 120px)",
   SIDEBAR_WIDTH: "clamp(240px, 22vw, 300px)",
   RIGHT_PANEL_WIDTH: "clamp(280px, 26vw, 360px)",
   // 手札エリア: トランプ型カード（120px）+ 余裕を持った安定した高さ
@@ -23,7 +23,7 @@ export const UNIFIED_LAYOUT = {
 
   // 125% DPI特別対応
   DPI_125: {
-    HEADER_HEIGHT: "clamp(44px, 3.5vh, 58px)",
+    HEADER_HEIGHT: "clamp(72px, 7vh, 104px)",
     // 125%DPI環境でもトランプ型カードに十分な高さを確保
     HAND_AREA_HEIGHT: "clamp(160px, 18vh, 200px)",
   },
@@ -89,7 +89,7 @@ export const DPI_ADAPTIVE_LAYOUT = {
 
 export const PREDICTABLE_LAYOUT = {
   // 固定サイズ (px)
-  HEADER_HEIGHT: 60, // ヘッダー固定高さ
+  HEADER_HEIGHT: 96, // ヘッダー固定高さ（黄金比対応）
   SIDEBAR_WIDTH: 280, // 左サイドバー幅
   RIGHT_PANEL_WIDTH: 340, // 右パネル幅
   HAND_MIN_HEIGHT: 140, // 手札エリア最小高さ

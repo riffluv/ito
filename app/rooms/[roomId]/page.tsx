@@ -18,6 +18,7 @@ const Participants = dynamic(
 );
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
+import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
@@ -26,7 +27,6 @@ import { Panel } from "@/components/ui/Panel";
 import ScrollableArea from "@/components/ui/ScrollableArea";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
-import SettingsModal from "@/components/SettingsModal";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -39,7 +39,6 @@ import { forceDetachAll, presenceSupported } from "@/lib/firebase/presence";
 import {
   leaveRoom as leaveRoomAction,
   resetRoomToWaiting,
-  setRoomOptions,
 } from "@/lib/firebase/rooms";
 import {
   continueAfterFail as continueAfterFailAction,
@@ -49,7 +48,6 @@ import {
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
-import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import {
   Box,
@@ -75,7 +73,7 @@ interface ClueInputMiniProps {
 
 function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
   const [text, setText] = useState<string>(currentValue);
-  
+
   // props が変わったら内部状態も更新
   useEffect(() => {
     setText(currentValue);
@@ -91,7 +89,11 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
       await updateClue1(roomId, playerId, value);
       notify({ title: "連想ワードを更新しました", type: "success" });
     } catch (err: any) {
-      notify({ title: "更新に失敗しました", description: err?.message, type: "error" });
+      notify({
+        title: "更新に失敗しました",
+        description: err?.message,
+        type: "error",
+      });
     }
   };
 
@@ -409,227 +411,238 @@ export default function RoomPage() {
   return (
     <>
       <GameLayout
-      header={
-        <Hud
-          roomName={room.name}
-          phase={room.status}
-          activeCount={onlinePlayers.length}
-          totalCount={players.length}
-          remainMs={null}
-          totalMs={null}
-          hostPrimary={showHostInHud ? hostPrimaryAction : null}
-          isHost={isHost}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-      }
-      sidebar={
-        <ScrollableArea label="参加者とオプション">
-          <Stack gap={4}>
-            <Panel
-              title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
-            >
-              <Participants players={onlinePlayers} />
-            </Panel>
-
-            {/* デスクトップの開始ボタン配置を統一 */}
-            {!showHostInHud && hostPrimaryAction && (
-              <Box px={4}>
-                <AppButton
-                  w="100%"
-                  colorPalette="orange"
-                  onClick={hostPrimaryAction.onClick}
-                  disabled={(hostPrimaryAction as any).disabled}
-                  title={(hostPrimaryAction as any).title}
-                  size="lg"
-                >
-                  {(hostPrimaryAction as any).label}
-                </AppButton>
-              </Box>
-            )}
-
-            {/* リセットボタン: ホストのみ表示 */}
-            {isHost && (
-              <Box px={4}>
-                <AppButton
-                  variant="outline"
-                  w="100%"
-                  onClick={resetToWaiting}
-                >
-                  リセット
-                </AppButton>
-              </Box>
-            )}
-          </Stack>
-        </ScrollableArea>
-      }
-      main={
-        <Box h="100%" display="flex" flexDir="column">
-          {/* モニター: 固定高さ */}
-          <Box flex="0 0 auto" p={3}>
-            <UniversalMonitor
-              room={room}
-              players={players}
-              roomId={roomId}
-              isHost={isHost}
-            />
-          </Box>
-
-          {/* カードボード: 残り高さを使用 */}
-          <Box flex="1 1 0" minH={0}>
-            <ScrollableArea label="カードボード" withPadding={true} padding={2}>
-              <CentralCardBoard
-                roomId={roomId}
-                players={players}
-                orderList={room.order?.list || []}
-                meId={meId}
-                eligibleIds={eligibleIds}
-                roomStatus={room.status}
-                cluesReady={allCluesReady}
-                failed={!!room.order?.failed}
-                failedAt={room.order?.failedAt}
-                proposal={room.order?.proposal || []}
-                resolveMode={room.options?.resolveMode}
-              />
-            </ScrollableArea>
-          </Box>
-        </Box>
-      }
-      rightPanel={
-        <Box h="100%" display="flex" flexDir="column">
-          {/* チャット: 残り高さを使用 */}
-          <Box flex="1 1 0" minH={0}>
-            <ChatPanelImproved roomId={roomId} />
-          </Box>
-
-          {/* 退出ボタン: 固定位置 */}
-          <Box
-            flex="0 0 auto"
-            p={3}
-            borderTopWidth="1px"
-            borderColor="borderDefault"
-          >
-            <AppButton
-              size="sm"
-              variant="ghost"
-              w="100%"
-              onClick={async () => {
-                await leaveRoom();
-                router.push("/");
-              }}
-            >
-              退出してロビーへ
-            </AppButton>
-          </Box>
-        </Box>
-      }
-      handArea={
-        <Box w="100%" h="100%" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
-          {room.status === "clue" && me ? (
-            <Flex
-              w="100%"
-              h="100%"
-              align="center"
-              justify="center"
-              gap={{ base: 2, md: 4 }}
-              direction={{ base: "column", lg: "row" }}
-              minH={0}
-            >
-              {/* 中央: カードと入力エリア */}
-              <Flex
-                align="center"
-                gap={{ base: 2, md: 4 }}
-                flexShrink={0}
-                minW={0}
-                direction={{ base: "row", md: "row" }}
+        header={
+          <Hud
+            roomName={room.name}
+            phase={room.status}
+            activeCount={onlinePlayers.length}
+            totalCount={players.length}
+            remainMs={null}
+            totalMs={null}
+            hostPrimary={showHostInHud ? hostPrimaryAction : null}
+            isHost={isHost}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+        }
+        sidebar={
+          <ScrollableArea label="参加者とオプション">
+            <Stack gap={4}>
+              <Panel
+                title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
               >
-                <SelfNumberCard value={me.number} draggableId={me.id} />
+                <Participants players={onlinePlayers} />
+              </Panel>
 
-                {/* コンパクトなClue入力エリア */}
-                <Flex align="center" gap={2} minW={0} flex="1">
-                  <Text
-                    fontSize="sm"
-                    color="fgMuted"
-                    flexShrink={0}
-                    display={{ base: "none", md: "block" }}
+              {/* デスクトップの開始ボタン配置を統一 */}
+              {!showHostInHud && hostPrimaryAction && (
+                <Box px={4}>
+                  <AppButton
+                    w="100%"
+                    colorPalette="orange"
+                    onClick={hostPrimaryAction.onClick}
+                    disabled={(hostPrimaryAction as any).disabled}
+                    title={(hostPrimaryAction as any).title}
+                    size="lg"
                   >
-                    連想:
-                  </Text>
-                  <ClueInputMini
-                    roomId={roomId}
-                    playerId={me.id}
-                    currentValue={me?.clue1 || ""}
-                  />
+                    {(hostPrimaryAction as any).label}
+                  </AppButton>
+                </Box>
+              )}
+
+              {/* リセットボタン: ホストのみ表示 */}
+              {isHost && (
+                <Box px={4}>
+                  <AppButton
+                    variant="outline"
+                    w="100%"
+                    onClick={resetToWaiting}
+                  >
+                    リセット
+                  </AppButton>
+                </Box>
+              )}
+            </Stack>
+          </ScrollableArea>
+        }
+        main={
+          <Box h="100%" display="flex" flexDir="column">
+            {/* モニター: 固定高さ */}
+            <Box flex="0 0 auto" p={3}>
+              <UniversalMonitor
+                room={room}
+                players={players}
+                roomId={roomId}
+                isHost={isHost}
+              />
+            </Box>
+
+            {/* カードボード: 残り高さを使用 */}
+            <Box flex="1 1 0" minH={0}>
+              <ScrollableArea
+                label="カードボード"
+                withPadding={true}
+                padding={2}
+              >
+                <CentralCardBoard
+                  roomId={roomId}
+                  players={players}
+                  orderList={room.order?.list || []}
+                  meId={meId}
+                  eligibleIds={eligibleIds}
+                  roomStatus={room.status}
+                  cluesReady={allCluesReady}
+                  failed={!!room.order?.failed}
+                  failedAt={room.order?.failedAt}
+                  proposal={room.order?.proposal || []}
+                  resolveMode={room.options?.resolveMode}
+                />
+              </ScrollableArea>
+            </Box>
+          </Box>
+        }
+        rightPanel={
+          <Box h="100%" display="flex" flexDir="column">
+            {/* チャット: 残り高さを使用 */}
+            <Box flex="1 1 0" minH={0}>
+              <ChatPanelImproved roomId={roomId} />
+            </Box>
+
+            {/* 退出ボタン: 固定位置 */}
+            <Box
+              flex="0 0 auto"
+              p={3}
+              borderTopWidth="1px"
+              borderColor="borderDefault"
+            >
+              <AppButton
+                size="sm"
+                variant="ghost"
+                w="100%"
+                onClick={async () => {
+                  await leaveRoom();
+                  router.push("/");
+                }}
+              >
+                退出してロビーへ
+              </AppButton>
+            </Box>
+          </Box>
+        }
+        handArea={
+          <Box
+            w="100%"
+            h="100%"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            overflow="hidden"
+          >
+            {room.status === "clue" && me ? (
+              <Flex
+                w="100%"
+                h="100%"
+                align="center"
+                justify="center"
+                gap={{ base: 2, md: 4 }}
+                direction={{ base: "column", lg: "row" }}
+                minH={0}
+              >
+                {/* 中央: カードと入力エリア */}
+                <Flex
+                  align="center"
+                  gap={{ base: 2, md: 4 }}
+                  flexShrink={0}
+                  minW={0}
+                  direction={{ base: "row", md: "row" }}
+                >
+                  <SelfNumberCard value={me.number} draggableId={me.id} />
+
+                  {/* コンパクトなClue入力エリア */}
+                  <Flex align="center" gap={2} minW={0} flex="1">
+                    <Text
+                      fontSize="sm"
+                      color="fgMuted"
+                      flexShrink={0}
+                      display={{ base: "none", md: "block" }}
+                    >
+                      連想:
+                    </Text>
+                    <ClueInputMini
+                      roomId={roomId}
+                      playerId={me.id}
+                      currentValue={me?.clue1 || ""}
+                    />
+                  </Flex>
+
+                  {/* ホストボタン */}
+                  {isHost && room.options?.resolveMode === "sort-submit" && (
+                    <Button
+                      colorPalette="teal"
+                      size="sm"
+                      flexShrink={0}
+                      onClick={async () => {
+                        const proposal: string[] =
+                          (room as any)?.order?.proposal || [];
+                        if (proposal.length === 0) {
+                          notify({
+                            title: "まだカードが場にありません",
+                            type: "info",
+                          });
+                          return;
+                        }
+                        const assigned = players
+                          .filter((p) => typeof (p as any).number === "number")
+                          .map((p) => p.id);
+                        if (assigned.length !== proposal.length) {
+                          notify({
+                            title: "まだ全員のカードが場に出ていません",
+                            type: "warning",
+                          });
+                          return;
+                        }
+                        try {
+                          await submitSortedOrder(roomId, proposal);
+                          notify({ title: "一括判定を実行", type: "success" });
+                        } catch (err: any) {
+                          notify({
+                            title: "一括判定失敗",
+                            description: err?.message,
+                            type: "error",
+                          });
+                        }
+                      }}
+                    >
+                      せーので判定！
+                    </Button>
+                  )}
                 </Flex>
-
-                {/* ホストボタン */}
-                {isHost && room.options?.resolveMode === "sort-submit" && (
-                  <Button
-                    colorPalette="teal"
-                    size="sm"
-                    flexShrink={0}
-                    onClick={async () => {
-                      const proposal: string[] =
-                        (room as any)?.order?.proposal || [];
-                      if (proposal.length === 0) {
-                        notify({
-                          title: "まだカードが場にありません",
-                          type: "info",
-                        });
-                        return;
-                      }
-                      const assigned = players
-                        .filter((p) => typeof (p as any).number === "number")
-                        .map((p) => p.id);
-                      if (assigned.length !== proposal.length) {
-                        notify({
-                          title: "まだ全員のカードが場に出ていません",
-                          type: "warning",
-                        });
-                        return;
-                      }
-                      try {
-                        await submitSortedOrder(roomId, proposal);
-                        notify({ title: "一括判定を実行", type: "success" });
-                      } catch (err: any) {
-                        notify({
-                          title: "一括判定失敗",
-                          description: err?.message,
-                          type: "error",
-                        });
-                      }
-                    }}
-                  >
-                    せーので判定！
-                  </Button>
-                )}
               </Flex>
-            </Flex>
-          ) : room.status === "playing" ? (
-            <Text fontSize="sm" color="fgMuted" textAlign="center">
-              下部の場パネルで「出す」を実行してください。
-            </Text>
-          ) : room.status === "waiting" ? (
-            <Text fontSize="sm" color="fgMuted" textAlign="center">
-              ゲーム開始をお待ちください...
-            </Text>
-          ) : (
-            <Text fontSize="sm" color="fgMuted" textAlign="center">
-              ゲーム準備中...
-            </Text>
-          )}
-        </Box>
-      }
-    />
-    
-    {/* 設定モーダル */}
-    <SettingsModal
-      isOpen={isSettingsOpen}
-      onClose={() => setIsSettingsOpen(false)}
-      roomId={roomId}
-      currentOptions={room.options || {}}
-      isHost={isHost}
-      roomStatus={room.status}
-    />
+            ) : room.status === "playing" ? (
+              <Text fontSize="sm" color="fgMuted" textAlign="center">
+                下部の場パネルで「出す」を実行してください。
+              </Text>
+            ) : room.status === "waiting" ? (
+              <Text fontSize="sm" color="fgMuted" textAlign="center">
+                ゲーム開始をお待ちください...
+              </Text>
+            ) : (
+              <Text fontSize="sm" color="fgMuted" textAlign="center">
+                ゲーム準備中...
+              </Text>
+            )}
+          </Box>
+        }
+      />
+
+      {/* 設定モーダル */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        roomId={roomId}
+        currentOptions={room.options || {}}
+        isHost={isHost}
+        roomStatus={room.status}
+      />
     </>
   );
 }

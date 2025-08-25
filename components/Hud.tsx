@@ -1,5 +1,12 @@
 "use client";
-import { Badge, Box, HStack, Progress, Spacer, IconButton } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  HStack,
+  IconButton,
+  Progress,
+  Spacer,
+} from "@chakra-ui/react";
 import { FiSettings } from "react-icons/fi";
 
 export type HudProps = {

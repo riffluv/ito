@@ -1,18 +1,12 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
-import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
-import {
-  Dialog,
-  HStack,
-  Stack,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
-import { FiSettings, FiZap, FiUsers } from "react-icons/fi";
+import { Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
+import { FiSettings, FiUsers, FiZap } from "react-icons/fi";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -78,7 +72,7 @@ export function SettingsModal({
     },
     {
       value: "sort-submit",
-      title: "一括判定モード", 
+      title: "一括判定モード",
       description: "全員カードを並べてからまとめて判定",
       icon: <FiUsers />,
       subtitle: "戦略的",
@@ -86,7 +80,10 @@ export function SettingsModal({
   ];
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(details) => !details.open && onClose()}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(details) => !details.open && onClose()}
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content maxW="lg">
@@ -114,7 +111,9 @@ export function SettingsModal({
                   <AppButton
                     key={option.value}
                     variant={resolveMode === option.value ? "solid" : "outline"}
-                    colorPalette={resolveMode === option.value ? "orange" : "gray"}
+                    colorPalette={
+                      resolveMode === option.value ? "orange" : "gray"
+                    }
                     onClick={() => setResolveMode(option.value)}
                     w="100%"
                     h="auto"
