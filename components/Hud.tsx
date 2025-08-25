@@ -1,5 +1,6 @@
 "use client";
-import { Badge, Box, HStack, Progress, Spacer } from "@chakra-ui/react";
+import { Badge, Box, HStack, Progress, Spacer, IconButton } from "@chakra-ui/react";
+import { FiSettings } from "react-icons/fi";
 
 export type HudProps = {
   roomName: string;
@@ -14,6 +15,8 @@ export type HudProps = {
     disabled?: boolean;
     title?: string;
   } | null;
+  isHost?: boolean;
+  onOpenSettings?: () => void;
 };
 
 export function Hud({
@@ -24,6 +27,8 @@ export function Hud({
   remainMs,
   totalMs,
   hostPrimary,
+  isHost = false,
+  onOpenSettings,
 }: HudProps) {
   const pct =
     totalMs && remainMs != null && totalMs > 0
@@ -70,6 +75,18 @@ export function Hud({
           )}
         </Box>
         <Spacer />
+        {/* 設定アイコン: ホストのみ表示 */}
+        {isHost && onOpenSettings && (
+          <IconButton
+            aria-label="ゲーム設定を開く"
+            variant="ghost"
+            size="sm"
+            onClick={onOpenSettings}
+            _hover={{ bg: "gray.700" }}
+          >
+            <FiSettings />
+          </IconButton>
+        )}
         {/* hostPrimary controls intentionally removed to simplify header UI */}
       </HStack>
     </Box>
