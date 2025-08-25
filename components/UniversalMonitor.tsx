@@ -20,7 +20,9 @@ export default function UniversalMonitor({
 
   return (
     <Panel
-      minH={UNIFIED_LAYOUT.MONITOR_MIN_HEIGHT} /* コンパクト化：統一システム対応 */
+      minH={
+        UNIFIED_LAYOUT.MONITOR_MIN_HEIGHT
+      } /* コンパクト化：統一システム対応 */
       display="flex"
       flexDir="column"
       justifyContent="flex-start"

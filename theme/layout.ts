@@ -45,7 +45,7 @@ export const UNIFIED_LAYOUT = {
 
   // ボード要素（DPI適応）
   BOARD_MIN_HEIGHT: "clamp(240px, 28vh, 320px)",
-  
+
   // モニター要素（コンパクト化対応）
   MONITOR_MIN_HEIGHT: "clamp(160px, 18vh, 200px)", // 180px固定値の代替
 
@@ -54,6 +54,18 @@ export const UNIFIED_LAYOUT = {
     COMPONENT_PADDING: "16px", // 統一パディング（Chakraの4に相当）
     SECTION_GAP: "0px", // セクション間のギャップ（外側制御のため0）
     INNER_SPACING: "24px", // 内部要素の間隔（Chakraの6に相当）
+    CARD_GAP: "12px", // カード間のギャップ（Chakraの3に相当）
+    FORM_GAP: "8px", // フォーム要素間のギャップ（Chakraの2に相当）
+  },
+
+  // Z-Index管理（統一）
+  Z_INDEX: {
+    BASE: 0,
+    CONTENT: 1,
+    PANEL: 10,
+    HEADER: 100,
+    MODAL: 1000,
+    TOAST: 2000,
   },
 
   // DPIスケール検出
@@ -66,6 +78,7 @@ export const UNIFIED_LAYOUT = {
 // === 後方互換性サポート ===
 
 // DPI_ADAPTIVE_LAYOUT (⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください)
+// @deprecated Use UNIFIED_LAYOUT instead
 export const DPI_ADAPTIVE_LAYOUT = {
   HEADER_HEIGHT_FLUID: UNIFIED_LAYOUT.HEADER_HEIGHT,
   SIDEBAR_WIDTH_FLUID: UNIFIED_LAYOUT.SIDEBAR_WIDTH,
@@ -100,6 +113,7 @@ export const DPI_ADAPTIVE_LAYOUT = {
   },
 } as const;
 
+// @deprecated Use UNIFIED_LAYOUT instead
 export const PREDICTABLE_LAYOUT = {
   // ⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください
   // 固定サイズ (px)
@@ -140,6 +154,7 @@ export const spacing = (size: keyof typeof PREDICTABLE_LAYOUT.SPACING) =>
   `${PREDICTABLE_LAYOUT.SPACING[size]}px`;
 
 // 後方互換性のため既存の LAYOUT も維持 (⚠️ 廃止予定 - UNIFIED_LAYOUTを使用してください)
+// @deprecated Use UNIFIED_LAYOUT instead
 export const LAYOUT = {
   HEADER_MIN_HEIGHT: PREDICTABLE_LAYOUT.HEADER_HEIGHT,
   SIDEBAR_WIDTH: PREDICTABLE_LAYOUT.SIDEBAR_WIDTH,
@@ -157,3 +172,66 @@ export const LAYOUT = {
 export type LayoutConstants = typeof LAYOUT;
 export type PredictableLayoutConstants = typeof PREDICTABLE_LAYOUT;
 export type DpiAdaptiveLayoutConstants = typeof DPI_ADAPTIVE_LAYOUT;
+
+// 🎯 推奨システム型定義（型安全性とIDEサポート向上）
+export type UnifiedLayoutConstants = typeof UNIFIED_LAYOUT;
+
+// 型安全なヘルパー関数
+export const getLayoutValue = <T extends keyof UnifiedLayoutConstants>(
+  key: T
+): UnifiedLayoutConstants[T] => UNIFIED_LAYOUT[key];
+
+// DPIスケール対応ヘルパー
+export const getDpiValue = <T extends keyof typeof UNIFIED_LAYOUT.DPI_125>(
+  key: T,
+  isDpi125: boolean = false
+): string => {
+  return isDpi125 && key in UNIFIED_LAYOUT.DPI_125
+    ? UNIFIED_LAYOUT.DPI_125[key]
+    : (UNIFIED_LAYOUT[key as keyof typeof UNIFIED_LAYOUT] as string);
+};
+
+// 🔍 CSS設計品質チェック関数（開発時の品質担保）
+export const validateLayoutUsage = {
+  // ハードコード値の検出
+  checkHardcodedValues: (cssText: string): string[] => {
+    const hardcoded = [];
+    if (cssText.includes('"1px"') || cssText.includes("'1px'")) {
+      hardcoded.push(
+        "⚠️ borderWidth: UNIFIED_LAYOUT.BORDER_WIDTHを使用してください"
+      );
+    }
+    if (/\b\d{2,}px\b/.test(cssText)) {
+      hardcoded.push(
+        "⚠️ ピクセル直打ちを避け、UNIFIED_LAYOUTを使用してください"
+      );
+    }
+    return hardcoded;
+  },
+
+  // 推奨システムの使用確認
+  isUsingRecommendedSystem: (importText: string): boolean => {
+    return importText.includes("UNIFIED_LAYOUT");
+  },
+
+  // 非推奨システムの使用検出
+  checkDeprecatedSystems: (codeText: string): string[] => {
+    const deprecated = [];
+    if (codeText.includes("PREDICTABLE_LAYOUT")) {
+      deprecated.push(
+        "⚠️ PREDICTABLE_LAYOUTは廃止予定です。UNIFIED_LAYOUTを使用してください。"
+      );
+    }
+    if (codeText.includes("DPI_ADAPTIVE_LAYOUT")) {
+      deprecated.push(
+        "⚠️ DPI_ADAPTIVE_LAYOUTは廃止予定です。UNIFIED_LAYOUTを使用してください。"
+      );
+    }
+    if (codeText.includes("LAYOUT.")) {
+      deprecated.push(
+        "⚠️ LAYOUTは廃止予定です。UNIFIED_LAYOUTを使用してください。"
+      );
+    }
+    return deprecated;
+  },
+};

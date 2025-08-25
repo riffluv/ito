@@ -11,7 +11,6 @@ import {
   setOrderProposal,
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
@@ -289,7 +288,13 @@ export function CentralCardBoard({
   };
 
   return (
-    <Panel density="compact" p={4} /* 統一スペーシング：UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING相当 */ h="100%" display="flex" flexDir="column">
+    <Panel
+      density="compact"
+      p={4}
+      /* 統一スペーシング：UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING相当 */ h="100%"
+      display="flex"
+      flexDir="column"
+    >
       <Box position="relative" flex="1" display="flex" flexDir="column">
         <Box textAlign="center" mb={4} flex="0 0 auto">
           <Box
@@ -328,93 +333,93 @@ export function CentralCardBoard({
 
         <Box flex="1" display="flex" flexDir="column" minH={0}>
           <BoardArea
-          onDragOver={(e) => {
-            e.preventDefault();
-            // only show hover highlight when drops are allowed
-            if (!(roomStatus === "clue" && cluesReady === false)) {
-              setIsOver(true);
-            }
-          }}
-          onDragLeave={() => setIsOver(false)}
-          onDrop={onDrop}
-          isOver={isOver}
-        >
-          {resolveMode === "sort-submit" && roomStatus === "clue" ? (
-            <DndContext
-              collisionDetection={closestCenter}
-              onDragEnd={onDragEnd}
-            >
-              <SortableContext items={activeProposal}>
-                {activeProposal.length > 0 &&
-                  activeProposal.map((id, idx) => (
-                    <SortableItem id={id} key={id}>
-                      {renderCard(id, idx)}
-                    </SortableItem>
-                  ))}
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <>
-              {/* orderListのカードを表示 */}
-              {orderList &&
-                orderList.length > 0 &&
-                orderList.map((id, idx) => renderCard(id, idx))}
-              {/* proposalからの追加カード表示（判定終了後は表示しない） */}
-              {proposal &&
-              proposal.length > 0 &&
-              roomStatus !== "finished" &&
-              roomStatus !== "reveal"
-                ? proposal
-                    .filter((id) => !orderList?.includes(id))
-                    .map((id) => renderCard(id))
-                : null}
-            </>
-          )}
-
-          {/* optimistic local pending (fallback) */}
-          {resolveMode === "sort-submit" &&
-            roomStatus === "clue" &&
-            activeProposal.length === 0 && (
-              <Text color="gray.400">
-                自分のカードをドラッグして場に置き、連想ワードで相談しましょう。
-              </Text>
+            onDragOver={(e) => {
+              e.preventDefault();
+              // only show hover highlight when drops are allowed
+              if (!(roomStatus === "clue" && cluesReady === false)) {
+                setIsOver(true);
+              }
+            }}
+            onDragLeave={() => setIsOver(false)}
+            onDrop={onDrop}
+            isOver={isOver}
+          >
+            {resolveMode === "sort-submit" && roomStatus === "clue" ? (
+              <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={onDragEnd}
+              >
+                <SortableContext items={activeProposal}>
+                  {activeProposal.length > 0 &&
+                    activeProposal.map((id, idx) => (
+                      <SortableItem id={id} key={id}>
+                        {renderCard(id, idx)}
+                      </SortableItem>
+                    ))}
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <>
+                {/* orderListのカードを表示 */}
+                {orderList &&
+                  orderList.length > 0 &&
+                  orderList.map((id, idx) => renderCard(id, idx))}
+                {/* proposalからの追加カード表示（判定終了後は表示しない） */}
+                {proposal &&
+                proposal.length > 0 &&
+                roomStatus !== "finished" &&
+                roomStatus !== "reveal"
+                  ? proposal
+                      .filter((id) => !orderList?.includes(id))
+                      .map((id) => renderCard(id))
+                  : null}
+              </>
             )}
-          {resolveMode !== "sort-submit" &&
-            (!orderList || orderList.length === 0) &&
-            (!proposal || proposal.length === 0) &&
-            pending.length === 0 &&
-            (roomStatus === "clue" && cluesReady === false ? (
-              <Box role="status" aria-live="polite">
-                <Text fontWeight={700} color="fgMuted">
-                  全員が連想ワードを決定するまでお待ちください
+
+            {/* optimistic local pending (fallback) */}
+            {resolveMode === "sort-submit" &&
+              roomStatus === "clue" &&
+              activeProposal.length === 0 && (
+                <Text color="gray.400">
+                  自分のカードをドラッグして場に置き、連想ワードで相談しましょう。
+                </Text>
+              )}
+            {resolveMode !== "sort-submit" &&
+              (!orderList || orderList.length === 0) &&
+              (!proposal || proposal.length === 0) &&
+              pending.length === 0 &&
+              (roomStatus === "clue" && cluesReady === false ? (
+                <Box role="status" aria-live="polite">
+                  <Text fontWeight={700} color="fgMuted">
+                    全員が連想ワードを決定するまでお待ちください
+                  </Text>
+                </Box>
+              ) : (
+                <Text color="gray.400">
+                  まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
+                </Text>
+              ))}
+
+            {/* ローカルのpendingカード表示（判定終了後は表示しない） */}
+            {resolveMode !== "sort-submit" &&
+            pending &&
+            pending.length > 0 &&
+            roomStatus !== "finished" &&
+            roomStatus !== "reveal"
+              ? pending
+                  .filter((id) => !(orderList || []).includes(id))
+                  .filter((id) => !(proposal || []).includes(id))
+                  .map((id) => renderCard(id))
+              : null}
+            {/* 失敗後も継続可能: 下部に説明 */}
+            {failed && (
+              <Box flexBasis="100%">
+                <Text fontSize="sm" color="red.300">
+                  失敗後も全員のカードが出揃うまで並べ続けます。
                 </Text>
               </Box>
-            ) : (
-              <Text color="gray.400">
-                まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
-              </Text>
-            ))}
-
-          {/* ローカルのpendingカード表示（判定終了後は表示しない） */}
-          {resolveMode !== "sort-submit" &&
-          pending &&
-          pending.length > 0 &&
-          roomStatus !== "finished" &&
-          roomStatus !== "reveal"
-            ? pending
-                .filter((id) => !(orderList || []).includes(id))
-                .filter((id) => !(proposal || []).includes(id))
-                .map((id) => renderCard(id))
-            : null}
-          {/* 失敗後も継続可能: 下部に説明 */}
-          {failed && (
-            <Box flexBasis="100%">
-              <Text fontSize="sm" color="red.300">
-                失敗後も全員のカードが出揃うまで並べ続けます。
-              </Text>
-            </Box>
-          )}
-        </BoardArea>
+            )}
+          </BoardArea>
         </Box>
       </Box>
     </Panel>
