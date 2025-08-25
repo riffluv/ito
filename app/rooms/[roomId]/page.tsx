@@ -433,6 +433,7 @@ export default function RoomPage() {
               <ScrollableArea label="参加者一覧">
                 <Panel
                   title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+                  density="compact"
                 >
                   <Participants players={onlinePlayers} />
                 </Panel>
