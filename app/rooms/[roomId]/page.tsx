@@ -23,10 +23,11 @@ const RoomOptionsEditor = dynamic(
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
 import { AppButton } from "@/components/ui/AppButton";
-import AppShell from "@/components/ui/AppShell";
+import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
+import GameLayout from "@/components/ui/GameLayout";
 import { notify } from "@/components/ui/notify";
 import { Panel } from "@/components/ui/Panel";
-import { ScrollRegion } from "@/components/ui/ScrollRegion";
+import ScrollableArea from "@/components/ui/ScrollableArea";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
@@ -345,61 +346,70 @@ export default function RoomPage() {
   }
   // 途中参加OKのため、ブロック画面は表示しない
 
-  // フルスクリーン AppShell グリッド
+  // 新しいGameLayoutを使用した予測可能な構造
   return (
-    <AppShell
+    <GameLayout
       header={
-        <>
-          <Hud
-            roomName={room.name}
-            phase={room.status}
-            activeCount={onlinePlayers.length}
-            totalCount={players.length}
-            remainMs={null}
-            totalMs={null}
-            hostPrimary={showHostInHud ? hostPrimaryAction : null}
-          />
-          {/* HUD 内フェーズバッジに統一済み */}
-        </>
+        <Hud
+          roomName={room.name}
+          phase={room.status}
+          activeCount={onlinePlayers.length}
+          totalCount={players.length}
+          remainMs={null}
+          totalMs={null}
+          hostPrimary={showHostInHud ? hostPrimaryAction : null}
+        />
       }
-      left={
-        <ScrollRegion withContainer aria-label="参加者とオプション">
-          <Panel
-            title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
-          >
-            <Participants players={onlinePlayers} />
-          </Panel>
-          {!showHostInHud && hostPrimaryAction && (
-            <HStack>
-              <AppButton
-                colorPalette="orange"
-                onClick={hostPrimaryAction.onClick}
-                disabled={(hostPrimaryAction as any).disabled}
-                title={(hostPrimaryAction as any).title}
-              >
-                {(hostPrimaryAction as any).label}
-              </AppButton>
-            </HStack>
-          )}
-          <Panel title="オプション">
-            <RoomOptionsEditor
-              value={room.options}
-              onChange={(v) => updateOptions(v)}
-              disabled={!isHost || room.status !== "waiting"}
-            />
-            {isHost && (
-              <Stack mt={3}>
-                <AppButton variant="outline" onClick={resetToWaiting}>
-                  リセット
+      sidebar={
+        <ScrollableArea label="参加者とオプション">
+          <Stack gap={4}>
+            <Panel
+              title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+            >
+              <Participants players={onlinePlayers} />
+            </Panel>
+
+            {/* デスクトップの開始ボタン配置を統一 */}
+            {!showHostInHud && hostPrimaryAction && (
+              <Box px={4}>
+                <AppButton
+                  w="100%"
+                  colorPalette="orange"
+                  onClick={hostPrimaryAction.onClick}
+                  disabled={(hostPrimaryAction as any).disabled}
+                  title={(hostPrimaryAction as any).title}
+                  size="lg"
+                >
+                  {(hostPrimaryAction as any).label}
                 </AppButton>
-              </Stack>
+              </Box>
             )}
-          </Panel>
-        </ScrollRegion>
+
+            <Panel title="オプション">
+              <RoomOptionsEditor
+                value={room.options}
+                onChange={(v) => updateOptions(v)}
+                disabled={!isHost || room.status !== "waiting"}
+              />
+              {isHost && (
+                <Box mt={3}>
+                  <AppButton
+                    variant="outline"
+                    w="100%"
+                    onClick={resetToWaiting}
+                  >
+                    リセット
+                  </AppButton>
+                </Box>
+              )}
+            </Panel>
+          </Stack>
+        </ScrollableArea>
       }
-      center={
-        <>
-          <Box flex="0 0 auto">
+      main={
+        <Box h="100%" display="flex" flexDir="column">
+          {/* モニター: 固定高さ */}
+          <Box flex="0 0 auto" p={4}>
             <UniversalMonitor
               room={room}
               players={players}
@@ -407,30 +417,45 @@ export default function RoomPage() {
               isHost={isHost}
             />
           </Box>
-          <ScrollRegion withContainer flex="1 1 auto" aria-label="カードボード">
-            <CentralCardBoard
-              roomId={roomId}
-              players={players}
-              orderList={room.order?.list || []}
-              meId={meId}
-              eligibleIds={eligibleIds}
-              roomStatus={room.status}
-              cluesReady={allCluesReady}
-              failed={!!room.order?.failed}
-              failedAt={room.order?.failedAt}
-              proposal={room.order?.proposal || []}
-              resolveMode={room.options?.resolveMode}
-            />
-          </ScrollRegion>
-        </>
+
+          {/* カードボード: 残り高さを使用 */}
+          <Box flex="1 1 0" minH={0}>
+            <ScrollableArea label="カードボード" withPadding={true}>
+              <CentralCardBoard
+                roomId={roomId}
+                players={players}
+                orderList={room.order?.list || []}
+                meId={meId}
+                eligibleIds={eligibleIds}
+                roomStatus={room.status}
+                cluesReady={allCluesReady}
+                failed={!!room.order?.failed}
+                failedAt={room.order?.failedAt}
+                proposal={room.order?.proposal || []}
+                resolveMode={room.options?.resolveMode}
+              />
+            </ScrollableArea>
+          </Box>
+        </Box>
       }
-      right={
-        <ScrollRegion aria-label="チャット">
-          <ChatPanel roomId={roomId} height="auto" />
-          <HStack mt={3}>
+      rightPanel={
+        <Box h="100%" display="flex" flexDir="column">
+          {/* チャット: 残り高さを使用 */}
+          <Box flex="1 1 0" minH={0}>
+            <ChatPanelImproved roomId={roomId} />
+          </Box>
+
+          {/* 退出ボタン: 固定位置 */}
+          <Box
+            flex="0 0 auto"
+            p={3}
+            borderTopWidth="1px"
+            borderColor="borderDefault"
+          >
             <AppButton
               size="sm"
               variant="ghost"
+              w="100%"
               onClick={async () => {
                 await leaveRoom();
                 router.push("/");
@@ -438,21 +463,21 @@ export default function RoomPage() {
             >
               退出してロビーへ
             </AppButton>
-          </HStack>
-        </ScrollRegion>
+          </Box>
+        </Box>
       }
-      hand={
+      handArea={
         <>
           {room.status === "clue" && me && (
-            <Box minW={0} display="flex" alignItems="center" gap={4} mx="auto">
+            <HStack gap={6} align="center" justify="center" w="100%">
               <SelfNumberCard value={me.number} draggableId={me.id} />
               <Box>
                 <CluePanel roomId={roomId} me={me} label="連想" />
               </Box>
-            </Box>
+            </HStack>
           )}
           {room.status === "playing" && (
-            <Text fontSize="sm" color="fgMuted">
+            <Text fontSize="sm" color="fgMuted" textAlign="center">
               下部の場パネルで「出す」を実行してください。
             </Text>
           )}

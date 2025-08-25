@@ -1,8 +1,65 @@
 /* ================================================================
-  Global Base (Minimal) - 2025
-  Purpose: Reset + viewport + shared micro animations only.
+  Global Base (Minimal) - 2025 DPI Scale Best Practices
+  Purpose: Reset + viewport + DPI adaptation + shared micro animations.
   Policy: Layout sizing & responsive logic live in React/Chakra components.
+  125% DPI Scale Optimization for ノートPC environments.
   ================================================================ */
+
+/* DPI Scale Detection & Base Variables */
+:root {
+  /* 2025年ベストプラクティス: CSS Custom Properties for DPI adaptation */
+  --base-scale: 1;
+  --adaptive-scale: clamp(0.85, 1vw + 0.5rem, 1.15);
+
+  /* ゲーム特化レイアウト変数 (125%DPI最適化) */
+  --game-header-height: clamp(48px, 4vh, 64px);
+  --game-sidebar-width: clamp(240px, 22vw, 300px);
+  --game-right-panel-width: clamp(280px, 26vw, 360px);
+  --game-hand-min-height: clamp(120px, 15vh, 180px);
+
+  /* フルードスペーシング (DPI対応) */
+  --spacing-xs: clamp(2px, 0.125rem + 0.25vw, 6px);
+  --spacing-sm: clamp(4px, 0.25rem + 0.5vw, 12px);
+  --spacing-md: clamp(8px, 0.5rem + 1vw, 20px);
+  --spacing-lg: clamp(12px, 0.75rem + 1.5vw, 32px);
+
+  /* ゲーム要素サイズ (タッチフレンドリー + DPI対応) */
+  --button-min-height: clamp(36px, 3.5vh, 48px);
+  --card-min-width: clamp(60px, 8vw, 120px);
+  --card-min-height: clamp(80px, 10vh, 140px);
+}
+
+/* 125% DPI スケール特別対応 + 高解像度最適化統合 */
+@media (resolution: 120dpi),
+  (resolution: 1.25dppx),
+  (-webkit-min-device-pixel-ratio: 1.25) {
+  :root {
+    --adaptive-scale: 0.92; /* 125%DPI時の微調整 */
+    --game-header-height: clamp(44px, 3.5vh, 58px);
+    --game-hand-min-height: clamp(110px, 13vh, 160px);
+  }
+
+  .crisp-edges {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+
+  .smooth-text {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* 150% DPI スケール対応 */
+@media (resolution: 144dpi), (resolution: 1.5dppx) {
+  :root {
+    --adaptive-scale: 0.88;
+    --game-header-height: clamp(42px, 3vh, 54px);
+    --game-hand-min-height: clamp(100px, 12vh, 150px);
+  }
+}
+
 html,
 body,
 #__next {
@@ -15,13 +72,61 @@ body {
 body {
   min-height: 100dvh; /* dynamic viewport height (mobile safe) */
   overflow: hidden; /* limit scrolling to internal ScrollRegion components */
+
+  /* 2025年フォント最適化 */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+
   /* 背景色・文字色はChakra Themeのglobal stylesに委譲 */
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* ===== 2025年アクセシビリティ対応 ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== スクロール防止のためのオーバーフロー制御 ===== */
+.no-scroll-container {
+  overflow: hidden;
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+.scrollable-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+
+  /* Webkitスクロールバースタイリング */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* stage background helper (optional usage in layout) */
