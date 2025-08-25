@@ -1,25 +1,62 @@
-// 予測可能なレイアウト定数 (Agent Design System Ready)
+// 統合レイアウト定数 (Agent Design System Ready)
 // agentが正確に計算・予測できる明確な値定義
 // Chakra UI v3.25.0 対応 + 2025年DPIスケールベストプラクティス
 
 /**
- * DPI Scale Adaptive Layout Constants
- * 125% DPI スケール対応のための流動的レイアウト定数
+ * 統一レイアウトシステム
  *
  * 設計原則:
- * 1. clamp() による流動的サイズ調整
- * 2. ビューポート単位との組み合わせ
- * 3. 125% DPI での最適化
- * 4. スクロール発生の完全防止
+ * 1. 単一責任原則: 1つのファイルで全レイアウト定数を管理
+ * 2. 予測可能性: agentが計算しやすい明確な値
+ * 3. DPI適応: 125%/150%スケール自動対応
+ * 4. スケーラビリティ: トークンベースの拡張可能設計
  */
-export const DPI_ADAPTIVE_LAYOUT = {
-  // ビューポート適応サイズ (125% DPI 最適化)
-  HEADER_HEIGHT_FLUID: "clamp(48px, 4vh, 64px)",
-  SIDEBAR_WIDTH_FLUID: "clamp(240px, 22vw, 300px)",
-  RIGHT_PANEL_WIDTH_FLUID: "clamp(280px, 26vw, 360px)",
-  HAND_MIN_HEIGHT_FLUID: "clamp(70px, 6vh, 100px)", // 手札エリア高さを最小化
 
-  // 固定値 (後方互換性)
+// === プライマリレイアウト定数 ===
+export const UNIFIED_LAYOUT = {
+  // ビューポート適応サイズ (DPI最適化)
+  HEADER_HEIGHT: "clamp(48px, 4vh, 64px)",
+  SIDEBAR_WIDTH: "clamp(240px, 22vw, 300px)",
+  RIGHT_PANEL_WIDTH: "clamp(280px, 26vw, 360px)",
+  HAND_AREA_HEIGHT: "clamp(100px, 12vh, 150px)",
+
+  // 125% DPI特別対応
+  DPI_125: {
+    HEADER_HEIGHT: "clamp(44px, 3.5vh, 58px)",
+    HAND_AREA_HEIGHT: "clamp(80px, 8vh, 120px)",
+  },
+
+  // ゲーム要素 (タッチフレンドリー)
+  CARD: {
+    MIN_WIDTH: "clamp(60px, 8vw, 120px)",
+    MIN_HEIGHT: "clamp(80px, 10vh, 140px)",
+  },
+
+  // インタラクション要素
+  BUTTON: {
+    MIN_HEIGHT: "clamp(36px, 3.5vh, 48px)",
+  },
+
+  // ボーダー（統一）
+  BORDER_WIDTH: "1px",
+
+  // DPIスケール検出
+  MEDIA_QUERIES: {
+    DPI_125: "(resolution: 120dpi), (resolution: 1.25dppx)",
+    DPI_150: "(resolution: 144dpi), (resolution: 1.5dppx)",
+  },
+} as const;
+
+// === 後方互換性サポート ===
+
+// DPI_ADAPTIVE_LAYOUT (既存コード用)
+export const DPI_ADAPTIVE_LAYOUT = {
+  HEADER_HEIGHT_FLUID: UNIFIED_LAYOUT.HEADER_HEIGHT,
+  SIDEBAR_WIDTH_FLUID: UNIFIED_LAYOUT.SIDEBAR_WIDTH,
+  RIGHT_PANEL_WIDTH_FLUID: UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH,
+  HAND_MIN_HEIGHT_FLUID: UNIFIED_LAYOUT.HAND_AREA_HEIGHT,
+
+  // 固定値（廃止予定）
   HEADER_HEIGHT: 60,
   SIDEBAR_WIDTH: 280,
   RIGHT_PANEL_WIDTH: 340,
@@ -27,10 +64,10 @@ export const DPI_ADAPTIVE_LAYOUT = {
   BOARD_MIN_HEIGHT: 300,
 
   // DPI スケール検出
-  DPI_SCALE_125: "(resolution: 120dpi), (resolution: 1.25dppx)",
-  DPI_SCALE_150: "(resolution: 144dpi), (resolution: 1.5dppx)",
+  DPI_SCALE_125: UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125,
+  DPI_SCALE_150: UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150,
 
-  // 流動的スペーシング
+  // 流動的スペーシング（Chakra UIトークンに移行推奨）
   SPACING_FLUID: {
     XS: "clamp(2px, 0.125rem + 0.25vw, 6px)",
     SM: "clamp(4px, 0.25rem + 0.5vw, 12px)",
@@ -39,11 +76,11 @@ export const DPI_ADAPTIVE_LAYOUT = {
     XL: "clamp(16px, 1rem + 2vw, 48px)",
   },
 
-  // ゲーム要素サイズ (タッチフレンドリー + DPI対応)
+  // ゲーム要素サイズ
   GAME_ELEMENTS: {
-    BUTTON_MIN_HEIGHT: "clamp(36px, 3.5vh, 48px)",
-    CARD_MIN_WIDTH: "clamp(60px, 8vw, 120px)",
-    CARD_MIN_HEIGHT: "clamp(80px, 10vh, 140px)",
+    BUTTON_MIN_HEIGHT: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
+    CARD_MIN_WIDTH: UNIFIED_LAYOUT.CARD.MIN_WIDTH,
+    CARD_MIN_HEIGHT: UNIFIED_LAYOUT.CARD.MIN_HEIGHT,
   },
 } as const;
 
