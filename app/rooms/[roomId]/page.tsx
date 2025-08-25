@@ -16,10 +16,6 @@ const Participants = dynamic(
   () => import("@/components/Participants").then((m) => m.Participants),
   { ssr: false }
 );
-const RoomOptionsEditor = dynamic(
-  () => import("@/components/RoomOptions").then((m) => m.RoomOptionsEditor),
-  { ssr: false }
-);
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
 import { AppButton } from "@/components/ui/AppButton";
@@ -30,6 +26,7 @@ import { Panel } from "@/components/ui/Panel";
 import ScrollableArea from "@/components/ui/ScrollableArea";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
+import SettingsModal from "@/components/SettingsModal";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -144,6 +141,9 @@ export default function RoomPage() {
     detachNow,
     leavingRef,
   } = useRoomState(roomId, uid, displayName);
+
+  // 設定モーダルの状態管理
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
@@ -301,11 +301,6 @@ export default function RoomPage() {
     await continueAfterFailAction(roomId);
   };
 
-  const updateOptions = async (partial: RoomDoc["options"]) => {
-    if (!isHost || !room) return;
-    await setRoomOptions(roomId, partial);
-  };
-
   // proposal state removed: clue フェーズではドロップ時に即時コミットして判定します
 
   // 表示名が変わったら、入室中の自分のプレイヤーDocにも反映
@@ -412,7 +407,8 @@ export default function RoomPage() {
 
   // 新しいGameLayoutを使用した予測可能な構造
   return (
-    <GameLayout
+    <>
+      <GameLayout
       header={
         <Hud
           roomName={room.name}
@@ -422,6 +418,8 @@ export default function RoomPage() {
           remainMs={null}
           totalMs={null}
           hostPrimary={showHostInHud ? hostPrimaryAction : null}
+          isHost={isHost}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       }
       sidebar={
@@ -449,24 +447,18 @@ export default function RoomPage() {
               </Box>
             )}
 
-            <Panel title="オプション">
-              <RoomOptionsEditor
-                value={room.options}
-                onChange={(v) => updateOptions(v)}
-                disabled={!isHost || room.status !== "waiting"}
-              />
-              {isHost && (
-                <Box mt={3}>
-                  <AppButton
-                    variant="outline"
-                    w="100%"
-                    onClick={resetToWaiting}
-                  >
-                    リセット
-                  </AppButton>
-                </Box>
-              )}
-            </Panel>
+            {/* リセットボタン: ホストのみ表示 */}
+            {isHost && (
+              <Box px={4}>
+                <AppButton
+                  variant="outline"
+                  w="100%"
+                  onClick={resetToWaiting}
+                >
+                  リセット
+                </AppButton>
+              </Box>
+            )}
           </Stack>
         </ScrollableArea>
       }
@@ -628,5 +620,16 @@ export default function RoomPage() {
         </Box>
       }
     />
+    
+    {/* 設定モーダル */}
+    <SettingsModal
+      isOpen={isSettingsOpen}
+      onClose={() => setIsSettingsOpen(false)}
+      roomId={roomId}
+      currentOptions={room.options || {}}
+      isHost={isHost}
+      roomStatus={room.status}
+    />
+    </>
   );
 }
