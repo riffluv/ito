@@ -19,11 +19,12 @@ export default function UniversalMonitor({
 
   return (
     <Panel
-      minH={240}
+      minH={180} /* コンパクト化：240px⇒180px */
       display="flex"
       flexDir="column"
       justifyContent="flex-start"
-      p={0}
+      density="compact"
+      p={4} /* 統一スペーシング：16px */
       overflow="hidden"
     >
       {/* top banner */}
@@ -41,7 +42,7 @@ export default function UniversalMonitor({
         {(room as any)?.topicBox ?? "未選択"}
       </Box>
 
-      <Box px={5} py={5} textAlign="center">
+      <Box px={5} py={3} textAlign="center">
         {/* Show the topic selector only for the host during clue phase; when shown, hide the separate header text to avoid duplicate boxes */}
         {room.status === "clue" && isHost ? (
           <Box>

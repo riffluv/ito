@@ -43,6 +43,16 @@ export const UNIFIED_LAYOUT = {
   // ボーダー（統一）
   BORDER_WIDTH: "1px",
 
+  // ボード要素（DPI適応）
+  BOARD_MIN_HEIGHT: "clamp(240px, 28vh, 320px)",
+
+  // コンポーネント間スペーシング（統一制御）
+  SPACING: {
+    COMPONENT_PADDING: "16px", // 統一パディング（Chakraの4に相当）
+    SECTION_GAP: "0px", // セクション間のギャップ（外側制御のため0）
+    INNER_SPACING: "24px", // 内部要素の間隔（Chakraの6に相当）
+  },
+
   // DPIスケール検出
   MEDIA_QUERIES: {
     DPI_125: "(resolution: 120dpi), (resolution: 1.25dppx)",

@@ -64,8 +64,8 @@ export function GameLayout({
         borderBottomWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         bg="panelBg"
-        px={4}
-        py={3}
+        px={0} /* パディング除去：外側で制御 */
+        py={0} /* パディング除去：外側で制御 */
         display="flex"
         alignItems="center"
         boxShadow="interactive"
@@ -133,8 +133,8 @@ export function GameLayout({
         borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         bg="panelBg"
-        px={3}
-        py={3}
+        px={0} /* パディング除去：外側で制御 */
+        py={0} /* パディング除去：外側で制御 */
         display="flex"
         alignItems="center"
         justifyContent="center"

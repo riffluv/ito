@@ -466,8 +466,8 @@ export default function RoomPage() {
         }
         main={
           <Box h="100%" display="flex" flexDir="column">
-            {/* モニター: 固定高さ */}
-            <Box flex="0 0 auto" p={3}>
+            {/* モニター: 固定高さ - パディング統一 */}
+            <Box flex="0 0 auto" p={0} /* パディング除去：内部で制御 */>
               <UniversalMonitor
                 room={room}
                 players={players}
@@ -477,26 +477,20 @@ export default function RoomPage() {
             </Box>
 
             {/* カードボード: 残り高さを使用 */}
-            <Box flex="1 1 0" minH={0}>
-              <ScrollableArea
-                label="カードボード"
-                withPadding={true}
-                padding={2}
-              >
-                <CentralCardBoard
-                  roomId={roomId}
-                  players={players}
-                  orderList={room.order?.list || []}
-                  meId={meId}
-                  eligibleIds={eligibleIds}
-                  roomStatus={room.status}
-                  cluesReady={allCluesReady}
-                  failed={!!room.order?.failed}
-                  failedAt={room.order?.failedAt}
-                  proposal={room.order?.proposal || []}
-                  resolveMode={room.options?.resolveMode}
-                />
-              </ScrollableArea>
+            <Box flex="1 1 0" minH={0} overflowY="auto" overflowX="hidden">
+              <CentralCardBoard
+                roomId={roomId}
+                players={players}
+                orderList={room.order?.list || []}
+                meId={meId}
+                eligibleIds={eligibleIds}
+                roomStatus={room.status}
+                cluesReady={allCluesReady}
+                failed={!!room.order?.failed}
+                failedAt={room.order?.failedAt}
+                proposal={room.order?.proposal || []}
+                resolveMode={room.options?.resolveMode}
+              />
             </Box>
           </Box>
         }

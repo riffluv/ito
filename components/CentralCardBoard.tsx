@@ -11,6 +11,7 @@ import {
   setOrderProposal,
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
@@ -288,17 +289,18 @@ export function CentralCardBoard({
   };
 
   return (
-    <Panel>
-      <Box position="relative">
-        <Box textAlign="center" mb={2}>
+    <Panel density="compact" p={4} /* 統一スペーシング：16px */ h="100%" display="flex" flexDir="column">
+      <Box position="relative" flex="1" display="flex" flexDir="column">
+        <Box textAlign="center" mb={4} flex="0 0 auto">
           <Box
             as="span"
             display="inline-block"
-            px={3}
-            py={1.5}
-            rounded="12px"
+            px={4}
+            py={2}
+            rounded="lg"
             bg="rgba(123,211,182,0.08)"
             fontWeight={700}
+            fontSize="md"
           >
             🎯 カードボード（出した順）
           </Box>
@@ -324,7 +326,8 @@ export function CentralCardBoard({
         )}
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
-        <BoardArea
+        <Box flex="1" display="flex" flexDir="column" minH={0}>
+          <BoardArea
           onDragOver={(e) => {
             e.preventDefault();
             // only show hover highlight when drops are allowed
@@ -412,6 +415,7 @@ export function CentralCardBoard({
             </Box>
           )}
         </BoardArea>
+        </Box>
       </Box>
     </Panel>
   );
