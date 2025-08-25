@@ -56,6 +56,7 @@ import type { RoomDoc } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import {
   Box,
+  Button,
   Flex,
   HStack,
   Input,
@@ -67,6 +68,65 @@ import {
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+// ClueInputMini: 手札エリア用のコンパクトな連想ワード入力コンポーネント
+interface ClueInputMiniProps {
+  roomId: string;
+  playerId: string;
+  currentValue: string;
+}
+
+function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
+  const [text, setText] = useState<string>(currentValue);
+  
+  // props が変わったら内部状態も更新
+  useEffect(() => {
+    setText(currentValue);
+  }, [currentValue]);
+
+  const handleSubmit = async () => {
+    const value = text.trim();
+    if (!value) {
+      notify({ title: "連想ワードを入力してください", type: "warning" });
+      return;
+    }
+    try {
+      await updateClue1(roomId, playerId, value);
+      notify({ title: "連想ワードを更新しました", type: "success" });
+    } catch (err: any) {
+      notify({ title: "更新に失敗しました", description: err?.message, type: "error" });
+    }
+  };
+
+  return (
+    <HStack gap={1} flex="1" minW={0}>
+      <Input
+        placeholder="連想ワード"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSubmit();
+          }
+        }}
+        size="sm"
+        w={{ base: "120px", md: "160px", lg: "200px" }}
+        bg="panelSubBg"
+        flex="1"
+        maxW="200px"
+      />
+      <Button
+        size="sm"
+        colorPalette="orange"
+        onClick={handleSubmit}
+        flexShrink={0}
+      >
+        更新
+      </Button>
+    </HStack>
+  );
+}
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -477,16 +537,16 @@ export default function RoomPage() {
               w="100%"
               h="100%"
               align="center"
-              justify="space-between"
+              justify="center"
               gap={{ base: 2, md: 4 }}
               direction={{ base: "column", lg: "row" }}
               minH={0}
             >
-              {/* 左側: カードと入力エリア */}
+              {/* 中央: カードと入力エリア */}
               <Flex
                 align="center"
                 gap={{ base: 2, md: 4 }}
-                flex="1"
+                flexShrink={0}
                 minW={0}
                 direction={{ base: "row", md: "row" }}
               >
@@ -502,30 +562,19 @@ export default function RoomPage() {
                   >
                     連想:
                   </Text>
-                  <Input
-                    placeholder="連想ワード"
-                    value={me?.clue1 || ""}
-                    onChange={async (e) => {
-                      const value = e.target.value;
-                      if (value.trim()) {
-                        await updateClue1(roomId, me.id, value.trim());
-                      }
-                    }}
-                    size="sm"
-                    w={{ base: "120px", md: "160px", lg: "200px" }}
-                    bg="panelSubBg"
-                    flex="1"
-                    maxW="200px"
+                  <ClueInputMini
+                    roomId={roomId}
+                    playerId={me.id}
+                    currentValue={me?.clue1 || ""}
                   />
                 </Flex>
-              </Flex>
 
-              {/* 右側: ホストボタン */}
-              {isHost && room.options?.resolveMode === "sort-submit" && (
-                <Box flexShrink={0}>
-                  <AppButton
+                {/* ホストボタン */}
+                {isHost && room.options?.resolveMode === "sort-submit" && (
+                  <Button
                     colorPalette="teal"
                     size="sm"
+                    flexShrink={0}
                     onClick={async () => {
                       const proposal: string[] =
                         (room as any)?.order?.proposal || [];
@@ -559,9 +608,9 @@ export default function RoomPage() {
                     }}
                   >
                     せーので判定！
-                  </AppButton>
-                </Box>
-              )}
+                  </Button>
+                )}
+              </Flex>
             </Flex>
           ) : room.status === "playing" ? (
             <Text fontSize="sm" color="fgMuted" textAlign="center">

@@ -18,21 +18,21 @@ export const UNIFIED_LAYOUT = {
   HEADER_HEIGHT: "clamp(48px, 4vh, 64px)",
   SIDEBAR_WIDTH: "clamp(240px, 22vw, 300px)",
   RIGHT_PANEL_WIDTH: "clamp(280px, 26vw, 360px)",
-  // 手札エリア: カードサイズ + 余裕を持った安定した高さ
-  HAND_AREA_HEIGHT: "clamp(160px, 18vh, 200px)",
+  // 手札エリア: トランプ型カード（120px）+ 余裕を持った安定した高さ
+  HAND_AREA_HEIGHT: "clamp(180px, 20vh, 220px)",
 
   // 125% DPI特別対応
   DPI_125: {
     HEADER_HEIGHT: "clamp(44px, 3.5vh, 58px)",
-    // 125%DPI環境でも十分な高さを確保
-    HAND_AREA_HEIGHT: "clamp(140px, 16vh, 180px)",
+    // 125%DPI環境でもトランプ型カードに十分な高さを確保
+    HAND_AREA_HEIGHT: "clamp(160px, 18vh, 200px)",
   },
 
   // ゲーム要素 (手札エリアと整合性を取る)
   CARD: {
-    MIN_WIDTH: "clamp(60px, 8vw, 120px)",
+    MIN_WIDTH: "80px", // トランプ型の幅
     // カード高さを手札エリアに収まるように調整
-    MIN_HEIGHT: "clamp(80px, 10vh, 120px)",
+    MIN_HEIGHT: "120px", // トランプ型の高さ（縦長）
   },
 
   // インタラクション要素
