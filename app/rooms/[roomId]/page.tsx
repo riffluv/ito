@@ -46,6 +46,7 @@ import {
 import {
   continueAfterFail as continueAfterFailAction,
   startGame as startGameAction,
+  submitSortedOrder,
 } from "@/lib/game/room";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
@@ -409,7 +410,7 @@ export default function RoomPage() {
       main={
         <Box h="100%" display="flex" flexDir="column">
           {/* モニター: 固定高さ */}
-          <Box flex="0 0 auto" p={4}>
+          <Box flex="0 0 auto" p={3}>
             <UniversalMonitor
               room={room}
               players={players}
@@ -420,7 +421,7 @@ export default function RoomPage() {
 
           {/* カードボード: 残り高さを使用 */}
           <Box flex="1 1 0" minH={0}>
-            <ScrollableArea label="カードボード" withPadding={true}>
+            <ScrollableArea label="カードボード" withPadding={true} padding={2}>
               <CentralCardBoard
                 roomId={roomId}
                 players={players}
@@ -469,11 +470,54 @@ export default function RoomPage() {
       handArea={
         <>
           {room.status === "clue" && me && (
-            <HStack gap={6} align="center" justify="center" w="100%">
-              <SelfNumberCard value={me.number} draggableId={me.id} />
-              <Box>
-                <CluePanel roomId={roomId} me={me} label="連想" />
-              </Box>
+            <HStack gap={6} align="center" justify="space-between" w="100%">
+              <HStack gap={6} align="center">
+                <SelfNumberCard value={me.number} draggableId={me.id} />
+                <Box>
+                  <CluePanel roomId={roomId} me={me} label="連想" />
+                </Box>
+              </HStack>
+
+              {/* せーので判定ボタンを手札エリア右側に配置 */}
+              {isHost && room.options?.resolveMode === "sort-submit" && (
+                <AppButton
+                  colorPalette="teal"
+                  size="sm"
+                  onClick={async () => {
+                    const proposal: string[] =
+                      (room as any)?.order?.proposal || [];
+                    if (proposal.length === 0) {
+                      notify({
+                        title: "まだカードが場にありません",
+                        type: "info",
+                      });
+                      return;
+                    }
+                    const assigned = players
+                      .filter((p) => typeof (p as any).number === "number")
+                      .map((p) => p.id);
+                    if (assigned.length !== proposal.length) {
+                      notify({
+                        title: "まだ全員のカードが場に出ていません",
+                        type: "warning",
+                      });
+                      return;
+                    }
+                    try {
+                      await submitSortedOrder(roomId, proposal);
+                      notify({ title: "一括判定を実行", type: "success" });
+                    } catch (err: any) {
+                      notify({
+                        title: "一括判定失敗",
+                        description: err?.message,
+                        type: "error",
+                      });
+                    }
+                  }}
+                >
+                  せーので判定！
+                </AppButton>
+              )}
             </HStack>
           )}
           {room.status === "playing" && (

@@ -52,7 +52,7 @@ export function GameLayout({
         // 125% DPIスケール最適化
         [`@media ${DPI_ADAPTIVE_LAYOUT.DPI_SCALE_125}`]: {
           "--header-height": "clamp(44px, 3.5vh, 58px)",
-          "--hand-min-height": "clamp(110px, 13vh, 160px)",
+          "--hand-min-height": "clamp(75px, 7vh, 110px)", // 更に小さく
         },
       }}
     >
