@@ -5,12 +5,9 @@ import {
   Box,
   Container,
   Flex,
-  Grid,
-  GridItem,
   Heading,
   HStack,
   ScrollArea,
-  SimpleGrid,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -170,12 +167,12 @@ export default function LobbyPage() {
           </HStack>
         </Flex>
 
-        <Grid
-          templateColumns={{ base: "1fr", lg: "1fr 320px" }}
+        <Flex
+          direction={{ base: "column", lg: "row" }}
           gap={{ base: 6, lg: 8 }}
-          alignItems="start"
+          align="flex-start"
         >
-          <GridItem minW={0}>
+          <Box flex="1" minW={0}>
             <ScrollArea.Root style={{ height: "clamp(400px, 60vh, 600px)" }}>
               <ScrollArea.Viewport>
                 <ScrollArea.Content>
@@ -195,7 +192,11 @@ export default function LobbyPage() {
                   ) : roomsLoading && showSkeletons ? (
                     <LobbySkeletons />
                   ) : (
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                    <Flex
+                      direction={{ base: "column", md: "row" }}
+                      gap={6}
+                      wrap="wrap"
+                    >
                       {filteredRooms.map((r) => (
                         <RoomCard
                           key={r.id}
@@ -229,7 +230,7 @@ export default function LobbyPage() {
                           }}
                         />
                       )}
-                    </SimpleGrid>
+                    </Flex>
                   )}
                 </ScrollArea.Content>
               </ScrollArea.Viewport>
@@ -238,12 +239,16 @@ export default function LobbyPage() {
               </ScrollArea.Scrollbar>
               <ScrollArea.Corner />
             </ScrollArea.Root>
-          </GridItem>
+          </Box>
 
-          <GridItem display={{ base: "none", lg: "block" }}>
+          <Box
+            w={{ base: "100%", lg: "320px" }}
+            flexShrink={0}
+            display={{ base: "none", lg: "block" }}
+          >
             <LobbyRightRail />
-          </GridItem>
-        </Grid>
+          </Box>
+        </Flex>
 
         <NameDialog
           isOpen={nameDialog.open}

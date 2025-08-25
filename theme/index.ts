@@ -144,15 +144,23 @@ const config = defineConfig({
         96: { value: "384px" },
       },
       sizes: {
+        // === コンテナーサイズ ===
         containerSm: { value: "640px" },
         containerMd: { value: "768px" },
         containerLg: { value: "1024px" },
-        cardSm: { value: "140px" },
-        cardMd: { value: "180px" },
-        // DPIスケール対応: 流動的サイズへ更新
-        sidebarLeft: { value: "clamp(240px, 22vw, 300px)" },
-        sidebarRight: { value: "clamp(280px, 26vw, 360px)" },
-        handRow: { value: "clamp(120px, 15vh, 180px)" },
+
+        // === ゲーム要素 (統一システム) ===
+        // カードサイズ: DPI対応の流動的サイズ
+        cardSm: { value: "clamp(100px, 12vw, 140px)" },
+        cardMd: { value: "clamp(140px, 16vw, 180px)" },
+
+        // レイアウトサイズ: 統一レイアウトシステムと連携
+        headerHeight: { value: "clamp(48px, 4vh, 64px)" },
+        sidebarWidth: { value: "clamp(240px, 22vw, 300px)" },
+        rightPanelWidth: { value: "clamp(280px, 26vw, 360px)" },
+        handAreaHeight: { value: "clamp(100px, 12vh, 150px)" },
+
+        // === 3Dアニメーション用 ===
         // perspective token (3D flip 用) ※ px: モーション自然さ考慮し将来 fluid 化検討
         perspectiveCard: { value: "1200px" },
       },

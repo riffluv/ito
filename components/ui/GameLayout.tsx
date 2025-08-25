@@ -1,5 +1,5 @@
 "use client";
-import { DPI_ADAPTIVE_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { ReactNode } from "react";
 
@@ -8,22 +8,23 @@ import { ReactNode } from "react";
  * 2025年DPIスケールベストプラクティス対応
  *
  * 設計原則:
- * - 流動的サイズ + 計算可能な制約
+ * - 統一レイアウトシステムの使用
  * - 125% DPI スケールでの最適化
  * - 明確なスクロール境界
  * - agentが正確に予測できる構造
  * - スクロール発生の完全防止
+ * - CSS設計の一貫性と保守性
  */
 export interface GameLayoutProps {
-  /** ヘッダー: 流動的高さ clamp(48px, 4vh, 64px) */
+  /** ヘッダー: 統一レイアウトシステムによる流動高さ */
   header: ReactNode;
-  /** 左サイドバー: 流動的幅 clamp(240px, 22vw, 300px) */
+  /** 左サイドバー: 統一レイアウトシステムによる流動幅 */
   sidebar?: ReactNode;
   /** 中央メインエリア: 残り幅、フレキシブル */
   main: ReactNode;
-  /** 右パネル: 流動的幅 clamp(280px, 26vw, 360px) */
+  /** 右パネル: 統一レイアウトシステムによる流動幅 */
   rightPanel?: ReactNode;
-  /** 手札エリア: 流動的高さ clamp(120px, 15vh, 180px) */
+  /** 手札エリア: 統一レイアウトシステムによる流動高さ */
   handArea?: ReactNode;
 }
 
@@ -42,25 +43,25 @@ export function GameLayout({
       bg="canvasBg"
       overflow="hidden"
       fontFamily="body"
-      // 2025年DPIスケール対応のCSSCustomPropertiesを設定
+      // 2025年DPIスケール対応のCSSCustomPropertiesを統一システムで設定
       css={{
-        "--header-height": DPI_ADAPTIVE_LAYOUT.HEADER_HEIGHT_FLUID,
-        "--sidebar-width": DPI_ADAPTIVE_LAYOUT.SIDEBAR_WIDTH_FLUID,
-        "--right-panel-width": DPI_ADAPTIVE_LAYOUT.RIGHT_PANEL_WIDTH_FLUID,
-        "--hand-min-height": DPI_ADAPTIVE_LAYOUT.HAND_MIN_HEIGHT_FLUID,
+        "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
+        "--unified-sidebar-width": UNIFIED_LAYOUT.SIDEBAR_WIDTH,
+        "--unified-right-panel-width": UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH,
+        "--unified-hand-area-height": UNIFIED_LAYOUT.HAND_AREA_HEIGHT,
 
         // 125% DPIスケール最適化
-        [`@media ${DPI_ADAPTIVE_LAYOUT.DPI_SCALE_125}`]: {
-          "--header-height": "clamp(44px, 3.5vh, 58px)",
-          "--hand-min-height": "clamp(60px, 5vh, 90px)", // 手札エリアを最小化
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
+          "--unified-hand-area-height": UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
         },
       }}
     >
-      {/* ヘッダー: 流動的高さ */}
+      {/* ヘッダー: 統一システムによる流動高さ */}
       <Box
         flex="0 0 auto"
-        h="var(--header-height)"
-        borderBottomWidth="1px"
+        h="var(--unified-header-height)"
+        borderBottomWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         bg="panelBg"
         px={4}
@@ -83,9 +84,9 @@ export function GameLayout({
         {/* 左サイドバー */}
         {sidebar && (
           <Box
-            w="var(--sidebar-width)"
-            flex="0 0 var(--sidebar-width)"
-            borderRightWidth="1px"
+            w="var(--unified-sidebar-width)"
+            flex="0 0 var(--unified-sidebar-width)"
+            borderRightWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
             borderColor="borderDefault"
             bg="panelBg"
             display={{ base: "none", md: "flex" }}
@@ -111,9 +112,9 @@ export function GameLayout({
         {/* 右パネル */}
         {rightPanel && (
           <Box
-            w="var(--right-panel-width)"
-            flex="0 0 var(--right-panel-width)"
-            borderLeftWidth="1px"
+            w="var(--unified-right-panel-width)"
+            flex="0 0 var(--unified-right-panel-width)"
+            borderLeftWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
             borderColor="borderDefault"
             bg="panelBg"
             display={{ base: "none", md: "flex" }}
@@ -125,15 +126,15 @@ export function GameLayout({
         )}
       </Box>
 
-      {/* 手札エリア: 流動的高さ - 常に表示 */}
+      {/* 手札エリア: 統一システムによる流動高さ - 常に表示 */}
       <Box
         flex="0 0 auto"
-        borderTopWidth="1px"
+        borderTopWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
         borderColor="borderDefault"
         bg="panelBg"
         px={3}
         py={3}
-        minH="var(--hand-min-height)"
+        minH="var(--unified-hand-area-height)"
         display="flex"
         alignItems="center"
         justifyContent="center"

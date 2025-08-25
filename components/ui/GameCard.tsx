@@ -1,5 +1,4 @@
 "use client";
-"use client";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
 
 export type GameCardProps = {

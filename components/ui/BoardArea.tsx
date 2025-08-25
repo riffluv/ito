@@ -1,5 +1,4 @@
 "use client";
-import { LAYOUT } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
 
 export type BoardAreaProps = BoxProps & {
@@ -17,7 +16,7 @@ export default function BoardArea({
         role="region"
         aria-label="カード配置エリア"
         position="relative"
-        minH={`${LAYOUT.BOARD_MIN_HEIGHT}px`}
+        minH="300px" /* TODO: 統一システムに移行 */
         borderWidth="2px"
         borderStyle="dashed"
         borderColor={isOver ? "accent" : "whiteAlpha.200"}

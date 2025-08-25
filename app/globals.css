@@ -7,26 +7,12 @@
 
 /* DPI Scale Detection & Base Variables */
 :root {
-  /* 2025年ベストプラクティス: CSS Custom Properties for DPI adaptation */
+  /* 2025年ベストプラクティス: Core DPI detection only */
   --base-scale: 1;
   --adaptive-scale: clamp(0.85, 1vw + 0.5rem, 1.15);
 
-  /* ゲーム特化レイアウト変数 (125%DPI最適化) */
-  --game-header-height: clamp(48px, 4vh, 64px);
-  --game-sidebar-width: clamp(240px, 22vw, 300px);
-  --game-right-panel-width: clamp(280px, 26vw, 360px);
-  --game-hand-min-height: clamp(120px, 15vh, 180px);
-
-  /* フルードスペーシング (DPI対応) */
-  --spacing-xs: clamp(2px, 0.125rem + 0.25vw, 6px);
-  --spacing-sm: clamp(4px, 0.25rem + 0.5vw, 12px);
-  --spacing-md: clamp(8px, 0.5rem + 1vw, 20px);
-  --spacing-lg: clamp(12px, 0.75rem + 1.5vw, 32px);
-
-  /* ゲーム要素サイズ (タッチフレンドリー + DPI対応) */
-  --button-min-height: clamp(36px, 3.5vh, 48px);
-  --card-min-width: clamp(60px, 8vw, 120px);
-  --card-min-height: clamp(80px, 10vh, 140px);
+  /* Layout variables are managed by Chakra UI theme system */
+  /* See theme/layout.ts and theme/index.ts for unified token management */
 }
 
 /* 125% DPI スケール特別対応 + 高解像度最適化統合 */
@@ -35,8 +21,6 @@
   (-webkit-min-device-pixel-ratio: 1.25) {
   :root {
     --adaptive-scale: 0.92; /* 125%DPI時の微調整 */
-    --game-header-height: clamp(44px, 3.5vh, 58px);
-    --game-hand-min-height: clamp(70px, 6vh, 100px); /* 手札エリアを最小化 */
   }
 
   .crisp-edges {
@@ -55,8 +39,6 @@
 @media (resolution: 144dpi), (resolution: 1.5dppx) {
   :root {
     --adaptive-scale: 0.88;
-    --game-header-height: clamp(42px, 3vh, 54px);
-    --game-hand-min-height: clamp(100px, 12vh, 150px);
   }
 }
 

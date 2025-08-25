@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 
 export interface SelfNumberCardProps {
@@ -10,6 +11,7 @@ export interface SelfNumberCardProps {
 /**
  * 自分の数字カード表示 (手札領域)
  * デザインは theme.tokens.gradients.playerNumber / shadows.selfNumber を利用。
+ * 統一レイアウトシステムによるDPI対応。
  */
 export function SelfNumberCard({
   value,
@@ -28,8 +30,8 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w={{ base: "80px", md: "88px" }}
-      h={{ base: "110px", md: "120px" }}
+      w={UNIFIED_LAYOUT.CARD.MIN_WIDTH}
+      h={UNIFIED_LAYOUT.CARD.MIN_HEIGHT}
       rounded="lg"
       display="flex"
       alignItems="center"
