@@ -35,6 +35,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
   setPlayerNameAvatar,
+  updateClue1,
   updateLastSeen,
 } from "@/lib/firebase/players";
 import { forceDetachAll, presenceSupported } from "@/lib/firebase/presence";
@@ -56,6 +57,7 @@ import { randomAvatar } from "@/lib/utils";
 import {
   Box,
   HStack,
+  Input,
   Spinner,
   Stack,
   Text,
@@ -469,13 +471,30 @@ export default function RoomPage() {
       }
       handArea={
         <>
-          {room.status === "clue" && me && (
+          {room.status === "clue" && me ? (
             <HStack gap={6} align="center" justify="space-between" w="100%">
-              <HStack gap={6} align="center">
+              <HStack gap={4} align="center">
                 <SelfNumberCard value={me.number} draggableId={me.id} />
-                <Box>
-                  <CluePanel roomId={roomId} me={me} label="連想" />
-                </Box>
+
+                {/* コンパクトなClue入力エリア */}
+                <HStack gap={2} align="center">
+                  <Text fontSize="sm" color="fgMuted" flexShrink={0}>
+                    連想:
+                  </Text>
+                  <Input
+                    placeholder="連想ワード"
+                    value={me?.clue1 || ""}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      if (value.trim()) {
+                        await updateClue1(roomId, me.id, value.trim());
+                      }
+                    }}
+                    size="sm"
+                    w="200px"
+                    bg="panelSubBg"
+                  />
+                </HStack>
               </HStack>
 
               {/* せーので判定ボタンを手札エリア右側に配置 */}
@@ -519,10 +538,17 @@ export default function RoomPage() {
                 </AppButton>
               )}
             </HStack>
-          )}
-          {room.status === "playing" && (
+          ) : room.status === "playing" ? (
             <Text fontSize="sm" color="fgMuted" textAlign="center">
               下部の場パネルで「出す」を実行してください。
+            </Text>
+          ) : room.status === "waiting" ? (
+            <Text fontSize="sm" color="fgMuted" textAlign="center">
+              ゲーム開始をお待ちください...
+            </Text>
+          ) : (
+            <Text fontSize="sm" color="fgMuted" textAlign="center">
+              ゲーム準備中...
             </Text>
           )}
         </>

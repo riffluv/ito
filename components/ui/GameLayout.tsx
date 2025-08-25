@@ -52,7 +52,7 @@ export function GameLayout({
         // 125% DPIスケール最適化
         [`@media ${DPI_ADAPTIVE_LAYOUT.DPI_SCALE_125}`]: {
           "--header-height": "clamp(44px, 3.5vh, 58px)",
-          "--hand-min-height": "clamp(75px, 7vh, 110px)", // 更に小さく
+          "--hand-min-height": "clamp(60px, 5vh, 90px)", // 手札エリアを最小化
         },
       }}
     >
@@ -125,25 +125,25 @@ export function GameLayout({
         )}
       </Box>
 
-      {/* 手札エリア: 流動的高さ */}
-      {handArea && (
-        <Box
-          flex="0 0 auto"
-          borderTopWidth="1px"
-          borderColor="borderDefault"
-          bg="panelBg"
-          px={4}
-          py={4}
-          minH="var(--hand-min-height)"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          gap={4}
-          boxShadow="elevated"
-        >
-          {handArea}
-        </Box>
-      )}
+      {/* 手札エリア: 流動的高さ - 常に表示 */}
+      <Box
+        flex="0 0 auto"
+        borderTopWidth="1px"
+        borderColor="borderDefault"
+        bg="panelBg"
+        px={3}
+        py={3}
+        minH="var(--hand-min-height)"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        gap={4}
+        boxShadow="elevated"
+      >
+        {handArea || (
+          <Box h="1px" w="100%" /> // 空の場合のプレースホルダー
+        )}
+      </Box>
     </Box>
   );
 }
