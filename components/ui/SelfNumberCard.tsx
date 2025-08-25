@@ -30,8 +30,8 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w={UNIFIED_LAYOUT.CARD.MIN_WIDTH}
-      h={UNIFIED_LAYOUT.CARD.MIN_HEIGHT}
+      w="80px" // トランプ型の幅
+      h="120px" // トランプ型の高さ（縦長）
       rounded="lg"
       display="flex"
       alignItems="center"
