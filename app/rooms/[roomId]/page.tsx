@@ -49,6 +49,7 @@ import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import { randomAvatar } from "@/lib/utils";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import {
   Box,
   Button,
@@ -425,44 +426,62 @@ export default function RoomPage() {
           />
         }
         sidebar={
-          <ScrollableArea label="参加者とオプション">
-            <Stack gap={4}>
-              <Panel
-                title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+          <Box h="100%" display="flex" flexDir="column">
+            {/* 👥 参加者セクション - 上部・拡張可能 */}
+            <Box flex="1 1 0" minH={0}>
+              <ScrollableArea label="参加者一覧">
+                <Panel
+                  title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
+                >
+                  <Participants players={onlinePlayers} />
+                </Panel>
+              </ScrollableArea>
+            </Box>
+
+            {/* 🎮 ゲーム制御セクション - 下部・固定（レイアウトシフト防止） */}
+            {isHost && (
+              <Box 
+                flex="0 0 auto"
+                p={4}
+                bg="panelBg"
               >
-                <Participants players={onlinePlayers} />
-              </Panel>
-
-              {/* デスクトップの開始ボタン配置を統一 */}
-              {!showHostInHud && hostPrimaryAction && (
-                <Box px={4}>
-                  <AppButton
-                    w="100%"
-                    colorPalette="orange"
-                    onClick={hostPrimaryAction.onClick}
-                    disabled={(hostPrimaryAction as any).disabled}
-                    title={(hostPrimaryAction as any).title}
-                    size="lg"
-                  >
-                    {(hostPrimaryAction as any).label}
-                  </AppButton>
-                </Box>
-              )}
-
-              {/* リセットボタン: ホストのみ表示 */}
-              {isHost && (
-                <Box px={4}>
-                  <AppButton
-                    variant="outline"
-                    w="100%"
-                    onClick={resetToWaiting}
-                  >
-                    リセット
-                  </AppButton>
-                </Box>
-              )}
-            </Stack>
-          </ScrollableArea>
+                <Panel 
+                  title="🎮 ゲーム制御" 
+                  variant="accent"
+                  elevated={true}
+                >
+                  {/* 固定高さコンテナでレイアウトシフトを防止 */}
+                  <Box minH="120px" display="flex" flexDir="column" justifyContent="center">
+                    <Stack gap={3}>
+                      {/* メインアクションボタン（開始・もう一度） */}
+                      {(!showHostInHud && hostPrimaryAction) && (
+                        <AppButton
+                          w="100%"
+                          colorPalette="orange"
+                          onClick={hostPrimaryAction.onClick}
+                          disabled={(hostPrimaryAction as any).disabled}
+                          title={(hostPrimaryAction as any).title}
+                          size="lg"
+                        >
+                          {(hostPrimaryAction as any).label}
+                        </AppButton>
+                      )}
+                      
+                      {/* リセットボタン - 常に表示で一貫性維持 */}
+                      <AppButton
+                        variant="outline"
+                        w="100%"
+                        onClick={resetToWaiting}
+                        size="md"
+                      >
+                        🔄 リセット
+                      </AppButton>
+                    </Stack>
+                  </Box>
+                </Panel>
+              </Box>
+            )}
+          </Box>
         }
         main={
           <Box h="100%" display="flex" flexDir="column">
@@ -568,46 +587,55 @@ export default function RoomPage() {
                     />
                   </Flex>
 
-                  {/* ホストボタン */}
+                  {/* 🎮 ホスト操作: 一括判定ボタン */}
                   {isHost && room.options?.resolveMode === "sort-submit" && (
-                    <Button
-                      colorPalette="teal"
-                      size="sm"
-                      flexShrink={0}
-                      onClick={async () => {
-                        const proposal: string[] =
-                          (room as any)?.order?.proposal || [];
-                        if (proposal.length === 0) {
-                          notify({
-                            title: "まだカードが場にありません",
-                            type: "info",
-                          });
-                          return;
-                        }
-                        const assigned = players
-                          .filter((p) => typeof (p as any).number === "number")
-                          .map((p) => p.id);
-                        if (assigned.length !== proposal.length) {
-                          notify({
-                            title: "まだ全員のカードが場に出ていません",
-                            type: "warning",
-                          });
-                          return;
-                        }
-                        try {
-                          await submitSortedOrder(roomId, proposal);
-                          notify({ title: "一括判定を実行", type: "success" });
-                        } catch (err: any) {
-                          notify({
-                            title: "一括判定失敗",
-                            description: err?.message,
-                            type: "error",
-                          });
-                        }
-                      }}
+                    <Box 
+                      px={3} 
+                      py={2} 
+                      borderLeftWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+                      borderColor="borderDefault"
+                      bg="accentSubtle"
+                      rounded="md"
                     >
-                      せーので判定！
-                    </Button>
+                      <Button
+                        colorPalette="teal"
+                        size="sm"
+                        w="100%"
+                        onClick={async () => {
+                          const proposal: string[] =
+                            (room as any)?.order?.proposal || [];
+                          if (proposal.length === 0) {
+                            notify({
+                              title: "まだカードが場にありません",
+                              type: "info",
+                            });
+                            return;
+                          }
+                          const assigned = players
+                            .filter((p) => typeof (p as any).number === "number")
+                            .map((p) => p.id);
+                          if (assigned.length !== proposal.length) {
+                            notify({
+                              title: "まだ全員のカードが場に出ていません",
+                              type: "warning",
+                            });
+                            return;
+                          }
+                          try {
+                            await submitSortedOrder(roomId, proposal);
+                            notify({ title: "一括判定を実行", type: "success" });
+                          } catch (err: any) {
+                            notify({
+                              title: "一括判定失敗",
+                              description: err?.message,
+                              type: "error",
+                            });
+                          }
+                        }}
+                      >
+                        🎯 せーので判定！
+                      </Button>
+                    </Box>
                   )}
                 </Flex>
               </Flex>
