@@ -7,7 +7,6 @@ import {
   Flex,
   Heading,
   HStack,
-  ScrollArea,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -168,78 +167,97 @@ export default function LobbyPage() {
           </HStack>
         </Flex>
 
+        {/* 
+          メインページ全体スクロール設計:
+          - 将来的な要素追加（掲示板、お知らせ、統計など）に対応
+          - ブラウザネイティブスクロールで自然な操作感を提供
+          - レイアウトの制約なく縦方向に要素を自由配置可能
+        */}
         <Flex
           direction={{ base: "column", lg: "row" }}
           gap={{ base: 6, lg: 8 }}
           align="flex-start"
+          minH="50vh" // 最小高さを確保してコンテンツが少なくても見栄えを保つ
         >
           <Box flex="1" minW={0}>
-            <ScrollArea.Root style={{ height: "clamp(400px, 60vh, 600px)" }}>
-              <ScrollArea.Viewport>
-                <ScrollArea.Content>
-                  {!firebaseEnabled ? (
-                    <Box
-                      p={8}
-                      textAlign="center"
-                      borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-                      rounded="lg"
-                      bg="blackAlpha.300"
-                    >
-                      <Text>
-                        Firebase設定が見つかりません。`.env.local`
-                        を設定してください。
-                      </Text>
-                    </Box>
-                  ) : roomsLoading && showSkeletons ? (
-                    <LobbySkeletons />
-                  ) : (
-                    <Flex
-                      direction={{ base: "column", md: "row" }}
-                      gap={6}
-                      wrap="wrap"
-                    >
-                      {filteredRooms.map((r) => (
-                        <RoomCard
-                          key={r.id}
-                          name={r.name}
-                          status={r.status}
-                          count={lobbyCounts[r.id] ?? 0}
-                          onJoin={() => {
-                            if (r.status && r.status !== "waiting") {
-                              notify({
-                                title: "この部屋は既に開始されています",
-                                description:
-                                  "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
-                                type: "info",
-                              });
-                              return;
-                            }
-                            openJoinFlow(r.id);
-                          }}
-                        />
-                      ))}
-                      {filteredRooms.length === 0 && (
-                        <EmptyState
-                          onCreate={() => {
-                            if (!displayName) {
-                              setAfterNameCreate(true);
-                              setPendingJoin(null);
-                              nameDialog.onOpen();
-                            } else {
-                              createDialog.onOpen();
-                            }
-                          }}
-                        />
-                      )}
-                    </Flex>
-                  )}
-                </ScrollArea.Content>
-              </ScrollArea.Viewport>
-              <ScrollArea.Scrollbar>
-                <ScrollArea.Thumb />
-              </ScrollArea.Scrollbar>
-              <ScrollArea.Corner />
-            </ScrollArea.Root>
+            {!firebaseEnabled ? (
+              <Box
+                p={8}
+                textAlign="center"
+                borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+                rounded="lg"
+                bg="blackAlpha.300"
+              >
+                <Text>
+                  Firebase設定が見つかりません。`.env.local`
+                  を設定してください。
+                </Text>
+              </Box>
+            ) : roomsLoading && showSkeletons ? (
+              <LobbySkeletons />
+            ) : (
+              <Box
+                display="grid"
+                gridTemplateColumns={{
+                  base: "1fr",
+                  sm: "repeat(auto-fill, minmax(280px, 1fr))",
+                  md: "repeat(auto-fill, minmax(320px, 1fr))",
+                }}
+                gap={4}
+                w="100%"
+              >
+                {filteredRooms.map((r) => (
+                  <RoomCard
+                    key={r.id}
+                    name={r.name}
+                    status={r.status}
+                    count={lobbyCounts[r.id] ?? 0}
+                    onJoin={() => {
+                      if (r.status && r.status !== "waiting") {
+                        notify({
+                          title: "この部屋は既に開始されています",
+                          description:
+                            "ホストがゲームを開始したため、現在は入室できません。ホストがリセットすると再度入室可能になります。",
+                          type: "info",
+                        });
+                        return;
+                      }
+                      openJoinFlow(r.id);
+                    }}
+                  />
+                ))}
+                {filteredRooms.length === 0 && (
+                  <Box gridColumn="1 / -1">
+                    <EmptyState
+                      onCreate={() => {
+                        if (!displayName) {
+                          setAfterNameCreate(true);
+                          setPendingJoin(null);
+                          nameDialog.onOpen();
+                        } else {
+                          createDialog.onOpen();
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {/* 将来追加予定のセクション例 */}
+            {/* TODO: 掲示板セクション
+            <Box mt={8}>
+              <Heading size="lg" mb={4}>お知らせ</Heading>
+              <NoticeBoard />
+            </Box>
+            */}
+
+            {/* TODO: 統計セクション
+            <Box mt={8}>
+              <Heading size="lg" mb={4}>統計情報</Heading>
+              <StatsPanel />
+            </Box>
+            */}
           </Box>
 
           <Box
