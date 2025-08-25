@@ -149,9 +149,10 @@ const config = defineConfig({
         containerLg: { value: "1024px" },
         cardSm: { value: "140px" },
         cardMd: { value: "180px" },
-        sidebarLeft: { value: "280px" },
-        sidebarRight: { value: "340px" },
-        handRow: { value: "160px" },
+        // DPIスケール対応: 流動的サイズへ更新
+        sidebarLeft: { value: "clamp(240px, 22vw, 300px)" },
+        sidebarRight: { value: "clamp(280px, 26vw, 360px)" },
+        handRow: { value: "clamp(120px, 15vh, 180px)" },
         // perspective token (3D flip 用) ※ px: モーション自然さ考慮し将来 fluid 化検討
         perspectiveCard: { value: "1200px" },
       },
