@@ -68,9 +68,9 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   };
 
   return (
-    <Box h="100%" display="flex" flexDir="column">
-      {/* メッセージエリア: 残り高さを使用 */}
-      <Box flex="1 1 0" minH={0}>
+    <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
+      {/* メッセージエリア: 1fr 行で安定スクロール */}
+      <Box overflow="hidden">
         <ScrollableArea
           label="チャットメッセージ"
           withPadding={true}
@@ -123,8 +123,8 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
         </ScrollableArea>
       </Box>
 
-      {/* 入力フォーム: 固定高さ */}
-      <Box flex="0 0 auto" p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
+      {/* 入力フォーム: 固定行 */}
+      <Box p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
         <HStack gap={2}>
           <Input
             placeholder={

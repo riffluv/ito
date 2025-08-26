@@ -71,8 +71,8 @@ export function ChatPanel({
   };
 
   return (
-    <Panel p={2} h={height} display="flex" flexDir="column">
-      <Box flex={1} minH={0}>
+    <Panel p={2} h={height} display="grid" gridTemplateRows="1fr auto" overflow="hidden">
+      <Box overflow="hidden">
         <ScrollArea.Root>
           <ScrollArea.Viewport>
             <ScrollArea.Content>

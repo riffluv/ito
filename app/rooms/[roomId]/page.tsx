@@ -417,9 +417,9 @@ export default function RoomPage() {
           />
         }
         sidebar={
-          <Box h="100%" display="flex" flexDir="column">
-            {/* 👥 参加者セクション - 上部・拡張可能 */}
-            <Box flex="1 1 0" minH={0}>
+          <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
+            {/* 👥 参加者セクション - 1fr 行 */}
+            <Box overflow="hidden">
               <ScrollableArea label="参加者一覧">
                 <Panel
                   title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
@@ -431,8 +431,7 @@ export default function RoomPage() {
             </Box>
 
             {/* 🎮 ゲーム制御セクション - 下部・固定（レイアウトシフト防止） */}
-            {isHost && (
-              <Box flex="0 0 auto" p={4} bg="panelBg">
+            <Box p={4} bg="panelBg" display={isHost ? "block" : "none"}>
                 <Panel title="🎮 ゲーム制御" variant="accent" elevated={true}>
                   {/* 拡張された固定高さコンテナでお題制御も含める */}
                   <Box
@@ -542,23 +541,17 @@ export default function RoomPage() {
                   </Box>
                 </Panel>
               </Box>
-            )}
           </Box>
         }
         main={
-          <Box
-            h="100%"
-            display="flex"
-            flexDir="column"
-            gap={3} /* elevation-based分離 */
-          >
+          <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3}>
             {/* モニター: 固定高さ - パディング統一 */}
-            <Box flex="0 0 auto" p={0} /* パディング除去：内部で制御 */>
+            <Box p={0} /* パディング除去：内部で制御 */>
               <UniversalMonitor room={room} players={players} />
             </Box>
 
             {/* カードボード: 残り高さを使用 - ゲーム画面規範準拠 */}
-            <Box flex="1 1 0" minH={0} overflow="hidden">
+            <Box overflow="hidden">
               <CentralCardBoard
                 roomId={roomId}
                 players={players}
@@ -576,14 +569,14 @@ export default function RoomPage() {
           </Box>
         }
         rightPanel={
-          <Box h="100%" display="flex" flexDir="column">
-            {/* チャット: 残り高さを使用 */}
-            <Box flex="1 1 0" minH={0}>
+          <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
+            {/* チャット */}
+            <Box overflow="hidden">
               <ChatPanelImproved roomId={roomId} />
             </Box>
 
             {/* 退出ボタン: 固定位置 */}
-            <Box flex="0 0 auto" p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
+            <Box p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
               <AppButton
                 size="sm"
                 variant="ghost"
@@ -615,7 +608,6 @@ export default function RoomPage() {
                 justify="center"
                 gap={{ base: 2, md: 4 }}
                 direction={{ base: "column", lg: "row" }}
-                minH={0}
               >
                 {/* 中央: カードと入力エリア */}
                 <Flex
