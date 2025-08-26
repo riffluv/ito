@@ -9,7 +9,11 @@
       "mcp__serena__list_dir",
       "mcp__serena__write_memory",
       "mcp__serena__think_about_collected_information",
-      "mcp__any-script__gpt5-search"
+      "mcp__any-script__gpt5-search",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []

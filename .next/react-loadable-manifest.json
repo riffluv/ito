@@ -1,34 +1,35 @@
 {
   "app\\rooms\\[roomId]\\page.tsx -> @/components/ChatPanel": {
-    "id": "app\\rooms\\[roomId]\\page.tsx -> @/components/ChatPanel",
+    "id": 71424,
     "files": [
-      "static/chunks/_app-pages-browser_components_ChatPanel_tsx.js"
+      "static/chunks/240-cd44bdba00819a12.js",
+      "static/chunks/424.9f6f435f096d6b2a.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/CluePanel": {
-    "id": "app\\rooms\\[roomId]\\page.tsx -> @/components/CluePanel",
+    "id": 14051,
     "files": [
-      "static/chunks/_app-pages-browser_components_CluePanel_tsx.js"
+      "static/chunks/51.42d35be62e8be5e2.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/Hud": {
-    "id": "app\\rooms\\[roomId]\\page.tsx -> @/components/Hud",
+    "id": 42794,
     "files": [
-      "static/chunks/_app-pages-browser_components_Hud_tsx.js"
+      "static/chunks/794.66523e5177f14048.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/Participants": {
-    "id": "app\\rooms\\[roomId]\\page.tsx -> @/components/Participants",
+    "id": 9854,
     "files": [
-      "static/chunks/_app-pages-browser_components_Participants_tsx.js"
+      "static/chunks/854.2166a82f75274c8b.js"
     ]
   },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
-    "id": "lib\\services\\roomService.ts -> @/lib/game/random",
+    "id": 56166,
     "files": []
   },
   "lib\\services\\roomService.ts -> firebase/firestore": {
-    "id": "lib\\services\\roomService.ts -> firebase/firestore",
+    "id": 69842,
     "files": []
   }
 }
