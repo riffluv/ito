@@ -11,7 +11,7 @@ export function ClientFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
       {!hideHeader && <Header />}
-      <div id="main">{children}</div>
+      <main id="main" role="main">{children}</main>
     </>
   );
 }
