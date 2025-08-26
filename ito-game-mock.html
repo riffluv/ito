@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO（イト）- ゲーム画面モック</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+            background: linear-gradient(135deg, #ff6b9d 0%, #ffc3a0 50%, #7ec8e3 100%);
+            height: 100vh;
+            overflow: hidden;
+            color: #2d3748;
+        }
+
+        /* Full-Screen Grid Layout */
+        .game-container {
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "sidebar main-area chat"
+                "hand hand hand";
+            grid-template-columns: 280px 1fr 340px;
+            grid-template-rows: auto 1fr 140px;
+            height: 100vh;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        /* Header */
+        .header {
+            grid-area: header;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 16px 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .game-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #e53e3e;
+            text-shadow: 1px 1px 0px #fff5f5;
+        }
+
+        .room-info {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .room-code {
+            background: #f7fafc;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        /* Left Sidebar - Player List */
+        .sidebar {
+            grid-area: sidebar;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2d3748;
+            text-align: center;
+        }
+
+        .player-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .player-card {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 12px;
+            border-left: 4px solid #48bb78;
+            transition: all 0.2s;
+        }
+
+        .player-card.host {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .player-card.active {
+            border-left-color: #3182ce;
+            background: #ebf8ff;
+            transform: scale(1.02);
+            box-shadow: 0 2px 8px rgba(49, 130, 206, 0.2);
+        }
+
+        .player-name {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .player-clue {
+            font-size: 12px;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .host-crown {
+            color: #ed8936;
+            margin-right: 4px;
+        }
+
+        /* Main Game Area */
+        .main-area {
+            grid-area: main-area;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Theme Display */
+        .theme-display {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .theme-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+            transform: perspective(1000px) rotateX(5deg);
+        }
+
+        .theme-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .theme-text {
+            font-size: 28px;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .instruction-text {
+            margin-top: 16px;
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
+        /* Game Board */
+        .game-board {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-slots {
+            display: flex;
+            gap: 16px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card-slot {
+            width: 80px;
+            height: 112px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .card-slot.drop-target {
+            border-color: #3182ce;
+            background: #ebf8ff;
+            box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.2);
+        }
+
+        .player-number-card {
+            width: 76px;
+            height: 108px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            border-radius: 8px;
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: grab;
+            transition: all 0.2s;
+        }
+
+        .player-number-card:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-number-card:active {
+            cursor: grabbing;
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .card-player-name {
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .card-number {
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .card-back .card-number {
+            font-size: 20px;
+            color: #a0aec0;
+        }
+
+        /* Right Chat Panel */
+        .chat-panel {
+            grid-area: chat;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-panel h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2d3748;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            max-height: 400px;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: #f7fafc;
+            border-radius: 12px;
+            border-left: 3px solid #48bb78;
+        }
+
+        .message-author {
+            font-weight: 700;
+            font-size: 12px;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .message-text {
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .chat-send-btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            background: #2c5aa0;
+            transform: scale(1.05);
+        }
+
+        /* Bottom Hand Panel */
+        .hand-panel {
+            grid-area: hand;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .my-card-area {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .my-card {
+            width: 100px;
+            height: 140px;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            border-radius: 12px;
+            border: 4px solid #ffffff;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            position: relative;
+        }
+
+        .my-card-label {
+            position: absolute;
+            top: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .my-card-number {
+            font-size: 48px;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .clue-input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            max-width: 400px;
+            margin: 0 20px;
+        }
+
+        .clue-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .clue-input {
+            padding: 12px 16px;
+            border: 3px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .clue-input:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
+            color: #2d3748;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+            transform: translateY(-1px);
+        }
+
+        /* Visual Feedback Elements */
+        .success-indicator {
+            background: #48bb78;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .waiting-indicator {
+            background: #ed8936;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .game-container {
+                grid-template-columns: 240px 1fr 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-areas:
+                    "header"
+                    "main-area"
+                    "sidebar"
+                    "hand";
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto auto;
+                gap: 8px;
+                padding: 8px;
+            }
+
+            .chat-panel {
+                display: none;
+            }
+
+            .theme-text {
+                font-size: 20px;
+            }
+
+            .card-slots {
+                gap: 8px;
+            }
+
+            .player-number-card {
+                width: 60px;
+                height: 84px;
+            }
+
+            .my-card {
+                width: 80px;
+                height: 112px;
+            }
+
+            .my-card-number {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="game-title">🎯 ITO（イト）</div>
+            <div class="room-info">
+                <div class="room-code">Room: ABC123</div>
+                <div class="waiting-indicator">ヒント入力中...</div>
+            </div>
+        </header>
+
+        <!-- Left Sidebar - Player List -->
+        <aside class="sidebar">
+            <h3>👥 プレイヤー一覧</h3>
+            <div class="player-list">
+                <div class="player-card host">
+                    <div class="player-name">
+                        <span class="host-crown">👑</span>たろう
+                    </div>
+                    <div class="player-clue">ヒント: お米のおいしさ</div>
+                </div>
+                <div class="player-card active">
+                    <div class="player-name">はなこ</div>
+                    <div class="player-clue">ヒント: キムチの辛さ</div>
+                </div>
+                <div class="player-card">
+                    <div class="player-name">じろう</div>
+                    <div class="player-clue">ヒント: 焚き火の温度</div>
+                </div>
+                <div class="player-card">
+                    <div class="player-name">さくら</div>
+                    <div class="player-clue">入力中...</div>
+                </div>
+                <div class="player-card">
+                    <div class="player-name">ゆうた</div>
+                    <div class="player-clue">ヒント待ち</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Game Area -->
+        <main class="main-area">
+            <!-- Theme Display -->
+            <div class="theme-display">
+                <div class="theme-card">
+                    <div class="theme-label">今回のお題</div>
+                    <div class="theme-text">🌶️ 辛さ・熱さ</div>
+                </div>
+                <div class="instruction-text">
+                    あなたの数字を「辛さ・熱さ」で表現してください。<br>
+                    数字そのものは絶対に言わないように！
+                </div>
+            </div>
+
+            <!-- Game Board -->
+            <div class="game-board">
+                <div style="text-align: center; margin-bottom: 16px; color: #718096; font-weight: 600;">
+                    カードを小さい順（左）から大きい順（右）に並べよう！
+                </div>
+                
+                <div class="card-slots">
+                    <div class="card-slot">
+                        <div style="color: #a0aec0; font-size: 24px; font-weight: 800;">0</div>
+                    </div>
+                    <div class="card-slot drop-target"></div>
+                    <div class="player-number-card card-back">
+                        <div class="card-player-name">たろう</div>
+                        <div class="card-number">?</div>
+                    </div>
+                    <div class="card-slot drop-target"></div>
+                    <div class="player-number-card card-back">
+                        <div class="card-player-name">はなこ</div>
+                        <div class="card-number">?</div>
+                    </div>
+                    <div class="card-slot"></div>
+                    <div class="player-number-card card-back">
+                        <div class="card-player-name">じろう</div>
+                        <div class="card-number">?</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="font-size: 14px; color: #4a5568; margin-bottom: 8px;">
+                        確認状況: <span style="font-weight: 700;">3/5人</span> がOKしました
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                        <span class="success-indicator">✓ たろう</span>
+                        <span class="success-indicator">✓ はなこ</span>
+                        <span class="success-indicator">✓ じろう</span>
+                        <span class="waiting-indicator">⏳ さくら</span>
+                        <span class="waiting-indicator">⏳ ゆうた</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Chat Panel -->
+        <aside class="chat-panel">
+            <h3>💬 チャット</h3>
+            <div class="chat-messages">
+                <div class="chat-message">
+                    <div class="message-author">たろう</div>
+                    <div class="message-text">みんな、頑張ろう！</div>
+                </div>
+                <div class="chat-message">
+                    <div class="message-author">はなこ</div>
+                    <div class="message-text">キムチって結構辛いよね？</div>
+                </div>
+                <div class="chat-message">
+                    <div class="message-author">じろう</div>
+                    <div class="message-text">焚き火は熱いけど、どのくらいかな…</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input class="chat-input" type="text" placeholder="メッセージを入力...">
+                <button class="chat-send-btn">送信</button>
+            </div>
+        </aside>
+
+        <!-- Bottom Hand Panel -->
+        <section class="hand-panel">
+            <div class="my-card-area">
+                <div class="my-card">
+                    <div class="my-card-label">あなたの数字</div>
+                    <div class="my-card-number">73</div>
+                </div>
+            </div>
+
+            <div class="clue-input-area">
+                <label class="clue-label">あなたのヒント（「辛さ・熱さ」で表現）</label>
+                <input class="clue-input" type="text" placeholder="例: お風呂のちょうどいい温度..." value="夏の車のハンドルくらい">
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-secondary">クリア</button>
+                <button class="btn btn-primary">ヒント確定</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Basic interactivity for demonstration
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chat functionality
+            const chatInput = document.querySelector('.chat-input');
+            const chatSendBtn = document.querySelector('.chat-send-btn');
+            const chatMessages = document.querySelector('.chat-messages');
+
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (message) {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = 'chat-message';
+                    messageEl.innerHTML = `
+                        <div class="message-author">あなた</div>
+                        <div class="message-text">${message}</div>
+                    `;
+                    chatMessages.appendChild(messageEl);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    chatInput.value = '';
+                }
+            }
+
+            chatSendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // Clue input functionality
+            const clueInput = document.querySelector('.clue-input');
+            const submitBtn = document.querySelector('.btn-primary');
+            const clearBtn = document.querySelector('.btn-secondary');
+
+            submitBtn.addEventListener('click', function() {
+                if (clueInput.value.trim()) {
+                    alert('ヒントを送信しました: ' + clueInput.value);
+                    this.textContent = '変更する';
+                    this.classList.add('submitted');
+                }
+            });
+
+            clearBtn.addEventListener('click', function() {
+                clueInput.value = '';
+                clueInput.focus();
+            });
+
+            // Card drag simulation (visual only)
+            const cards = document.querySelectorAll('.player-number-card');
+            const slots = document.querySelectorAll('.card-slot');
+
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    slots.forEach(slot => {
+                        if (slot.children.length === 0) {
+                            slot.classList.add('drop-target');
+                        }
+                    });
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    setTimeout(() => {
+                        slots.forEach(slot => {
+                            slot.classList.remove('drop-target');
+                        });
+                    }, 200);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

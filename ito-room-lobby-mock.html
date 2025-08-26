@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO（イト）- 部屋待機画面</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+            background: linear-gradient(135deg, #ff6b9d 0%, #ffc3a0 50%, #7ec8e3 100%);
+            height: 100vh;
+            overflow: hidden;
+            color: #2d3748;
+        }
+
+        /* Room Layout */
+        .room-container {
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "players main-area chat"
+                "players controls chat";
+            grid-template-columns: 320px 1fr 340px;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        /* Header */
+        .header {
+            grid-area: header;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 16px 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .room-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .room-code-display {
+            font-size: 24px;
+            font-weight: 800;
+            color: #e53e3e;
+            text-shadow: 1px 1px 0px #fff5f5;
+        }
+
+        .room-status {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .copy-code-btn {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .copy-code-btn:hover {
+            background: #e2e8f0;
+            transform: scale(1.05);
+        }
+
+        /* Player List Panel */
+        .players-panel {
+            grid-area: players;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .player-count {
+            background: #edf2f7;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .players-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #48bb78;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-item.host {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .player-item.you {
+            border-left-color: #3182ce;
+            background: #ebf8ff;
+            box-shadow: 0 2px 8px rgba(49, 130, 206, 0.15);
+        }
+
+        .player-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .player-avatar.host {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .host-badge {
+            background: #ed8936;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .you-badge {
+            background: #3182ce;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .player-status {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .ready-indicator {
+            width: 12px;
+            height: 12px;
+            background: #48bb78;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .not-ready-indicator {
+            width: 12px;
+            height: 12px;
+            background: #cbd5e0;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Main Area */
+        .main-area {
+            grid-area: main-area;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .waiting-illustration {
+            font-size: 120px;
+            margin-bottom: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .waiting-message {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 16px;
+        }
+
+        .waiting-description {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 32px;
+            line-height: 1.5;
+            max-width: 500px;
+        }
+
+        /* Game Settings */
+        .game-settings {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .setting-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .setting-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .change-settings-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #4a5568;
+        }
+
+        .change-settings-btn:hover {
+            background: #cbd5e0;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            grid-area: controls;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .ready-section {
+            flex: 1;
+        }
+
+        .ready-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f7fafc;
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ready-toggle.ready {
+            background: #c6f6d5;
+            border: 2px solid #48bb78;
+        }
+
+        .ready-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #cbd5e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .ready-toggle.ready .ready-checkbox {
+            background: #48bb78;
+            border-color: #48bb78;
+            color: white;
+        }
+
+        .ready-label {
+            font-weight: 600;
+            font-size: 16px;
+            color: #2d3748;
+        }
+
+        .start-game-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 16px rgba(72, 187, 120, 0.3);
+        }
+
+        .start-game-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .start-game-btn:disabled {
+            background: #cbd5e0;
+            color: #a0aec0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .leave-room-btn {
+            background: #fed7d7;
+            color: #c53030;
+            border: 2px solid #feb2b2;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .leave-room-btn:hover {
+            background: #feb2b2;
+            border-color: #fc8181;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            grid-area: chat;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            max-height: 400px;
+            min-height: 200px;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .chat-message.system {
+            background: #edf2f7;
+            color: #4a5568;
+            text-align: center;
+            max-width: 100%;
+            font-style: italic;
+        }
+
+        .chat-message.other {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-message.own {
+            background: #ebf8ff;
+            border: 1px solid #bee3f8;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message-author {
+            font-weight: 700;
+            font-size: 12px;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .message-text {
+            font-size: 14px;
+            color: #2d3748;
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            resize: none;
+            min-height: 44px;
+            max-height: 80px;
+        }
+
+        .chat-input:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .chat-send-btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .chat-send-btn:hover {
+            background: #2c5aa0;
+            transform: scale(1.05);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Ready Status Indicator */
+        .all-ready-indicator {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 16px;
+            font-weight: 700;
+            text-align: center;
+            margin: 16px 0;
+            animation: readyPulse 2s infinite;
+        }
+
+        @keyframes readyPulse {
+            0%, 100% { 
+                transform: scale(1); 
+                box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+            }
+            50% { 
+                transform: scale(1.02); 
+                box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .room-container {
+                grid-template-areas:
+                    "header"
+                    "main-area"
+                    "players"
+                    "controls";
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto auto;
+            }
+
+            .chat-panel {
+                display: none;
+            }
+
+            .controls-panel {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .ready-section {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .waiting-illustration {
+                font-size: 80px;
+            }
+
+            .waiting-message {
+                font-size: 24px;
+            }
+
+            .waiting-description {
+                font-size: 16px;
+            }
+
+            .main-area {
+                padding: 20px;
+            }
+
+            .game-settings {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="room-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="room-title">
+                <div class="room-code-display">🏠 ABC123</div>
+                <div class="room-status">待機中</div>
+            </div>
+            <div class="header-actions">
+                <button class="copy-code-btn" onclick="copyRoomCode()">
+                    📋 コードをコピー
+                </button>
+                <button class="copy-code-btn" onclick="showInviteModal()" style="background: #ebf8ff; border-color: #bee3f8; color: #3182ce;">
+                    👥 友達を招待
+                </button>
+            </div>
+        </header>
+
+        <!-- Players Panel -->
+        <aside class="players-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">👥 プレイヤー</h3>
+                <div class="player-count">5/6 人</div>
+            </div>
+            <div class="players-list">
+                <div class="player-item host">
+                    <div class="player-avatar host">た</div>
+                    <div class="player-info">
+                        <div class="player-name">
+                            たろう
+                            <span class="host-badge">ホスト</span>
+                        </div>
+                        <div class="player-status">準備完了</div>
+                    </div>
+                    <div class="ready-indicator"></div>
+                </div>
+
+                <div class="player-item you">
+                    <div class="player-avatar">あ</div>
+                    <div class="player-info">
+                        <div class="player-name">
+                            あなた
+                            <span class="you-badge">自分</span>
+                        </div>
+                        <div class="player-status">準備中...</div>
+                    </div>
+                    <div class="not-ready-indicator"></div>
+                </div>
+
+                <div class="player-item">
+                    <div class="player-avatar">は</div>
+                    <div class="player-info">
+                        <div class="player-name">はなこ</div>
+                        <div class="player-status">準備完了</div>
+                    </div>
+                    <div class="ready-indicator"></div>
+                </div>
+
+                <div class="player-item">
+                    <div class="player-avatar">じ</div>
+                    <div class="player-info">
+                        <div class="player-name">じろう</div>
+                        <div class="player-status">準備完了</div>
+                    </div>
+                    <div class="ready-indicator"></div>
+                </div>
+
+                <div class="player-item">
+                    <div class="player-avatar">さ</div>
+                    <div class="player-info">
+                        <div class="player-name">さくら</div>
+                        <div class="player-status">準備中...</div>
+                    </div>
+                    <div class="not-ready-indicator"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="main-area">
+            <div class="waiting-illustration">🎯</div>
+            <h2 class="waiting-message">ゲーム開始を待っています</h2>
+            <p class="waiting-description">
+                全員の準備が完了したら、ホストがゲームを開始できます。<br>
+                準備ができたら「準備完了」ボタンを押してください！
+            </p>
+
+            <!-- Game Settings -->
+            <div class="game-settings">
+                <h3 class="settings-title">🎮 ゲーム設定</h3>
+                <div class="setting-row">
+                    <span class="setting-label">ゲームモード</span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="setting-value">逐次判定</span>
+                        <button class="change-settings-btn" onclick="showSettingsModal()">変更</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">最大人数</span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="setting-value">6人</span>
+                        <button class="change-settings-btn" onclick="showSettingsModal()">変更</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">カードの範囲</span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="setting-value">1-100</span>
+                        <button class="change-settings-btn" onclick="showSettingsModal()">変更</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">時間制限</span>
+                    <span class="setting-value">なし</span>
+                </div>
+            </div>
+
+            <!-- All Ready Indicator -->
+            <div id="allReadyIndicator" class="all-ready-indicator" style="display: none;">
+                🎉 全員準備完了！ホストがゲームを開始できます
+            </div>
+        </main>
+
+        <!-- Controls Panel -->
+        <section class="controls-panel">
+            <div class="ready-section">
+                <div class="ready-toggle" id="readyToggle" onclick="toggleReady()">
+                    <div class="ready-checkbox" id="readyCheckbox"></div>
+                    <div class="ready-label" id="readyLabel">準備完了</div>
+                </div>
+            </div>
+
+            <button class="start-game-btn" id="startGameBtn" disabled onclick="startGame()">
+                ⚡ ゲーム開始
+            </button>
+
+            <button class="leave-room-btn" onclick="leaveRoom()">
+                🚪 退室
+            </button>
+        </section>
+
+        <!-- Chat Panel -->
+        <aside class="chat-panel">
+            <div class="chat-header">
+                💬 チャット
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message system">
+                    <div class="message-text">たろうさんが部屋を作成しました</div>
+                    <div class="message-time">15:30</div>
+                </div>
+                <div class="chat-message system">
+                    <div class="message-text">はなこさんが参加しました</div>
+                    <div class="message-time">15:32</div>
+                </div>
+                <div class="chat-message other">
+                    <div class="message-author">たろう</div>
+                    <div class="message-text">みなさん、よろしくお願いします！</div>
+                    <div class="message-time">15:33</div>
+                </div>
+                <div class="chat-message other">
+                    <div class="message-author">はなこ</div>
+                    <div class="message-text">よろしくお願いします😊</div>
+                    <div class="message-time">15:34</div>
+                </div>
+                <div class="chat-message system">
+                    <div class="message-text">じろうさんが参加しました</div>
+                    <div class="message-time">15:35</div>
+                </div>
+                <div class="chat-message own">
+                    <div class="message-text">みなさん、よろしくです！楽しみましょう🎯</div>
+                    <div class="message-time">15:36</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" id="chatInput" placeholder="メッセージを入力..." rows="1"></textarea>
+                <button class="chat-send-btn" onclick="sendMessage()">送信</button>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        let isReady = false;
+        let isHost = false; // In real app, this would be determined by server
+
+        // Toggle ready status
+        function toggleReady() {
+            isReady = !isReady;
+            const toggle = document.getElementById('readyToggle');
+            const checkbox = document.getElementById('readyCheckbox');
+            const label = document.getElementById('readyLabel');
+
+            if (isReady) {
+                toggle.classList.add('ready');
+                checkbox.innerHTML = '✓';
+                label.textContent = '準備完了';
+                sendSystemMessage('準備完了しました');
+            } else {
+                toggle.classList.remove('ready');
+                checkbox.innerHTML = '';
+                label.textContent = '準備完了';
+                sendSystemMessage('準備をキャンセルしました');
+            }
+
+            updateReadyStatus();
+        }
+
+        // Update ready status and check if all players are ready
+        function updateReadyStatus() {
+            // Simulate checking all players ready status
+            const allReady = isReady; // In real app, check all players
+            const indicator = document.getElementById('allReadyIndicator');
+            const startBtn = document.getElementById('startGameBtn');
+
+            if (allReady && isHost) {
+                indicator.style.display = 'block';
+                startBtn.disabled = false;
+            } else {
+                indicator.style.display = 'none';
+                startBtn.disabled = true;
+            }
+        }
+
+        // Send system message
+        function sendSystemMessage(message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message system';
+            messageDiv.innerHTML = `
+                <div class="message-text">あなたが${message}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Send chat message
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                const chatMessages = document.getElementById('chatMessages');
+                const time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'chat-message own';
+                messageDiv.innerHTML = `
+                    <div class="message-text">${message}</div>
+                    <div class="message-time">${time}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                input.value = '';
+                autoResize(input);
+            }
+        }
+
+        // Auto resize textarea
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 80) + 'px';
+        }
+
+        // Copy room code
+        function copyRoomCode() {
+            navigator.clipboard.writeText('ABC123').then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ コピーしました！';
+                btn.style.background = '#c6f6d5';
+                btn.style.color = '#22543d';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#f7fafc';
+                    btn.style.color = '#4a5568';
+                }, 2000);
+            });
+        }
+
+        // Show invite modal (placeholder)
+        function showInviteModal() {
+            alert('招待機能：\n\n部屋コード: ABC123\n\nこのコードを友達に教えて、ゲームに招待しましょう！\n\n（実際のアプリでは、SNS共有やリンク送信機能が利用できます）');
+        }
+
+        // Show settings modal (placeholder)
+        function showSettingsModal() {
+            if (!isHost) {
+                alert('設定を変更できるのはホストのみです。');
+                return;
+            }
+            alert('設定変更機能（ホスト専用）：\n\n・ゲームモード変更\n・最大人数変更\n・カードレンジ変更\n・時間制限設定\n\n（実際のアプリでは設定画面が開きます）');
+        }
+
+        // Start game
+        function startGame() {
+            if (!isHost) {
+                alert('ゲームを開始できるのはホストのみです。');
+                return;
+            }
+            if (!isReady) {
+                alert('まず自分も準備完了にしてください。');
+                return;
+            }
+            alert('ゲームを開始します！\n\n（実際のアプリではゲーム画面に遷移します）');
+            // window.location.href = 'ito-game-mock.html';
+        }
+
+        // Leave room
+        function leaveRoom() {
+            if (confirm('本当に退室しますか？')) {
+                alert('退室しました。\n\n（実際のアプリではロビー画面に戻ります）');
+                // window.location.href = 'ito-lobby-mock.html';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto resize chat input
+            const chatInput = document.getElementById('chatInput');
+            chatInput.addEventListener('input', function() {
+                autoResize(this);
+            });
+
+            // Enter to send message, Shift+Enter for new line
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Simulate being host for demo (in real app, this comes from server)
+            // isHost = true; // Uncomment to test host features
+
+            // Initialize ready status
+            updateReadyStatus();
+
+            // Auto scroll chat to bottom
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    </script>
+</body>
+</html>

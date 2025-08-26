@@ -126,7 +126,7 @@ export function PlayerList({
   const total = players.length;
   if (total === 0) {
     return (
-      <Text fontSize="sm" color="gray.400">
+      <Text fontSize="sm" color="fgMuted">
         プレイヤーがいません
       </Text>
     );

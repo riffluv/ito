@@ -101,7 +101,7 @@ export function SettingsModal({
                 <Text fontWeight="bold" fontSize="md">
                   クリア方式
                 </Text>
-                <Text fontSize="sm" color="gray.400">
+                <Text fontSize="sm" color="fgMuted">
                   ゲーム進行のルールを選択してください
                 </Text>
               </VStack>
@@ -142,7 +142,7 @@ export function SettingsModal({
               </Stack>
 
               {(!isHost || roomStatus !== "waiting") && (
-                <Text fontSize="sm" color="gray.400" textAlign="center">
+                <Text fontSize="sm" color="fgMuted" textAlign="center">
                   {!isHost
                     ? "設定の変更はホストのみ可能です"
                     : "設定の変更は待機中のみ可能です"}

@@ -89,7 +89,7 @@ export function Hud({
             variant="ghost"
             size="sm"
             onClick={onOpenSettings}
-            _hover={{ bg: "gray.700" }}
+            _hover={{ bg: "cardHoverBg" }}
           >
             <FiSettings />
           </IconButton>

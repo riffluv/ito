@@ -28,15 +28,13 @@ export function TopicDisplay({
               {room.topic}
             </Text>
             {topicBox && (
-              <Text color="gray.300" fontSize="sm">
+              <Text color="fgMuted" fontSize="sm">
                 カテゴリ: {topicBox}
               </Text>
             )}
           </>
         ) : (
-          <Text color="gray.300">
-            お題が設定されていません
-          </Text>
+          <Text color="fgMuted">お題が設定されていません</Text>
         )}
       </Box>
     </Box>
