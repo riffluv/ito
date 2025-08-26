@@ -4,15 +4,8 @@ import { notify } from "@/components/ui/notify";
 import { updateClue1 } from "@/lib/firebase/players";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import {
-  Box,
-  Button,
-  Heading,
-  HStack,
-  Input,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
+import { Box, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 
 export function CluePanel({
@@ -73,7 +66,7 @@ export function CluePanel({
             } catch {}
           }}
         >
-          <Text fontSize="sm" color="gray.300">
+          <Text fontSize="sm" color="fgMuted">
             あなたの数字（自分にだけ表示）
           </Text>
           <Heading size="lg" color="yellow.300">
@@ -93,11 +86,11 @@ export function CluePanel({
             }}
             disabled={readOnly}
           />
-          <Button onClick={submit} colorPalette="orange" disabled={readOnly}>
+          <AppButton onClick={submit} colorPalette="orange" disabled={readOnly}>
             更新
-          </Button>
+          </AppButton>
         </HStack>
-        <Text color="gray.300">
+        <Text color="fgMuted">
           {label}
           は全員に表示されます。チャットで相談しながら自由に変更できます。
         </Text>
