@@ -15,8 +15,8 @@ export default function RulesPage() {
         <Heading size="2xl" letterSpacing="tight">
           ITO（イト） — ルール（簡潔版）
         </Heading>
-        <AppButton asChild variant="subtle">
-          <Link href="/">トップへ戻る</Link>
+        <AppButton as={Link} href="/" variant="subtle">
+          トップへ戻る
         </AppButton>
       </HStack>
 

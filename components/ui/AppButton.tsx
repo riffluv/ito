@@ -10,6 +10,8 @@ type AppButtonProps = React.ComponentProps<typeof CButton> & {
   density?: "compact" | "comfortable"
   visual?: Visual
   palette?: Palette
+  // Linkサポート（as={Link}時にhrefを型的に許可）
+  href?: string
 }
 
 export function AppButton({

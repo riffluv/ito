@@ -79,8 +79,13 @@ export function GameLayout({
           {header}
         </Box>
 
-        {/* メインコンテンツエリア: 残り高さを使用 */}
-        <Box flex="1 1 0" display="flex" minH={0}>
+        {/* メインコンテンツエリア: 明示高さで安定化 */}
+        <Box
+          flex="0 0 auto"
+          h="calc(100dvh - var(--unified-header-height) - var(--unified-hand-area-height))"
+          display="flex"
+          overflow="hidden"
+        >
           {/* 左サイドバー - デスクトップのみ表示 */}
           {sidebar && (
             <Box
@@ -98,12 +103,12 @@ export function GameLayout({
 
           {/* 中央メインエリア: 残り幅を使用 */}
           <Box
-            flex="1 1 0"
+            flex="1 1 auto"
             display="flex"
             flexDir="column"
-            minH={0}
             bg="canvasBg"
             overflow="hidden"
+            h="100%"
           >
             {main}
           </Box>

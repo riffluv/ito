@@ -2,7 +2,9 @@
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
+import { AppButton } from "@/components/ui/AppButton";
 
 export default function Header() {
   const pathname = usePathname();
@@ -43,6 +45,9 @@ export default function Header() {
             </Heading>
           </HStack>
           <HStack gap={4}>
+            <AppButton variant="subtle" as={Link} href="/rules">
+              ルール
+            </AppButton>
             <ThemeToggle />
           </HStack>
         </Flex>
