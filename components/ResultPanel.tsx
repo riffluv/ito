@@ -21,7 +21,7 @@ export function ResultPanel({
     <Panel title={title}>
       <Stack>
         {played.length === 0 ? (
-          <Text color="gray.400">データがありません</Text>
+        <Text color="fgMuted">データがありません</Text>
         ) : (
           <Stack>
             {played.map((p, idx) => (
@@ -47,7 +47,7 @@ export function ResultPanel({
                   #{idx + 1} {p.name}
                 </Text>
                 <Text
-                  color="gray.200"
+                color="fgMuted"
                   textAlign="center"
                   whiteSpace="nowrap"
                   overflow="hidden"

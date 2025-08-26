@@ -72,11 +72,11 @@ export function PlayBoard({
     <Panel title="順番に出す" role="region" aria-label="場（出した順）">
       <Stack>
         {!failed ? (
-          <Text color="gray.300">
+          <Text color="fgMuted">
             低いと思った人から順に「出す」を押してください。順番を間違えると失敗になります。
           </Text>
         ) : (
-          <Text color="red.300" fontWeight="bold">
+          <Text color="dangerSolid" fontWeight="bold">
             失敗！！　最後までカード出して数字を確認しましょう。
           </Text>
         )}
@@ -84,7 +84,7 @@ export function PlayBoard({
         <Stack>
           <Text fontWeight="bold">場に出たカード</Text>
           {played.length === 0 ? (
-            <Text color="gray.400">まだ誰も出していません</Text>
+            <Text color="fgMuted">まだ誰も出していません</Text>
           ) : (
             <Stack>
               {played.map((p, idx) => (
@@ -111,7 +111,7 @@ export function PlayBoard({
         <Stack>
           <Text fontWeight="bold">まだ出していないプレイヤー</Text>
           {waiting.length === 0 ? (
-            <Text color="gray.400">全員出し終わりました</Text>
+            <Text color="fgMuted">全員出し終わりました</Text>
           ) : (
             <Stack>
               {waiting.map((p) => (

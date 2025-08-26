@@ -145,7 +145,7 @@ export default function LobbyPage() {
             Online-ITO
           </Heading>
           <HStack>
-            <HStack gap={2} mr={2} color="gray.300">
+            <HStack gap={2} mr={2} color="fgMuted">
               <Text fontSize="sm" suppressHydrationWarning>
                 名前: {mounted ? displayName || "未設定" : "未設定"}
               </Text>
@@ -185,8 +185,9 @@ export default function LobbyPage() {
                 p={8}
                 textAlign="center"
                 borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+                borderColor="borderDefault"
                 rounded="lg"
-                bg="blackAlpha.300"
+                bg="panelSubBg"
               >
                 <Text>
                   Firebase設定が見つかりません。`.env.local`

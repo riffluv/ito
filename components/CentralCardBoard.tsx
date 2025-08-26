@@ -86,6 +86,22 @@ export function CentralCardBoard({
   const map = new Map(players.map((p) => [p.id, p]));
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
+  const me = map.get(meId as string) as any;
+  const mePlaced = useMemo(() => {
+    return (
+      (orderList || []).includes(meId) ||
+      (proposal || []).includes(meId) ||
+      pending.includes(meId)
+    );
+  }, [orderList?.join(","), proposal?.join(","), pending.join(","), meId]);
+  const hasNumber = typeof (me as any)?.number === "number";
+  const canDrop = useMemo(() => {
+    if (roomStatus !== "clue") return false;
+    if (!hasNumber || mePlaced) return false;
+    if (resolveMode === "sort-submit") return true; // 並べ替えモードは常時配置可
+    // sequential: 連想ワードが全員揃ってから
+    return !!cluesReady;
+  }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady]);
 
   // sequential モード向けのローカル評価: サーバ更新を待たずに即時に失敗を検出して表示するため
   const currentPlaced = useMemo(() => {
@@ -121,17 +137,16 @@ export function CentralCardBoard({
     const pid = e.dataTransfer.getData("text/plain");
     if (!pid) return;
     setIsOver(false);
+    if (!canDrop) {
+      notify({ title: "今はここに置けません", type: "info" });
+      return;
+    }
     if (pid !== meId) {
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
-    const me = map.get(meId as string) as any;
     if (!me || typeof me.number !== "number") {
       notify({ title: "数字が割り当てられていません", type: "warning" });
-      return;
-    }
-    if (roomStatus !== "clue") {
-      notify({ title: "今はカードを出せません", type: "info" });
       return;
     }
     if (resolveMode === "sort-submit") {
@@ -315,24 +330,19 @@ export function CentralCardBoard({
         {/* no separate header hint; placeholder inside board will show waiting message when appropriate */}
 
         {/* 🎯 カード配置エリア - 統一レイアウトシステム使用 */}
-        <Box
-          flex="0 0 auto"
-          h={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT}
-          display="flex"
-          flexDir="column"
-          position="relative"
-        >
+        <Box flex="0 0 auto" minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} display="flex" flexDir="column" position="relative">
           <BoardArea
             onDragOver={(e) => {
               e.preventDefault();
               // only show hover highlight when drops are allowed
-              if (!(roomStatus === "clue" && cluesReady === false)) {
+              if (canDrop) {
                 setIsOver(true);
               }
             }}
             onDragLeave={() => setIsOver(false)}
             onDrop={onDrop}
             isOver={isOver}
+            droppable={canDrop}
           >
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
               <DndContext
@@ -370,7 +380,7 @@ export function CentralCardBoard({
             {resolveMode === "sort-submit" &&
               roomStatus === "clue" &&
               activeProposal.length === 0 && (
-                <Text color="gray.400">
+                <Text color="fgMuted">
                   自分のカードをドラッグして場に置き、連想ワードで相談しましょう。
                 </Text>
               )}
@@ -385,7 +395,7 @@ export function CentralCardBoard({
                   </Text>
                 </Box>
               ) : (
-                <Text color="gray.400">
+                <Text color="fgMuted">
                   まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
                 </Text>
               ))}
@@ -453,7 +463,7 @@ export function CentralCardBoard({
                   rounded="2xl"
                   fontWeight={800}
                   fontSize={{ base: "2xl", md: "3xl" }}
-                  color="teal.300"
+                  color="successSolid"
                   letterSpacing={2}
                   boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.ELEVATED}
                   transform="scale(1) rotate(0deg)"

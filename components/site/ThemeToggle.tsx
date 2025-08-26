@@ -48,7 +48,7 @@ export default function ThemeToggle() {
         rounded="full"
         _focusVisible={{
           outline: "2px solid",
-          outlineColor: "{colors.brand.400}",
+          outlineColor: "focusRing",
           outlineOffset: "2px",
         }}
       >

@@ -4,30 +4,21 @@ import { Box, BoxProps } from "@chakra-ui/react";
 
 export type BoardAreaProps = BoxProps & {
   isOver?: boolean;
+  droppable?: boolean;
 };
 
-export default function BoardArea({
-  isOver,
-  children,
-  ...rest
-}: BoardAreaProps) {
+export default function BoardArea({ isOver, droppable = true, children, ...rest }: BoardAreaProps) {
   return (
-    <Box
-      position="relative"
-      h={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT}
-      display="flex"
-      flexDir="column"
-    >
+    <Box position="relative" minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} display="flex" flexDir="column">
       <Box
         role="region"
         aria-label="カード配置エリア"
+        aria-disabled={!droppable}
         position="relative"
-        h={
-          UNIFIED_LAYOUT.BOARD_MIN_HEIGHT
-        } /* 8人分のカード配置に十分な統一高さ */
+        minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} /* 8人分のカード配置に十分な統一高さ */
         p={4} /* カードの上下左右スペーシング */
         borderStyle="dashed"
-        borderColor={isOver ? "accent" : "transparent"}
+        borderColor={isOver ? "accent" : droppable ? "borderDefault" : "transparent"}
         borderWidth={getDynamicBorder({
           isActive: !!isOver,
           activeContext: "SEMANTIC",
@@ -45,14 +36,35 @@ export default function BoardArea({
             transformStyle: "preserve-3d",
           },
         }}
-        bg={
-          isOver
-            ? "rgba(78,205,196,0.04)"
-            : "repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 8px, transparent 8px, transparent 16px)"
+        bg={isOver ? "accentSubtle" : "panelSubBg"}
+        backgroundImage={
+          "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)"
         }
+        cursor={droppable ? (isOver ? "copy" : "default") : "not-allowed"}
         transition="all 150ms ease"
         {...rest}
       >
+        {/* ドラッグ中の視覚ヒント */}
+        {isOver && (
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            px={3}
+            py={1}
+            rounded="full"
+            bg="panelBg"
+            borderColor="accent"
+            borderWidth="1px"
+            color="accent"
+            fontSize="sm"
+            fontWeight="semibold"
+            pointerEvents="none"
+          >
+            ここに置く
+          </Box>
+        )}
         {children}
       </Box>
     </Box>

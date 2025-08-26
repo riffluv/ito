@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO（イト）- メイン画面</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+            background: linear-gradient(135deg, #ff6b9d 0%, #ffc3a0 50%, #7ec8e3 100%);
+            min-height: 100vh;
+            color: #2d3748;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            color: #e53e3e;
+            text-shadow: 1px 1px 0px #fff5f5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-5px);
+            }
+            60% {
+                transform: translateY(-3px);
+            }
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            min-height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .game-title {
+            font-size: 64px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 
+                2px 2px 0px #e53e3e,
+                4px 4px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 16px;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from {
+                text-shadow: 
+                    2px 2px 0px #e53e3e,
+                    4px 4px 8px rgba(0, 0, 0, 0.3);
+            }
+            to {
+                text-shadow: 
+                    2px 2px 0px #e53e3e,
+                    4px 4px 16px rgba(229, 62, 62, 0.4),
+                    0px 0px 32px rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        .game-subtitle {
+            font-size: 24px;
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            margin-bottom: 32px;
+            opacity: 0.9;
+        }
+
+        .game-description {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4a5568;
+        }
+
+        /* Action Section */
+        .action-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 48px;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+        }
+
+        .action-card.create-room::before {
+            background: linear-gradient(90deg, #3182ce, #2c5aa0);
+        }
+
+        .action-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .action-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2d3748;
+        }
+
+        .action-description {
+            color: #718096;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        /* Room Code Input */
+        .room-input-area {
+            margin-bottom: 16px;
+        }
+
+        .room-code-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 3px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            outline: none;
+            transition: all 0.2s;
+            background: #f7fafc;
+        }
+
+        .room-code-input:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.1);
+            background: white;
+        }
+
+        .room-code-input::placeholder {
+            color: #a0aec0;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            box-shadow: 0 6px 16px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5aa0 100%);
+            color: white;
+            box-shadow: 0 6px 16px rgba(49, 130, 206, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(49, 130, 206, 0.4);
+        }
+
+        .btn-large {
+            font-size: 20px;
+            padding: 20px 40px;
+        }
+
+        /* Active Rooms Section */
+        .rooms-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .room-card {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid #48bb78;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .room-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left-color: #38a169;
+        }
+
+        .room-card.full {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .room-card.playing {
+            border-left-color: #e53e3e;
+            background: #fff5f5;
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .room-code {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .room-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .room-status.waiting {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .room-status.full {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .room-status.playing {
+            background: #fbb6ce;
+            color: #97266d;
+        }
+
+        .room-info {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .room-players {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .player-avatar {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* How to Play Section */
+        .how-to-play {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .how-to-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .step-card {
+            text-align: center;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #3182ce, #2c5aa0);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 16px auto;
+            font-size: 18px;
+        }
+
+        .step-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+
+        .step-description {
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 48px;
+            }
+
+            .game-subtitle {
+                font-size: 20px;
+            }
+
+            .action-section {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .action-card {
+                padding: 24px;
+            }
+
+            .container {
+                padding: 24px 16px;
+            }
+
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .how-to-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                padding: 0 16px;
+            }
+
+            .logo {
+                font-size: 24px;
+            }
+
+            .header-buttons {
+                gap: 8px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #a0aec0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #f7fafc;
+            color: #2d3748;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .form-select:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎯</span>
+                ITO（イト）
+            </div>
+            <div class="header-buttons">
+                <button class="btn btn-secondary" onclick="showSettingsModal()">⚙️ 設定</button>
+                <button class="btn btn-primary" onclick="showRulesModal()">📖 ルール</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1 class="game-title">🎯 ITO</h1>
+            <p class="game-subtitle">みんなで協力する数字当てゲーム</p>
+            <div class="game-description">
+                <strong>ITOは協力型パーティゲームです！</strong><br>
+                1〜100の数字カードを持ち、お題に沿った「たとえ」で数字の大小を表現。<br>
+                みんなで協力して、カードを小さい順に並べることを目指しましょう！
+            </div>
+        </section>
+
+        <!-- Action Section -->
+        <section class="action-section">
+            <!-- Create Room -->
+            <div class="action-card create-room">
+                <span class="action-icon">🏠</span>
+                <h2 class="action-title">部屋を作る</h2>
+                <p class="action-description">
+                    新しいゲーム部屋を作成して、<br>
+                    友達を招待しましょう！
+                </p>
+                <button class="btn btn-secondary btn-large" onclick="showCreateRoomModal()">
+                    部屋を作成する
+                </button>
+            </div>
+
+            <!-- Join Room -->
+            <div class="action-card join-room">
+                <span class="action-icon">🚪</span>
+                <h2 class="action-title">部屋に参加</h2>
+                <p class="action-description">
+                    部屋コードを入力して、<br>
+                    友達のゲームに参加しましょう！
+                </p>
+                <div class="room-input-area">
+                    <input 
+                        type="text" 
+                        class="room-code-input" 
+                        placeholder="部屋コードを入力（例: ABC123）"
+                        maxlength="6"
+                        id="joinRoomCode"
+                    >
+                </div>
+                <button class="btn btn-primary btn-large" onclick="joinRoom()">
+                    部屋に参加する
+                </button>
+            </div>
+        </section>
+
+        <!-- Active Rooms Section -->
+        <section class="rooms-section">
+            <h2 class="section-title">
+                🎮 アクティブな部屋
+                <button class="btn" style="padding: 8px 16px; font-size: 14px; margin-left: auto;" onclick="refreshRooms()">
+                    🔄 更新
+                </button>
+            </h2>
+            <div class="rooms-grid" id="roomsList">
+                <!-- Room Card 1 -->
+                <div class="room-card" onclick="joinSpecificRoom('ABC123')">
+                    <div class="room-header">
+                        <div class="room-code">ABC123</div>
+                        <span class="room-status waiting">待機中</span>
+                    </div>
+                    <div class="room-info">ホスト: たろう | モード: 逐次判定</div>
+                    <div class="room-players">
+                        <div class="player-avatar">た</div>
+                        <div class="player-avatar">は</div>
+                        <div class="player-avatar">じ</div>
+                        <div style="color: #a0aec0; font-size: 14px; line-height: 24px;">3/8 人</div>
+                    </div>
+                </div>
+
+                <!-- Room Card 2 -->
+                <div class="room-card full" onclick="joinSpecificRoom('XYZ789')">
+                    <div class="room-header">
+                        <div class="room-code">XYZ789</div>
+                        <span class="room-status full">満員</span>
+                    </div>
+                    <div class="room-info">ホスト: さくら | モード: 一括判定</div>
+                    <div class="room-players">
+                        <div class="player-avatar">さ</div>
+                        <div class="player-avatar">ゆ</div>
+                        <div class="player-avatar">け</div>
+                        <div class="player-avatar">み</div>
+                        <div class="player-avatar">り</div>
+                        <div style="color: #e53e3e; font-size: 14px; line-height: 24px;">5/5 人</div>
+                    </div>
+                </div>
+
+                <!-- Room Card 3 -->
+                <div class="room-card playing" onclick="joinSpecificRoom('DEF456')">
+                    <div class="room-header">
+                        <div class="room-code">DEF456</div>
+                        <span class="room-status playing">プレイ中</span>
+                    </div>
+                    <div class="room-info">ホスト: まこと | モード: 逐次判定</div>
+                    <div class="room-players">
+                        <div class="player-avatar">ま</div>
+                        <div class="player-avatar">あ</div>
+                        <div class="player-avatar">い</div>
+                        <div class="player-avatar">う</div>
+                        <div style="color: #718096; font-size: 14px; line-height: 24px;">4/6 人</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How to Play Section -->
+        <section class="how-to-play">
+            <h2 class="section-title">🎲 遊び方</h2>
+            <div class="how-to-steps">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-title">カード配布</div>
+                    <div class="step-description">各プレイヤーに1〜100の数字カードを1枚配布</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-title">お題決定</div>
+                    <div class="step-description">「辛さ」「怖さ」などのテーマを決定</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-title">ヒント表現</div>
+                    <div class="step-description">数字を直接言わず、お題に沿って表現</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <div class="step-title">カード並び</div>
+                    <div class="step-description">協力して小さい順にカードを並べる</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">5</div>
+                    <div class="step-title">結果確認</div>
+                    <div class="step-description">正しい順序なら成功！</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="#rules">ゲームルール</a>
+            <a href="#about">ITOについて</a>
+            <a href="#contact">お問い合わせ</a>
+            <a href="#privacy">プライバシー</a>
+        </div>
+        <p>&copy; 2024 ITO Online Game. All rights reserved.</p>
+    </footer>
+
+    <!-- Create Room Modal -->
+    <div class="modal-overlay" id="createRoomModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🏠 部屋を作成</h3>
+                <button class="close-btn" onclick="hideCreateRoomModal()">&times;</button>
+            </div>
+            <form onsubmit="createRoom(event)">
+                <div class="form-group">
+                    <label class="form-label">あなたの名前</label>
+                    <input type="text" class="form-input" id="playerName" placeholder="ニックネームを入力" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">最大人数</label>
+                    <select class="form-select" id="maxPlayers">
+                        <option value="4">4人</option>
+                        <option value="5">5人</option>
+                        <option value="6" selected>6人</option>
+                        <option value="7">7人</option>
+                        <option value="8">8人</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ゲームモード</label>
+                    <select class="form-select" id="gameMode">
+                        <option value="sequential">逐次判定（カードを1枚ずつ出す）</option>
+                        <option value="sort-submit">一括判定（並べてから一斉公開）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">部屋の説明（任意）</label>
+                    <input type="text" class="form-input" id="roomDescription" placeholder="例: 初心者歓迎！">
+                </div>
+                <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+                    部屋を作成する
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">⚙️ 設定</h3>
+                <button class="close-btn" onclick="hideSettingsModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">効果音</label>
+                <select class="form-select" id="soundEnabled">
+                    <option value="true">有効</option>
+                    <option value="false">無効</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">アニメーション</label>
+                <select class="form-select" id="animationEnabled">
+                    <option value="true">有効</option>
+                    <option value="false">無効</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">テーマ</label>
+                <select class="form-select" id="theme">
+                    <option value="auto">自動</option>
+                    <option value="light">ライト</option>
+                    <option value="dark">ダーク</option>
+                </select>
+            </div>
+            <button class="btn btn-primary btn-large" style="width: 100%;" onclick="saveSettings()">
+                設定を保存
+            </button>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div class="modal-overlay" id="rulesModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">📖 ゲームルール</h3>
+                <button class="close-btn" onclick="hideRulesModal()">&times;</button>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <h4 style="margin-bottom: 12px; color: #3182ce;">基本ルール</h4>
+                <p style="margin-bottom: 16px; line-height: 1.5;">
+                    ITOは協力型のパーティゲームです。各プレイヤーは1〜100の数字が書かれたカードを1枚ずつ持ち、自分の数字を直接言わずに「お題」に沿った表現で数字の大小を伝え、全員でカードを小さい順に並べることを目指します。
+                </p>
+                
+                <h4 style="margin-bottom: 12px; color: #3182ce;">ゲームモード</h4>
+                <p style="margin-bottom: 16px; line-height: 1.5;">
+                    <strong>逐次判定：</strong>カードを1枚ずつ出して、その都度正しい順序かチェック<br>
+                    <strong>一括判定：</strong>ヒントを出し合い、話し合ってから一斉に公開
+                </p>
+
+                <h4 style="margin-bottom: 12px; color: #3182ce;">勝利条件</h4>
+                <p style="margin-bottom: 16px; line-height: 1.5;">
+                    すべてのカードが小さい順に正しく並んでいれば勝利です！
+                </p>
+            </div>
+            <button class="btn btn-primary btn-large" style="width: 100%; margin-top: 20px;" onclick="hideRulesModal()">
+                閉じる
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Modal functions
+        function showCreateRoomModal() {
+            document.getElementById('createRoomModal').classList.add('active');
+        }
+
+        function hideCreateRoomModal() {
+            document.getElementById('createRoomModal').classList.remove('active');
+        }
+
+        function showSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function hideSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function showRulesModal() {
+            document.getElementById('rulesModal').classList.add('active');
+        }
+
+        function hideRulesModal() {
+            document.getElementById('rulesModal').classList.remove('active');
+        }
+
+        // Create room function
+        function createRoom(event) {
+            event.preventDefault();
+            const playerName = document.getElementById('playerName').value;
+            const maxPlayers = document.getElementById('maxPlayers').value;
+            const gameMode = document.getElementById('gameMode').value;
+            const roomDescription = document.getElementById('roomDescription').value;
+
+            // Generate random room code
+            const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            alert(`部屋を作成しました！\n部屋コード: ${roomCode}\nホスト: ${playerName}\n最大人数: ${maxPlayers}人\nモード: ${gameMode === 'sequential' ? '逐次判定' : '一括判定'}`);
+            hideCreateRoomModal();
+            
+            // In real implementation, redirect to game room
+            // window.location.href = `/rooms/${roomCode}`;
+        }
+
+        // Join room functions
+        function joinRoom() {
+            const roomCode = document.getElementById('joinRoomCode').value.trim().toUpperCase();
+            if (roomCode.length === 6) {
+                alert(`部屋 ${roomCode} に参加しています...`);
+                // In real implementation, redirect to game room
+                // window.location.href = `/rooms/${roomCode}`;
+            } else {
+                alert('6文字の部屋コードを入力してください。');
+            }
+        }
+
+        function joinSpecificRoom(roomCode) {
+            const playerName = prompt('あなたの名前を入力してください:');
+            if (playerName) {
+                alert(`${playerName}さんが部屋 ${roomCode} に参加しています...`);
+                // In real implementation, redirect to game room
+                // window.location.href = `/rooms/${roomCode}?name=${encodeURIComponent(playerName)}`;
+            }
+        }
+
+        // Refresh rooms
+        function refreshRooms() {
+            const button = event.target;
+            button.innerHTML = '<span class="loading"></span> 更新中...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = '🔄 更新';
+                button.disabled = false;
+                // In real implementation, fetch updated room list
+            }, 2000);
+        }
+
+        // Save settings
+        function saveSettings() {
+            const soundEnabled = document.getElementById('soundEnabled').value;
+            const animationEnabled = document.getElementById('animationEnabled').value;
+            const theme = document.getElementById('theme').value;
+            
+            localStorage.setItem('ito-settings', JSON.stringify({
+                sound: soundEnabled === 'true',
+                animation: animationEnabled === 'true',
+                theme: theme
+            }));
+            
+            alert('設定を保存しました！');
+            hideSettingsModal();
+        }
+
+        // Load settings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedSettings = localStorage.getItem('ito-settings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                document.getElementById('soundEnabled').value = settings.sound ? 'true' : 'false';
+                document.getElementById('animationEnabled').value = settings.animation ? 'true' : 'false';
+                document.getElementById('theme').value = settings.theme || 'auto';
+            }
+
+            // Auto-format room code input
+            const roomCodeInput = document.getElementById('joinRoomCode');
+            roomCodeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            });
+
+            // Close modals when clicking outside
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
