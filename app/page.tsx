@@ -138,7 +138,7 @@ export default function LobbyPage() {
 
   return (
     <>
-      <Hero onPlay={openCreateFlow} onRules={() => router.push("/")} />
+      <Hero onPlay={openCreateFlow} onRules={() => router.push("/rules")} />
       <Container maxW="6xl" py={8}>
         <Flex justify="space-between" align="center" mb={4}>
           <Heading size="2xl" letterSpacing="tight">

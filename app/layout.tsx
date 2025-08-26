@@ -33,9 +33,7 @@ export default function RootLayout({
         <meta name="color-scheme" content="dark light" />
       </head>
       <body>
-        <a href="#main" style={{ position: "absolute", left: -9999, top: 0 }}>
-          本文へスキップ
-        </a>
+        <a href="#main" className="skip-link">本文へスキップ</a>
         {/* Client コンポーネント内でパス判定するためラッパーを分離 */}
         <Providers>
           {/* ClientFrame 内で /rooms/ 判定し Header を条件表示 */}

@@ -68,6 +68,26 @@ body {
 }
 
 /* ===== 2025年アクセシビリティ対応 ===== */
+/* Skip to content (フォーカス時のみ表示) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 9999;
+  background: #11151a;
+  color: #e8edf4;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  left: 8px;
+  outline: 2px solid #38b2ac;
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
