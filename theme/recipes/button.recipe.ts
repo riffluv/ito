@@ -15,6 +15,7 @@ export const buttonRecipe = defineRecipe({
   },
   variants: {
     size: {
+      xs: { px: 2.5, py: 1.5, fontSize: "xs", minW: "5.5rem" },
       sm: { px: 3, py: 2, fontSize: "sm", minW: "6.5rem" },
       md: { px: 4, py: 2.5, fontSize: "sm", minW: "8rem" },
       lg: { px: 5, py: 3, fontSize: "md", minW: "10rem" },

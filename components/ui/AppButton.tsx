@@ -6,7 +6,7 @@ type Visual = "solid" | "outline" | "ghost" | "subtle" | "soft" | "link"
 type Palette = "brand" | "orange" | "gray"
 
 type AppButtonProps = React.ComponentProps<typeof CButton> & {
-  size?: "sm" | "md" | "lg"
+  size?: "xs" | "sm" | "md" | "lg"
   density?: "compact" | "comfortable"
   visual?: Visual
   palette?: Palette

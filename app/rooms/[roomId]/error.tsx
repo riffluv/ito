@@ -1,5 +1,6 @@
 "use client";
-import { Button, Container, Stack, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
+import { Container, Stack, Text } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 
 export default function RoomError({
@@ -21,12 +22,12 @@ export default function RoomError({
     >
       <Stack gap={3}>
         <Text fontWeight="bold">エラーが発生しました</Text>
-        <Text fontSize="sm" color="gray.300">
+        <Text fontSize="sm" color="fgMuted">
           {String(error?.message || error)}
         </Text>
         <Stack direction="row">
-          <Button onClick={() => reset()}>再読み込み</Button>
-          <Button onClick={() => router.push("/")}>ロビーへ戻る</Button>
+          <AppButton onClick={() => reset()}>再読み込み</AppButton>
+          <AppButton onClick={() => router.push("/")}>ロビーへ戻る</AppButton>
         </Stack>
       </Stack>
     </Container>

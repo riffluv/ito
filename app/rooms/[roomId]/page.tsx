@@ -51,17 +51,7 @@ import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import { randomAvatar } from "@/lib/utils";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import {
-  Box,
-  Button,
-  Flex,
-  HStack,
-  Input,
-  Spinner,
-  Stack,
-  Text,
-  useBreakpointValue,
-} from "@chakra-ui/react";
+import { Box, Flex, HStack, Input, Spinner, Stack, Text, useBreakpointValue } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -117,14 +107,14 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
         flex="1"
         maxW="200px"
       />
-      <Button
+      <AppButton
         size="sm"
         colorPalette="orange"
         onClick={handleSubmit}
         flexShrink={0}
       >
         更新
-      </Button>
+      </AppButton>
     </HStack>
   );
 }
@@ -459,21 +449,21 @@ export default function RoomPage() {
                           bg="panelSubBg"
                           rounded="md"
                           borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-                          borderColor="gray.600"
+                          borderColor="borderDefault"
                         >
-                          <Text fontSize="xs" color="gray.300" mb={2}>
+                          <Text fontSize="xs" color="fgMuted" mb={2}>
                             📋 お題管理
                           </Text>
                           <Stack gap={2}>
                             {/* カテゴリ選択ボタン（お題未選択時） */}
                             {!room.topic && (
                               <>
-                                <Text fontSize="xs" color="gray.400">
+                                <Text fontSize="xs" color="fgMuted">
                                   カテゴリ選択:
                                 </Text>
                                 <Flex wrap="wrap" gap={1}>
                                   {topicTypeLabels.map((label) => (
-                                    <Button
+                                    <AppButton
                                       key={label}
                                       size="xs"
                                       variant="outline"
@@ -487,7 +477,7 @@ export default function RoomPage() {
                                       minW="60px"
                                     >
                                       {label.replace("版", "")}
-                                    </Button>
+                                    </AppButton>
                                   ))}
                                 </Flex>
                               </>
@@ -496,7 +486,7 @@ export default function RoomPage() {
                             {/* お題制御ボタン（お題選択後） */}
                             {room.topic && (
                               <HStack>
-                                <Button
+                                <AppButton
                                   size="xs"
                                   variant="outline"
                                   onClick={() =>
@@ -508,8 +498,8 @@ export default function RoomPage() {
                                   flex="1"
                                 >
                                   🔄 シャッフル
-                                </Button>
-                                <Button
+                                </AppButton>
+                                <AppButton
                                   size="xs"
                                   variant="outline"
                                   onClick={() =>
@@ -518,7 +508,7 @@ export default function RoomPage() {
                                   flex="1"
                                 >
                                   🎲 数字配布
-                                </Button>
+                                </AppButton>
                               </HStack>
                             )}
                           </Stack>
@@ -663,7 +653,7 @@ export default function RoomPage() {
                       rounded="md"
                       boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
                     >
-                      <Button
+                      <AppButton
                         colorPalette="teal"
                         size="sm"
                         w="100%"
@@ -705,7 +695,7 @@ export default function RoomPage() {
                         }}
                       >
                         🎯 せーので判定！
-                      </Button>
+                      </AppButton>
                     </Box>
                   )}
                 </Flex>
