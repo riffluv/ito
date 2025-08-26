@@ -2,6 +2,7 @@
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { ReactNode } from "react";
+import MobileBottomSheet from "./MobileBottomSheet";
 
 /**
  * GameLayout: 予測可能で安定したゲーム画面レイアウト
@@ -36,111 +37,122 @@ export function GameLayout({
   handArea,
 }: GameLayoutProps) {
   return (
-    <Box
-      h="100dvh"
-      display="flex"
-      flexDir="column"
-      bg="canvasBg"
-      overflow="hidden"
-      fontFamily="body"
-      // 2025年DPIスケール対応のCSSCustomPropertiesを統一システムで設定
-      css={{
-        "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
-        "--unified-sidebar-width": UNIFIED_LAYOUT.SIDEBAR_WIDTH,
-        "--unified-right-panel-width": UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH,
-        "--unified-hand-area-height": UNIFIED_LAYOUT.HAND_AREA_HEIGHT,
-
-        // 125% DPIスケール最適化
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
-          "--unified-hand-area-height": UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
-        },
-      }}
-    >
-      {/* ヘッダー: 統一システムによる流動高さ */}
+    <>
       <Box
-        flex="0 0 auto"
-        h="var(--unified-header-height)"
-        bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-        px={0} /* パディング除去：外側で制御 */
-        py={0} /* パディング除去：外側で制御 */
+        h="100dvh"
         display="flex"
-        alignItems="center"
-        boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
-        // テキスト最適化
+        flexDir="column"
+        bg="canvasBg"
+        overflow="hidden"
+        fontFamily="body"
+        // 2025年DPIスケール対応のCSSCustomPropertiesを統一システムで設定
         css={{
-          "-webkit-font-smoothing": "antialiased",
-          "-moz-osx-font-smoothing": "grayscale",
-          "text-rendering": "optimizeLegibility",
+          "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
+          "--unified-sidebar-width": UNIFIED_LAYOUT.SIDEBAR_WIDTH,
+          "--unified-right-panel-width": UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH,
+          "--unified-hand-area-height": UNIFIED_LAYOUT.HAND_AREA_HEIGHT,
+
+          // 125% DPIスケール最適化
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
+            "--unified-hand-area-height": UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
+          },
         }}
       >
-        {header}
-      </Box>
-
-      {/* メインコンテンツエリア: 残り高さを使用 */}
-      <Box flex="1 1 0" display="flex" minH={0}>
-        {/* 左サイドバー */}
-        {sidebar && (
-          <Box
-            w="var(--unified-sidebar-width)"
-            flex="0 0 var(--unified-sidebar-width)"
-            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-            display={{ base: "none", md: "flex" }}
-            flexDir="column"
-            overflow="hidden"
-            boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
-          >
-            {sidebar}
-          </Box>
-        )}
-
-        {/* 中央メインエリア: 残り幅を使用 */}
+        {/* ヘッダー: 統一システムによる流動高さ */}
         <Box
-          flex="1 1 0"
+          flex="0 0 auto"
+          h="var(--unified-header-height)"
+          bg={UNIFIED_LAYOUT.SURFACE.PANEL}
+          px={0} /* パディング除去：外側で制御 */
+          py={0} /* パディング除去：外側で制御 */
           display="flex"
-          flexDir="column"
-          minH={0}
-          bg="canvasBg"
-          overflow="hidden"
+          alignItems="center"
+          boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
+          // テキスト最適化
+          css={{
+            "-webkit-font-smoothing": "antialiased",
+            "-moz-osx-font-smoothing": "grayscale",
+            "text-rendering": "optimizeLegibility",
+          }}
         >
-          {main}
+          {header}
         </Box>
 
-        {/* 右パネル */}
-        {rightPanel && (
+        {/* メインコンテンツエリア: 残り高さを使用 */}
+        <Box flex="1 1 0" display="flex" minH={0}>
+          {/* 左サイドバー - デスクトップのみ表示 */}
+          {sidebar && (
+            <Box
+              w="var(--unified-sidebar-width)"
+              flex="0 0 var(--unified-sidebar-width)"
+              bg={UNIFIED_LAYOUT.SURFACE.PANEL}
+              display={{ base: "none", md: "flex" }}
+              flexDir="column"
+              overflow="hidden"
+              boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
+            >
+              {sidebar}
+            </Box>
+          )}
+
+          {/* 中央メインエリア: 残り幅を使用 */}
           <Box
-            w="var(--unified-right-panel-width)"
-            flex="0 0 var(--unified-right-panel-width)"
-            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-            display={{ base: "none", md: "flex" }}
+            flex="1 1 0"
+            display="flex"
             flexDir="column"
+            minH={0}
+            bg="canvasBg"
             overflow="hidden"
-            boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
           >
-            {rightPanel}
+            {main}
           </Box>
-        )}
+
+          {/* 右パネル - デスクトップのみ表示 */}
+          {rightPanel && (
+            <Box
+              w="var(--unified-right-panel-width)"
+              flex="0 0 var(--unified-right-panel-width)"
+              bg={UNIFIED_LAYOUT.SURFACE.PANEL}
+              display={{ base: "none", md: "flex" }}
+              flexDir="column"
+              overflow="hidden"
+              boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
+            >
+              {rightPanel}
+            </Box>
+          )}
+        </Box>
+
+        {/* 手札エリア: 統一システムによる固定高さ - 常に表示 */}
+        <Box
+          flex="0 0 auto"
+          h="var(--unified-hand-area-height)" // minHではなくhで固定高さ
+          bg={UNIFIED_LAYOUT.SURFACE.HAND_AREA}
+          px={0} /* パディング除去：外側で制御 */
+          py={0} /* パディング除去：外側で制御 */
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={4}
+          boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
+          overflow="hidden" // コンテンツがはみ出さないように
+        >
+          {handArea || (
+            <Box h="1px" w="100%" /> // 空の場合のプレースホルダー
+          )}
+        </Box>
       </Box>
 
-      {/* 手札エリア: 統一システムによる固定高さ - 常に表示 */}
-      <Box
-        flex="0 0 auto"
-        h="var(--unified-hand-area-height)" // minHではなくhで固定高さ
-        bg={UNIFIED_LAYOUT.SURFACE.HAND_AREA}
-        px={0} /* パディング除去：外側で制御 */
-        py={0} /* パディング除去：外側で制御 */
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        gap={4}
-        boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
-        overflow="hidden" // コンテンツがはみ出さないように
-      >
-        {handArea || (
-          <Box h="1px" w="100%" /> // 空の場合のプレースホルダー
-        )}
+      {/* モバイル専用ボトムシート - モバイルのみ表示 */}
+      <Box display={{ base: "block", md: "none" }}>
+        <MobileBottomSheet
+          chatPanel={rightPanel}
+          sidebar={sidebar}
+          rightPanel={rightPanel}
+        />
       </Box>
-    </Box>
+    </>
   );
 }
 
