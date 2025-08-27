@@ -37,9 +37,9 @@ export function HostControlDock({
   const pickingCategory = (room as any)?.status === "clue" && !(room as any)?.topic;
 
   return (
-    <Flex direction="column" gap={2} align="flex-end" w={{ base: "100%", xl: "auto" }}>
-      {/* 上段: クイックバー（主要操作＋リセット） */}
-      <HStack gap={2} wrap="wrap" justify="flex-end" w="100%" role="group" aria-label="ホスト操作">
+    <>
+      {/* Host Control Actions - Professional Style */}
+      <Box display="flex" gap={3} flexWrap="wrap" justifyContent="flex-end">
         {actions.map((a) => (
           <Tooltip key={a.key} content={a.title || ""} disabled={!a.title}>
             <AppButton
@@ -47,22 +47,26 @@ export function HostControlDock({
               disabled={a.disabled}
               colorPalette={a.palette as any}
               variant={a.variant as any}
+              size="sm"
             >
               {a.label}
             </AppButton>
           </Tooltip>
         ))}
-        {/* リセットを直接表示 */}
+        
         {!pickingCategory && (
-          <AppButton variant="ghost" onClick={() => setConfirmOpen(true)} title="最初からやり直す">
+          <AppButton 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setConfirmOpen(true)} 
+            title="最初からやり直す"
+          >
             <FiRefreshCw style={{ marginRight: 6 }} /> リセット
           </AppButton>
         )}
-      </HStack>
+      </Box>
 
-      {/* お題ポップオーバーは撤去（動的ボタン群に統合） */}
-
-      {/* リセット確認ダイアログ */}
+      {/* Reset Confirmation Dialog */}
       <Dialog.Root open={confirmOpen} onOpenChange={(d) => setConfirmOpen(d.open)}>
         <Dialog.Backdrop />
         <Dialog.Positioner>
@@ -96,7 +100,7 @@ export function HostControlDock({
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
-    </Flex>
+    </>
   );
 }
 

@@ -377,7 +377,7 @@ export default function RoomPage() {
         : null
     : null;
 
-  const showHostInHud = useBreakpointValue({ base: true, md: false });
+  const showHostInHud = false; // Always show host controls in hand area instead of HUD
 
   if (!firebaseEnabled || loading || !room) {
     return (
@@ -418,17 +418,31 @@ export default function RoomPage() {
           />
         }
         sidebar={
-          <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
-            {/* 👥 参加者セクション - 1fr 行 */}
-            <Box overflow="hidden">
-              <ScrollableArea label="参加者一覧">
-                <Panel
-                  title={`参加者人数: ${onlinePlayers.length}/${players.length}`}
-                  density="compact"
-                >
-                  <Participants players={onlinePlayers} />
-                </Panel>
-              </ScrollableArea>
+          <Box h="100%">
+            {/* Sidebar Header - Professional Style */}
+            <Box
+              padding="1.5rem 1.5rem 1rem"
+              borderBottom="1px solid #e2e8f0" // --slate-200
+            >
+              <Box
+                fontSize="1.125rem"
+                fontWeight={600}
+                color="#0f172a" // --slate-900
+                marginBottom={2}
+              >
+                プレイヤー
+              </Box>
+              <Box
+                fontSize="0.875rem"
+                color="#64748b" // --slate-600
+              >
+                {onlinePlayers.length}/{players.length}人
+              </Box>
+            </Box>
+            
+            {/* Player List */}
+            <Box overflowY="auto" flex={1}>
+              <Participants players={onlinePlayers} />
             </Box>
           </Box>
         }
@@ -458,87 +472,137 @@ export default function RoomPage() {
           </Box>
         }
         rightPanel={
-          <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
-            {/* チャット */}
-            <Box overflow="hidden">
-              <ChatPanelImproved roomId={roomId} />
-            </Box>
-
-            {/* 退出ボタン: 固定位置 */}
-            <Box p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
-              <AppButton
-                size="sm"
-                variant="ghost"
-                w="100%"
-                onClick={async () => {
-                  await leaveRoom();
-                  router.push("/");
-                }}
+          <Box h="100%" display="flex" flexDirection="column">
+            {/* Chat Header - Professional Style */}
+            <Box
+              padding="1.5rem 1.5rem 1rem"
+              borderBottom="1px solid #e2e8f0" // --slate-200
+            >
+              <Box
+                fontSize="1.125rem"
+                fontWeight={600}
+                color="#0f172a" // --slate-900
               >
-                退出してロビーへ
-              </AppButton>
+                チャット
+              </Box>
+            </Box>
+            
+            {/* Chat Messages */}
+            <Box flex={1} overflow="hidden">
+              <ChatPanelImproved roomId={roomId} />
             </Box>
           </Box>
         }
         handArea={
           <Box
-            w="100%"
-            h="100%"
             display="flex"
             alignItems="center"
-            justifyContent="center"
-            overflow="hidden"
+            justifyContent="space-between"
+            gap={6}
+            css={{
+              "@media (max-width: 768px)": {
+                flexDirection: "column",
+                gap: "1.5rem",
+              },
+            }}
           >
-            <Flex
-              w="100%"
-              h="100%"
-              align="center"
-              justify="space-between"
-              gap={{ base: 2, md: 4 }}
-              direction={{ base: "column", xl: "row" }}
-              px={{ base: 2, md: 4 }}
-            >
-              {/* 左: 自分の手札（clue時のみ有効） */}
-              {room.status === "clue" && me ? (
-                <Flex align="center" gap={{ base: 2, md: 4 }} minW={0} flex="1">
+            {/* Left Side: My Card & Clue Input - Only show during clue phase */}
+            {room.status === "clue" && me ? (
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={{ base: 4, md: 6 }}
+                flex={1}
+                css={{
+                  "@media (max-width: 768px)": {
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                  },
+                }}
+              >
+                {/* My Card Section - Responsive Professional Style */}
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={{ base: 3, md: 6 }}
+                  css={{
+                    "@media (max-width: 768px)": {
+                      width: "100%",
+                      justifyContent: "center",
+                    },
+                  }}
+                >
                   <SelfNumberCard value={me.number} draggableId={me.id} />
-                  <Flex align="center" gap={2} minW={0} flex="1">
-                    <Text
-                      fontSize="sm"
-                      color="fgMuted"
-                      flexShrink={0}
-                      display={{ base: "none", md: "block" }}
+                  
+                  <Box textAlign="left" display={{ base: "none", md: "block" }}>
+                    <Box
+                      fontSize="0.875rem"
+                      color="#64748b" // --slate-500
+                      marginBottom={1}
                     >
-                      連想:
-                    </Text>
-                    <ClueInputMini
-                      roomId={roomId}
-                      playerId={me.id}
-                      currentValue={me?.clue1 || ""}
-                    />
-                    {/* インライン操作は廃止（Dockに一本化） */}
-                  </Flex>
-                </Flex>
-              ) : (
-                <Box />
-              )}
-
-              {/* 右: ホスト操作群（Dockに一本化・常時表示） */}
-              {isHost ? (
-                <Box>
-                  <HostControlDock
-                    roomId={roomId}
-                    room={room}
-                    players={players}
-                    onlineCount={onlinePlayers.length}
-                    hostPrimaryAction={hostPrimaryAction}
-                    onReset={resetToWaiting}
-                  />
+                      カードの位置予想
+                    </Box>
+                    <Box
+                      fontWeight={600}
+                      color="#0f172a" // --slate-900
+                    >
+                      中程度～高め
+                    </Box>
+                  </Box>
                 </Box>
-              ) : (
-                <Box />
-              )}
-            </Flex>
+
+                {/* Clue Section - Responsive Professional Style */}
+                <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
+                  <Box
+                    as="label"
+                    fontWeight={600}
+                    color="#0f172a" // --slate-900
+                    marginBottom={2}
+                    display="block"
+                    fontSize={{ base: "0.875rem", md: "1rem" }}
+                  >
+                    あなたのヒント（「{(room as any)?.topic || "お題"}」で表現）
+                  </Box>
+                  <ClueInputMini
+                    roomId={roomId}
+                    playerId={me.id}
+                    currentValue={me?.clue1 || ""}
+                  />
+                  <Box
+                    fontSize="0.75rem"
+                    color="#64748b" // --slate-500
+                    marginTop={1}
+                  >
+                    {(me?.clue1 || "").length} / 50文字
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Box flex={1} />
+            )}
+
+            {/* Right Side: Host Controls - Always show for hosts */}
+            {isHost && (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent={{ base: "center", md: "flex-end" }}
+                css={{
+                  "@media (max-width: 768px)": {
+                    width: "100%",
+                  },
+                }}
+              >
+                <HostControlDock
+                  roomId={roomId}
+                  room={room}
+                  players={players}
+                  onlineCount={onlinePlayers.length}
+                  hostPrimaryAction={hostPrimaryAction}
+                  onReset={resetToWaiting}
+                />
+              </Box>
+            )}
           </Box>
         }
       />

@@ -40,108 +40,106 @@ export function GameLayout({
     <>
       <Box
         h="100dvh"
-        display="flex"
-        flexDir="column"
-        bg="canvasBg"
-        overflow="hidden"
-        fontFamily="body"
-        // 2025年DPIスケール対応のCSSCustomPropertiesを統一システムで設定
+        display="grid"
+        gridTemplateAreas={`
+          "header header header"
+          "sidebar main-area chat"
+          "hand hand hand"
+        `}
+        gridTemplateColumns={{ base: "1fr", xl: "280px 1fr 320px" }}
+        gridTemplateRows={{ base: "auto 1fr auto", xl: "auto 1fr 160px" }}
+        gap="1px"
+        bg="#f8fafc" // --slate-50
+        fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
+        color="#0f172a" // --slate-900
+        lineHeight={1.5}
         css={{
-          "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
-          "--unified-sidebar-width": UNIFIED_LAYOUT.SIDEBAR_WIDTH,
-          "--unified-right-panel-width": UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH,
-          "--unified-hand-area-height": UNIFIED_LAYOUT.HAND_AREA_HEIGHT,
-
-          // 125% DPIスケール最適化
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
-            "--unified-hand-area-height": UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
+          "-webkit-font-smoothing": "antialiased",
+          // レスポンシブ対応: モバイルでは縦積み
+          "@media (max-width: 1279px)": {
+            gridTemplateAreas: `
+              "header"
+              "main-area"
+              "hand"
+            `,
+            gridTemplateColumns: "1fr",
+            gridTemplateRows: "auto minmax(0, 1fr) minmax(140px, auto)",
           },
         }}
       >
-        {/* ヘッダー: 統一システムによる流動高さ */}
+        {/* ヘッダー: Professional Game Header - メインメニューと同じ高さ */}
         <Box
-          flex="0 0 auto"
-          h="var(--unified-header-height)"
-          bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-          px={0} /* パディング除去：外側で制御 */
-          py={0} /* パディング除去：外側で制御 */
+          gridArea="header"
+          bg="white"
+          borderBottom="1px solid #e2e8f0" // --slate-200
+          padding="0.75rem 1.5rem"
           display="flex"
+          justifyContent="space-between"
           alignItems="center"
-          boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
-          // テキスト最適化
-          css={{
-            "-webkit-font-smoothing": "antialiased",
-            "-moz-osx-font-smoothing": "grayscale",
-            "text-rendering": "optimizeLegibility",
-          }}
+          boxShadow="0 1px 3px 0 rgb(0 0 0 / 0.1)"
+          minHeight="56px"
         >
           {header}
         </Box>
 
-        {/* メインコンテンツエリア: 明示高さで安定化 */}
-        <Box
-          flex="0 0 auto"
-          h="calc(100dvh - var(--unified-header-height) - var(--unified-hand-area-height))"
-          display="flex"
-          overflow="hidden"
-        >
-          {/* 左サイドバー - デスクトップのみ表示 */}
-          {sidebar && (
-            <Box
-              w="var(--unified-sidebar-width)"
-              flex="0 0 var(--unified-sidebar-width)"
-              bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-              display={{ base: "none", md: "flex" }}
-              flexDir="column"
-              overflow="hidden"
-              boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
-            >
-              {sidebar}
-            </Box>
-          )}
-
-          {/* 中央メインエリア: 残り幅を使用 */}
+        {/* 左サイドバー - Professional Sidebar */}
+        {sidebar && (
           <Box
-            flex="1 1 auto"
-            display="flex"
-            flexDir="column"
-            bg="canvasBg"
-            overflow="hidden"
-            h="100%"
+            gridArea="sidebar"
+            bg="white"
+            borderRight="1px solid #e2e8f0" // --slate-200
+            overflowY="auto"
+            display={{ base: "none", xl: "block" }}
           >
-            {main}
+            {sidebar}
           </Box>
+        )}
 
-          {/* 右パネル - デスクトップのみ表示 */}
-          {rightPanel && (
-            <Box
-              w="var(--unified-right-panel-width)"
-              flex="0 0 var(--unified-right-panel-width)"
-              bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-              display={{ base: "none", md: "flex" }}
-              flexDir="column"
-              overflow="hidden"
-              boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
-            >
-              {rightPanel}
-            </Box>
-          )}
+        {/* 中央メインエリア - Professional Main Area */}
+        <Box
+          gridArea="main-area"
+          bg="white"
+          padding={{ base: "1rem", md: "2rem" }}
+          overflowY="auto"
+          display="flex"
+          flexDirection="column"
+          minHeight={0} // Allow flex shrinking
+        >
+          {main}
         </Box>
 
-        {/* 手札エリア: 統一システムによる固定高さ - 常に表示 */}
+        {/* 右パネル - Professional Chat Panel */}
+        {rightPanel && (
+          <Box
+            gridArea="chat"
+            bg="white"
+            borderLeft="1px solid #e2e8f0" // --slate-200
+            display={{ base: "none", xl: "flex" }}
+            flexDirection="column"
+          >
+            {rightPanel}
+          </Box>
+        )}
+
+        {/* 手札エリア - Professional Hand Panel */}
         <Box
-          flex="0 0 auto"
-          h="var(--unified-hand-area-height)" // minHではなくhで固定高さ
-          bg={UNIFIED_LAYOUT.SURFACE.HAND_AREA}
-          px={0} /* パディング除去：外側で制御 */
-          py={0} /* パディング除去：外側で制御 */
+          gridArea="hand"
+          bg="white"
+          borderTop="1px solid #e2e8f0" // --slate-200
+          padding={{ base: "1rem", md: "1.5rem" }}
           display="flex"
           alignItems="center"
-          justifyContent="center"
-          gap={4}
-          boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
-          overflow="hidden" // コンテンツがはみ出さないように
+          justifyContent="space-between"
+          gap={{ base: "1rem", md: "2rem" }}
+          boxShadow="0 -1px 3px 0 rgb(0 0 0 / 0.1)"
+          minHeight={{ base: "140px", md: "160px" }}
+          maxHeight={{ base: "180px", md: "200px" }}
+          css={{
+            "@media (max-width: 768px)": {
+              flexDirection: "column",
+              gap: "1rem",
+            },
+          }}
         >
           {handArea || (
             <Box h="1px" w="100%" /> // 空の場合のプレースホルダー

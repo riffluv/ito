@@ -17,89 +17,70 @@ export function Participants({
     );
   }
   return (
-    <Stack as="ul" role="list" gap={2} pl={0} m={0} listStyleType="none">
+    <Box
+      padding="1rem 1.5rem"
+    >
       {players.map((p) => (
-        <Box as="li" key={p.id}>
-          {/* 
-            最適化されたレイアウト + CLS回避:
-            - パディング削減: p={1.5} (6px) に変更 
-            - gap削減: gap={2} (8px) に変更
-            - アイコンを視覚的インジケーターのみに変更
-            - 名前エリアの幅を最大化
-            - 連想ワードの有無に関わらず固定高さでCLS防止
-          */}
-          <HStack
-            gap={2}
-            p={1.5}
-            borderRadius="md"
-            h={16} /* minH → h で固定高さ化 (連想ワード用スペース確保) */
-            align="stretch" /* 内部要素を全高さに引き伸ばし */
-            boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
-            bg={UNIFIED_LAYOUT.SURFACE.PANEL}
-            _hover={{
-              bg: "cardHoverBg",
-              transform: "translateY(-1px)",
-            }}
-            transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
-          >
-            <Avatar.Root size="xs" flexShrink={0}>
-              <Avatar.Fallback name={p.name} />
-            </Avatar.Root>
-
-            {/* 名前エリア - 最大幅を確保 + 高さ全体を使用 */}
+        <Box
+          key={p.id}
+          display="flex"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          padding="0.75rem 0"
+          borderBottom="1px solid #f1f5f9" // --slate-100
+          _last={{
+            borderBottom: "none"
+          }}
+        >
+          {/* Player Info */}
+          <Box flex={1}>
             <Box
-              flex={1}
-              minW={0}
-              overflow="hidden"
-              h="100%"
               display="flex"
-              flexDir="column"
-              justifyContent="center"
+              alignItems="center"
+              gap={2}
+              marginBottom={1}
             >
-              <Box>
-                <HStack gap={1} align="center" minW={0}>
-                  <Text
-                    fontWeight="semibold"
-                    fontSize="sm"
-                    title={p.name}
-                    overflow="hidden"
-                    textOverflow="ellipsis"
-                    whiteSpace="nowrap"
-                    flex={1}
-                    minW={0}
-                  >
-                    {p.name}
-                  </Text>
-
-                  {/* コンパクトな在室インジケーター */}
-                  <Box as="span" color="successSolid" opacity={0.85} flexShrink={0}>
-                    <CheckCircle2 size={12} color="currentColor" />
-                  </Box>
-                </HStack>
-
-                {/* 連想ワード - 常に同じスペースを確保してCLS防止 */}
-                <Box minH="16px" mt={0.5}>
-                  {p.clue1 ? (
-                    <Text
-                      fontSize="xs"
-                      color="fgMuted"
-                      overflow="hidden"
-                      textOverflow="ellipsis"
-                      whiteSpace="nowrap"
-                      title={`連想: ${p.clue1}`}
-                    >
-                      連想: {p.clue1}
-                    </Text>
-                  ) : (
-                    /* 連想ワードがない場合も同じ高さを維持 */
-                    <Box />
-                  )}
-                </Box>
+              <Text
+                fontWeight={600}
+                color="#0f172a" // --slate-900
+                fontSize="sm"
+              >
+                {p.name}
+              </Text>
+              
+              {/* Player Badge */}
+              <Box
+                bg="#dbeafe" // --blue-100
+                color="#0369a1" // --blue-700
+                fontSize="0.75rem"
+                padding="0.125rem 0.5rem"
+                borderRadius="0.125rem"
+                fontWeight={500}
+              >
+                プレイヤー
               </Box>
             </Box>
-          </HStack>
+            
+            {/* Player Clue */}
+            <Box
+              fontSize="0.875rem"
+              color={p.clue1 ? "#64748b" : "#94a3b8"} // --slate-500 : --slate-400
+              fontStyle={p.clue1 ? "normal" : "italic"}
+            >
+              {p.clue1 ? `ヒント: ${p.clue1}` : "ヒント入力中..."}
+            </Box>
+          </Box>
+          
+          {/* Player Status */}
+          <Box
+            width="8px"
+            height="8px"
+            borderRadius="50%"
+            bg={p.ready ? "#22c55e" : "#0ea5e9"} // --green-500 : --blue-500
+            marginTop={1}
+          />
         </Box>
       ))}
-    </Stack>
+    </Box>
   );
 }
