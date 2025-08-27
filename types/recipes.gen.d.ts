@@ -1429,6 +1429,24 @@ export type GameCardVariantMap = {
   [K in keyof GameCardVariant]: Array<GameCardVariant[K]>
 }
 
+// Panel
+
+export type PanelSlot = "container" | "header" | "title" | "actions" | "body" | "footer"
+
+export interface PanelVariant {
+  density?: "comfortable" | "compact" | undefined
+  variant?: "surface" | "subtle" | "outlined" | "accent" | undefined
+  elevated?: boolean | undefined
+}
+
+export type PanelVariantProps = {
+  [K in keyof PanelVariant]?: ConditionalValue<PanelVariant[K]> | undefined
+}
+
+export type PanelVariantMap = {
+  [K in keyof PanelVariant]: Array<PanelVariant[K]>
+}
+
 export interface ConfigSlotRecipes {
   accordion: SystemSlotRecipeFn<AccordionSlot, AccordionVariantProps, AccordionVariantMap>
   actionBar: SystemSlotRecipeFn<ActionBarSlot, ActionBarVariantProps, ActionBarVariantMap>
@@ -1480,6 +1498,7 @@ export interface ConfigSlotRecipes {
   qrCode: SystemSlotRecipeFn<QrCodeSlot, QrCodeVariantProps, QrCodeVariantMap>
   treeView: SystemSlotRecipeFn<TreeViewSlot, TreeViewVariantProps, TreeViewVariantMap>
   gameCard: SystemSlotRecipeFn<GameCardSlot, GameCardVariantProps, GameCardVariantMap>
+  panel: SystemSlotRecipeFn<PanelSlot, PanelVariantProps, PanelVariantMap>
 }
 
 export interface ConfigRecipeSlots {
@@ -1533,6 +1552,7 @@ export interface ConfigRecipeSlots {
   qrCode: QrCodeSlot
   treeView: TreeViewSlot
   gameCard: GameCardSlot
+  panel: PanelSlot
 }
 
 export type SlotRecipeRecord<T, K> = T extends keyof ConfigRecipeSlots ? Record<ConfigRecipeSlots[T], K> : Record<string, K>

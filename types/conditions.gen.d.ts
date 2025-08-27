@@ -213,6 +213,8 @@ export interface Conditions {
   _cqMd: string
   /** `@container (min-width: 64rem)` */
   _cqLg: string
+  /** `@media (prefers-reduced-motion: reduce)` */
+  _reducedMotion: string
   /** `@media screen and (min-width: 30rem)` */
   sm: string
   /** `@media screen and (min-width: 30rem) and (max-width: 47.9975rem)` */
