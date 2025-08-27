@@ -51,51 +51,69 @@ export function Hud({
 
   return (
     <Box
-      layerStyle="hud"
-      position="sticky"
-      top={0}
-      zIndex={10}
-      px={3}
-      py={2}
-      aria-label="現在のゲームフェーズと進行状況"
-      role="region"
+      w="100%"
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      px={6}
+      py={4}
     >
-      <HStack>
-        <HStack minW={0} gap={3}>
-          <Badge variant="subtle" colorPalette="gray" borderRadius="md" px={2}>
-            {phaseLabel}
-          </Badge>
-        </HStack>
-        <Spacer />
-        <Box flex={1} maxW={480}>
-          {typeof pct === "number" && (
-            <Progress.Root
-              value={pct}
-              size="xs"
-              colorPalette="orange"
-              rounded="full"
-            >
-              <Progress.Track bg="panelSubBg">
-                <Progress.Range />
-              </Progress.Track>
-            </Progress.Root>
-          )}
+      {/* Game Title - Professional Style */}
+      <Box
+        fontSize="1.5rem"
+        fontWeight={700}
+        color="#0f172a" // --slate-900
+        fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
+      >
+        ITO
+      </Box>
+      
+      {/* Room Info - Professional Style */}
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={4}
+      >
+        <Box
+          bg="#f1f5f9" // --slate-100
+          padding="0.5rem 0.75rem"
+          borderRadius="0.5rem" // --radius-md
+          fontFamily="'Monaco', monospace"
+          fontSize="0.875rem"
+          color="#334155" // --slate-700
+          border="1px solid #e2e8f0" // --slate-200
+        >
+          {roomName}
         </Box>
-        <Spacer />
-        {/* 設定アイコン: ホストのみ表示 */}
-        {isHost && onOpenSettings && (
+        <Box
+          bg="#0ea5e9" // --blue-500
+          color="white"
+          padding="0.5rem 0.75rem"
+          borderRadius="0.5rem" // --radius-md
+          fontSize="0.875rem"
+          fontWeight={500}
+        >
+          {phaseLabel}フェーズ
+        </Box>
+        
+        {/* Settings Button - Professional Style */}
+        {onOpenSettings && (
           <IconButton
-            aria-label="ゲーム設定を開く"
-            variant="ghost"
-            size="sm"
+            aria-label="設定"
             onClick={onOpenSettings}
-            _hover={{ bg: "cardHoverBg" }}
+            size="sm"
+            colorPalette="gray"
+            variant="ghost"
+            color="#64748b" // --slate-500
+            _hover={{
+              bg: "#f1f5f9", // --slate-100
+              color: "#334155", // --slate-700
+            }}
           >
             <FiSettings />
           </IconButton>
         )}
-        {/* hostPrimary controls intentionally removed to simplify header UI */}
-      </HStack>
+      </Box>
     </Box>
   );
 }

@@ -30,27 +30,51 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      w={UNIFIED_LAYOUT.CARD.MIN_WIDTH} // 統一システムによるゲーム感向上サイズ
-      h={UNIFIED_LAYOUT.CARD.MIN_HEIGHT} // 統一システムによるゲーム感向上サイズ
-      rounded="lg"
+      // Professional My Card - Responsive Design
+      width={{ base: "100px", md: "120px" }}
+      height={{ base: "140px", md: "168px" }}
+      bg="#0f172a" // --slate-900
+      color="white"
+      borderRadius="1rem" // --radius-xl
       display="flex"
+      flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      boxShadow="selfNumber"
-      color="selfNumberFg"
-      fontWeight={900}
-      fontSize={{ base: "2xl", md: "3xl" }}
-      bgGradient="playerNumber"
+      boxShadow="0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" // --shadow-lg
       userSelect="none"
       aria-label="自分の数字カード"
       tabIndex={0}
+      cursor="grab"
+      _active={{
+        cursor: "grabbing",
+      }}
+      _hover={{
+        transform: "translateY(-2px) scale(1.02)",
+        boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04)",
+      }}
       _focusVisible={{
         outline: "2px solid",
         outlineColor: "focusRing",
         outlineOffset: 2,
       }}
+      transition="all 0.2s ease"
     >
-      {value ?? "?"}
+      <Box
+        fontSize={{ base: "0.65rem", md: "0.75rem" }}
+        opacity={0.8}
+        marginBottom="0.5rem"
+        textTransform="uppercase"
+        letterSpacing="0.05em"
+      >
+        あなたの数字
+      </Box>
+      <Box
+        fontSize={{ base: "2.5rem", md: "3rem" }}
+        fontWeight={700}
+        lineHeight={1}
+      >
+        {value ?? "?"}
+      </Box>
     </Box>
   );
 }

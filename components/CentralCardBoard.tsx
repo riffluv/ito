@@ -128,31 +128,60 @@ export function CentralCardBoard({
   };
 
   return (
-    <Panel
-      density="compact"
-      p={4}
+    <Box
       h="100%"
       display="flex"
-      flexDir="column"
+      flexDirection="column"
     >
-      <Box position="relative" flex="1" display="flex" flexDir="column">
-        <Box textAlign="center" mb={4} flex="0 0 auto">
-          <Box
-            as="span"
-            display="inline-block"
-            px={4}
-            py={2}
-            rounded="lg"
-            bg="successSubtle"
-            fontWeight={700}
-            fontSize="md"
-          >
-            🎯 カードボード（出した順）
-          </Box>
+      {/* Board Header - Professional Style */}
+      <Box
+        textAlign="center"
+        marginBottom="1.5rem"
+        flex="0 0 auto"
+      >
+        <Box
+          fontWeight={600}
+          color="#334155" // --slate-700
+          marginBottom="1.5rem"
+        >
+          カードを小さい順（左）から大きい順（右）に並べよう！
         </Box>
+      </Box>
 
-        <Box flex="0 0 auto" minH={UNIFIED_LAYOUT.BOARD_MIN_HEIGHT} display="flex" flexDir="column" position="relative">
-          <BoardArea
+      {/* Professional Card Area - Responsive Design */}
+      <Box 
+        flex="1" 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center"
+        minHeight={0} // Allow flex shrinking
+      >
+        <Box
+          bg="#f8fafc" // --slate-50
+          border="2px dashed #cbd5e1" // --slate-300
+          borderRadius="1rem" // --radius-xl
+          padding={{ base: "1rem", md: "1.5rem" }}
+          minHeight={{ base: "120px", md: "160px" }} // Responsive min height
+          maxHeight="300px" // Prevent overflow
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={{ base: "0.5rem", md: "1rem" }}
+          flexWrap="wrap"
+          marginBottom={{ base: "1rem", md: "1.5rem" }}
+          width="100%"
+          overflowX="auto" // Allow horizontal scroll if needed
+          overflowY="hidden"
+          css={{
+            "&[data-drop-target='true']": {
+              borderColor: "#0ea5e9", // --blue-500
+              backgroundColor: "#f0f9ff", // --blue-50
+            },
+          }}
+          data-drop-target={isOver && canDrop ? "true" : "false"}
+        >
+          <Box
             onDragOver={(e) => {
               e.preventDefault();
               if (canDrop) {
@@ -161,28 +190,81 @@ export function CentralCardBoard({
             }}
             onDragLeave={() => setIsOver(false)}
             onDrop={onDrop}
-            isOver={isOver}
-            droppable={canDrop}
+            width="100%"
+            height="100%"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            gap="1rem"
+            flexWrap="wrap"
           >
+            {/* Drop Slots and Cards */}
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
               <DndContext
                 collisionDetection={closestCenter}
                 onDragEnd={onDragEnd}
               >
                 <SortableContext items={activeProposal}>
-                  {activeProposal.length > 0 &&
-                    activeProposal.map((id, idx) => (
-                      <SortableItem id={id} key={id}>
-                        {renderCard(id, idx)}
+                  {/* Empty slots for placement */}
+                  {Array.from({ length: Math.min(5, Math.max(3, eligibleIds.length)) }).map((_, idx) => {
+                    const cardId = activeProposal[idx];
+                    return cardId ? (
+                      <SortableItem id={cardId} key={cardId}>
+                        {renderCard(cardId, idx)}
                       </SortableItem>
-                    ))}
+                    ) : (
+                      <Box
+                        key={`slot-${idx}`}
+                        width={{ base: "60px", md: "80px" }}
+                        height={{ base: "84px", md: "112px" }}
+                        border="2px dashed #cbd5e1" // --slate-300
+                        borderRadius="0.75rem" // --radius-lg
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        bg="transparent"
+                        flexShrink={0}
+                        color="#94a3b8"
+                        fontSize="0.75rem"
+                        fontWeight={500}
+                      >
+                        {idx + 1}
+                      </Box>
+                    );
+                  })}
                 </SortableContext>
               </DndContext>
             ) : (
               <>
-                {orderList &&
-                  orderList.length > 0 &&
-                  orderList.map((id, idx) => renderCard(id, idx))}
+                {/* Rendered cards with slots */}
+                {orderList && orderList.length > 0 ? (
+                  orderList.map((id, idx) => (
+                    <React.Fragment key={id}>
+                      {renderCard(id, idx)}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  // Show empty drop zones when no cards
+                  Array.from({ length: Math.max(3, eligibleIds.length) }).map((_, idx) => (
+                    <Box
+                      key={`drop-zone-${idx}`}
+                      width={{ base: "60px", md: "80px" }}
+                      height={{ base: "84px", md: "112px" }}
+                      border="2px dashed #cbd5e1"
+                      borderRadius="0.75rem"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      bg="transparent"
+                      flexShrink={0}
+                      color="#94a3b8"
+                      fontSize="0.75rem"
+                      fontWeight={500}
+                    >
+                      {idx + 1}
+                    </Box>
+                  ))
+                )}
                 {proposal &&
                 proposal.length > 0 &&
                 roomStatus !== "finished" &&
@@ -194,29 +276,7 @@ export function CentralCardBoard({
               </>
             )}
 
-            {resolveMode === "sort-submit" &&
-              roomStatus === "clue" &&
-              activeProposal.length === 0 && (
-                <Text color="fgMuted">
-                  自分のカードをドラッグして場に置き、連想ワードで相談しましょう。
-                </Text>
-              )}
-            {resolveMode !== "sort-submit" &&
-              (!orderList || orderList.length === 0) &&
-              (!proposal || proposal.length === 0) &&
-              pending.length === 0 &&
-              (roomStatus === "clue" && cluesReady === false ? (
-                <Box role="status" aria-live="polite">
-                  <Text fontWeight={700} color="fgMuted">
-                    全員が連想ワードを決定するまでお待ちください
-                  </Text>
-                </Box>
-              ) : (
-                <Text color="fgMuted">
-                  まだカードが出されていません。自分のカードをドラッグしてここに置いてください。
-                </Text>
-              ))}
-
+            {/* Pending cards */}
             {resolveMode !== "sort-submit" &&
             pending &&
             pending.length > 0 &&
@@ -227,14 +287,54 @@ export function CentralCardBoard({
                   .filter((id) => !(proposal || []).includes(id))
                   .map((id) => renderCard(id))
               : null}
-          </BoardArea>
+          </Box>
 
-          {roomStatus === "finished" && (
-            <GameResultOverlay failed={failed} failedAt={failedAt} />
-          )}
         </Box>
+        
+        {/* Progress Section - Professional Style */}
+        <Box
+          bg="#f8fafc" // --slate-50
+          borderRadius="0.75rem" // --radius-lg
+          padding="1rem"
+          textAlign="center"
+        >
+          <Box
+            color="#64748b" // --slate-600
+            marginBottom="0.75rem"
+          >
+            準備状況: <Box as="strong">{orderList?.length || 0}/{eligibleIds.length}人</Box> がカードを出しました
+          </Box>
+          <Box
+            display="flex"
+            gap="0.5rem"
+            justifyContent="center"
+            flexWrap="wrap"
+          >
+            {eligibleIds.map((id) => {
+              const placed = orderList?.includes(id) || proposal?.includes(id);
+              const player = map.get(id);
+              return (
+                <Box
+                  key={id}
+                  bg={placed ? "#dcfce7" : "#fef3c7"} // green-100 : amber-100
+                  color={placed ? "#16a34a" : "#f59e0b"} // green-600 : amber-500
+                  fontSize="0.75rem"
+                  padding="0.25rem 0.5rem"
+                  borderRadius="0.375rem"
+                  fontWeight={500}
+                >
+                  {player?.name || "Unknown"}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+        
+        {roomStatus === "finished" && (
+          <GameResultOverlay failed={failed} failedAt={failedAt} />
+        )}
       </Box>
-    </Panel>
+    </Box>
   );
 }
 
