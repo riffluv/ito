@@ -15,10 +15,7 @@ export default function Hero({ onPlay, onRules }: Props) {
       overflow="hidden"
       pt={{ base: 16, md: 24 }}
       pb={{ base: 14, md: 20 }}
-      bgGradient={{
-        base: "linear(to-b, canvasBg, panelSubBg)",
-        _dark: "linear(to-b, canvasBg, panelSubBg)",
-      }}
+      bgGradient="linear(to-b, canvasBg, panelSubBg)" // ライトモード固定
       boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
     >
       <Container maxW="6xl" position="relative">

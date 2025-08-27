@@ -31,19 +31,19 @@ export const buttonRecipe = defineRecipe({
       subtle: {
         bg: "accentSubtle",
         color: "accent",
-        _hover: { bg: { base: "{colors.brand.100}", _dark: "{colors.brand.800}" } },
-        _active: { bg: { base: "{colors.brand.200}", _dark: "{colors.brand.700}" } },
+        _hover: { bg: "{colors.brand.100}" }, // ライトモード固定
+        _active: { bg: "{colors.brand.200}" }, // ライトモード固定
       },
       soft: {
-        bg: { base: "{colors.orange.50}", _dark: "{colors.orange.900}" },
-        color: { base: "{colors.orange.600}", _dark: "{colors.orange.300}" },
+        bg: "{colors.orange.50}", // ライトモード固定
+        color: "{colors.orange.600}", // ライトモード固定
         shadow: "xs",
         _hover: {
-          bg: { base: "{colors.orange.100}", _dark: "{colors.orange.800}" },
+          bg: "{colors.orange.100}", // ライトモード固定
           shadow: "sm",
         },
         _active: {
-          bg: { base: "{colors.orange.200}", _dark: "{colors.orange.700}" },
+          bg: "{colors.orange.200}", // ライトモード固定
         },
       },
       link: {

@@ -30,9 +30,9 @@ export function SelfNumberCard({
         }
         onDragStart?.(e);
       }}
-      // Professional My Card - Responsive Design
-      width={{ base: "100px", md: "120px" }}
-      height={{ base: "140px", md: "168px" }}
+      // Professional My Card - Responsive Design (UNIFIED_LAYOUT に揃える)
+      width={UNIFIED_LAYOUT.CARD.WIDTH}
+      height={UNIFIED_LAYOUT.CARD.HEIGHT}
       bg="#0f172a" // --slate-900
       color="white"
       borderRadius="1rem" // --radius-xl

@@ -15,8 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B0D10" },
+    { media: "all", color: "#ffffff" },
   ],
 };
 
@@ -30,10 +29,9 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning className={inter.className}>
       <head>
-        <meta name="color-scheme" content="dark light" />
+        <meta name="color-scheme" content="light" />
       </head>
       <body>
-        <a href="#main" className="skip-link">本文へスキップ</a>
         {/* Client コンポーネント内でパス判定するためラッパーを分離 */}
         <Providers>
           {/* ClientFrame 内で /rooms/ 判定し Header を条件表示 */}

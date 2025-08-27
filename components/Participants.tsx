@@ -61,13 +61,14 @@ export function Participants({
               </Box>
             </Box>
             
-            {/* Player Clue */}
-            <Box
-              fontSize="0.875rem"
-              color={p.clue1 ? "#64748b" : "#94a3b8"} // --slate-500 : --slate-400
-              fontStyle={p.clue1 ? "normal" : "italic"}
-            >
-              {p.clue1 ? `ヒント: ${p.clue1}` : "ヒント入力中..."}
+            {/* Player Clue: レイアウトの高さを常に確保してCLSを防止 */}
+            <Box fontSize="0.875rem" minH="1.25rem">
+              {p.clue1 ? (
+                <Box color="#64748b">{p.clue1}</Box>
+              ) : (
+                // スクリーンリーダーには読み上げさせない透明プレースホルダー
+                <Box aria-hidden="true" visibility="hidden">placeholder</Box>
+              )}
             </Box>
           </Box>
           

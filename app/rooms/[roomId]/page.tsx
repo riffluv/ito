@@ -104,7 +104,15 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
         }}
         size="sm"
         w={{ base: "120px", md: "160px", lg: "200px" }}
-        bg="panelSubBg"
+        bg="white" // 緊急修正: 確実な白背景
+        color="gray.900" // 緊急修正: 確実な黒文字
+        border="1px solid"
+        borderColor="gray.300" // 緊急修正: 明確な境界線
+        _placeholder={{ color: "gray.500" }} // プレースホルダー視認性
+        _focus={{ 
+          borderColor: "blue.500", 
+          boxShadow: "0 0 0 1px blue.500" 
+        }} // フォーカス状態の明確化
         flex="1"
         maxW="200px"
       />
@@ -327,7 +335,13 @@ export default function RoomPage() {
           if (lr === roomId) window.localStorage.removeItem("lastRoom");
         }
       } catch {}
-    } catch {}
+      // メインメニューに戻る
+      router.push("/");
+    } catch (error) {
+      console.error("退出エラー:", error);
+      // エラーが発生してもメインメニューに戻る
+      router.push("/");
+    }
   };
 
   // 退出時処理をフックで一元化
@@ -415,6 +429,7 @@ export default function RoomPage() {
             hostPrimary={showHostInHud ? hostPrimaryAction : null}
             isHost={isHost}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onLeaveRoom={leaveRoom} // 退出ボタン機能追加
           />
         }
         sidebar={
@@ -553,16 +568,6 @@ export default function RoomPage() {
 
                 {/* Clue Section - Responsive Professional Style */}
                 <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
-                  <Box
-                    as="label"
-                    fontWeight={600}
-                    color="#0f172a" // --slate-900
-                    marginBottom={2}
-                    display="block"
-                    fontSize={{ base: "0.875rem", md: "1rem" }}
-                  >
-                    あなたのヒント（「{(room as any)?.topic || "お題"}」で表現）
-                  </Box>
                   <ClueInputMini
                     roomId={roomId}
                     playerId={me.id}

@@ -30,9 +30,12 @@ export const UNIFIED_LAYOUT = {
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
   CARD: {
-    MIN_WIDTH: "140px",
-    // カード高さを手札エリアに収まるように調整（ゲーム感重視）
-    MIN_HEIGHT: "180px",
+    // 手札とボードで統一するカードサイズ（トランプ比 5:7 付近）
+    WIDTH: { base: "100px", md: "120px" },
+    HEIGHT: { base: "140px", md: "168px" },
+    // 後方互換用の最小値（内部レイアウトが min-* 参照する可能性に備える）
+    MIN_WIDTH: "100px",
+    MIN_HEIGHT: "140px",
   },
 
   // インタラクション要素
@@ -121,9 +124,8 @@ export const UNIFIED_LAYOUT = {
     BOARD_AREA: "transparent", // カードボード（背景なし）
   },
 
-  // 🔄 LEGACY COMPATIBILITY - 段階的移行サポート
-  // @deprecated Use BORDER.CONTEXT instead
-  BORDER_WIDTH: "1px", // 既存コードとの互換性維持
+  // 🔄 LEGACY COMPATIBILITY removed - 完全移行完了
+  // BORDER_WIDTH は getBorderWidth() に完全移行済み
 
   // 📋 COMPONENT BORDER STRATEGY - コンポーネント別戦略
   // 将来のborder要求に対して予測可能な対応を保証
@@ -300,11 +302,12 @@ export const getDynamicBorder = ({
 };
 
 /**
- * レガシーBORDER_WIDTHとの互換性維持
- * 段階的移行をサポート
+ * レガシーBORDER_WIDTH - 完全移行完了
+ * getBorderWidth()への移行が完了したため、この関数は使用されていません
+ * @deprecated 完全移行完了 - 削除予定
  */
 export const getLegacyBorderWidth = (): string => {
-  console.warn("⚠️ BORDER_WIDTH is deprecated. Use getBorderWidth() instead.");
+  console.warn("⚠️ BORDER_WIDTH migration completed. Use getBorderWidth() instead.");
   return UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
 };
 

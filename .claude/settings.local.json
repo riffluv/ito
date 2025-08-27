@@ -2,25 +2,19 @@
   "permissions": {
     "allow": [
       "Read(/c:\\Users\\hr-hm\\Desktop\\codex\\docs/**)",
-      "Read(/c:\\Users\\hr-hm\\Desktop\\codex\\docs/**)",
-      "mcp__serena__activate_project",
-      "mcp__serena__check_onboarding_performed",
-      "mcp__serena__onboarding",
-      "mcp__serena__list_dir",
-      "mcp__serena__write_memory",
-      "mcp__serena__think_about_collected_information",
       "mcp__any-script__gpt5-search",
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
       "Bash(npm run:*)",
-      "mcp__serena__search_for_pattern",
-      "mcp__serena__get_symbols_overview",
-      "mcp__serena__find_symbol",
       "Bash(npm install:*)",
-      "mcp__serena__replace_symbol_body",
-      "mcp__serena__insert_after_symbol",
-      "Bash(npx storybook@latest init:*)"
+      "Bash(npx storybook@latest init:*)",
+      "mcp__serena__list_dir",
+      "mcp__serena__activate_project",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__think_about_collected_information",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol"
     ],
     "deny": [],
     "ask": []

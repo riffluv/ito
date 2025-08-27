@@ -155,7 +155,8 @@ export function CentralCardBoard({
         flexDirection="column" 
         alignItems="center" 
         justifyContent="center"
-        minHeight={0} // Allow flex shrinking
+        overflow="hidden" // 根本解決: Flexコンテナの適切なoverflow制御
+        position="relative" // Flex子要素の適切な配置コンテキスト
       >
         <Box
           bg="#f8fafc" // --slate-50

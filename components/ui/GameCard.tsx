@@ -1,5 +1,6 @@
 "use client";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 export type GameCardProps = {
   index?: number | null;
@@ -32,6 +33,8 @@ export function GameCard({
         role="group"
         aria-label="card"
         tabIndex={0}
+        width={UNIFIED_LAYOUT.CARD.WIDTH}
+        height={UNIFIED_LAYOUT.CARD.HEIGHT}
         _focusVisible={{
           outline: "2px solid",
           outlineColor: "focusRing",
@@ -75,6 +78,8 @@ export function GameCard({
     <Box
       css={styles.frame}
       tabIndex={0}
+      width={UNIFIED_LAYOUT.CARD.WIDTH}
+      height={UNIFIED_LAYOUT.CARD.HEIGHT}
       _focusVisible={{
         outline: "2px solid",
         outlineColor: "focusRing",

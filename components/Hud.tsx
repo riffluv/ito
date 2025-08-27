@@ -7,7 +7,8 @@ import {
   Progress,
   Spacer,
 } from "@chakra-ui/react";
-import { FiSettings } from "react-icons/fi";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { FiSettings, FiLogOut } from "react-icons/fi";
 
 export type HudProps = {
   roomName: string;
@@ -24,6 +25,7 @@ export type HudProps = {
   } | null;
   isHost?: boolean;
   onOpenSettings?: () => void;
+  onLeaveRoom?: () => void | Promise<void>; // 退出ボタン用
 };
 
 export function Hud({
@@ -36,6 +38,7 @@ export function Hud({
   hostPrimary,
   isHost = false,
   onOpenSettings,
+  onLeaveRoom,
 }: HudProps) {
   const pct =
     totalMs && remainMs != null && totalMs > 0
@@ -52,11 +55,17 @@ export function Hud({
   return (
     <Box
       w="100%"
+      h={UNIFIED_LAYOUT.HEADER_HEIGHT} // メインメニューと同じ高さ
       display="flex"
       justifyContent="space-between"
       alignItems="center"
       px={6}
-      py={4}
+      css={{
+        // 125% DPI最適化
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          height: UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
+        },
+      }}
     >
       {/* Game Title - Professional Style */}
       <Box
@@ -95,6 +104,25 @@ export function Hud({
         >
           {phaseLabel}フェーズ
         </Box>
+        
+        {/* Leave Room Button - Professional Style */}
+        {onLeaveRoom && (
+          <IconButton
+            aria-label="ルームを退出"
+            onClick={onLeaveRoom}
+            size="sm"
+            colorPalette="red"
+            variant="ghost"
+            color="#dc2626" // --red-600
+            _hover={{
+              bg: "#fef2f2", // --red-50
+              color: "#991b1b", // --red-800
+            }}
+            title="メインメニューに戻る"
+          >
+            <FiLogOut />
+          </IconButton>
+        )}
         
         {/* Settings Button - Professional Style */}
         {onOpenSettings && (
