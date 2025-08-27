@@ -88,6 +88,7 @@ body {
   outline-offset: 2px;
 }
 
+/* stylelint-disable declaration-no-important */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -98,6 +99,7 @@ body {
     scroll-behavior: auto !important;
   }
 }
+/* stylelint-enable declaration-no-important */
 
 /* ===== スクロール防止のためのオーバーフロー制御 ===== */
 .no-scroll-container {

@@ -9,7 +9,7 @@ import { ThemeProvider } from "next-themes";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ChakraProvider value={system}>
-      <ThemeProvider attribute="class">
+      <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
         <ThemePresetProvider>
           <AuthProvider>
             <Box bg="canvasBg" color="fgDefault" minH="100vh">

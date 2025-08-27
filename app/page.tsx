@@ -184,7 +184,7 @@ export default function LobbyPage() {
               <Box
                 p={8}
                 textAlign="center"
-                borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+                borderWidth={UNIFIED_LAYOUT.BORDER.WIDTH.THIN}
                 borderColor="borderDefault"
                 rounded="lg"
                 bg="panelSubBg"

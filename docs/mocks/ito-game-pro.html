@@ -1,0 +1,2015 @@
+<!-- MOCK ONLY: このHTMLは初期デザイン検討用。実装ではtheme tokens/UNIFIED_LAYOUTを使用します -->
+<!-- moved to docs/mocks/ (2025-08-27) -->
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      ITO（イト）- プロフェッショナル版ゲーム画面 | デザインリファレンス
+    </title>
+    <!-- 
+    ===========================================
+    ITO GAME DESIGN REFERENCE - PROFESSIONAL
+    ===========================================
+    
+    このHTMLファイルは、ITOゲームアプリケーションの
+    理想的なUI/UXデザインを示すリファレンスモックです。
+    
+    【主要特徴】
+    ✅ レスポンシブ設計（1200px未満で縦積み）
+    ✅ プロフェッショナルグレードのビジュアル
+    ✅ アクセシビリティ対応
+    ✅ モダンCSS（Grid + Flexbox）
+    ✅ 流動的レイアウト（clamp使用）
+    
+    【技術仕様】
+    - グリッドレイアウト：3カラム → 縦積み
+    - ブレークポイント：1400px, 1200px, 768px
+    - 統一レイアウトシステム互換
+    - CSS Custom Properties活用
+    - Chakra UI v3対応設計
+    
+    【使用目的】
+    Next.js + Chakra UI実装時の忠実なデザイン再現
+    ===========================================
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* CSS Custom Properties for Design System */
+      :root {
+        /* Color Palette */
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-secondary: linear-gradient(
+          135deg,
+          #ff6b9d 0%,
+          #ffc3a0 50%,
+          #7ec8e3 100%
+        );
+        --gradient-success: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        --gradient-danger: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        --gradient-warning: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        --gradient-info: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+
+        /* Neutral Colors */
+        --white: #ffffff;
+        --gray-50: #f7fafc;
+        --gray-100: #edf2f7;
+        --gray-200: #e2e8f0;
+        --gray-300: #cbd5e0;
+        --gray-400: #a0aec0;
+        --gray-500: #718096;
+        --gray-600: #4a5568;
+        --gray-700: #2d3748;
+        --gray-800: #1a202c;
+        --gray-900: #171923;
+
+        /* Semantic Colors */
+        --success-50: #f0fff4;
+        --success-100: #c6f6d5;
+        --success-500: #48bb78;
+        --error-50: #fff5f5;
+        --error-100: #fed7d7;
+        --error-500: #e53e3e;
+        --warning-50: #fffaf0;
+        --warning-100: #feebc8;
+        --warning-500: #ed8936;
+        --info-50: #ebf8ff;
+        --info-100: #bee3f8;
+        --info-500: #3182ce;
+
+        /* Spacing */
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-5: 1.25rem;
+        --space-6: 1.5rem;
+        --space-8: 2rem;
+        --space-10: 2.5rem;
+        --space-12: 3rem;
+        --space-16: 4rem;
+        --space-20: 5rem;
+
+        /* Border Radius */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        --radius-2xl: 1.25rem;
+        --radius-3xl: 1.5rem;
+
+        /* Shadows */
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+        --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+
+        /* Typography */
+        --font-family:
+          "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+          sans-serif;
+        --font-size-xs: 0.75rem;
+        --font-size-sm: 0.875rem;
+        --font-size-base: 1rem;
+        --font-size-lg: 1.125rem;
+        --font-size-xl: 1.25rem;
+        --font-size-2xl: 1.5rem;
+        --font-size-3xl: 1.875rem;
+        --font-size-4xl: 2.25rem;
+        --font-size-5xl: 3rem;
+
+        /* Z-Index */
+        --z-modal: 1000;
+        --z-dropdown: 500;
+        --z-sticky: 100;
+        --z-fixed: 50;
+
+        /* Transitions */
+        --transition-fast: 150ms ease-in-out;
+        --transition-base: 200ms ease-in-out;
+        --transition-slow: 300ms ease-in-out;
+      }
+
+      /* Reset and Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        font-family: var(--font-family);
+        background: var(--gradient-secondary);
+        height: 100vh;
+        overflow: hidden;
+        color: var(--gray-700);
+        line-height: 1.5;
+      }
+
+      /* Focus Management */
+      :focus {
+        outline: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--info-500);
+        outline-offset: 2px;
+      }
+
+      /* Full-Screen Grid Layout with Fluid Responsive Design */
+      .game-container {
+        display: grid;
+        grid-template-areas:
+          "header header header"
+          "sidebar main-area chat"
+          "hand hand hand";
+        grid-template-columns: clamp(240px, 20vw, 300px) 1fr clamp(
+            280px,
+            25vw,
+            360px
+          );
+        grid-template-rows: auto 1fr clamp(140px, 12vh, 180px);
+        height: 100vh;
+        gap: clamp(8px, 1vw, 12px);
+        padding: clamp(8px, 1vw, 12px);
+      }
+
+      /* Enhanced Header */
+      .header {
+        grid-area: header;
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-4) var(--space-6);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .game-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .game-icon {
+        font-size: var(--font-size-3xl);
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      }
+
+      .room-info {
+        display: flex;
+        gap: var(--space-4);
+        align-items: center;
+      }
+
+      .room-code {
+        background: var(--gray-50);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-xl);
+        font-weight: 700;
+        color: var(--gray-600);
+        border: 2px solid var(--gray-200);
+        font-family: "Monaco", "Menlo", monospace;
+        letter-spacing: 1px;
+      }
+
+      .game-phase-indicator {
+        background: var(--gradient-info);
+        color: var(--white);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-xl);
+        font-weight: 600;
+        font-size: var(--font-size-sm);
+        animation: pulse 2s infinite;
+        box-shadow: 0 4px 12px rgba(65, 145, 225, 0.3);
+      }
+
+      /* Enhanced Sidebar */
+      .sidebar {
+        grid-area: sidebar;
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-5);
+        box-shadow: var(--shadow-lg);
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-5);
+        padding-bottom: var(--space-3);
+        border-bottom: 2px solid var(--gray-100);
+      }
+
+      .sidebar-title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .player-count-badge {
+        background: var(--gradient-info);
+        color: var(--white);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-lg);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+      }
+
+      .player-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .player-card {
+        background: var(--gray-50);
+        border-radius: var(--radius-xl);
+        padding: var(--space-4);
+        border-left: 4px solid var(--success-500);
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .player-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.1) 100%
+        );
+        opacity: 0;
+        transition: opacity var(--transition-base);
+      }
+
+      .player-card:hover::before {
+        opacity: 1;
+      }
+
+      .player-card.host {
+        border-left-color: var(--warning-500);
+        background: var(--warning-50);
+      }
+
+      .player-card.active {
+        border-left-color: var(--info-500);
+        background: var(--info-50);
+        transform: scale(1.02);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .player-card.you {
+        border-left-color: var(--success-500);
+        background: var(--success-50);
+        box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.2);
+      }
+
+      .player-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--space-2);
+      }
+
+      .player-name {
+        font-weight: 700;
+        font-size: var(--font-size-base);
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .player-badge {
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+      }
+
+      .host-badge {
+        background: var(--warning-500);
+        color: var(--white);
+      }
+
+      .you-badge {
+        background: var(--success-500);
+        color: var(--white);
+      }
+
+      .player-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--success-500);
+        position: relative;
+      }
+
+      .player-status.pending {
+        background: var(--gray-300);
+      }
+
+      .player-status.active {
+        background: var(--info-500);
+        animation: pulse 2s infinite;
+      }
+
+      .player-clue {
+        font-size: var(--font-size-sm);
+        color: var(--gray-500);
+        font-style: italic;
+        margin-top: var(--space-1);
+        line-height: 1.4;
+      }
+
+      .player-clue.pending {
+        color: var(--warning-500);
+        font-weight: 500;
+      }
+
+      /* Enhanced Main Area */
+      .main-area {
+        grid-area: main-area;
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-8);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+      }
+
+      .main-area::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+      }
+
+      /* Enhanced Theme Display */
+      .theme-display {
+        text-align: center;
+        margin-bottom: var(--space-8);
+      }
+
+      .theme-card {
+        background: var(--gradient-primary);
+        color: var(--white);
+        padding: var(--space-6);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-xl);
+        transform: perspective(1000px) rotateX(5deg);
+        transition: transform var(--transition-slow);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .theme-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          45deg,
+          transparent,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        transform: rotate(45deg);
+        animation: shimmer 3s infinite;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%) translateY(-100%) rotate(45deg);
+        }
+        100% {
+          transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+      }
+
+      .theme-card:hover {
+        transform: perspective(1000px) rotateX(0deg) scale(1.02);
+      }
+
+      .theme-label {
+        font-size: var(--font-size-sm);
+        opacity: 0.9;
+        margin-bottom: var(--space-2);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+      }
+
+      .theme-text {
+        font-size: var(--font-size-4xl);
+        font-weight: 900;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        margin-bottom: var(--space-2);
+        position: relative;
+        z-index: 1;
+      }
+
+      .theme-emoji {
+        font-size: var(--font-size-5xl);
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        margin-right: var(--space-3);
+      }
+
+      .instruction-text {
+        margin-top: var(--space-4);
+        font-size: var(--font-size-lg);
+        color: var(--gray-600);
+        line-height: 1.6;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Enhanced Game Board */
+      .game-board {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .board-header {
+        text-align: center;
+        margin-bottom: var(--space-6);
+        color: var(--gray-600);
+        font-weight: 600;
+        font-size: var(--font-size-lg);
+      }
+
+      .sorting-area {
+        background: var(--gray-50);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-6);
+        margin: var(--space-4) 0;
+        border: 2px dashed var(--gray-300);
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sorting-area.active {
+        border-color: var(--info-500);
+        background: var(--info-50);
+        box-shadow: 0 0 0 4px rgba(65, 145, 225, 0.1);
+      }
+
+      .card-slots {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        min-height: 140px;
+      }
+
+      .card-slot {
+        width: 90px;
+        height: 126px;
+        background: var(--white);
+        border: 2px dashed var(--gray-300);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-base);
+        position: relative;
+      }
+
+      .card-slot.drop-target {
+        border-color: var(--info-500);
+        background: var(--info-50);
+        box-shadow: 0 0 0 4px rgba(65, 145, 225, 0.2);
+        transform: scale(1.05);
+      }
+
+      .card-slot::before {
+        content: "↓";
+        position: absolute;
+        top: -30px;
+        font-size: var(--font-size-xl);
+        color: var(--info-500);
+        opacity: 0;
+        transition: opacity var(--transition-base);
+      }
+
+      .card-slot.drop-target::before {
+        opacity: 1;
+        animation: bounce 0.5s infinite alternate;
+      }
+
+      .zero-card {
+        color: var(--gray-400);
+        font-size: var(--font-size-3xl);
+        font-weight: 800;
+        position: relative;
+      }
+
+      .zero-card::after {
+        content: "スタート";
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: var(--font-size-xs);
+        color: var(--gray-500);
+        white-space: nowrap;
+      }
+
+      /* Enhanced Player Cards */
+      .player-number-card {
+        width: 86px;
+        height: 122px;
+        background: var(--gradient-info);
+        border-radius: var(--radius-lg);
+        border: 3px solid var(--white);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        cursor: grab;
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .player-number-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.2) 0%,
+          transparent 50%
+        );
+        opacity: 0;
+        transition: opacity var(--transition-base);
+      }
+
+      .player-number-card:hover {
+        transform: scale(1.08) translateY(-4px) rotate(2deg);
+        box-shadow: var(--shadow-2xl);
+        z-index: 10;
+      }
+
+      .player-number-card:hover::before {
+        opacity: 1;
+      }
+
+      .player-number-card:active {
+        cursor: grabbing;
+        transform: scale(1.12) rotate(8deg);
+      }
+
+      .player-number-card.dragging {
+        transform: scale(1.15) rotate(12deg);
+        z-index: var(--z-dropdown);
+        box-shadow: var(--shadow-2xl);
+      }
+
+      .card-player-name {
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        margin-bottom: var(--space-1);
+        opacity: 0.9;
+      }
+
+      .card-number {
+        font-size: var(--font-size-4xl);
+        font-weight: 900;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .card-back .card-number {
+        font-size: var(--font-size-2xl);
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      /* Progress Indicator */
+      .progress-section {
+        margin-top: var(--space-6);
+        text-align: center;
+        background: var(--gray-50);
+        padding: var(--space-4);
+        border-radius: var(--radius-xl);
+      }
+
+      .progress-text {
+        font-size: var(--font-size-base);
+        color: var(--gray-600);
+        margin-bottom: var(--space-3);
+      }
+
+      .progress-badges {
+        display: flex;
+        gap: var(--space-2);
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .status-badge {
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-lg);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        transition: all var(--transition-base);
+      }
+
+      .status-badge.ready {
+        background: var(--success-100);
+        color: var(--success-500);
+      }
+
+      .status-badge.waiting {
+        background: var(--warning-100);
+        color: var(--warning-500);
+        animation: pulse 2s infinite;
+      }
+
+      /* Enhanced Chat Panel */
+      .chat-panel {
+        grid-area: chat;
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        padding: var(--space-5);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 2px solid var(--gray-100);
+      }
+
+      .chat-title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .chat-status {
+        font-size: var(--font-size-xs);
+        color: var(--success-500);
+        background: var(--success-50);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-md);
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: var(--space-4);
+        max-height: 400px;
+        min-height: 200px;
+        padding-right: var(--space-2);
+      }
+
+      .chat-messages::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .chat-messages::-webkit-scrollbar-track {
+        background: var(--gray-100);
+        border-radius: var(--radius-md);
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: var(--radius-md);
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: var(--gray-400);
+      }
+
+      .chat-message {
+        margin-bottom: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-xl);
+        max-width: 90%;
+        word-wrap: break-word;
+        animation: slideInUp 0.3s ease-out;
+        position: relative;
+      }
+
+      @keyframes slideInUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .chat-message.system {
+        background: var(--gray-100);
+        color: var(--gray-600);
+        text-align: center;
+        max-width: 100%;
+        font-style: italic;
+        border-radius: var(--radius-lg);
+      }
+
+      .chat-message.other {
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
+        border-left: 4px solid var(--info-500);
+      }
+
+      .chat-message.own {
+        background: var(--info-50);
+        border: 1px solid var(--info-100);
+        border-left: 4px solid var(--info-500);
+        margin-left: auto;
+      }
+
+      .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-1);
+      }
+
+      .message-author {
+        font-weight: 700;
+        font-size: var(--font-size-sm);
+        color: var(--gray-700);
+      }
+
+      .message-time {
+        font-size: var(--font-size-xs);
+        color: var(--gray-400);
+      }
+
+      .message-text {
+        font-size: var(--font-size-sm);
+        color: var(--gray-700);
+        line-height: 1.4;
+      }
+
+      .chat-input-area {
+        display: flex;
+        gap: var(--space-2);
+        align-items: flex-end;
+      }
+
+      .chat-input {
+        flex: 1;
+        padding: var(--space-3) var(--space-4);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        font-size: var(--font-size-sm);
+        outline: none;
+        transition: all var(--transition-base);
+        resize: none;
+        min-height: 44px;
+        max-height: 80px;
+        font-family: inherit;
+      }
+
+      .chat-input:focus {
+        border-color: var(--info-500);
+        box-shadow: 0 0 0 3px rgba(65, 145, 225, 0.1);
+      }
+
+      .chat-send-btn {
+        background: var(--gradient-info);
+        color: var(--white);
+        border: none;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-xl);
+        font-weight: 700;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        white-space: nowrap;
+        font-size: var(--font-size-sm);
+      }
+
+      .chat-send-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .chat-send-btn:active {
+        transform: translateY(0);
+      }
+
+      /* Enhanced Hand Panel - Unified Layout System Compatible */
+      .hand-panel {
+        grid-area: hand;
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        padding: clamp(var(--space-4), 3vh, var(--space-6));
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        min-height: clamp(140px, 12vh, 180px);
+      }
+
+      .hand-panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-danger);
+        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+      }
+
+      .my-card-area {
+        display: flex;
+        align-items: center;
+        gap: var(--space-5);
+      }
+
+      .my-card {
+        width: 120px;
+        height: 168px;
+        background: var(--gradient-danger);
+        border-radius: var(--radius-xl);
+        border: 4px solid var(--white);
+        box-shadow: var(--shadow-xl);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        position: relative;
+        overflow: hidden;
+        transition: all var(--transition-slow);
+      }
+
+      .my-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          45deg,
+          transparent,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        transform: rotate(45deg);
+        animation: cardShimmer 4s infinite;
+      }
+
+      @keyframes cardShimmer {
+        0% {
+          transform: translateX(-100%) translateY(-100%) rotate(45deg);
+        }
+        100% {
+          transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+      }
+
+      .my-card:hover {
+        transform: scale(1.05) rotate(-2deg);
+      }
+
+      .my-card-label {
+        position: absolute;
+        top: var(--space-3);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .my-card-number {
+        font-size: var(--font-size-5xl);
+        font-weight: 900;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        position: relative;
+        z-index: 1;
+      }
+
+      .card-info {
+        text-align: center;
+      }
+
+      .card-info-label {
+        font-size: var(--font-size-sm);
+        color: var(--gray-500);
+        margin-bottom: var(--space-1);
+      }
+
+      .card-info-value {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--gray-700);
+      }
+
+      /* Enhanced Clue Input */
+      .clue-input-area {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        flex: 1;
+        max-width: 450px;
+      }
+
+      .clue-label {
+        font-size: var(--font-size-base);
+        font-weight: 600;
+        color: var(--gray-700);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .clue-input {
+        padding: var(--space-4) var(--space-5);
+        border: 3px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        outline: none;
+        transition: all var(--transition-base);
+        font-family: inherit;
+        background: var(--gray-50);
+      }
+
+      .clue-input:focus {
+        border-color: var(--info-500);
+        box-shadow: 0 0 0 4px rgba(65, 145, 225, 0.1);
+        background: var(--white);
+      }
+
+      .clue-input:valid {
+        border-color: var(--success-500);
+        background: var(--success-50);
+      }
+
+      .char-count {
+        font-size: var(--font-size-xs);
+        color: var(--gray-500);
+        text-align: right;
+      }
+
+      .char-count.warning {
+        color: var(--warning-500);
+      }
+
+      .char-count.danger {
+        color: var(--error-500);
+      }
+
+      /* Enhanced Action Buttons */
+      .action-buttons {
+        display: flex;
+        gap: var(--space-3);
+      }
+
+      .btn {
+        padding: var(--space-4) var(--space-6);
+        border: none;
+        border-radius: var(--radius-xl);
+        font-size: var(--font-size-base);
+        font-weight: 700;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+        min-width: 120px;
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .btn:hover::before {
+        left: 100%;
+      }
+
+      .btn-primary {
+        background: var(--gradient-success);
+        color: var(--white);
+        box-shadow: 0 6px 16px rgba(72, 187, 120, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+      }
+
+      .btn-secondary {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        border: 2px solid var(--gray-200);
+      }
+
+      .btn-secondary:hover {
+        background: var(--gray-200);
+        transform: translateY(-1px);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      /* Animations */
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      @keyframes bounce {
+        from {
+          transform: translateY(0);
+        }
+        to {
+          transform: translateY(-8px);
+        }
+      }
+
+      /* Enhanced Responsive Design - Professional Grade */
+      @media (max-width: 1400px) {
+        .game-container {
+          grid-template-columns: clamp(220px, 18vw, 280px) 1fr clamp(
+              260px,
+              23vw,
+              340px
+            );
+        }
+
+        .sidebar,
+        .chat-panel {
+          padding: var(--space-4);
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .game-container {
+          grid-template-areas:
+            "header"
+            "main-area"
+            "sidebar"
+            "hand";
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr auto auto;
+          gap: clamp(6px, 0.8vw, 10px);
+          padding: clamp(6px, 0.8vw, 10px);
+        }
+
+        .chat-panel {
+          display: none;
+        }
+
+        .main-area {
+          padding: var(--space-6);
+        }
+
+        .hand-panel {
+          flex-direction: column;
+          gap: var(--space-4);
+          padding: var(--space-4);
+        }
+
+        .my-card-area {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .clue-input-area {
+          width: 100%;
+          max-width: none;
+        }
+
+        .action-buttons {
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        /* Tablet optimizations */
+        .sidebar {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        .player-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: var(--space-2);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .game-container {
+          gap: clamp(4px, 0.5vw, 8px);
+          padding: clamp(4px, 0.5vw, 8px);
+        }
+
+        .theme-text {
+          font-size: var(--font-size-3xl);
+        }
+
+        .card-slots {
+          gap: var(--space-2);
+          flex-wrap: wrap;
+        }
+
+        .player-number-card {
+          width: 70px;
+          height: 98px;
+        }
+
+        .my-card {
+          width: 100px;
+          height: 140px;
+        }
+
+        .my-card-number {
+          font-size: var(--font-size-4xl);
+        }
+
+        .main-area {
+          padding: var(--space-4);
+        }
+
+        .header {
+          padding: var(--space-2) var(--space-4);
+        }
+
+        .room-info {
+          flex-direction: column;
+          gap: var(--space-1);
+          align-items: flex-end;
+        }
+
+        .game-title {
+          font-size: var(--font-size-xl);
+        }
+
+        .player-list {
+          grid-template-columns: 1fr;
+        }
+
+        .btn {
+          min-width: 100px;
+          padding: var(--space-3) var(--space-4);
+        }
+      }
+
+      /* Accessibility */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* High contrast mode */
+      @media (prefers-contrast: high) {
+        .player-number-card {
+          border-width: 4px;
+        }
+
+        .theme-card {
+          border: 3px solid var(--white);
+        }
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --white: #1a202c;
+          --gray-50: #2d3748;
+          --gray-100: #4a5568;
+          --gray-700: #e2e8f0;
+          --gray-600: #cbd5e0;
+        }
+      }
+
+      /* Loading states */
+      .loading {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .loading::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.4),
+          transparent
+        );
+        animation: loading 1.5s infinite;
+      }
+
+      @keyframes loading {
+        0% {
+          left: -100%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <!-- Enhanced Header -->
+      <header class="header" role="banner">
+        <div class="game-title">
+          <span class="game-icon">🎯</span>
+          ITO（イト）
+        </div>
+        <div class="room-info">
+          <div class="room-code" role="text" aria-label="Room code">ABC123</div>
+          <div class="game-phase-indicator" role="status" aria-live="polite">
+            ヒント入力フェーズ
+          </div>
+        </div>
+      </header>
+
+      <!-- Enhanced Left Sidebar -->
+      <aside class="sidebar" role="complementary" aria-label="プレイヤー情報">
+        <div class="sidebar-header">
+          <h2 class="sidebar-title">👥 プレイヤー</h2>
+          <div class="player-count-badge" aria-label="プレイヤー数">5/6人</div>
+        </div>
+
+        <div class="player-list" role="list">
+          <div class="player-card host" role="listitem">
+            <div class="player-header">
+              <div class="player-name">
+                たろう
+                <span class="player-badge host-badge">ホスト</span>
+              </div>
+              <div class="player-status" aria-label="準備完了"></div>
+            </div>
+            <div class="player-clue">ヒント: お米のおいしさ</div>
+          </div>
+
+          <div class="player-card you" role="listitem">
+            <div class="player-header">
+              <div class="player-name">
+                あなた
+                <span class="player-badge you-badge">自分</span>
+              </div>
+              <div class="player-status active" aria-label="入力中"></div>
+            </div>
+            <div class="player-clue pending">ヒント入力中...</div>
+          </div>
+
+          <div class="player-card" role="listitem">
+            <div class="player-header">
+              <div class="player-name">はなこ</div>
+              <div class="player-status" aria-label="準備完了"></div>
+            </div>
+            <div class="player-clue">ヒント: キムチの辛さ</div>
+          </div>
+
+          <div class="player-card" role="listitem">
+            <div class="player-header">
+              <div class="player-name">じろう</div>
+              <div class="player-status" aria-label="準備完了"></div>
+            </div>
+            <div class="player-clue">ヒント: 焚き火の温度</div>
+          </div>
+
+          <div class="player-card" role="listitem">
+            <div class="player-header">
+              <div class="player-name">さくら</div>
+              <div class="player-status pending" aria-label="待機中"></div>
+            </div>
+            <div class="player-clue pending">ヒント待ち</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Enhanced Main Game Area -->
+      <main class="main-area" role="main" aria-label="ゲーム画面">
+        <!-- Enhanced Theme Display -->
+        <section class="theme-display">
+          <div class="theme-card" role="img" aria-label="現在のお題">
+            <div class="theme-label">今回のお題</div>
+            <div class="theme-text">
+              <span class="theme-emoji">🌶️</span>辛さ・熱さ
+            </div>
+          </div>
+          <div class="instruction-text">
+            あなたの数字を「辛さ・熱さ」で表現してください。<br />
+            <strong>数字そのものは絶対に言わないように！</strong>
+          </div>
+        </section>
+
+        <!-- Enhanced Game Board -->
+        <section class="game-board">
+          <div class="board-header">
+            カードを小さい順（左）から大きい順（右）に並べよう！
+          </div>
+
+          <div
+            class="sorting-area"
+            role="application"
+            aria-label="カード並び替えエリア"
+          >
+            <div class="card-slots">
+              <div
+                class="card-slot"
+                role="button"
+                tabindex="0"
+                aria-label="スタート位置"
+              >
+                <div class="zero-card">0</div>
+              </div>
+
+              <div
+                class="card-slot drop-target"
+                role="button"
+                tabindex="0"
+                aria-label="カード配置スロット"
+              ></div>
+
+              <div
+                class="player-number-card card-back"
+                role="button"
+                tabindex="0"
+                aria-label="たろうのカード（ドラッグして移動可能）"
+                draggable="true"
+              >
+                <div class="card-player-name">たろう</div>
+                <div class="card-number">?</div>
+              </div>
+
+              <div
+                class="card-slot drop-target"
+                role="button"
+                tabindex="0"
+                aria-label="カード配置スロット"
+              ></div>
+
+              <div
+                class="player-number-card card-back"
+                role="button"
+                tabindex="0"
+                aria-label="はなこのカード（ドラッグして移動可能）"
+                draggable="true"
+              >
+                <div class="card-player-name">はなこ</div>
+                <div class="card-number">?</div>
+              </div>
+
+              <div
+                class="card-slot"
+                role="button"
+                tabindex="0"
+                aria-label="カード配置スロット"
+              ></div>
+
+              <div
+                class="player-number-card card-back"
+                role="button"
+                tabindex="0"
+                aria-label="じろうのカード（ドラッグして移動可能）"
+                draggable="true"
+              >
+                <div class="card-player-name">じろう</div>
+                <div class="card-number">?</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="progress-section">
+            <div class="progress-text">
+              準備状況: <strong>3/5人</strong> がヒントを入力しました
+            </div>
+            <div class="progress-badges">
+              <span class="status-badge ready">✓ たろう</span>
+              <span class="status-badge ready">✓ はなこ</span>
+              <span class="status-badge ready">✓ じろう</span>
+              <span class="status-badge waiting">⏳ あなた</span>
+              <span class="status-badge waiting">⏳ さくら</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Enhanced Chat Panel -->
+      <aside class="chat-panel" role="complementary" aria-label="チャット">
+        <div class="chat-header">
+          <h2 class="chat-title">💬 チャット</h2>
+          <div class="chat-status">オンライン</div>
+        </div>
+
+        <div
+          class="chat-messages"
+          role="log"
+          aria-live="polite"
+          aria-label="チャットメッセージ"
+          id="chatMessages"
+        >
+          <div class="chat-message other" role="article">
+            <div class="message-header">
+              <div class="message-author">たろう</div>
+              <div class="message-time">15:30</div>
+            </div>
+            <div class="message-text">みんな、頑張ろう！</div>
+          </div>
+
+          <div class="chat-message other" role="article">
+            <div class="message-header">
+              <div class="message-author">はなこ</div>
+              <div class="message-time">15:32</div>
+            </div>
+            <div class="message-text">キムチって結構辛いよね？🌶️</div>
+          </div>
+
+          <div class="chat-message other" role="article">
+            <div class="message-header">
+              <div class="message-author">じろう</div>
+              <div class="message-time">15:34</div>
+            </div>
+            <div class="message-text">焚き火は熱いけど、どのくらいかな…🔥</div>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <textarea
+            class="chat-input"
+            id="chatInput"
+            placeholder="メッセージを入力..."
+            rows="1"
+            maxlength="200"
+            aria-label="チャットメッセージを入力"
+          ></textarea>
+          <button
+            class="chat-send-btn"
+            onclick="sendMessage()"
+            aria-label="メッセージを送信"
+          >
+            送信
+          </button>
+        </div>
+      </aside>
+
+      <!-- Enhanced Bottom Hand Panel -->
+      <section
+        class="hand-panel"
+        role="region"
+        aria-label="自分のカードとヒント入力"
+      >
+        <div class="my-card-area">
+          <div class="my-card" role="img" aria-label="あなたのカード: 73">
+            <div class="my-card-label">あなたの数字</div>
+            <div class="my-card-number">73</div>
+          </div>
+
+          <div class="card-info">
+            <div class="card-info-label">カードの位置予想</div>
+            <div class="card-info-value">中程度〜高め</div>
+          </div>
+        </div>
+
+        <div class="clue-input-area">
+          <label class="clue-label" for="clueInput">
+            🌶️ あなたのヒント（「辛さ・熱さ」で表現）
+          </label>
+          <input
+            class="clue-input"
+            type="text"
+            id="clueInput"
+            placeholder="例: お風呂のちょうどいい温度..."
+            value="夏の車のハンドルくらい"
+            maxlength="50"
+            required
+            aria-describedby="charCount"
+            oninput="updateCharCount()"
+          />
+          <div class="char-count" id="charCount">12 / 50文字</div>
+        </div>
+
+        <div class="action-buttons">
+          <button
+            class="btn btn-secondary"
+            onclick="clearClue()"
+            aria-label="ヒントをクリア"
+          >
+            🗑️ クリア
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="submitClue()"
+            aria-label="ヒントを確定して送信"
+          >
+            ✓ ヒント確定
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // State management
+      let gameState = {
+        currentPhase: "clueInput",
+        players: [
+          {
+            name: "たろう",
+            status: "ready",
+            clue: "お米のおいしさ",
+            isHost: true,
+          },
+          { name: "あなた", status: "inputting", clue: "", isYou: true },
+          { name: "はなこ", status: "ready", clue: "キムチの辛さ" },
+          { name: "じろう", status: "ready", clue: "焚き火の温度" },
+          { name: "さくら", status: "waiting", clue: "" },
+        ],
+        myCard: 73,
+        theme: "辛さ・熱さ",
+      };
+
+      // Enhanced chat functionality
+      function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const message = input.value.trim();
+
+        if (message) {
+          const chatMessages = document.getElementById("chatMessages");
+          const time = new Date().toLocaleTimeString("ja-JP", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const messageEl = document.createElement("div");
+          messageEl.className = "chat-message own";
+          messageEl.setAttribute("role", "article");
+          messageEl.innerHTML = `
+                    <div class="message-header">
+                        <div class="message-author">あなた</div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                    <div class="message-text">${escapeHtml(message)}</div>
+                `;
+
+          chatMessages.appendChild(messageEl);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          input.value = "";
+          autoResize(input);
+
+          // Announce new message for screen readers
+          const announcement = document.createElement("div");
+          announcement.setAttribute("aria-live", "assertive");
+          announcement.setAttribute("aria-atomic", "true");
+          announcement.textContent = `メッセージを送信しました: ${message}`;
+          announcement.style.position = "absolute";
+          announcement.style.left = "-10000px";
+          document.body.appendChild(announcement);
+          setTimeout(() => document.body.removeChild(announcement), 1000);
+        }
+      }
+
+      // Auto-resize textarea
+      function autoResize(textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = Math.min(textarea.scrollHeight, 80) + "px";
+      }
+
+      // Character count for clue input
+      function updateCharCount() {
+        const input = document.getElementById("clueInput");
+        const charCount = document.getElementById("charCount");
+        const count = input.value.length;
+        const max = 50;
+
+        charCount.textContent = `${count} / ${max}文字`;
+
+        if (count > max * 0.9) {
+          charCount.className = "char-count danger";
+        } else if (count > max * 0.7) {
+          charCount.className = "char-count warning";
+        } else {
+          charCount.className = "char-count";
+        }
+      }
+
+      // Enhanced clue submission
+      function submitClue() {
+        const input = document.getElementById("clueInput");
+        const clue = input.value.trim();
+
+        if (clue) {
+          const btn = event.target;
+          const originalText = btn.innerHTML;
+
+          // Show loading state
+          btn.innerHTML = "🔄 送信中...";
+          btn.disabled = true;
+
+          setTimeout(() => {
+            // Success state
+            btn.innerHTML = "✓ 送信完了";
+            btn.className = "btn btn-primary";
+
+            // Update game state
+            gameState.players[1].status = "ready";
+            gameState.players[1].clue = clue;
+
+            // Show success message
+            showNotification(`ヒントを送信しました: "${clue}"`, "success");
+
+            // Update UI
+            updatePlayerList();
+
+            setTimeout(() => {
+              btn.innerHTML = "📝 変更する";
+              btn.disabled = false;
+            }, 1500);
+          }, 1000);
+        } else {
+          showNotification("ヒントを入力してください", "error");
+        }
+      }
+
+      // Clear clue
+      function clearClue() {
+        const input = document.getElementById("clueInput");
+        input.value = "";
+        input.focus();
+        updateCharCount();
+      }
+
+      // Show notifications
+      function showNotification(message, type = "info") {
+        const notification = document.createElement("div");
+        notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === "success" ? "var(--gradient-success)" : type === "error" ? "var(--gradient-danger)" : "var(--gradient-info)"};
+                color: white;
+                padding: var(--space-4) var(--space-6);
+                border-radius: var(--radius-xl);
+                box-shadow: var(--shadow-xl);
+                z-index: var(--z-modal);
+                font-weight: 600;
+                animation: slideInRight 0.3s ease-out;
+                max-width: 300px;
+            `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.animation = "slideOutRight 0.3s ease-in forwards";
+          setTimeout(() => document.body.removeChild(notification), 300);
+        }, 3000);
+      }
+
+      // Enhanced drag and drop
+      let draggedElement = null;
+      let dragOffset = { x: 0, y: 0 };
+
+      function initializeDragAndDrop() {
+        const cards = document.querySelectorAll(".player-number-card");
+        const slots = document.querySelectorAll(".card-slot");
+
+        cards.forEach((card) => {
+          card.addEventListener("dragstart", handleDragStart);
+          card.addEventListener("dragend", handleDragEnd);
+
+          // Mouse events for enhanced interaction
+          card.addEventListener("mousedown", handleMouseDown);
+          card.addEventListener("mouseenter", handleCardHover);
+          card.addEventListener("mouseleave", handleCardLeave);
+        });
+
+        slots.forEach((slot) => {
+          slot.addEventListener("dragover", handleDragOver);
+          slot.addEventListener("drop", handleDrop);
+          slot.addEventListener("dragenter", handleDragEnter);
+          slot.addEventListener("dragleave", handleDragLeave);
+        });
+      }
+
+      function handleDragStart(e) {
+        draggedElement = e.target;
+        e.target.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      }
+
+      function handleDragEnd(e) {
+        e.target.classList.remove("dragging");
+        document.querySelectorAll(".card-slot").forEach((slot) => {
+          slot.classList.remove("drop-target");
+        });
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }
+
+      function handleDragEnter(e) {
+        e.preventDefault();
+        e.target.classList.add("drop-target");
+      }
+
+      function handleDragLeave(e) {
+        e.target.classList.remove("drop-target");
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        e.target.classList.remove("drop-target");
+
+        if (draggedElement && e.target.classList.contains("card-slot")) {
+          // Animate the drop
+          e.target.appendChild(draggedElement);
+          showNotification(
+            `${draggedElement.querySelector(".card-player-name").textContent}のカードを移動しました`,
+            "success"
+          );
+        }
+      }
+
+      function handleCardHover(e) {
+        document.querySelectorAll(".card-slot").forEach((slot) => {
+          if (slot.children.length === 0) {
+            slot.classList.add("drop-target");
+          }
+        });
+      }
+
+      function handleCardLeave(e) {
+        setTimeout(() => {
+          document.querySelectorAll(".card-slot").forEach((slot) => {
+            slot.classList.remove("drop-target");
+          });
+        }, 100);
+      }
+
+      // Update player list
+      function updatePlayerList() {
+        // This would typically update the UI based on gameState
+        console.log("Updating player list...", gameState);
+      }
+
+      // Utility functions
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Keyboard navigation
+      function initializeKeyboardNavigation() {
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && e.target.classList.contains("chat-input")) {
+            sendMessage();
+          }
+
+          if (e.key === "Enter" && e.target.classList.contains("clue-input")) {
+            submitClue();
+          }
+
+          // Arrow key navigation for cards
+          if (
+            ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
+          ) {
+            const focusedElement = document.activeElement;
+            if (
+              focusedElement.classList.contains("player-number-card") ||
+              focusedElement.classList.contains("card-slot")
+            ) {
+              e.preventDefault();
+              navigateCards(e.key, focusedElement);
+            }
+          }
+        });
+      }
+
+      function navigateCards(direction, currentElement) {
+        const allInteractiveElements = Array.from(
+          document.querySelectorAll(".player-number-card, .card-slot")
+        );
+        const currentIndex = allInteractiveElements.indexOf(currentElement);
+        let nextIndex;
+
+        switch (direction) {
+          case "ArrowLeft":
+            nextIndex = Math.max(0, currentIndex - 1);
+            break;
+          case "ArrowRight":
+            nextIndex = Math.min(
+              allInteractiveElements.length - 1,
+              currentIndex + 1
+            );
+            break;
+          case "ArrowUp":
+            nextIndex = Math.max(0, currentIndex - 3);
+            break;
+          case "ArrowDown":
+            nextIndex = Math.min(
+              allInteractiveElements.length - 1,
+              currentIndex + 3
+            );
+            break;
+        }
+
+        allInteractiveElements[nextIndex].focus();
+      }
+
+      // Initialize everything when DOM is loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize chat
+        const chatInput = document.getElementById("chatInput");
+        chatInput.addEventListener("input", function () {
+          autoResize(this);
+        });
+
+        // Initialize clue input
+        updateCharCount();
+
+        // Initialize drag and drop
+        initializeDragAndDrop();
+
+        // Initialize keyboard navigation
+        initializeKeyboardNavigation();
+
+        // Auto-scroll chat to bottom
+        const chatMessages = document.getElementById("chatMessages");
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Add CSS animations for notifications
+        const style = document.createElement("style");
+        style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+                
+                @keyframes slideOutRight {
+                    from {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                }
+            `;
+        document.head.appendChild(style);
+
+        console.log("ITO Game Pro initialized successfully! 🎯");
+      });
+    </script>
+  </body>
+</html>

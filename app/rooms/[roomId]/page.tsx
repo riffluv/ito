@@ -27,6 +27,7 @@ import { Panel } from "@/components/ui/Panel";
 import ScrollableArea from "@/components/ui/ScrollableArea";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
+import HostControlDock from "@/components/ui/HostControlDock";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -429,118 +430,6 @@ export default function RoomPage() {
                 </Panel>
               </ScrollableArea>
             </Box>
-
-            {/* 🎮 ゲーム制御セクション - 下部・固定（レイアウトシフト防止） */}
-            <Box p={4} bg="panelBg" display={isHost ? "block" : "none"}>
-                <Panel title="🎮 ゲーム制御" variant="accent" elevated={true}>
-                  {/* 拡張された固定高さコンテナでお題制御も含める */}
-                  <Box
-                    minH="200px"
-                    display="flex"
-                    flexDir="column"
-                    justifyContent="center"
-                  >
-                    <Stack gap={3}>
-                      {/* お題制御セクション（ゲーム中のみ表示） */}
-                      {room.status === "clue" && (
-                        <Box
-                          p={2}
-                          bg="panelSubBg"
-                          rounded="md"
-                          borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
-                          borderColor="borderDefault"
-                        >
-                          <Text fontSize="xs" color="fgMuted" mb={2}>
-                            📋 お題管理
-                          </Text>
-                          <Stack gap={2}>
-                            {/* カテゴリ選択ボタン（お題未選択時） */}
-                            {!room.topic && (
-                              <>
-                                <Text fontSize="xs" color="fgMuted">
-                                  カテゴリ選択:
-                                </Text>
-                                <Flex wrap="wrap" gap={1}>
-                                  {topicTypeLabels.map((label) => (
-                                    <AppButton
-                                      key={label}
-                                      size="xs"
-                                      variant="outline"
-                                      onClick={() =>
-                                        topicControls.selectCategory(
-                                          roomId,
-                                          label
-                                        )
-                                      }
-                                      flex="1"
-                                      minW="60px"
-                                    >
-                                      {label.replace("版", "")}
-                                    </AppButton>
-                                  ))}
-                                </Flex>
-                              </>
-                            )}
-
-                            {/* お題制御ボタン（お題選択後） */}
-                            {room.topic && (
-                              <HStack>
-                                <AppButton
-                                  size="xs"
-                                  variant="outline"
-                                  onClick={() =>
-                                    topicControls.shuffleTopic(
-                                      roomId,
-                                      (room as any).topicBox
-                                    )
-                                  }
-                                  flex="1"
-                                >
-                                  🔄 シャッフル
-                                </AppButton>
-                                <AppButton
-                                  size="xs"
-                                  variant="outline"
-                                  onClick={() =>
-                                    topicControls.dealNumbers(roomId)
-                                  }
-                                  flex="1"
-                                >
-                                  🎲 数字配布
-                                </AppButton>
-                              </HStack>
-                            )}
-                          </Stack>
-                        </Box>
-                      )}
-
-                      {/* メインアクションボタン（開始・もう一度） */}
-                      {!showHostInHud && hostPrimaryAction && (
-                        <AppButton
-                          w="100%"
-                          colorPalette="orange"
-                          onClick={hostPrimaryAction.onClick}
-                          disabled={(hostPrimaryAction as any).disabled}
-                          title={(hostPrimaryAction as any).title}
-                          size="lg"
-                        >
-                          {(hostPrimaryAction as any).label}
-                        </AppButton>
-                      )}
-
-                      {/* リセットボタン - 常に表示で一貫性維持 */}
-                      <AppButton
-                        variant="outline"
-                        w="100%"
-                        onClick={resetToWaiting}
-                        size="md"
-                      >
-                        🔄 リセット
-                      </AppButton>
-                    </Stack>
-                  </Box>
-                </Panel>
-              </Box>
           </Box>
         }
         main={
@@ -600,26 +489,19 @@ export default function RoomPage() {
             justifyContent="center"
             overflow="hidden"
           >
-            {room.status === "clue" && me ? (
-              <Flex
-                w="100%"
-                h="100%"
-                align="center"
-                justify="center"
-                gap={{ base: 2, md: 4 }}
-                direction={{ base: "column", lg: "row" }}
-              >
-                {/* 中央: カードと入力エリア */}
-                <Flex
-                  align="center"
-                  gap={{ base: 2, md: 4 }}
-                  flexShrink={0}
-                  minW={0}
-                  direction={{ base: "row", md: "row" }}
-                >
+            <Flex
+              w="100%"
+              h="100%"
+              align="center"
+              justify="space-between"
+              gap={{ base: 2, md: 4 }}
+              direction={{ base: "column", xl: "row" }}
+              px={{ base: 2, md: 4 }}
+            >
+              {/* 左: 自分の手札（clue時のみ有効） */}
+              {room.status === "clue" && me ? (
+                <Flex align="center" gap={{ base: 2, md: 4 }} minW={0}>
                   <SelfNumberCard value={me.number} draggableId={me.id} />
-
-                  {/* コンパクトなClue入力エリア */}
                   <Flex align="center" gap={2} minW={0} flex="1">
                     <Text
                       fontSize="sm"
@@ -635,76 +517,31 @@ export default function RoomPage() {
                       currentValue={me?.clue1 || ""}
                     />
                   </Flex>
-
-                  {/* 🎮 ホスト操作: 一括判定ボタン */}
-                  {isHost && room.options?.resolveMode === "sort-submit" && (
-                    <Box
-                      px={3}
-                      py={2}
-                      bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
-                      rounded="md"
-                      boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.SUBTLE}
-                    >
-                      <AppButton
-                        colorPalette="teal"
-                        size="sm"
-                        w="100%"
-                        onClick={async () => {
-                          const proposal: string[] =
-                            (room as any)?.order?.proposal || [];
-                          if (proposal.length === 0) {
-                            notify({
-                              title: "まだカードが場にありません",
-                              type: "info",
-                            });
-                            return;
-                          }
-                          const assigned = players
-                            .filter(
-                              (p) => typeof (p as any).number === "number"
-                            )
-                            .map((p) => p.id);
-                          if (assigned.length !== proposal.length) {
-                            notify({
-                              title: "まだ全員のカードが場に出ていません",
-                              type: "warning",
-                            });
-                            return;
-                          }
-                          try {
-                            await submitSortedOrder(roomId, proposal);
-                            notify({
-                              title: "一括判定を実行",
-                              type: "success",
-                            });
-                          } catch (err: any) {
-                            notify({
-                              title: "一括判定失敗",
-                              description: err?.message,
-                              type: "error",
-                            });
-                          }
-                        }}
-                      >
-                        🎯 せーので判定！
-                      </AppButton>
-                    </Box>
-                  )}
                 </Flex>
-              </Flex>
-            ) : room.status === "playing" ? (
-              <Text fontSize="sm" color="fgMuted" textAlign="center">
-                下部の場パネルで「出す」を実行してください。
-              </Text>
-            ) : room.status === "waiting" ? (
-              <Text fontSize="sm" color="fgMuted" textAlign="center">
-                ゲーム開始をお待ちください...
-              </Text>
-            ) : (
-              <Text fontSize="sm" color="fgMuted" textAlign="center">
-                ゲーム準備中...
-              </Text>
-            )}
+              ) : (
+                <Box />
+              )}
+
+              {/* 右: ホスト操作群（ホストのみ表示） */}
+              {isHost ? (
+                <HostControlDock
+                  roomId={roomId}
+                  room={room}
+                  players={players}
+                  onlineCount={onlinePlayers.length}
+                  hostPrimaryAction={hostPrimaryAction}
+                  onReset={resetToWaiting}
+                />
+              ) : (
+                <Text fontSize="sm" color="fgMuted" textAlign="center">
+                  {room.status === "playing"
+                    ? "下部の場パネルで「出す」を実行してください。"
+                    : room.status === "waiting"
+                    ? "ゲーム開始をお待ちください..."
+                    : "ゲーム準備中..."}
+                </Text>
+              )}
+            </Flex>
           </Box>
         }
       />
