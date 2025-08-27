@@ -47,16 +47,6 @@ export default function UniversalMonitor({
       </Box>
       
       {/* Instruction Text - モックデザイン準拠 */}
-      <Box
-        color="#64748b" // --slate-500
-        maxWidth="480px"
-        margin="0 auto"
-        fontSize={{ base: "0.875rem", md: "1rem" }}
-        padding={{ base: "0 1rem", md: "0" }}
-      >
-        あなたの数字を「{(room as any)?.topic || "お題"}」で表現してください。<br />
-        <Box as="strong">数字そのものは絶対に言わないように！</Box>
-      </Box>
     </Box>
   );
 }
