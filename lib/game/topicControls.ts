@@ -38,6 +38,20 @@ export const topicControls = {
     }
   },
 
+  // お題をクリア（カテゴリ/お題の選び直し）
+  async resetTopic(roomId: string) {
+    try {
+      await updateDoc(doc(db!, "rooms", roomId), {
+        topicBox: null,
+        topicOptions: null,
+        topic: null,
+      });
+      notify({ title: "お題をクリアしました", type: "success" });
+    } catch (error: any) {
+      notify({ title: "お題のクリアに失敗", description: error?.message || String(error), type: "error" });
+    }
+  },
+
   // 現在のカテゴリでお題をシャッフル
   async shuffleTopic(roomId: string, currentCategory: string | null) {
     if (!currentCategory) {

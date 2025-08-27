@@ -13,11 +13,13 @@ export function CluePanel({
   me,
   label = "連想ワード",
   readOnly = false,
+  rightActions,
 }: {
   roomId: string;
   me: PlayerDoc & { id: string };
   label?: string;
   readOnly?: boolean;
+  rightActions?: React.ReactNode;
 }) {
   const [text, setText] = useState<string>(me?.clue1 || "");
   useEffect(() => setText(me?.clue1 || ""), [me?.clue1]);
@@ -73,8 +75,9 @@ export function CluePanel({
             {me.number ?? "?"}
           </Heading>
         </Box>
-        <HStack>
-          <Input
+        <HStack align="stretch" gap={3} justify="space-between">
+          <HStack flex="1" minW={0}>
+            <Input
             placeholder={`${label}（いつでも変更可）`}
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -85,11 +88,24 @@ export function CluePanel({
               }
             }}
             disabled={readOnly}
-          />
-          <AppButton onClick={submit} colorPalette="orange" disabled={readOnly}>
-            更新
-          </AppButton>
+            />
+            <AppButton onClick={submit} colorPalette="orange" disabled={readOnly}>
+              更新
+            </AppButton>
+          </HStack>
+
+          {rightActions && (
+            <Box display={{ base: "none", md: "flex" }} alignItems="center" gap={2}>
+              {rightActions}
+            </Box>
+          )}
         </HStack>
+
+        {rightActions && (
+          <Box display={{ base: "flex", md: "none" }} gap={2} justifyContent="flex-end">
+            {rightActions}
+          </Box>
+        )}
         <Text color="fgMuted">
           {label}
           は全員に表示されます。チャットで相談しながら自由に変更できます。
