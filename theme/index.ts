@@ -176,58 +176,50 @@ const config = defineConfig({
     },
     semanticTokens: {
       colors: {
-        canvasBg: { value: { base: "gray.50", _dark: "#0B0D10" } },
-        panelBg: { value: { base: "white", _dark: "#11151A" } },
-        panelSubBg: { value: { base: "gray.50", _dark: "#161A20" } },
-        fgDefault: { value: { base: "gray.800", _dark: "#E8EDF4" } },
-        fgMuted: { value: { base: "gray.600", _dark: "#A9B4C2" } },
-        borderDefault: { value: { base: "gray.200", _dark: "whiteAlpha.200" } },
+        canvasBg: { value: "gray.50" }, // ライトモード固定
+        panelBg: { value: "white" }, // ライトモード固定
+        panelSubBg: { value: "gray.50" }, // ライトモード固定
+        fgDefault: { value: "gray.800" }, // ライトモード固定
+        fgMuted: { value: "gray.600" }, // ライトモード固定
+        borderDefault: { value: "gray.200" }, // ライトモード固定
         accent: {
-          value: { base: "{colors.brand.500}", _dark: "{colors.brand.400}" },
+          value: "{colors.brand.500}", // ライトモード固定
         },
         accentSubtle: {
-          value: {
-            base: "{colors.brand.50}",
-            _dark: "{colors.brand.900}",
-          },
+          value: "{colors.brand.50}", // ライトモード固定
         },
         // success/fail の subtle 背景を明示化
         successSubtle: {
-          value: { base: "rgba(56,178,172,0.10)", _dark: "rgba(56,178,172,0.12)" },
+          value: "rgba(56,178,172,0.10)", // ライトモード固定
         },
         dangerSubtle: {
-          value: { base: "rgba(255,80,80,0.10)", _dark: "rgba(255,80,80,0.12)" },
+          value: "rgba(255,80,80,0.10)", // ライトモード固定
         },
         cardHoverBg: {
-          value: { base: "gray.100", _dark: "whiteAlpha.100" },
+          value: "gray.100", // ライトモード固定
         },
-        link: { value: { base: "blue.600", _dark: "blue.300" } },
+        link: { value: "blue.600" }, // ライトモード固定
         // focus ring token (Chakra v3 semantic palette 仕様に近似)
         focusRing: {
-          value: { base: "{colors.brand.400}", _dark: "{colors.brand.300}" },
+          value: "{colors.brand.400}", // ライトモード固定
         },
         // 状態色 (今後 colorPalette による上書きを想定)
-        dangerSolid: { value: { base: "red.500", _dark: "red.400" } },
-        successSolid: { value: { base: "green.500", _dark: "green.400" } },
+        dangerSolid: { value: "red.500" }, // ライトモード固定
+        successSolid: { value: "green.500" }, // ライトモード固定
         // Banner / Self number foreground brand-ish
-        panelBannerFg: { value: { base: "#0f1724", _dark: "#0f1724" } },
-        selfNumberFg: { value: { base: "#0F3460", _dark: "#0F3460" } },
+        panelBannerFg: { value: "#0f1724" }, // ライトモード固定
+        selfNumberFg: { value: "#0F3460" }, // ライトモード固定
       },
       shadows: {
-        interactive: { value: { base: "{shadows.sm}", _dark: "{shadows.sm}" } },
-        elevated: { value: { base: "{shadows.md}", _dark: "{shadows.md}" } },
+        interactive: { value: "{shadows.sm}" }, // ライトモード固定
+        elevated: { value: "{shadows.md}" }, // ライトモード固定
       },
       gradients: {
-        accentSoft: { value: { base: "{gradients.accentSoft}" } },
-        dangerStrong: { value: { base: "{gradients.dangerStrong}" } },
-        playerNumber: { value: { base: "{gradients.playerNumber}" } },
+        accentSoft: { value: "{gradients.accentSoft}" }, // ライトモード固定
+        dangerStrong: { value: "{gradients.dangerStrong}" }, // ライトモード固定
+        playerNumber: { value: "{gradients.playerNumber}" }, // ライトモード固定
         boardPattern: {
-          value: {
-            base:
-              "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)",
-            _dark:
-              "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)",
-          },
+          value: "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)", // ライトモード固定
         },
       },
     },

@@ -138,6 +138,15 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             disabled={readOnly}
             size="sm"
             borderRadius="lg"
+            bg="white" // 緊急修正: 確実な白背景
+            color="gray.900" // 緊急修正: 確実な黒文字
+            border="1px solid"
+            borderColor="gray.300" // 緊急修正: 明確な境界線
+            _placeholder={{ color: "gray.500" }}
+            _focus={{ 
+              borderColor: "blue.500", 
+              boxShadow: "0 0 0 1px blue.500" 
+            }}
           />
           <AppButton
             onClick={send}

@@ -8,8 +8,7 @@ function Line({ w = "60%", h = 4 }: { w?: any; h?: any }) {
       w={w}
       h={h}
       rounded="full"
-      bg="blackAlpha.300"
-      _dark={{ bg: "whiteAlpha.200" }}
+      bg="blackAlpha.300" // ライトモード固定
       className="animate-pulse"
     />
   );

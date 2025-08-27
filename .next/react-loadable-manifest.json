@@ -3,25 +3,25 @@
     "id": 71424,
     "files": [
       "static/chunks/240-cd44bdba00819a12.js",
-      "static/chunks/424.359600e36aa82a5c.js"
+      "static/chunks/424.a02e68b23ae3c0dd.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/CluePanel": {
     "id": 14051,
     "files": [
-      "static/chunks/51.dee48a9a1d6b06e1.js"
+      "static/chunks/51.4c006e18f604d168.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/Hud": {
     "id": 42794,
     "files": [
-      "static/chunks/794.63258674bbbbb171.js"
+      "static/chunks/794.b300913cb41c0f10.js"
     ]
   },
   "app\\rooms\\[roomId]\\page.tsx -> @/components/Participants": {
     "id": 37108,
     "files": [
-      "static/chunks/108.4b5e89efebbf8eb1.js"
+      "static/chunks/108.bc5a135828799612.js"
     ]
   },
   "lib\\services\\roomService.ts -> @/lib/game/random": {

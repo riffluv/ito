@@ -1,7 +1,7 @@
 import { DevPresetSwitcher } from "@/components/DevPresetSwitcher";
 import GameCard from "@/components/ui/GameCard";
 import { Panel } from "@/components/ui/Panel";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { getBorderWidth } from "@/theme/layout";
 import { Box, Grid, Heading, HStack, Stack, Text } from "@chakra-ui/react";
 
 export const metadata = { title: "Design Preview" };
@@ -58,7 +58,7 @@ function TokenRow({ name, tokenVar }: { name: string; tokenVar: string }) {
         flex={1}
         h={6}
         rounded="md"
-        borderWidth={UNIFIED_LAYOUT.BORDER_WIDTH}
+        borderWidth={getBorderWidth("LAYOUT")}
         bg={`var(${tokenVar})`}
       />
       <Text fontFamily="mono" fontSize="xs">

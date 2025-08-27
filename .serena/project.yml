@@ -63,9 +63,6 @@ excluded_tools: []
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: |-
-  以降のやり取りでは常に日本語で回答してください。
-  コマンド、ファイルパス、コード識別子はバッククォートで囲んで提示してください。
-  Serena のツールを優先して使用し、可能な限りシンボル指向の操作を行ってください。
+initial_prompt: ""
 
 project_name: "codex"

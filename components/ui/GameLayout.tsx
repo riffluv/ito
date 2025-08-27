@@ -100,10 +100,10 @@ export function GameLayout({
           gridArea="main-area"
           bg="white"
           padding={{ base: "1rem", md: "2rem" }}
-          overflowY="auto"
+          overflow="hidden" // 根本解決: Grid子要素の適切なoverflow制御
           display="flex"
           flexDirection="column"
-          minHeight={0} // Allow flex shrinking
+          position="relative" // Grid子要素の適切な配置コンテキスト
         >
           {main}
         </Box>
