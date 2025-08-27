@@ -9,7 +9,11 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "chakra:typegen": "npx @chakra-ui/cli typegen ./theme/index.ts --outdir types",
-    "lint:css": "stylelint \"**/*.{css,scss}\""
+    "lint:css": "stylelint \"**/*.{css,scss}\"",
+    "audit:design": "node scripts/audit-design.js",
+    "prepare": "npm run chakra:typegen",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.25.0",

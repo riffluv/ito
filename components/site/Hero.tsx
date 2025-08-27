@@ -1,5 +1,6 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Container, HStack, Text } from "@chakra-ui/react";
 
 type Props = {
@@ -18,7 +19,7 @@ export default function Hero({ onPlay, onRules }: Props) {
         base: "linear(to-b, canvasBg, panelSubBg)",
         _dark: "linear(to-b, canvasBg, panelSubBg)",
       }}
-      boxShadow="0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)"
+      boxShadow={UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT}
     >
       <Container maxW="6xl" position="relative">
         {/* hero heading removed per request to avoid transparent selectable text */}

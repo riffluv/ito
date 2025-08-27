@@ -28,7 +28,7 @@ export default function UniversalMonitor({
     >
       {/* top banner */}
       <Box
-        bgGradient="linear(90deg,#ff9a58,#ffcf67)"
+        bgGradient="accentSoft"
         px={4}
         py={2}
         roundedTopLeft={8}

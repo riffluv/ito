@@ -221,6 +221,14 @@ const config = defineConfig({
         accentSoft: { value: { base: "{gradients.accentSoft}" } },
         dangerStrong: { value: { base: "{gradients.dangerStrong}" } },
         playerNumber: { value: { base: "{gradients.playerNumber}" } },
+        boardPattern: {
+          value: {
+            base:
+              "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)",
+            _dark:
+              "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)",
+          },
+        },
       },
     },
     recipes: {

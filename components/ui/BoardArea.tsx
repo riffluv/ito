@@ -37,9 +37,7 @@ export default function BoardArea({ isOver, droppable = true, children, ...rest 
           },
         }}
         bg={isOver ? "accentSubtle" : "panelSubBg"}
-        backgroundImage={
-          "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)"
-        }
+        backgroundImage="var(--gradients-boardPattern)"
         cursor={droppable ? (isOver ? "copy" : "default") : "not-allowed"}
         transition="all 150ms ease"
         {...rest}

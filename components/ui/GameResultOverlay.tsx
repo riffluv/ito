@@ -26,7 +26,7 @@ export function GameResultOverlay({ failed, failedAt }: GameResultOverlayProps) 
           color="white"
           letterSpacing={1}
           boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.ELEVATED}
-          bg="rgba(255,70,70,0.95)"
+          bgGradient="dangerStrong"
           transform="translateX(0)"
           animation="shake 0.6s ease-in-out"
           css={{

@@ -1,7 +1,8 @@
 "use client";
 
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
+import { AppIconButton } from "@/components/ui/AppIconButton";
 import { AppButton } from "@/components/ui/AppButton";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { ChevronUp, ChevronDown, MessageCircle, Users, Menu } from "lucide-react";
@@ -329,7 +330,7 @@ export function MobileBottomSheet({
           </Flex>
 
           {/* 右側: 展開/縮小ボタン */}
-          <IconButton
+          <AppIconButton
             size="sm"
             variant="ghost"
             aria-label={
@@ -350,7 +351,7 @@ export function MobileBottomSheet({
             ) : (
               <ChevronDown size={20} />
             )}
-          </IconButton>
+          </AppIconButton>
         </Flex>
 
         {/* コンテンツエリア */}
