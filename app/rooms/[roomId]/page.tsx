@@ -500,7 +500,7 @@ export default function RoomPage() {
             >
               {/* 左: 自分の手札（clue時のみ有効） */}
               {room.status === "clue" && me ? (
-                <Flex align="center" gap={{ base: 2, md: 4 }} minW={0}>
+                <Flex align="center" gap={{ base: 2, md: 4 }} minW={0} flex="1">
                   <SelfNumberCard value={me.number} draggableId={me.id} />
                   <Flex align="center" gap={2} minW={0} flex="1">
                     <Text
@@ -516,30 +516,27 @@ export default function RoomPage() {
                       playerId={me.id}
                       currentValue={me?.clue1 || ""}
                     />
+                    {/* インライン操作は廃止（Dockに一本化） */}
                   </Flex>
                 </Flex>
               ) : (
                 <Box />
               )}
 
-              {/* 右: ホスト操作群（ホストのみ表示） */}
+              {/* 右: ホスト操作群（Dockに一本化・常時表示） */}
               {isHost ? (
-                <HostControlDock
-                  roomId={roomId}
-                  room={room}
-                  players={players}
-                  onlineCount={onlinePlayers.length}
-                  hostPrimaryAction={hostPrimaryAction}
-                  onReset={resetToWaiting}
-                />
+                <Box>
+                  <HostControlDock
+                    roomId={roomId}
+                    room={room}
+                    players={players}
+                    onlineCount={onlinePlayers.length}
+                    hostPrimaryAction={hostPrimaryAction}
+                    onReset={resetToWaiting}
+                  />
+                </Box>
               ) : (
-                <Text fontSize="sm" color="fgMuted" textAlign="center">
-                  {room.status === "playing"
-                    ? "下部の場パネルで「出す」を実行してください。"
-                    : room.status === "waiting"
-                    ? "ゲーム開始をお待ちください..."
-                    : "ゲーム準備中..."}
-                </Text>
+                <Box />
               )}
             </Flex>
           </Box>

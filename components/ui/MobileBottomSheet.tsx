@@ -1,7 +1,7 @@
 "use client";
 
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Text, VisuallyHidden } from "@chakra-ui/react";
 import { AppIconButton } from "@/components/ui/AppIconButton";
 import { AppButton } from "@/components/ui/AppButton";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
@@ -91,33 +91,19 @@ export function MobileBottomSheet({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sheetState, contentType]);
 
-  // アクセシビリティ - シート状態変更時のアナウンス
-  useEffect(() => {
-    const announcement = document.createElement("div");
-    announcement.setAttribute("aria-live", "polite");
-    announcement.setAttribute("aria-atomic", "true");
-    announcement.className = "sr-only";
-    
-    let message = "";
+  // SR向けライブリージョン（DOM直挿入をやめ、視覚非表示で常駐）
+  const liveMessage = (() => {
     switch (sheetState) {
       case "collapsed":
-        message = "ボトムシートが閉じられました。Shift+Enterで開けます。";
-        break;
+        return "ボトムシートが閉じられました。Shift+Enterで開けます。";
       case "partial":
-        message = `ボトムシートが開かれました。現在は${contentType === "chat" ? "チャット" : contentType === "participants" ? "参加者リスト" : "メニュー"}を表示中です。`;
-        break;
+        return `ボトムシートが開かれました。現在は${contentType === "chat" ? "チャット" : contentType === "participants" ? "参加者リスト" : "メニュー"}を表示中です。`;
       case "full":
-        message = `ボトムシートが全画面表示されました。現在は${contentType === "chat" ? "チャット" : contentType === "participants" ? "参加者リスト" : "メニュー"}を表示中です。`;
-        break;
+        return `ボトムシートが全画面表示されました。現在は${contentType === "chat" ? "チャット" : contentType === "participants" ? "参加者リスト" : "メニュー"}を表示中です。`;
+      default:
+        return "";
     }
-    
-    announcement.textContent = message;
-    document.body.appendChild(announcement);
-    
-    setTimeout(() => {
-      document.body.removeChild(announcement);
-    }, 1000);
-  }, [sheetState, contentType]);
+  })();
 
   // シート高さ計算
   const getSheetHeight = () => {
@@ -257,6 +243,8 @@ export function MobileBottomSheet({
         aria-describedby="bottom-sheet-description"
         tabIndex={sheetState === "collapsed" ? -1 : 0}
       >
+        {/* 視覚には表示しないSR用ライブメッセージ */}
+        <VisuallyHidden aria-live="polite">{liveMessage}</VisuallyHidden>
         {/* アクセシビリティ - スクリーンリーダー用説明 */}
         <Box
           id="bottom-sheet-description"
