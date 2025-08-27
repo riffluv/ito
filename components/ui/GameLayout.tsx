@@ -67,17 +67,13 @@ export function GameLayout({
           },
         }}
       >
-        {/* ヘッダー: Professional Game Header - メインメニューと同じ高さ */}
+        {/* ヘッダー: Professional Game Header - メインメニューと統一 */}
         <Box
           gridArea="header"
           bg="white"
           borderBottom="1px solid #e2e8f0" // --slate-200
-          padding="0.75rem 1.5rem"
           display="flex"
-          justifyContent="space-between"
-          alignItems="center"
           boxShadow="0 1px 3px 0 rgb(0 0 0 / 0.1)"
-          minHeight="56px"
         >
           {header}
         </Box>

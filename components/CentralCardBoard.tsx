@@ -163,21 +163,35 @@ export function CentralCardBoard({
           border="2px dashed #cbd5e1" // --slate-300
           borderRadius="1rem" // --radius-xl
           padding={{ base: "1rem", md: "1.5rem" }}
-          minHeight={{ base: "120px", md: "160px" }} // Responsive min height
-          maxHeight="300px" // Prevent overflow
+          minHeight={{ base: "200px", md: "240px" }} // カードサイズに対応した最小高さ
+          // maxHeightを除去 - コンテントに応じて自然に伸縮
           display="flex"
-          alignItems="center"
+          alignItems="center" // カードが中央に美しく配置
           justifyContent="center"
           gap={{ base: "0.5rem", md: "1rem" }}
           flexWrap="wrap"
           marginBottom={{ base: "1rem", md: "1.5rem" }}
           width="100%"
-          overflowX="auto" // Allow horizontal scroll if needed
-          overflowY="hidden"
+          // スクロールは不要 - コンテンツに応じて自然に伸縮
           css={{
             "&[data-drop-target='true']": {
               borderColor: "#0ea5e9", // --blue-500
               backgroundColor: "#f0f9ff", // --blue-50
+            },
+            // スクロールバーのスタイル改善
+            "&::-webkit-scrollbar": {
+              width: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              background: "#f1f5f9",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "#cbd5e1",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              background: "#94a3b8",
             },
           }}
           data-drop-target={isOver && canDrop ? "true" : "false"}
@@ -192,12 +206,12 @@ export function CentralCardBoard({
             onDragLeave={() => setIsOver(false)}
             onDrop={onDrop}
             width="100%"
-            height="100%"
             display="flex"
-            alignItems="center"
+            alignItems="flex-start" // 上揃えで一貫性保持
             justifyContent="center"
-            gap="1rem"
+            gap={{ base: "0.5rem", md: "1rem" }}
             flexWrap="wrap"
+            minHeight="inherit" // 親の minHeight を継承
           >
             {/* Drop Slots and Cards */}
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
@@ -207,7 +221,7 @@ export function CentralCardBoard({
               >
                 <SortableContext items={activeProposal}>
                   {/* Empty slots for placement */}
-                  {Array.from({ length: Math.min(5, Math.max(3, eligibleIds.length)) }).map((_, idx) => {
+                  {Array.from({ length: eligibleIds.length }).map((_, idx) => {
                     const cardId = activeProposal[idx];
                     return cardId ? (
                       <SortableItem id={cardId} key={cardId}>
@@ -216,10 +230,10 @@ export function CentralCardBoard({
                     ) : (
                       <Box
                         key={`slot-${idx}`}
-                        width={{ base: "60px", md: "80px" }}
-                        height={{ base: "84px", md: "112px" }}
+                        width={UNIFIED_LAYOUT.CARD.WIDTH} // 手札と同じサイズ
+                        height={UNIFIED_LAYOUT.CARD.HEIGHT} // 手札と同じサイズ
                         border="2px dashed #cbd5e1" // --slate-300
-                        borderRadius="0.75rem" // --radius-lg
+                        borderRadius="1rem" // --radius-xl (手札と統一)
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
@@ -246,13 +260,13 @@ export function CentralCardBoard({
                   ))
                 ) : (
                   // Show empty drop zones when no cards
-                  Array.from({ length: Math.max(3, eligibleIds.length) }).map((_, idx) => (
+                  Array.from({ length: eligibleIds.length }).map((_, idx) => (
                     <Box
                       key={`drop-zone-${idx}`}
-                      width={{ base: "60px", md: "80px" }}
-                      height={{ base: "84px", md: "112px" }}
+                      width={UNIFIED_LAYOUT.CARD.WIDTH} // 手札と同じサイズ
+                      height={UNIFIED_LAYOUT.CARD.HEIGHT} // 手札と同じサイズ
                       border="2px dashed #cbd5e1"
-                      borderRadius="0.75rem"
+                      borderRadius="1rem" // --radius-xl (手札と統一)
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
