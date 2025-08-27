@@ -2,6 +2,7 @@
   "extends": ["stylelint-config-standard", "stylelint-config-recess-order"],
   "ignoreFiles": ["**/node_modules/**", "**/dist/**"],
   "rules": {
+    "declaration-no-important": true,
     "color-function-notation": null,
     "alpha-value-notation": null,
     "selector-class-pattern": null,

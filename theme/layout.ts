@@ -30,9 +30,9 @@ export const UNIFIED_LAYOUT = {
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
   CARD: {
-    MIN_WIDTH: "90px", // トランプ型の幅（拡大）
+    MIN_WIDTH: "140px",
     // カード高さを手札エリアに収まるように調整（ゲーム感重視）
-    MIN_HEIGHT: "140px", // トランプ型の高さ（縦長・拡大）
+    MIN_HEIGHT: "180px",
   },
 
   // インタラクション要素
@@ -90,24 +90,21 @@ export const UNIFIED_LAYOUT = {
     // カード階層
     CARD: {
       FLAT: "none", // borderlessカード
-      RAISED: "0 1px 3px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)", // 軽い浮遊感
-      FLOATING:
-        "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)", // ホバー時
-      ELEVATED:
-        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)", // モーダル要素
+      RAISED: "var(--shadows-cardRaised)", // 軽い浮遊感
+      FLOATING: "var(--shadows-cardFloating)", // ホバー時
+      ELEVATED: "var(--shadows-cardElevated)", // モーダル要素
     },
     // パネル階層
     PANEL: {
       BASE: "none", // 基本パネルはborderless
-      SUBTLE: "0 1px 2px 0 rgba(0,0,0,0.05)", // 微細なshadow
-      DISTINCT: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)", // 明確な分離
+      SUBTLE: "var(--shadows-panelSubtle)", // 微細なshadow
+      DISTINCT: "var(--shadows-panelDistinct)", // 明確な分離
     },
     // ゲーム要素
     GAME: {
-      HAND_CARD:
-        "0 2px 8px -2px rgba(0,0,0,0.12), 0 4px 12px -4px rgba(0,0,0,0.08)", // 手札カード
-      BOARD_CARD: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)", // 場のカード
-      ACTIVE_AREA: "inset 0 1px 2px 0 rgba(0,0,0,0.06)", // アクティブエリア（内側shadow）
+      HAND_CARD: "var(--shadows-cardFloating)", // 手札カード
+      BOARD_CARD: "var(--shadows-cardRaised)", // 場のカード
+      ACTIVE_AREA: "var(--shadows-activeArea)", // アクティブエリア（内側shadow）
     },
   },
 
@@ -328,7 +325,7 @@ export const validateLayoutUsage = {
     const hardcoded = [];
     if (cssText.includes('"1px"') || cssText.includes("'1px'")) {
       hardcoded.push(
-        "⚠️ borderWidth: UNIFIED_LAYOUT.BORDER_WIDTHを使用してください"
+        "⚠️ borderWidth: UNIFIED_LAYOUT.BORDER.WIDTH.* もしくは getDynamicBorder() を使用してください"
       );
     }
     if (/\b\d{2,}px\b/.test(cssText)) {

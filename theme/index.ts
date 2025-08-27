@@ -24,11 +24,11 @@ const config = defineConfig({
       fonts: {
         heading: {
           value:
-            "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+            "Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', Segoe UI, Roboto, Helvetica, Arial",
         },
         body: {
           value:
-            "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+            "Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', Segoe UI, Roboto, Helvetica, Arial",
         },
       },
       fontSizes: {
@@ -81,6 +81,13 @@ const config = defineConfig({
         xs: { value: "0 1px 2px rgba(0,0,0,0.12)" },
         sm: { value: "0 2px 4px -1px rgba(0,0,0,0.18)" },
         md: { value: "0 4px 10px -2px rgba(0,0,0,0.28)" },
+        // Panel / Card 用の統一シャドウトークン
+        panelSubtle: { value: "0 1px 2px 0 rgba(0,0,0,0.05)" },
+        panelDistinct: { value: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)" },
+        cardRaised: { value: "0 1px 3px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)" },
+        cardFloating: { value: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)" },
+        cardElevated: { value: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)" },
+        activeArea: { value: "inset 0 1px 2px 0 rgba(0,0,0,0.06)" },
         glow: {
           value:
             "0 0 0 2px rgba(56,178,172,0.55), 0 0 18px -4px rgba(56,178,172,0.5)",
@@ -150,9 +157,11 @@ const config = defineConfig({
         containerLg: { value: "1024px" },
 
         // === ゲーム要素 (統一システム) ===
-        // カードサイズ: DPI対応の流動的サイズ
+        // カードサイズ: DPI対応の流動/固定トークン
         cardSm: { value: "clamp(100px, 12vw, 140px)" },
         cardMd: { value: "clamp(140px, 16vw, 180px)" },
+        cardW: { value: "140px" },
+        cardH: { value: "180px" },
 
         // レイアウトサイズ: 統一レイアウトシステムと連携
         headerHeight: { value: "clamp(48px, 4vh, 64px)" },
@@ -181,6 +190,13 @@ const config = defineConfig({
             base: "{colors.brand.50}",
             _dark: "{colors.brand.900}",
           },
+        },
+        // success/fail の subtle 背景を明示化
+        successSubtle: {
+          value: { base: "rgba(56,178,172,0.10)", _dark: "rgba(56,178,172,0.12)" },
+        },
+        dangerSubtle: {
+          value: { base: "rgba(255,80,80,0.10)", _dark: "rgba(255,80,80,0.12)" },
         },
         cardHoverBg: {
           value: { base: "gray.100", _dark: "whiteAlpha.100" },
@@ -326,8 +342,8 @@ const config = defineConfig({
           container: {
             perspective: "1000px",
             position: "relative",
-            width: "140px",
-            height: "180px",
+            width: "{sizes.cardW}",
+            height: "{sizes.cardH}",
           },
           inner: {
             position: "absolute",
@@ -341,7 +357,7 @@ const config = defineConfig({
           },
           front: {
             p: 3,
-            borderRadius: "16px",
+            rounded: "xl",
             borderWidth: "2px",
             fontWeight: 700,
             position: "absolute",
@@ -354,7 +370,7 @@ const config = defineConfig({
           },
           back: {
             p: 3,
-            borderRadius: "16px",
+            rounded: "xl",
             borderWidth: "2px",
             fontWeight: 900,
             position: "absolute",
@@ -368,9 +384,9 @@ const config = defineConfig({
           },
           frame: {
             p: 3,
-            minW: "140px",
-            minH: "160px",
-            borderRadius: "12px",
+            minW: "{sizes.cardW}",
+            minH: "{sizes.cardH}",
+            rounded: "lg",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -398,13 +414,13 @@ const config = defineConfig({
             state: "default",
             css: {
               front: {
-                bgGradient: "linear(135deg,#1F2732,#242F3A)",
+                bg: "panelSubBg",
                 borderColor: "borderDefault",
                 boxShadow: "sm",
                 color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#1F2732,#242F3A)",
+                bg: "panelSubBg",
                 borderColor: "borderDefault",
                 boxShadow: "sm",
                 color: "fgDefault",
@@ -416,17 +432,15 @@ const config = defineConfig({
             state: "success",
             css: {
               front: {
-                bgGradient: "linear(135deg,#1F2732,#1A202C)",
-                borderColor: "teal.300",
-                boxShadow:
-                  "0 0 0 2px rgba(56,178,172,0.65), 0 0 22px -4px rgba(56,178,172,0.75), 0 0 60px -10px rgba(56,178,172,0.55)",
+                bg: "successSubtle",
+                borderColor: "successSolid",
+                boxShadow: "glow",
                 color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#2C7A7B,#38B2AC)",
-                borderColor: "teal.300",
-                boxShadow:
-                  "0 0 0 2px rgba(56,178,172,0.75), 0 0 28px -6px rgba(56,178,172,0.85), 0 0 70px -12px rgba(56,178,172,0.6)",
+                bg: "successSubtle",
+                borderColor: "successSolid",
+                boxShadow: "glow",
                 color: "fgDefault",
               },
             },
@@ -436,17 +450,15 @@ const config = defineConfig({
             state: "fail",
             css: {
               front: {
-                bgGradient: "linear(135deg,#321F1F,#3A2424)",
-                borderColor: "red.300",
-                boxShadow:
-                  "0 0 0 2px rgba(255,80,80,0.55), 0 0 22px -4px rgba(255,80,80,0.7)",
+                bg: "dangerSubtle",
+                borderColor: "dangerSolid",
+                boxShadow: "glowDanger",
                 color: "fgDefault",
               },
               back: {
-                bgGradient: "linear(135deg,#5B2525,#E53E3E)",
-                borderColor: "red.300",
-                boxShadow:
-                  "0 0 0 2px rgba(255,80,80,0.65), 0 0 28px -6px rgba(255,80,80,0.75)",
+                bg: "dangerSubtle",
+                borderColor: "dangerSolid",
+                boxShadow: "glowDanger",
                 color: "fgDefault",
               },
             },
@@ -457,7 +469,8 @@ const config = defineConfig({
             css: {
               frame: {
                 bg: "panelSubBg",
-                border: "1px solid {colors.gray.700}",
+                borderWidth: "1px",
+                borderColor: "borderDefault",
                 boxShadow: "xs",
               },
             },
@@ -467,10 +480,10 @@ const config = defineConfig({
             state: "success",
             css: {
               frame: {
-                bg: "rgba(56,178,172,0.10)",
-                border: "2px solid rgba(56,178,172,0.6)",
-                boxShadow:
-                  "0 0 0 2px rgba(56,178,172,0.75), 0 0 30px -6px rgba(56,178,172,0.85), 0 0 80px -12px rgba(56,178,172,0.55)",
+                bg: "successSubtle",
+                borderWidth: "2px",
+                borderColor: "successSolid",
+                boxShadow: "glow",
               },
             },
           },
@@ -479,10 +492,10 @@ const config = defineConfig({
             state: "fail",
             css: {
               frame: {
-                bg: "rgba(255,80,80,0.10)",
-                border: "2px solid rgba(255,80,80,0.55)",
-                boxShadow:
-                  "0 0 0 2px rgba(255,80,80,0.55), 0 0 30px -6px rgba(255,80,80,0.7)",
+                bg: "dangerSubtle",
+                borderWidth: "2px",
+                borderColor: "dangerSolid",
+                boxShadow: "glowDanger",
               },
             },
           },

@@ -35,11 +35,7 @@ export default function Header() {
       <Container maxW="6xl" px={4}>
         <Flex align="center" justify="space-between">
           <HStack gap="3">
-            <Box
-              boxSize="6"
-              bgGradient="linear(to-br, brand.400, cyan.400)"
-              rounded="md"
-            />
+            <Box boxSize="6" bgGradient="accentSoft" rounded="md" />
             <Heading size="lg" letterSpacing="tight">
               Online ITO
             </Heading>

@@ -6,7 +6,7 @@
 
 1. Single Source of Truth: レイアウト寸法は `theme/layout.ts` の定数のみを参照 (魔法数禁止)。
 2. Tokens First: 色/余白/フォント/影/角丸は theme tokens or semantic tokens を最優先。直接 rgba/hex を埋め込む場合は差別化意図をコメント。
-3. No !important: 競合/優先度問題は構造・props・レシピで解決。`!important` 使用禁止。
+3. No !important: 競合/優先度問題は構造・props・レシピで解決。`!important` 使用禁止（例外: `@media (prefers-reduced-motion: reduce)` の全局オーバーライドのみ許容）。
 4. Scoped Scroll: 外枠は `overflow:hidden`, 内部スクロール領域は明示的コンポーネント (`ScrollRegion`) に限定。
 5. Intrinsic > Fixed: `auto` + min/max 組合せで固定高さを避け DPI / clamp 変動に追従。
 6. Progressive Enhancement: `100dvh` を基本。古環境フォールバックが必要なら `@supports` ブロックで追加。
@@ -27,6 +27,7 @@ BOARD_MIN_HEIGHT 220
 
 - 変更時はコンポーネント内のマジックナンバーを探し `grep` で差分吸収。
 - AI へ寸法指示する際は「これら定数を利用」と明記。
+- GameCard の標準寸法は `tokens.sizes.cardW/cardH`（現在 140x180）と `UNIFIED_LAYOUT.CARD.MIN_*` に統一。
 
 ## 3. タイポグラフィ
 
@@ -86,6 +87,7 @@ Avoid fixed heights; use min/max and flex.
 
 - Stylelint 推奨設定 + 禁止ルール: `declaration-no-important`, `unit-no-unknown`, `property-no-vendor-prefix`。
 - 追加プラグイン: `stylelint-order` で宣言順序 (Layout -> Box Model -> Typography -> Visual -> Misc)。
+ - CSS Nesting: ブラウザネイティブの CSS Nesting を採用（主要最新版に限定）。互換重視の場合は `postcss-nesting` を導入。
 
 ## 12. 変更フロー
 
@@ -110,6 +112,11 @@ Avoid fixed heights; use min/max and flex.
 | `.some-class { width: 280px !important; }` | Chakra prop `w="280px"` or layout定数 |
 | `overflow:auto` を親複数階層に             | 最上位のみ hidden, 内側 ScrollRegion  |
 | 任意 rgba 透過でブランド色再現             | semantic token / palette 利用         |
+
+## 16. モックHTMLの扱い
+
+- ルート直下の `ito-*.html` は参考用モック（実行時未使用）。設計の参照のみ可。
+- 実装時は theme tokens / semantic tokens / `UNIFIED_LAYOUT` を必ず使用し、モックの `rgba()/linear-gradient()` はコピーしない。
 
 ## 15. チェックリスト (PR 用)
 

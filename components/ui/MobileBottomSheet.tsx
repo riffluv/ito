@@ -1,7 +1,8 @@
 "use client";
 
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Button, Flex, IconButton, Text } from "@chakra-ui/react";
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { ChevronUp, ChevronDown, MessageCircle, Users, Menu } from "lucide-react";
 import { ReactNode, useState, useRef, useEffect } from "react";
@@ -47,10 +48,10 @@ export function MobileBottomSheet({
   };
 
   // テーマカラー（Chakra UI v3対応）
-  const bgColor = "white";
-  const borderColor = "gray.200";
-  const buttonBg = "gray.50";
-  const buttonHoverBg = "gray.100";
+  const bgColorVar = "var(--colors-panelBg)";
+  const borderColorVar = "var(--colors-borderDefault)";
+  const buttonBg = "panelSubBg";
+  const buttonHoverBg = "cardHoverBg";
 
   // アクセシビリティ - フォーカス管理
   useEffect(() => {
@@ -183,10 +184,10 @@ export function MobileBottomSheet({
 
   // アクティブボタンのスタイル
   const getButtonStyle = (type: ContentType) => ({
-    bg: contentType === type ? "blue.500" : buttonBg,
-    color: contentType === type ? "white" : "inherit",
+    bg: contentType === type ? "accent" : buttonBg,
+    color: contentType === type ? "panelBannerFg" : "inherit",
     _hover: {
-      bg: contentType === type ? "blue.600" : buttonHoverBg,
+      bg: contentType === type ? "accent" : buttonHoverBg,
     },
   });
 
@@ -232,12 +233,12 @@ export function MobileBottomSheet({
           damping: 30,
         }}
         style={{
-          backgroundColor: bgColor,
+          backgroundColor: bgColorVar,
           borderTopLeftRadius: "16px",
           borderTopRightRadius: "16px",
-          borderTop: `1px solid ${borderColor}`,
-          borderLeft: `1px solid ${borderColor}`,
-          borderRight: `1px solid ${borderColor}`,
+          borderTop: `1px solid ${borderColorVar}`,
+          borderLeft: `1px solid ${borderColorVar}`,
+          borderRight: `1px solid ${borderColorVar}`,
           boxShadow: UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT,
           pointerEvents: "auto",
           minHeight: "60px",
@@ -273,7 +274,7 @@ export function MobileBottomSheet({
           align="center"
           justify="space-between"
           px={4}
-          borderBottom={sheetState !== "collapsed" ? `1px solid ${borderColor}` : "none"}
+          borderBottom={sheetState !== "collapsed" ? `1px solid ${borderColorVar}` : "none"}
           cursor={isDragging ? "grabbing" : "grab"}
         >
           {/* ドラッグインジケーター */}
@@ -291,7 +292,7 @@ export function MobileBottomSheet({
 
           {/* 左側: ナビゲーションボタン */}
           <Flex gap={1}>
-            <Button
+            <AppButton
               ref={firstButtonRef}
               size="sm"
               variant="ghost"
@@ -302,8 +303,8 @@ export function MobileBottomSheet({
             >
               <MessageCircle size={16} />
               <Text ml={1}>チャット</Text>
-            </Button>
-            <Button
+            </AppButton>
+            <AppButton
               size="sm"
               variant="ghost"
               onClick={() => setContentType("participants")}
@@ -313,8 +314,8 @@ export function MobileBottomSheet({
             >
               <Users size={16} />
               <Text ml={1}>参加者</Text>
-            </Button>
-            <Button
+            </AppButton>
+            <AppButton
               size="sm"
               variant="ghost"
               onClick={() => setContentType("sidebar")}
@@ -324,7 +325,7 @@ export function MobileBottomSheet({
             >
               <Menu size={16} />
               <Text ml={1}>メニュー</Text>
-            </Button>
+            </AppButton>
           </Flex>
 
           {/* 右側: 展開/縮小ボタン */}
