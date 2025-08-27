@@ -72,14 +72,9 @@ export function Participants({
                   </Text>
 
                   {/* コンパクトな在室インジケーター */}
-                  <CheckCircle2
-                    size={12}
-                    style={{
-                      color: "#22C55E",
-                      flexShrink: 0,
-                      opacity: 0.8,
-                    }}
-                  />
+                  <Box as="span" color="successSolid" opacity={0.85} flexShrink={0}>
+                    <CheckCircle2 size={12} color="currentColor" />
+                  </Box>
                 </HStack>
 
                 {/* 連想ワード - 常に同じスペースを確保してCLS防止 */}

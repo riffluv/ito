@@ -105,7 +105,7 @@ export function SortBoard({
               p={3}
               borderRadius="xl"
               bg="panelBg"
-              boxShadow="cardHover"
+              boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.FLOATING}
               transform="scale(1.04) rotate(0.5deg)"
             >
               <Text>{map.get(activeId)?.name}</Text>

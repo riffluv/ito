@@ -69,7 +69,7 @@ export function PlayerList({
             key={p.id}
             p={3}
             borderRadius="xl"
-            bg={isMe ? "#141C2E" : "panelSubBg"}
+            bg={isMe ? "accentSubtle" : "panelSubBg"}
             boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
             _hover={{ boxShadow: UNIFIED_LAYOUT.ELEVATION.CARD.FLOATING }}
           >

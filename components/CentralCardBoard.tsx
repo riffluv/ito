@@ -143,7 +143,7 @@ export function CentralCardBoard({
             px={4}
             py={2}
             rounded="lg"
-            bg="rgba(123,211,182,0.08)"
+            bg="successSubtle"
             fontWeight={700}
             fontSize="md"
           >
