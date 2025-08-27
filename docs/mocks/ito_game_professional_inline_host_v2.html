@@ -93,19 +93,12 @@
             display: grid;
             grid-template-areas:
                 "header header header"
-                "sidebar main-area host-controls"
+                "sidebar main-area chat"
                 "hand hand hand";
             grid-template-columns: 280px 1fr 320px;
             grid-template-rows: auto 1fr 180px;
             height: 100vh;
             gap: 1px;
-        }
-
-        .game-layout.chat-mode {
-            grid-template-areas:
-                "header header header"
-                "sidebar main-area chat"
-                "hand hand hand";
         }
 
         /* Header */
@@ -422,215 +415,6 @@
             color: var(--amber-500);
         }
 
-        /* Host Controls Panel */
-        .host-controls {
-            grid-area: host-controls;
-            background: var(--white);
-            border-left: 1px solid var(--slate-200);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .host-header {
-            padding: var(--space-6) var(--space-6) var(--space-4);
-            border-bottom: 1px solid var(--slate-200);
-            background: var(--amber-50);
-        }
-
-        .host-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--slate-900);
-            margin-bottom: var(--space-2);
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-        }
-
-        .host-badge {
-            background: var(--amber-500);
-            color: var(--white);
-            font-size: 0.75rem;
-            padding: var(--space-1) var(--space-2);
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-        }
-
-        .host-status {
-            font-size: 0.875rem;
-            color: var(--slate-600);
-        }
-
-        .host-controls-body {
-            padding: var(--space-4) var(--space-6);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-6);
-        }
-
-        .control-section {
-            border-bottom: 1px solid var(--slate-100);
-            padding-bottom: var(--space-4);
-        }
-
-        .control-section:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .section-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--slate-700);
-            margin-bottom: var(--space-3);
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-        }
-
-        .control-group.horizontal {
-            flex-direction: row;
-            gap: var(--space-2);
-        }
-
-        .host-btn {
-            padding: var(--space-3) var(--space-4);
-            border-radius: var(--radius-lg);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            border: 2px solid transparent;
-            text-align: center;
-            font-size: 0.875rem;
-        }
-
-        .host-btn-primary {
-            background: var(--blue-500);
-            color: var(--white);
-        }
-
-        .host-btn-primary:hover {
-            background: var(--blue-600);
-        }
-
-        .host-btn-primary:disabled {
-            background: var(--slate-300);
-            color: var(--slate-500);
-            cursor: not-allowed;
-        }
-
-        .host-btn-secondary {
-            background: var(--slate-100);
-            color: var(--slate-700);
-            border-color: var(--slate-200);
-        }
-
-        .host-btn-secondary:hover {
-            background: var(--slate-200);
-        }
-
-        .host-btn-danger {
-            background: var(--red-50);
-            color: var(--red-600);
-            border-color: var(--red-200);
-        }
-
-        .host-btn-danger:hover {
-            background: var(--red-100);
-        }
-
-        .theme-selector {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-        }
-
-        .theme-option {
-            padding: var(--space-3);
-            border: 2px solid var(--slate-200);
-            border-radius: var(--radius-lg);
-            cursor: pointer;
-            transition: var(--transition);
-            text-align: left;
-        }
-
-        .theme-option:hover {
-            border-color: var(--blue-300);
-            background: var(--blue-50);
-        }
-
-        .theme-option.selected {
-            border-color: var(--blue-500);
-            background: var(--blue-50);
-        }
-
-        .theme-option-name {
-            font-weight: 600;
-            color: var(--slate-900);
-            margin-bottom: var(--space-1);
-        }
-
-        .theme-option-desc {
-            font-size: 0.75rem;
-            color: var(--slate-500);
-        }
-
-        .game-state-info {
-            background: var(--slate-50);
-            border-radius: var(--radius-lg);
-            padding: var(--space-3);
-            margin-bottom: var(--space-4);
-        }
-
-        .state-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.875rem;
-            margin-bottom: var(--space-1);
-        }
-
-        .state-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .state-label {
-            color: var(--slate-600);
-        }
-
-        .state-value {
-            font-weight: 600;
-            color: var(--slate-900);
-        }
-
-        .mode-toggle {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            margin-bottom: var(--space-4);
-        }
-
-        .toggle-btn {
-            background: var(--slate-200);
-            color: var(--slate-600);
-            padding: var(--space-2) var(--space-3);
-            border-radius: var(--radius-md);
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-        }
-
-        .toggle-btn.active {
-            background: var(--blue-500);
-            color: var(--white);
-        }
         /* Chat Panel */
         .chat-panel {
             grid-area: chat;
@@ -866,34 +650,15 @@
             .game-layout {
                 grid-template-areas:
                     "header"
-                    "host-controls"
                     "main-area"
                     "sidebar"
                     "hand";
                 grid-template-columns: 1fr;
-                grid-template-rows: auto auto 1fr auto auto;
+                grid-template-rows: auto 1fr auto auto;
             }
 
             .chat-panel {
                 display: none;
-            }
-
-            .host-controls {
-                max-height: 200px;
-                overflow-y: auto;
-            }
-
-            .host-controls-body {
-                padding: var(--space-3) var(--space-4);
-                gap: var(--space-4);
-            }
-
-            .control-section {
-                padding-bottom: var(--space-3);
-            }
-
-            .control-group.horizontal {
-                flex-wrap: wrap;
             }
 
             .hand-panel {
@@ -970,6 +735,89 @@
             background: var(--blue-50);
             border-color: var(--blue-500);
         }
+
+        /* === Inline Host Actions (Hand Panel Right) === */
+        .host-inline-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+        }
+        .host-inline-actions .btn-pill {
+            border-radius: 999px;
+            padding-left: 16px;
+            padding-right: 16px;
+            font-weight: 700;
+        }
+        .btn-primary-outline {
+            background: transparent;
+            border: 1px solid var(--blue-500);
+            color: var(--blue-600);
+        }
+        .btn-primary-outline:hover { background: var(--blue-50); }
+
+        /* Chat panel height lock (prevents overall layout jump; internal scroll only) */
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+
+        /* === Inline Host Actions: right of clue input === */
+        .clue-section {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            flex-wrap: nowrap;
+        }
+        .clue-section input[type="text"],
+        .clue-section .clue-input,
+        .clue-section .input {
+            flex: 1 1 320px;
+            min-width: 0;
+        }
+        .clue-section .host-inline-actions {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            white-space: nowrap;
+            overflow-x: auto;
+            max-width: 48%;
+        }
+        .host-inline-actions .btn { padding-top: 6px; padding-bottom: 6px; }
+        .host-inline-actions .btn-pill {
+            border-radius: 999px;
+            padding-left: 14px;
+            padding-right: 14px;
+            font-weight: 700;
+        }
+        .btn-primary-outline {
+            background: transparent;
+            border: 1px solid var(--blue-500);
+            color: var(--blue-600);
+        }
+        .btn-primary-outline:hover { background: var(--blue-50); }
+
+        /* Chat internal scroll + stable gutter to avoid width jump */
+        .chat-panel { display: flex; flex-direction: column; }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-gutter: stable both-edges;
+            overscroll-behavior: contain;
+        }
+
+        @media (max-width: 768px) {
+            .clue-section { flex-wrap: wrap; }
+            .clue-section .host-inline-actions { max-width: 100%; }
+        }
+
     </style>
 </head>
 <body>
@@ -1154,6 +1002,10 @@
                     value="夏の車のハンドルくらい"
                     maxlength="50">
                 <div class="clue-help">12 / 50文字</div>
+            <div class="host-inline-actions" id="hostInlineActions">
+                <!-- dynamic host buttons appear here -->
+            </div>
+
             </div>
 
             <div class="action-buttons">
@@ -1311,6 +1163,153 @@
             div.textContent = text;
             return div.innerHTML;
         }
+    
+        // === Host Controls (Inline in Hand Panel) ===
+        const hostInlineState = {
+            phase: 'pre', // 'pre' -> 'mode' -> 'play'
+            mode: null
+        };
+        function HI_qs(s, r=document){ return r.querySelector(s); }
+        function HI_qsa(s, r=document){ return [...r.querySelectorAll(s)]; }
+
+        function hostInlineAnnounce(text){
+            const chat = HI_qs('.chat-messages');
+            if (!chat) return;
+            const el = document.createElement('div');
+            el.className = 'message system';
+            el.textContent = text;
+            chat.appendChild(el);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function hostInlinePickTheme(mode){
+            const pools = {
+                normal: ['辛さ・熱さ','速さ','大きさ','価格','重さ','人気','甘さ','明るさ'],
+                rainbow: ['赤み','オレンジ感','黄色さ','緑っぽさ','青さ','藍っぽさ','紫み'],
+                classic: ['古さ','希少さ','知名度','高級感','便利さ','危険度','かわいさ']
+            };
+            const themeText = HI_qs('.theme-text');
+            const themeLabel = HI_qs('.theme-label');
+            const pool = pools[mode] || pools.normal;
+            const chosen = pool[Math.floor(Math.random()*pool.length)];
+            const idx = Math.floor(Math.random()*100)+1;
+            if (themeLabel) themeLabel.textContent = '今回のお題';
+            if (themeText) themeText.textContent = `${chosen}（#${idx}）`;
+            hostInlineAnnounce(`ホストがお題を決定: ${chosen}（#${idx}）`);
+        }
+
+        function hostInlineShuffle(){
+            const area = HI_qs('.card-area');
+            const cards = HI_qsa('.player-card', area);
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            cards.forEach(c => area.appendChild(c));
+            hostInlineAnnounce('カードをシャッフルしました');
+        }
+
+        function hostInlineAssign(){
+            const progress = HI_qs('.progress-text');
+            if (progress) progress.innerHTML = '番号の配布が完了しました。ゲームを開始できます。';
+            hostInlineAnnounce('番号を配布しました');
+        }
+
+        function renderHostInline(){
+            const wrap = HI_qs('#hostInlineActions');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            const makeBtn = (label, classes='btn btn-secondary btn-pill', onClick=()=>{}) => {
+                const b = document.createElement('button');
+                b.className = classes;
+                b.textContent = label;
+                b.addEventListener('click', onClick);
+                return b;
+            };
+
+            if (hostInlineState.phase === 'pre'){
+                wrap.appendChild(makeBtn('開始', 'btn btn-primary btn-pill', ()=>{
+                    hostInlineState.phase = 'mode';
+                    renderHostInline();
+                    hostInlineAnnounce('ゲームを開始しました。モードを選んでください。');
+                }));
+                return; // only "開始"
+            } else {
+                wrap.appendChild(makeBtn('リセット', 'btn btn-primary-outline btn-pill', ()=>{
+                    hostInlineState.phase = 'pre';
+                    hostInlineState.mode = null;
+                    const themeText = HI_qs('.theme-text');
+                    if (themeText) themeText.textContent = '—';
+                    renderHostInline();
+                    hostInlineAnnounce('ゲームをリセットしました');
+                }));
+            }
+
+            if (hostInlineState.phase === 'mode'){
+                wrap.appendChild(makeBtn('通常', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineState.mode = 'normal';
+                    hostInlinePickTheme('normal');
+                    hostInlineState.phase = 'play';
+                    renderHostInline();
+                }));
+                wrap.appendChild(makeBtn('レインボー', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineState.mode = 'rainbow';
+                    hostInlinePickTheme('rainbow');
+                    hostInlineState.phase = 'play';
+                    renderHostInline();
+                }));
+                wrap.appendChild(makeBtn('クラシック', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineState.mode = 'classic';
+                    hostInlinePickTheme('classic');
+                    hostInlineState.phase = 'play';
+                    renderHostInline();
+                }));
+                return;
+            }
+
+            if (hostInlineState.phase === 'play'){
+                wrap.appendChild(makeBtn('お題を選びなおす', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineState.phase = 'mode';
+                    hostInlineAnnounce('お題の選び直しを行います。モードを選んでください。');
+                    renderHostInline();
+                }));
+                wrap.appendChild(makeBtn('シャッフル', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineShuffle();
+                }));
+                wrap.appendChild(makeBtn('数字を配る', 'btn btn-secondary btn-pill', ()=>{
+                    hostInlineAssign();
+                }));
+            }
+        }
+
+        // Lock chat panel height to its initial size so only internal scroll moves
+        function lockChatPanelHeight(){
+            const panel = HI_qs('.chat-panel');
+            if (!panel) return;
+            // Measure current height and lock it
+            const h = panel.getBoundingClientRect().height;
+            panel.style.height = `${Math.round(h)}px`;
+            panel.style.overflow = 'hidden'; // ensure internal scroll only
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHostInline();
+            lockChatPanelHeight();
+        });
+
+    
+        // Ensure host-inline UI is inside the clue section on the right
+        function moveHostInlineIntoClue(){
+            const wrap = document.getElementById('hostInlineActions');
+            const clue = document.querySelector('.clue-section');
+            if (wrap && clue && wrap.parentElement !== clue){
+                clue.appendChild(wrap);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            try { moveHostInlineIntoClue(); } catch(e){}
+        });
+
     </script>
 </body>
 </html>
