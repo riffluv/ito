@@ -137,35 +137,93 @@ export default function LobbyPage() {
   };
 
   return (
-    <>
+    <Box bg="#fafafa"> {/* より暖かいグレー背景 - メインメニューはスクロール可能 */}
       <Hero onPlay={openCreateFlow} onRules={() => router.push("/rules")} />
       <Container maxW="6xl" py={8}>
-        <Flex justify="space-between" align="center" mb={4}>
-          <Heading size="2xl" letterSpacing="tight">
-            Online-ITO
-          </Heading>
-          <HStack>
-            <HStack gap={2} mr={2} color="fgMuted">
-              <Text fontSize="sm" suppressHydrationWarning>
-                名前: {mounted ? displayName || "未設定" : "未設定"}
-              </Text>
-              <AppButton
-                size="sm"
-                variant="subtle"
-                onClick={() => {
-                  setTempName(displayName || "");
-                  setAfterNameCreate(false);
-                  setPendingJoin(null);
-                  nameDialog.onOpen();
-                }}
-                minW="6.5rem"
+        {/* シンプルなヘッダーセクション */}
+        <Box
+          bg="white"
+          border="1px solid #e5e7eb" // より自然なボーダー
+          borderRadius="8px" // 少し角を立てる
+          padding={{ base: "1.25rem", md: "1.75rem" }} // 非均等なパディング
+          mb="6" // 少し狭く
+          boxShadow="0 1px 2px rgba(0,0,0,0.05)" // より控えめ
+        >
+          <Flex 
+            direction={{ base: "column", md: "row" }}
+            justify="space-between" 
+            align={{ base: "flex-start", md: "center" }}
+            gap="4"
+          >
+            <Box>
+              <Text
+                fontSize={{ base: "lg", md: "xl" }} // 少し小さく
+                fontWeight={600} // 軽く
+                color="#111827" // より自然な黒
+                fontFamily="system-ui, -apple-system, sans-serif"
+                mb="1" // 狭く
               >
-                変更
-              </AppButton>
-            </HStack>
-            {/* メインCTAはHeroに集約するため、ここでの作成ボタンは削除 */}
-          </HStack>
-        </Flex>
+                ルーム一覧
+              </Text>
+              <Text
+                fontSize="sm"
+                color="#6b7280" // より自然なグレー
+                fontWeight={400}
+              >
+                参加するルームを選んでください
+              </Text>
+            </Box>
+            
+            {/* シンプルなユーザー情報 */}
+            <Box
+              bg="#f9fafb" // より控えめな背景
+              borderRadius="6px"
+              padding="0.875rem" // 14px - 微妙に小さく
+              minW={{ base: "100%", md: "240px" }} // 少し狭く
+            >
+              <HStack justify="space-between" align="center">
+                <Box>
+                  <Text
+                    fontSize="xs"
+                    color="#9ca3af" // より薄いグレー
+                    fontWeight={400}
+                    mb="2px"
+                  >
+                    プレイヤー名
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    fontWeight={500}
+                    color="#111827"
+                    suppressHydrationWarning
+                  >
+                    {mounted ? displayName || "未設定" : "未設定"}
+                  </Text>
+                </Box>
+                <AppButton
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setTempName(displayName || "");
+                    setAfterNameCreate(false);
+                    setPendingJoin(null);
+                    nameDialog.onOpen();
+                  }}
+                  minW="3.5rem" // 少し小さく
+                  borderColor="#d1d5db"
+                  color="#4b5563"
+                  fontSize="xs" // 小さめのフォント
+                  _hover={{
+                    bg: "#f3f4f6",
+                    borderColor: "#9ca3af",
+                  }}
+                >
+                  変更
+                </AppButton>
+              </HStack>
+            </Box>
+          </Flex>
+        </Box>
 
         {/* 
           メインページ全体スクロール設計:
@@ -302,6 +360,6 @@ export default function LobbyPage() {
           }}
         />
       </Container>
-    </>
+    </Box>
   );
 }

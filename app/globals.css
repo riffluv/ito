@@ -53,7 +53,7 @@ body {
 }
 body {
   min-height: 100dvh; /* dynamic viewport height (mobile safe) */
-  overflow: hidden; /* limit scrolling to internal ScrollRegion components */
+  /* overflow: hidden; メインメニューでスクロール必要のため除去 */
 
   /* 2025年フォント最適化 */
   -webkit-font-smoothing: antialiased;

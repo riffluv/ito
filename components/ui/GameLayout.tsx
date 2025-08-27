@@ -1,7 +1,7 @@
 "use client";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
 
 /**
@@ -36,6 +36,14 @@ export function GameLayout({
   rightPanel,
   handArea,
 }: GameLayoutProps) {
+  // ゲーム画面でのみbodyスクロールを無効化
+  React.useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = ""; // クリーンアップ
+    };
+  }, []);
+
   return (
     <>
       <Box
