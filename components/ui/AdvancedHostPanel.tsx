@@ -31,7 +31,7 @@ export function AdvancedHostPanel({
   const handleCategorySelect = async (category: string) => {
     try {
       await topicControls.selectCategory(roomId, category as any);
-      onClose(); // 選択後は閉じる
+      // 選択後もパネルを開いたままにして、シャッフルや数字配布を可能にする
     } catch (error: any) {
       notify({
         title: "カテゴリ選択に失敗",
