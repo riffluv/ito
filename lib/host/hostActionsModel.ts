@@ -30,17 +30,6 @@ export function buildHostActionModel(
   const proposal: string[] = ((room as any)?.order?.proposal || []) as string[];
   const assigned = players.filter((p) => typeof (p as any)?.number === "number").length;
 
-  // デバッグ情報（一時的）
-  console.log("🔍 HostActionModel Debug:", {
-    status,
-    resolveMode,
-    topicSelected,
-    proposalLength: proposal.length,
-    assigned,
-    onlineCount: _onlineCount,
-    proposal
-  });
-
   const intents: HostIntent[] = [];
 
   // waiting: primaryは出さず、すぐにクイック開始/詳細を提示
@@ -61,15 +50,8 @@ export function buildHostActionModel(
     }
 
     if (resolveMode === "sort-submit") {
-      // 修正: 数字が割り当てられた全プレイヤーがproposalに含まれているかをチェック
+      // 数字が割り当てられた全プレイヤーがproposalに含まれているかをチェック
       const canEval = proposal.length > 0 && proposal.length === assigned;
-      console.log("🎯 Button evaluation:", {
-        canEval,
-        proposalLength: proposal.length,
-        assigned,
-        condition: `${proposal.length} > 0 && ${proposal.length} === ${assigned}`
-      });
-      
       intents.push({
         key: "evaluate",
         label: "並びを確定",

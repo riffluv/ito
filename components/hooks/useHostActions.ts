@@ -48,15 +48,6 @@ export function useHostActions({
       variant: i.variant,
     } as Omit<HostAction, "onClick">;
 
-    // デバッグ: evaluateアクションの状態を確認
-    if (i.key === "evaluate") {
-      console.log("🎯 useHostActions evaluate:", {
-        intentDisabled: i.disabled,
-        baseDisabled: base.disabled,
-        reason: i.reason
-      });
-    }
-
     switch (i.key) {
       case "primary":
         return {
@@ -99,12 +90,11 @@ export function useHostActions({
           },
         } as HostAction;
       case "evaluate":
-        const evaluateAction = {
+        return {
           ...base,
           onClick: async () => {
             const proposal: string[] = ((room as any)?.order?.proposal || []) as string[];
             const assigned = players.filter((p) => typeof (p as any)?.number === "number").length;
-            console.log("🚀 evaluate onClick:", { proposal, assigned });
             if (proposal.length === 0) {
               notify({ title: "カード案がまだありません", type: "info" });
               return;
@@ -117,13 +107,6 @@ export function useHostActions({
             notify({ title: "並びを確定", type: "success" });
           },
         } as HostAction;
-        
-        console.log("🎯 Final evaluate action:", {
-          disabled: evaluateAction.disabled,
-          title: evaluateAction.title
-        });
-        
-        return evaluateAction;
       case "quickStart":
         return {
           ...base,
