@@ -1,8 +1,8 @@
+import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -13,7 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 
-const ROOM_TTL_MS = 60 * 60 * 1000; // 60����Ɏ����폜���������ꍇ�̖ڈ�
+const ROOM_TTL_MS = 60 * 60 * 1000; // 60分で自動削除（未使用時のTTL想定）
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db!, "rooms", roomId), { options });
@@ -34,8 +34,10 @@ export async function leaveRoom(
   userId: string,
   displayName: string | null | undefined
 ) {
-  // �Q���҈ꗗ����z�X�g�ڏ��������
-  const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
+  // ホスト退室時: 次のホストを決定（オンライン優先）
+  const playersSnap = await getDocs(
+    collection(db!, "rooms", roomId, "players")
+  );
   const all = playersSnap.docs.map((d) => ({
     id: d.id,
     ...(d.data() as any),
@@ -54,7 +56,7 @@ export async function leaveRoom(
     await transferHost(roomId, nextHost);
   }
 
-  // ������ގ��i�d��Doc���܂߂ĉ\�Ȍ���폜�j
+  // プレイヤーDoc重複安全削除
   try {
     const dupQ = query(
       collection(db!, "rooms", roomId, "players"),
@@ -62,7 +64,7 @@ export async function leaveRoom(
     );
     const dupSnap = await getDocs(dupQ);
     const ids = new Set<string>(dupSnap.docs.map((d) => d.id));
-    ids.add(userId); // ��L�[�̃h�L�������g������
+    ids.add(userId); // 元UIDの doc も確実に削除
     await Promise.all(
       Array.from(ids).map(async (id) => {
         try {
@@ -76,12 +78,11 @@ export async function leaveRoom(
     } catch {}
   }
 
-  // �ގ����O�isystem�j
-  await addDoc(collection(db!, "rooms", roomId, "chat"), {
-    sender: "system",
-    text: `${displayName || "����"} ���ޏo���܂���`,
-    createdAt: serverTimestamp(),
-  });
+  // 退出システムメッセージ（UTF-8）
+  await sendSystemMessage(
+    roomId,
+    `${displayName || "匿名"} さんが退出しました`
+  );
 }
 
 export async function resetRoomToWaiting(roomId: string) {
@@ -98,4 +99,3 @@ export async function resetRoomToWaiting(roomId: string) {
     expiresAt: null,
   });
 }
-

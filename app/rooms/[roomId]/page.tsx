@@ -2,16 +2,15 @@
 import dynamic from "next/dynamic";
 
 // 重要コンポーネント: Eager loading（初期表示性能優先）
-import { ChatPanel } from "@/components/ChatPanel";
 import { Hud } from "@/components/Hud";
 import { Participants } from "@/components/Participants";
 
 // 非重要コンポーネント: Dynamic import（必要時に読み込み）
 const CluePanel = dynamic(
   () => import("@/components/CluePanel").then((m) => m.CluePanel),
-  { 
-    ssr: false, 
-    loading: () => null 
+  {
+    ssr: false,
+    loading: () => null,
   }
 );
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
@@ -20,13 +19,12 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
+import HostControlDock from "@/components/ui/HostControlDock";
 import { notify } from "@/components/ui/notify";
-import { Panel } from "@/components/ui/Panel";
-import ScrollableArea from "@/components/ui/ScrollableArea";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
-import HostControlDock from "@/components/ui/HostControlDock";
 import { useAuth } from "@/context/AuthContext";
+import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
@@ -42,15 +40,12 @@ import {
 import {
   continueAfterFail as continueAfterFailAction,
   startGame as startGameAction,
-  submitSortedOrder,
 } from "@/lib/game/room";
-import { topicControls, topicTypeLabels } from "@/lib/game/topicControls";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import { randomAvatar } from "@/lib/utils";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Flex, HStack, Input, Spinner, Stack, Text, useBreakpointValue } from "@chakra-ui/react";
+import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -107,9 +102,9 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
         border="1px solid"
         borderColor="gray.300" // 緊急修正: 明確な境界線
         _placeholder={{ color: "gray.500" }} // プレースホルダー視認性
-        _focus={{ 
-          borderColor: "blue.500", 
-          boxShadow: "0 0 0 1px blue.500" 
+        _focus={{
+          borderColor: "blue.500",
+          boxShadow: "0 0 0 1px blue.500",
         }} // フォーカス状態の明確化
         flex="1"
         maxW="200px"
@@ -184,16 +179,25 @@ export default function RoomPage() {
     assignNumberIfNeeded(roomId, uid).catch(() => void 0);
   }, [room?.deal?.seed, room?.status, uid]);
 
-  const allNumbersDealt =
-    !!room?.topic &&
-    !!room?.deal &&
-    Array.isArray((room.deal as any).players) &&
-    onlinePlayers.every((p) => typeof p.number === "number");
+  // 入室システムメッセージ（1ユーザー1回）
+  useEffect(() => {
+    if (!uid || !displayName) return;
+    if (!room) return;
+    // localStorageフラグで多重送信防止
+    try {
+      const key = `room:${roomId}:joined:${uid}`;
+      if (typeof window !== "undefined" && !window.localStorage.getItem(key)) {
+        window.localStorage.setItem(key, "1");
+        sendSystemMessage(roomId, `${displayName} さんが入室しました`).catch(
+          () => void 0
+        );
+      }
+    } catch {}
+  }, [uid, displayName, roomId, room?.id]);
 
   // 準備完了（ready）はオンライン参加者のみを対象に判定
   const allCluesReady =
     onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
-  const enoughPlayers = onlinePlayers.length >= 2;
 
   // playing フェーズ廃止につき canStartPlaying ロジックは削除
 
@@ -381,7 +385,11 @@ export default function RoomPage() {
 
   // presence のアタッチ/デタッチは usePresence が管理
   // Host primary action object (reused for HUD or left column)
-  const hostPrimaryAction = isHost ? (room?.status === "finished" ? { label: "もう一度", onClick: resetToWaiting } : null) : null;
+  const hostPrimaryAction = isHost
+    ? room?.status === "finished"
+      ? { label: "もう一度", onClick: resetToWaiting }
+      : null
+    : null;
   const showHostInHud = false; // Always show host controls in hand area instead of HUD
 
   if (!firebaseEnabled || loading || !room) {
@@ -425,8 +433,12 @@ export default function RoomPage() {
   const sidebarNode = (
     <Box h="100%">
       <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">プレイヤー</Box>
-        <Box fontSize="0.875rem" color="#64748b">{onlinePlayers.length}/{players.length}人</Box>
+        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">
+          プレイヤー
+        </Box>
+        <Box fontSize="0.875rem" color="#64748b">
+          {onlinePlayers.length}/{players.length}人
+        </Box>
       </Box>
       <Box overflowY="auto" flex={1}>
         <Participants players={onlinePlayers} />
@@ -460,7 +472,9 @@ export default function RoomPage() {
   const rightPanelNode = (
     <Box h="100%" display="flex" flexDirection="column">
       <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">チャット</Box>
+        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">
+          チャット
+        </Box>
       </Box>
       <Box flex={1} overflow="hidden">
         <ChatPanelImproved roomId={roomId} />
@@ -470,32 +484,59 @@ export default function RoomPage() {
 
   const handAreaNode = (
     <Box
-      display="flex" alignItems="center" justifyContent="space-between" gap={6}
-      css={{ "@media (max-width: 768px)": { flexDirection: "column", gap: "1.5rem" } }}
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={6}
+      css={{
+        "@media (max-width: 768px)": { flexDirection: "column", gap: "1.5rem" },
+      }}
     >
       {me ? (
         <Box
-          display="flex" alignItems="center" gap={{ base: 4, md: 6 }} flex={1}
-          css={{ "@media (max-width: 768px)": { flexDirection: "column", alignItems: "flex-start" } }}
+          display="flex"
+          alignItems="center"
+          gap={{ base: 4, md: 6 }}
+          flex={1}
+          css={{
+            "@media (max-width: 768px)": {
+              flexDirection: "column",
+              alignItems: "flex-start",
+            },
+          }}
         >
-          <Box display="flex" alignItems="center" gap={{ base: 3, md: 6 }}
-               css={{ "@media (max-width: 768px)": { width: "100%", justifyContent: "center" } }}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={{ base: 3, md: 6 }}
+            css={{
+              "@media (max-width: 768px)": {
+                width: "100%",
+                justifyContent: "center",
+              },
+            }}
+          >
             <SelfNumberCard value={me.number} draggableId={me.id} />
           </Box>
           <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
-            {room.status === "clue" ? (
-              <>
-                <ClueInputMini roomId={roomId} playerId={me.id} currentValue={me?.clue1 || ""} />
-              </>
-            ) : null}
+            {/* 常時表示: フェーズに関わらず連想ワードを更新可能 */}
+            <ClueInputMini
+              roomId={roomId}
+              playerId={me.id}
+              currentValue={me?.clue1 || ""}
+            />
           </Box>
         </Box>
       ) : (
         <Box flex={1} />
       )}
       {isHost && (
-        <Box display="flex" alignItems="center" justifyContent={{ base: "center", md: "flex-end" }}
-             css={{ "@media (max-width: 768px)": { width: "100%" } }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent={{ base: "center", md: "flex-end" }}
+          css={{ "@media (max-width: 768px)": { width: "100%" } }}
+        >
           <HostControlDock
             roomId={roomId}
             room={room}
@@ -529,10 +570,4 @@ export default function RoomPage() {
       />
     </>
   );
-
 }
-
-
-
-
-
