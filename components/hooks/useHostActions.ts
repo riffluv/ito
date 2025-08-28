@@ -1,5 +1,5 @@
 "use client";
-import { submitSortedOrder } from "@/lib/game/room";
+import { submitSortedOrder, startGame as startGameAction } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
 import { notify } from "@/components/ui/notify";
 import { topicTypeLabels } from "@/lib/topics";
@@ -29,7 +29,6 @@ export function useHostActions({
   hostPrimaryAction?: { label: string; onClick: () => void | Promise<void>; disabled?: boolean; title?: string } | null;
   onlineCount?: number;
 }): HostAction[] {
-  // build intents purely
   const intents = buildHostActionModel(
     room,
     players,
@@ -38,7 +37,6 @@ export function useHostActions({
     hostPrimaryAction ? { label: hostPrimaryAction.label } : null
   );
 
-  // bind onClick at UI layer
   const actions: HostAction[] = intents.map((i: HostIntent): HostAction => {
     const uniqueKey = i.key + (i?.payload?.category ? `-${i.payload.category}` : "");
     const base = {
@@ -72,18 +70,19 @@ export function useHostActions({
             await topicControls.shuffleTopic(roomId, ((room as any)?.topicBox as string) || null);
           },
         } as HostAction;
-            case "deal":
+      case "deal":
         return {
           ...base,
           onClick: async () => {
             if (!((room as any)?.topic)) {
-              notify({ title: "全員分のカードが揃っていません", type: "warning" });
+              notify({ title: "カテゴリを選択してください", type: "warning" });
               return;
             }
             await topicControls.dealNumbers(roomId);
             notify({ title: "番号を配布しました", type: "success" });
           },
-        } as HostAction;case "reselect":
+        } as HostAction;
+      case "reselect":
         return {
           ...base,
           onClick: async () => {
@@ -105,7 +104,7 @@ export function useHostActions({
               return;
             }
             await submitSortedOrder(roomId, proposal);
-            notify({ title: "番号を配布しました", type: "success" });
+            notify({ title: "並びを確定", type: "success" });
           },
         } as HostAction;
       case "quickStart":
@@ -113,35 +112,20 @@ export function useHostActions({
           ...base,
           onClick: async () => {
             try {
-              // デフォルトお題タイプを使用（設定がない場合は通常版）
               const defaultType = (room as any)?.options?.defaultTopicType || "通常版";
-              
-              notify({ title: "カード案がまだありません", type: "info" });
-              
-              // 1. お題選択
+              if ((room as any)?.status === "waiting") {
+                await startGameAction(roomId);
+              }
               await topicControls.selectCategory(roomId, defaultType as any);
-              
-              // 2. 数字配布
               await topicControls.dealNumbers(roomId);
-              
-              notify({ title: "番号を配布しました", type: "success" });
+              notify({ title: "🚀 クイック開始しました", type: "success" });
             } catch (error: any) {
-              notify({
-                title: "ワンクリック開始に失敗",
-                description: error?.message,
-                type: "error",
-              });
+              notify({ title: "クイック開始に失敗", description: error?.message, type: "error" });
             }
           },
         } as HostAction;
       case "advancedMode":
-        return {
-          ...base,
-          onClick: () => {
-            // モーダルを開く処理は親コンポーネント（HostControlDock）で処理される
-            // この関数は空にしておく
-          },
-        } as HostAction;
+        return { ...base, onClick: () => {} } as HostAction;
       default:
         return { ...base, onClick: () => {} } as HostAction;
     }
@@ -149,7 +133,3 @@ export function useHostActions({
 
   return actions;
 }
-
-
-
-
