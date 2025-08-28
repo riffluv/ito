@@ -48,6 +48,9 @@ export function buildHostActionModel(
       intents.push({ key: "advancedMode", label: "詳細", palette: "gray", variant: "outline" });
       return intents;
     }
+    
+    // お題選択済みでも詳細設定にアクセスできるようにする
+    intents.push({ key: "advancedMode", label: "詳細", palette: "gray", variant: "outline" });
 
     if (resolveMode === "sort-submit") {
       // 数字が割り当てられた全プレイヤーがproposalに含まれているかをチェック
