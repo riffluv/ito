@@ -2,16 +2,17 @@
 
 ## 📋 **メイン ミッション**
 
-**あなたの使命**:prompt.mdファイルを見てくれ！！！！！
+
+**あなたの使命**
+[text](docs/GAME_LOGIC_OVERVIEW.md) を見て現在のプロジェクトのロジック改善点などありますか？
+
 
 ## 📚 **必読資料**
 
 ### **最優先参照ファイル**
 
 - **`CLAUDE.md`** ← この指示書（現在のファイル）
-- [docs/itorule.md](docs/itorule.md) ゲームルール仕様（変更禁止）
-- **`prompt.md`** ← この指示書（現在のファイル）
-
+[text](docs/GAME_LOGIC_OVERVIEW.md) ←現在のitoゲームの仕様です
 
 
 ## 🚨 **重要: テーマシステム決定事項**

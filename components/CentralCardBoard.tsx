@@ -11,7 +11,8 @@ import { setOrderProposal } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
-import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import React, { useEffect, useMemo } from "react";
 
@@ -43,6 +44,18 @@ export function CentralCardBoard({
   const map = new Map(players.map((p) => [p.id, p]));
   const me = map.get(meId as string) as any;
   const hasNumber = typeof (me as any)?.number === "number";
+
+  // Accessibility sensors for keyboard and pointer interactions
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before activating drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   
   const mePlaced = useMemo(() => {
     return (
@@ -218,6 +231,35 @@ export function CentralCardBoard({
               <DndContext
                 collisionDetection={closestCenter}
                 onDragEnd={onDragEnd}
+                sensors={sensors}
+                accessibility={{
+                  announcements: {
+                    onDragStart: ({ active }) => {
+                      const player = map.get(active.id as string);
+                      return `カード「${player?.name || active.id}」のドラッグを開始しました。`;
+                    },
+                    onDragOver: ({ active, over }) => {
+                      if (over) {
+                        const activePlayer = map.get(active.id as string);
+                        const overIndex = activeProposal.indexOf(over.id as string);
+                        return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に移動中です。`;
+                      }
+                      return `カード「${active.id}」を移動中です。`;
+                    },
+                    onDragEnd: ({ active, over }) => {
+                      const activePlayer = map.get(active.id as string);
+                      if (over) {
+                        const overIndex = activeProposal.indexOf(over.id as string);
+                        return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に配置しました。`;
+                      }
+                      return `カード「${activePlayer?.name || active.id}」のドラッグを終了しました。`;
+                    },
+                    onDragCancel: ({ active }) => {
+                      const activePlayer = map.get(active.id as string);
+                      return `カード「${activePlayer?.name || active.id}」のドラッグをキャンセルしました。`;
+                    },
+                  },
+                }}
               >
                 <SortableContext items={activeProposal}>
                   {/* Empty slots for placement */}

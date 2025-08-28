@@ -31,6 +31,75 @@ function players(n: number, assigned = 0): (PlayerDoc & { id: string })[] {
 }
 
 describe("buildHostActionModel", () => {
+  test("waiting with insufficient players → disabled quickStart", () => {
+    const r = room({ status: "waiting" });
+    const intents = buildHostActionModel(r, players(1), 1, topicTypeLabels, {
+      label: "開始",
+    });
+    const qs = intents.find((i) => i.key === "quickStart")!;
+    expect(qs.disabled).toBe(true);
+    expect(qs.reason).toBe("2人必要: 現在1人");
+  });
+
+  test("sort-submit mode with partial cards → evaluate disabled with reason", () => {
+    const r = room({
+      status: "clue",
+      topic: "食べ物",
+      topicBox: "通常版",
+      options: { allowContinueAfterFail: true, resolveMode: "sort-submit" },
+      order: {
+        list: [],
+        proposal: ["u1"], // Only 1 out of 3 players
+        decidedAt: null,
+        failed: false,
+        failedAt: null,
+        lastNumber: null,
+        total: null,
+      },
+    });
+    const intents = buildHostActionModel(r, players(3, 3), 3, topicTypeLabels, null);
+    const evalIntent = intents.find((i) => i.key === "evaluate")!;
+    expect(evalIntent.disabled).toBe(true);
+    expect(evalIntent.reason).toBe("残り2人");
+  });
+
+  test("sort-submit mode with no cards → evaluate disabled with appropriate reason", () => {
+    const r = room({
+      status: "clue",
+      topic: "食べ物", 
+      topicBox: "通常版",
+      options: { allowContinueAfterFail: true, resolveMode: "sort-submit" },
+      order: {
+        list: [],
+        proposal: [],
+        decidedAt: null,
+        failed: false,
+        failedAt: null,
+        lastNumber: null,
+        total: null,
+      },
+    });
+    const intents = buildHostActionModel(r, players(3, 3), 3, topicTypeLabels, null);
+    const evalIntent = intents.find((i) => i.key === "evaluate")!;
+    expect(evalIntent.disabled).toBe(true);
+    expect(evalIntent.reason).toBe("カードがまだ場に出ていません");
+  });
+
+  test("online count fallback behavior", () => {
+    const r = room({ status: "waiting" });
+    // undefined onlineCount should fallback to players.length
+    const intents = buildHostActionModel(r, players(3), undefined, topicTypeLabels, {
+      label: "開始",
+    });
+    const qs = intents.find((i) => i.key === "quickStart")!;
+    expect(qs.disabled).toBe(false); // 3 players >= 2
+  });
+
+  test("reveal status should not show any intents", () => {
+    const r = room({ status: "reveal" });
+    const intents = buildHostActionModel(r, players(3), 3, topicTypeLabels, null);
+    expect(intents.length).toBe(0);
+  });
   test("waiting → quickStart + advancedMode", () => {
     const r = room({ status: "waiting" });
     const intents = buildHostActionModel(r, players(2), 2, topicTypeLabels, {
@@ -41,7 +110,7 @@ describe("buildHostActionModel", () => {
     expect(qs.label).toBe("開始");
   });
 
-  test("clue 未選択 → quickStart + advancedMode", () => {
+  test("clue 未選択 → advancedMode only", () => {
     const r = room({ status: "clue", topic: null, topicBox: null });
     const intents = buildHostActionModel(
       r,
@@ -50,7 +119,7 @@ describe("buildHostActionModel", () => {
       topicTypeLabels,
       null
     );
-    expect(intents.map((i) => i.key)).toEqual(["quickStart", "advancedMode"]);
+    expect(intents.map((i) => i.key)).toEqual(["advancedMode"]);
   });
 
   test("clue 選択済み・sequential → advancedのみ（簡素化後）", () => {
