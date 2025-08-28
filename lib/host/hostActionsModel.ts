@@ -32,9 +32,10 @@ export function buildHostActionModel(
 
   const intents: HostIntent[] = [];
 
-  // waiting: show primary (開始)
-  if (status === "waiting" && hostPrimary) {
-    intents.push({ key: "primary", label: hostPrimary.label, palette: "orange", variant: "solid" });
+  // waiting: primary(開始)は出さず、すぐにクイック開始/詳細を提示
+  if (status === "waiting") {
+    intents.push({ key: "quickStart", label: "クイック開始", palette: "orange", variant: "solid" });
+    intents.push({ key: "advancedMode", label: "詳細", palette: "gray", variant: "outline" });
   }
   // finished: show primary (もう一度)
   if (status === "finished" && hostPrimary) {
@@ -43,9 +44,8 @@ export function buildHostActionModel(
 
   if (status === "clue") {
     if (!topicSelected) {
-      // まだお題未選択 → クイック開始/詳細設定
-      intents.push({ key: "quickStart", label: "ワンクリック開始", palette: "orange", variant: "solid" });
-      intents.push({ key: "advancedMode", label: "詳細設定", palette: "gray", variant: "outline" });
+      intents.push({ key: "quickStart", label: "クイック開始", palette: "orange", variant: "solid" });
+      intents.push({ key: "advancedMode", label: "詳細", palette: "gray", variant: "outline" });
       return intents;
     }
 
@@ -63,4 +63,3 @@ export function buildHostActionModel(
 
   return intents;
 }
-

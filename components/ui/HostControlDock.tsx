@@ -5,7 +5,7 @@ import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Box, Text, Dialog } from "@chakra-ui/react";
 import { FiRefreshCw } from "react-icons/fi";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useHostActions } from "@/components/hooks/useHostActions";
 import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 
@@ -35,12 +35,20 @@ export function HostControlDock({
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const actions = useHostActions({ room, players, roomId, hostPrimaryAction, onlineCount });
-  const pickingCategory = (room as any)?.status === "clue" && !(room as any)?.topic;
+  const status = (room as any)?.status as string | undefined;
+  const isWaiting = status === "waiting";
+  const pickingCategory = status === "clue" && !(room as any)?.topic;
+
+  // Arrange: QuickStart -> Reset -> Advanced (waiting only)
+  const quick = actions.find((a) => a.key.startsWith("quickStart"));
+  const advanced = actions.find((a) => a.key.startsWith("advancedMode") || a.key === "advancedMode");
+  const others = actions.filter((a) => a !== quick && a !== advanced);
+  const ordered = useMemo(() => (isWaiting ? ([quick, ...others].filter(Boolean) as typeof actions) : actions), [isWaiting, actions.length]);
 
   return (
     <>
       <Box display="flex" gap={3} flexWrap="wrap" justifyContent="flex-end">
-        {actions.map((a) => (
+        {ordered.map((a) => (
           <Tooltip key={a.key} content={a.title || ""} disabled={!a.title}>
             <AppButton
               onClick={a.key === "advancedMode" ? () => setAdvancedOpen(true) : a.onClick}
@@ -63,6 +71,20 @@ export function HostControlDock({
           >
             <FiRefreshCw style={{ marginRight: 6 }} /> リセット
           </AppButton>
+        )}
+
+        {isWaiting && advanced && (
+          <Tooltip key={advanced.key} content={advanced.title || ""} disabled={!advanced.title}>
+            <AppButton
+              onClick={() => setAdvancedOpen(true)}
+              disabled={advanced.disabled}
+              colorPalette={advanced.palette as any}
+              variant={advanced.variant as any}
+              size="sm"
+            >
+              {advanced.label}
+            </AppButton>
+          </Tooltip>
         )}
       </Box>
 

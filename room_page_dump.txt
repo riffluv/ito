@@ -406,119 +406,199 @@ export default function RoomPage() {
   // 途中参加OKのため、ブロック画面は表示しない
 
   // 新しいGameLayoutを使用した予測可能な構造
-  // Layout nodes split to avoid JSX nesting pitfalls
-  const headerNode = (
-    <Hud
-      roomName={room.name}
-      phase={room.status}
-      activeCount={onlinePlayers.length}
-      totalCount={players.length}
-      remainMs={null}
-      totalMs={null}
-      hostPrimary={showHostInHud ? hostPrimaryAction : null}
-      isHost={isHost}
-      onOpenSettings={() => setIsSettingsOpen(true)}
-      onLeaveRoom={leaveRoom}
-    />
-  );
-
-  const sidebarNode = (
-    <Box h="100%">
-      <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">プレイヤー</Box>
-        <Box fontSize="0.875rem" color="#64748b">{onlinePlayers.length}/{players.length}人</Box>
-      </Box>
-      <Box overflowY="auto" flex={1}>
-        <Participants players={onlinePlayers} />
-      </Box>
-    </Box>
-  );
-
-  const mainNode = (
-    <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3}>
-      <Box p={0}>
-        <UniversalMonitor room={room} players={players} />
-      </Box>
-      <Box overflow="hidden">
-        <CentralCardBoard
-          roomId={roomId}
-          players={players}
-          orderList={room.order?.list || []}
-          meId={meId}
-          eligibleIds={eligibleIds}
-          roomStatus={room.status}
-          cluesReady={allCluesReady}
-          failed={!!room.order?.failed}
-          failedAt={room.order?.failedAt}
-          proposal={room.order?.proposal || []}
-          resolveMode={room.options?.resolveMode}
-        />
-      </Box>
-    </Box>
-  );
-
-  const rightPanelNode = (
-    <Box h="100%" display="flex" flexDirection="column">
-      <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">チャット</Box>
-      </Box>
-      <Box flex={1} overflow="hidden">
-        <ChatPanelImproved roomId={roomId} />
-      </Box>
-    </Box>
-  );
-
-  const handAreaNode = (
-    <Box
-      display="flex" alignItems="center" justifyContent="space-between" gap={6}
-      css={{ "@media (max-width: 768px)": { flexDirection: "column", gap: "1.5rem" } }}
-    >
-      {me ? (
-        <Box
-          display="flex" alignItems="center" gap={{ base: 4, md: 6 }} flex={1}
-          css={{ "@media (max-width: 768px)": { flexDirection: "column", alignItems: "flex-start" } }}
-        >
-          <Box display="flex" alignItems="center" gap={{ base: 3, md: 6 }}
-               css={{ "@media (max-width: 768px)": { width: "100%", justifyContent: "center" } }}>
-            <SelfNumberCard value={me.number} draggableId={me.id} />
-          </Box>
-          <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
-            {room.status === "clue" ? (
-              <>
-                <ClueInputMini roomId={roomId} playerId={me.id} currentValue={me?.clue1 || ""} />
-              </>
-            ) : null}
-          </Box>
-        </Box>
-      ) : (
-        <Box flex={1} />
-      )}
-      {isHost && (
-        <Box display="flex" alignItems="center" justifyContent={{ base: "center", md: "flex-end" }}
-             css={{ "@media (max-width: 768px)": { width: "100%" } }}>
-          <HostControlDock
-            roomId={roomId}
-            room={room}
-            players={players}
-            onlineCount={onlinePlayers.length}
-            hostPrimaryAction={hostPrimaryAction}
-            onReset={resetToWaiting}
-          />
-        </Box>
-      )}
-    </Box>
-  );
-
   return (
     <>
       <GameLayout
-        header={headerNode}
-        sidebar={sidebarNode}
-        main={mainNode}
-        rightPanel={rightPanelNode}
-        handArea={handAreaNode}
+        header={
+          <Hud
+            roomName={room.name}
+            phase={room.status}
+            activeCount={onlinePlayers.length}
+            totalCount={players.length}
+            remainMs={null}
+            totalMs={null}
+            hostPrimary={showHostInHud ? hostPrimaryAction : null}
+            isHost={isHost}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onLeaveRoom={leaveRoom} // 退出ボタン機能追加
+          />
+        }
+        sidebar={
+          <Box h="100%">
+            {/* Sidebar Header - Professional Style */}
+            <Box
+              padding="1.5rem 1.5rem 1rem"
+              borderBottom="1px solid #e2e8f0" // --slate-200
+            >
+              <Box
+                fontSize="1.125rem"
+                fontWeight={600}
+                color="#0f172a" // --slate-900
+                marginBottom={2}
+              >
+                プレイヤー
+              </Box>
+              <Box
+                fontSize="0.875rem"
+                color="#64748b" // --slate-600
+              >
+                {onlinePlayers.length}/{players.length}人
+              </Box>
+            </Box>
+            
+            {/* Player List */}
+            <Box overflowY="auto" flex={1}>
+              <Participants players={onlinePlayers} />
+            </Box>
+          </Box>
+        }
+        main={
+          <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3}>
+            {/* モニター: 固定高さ - パディング統一 */}
+            <Box p={0} /* パディング除去：内部で制御 */>
+              <UniversalMonitor room={room} players={players} />
+            </Box>
+
+            {/* カードボード: 残り高さを使用 - ゲーム画面規範準拠 */}
+            <Box overflow="hidden">
+              <CentralCardBoard
+                roomId={roomId}
+                players={players}
+                orderList={room.order?.list || []}
+                meId={meId}
+                eligibleIds={eligibleIds}
+                roomStatus={room.status}
+                cluesReady={allCluesReady}
+                failed={!!room.order?.failed}
+                failedAt={room.order?.failedAt}
+                proposal={room.order?.proposal || []}
+                resolveMode={room.options?.resolveMode}
+              />
+            </Box>
+          </Box>
+        }
+        rightPanel={
+          <Box h="100%" display="flex" flexDirection="column">
+            {/* Chat Header - Professional Style */}
+            <Box
+              padding="1.5rem 1.5rem 1rem"
+              borderBottom="1px solid #e2e8f0" // --slate-200
+            >
+              <Box
+                fontSize="1.125rem"
+                fontWeight={600}
+                color="#0f172a" // --slate-900
+              >
+                チャット
+              </Box>
+            </Box>
+            
+            {/* Chat Messages */}
+            <Box flex={1} overflow="hidden">
+              <ChatPanelImproved roomId={roomId} />
+            </Box>
+          </Box>
+        }
+        handArea={
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={6}
+            css={{
+              "@media (max-width: 768px)": {
+                flexDirection: "column",
+                gap: "1.5rem",
+              },
+            }}
+          >
+            {/* Left Side: My Card & Clue Input - Only show during clue phase */}
+            {me ? (
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={{ base: 4, md: 6 }}
+                flex={1}
+                css={{
+                  "@media (max-width: 768px)": {
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                  },
+                }}
+              >
+                {/* My Card Section - Responsive Professional Style */}
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={{ base: 3, md: 6 }}
+                  css={{
+                    "@media (max-width: 768px)": {
+                      width: "100%",
+                      justifyContent: "center",
+                    },
+                  }}
+                >
+                  <SelfNumberCard value={me.number} draggableId={me.id} />
+                  
+                  <Box textAlign="left" display={{ base: "none", md: "block" }}>
+                    <Box
+                      fontSize="0.875rem"
+                      color="#64748b" // --slate-500
+                      marginBottom={1}
+                    >
+                      カードの位置予想
+                    </Box>
+                    <Box
+                      fontWeight={600}
+                      color="#0f172a" // --slate-900
+                    >
+                      中程度～高め
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Clue Section - Responsive Professional Style */}
+                {/* Clue Section - show input only during clue phase */}
+                <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
+                  {room.status === "clue" ? (
+                    <ClueInputMini
+                      roomId={roomId}
+                      playerId={me.id}
+                      currentValue={me?.clue1 || ""}
+                    />
+                  ) : null}
+                </Box>
+            ) : (
+              <Box flex={1} />
+            )}
+
+            {/* Right Side: Host Controls - Always show for hosts */}
+            {isHost && (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent={{ base: "center", md: "flex-end" }}
+                css={{
+                  "@media (max-width: 768px)": {
+                    width: "100%",
+                  },
+                }}
+              >
+                <HostControlDock
+                  roomId={roomId}
+                  room={room}
+                  players={players}
+                  onlineCount={onlinePlayers.length}
+                  hostPrimaryAction={hostPrimaryAction}
+                  onReset={resetToWaiting}
+                />
+              </Box>
+            )}
+          </Box>
+        }
       />
 
+      {/* 設定モーダル */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -529,8 +609,8 @@ export default function RoomPage() {
       />
     </>
   );
-
 }
+
 
 
 
