@@ -388,7 +388,6 @@ export default function RoomPage() {
         ? { label: "もう一度", onClick: resetToWaiting }
         : null
     : null;
-
   const showHostInHud = false; // Always show host controls in hand area instead of HUD
 
   if (!firebaseEnabled || loading || !room) {
@@ -622,3 +621,6 @@ export default function RoomPage() {
     </>
   );
 }
+
+
+

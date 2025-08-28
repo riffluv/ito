@@ -13,7 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 
-const ROOM_TTL_MS = 60 * 60 * 1000; // 60分後に自動削除させたい場合の目安
+const ROOM_TTL_MS = 60 * 60 * 1000; // 60����Ɏ����폜���������ꍇ�̖ڈ�
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db!, "rooms", roomId), { options });
@@ -34,7 +34,7 @@ export async function leaveRoom(
   userId: string,
   displayName: string | null | undefined
 ) {
-  // 参加者一覧からホスト移譲先を決定
+  // �Q���҈ꗗ����z�X�g�ڏ��������
   const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all = playersSnap.docs.map((d) => ({
     id: d.id,
@@ -54,7 +54,7 @@ export async function leaveRoom(
     await transferHost(roomId, nextHost);
   }
 
-  // 自分を退室（重複Docも含めて可能な限り削除）
+  // ������ގ��i�d��Doc���܂߂ĉ\�Ȍ���폜�j
   try {
     const dupQ = query(
       collection(db!, "rooms", roomId, "players"),
@@ -62,7 +62,7 @@ export async function leaveRoom(
     );
     const dupSnap = await getDocs(dupQ);
     const ids = new Set<string>(dupSnap.docs.map((d) => d.id));
-    ids.add(userId); // 主キーのドキュメントも試す
+    ids.add(userId); // ��L�[�̃h�L�������g������
     await Promise.all(
       Array.from(ids).map(async (id) => {
         try {
@@ -76,17 +76,17 @@ export async function leaveRoom(
     } catch {}
   }
 
-  // 退室ログ（system）
+  // �ގ����O�isystem�j
   await addDoc(collection(db!, "rooms", roomId, "chat"), {
     sender: "system",
-    text: `${displayName || "匿名"} が退出しました`,
+    text: `${displayName || "����"} ���ޏo���܂���`,
     createdAt: serverTimestamp(),
   });
 }
 
 export async function resetRoomToWaiting(roomId: string) {
   await updateDoc(doc(db!, "rooms", roomId), {
-    status: "clue", // 手札が常に見える新UX: リセット後もclue状態を維持
+    status: "waiting", // ラウンド終了後はロビー状態に戻す
     result: null,
     deal: null,
     order: null,
@@ -98,3 +98,4 @@ export async function resetRoomToWaiting(roomId: string) {
     expiresAt: null,
   });
 }
+

@@ -3,12 +3,12 @@ import { AppButton } from "@/components/ui/AppButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { Box, Flex, HStack, Text, Dialog } from "@chakra-ui/react";
+import { Box, Text, Dialog } from "@chakra-ui/react";
 import { FiRefreshCw } from "react-icons/fi";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useHostActions } from "@/components/hooks/useHostActions";
-
 import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
+
 export type HostControlDockProps = {
   roomId: string;
   room: RoomDoc & { id?: string };
@@ -34,13 +34,11 @@ export function HostControlDock({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // 動的ホストアクション（UI層は並べるだけ）
   const actions = useHostActions({ room, players, roomId, hostPrimaryAction, onlineCount });
   const pickingCategory = (room as any)?.status === "clue" && !(room as any)?.topic;
 
   return (
     <>
-      {/* Host Control Actions - Professional Style */}
       <Box display="flex" gap={3} flexWrap="wrap" justifyContent="flex-end">
         {actions.map((a) => (
           <Tooltip key={a.key} content={a.title || ""} disabled={!a.title}>
@@ -55,12 +53,12 @@ export function HostControlDock({
             </AppButton>
           </Tooltip>
         ))}
-        
+
         {!pickingCategory && (
-          <AppButton 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setConfirmOpen(true)} 
+          <AppButton
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
             title="最初からやり直す"
           >
             <FiRefreshCw style={{ marginRight: 6 }} /> リセット
@@ -68,7 +66,6 @@ export function HostControlDock({
         )}
       </Box>
 
-      {/* Advanced Host Panel */}
       <AdvancedHostPanel
         isOpen={advancedOpen}
         onClose={() => setAdvancedOpen(false)}
@@ -78,16 +75,15 @@ export function HostControlDock({
         onlineCount={onlineCount}
       />
 
-      {/* Reset Confirmation Dialog */}
       <Dialog.Root open={confirmOpen} onOpenChange={(d) => setConfirmOpen(d.open)}>
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>ルームをリセット</Dialog.Title>
+              <Dialog.Title>部屋をリセット</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              <Text>現在の進行と結果が破棄されます。よろしいですか？</Text>
+              <Text>現在の進行と並び順を消去します。よろしいですか？</Text>
             </Dialog.Body>
             <Dialog.Footer display="flex" gap={2} justifyContent="flex-end">
               <AppButton variant="ghost" onClick={() => setConfirmOpen(false)}>
@@ -117,3 +113,4 @@ export function HostControlDock({
 }
 
 export default HostControlDock;
+

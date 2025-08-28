@@ -6,9 +6,16 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import { Dialog, Field, Input, Stack } from "@chakra-ui/react";
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+// ������͕����쐬��ɑI���iTopicDisplay���ŏ����j
 
 export function CreateRoomModal({
   isOpen,
@@ -22,34 +29,37 @@ export function CreateRoomModal({
   const { user, displayName } = useAuth() as any;
   const router = useRouter();
   const [name, setName] = useState("");
-  const [allowContinueAfterFail] = useState(true);
+  const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
     if (!firebaseEnabled) {
-      notify({ title: "Firebaseの設定が見つかりません", type: "error" });
+      notify({ title: "Firebase�ݒ肪������܂���", type: "error" });
       return;
     }
     if (!user) {
-      notify({ title: "サインイン処理中です。少し待ってから再試行してください", type: "info" });
+      notify({
+        title: "�������O�C������������܂ł��҂���������",
+        type: "info",
+      });
       return;
     }
     if (!name.trim()) {
-      notify({ title: "部屋名を入力してください", type: "warning" });
+      notify({ title: "����������͂��Ă�������", type: "warning" });
       return;
     }
     setSubmitting(true);
     try {
-      const options: RoomOptions = {
+      const options: RoomOptions = { 
         allowContinueAfterFail,
-        defaultTopicType: "通常版", // ワンクリック開始のデフォルト
+        defaultTopicType: "�ʏ��" // �����N���b�N�J�n�̃f�t�H���g
       };
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
         options,
-        status: "waiting", // 新規作成時は待機
-        visibility: "public",
+        status: "waiting", // 新規作成時はロビーで参加可能な待機状態
+        visibility: "public", // ���̎Q���҂ɕ\�������悤��
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,
@@ -60,8 +70,9 @@ export function CreateRoomModal({
         result: null,
       };
       const roomRef = await addDoc(collection(db!, "rooms"), room);
+      // �������v���C���[�Ƃ��ēo�^
       const pdoc: PlayerDoc = {
-        name: displayName || "プレイヤー",
+        name: displayName || "����",
         avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
         number: null,
         clue1: "",
@@ -81,11 +92,15 @@ export function CreateRoomModal({
       } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      notify({ title: "作成に失敗しました", description: e?.message, type: "error" });
+      notify({
+        title: "�쐬�Ɏ��s���܂���",
+        description: e?.message,
+        type: "error",
+      });
     } finally {
       setSubmitting(false);
     }
-  };
+  };;;
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
@@ -94,29 +109,30 @@ export function CreateRoomModal({
         <Dialog.Content>
           <Dialog.CloseTrigger />
           <Dialog.Header>
-            <Dialog.Title>部屋を作成</Dialog.Title>
+            <Dialog.Title>���������</Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
             <Stack gap={4}>
               {!user && (
                 <Stack fontSize="sm" color="fgMuted">
-                  <span>まだサインインしていませんが、部屋は作成できます。</span>
-                  <span>参加には後で名前の設定をおすすめします。</span>
+                  <span>�������O�C�������������Ă��܂��c</r
+                  ><span>�����҂��Ă���u�쐬�v�������Ă��������B</span>
                 </Stack>
               )}
               <Field.Root>
-                <Field.Label>部屋名</Field.Label>
+                <Field.Label>������</Field.Label>
                 <Input
-                  placeholder="例: ITO"
+                  placeholder="��j�F��ITO"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field.Root>
+              {/* �p���I�v�V������ UI ����폜���܂����i�z�X�g����Ő��䂵�܂��j */}
             </Stack>
           </Dialog.Body>
           <Dialog.Footer>
             <AppButton mr={3} onClick={onClose} variant="ghost">
-              キャンセル
+              �L�����Z��
             </AppButton>
             <AppButton
               colorPalette="orange"
@@ -125,7 +141,7 @@ export function CreateRoomModal({
               loading={submitting}
               disabled={submitting}
             >
-              作成
+              �쐬
             </AppButton>
           </Dialog.Footer>
         </Dialog.Content>
@@ -133,4 +149,5 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
+
 

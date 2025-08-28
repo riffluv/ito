@@ -72,19 +72,18 @@ export function useHostActions({
             await topicControls.shuffleTopic(roomId, ((room as any)?.topicBox as string) || null);
           },
         } as HostAction;
-      case "deal":
+            case "deal":
         return {
           ...base,
           onClick: async () => {
             if (!((room as any)?.topic)) {
-              notify({ title: "先にお題を設定", type: "warning" });
+              notify({ title: "全員分のカードが揃っていません", type: "warning" });
               return;
             }
             await topicControls.dealNumbers(roomId);
-            notify({ title: "数字を配布しました", type: "success" });
+            notify({ title: "番号を配布しました", type: "success" });
           },
-        } as HostAction;
-      case "reselect":
+        } as HostAction;case "reselect":
         return {
           ...base,
           onClick: async () => {
@@ -98,15 +97,15 @@ export function useHostActions({
             const proposal: string[] = ((room as any)?.order?.proposal || []) as string[];
             const assigned = players.filter((p) => typeof (p as any)?.number === "number").length;
             if (proposal.length === 0) {
-              notify({ title: "まだカードが場にありません", type: "info" });
+              notify({ title: "カード案がまだありません", type: "info" });
               return;
             }
             if (proposal.length !== assigned) {
-              notify({ title: "まだ全員のカードが場に出ていません", type: "warning" });
+              notify({ title: "全員分のカードが揃っていません", type: "warning" });
               return;
             }
             await submitSortedOrder(roomId, proposal);
-            notify({ title: "一括判定を実行", type: "success" });
+            notify({ title: "番号を配布しました", type: "success" });
           },
         } as HostAction;
       case "quickStart":
@@ -117,7 +116,7 @@ export function useHostActions({
               // デフォルトお題タイプを使用（設定がない場合は通常版）
               const defaultType = (room as any)?.options?.defaultTopicType || "通常版";
               
-              notify({ title: "ゲーム準備中...", type: "info" });
+              notify({ title: "カード案がまだありません", type: "info" });
               
               // 1. お題選択
               await topicControls.selectCategory(roomId, defaultType as any);
@@ -125,7 +124,7 @@ export function useHostActions({
               // 2. 数字配布
               await topicControls.dealNumbers(roomId);
               
-              notify({ title: "🚀 ゲーム開始準備完了！", type: "success" });
+              notify({ title: "番号を配布しました", type: "success" });
             } catch (error: any) {
               notify({
                 title: "ワンクリック開始に失敗",
@@ -150,3 +149,7 @@ export function useHostActions({
 
   return actions;
 }
+
+
+
+
