@@ -251,16 +251,14 @@ export function CentralCardBoard({
               </DndContext>
             ) : (
               <>
-                {/* Rendered cards with slots */}
-                {orderList && orderList.length > 0 ? (
-                  orderList.map((id, idx) => (
-                    <React.Fragment key={id}>
-                      {renderCard(id, idx)}
+                {/* 順次判定モード: 固定スロットレイアウト（orderList使用） */}
+                {Array.from({ length: eligibleIds.length }).map((_, idx) => {
+                  const cardId = orderList?.[idx];
+                  return cardId ? (
+                    <React.Fragment key={cardId}>
+                      {renderCard(cardId, idx)}
                     </React.Fragment>
-                  ))
-                ) : (
-                  // Show empty drop zones when no cards
-                  Array.from({ length: eligibleIds.length }).map((_, idx) => (
+                  ) : (
                     <Box
                       key={`drop-zone-${idx}`}
                       width={UNIFIED_LAYOUT.CARD.WIDTH} // 手札と同じサイズ
@@ -278,30 +276,22 @@ export function CentralCardBoard({
                     >
                       {idx + 1}
                     </Box>
-                  ))
-                )}
-                {proposal &&
-                proposal.length > 0 &&
+                  );
+                })}
+
+                {/* Pending cards - 順次判定モード専用 */}
+                {resolveMode !== "sort-submit" &&
+                pending &&
+                pending.length > 0 &&
                 roomStatus !== "finished" &&
                 roomStatus !== "reveal"
-                  ? proposal
-                      .filter((id) => !orderList?.includes(id))
+                  ? pending
+                      .filter((id) => !(orderList || []).includes(id))
+                      .filter((id) => !(proposal || []).includes(id))
                       .map((id) => renderCard(id))
                   : null}
               </>
             )}
-
-            {/* Pending cards */}
-            {resolveMode !== "sort-submit" &&
-            pending &&
-            pending.length > 0 &&
-            roomStatus !== "finished" &&
-            roomStatus !== "reveal"
-              ? pending
-                  .filter((id) => !(orderList || []).includes(id))
-                  .filter((id) => !(proposal || []).includes(id))
-                  .map((id) => renderCard(id))
-              : null}
           </Box>
 
         </Box>
@@ -317,7 +307,12 @@ export function CentralCardBoard({
             color="#64748b" // --slate-600
             marginBottom="0.75rem"
           >
-            準備状況: <Box as="strong">{orderList?.length || 0}/{eligibleIds.length}人</Box> がカードを出しました
+            準備状況: <Box as="strong">
+              {resolveMode === "sort-submit" 
+                ? `${proposal?.length || 0}/${eligibleIds.length}人` 
+                : `${orderList?.length || 0}/${eligibleIds.length}人`
+              }
+            </Box> がカードを出しました
           </Box>
           <Box
             display="flex"
@@ -326,7 +321,9 @@ export function CentralCardBoard({
             flexWrap="wrap"
           >
             {eligibleIds.map((id) => {
-              const placed = orderList?.includes(id) || proposal?.includes(id);
+              const placed = resolveMode === "sort-submit" 
+                ? proposal?.includes(id) 
+                : orderList?.includes(id);
               const player = map.get(id);
               return (
                 <Box
