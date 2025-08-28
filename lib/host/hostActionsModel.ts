@@ -32,7 +32,7 @@ export function buildHostActionModel(
 
   const intents: HostIntent[] = [];
 
-  // waiting: primary(開始)は出さず、すぐにクイック開始/詳細を提示
+  // waiting: primaryは出さず、すぐにクイック開始/詳細を提示
   if (status === "waiting") {
     intents.push({ key: "quickStart", label: "クイック開始", palette: "orange", variant: "solid" });
     intents.push({ key: "advancedMode", label: "詳細", palette: "gray", variant: "outline" });
@@ -50,6 +50,7 @@ export function buildHostActionModel(
     }
 
     if (resolveMode === "sort-submit") {
+      // 修正: 数字が割り当てられた全プレイヤーがproposalに含まれているかをチェック
       const canEval = proposal.length > 0 && proposal.length === assigned;
       intents.push({
         key: "evaluate",
@@ -63,3 +64,6 @@ export function buildHostActionModel(
 
   return intents;
 }
+
+
+
