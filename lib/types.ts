@@ -6,6 +6,11 @@ export type RoomOptions = {
    * - "sort-submit": 全員がカード(伏せ/連想ワード表示)を場に置き、相談しながら並べ替えてホストが一括判定
    */
   resolveMode?: "sequential" | "sort-submit";
+  /**
+   * デフォルトお題タイプ
+   * ワンクリック開始時に使用されるお題の山札タイプ
+   */
+  defaultTopicType?: "通常版" | "レインボー版" | "クラシック版";
 };
 
 export type RoomDoc = {

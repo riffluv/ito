@@ -8,6 +8,7 @@ import { FiRefreshCw } from "react-icons/fi";
 import { useMemo, useState } from "react";
 import { useHostActions } from "@/components/hooks/useHostActions";
 
+import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 export type HostControlDockProps = {
   roomId: string;
   room: RoomDoc & { id?: string };
@@ -31,6 +32,7 @@ export function HostControlDock({
   onReset,
 }: HostControlDockProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // 動的ホストアクション（UI層は並べるだけ）
   const actions = useHostActions({ room, players, roomId, hostPrimaryAction, onlineCount });
@@ -43,7 +45,7 @@ export function HostControlDock({
         {actions.map((a) => (
           <Tooltip key={a.key} content={a.title || ""} disabled={!a.title}>
             <AppButton
-              onClick={a.onClick}
+              onClick={a.key === "advancedMode" ? () => setAdvancedOpen(true) : a.onClick}
               disabled={a.disabled}
               colorPalette={a.palette as any}
               variant={a.variant as any}
@@ -65,6 +67,16 @@ export function HostControlDock({
           </AppButton>
         )}
       </Box>
+
+      {/* Advanced Host Panel */}
+      <AdvancedHostPanel
+        isOpen={advancedOpen}
+        onClose={() => setAdvancedOpen(false)}
+        roomId={roomId}
+        room={room}
+        players={players}
+        onlineCount={onlineCount}
+      />
 
       {/* Reset Confirmation Dialog */}
       <Dialog.Root open={confirmOpen} onOpenChange={(d) => setConfirmOpen(d.open)}>

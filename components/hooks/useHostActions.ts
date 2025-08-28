@@ -109,6 +109,40 @@ export function useHostActions({
             notify({ title: "一括判定を実行", type: "success" });
           },
         } as HostAction;
+      case "quickStart":
+        return {
+          ...base,
+          onClick: async () => {
+            try {
+              // デフォルトお題タイプを使用（設定がない場合は通常版）
+              const defaultType = (room as any)?.options?.defaultTopicType || "通常版";
+              
+              notify({ title: "ゲーム準備中...", type: "info" });
+              
+              // 1. お題選択
+              await topicControls.selectCategory(roomId, defaultType as any);
+              
+              // 2. 数字配布
+              await topicControls.dealNumbers(roomId);
+              
+              notify({ title: "🚀 ゲーム開始準備完了！", type: "success" });
+            } catch (error: any) {
+              notify({
+                title: "ワンクリック開始に失敗",
+                description: error?.message,
+                type: "error",
+              });
+            }
+          },
+        } as HostAction;
+      case "advancedMode":
+        return {
+          ...base,
+          onClick: () => {
+            // モーダルを開く処理は親コンポーネント（HostControlDock）で処理される
+            // この関数は空にしておく
+          },
+        } as HostAction;
       default:
         return { ...base, onClick: () => {} } as HostAction;
     }

@@ -86,7 +86,7 @@ export async function leaveRoom(
 
 export async function resetRoomToWaiting(roomId: string) {
   await updateDoc(doc(db!, "rooms", roomId), {
-    status: "waiting",
+    status: "clue", // 手札が常に見える新UX: リセット後もclue状態を維持
     result: null,
     deal: null,
     order: null,

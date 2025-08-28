@@ -28,6 +28,9 @@ export function SettingsModal({
   const [resolveMode, setResolveMode] = useState<string>(
     currentOptions?.resolveMode || "sequential"
   );
+  const [defaultTopicType, setDefaultTopicType] = useState<string>(
+    currentOptions?.defaultTopicType || "通常版"
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -48,6 +51,7 @@ export function SettingsModal({
     try {
       await updateDoc(doc(db!, "rooms", roomId), {
         "options.resolveMode": resolveMode,
+        "options.defaultTopicType": defaultTopicType,
       });
       notify({ title: "設定を保存しました", type: "success" });
       onClose();
@@ -76,6 +80,27 @@ export function SettingsModal({
       description: "全員カードを並べてからまとめて判定",
       icon: <FiUsers />,
       subtitle: "戦略的",
+    },
+  ];
+
+  const topicTypeOptions = [
+    {
+      value: "通常版",
+      title: "通常版",
+      description: "バランスの取れた定番のお題",
+      emoji: "🎯",
+    },
+    {
+      value: "レインボー版",
+      title: "レインボー版",
+      description: "カラフルで創造的なお題",
+      emoji: "🌈",
+    },
+    {
+      value: "クラシック版",
+      title: "クラシック版",
+      description: "シンプルで分かりやすいお題",
+      emoji: "⭐",
     },
   ];
 
@@ -127,6 +152,50 @@ export function SettingsModal({
                         <Text fontSize="xs" fontWeight="bold">
                           {option.subtitle}
                         </Text>
+                      </VStack>
+                      <VStack align="start" gap={1} flex="1">
+                        <Text fontWeight="bold" fontSize="md">
+                          {option.title}
+                        </Text>
+                        <Text fontSize="sm" opacity={0.8}>
+                          {option.description}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                  </AppButton>
+                ))}
+              </Stack>
+
+              {/* デフォルトお題タイプ設定 */}
+              <VStack align="start" gap={2}>
+                <Text fontWeight="bold" fontSize="md">
+                  デフォルトお題タイプ
+                </Text>
+                <Text fontSize="sm" color="fgMuted">
+                  ワンクリック開始時に使用される山札を選択
+                </Text>
+              </VStack>
+
+              <Stack gap={2}>
+                {topicTypeOptions.map((option) => (
+                  <AppButton
+                    key={option.value}
+                    variant={
+                      defaultTopicType === option.value ? "solid" : "outline"
+                    }
+                    colorPalette={
+                      defaultTopicType === option.value ? "orange" : "gray"
+                    }
+                    onClick={() => setDefaultTopicType(option.value)}
+                    w="100%"
+                    h="auto"
+                    p={4}
+                    justifyContent="flex-start"
+                    disabled={!isHost || roomStatus !== "waiting"}
+                  >
+                    <HStack w="100%" gap={3}>
+                      <VStack align="center" gap={1} minW="50px">
+                        <Text fontSize="2xl">{option.emoji}</Text>
                       </VStack>
                       <VStack align="start" gap={1} flex="1">
                         <Text fontWeight="bold" fontSize="md">

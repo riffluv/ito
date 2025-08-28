@@ -8,10 +8,8 @@ import type { RoomDoc, PlayerDoc } from "@/lib/types";
 
 export type HostIntentKey =
   | "primary"
-  | "pickTopic"
-  | "deal"
-  | "shuffle"
-  | "reselect"
+  | "quickStart"
+  | "advancedMode"
   | "evaluate";
 
 export type HostIntent = {
@@ -42,34 +40,33 @@ export function buildHostActionModel(
 
   const intents: HostIntent[] = [];
 
-  // primary（開始/もう一度）
-  if ((status === "waiting" || status === "finished") && hostPrimary) {
+  // finished状態でのみprimaryアクション（もう一度）を表示
+  if (status === "finished" && hostPrimary) {
     intents.push({ key: "primary", label: hostPrimary.label, palette: "orange" });
   }
 
   if (status === "clue") {
     if (!topicSelected) {
-      // カテゴリ3択のみ（自動決定しない）
-      for (const cat of topicTypeLabels) {
-        intents.push({ key: "pickTopic", label: cat, palette: "brand", payload: { category: cat } });
-      }
+      // メイン: ワンクリック開始
+      intents.push({ 
+        key: "quickStart", 
+        label: "🚀 ワンクリック開始", 
+        palette: "orange",
+        variant: "solid"
+      });
+      
+      // 上級者向け: 詳細設定
+      intents.push({ 
+        key: "advancedMode", 
+        label: "⚙️ 詳細設定", 
+        palette: "gray",
+        variant: "outline"
+      });
+      
       return intents;
     }
 
-    // お題選択済み → シャッフル / 数字配布 / お題を選び直す
-    intents.push({ key: "shuffle", label: "シャッフル", variant: "outline" });
-
-    const tooFewPlayers = typeof onlineCount === "number" && onlineCount < MIN_PLAYERS_FOR_DEAL;
-    intents.push({
-      key: "deal",
-      label: "数字配布",
-      variant: "outline",
-      disabled: tooFewPlayers,
-      reason: tooFewPlayers ? `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です` : undefined,
-    });
-
-    intents.push({ key: "reselect", label: "お題を選び直す", variant: "ghost" });
-
+    // お題選択済みの場合は sort-submit の評価ボタンのみ表示
     if (resolveMode === "sort-submit") {
       const canEval = proposal.length > 0 && proposal.length === assigned;
       intents.push({

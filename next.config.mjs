@@ -5,7 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
   // パフォーマンス最適化
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // critters依存エラーのため一時無効化
     optimizePackageImports: [
       '@chakra-ui/react',
       'framer-motion',
