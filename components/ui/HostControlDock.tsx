@@ -2,6 +2,8 @@
 import { useHostActions } from "@/components/hooks/useHostActions";
 import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 import { AppButton } from "@/components/ui/AppButton";
+import { QuickTopicChange } from "@/components/ui/QuickTopicChange";
+import { QuickNumberRedeal } from "@/components/ui/QuickNumberRedeal";
 import Tooltip from "@/components/ui/Tooltip";
 import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -66,11 +68,36 @@ function HostControlDock({
     // actions 配列内の disabled 変化も拾うため actions を直接依存に含める
   }, [isWaiting, status, (room as any)?.options?.resolveMode, actions]);
 
+  // Show direct action buttons in waiting and clue phases
+  const showQuickActions = isWaiting || status === "clue";
+
   return (
     <>
-      <Box display="flex" gap={3} flexWrap="wrap" justifyContent="flex-end">
+      <Box display="flex" gap={2} flexWrap="wrap" justifyContent="flex-end" alignItems="center">
+        {/* Quick Action Buttons - Primary UX */}
+        {showQuickActions && (
+          <>
+            <QuickTopicChange 
+              roomId={roomId}
+              room={room}
+              size="sm"
+            />
+            <QuickNumberRedeal 
+              roomId={roomId}
+              room={room}
+              players={players}
+              onlineCount={onlineCount}
+              size="sm"
+            />
+          </>
+        )}
+        
+        {/* Traditional Host Actions */}
         {ordered.map((a) => {
           const isAdvanced = a.key.includes("advancedMode");
+          // Skip quickStart in clue phase since we have dedicated buttons
+          if (status === "clue" && a.key.startsWith("quickStart")) return null;
+          
           const tooltip = a.title || (a.disabled ? "利用できません" : "");
           return (
             <Tooltip key={a.key} content={tooltip} disabled={!tooltip}>
@@ -87,7 +114,7 @@ function HostControlDock({
               </AppButton>
             </Tooltip>
           );
-        })}
+        }).filter(Boolean)}
 
         {!pickingCategory && !isWaiting && (
           <AppButton

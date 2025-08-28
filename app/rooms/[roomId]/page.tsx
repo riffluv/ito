@@ -145,10 +145,12 @@ export default function RoomPage() {
   const me = players.find((p) => p.id === meId);
 
   // 入室ガード: 自分がメンバーでないかつ待機中でない場合はロビーへ戻す
+  // ただし、ホストは常にアクセス可能
   const isMember = !!(uid && players.some((p) => p.id === uid));
+  const canAccess = isMember || isHost;
   useEffect(() => {
     if (!room || !uid) return;
-    if (!isMember && room.status !== "waiting" && room.status !== "clue") {
+    if (!canAccess && room.status !== "waiting" && room.status !== "clue") {
       try {
         notify({
           title: "入室できません",
@@ -159,7 +161,7 @@ export default function RoomPage() {
       } catch {}
       router.replace("/");
     }
-  }, [room?.status, uid, isMember]);
+  }, [room?.status, uid, canAccess]);
 
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {

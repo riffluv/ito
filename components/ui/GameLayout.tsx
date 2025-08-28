@@ -62,7 +62,7 @@ export function GameLayout({
         color="#0f172a" // --slate-900
         lineHeight={1.5}
         css={{
-          "-webkit-font-smoothing": "antialiased",
+          "WebkitFontSmoothing": "antialiased",
           // レスポンシブ対応: モバイルでは縦積み
           "@media (max-width: 1279px)": {
             gridTemplateAreas: `
