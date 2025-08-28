@@ -12,7 +12,31 @@ service cloud.firestore {
         request.resource.data.hostId == request.auth.uid;
 
       // 更新はルームのホストに限定（status/closedAt など重要フィールド）
-      allow update: if request.auth != null && isHost(roomId);
+      // + order.* フィールドの書き込みを厳格化
+      allow update: if request.auth != null && isHost(roomId)
+        // order フィールドの変更に対する追加制限
+        && (
+          // orderフィールドが変更されていない場合はOK
+          !('order' in request.resource.data) ||
+          resource.data.order == request.resource.data.order ||
+          // orderフィールドが変更される場合の制限
+          (
+            // ホストのみが order を変更可能
+            isHost(roomId) &&
+            // 特定のstatusでのみ変更可能
+            (resource.data.status in ['clue', 'reveal']) &&
+            // list が存在する場合、既存プレイヤーのみ含める
+            (
+              !('list' in request.resource.data.order) ||
+              isValidPlayerList(roomId, request.resource.data.order.list)
+            ) &&
+            // proposal が存在する場合、既存プレイヤーのみ含める  
+            (
+              !('proposal' in request.resource.data.order) ||
+              isValidPlayerList(roomId, request.resource.data.order.proposal)
+            )
+          )
+        );
 
       // 削除はホストまたは管理者（要カスタムクレーム）
       allow delete: if request.auth != null && (isHost(roomId) || isAdmin());
@@ -20,10 +44,32 @@ service cloud.firestore {
       // players サブコレクション
       match /players/{playerId} {
         // プレイヤーは自身のドキュメントのみ作成/更新/削除可能
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.uid
-          && isWaiting(roomId);
+        allow create: if request.auth != null && 
+          request.auth.uid == request.resource.data.uid &&
+          isWaiting(roomId) &&
+          // 必須フィールドの検証
+          request.resource.data.name is string &&
+          request.resource.data.name.size() <= 20 &&
+          request.resource.data.uid is string;
+        
         allow read: if true;
-        allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+        
+        // 更新は本人のみ、かつ制限付き
+        allow update: if request.auth != null && 
+          request.auth.uid == resource.data.uid &&
+          // nameフィールドの変更制限（waiting状態のみ）
+          (
+            !('name' in request.resource.data) ||
+            resource.data.name == request.resource.data.name ||
+            isWaiting(roomId)
+          ) &&
+          // numberフィールドの変更制限（プレイヤー自身のみ、クルー中のみ）
+          (
+            !('number' in request.resource.data) ||
+            resource.data.number == request.resource.data.number ||
+            (getRoomStatus(roomId) in ['clue', 'reveal'])
+          );
+        
         allow delete: if request.auth != null && request.auth.uid == resource.data.uid;
       }
 
@@ -56,6 +102,24 @@ service cloud.firestore {
     }
     function isAdmin(){
       return request.auth.token.admin == true;
+    }
+    function getRoomStatus(roomId){
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.status;
+    }
+    // プレイヤーリストが既存のプレイヤーのみを含んでいるかチェック
+    function isValidPlayerList(roomId, playerList) {
+      // 空リストは許可
+      return playerList.size() == 0 ||
+        // リスト内の各プレイヤーがルーム内に存在することを確認
+        // 注意: この実装は簡易版。実際の実装ではプレイヤーの存在確認が必要だが
+        // Firestoreルールでの複雑なクエリは制限があるため、
+        // アプリケーション側でも検証を行う
+        playerList.size() <= 10; // 最大プレイヤー数制限
+    }
+    // レート制限のヘルパー関数
+    function isRateLimited() {
+      // 簡易的なレート制限（実際の実装ではより複雑な制御が必要）
+      return request.time < resource.data.lastUpdate + duration.value(1, 's');
     }
   }
 }

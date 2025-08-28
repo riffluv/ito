@@ -9,11 +9,13 @@ import {
   DndContext,
   DragEndEvent,
   DragOverlay,
+  KeyboardSensor,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   SortableContext,
   arrayMove,
@@ -38,6 +40,9 @@ export function SortBoard({
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 100, tolerance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
   const ids = proposal;
@@ -66,6 +71,34 @@ export function SortBoard({
         sensors={sensors}
         onDragStart={(e) => setActiveId(String(e.active.id))}
         onDragEnd={onDragEnd}
+        accessibility={{
+          announcements: {
+            onDragStart: ({ active }) => {
+              const player = map.get(active.id as string);
+              return `カード「${player?.name || active.id}」の並び替えを開始しました。矢印キーで移動できます。`;
+            },
+            onDragOver: ({ active, over }) => {
+              if (over) {
+                const activePlayer = map.get(active.id as string);
+                const overPlayer = map.get(over.id as string);
+                return `カード「${activePlayer?.name || active.id}」を「${overPlayer?.name || over.id}」の位置に移動中です。`;
+              }
+              return `カード「${active.id}」を移動中です。`;
+            },
+            onDragEnd: ({ active, over }) => {
+              const activePlayer = map.get(active.id as string);
+              if (over) {
+                const overPlayer = map.get(over.id as string);
+                return `カード「${activePlayer?.name || active.id}」を「${overPlayer?.name || over.id}」の位置に配置しました。`;
+              }
+              return `カード「${activePlayer?.name || active.id}」の並び替えを終了しました。`;
+            },
+            onDragCancel: ({ active }) => {
+              const activePlayer = map.get(active.id as string);
+              return `カード「${activePlayer?.name || active.id}」の並び替えをキャンセルしました。`;
+            },
+          },
+        }}
       >
         <SortableContext items={ids} strategy={rectSortingStrategy}>
           <Box
