@@ -50,12 +50,16 @@ export function CreateRoomModal({
     }
     setSubmitting(true);
     try {
-      const options: RoomOptions = { allowContinueAfterFail };
+      const options: RoomOptions = { 
+        allowContinueAfterFail,
+        defaultTopicType: "通常版" // ワンクリック開始のデフォルト
+      };
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
         options,
-        status: "waiting",
+        status: "clue", // 即座にゲーム準備状態に
+        visibility: "public", // 他の参加者に表示されるように
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,
@@ -96,7 +100,7 @@ export function CreateRoomModal({
     } finally {
       setSubmitting(false);
     }
-  };
+  };;;
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>

@@ -153,7 +153,7 @@ export default function RoomPage() {
   const isMember = !!(uid && players.some((p) => p.id === uid));
   useEffect(() => {
     if (!room || !uid) return;
-    if (!isMember && room.status !== "waiting") {
+    if (!isMember && room.status !== "waiting" && room.status !== "clue") {
       try {
         notify({
           title: "入室できません",
