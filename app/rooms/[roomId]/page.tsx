@@ -1,20 +1,18 @@
 "use client";
 import dynamic from "next/dynamic";
-// dynamic imports (chunk split + 初期JS削減)
-const ChatPanel = dynamic(
-  () => import("@/components/ChatPanel").then((m) => m.ChatPanel),
-  { ssr: false, loading: () => null }
-);
+
+// 重要コンポーネント: Eager loading（初期表示性能優先）
+import { ChatPanel } from "@/components/ChatPanel";
+import { Hud } from "@/components/Hud";
+import { Participants } from "@/components/Participants";
+
+// 非重要コンポーネント: Dynamic import（必要時に読み込み）
 const CluePanel = dynamic(
   () => import("@/components/CluePanel").then((m) => m.CluePanel),
-  { ssr: false, loading: () => null }
-);
-const Hud = dynamic(() => import("@/components/Hud").then((m) => m.Hud), {
-  ssr: false,
-});
-const Participants = dynamic(
-  () => import("@/components/Participants").then((m) => m.Participants),
-  { ssr: false }
+  { 
+    ssr: false, 
+    loading: () => null 
+  }
 );
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
@@ -55,7 +53,7 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Flex, HStack, Input, Spinner, Stack, Text, useBreakpointValue } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // ClueInputMini: 手札エリア用のコンパクトな連想ワード入力コンポーネント
 interface ClueInputMiniProps {
@@ -265,7 +263,7 @@ export default function RoomPage() {
     }
   }, [room?.status, uid]);
 
-  const startGame = async () => {
+  const startGame = useCallback(async () => {
     try {
       if (!room || !isHost) {
         notify({ title: "ホストのみ開始できます", type: "warning" });
@@ -288,21 +286,21 @@ export default function RoomPage() {
         type: "error",
       });
     }
-  };
+  }, [room, isHost, onlinePlayers.length, roomId]);
 
   // finalizeはRevealPanel側で処理
 
-  const resetToWaiting = async () => {
+  const resetToWaiting = useCallback(async () => {
     if (!isHost) return;
     await resetRoomToWaiting(roomId);
-  };
+  }, [isHost, roomId]);
 
-  const continueAfterFail = async () => {
+  const continueAfterFail = useCallback(async () => {
     await updateDoc(doc(db!, "rooms", roomId), {
       round: (room?.round || 0) + 1,
     });
     await continueAfterFailAction(roomId);
-  };
+  }, [room?.round, roomId]);
 
   // proposal state removed: clue フェーズではドロップ時に即時コミットして判定します
 
@@ -319,7 +317,7 @@ export default function RoomPage() {
     }
   }, [displayName, uid, roomId]);
 
-  const leaveRoom = async () => {
+  const leaveRoom = useCallback(async () => {
     if (!uid) return;
     try {
       leavingRef.current = true;
@@ -342,7 +340,7 @@ export default function RoomPage() {
       // エラーが発生してもメインメニューに戻る
       router.push("/");
     }
-  };
+  }, [uid, detachNow, roomId, displayName, router]);
 
   // 退出時処理をフックで一元化
   useLeaveCleanup({

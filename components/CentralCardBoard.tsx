@@ -306,10 +306,10 @@ export function CentralCardBoard({
 
         </Box>
         
-        {/* Progress Section - Professional Style */}
+        {/* Progress Section - Professional Style (Mock準拠) */}
         <Box
           bg="#f8fafc" // --slate-50
-          borderRadius="0.75rem" // --radius-lg
+          borderRadius="0.75rem"
           padding="1rem"
           textAlign="center"
         >

@@ -22,9 +22,9 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
-export function ChatPanel({
+export const ChatPanel = memo(function ChatPanel({
   roomId,
   height = 360,
   readOnly = false,
@@ -57,7 +57,7 @@ export function ChatPanel({
     return () => unsub();
   }, [roomId]);
 
-  const send = async () => {
+  const send = useCallback(async () => {
     const t = text.trim();
     if (!t) return;
     if (readOnly) return;
@@ -68,7 +68,7 @@ export function ChatPanel({
     if (!user?.uid) return;
     await sendMessage(roomId, user.uid, displayName || "匿名", clipped);
     setText("");
-  };
+  }, [text, readOnly, roomId, user?.uid, displayName]);
 
   return (
     <Panel p={2} h={height} display="grid" gridTemplateRows="1fr auto" overflow="hidden">
@@ -159,4 +159,4 @@ export function ChatPanel({
       </HStack>
     </Panel>
   );
-}
+});
