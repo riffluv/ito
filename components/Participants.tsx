@@ -3,8 +3,9 @@ import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Avatar, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { CheckCircle2 } from "lucide-react";
+import { memo } from "react";
 
-export function Participants({
+export const Participants = memo(function Participants({
   players,
 }: {
   players: (PlayerDoc & { id: string })[]; // derived participants only
@@ -77,11 +78,11 @@ export function Participants({
             width="8px"
             height="8px"
             borderRadius="50%"
-            bg={p.ready ? "#22c55e" : "#0ea5e9"} // --green-500 : --blue-500
+            bg={p.ready ? "#22c55e" : "#10b981"} // --green-500 : --emerald-500 (オンライン感のある緑)
             marginTop={1}
           />
         </Box>
       ))}
     </Box>
   );
-}
+});
