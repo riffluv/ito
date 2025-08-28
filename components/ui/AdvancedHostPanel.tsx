@@ -27,6 +27,9 @@ export function AdvancedHostPanel({
   const MIN_PLAYERS_FOR_DEAL = 2;
   const topicSelected = !!(room as any)?.topic;
   const tooFewPlayers = onlineCount < MIN_PLAYERS_FOR_DEAL;
+  
+  // デフォルトモードは "sequential" (通常モード)
+  const currentMode = room.options?.resolveMode || "sequential";
 
   const handleCategorySelect = async (category: string) => {
     try {
@@ -53,17 +56,58 @@ export function AdvancedHostPanel({
     }
   };
 
-  const handleDealNumbers = async () => {
+  const handleModeChange = async (mode: "sequential" | "sort-submit") => {
     try {
-      if (!topicSelected) {
-        notify({ title: "先にお題を設定してください", type: "warning" });
-        return;
-      }
-      await topicControls.dealNumbers(roomId);
-      notify({ title: "数字を配布しました", type: "success" });
+      const { updateDoc, doc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase/client");
+      
+      await updateDoc(doc(db!, "rooms", roomId), {
+        "options.resolveMode": mode,
+      });
+      
+      notify({ 
+        title: `モードを${mode === "sequential" ? "通常モード" : "一括判定モード"}に変更しました`, 
+        type: "success" 
+      });
     } catch (error: any) {
       notify({
-        title: "数字配布に失敗",
+        title: "モード変更に失敗",
+        description: error?.message,
+        type: "error",
+      });
+    }
+  };
+
+  const handleFailModeToggle = async () => {
+    try {
+      const { updateDoc, doc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase/client");
+      
+      const newMode = !room.options?.allowContinueAfterFail;
+      await updateDoc(doc(db!, "rooms", roomId), {
+        "options.allowContinueAfterFail": newMode,
+      });
+      
+      notify({ 
+        title: newMode ? "失敗後継続モードを有効化" : "失敗時即終了モードを有効化", 
+        type: "success" 
+      });
+    } catch (error: any) {
+      notify({
+        title: "設定変更に失敗",
+        description: error?.message,
+        type: "error",
+      });
+    }
+  };
+
+  const handleResetRoom = async () => {
+    try {
+      await topicControls.resetTopic(roomId);
+      notify({ title: "ルームをリセットしました", type: "success" });
+    } catch (error: any) {
+      notify({
+        title: "ルームリセットに失敗",
         description: error?.message,
         type: "error",
       });
@@ -105,76 +149,84 @@ export function AdvancedHostPanel({
           
           <Dialog.Body>
             <VStack gap={6} align="stretch">
-              {!topicSelected ? (
-                // お題未選択時: カテゴリ選択
-                <VStack align="stretch" gap={3}>
+              {/* 上級者向け設定のみ */}
+              <VStack align="stretch" gap={4}>
+                <VStack align="stretch" gap={2}>
                   <Text fontWeight="bold" fontSize="md">
-                    📝 お題カテゴリを選択
+                    🔧 ゲームモード設定
                   </Text>
                   <HStack gap={2}>
-                    {topicTypeLabels.map((cat) => (
-                      <AppButton
-                        key={cat}
-                        onClick={() => handleCategorySelect(cat)}
-                        colorPalette="brand"
-                        flex="1"
-                      >
-                        {cat}
-                      </AppButton>
-                    ))}
-                  </HStack>
-                </VStack>
-              ) : (
-                // お題選択済み: 詳細操作
-                <VStack align="stretch" gap={4}>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontWeight="bold" fontSize="md">
-                      🎲 お題の調整
-                    </Text>
-                    <HStack gap={2}>
-                      <AppButton
-                        onClick={handleShuffle}
-                        variant="outline"
-                        flex="1"
-                      >
-                        シャッフル
-                      </AppButton>
-                      <AppButton
-                        onClick={handleReselect}
-                        variant="ghost"
-                        flex="1"
-                      >
-                        お題を選び直す
-                      </AppButton>
-                    </HStack>
-                  </VStack>
-
-                  <VStack align="stretch" gap={2}>
-                    <Text fontWeight="bold" fontSize="md">
-                      🎯 ゲーム開始
-                    </Text>
                     <AppButton
-                      onClick={handleDealNumbers}
-                      colorPalette="orange"
-                      disabled={tooFewPlayers}
-                      title={tooFewPlayers ? `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です` : undefined}
+                      variant={currentMode === "sequential" ? "solid" : "outline"}
+                      colorPalette="blue"
+                      flex="1"
+                      onClick={() => handleModeChange("sequential")}
                     >
-                      数字配布
+                      通常モード
                     </AppButton>
-                  </VStack>
+                    <AppButton
+                      variant={currentMode === "sort-submit" ? "solid" : "outline"}
+                      colorPalette="blue"
+                      flex="1"
+                      onClick={() => handleModeChange("sort-submit")}
+                    >
+                      一括判定
+                    </AppButton>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600">
+                    通常: リアルタイム判定　｜　一括: 相談して並び替え後判定
+                  </Text>
                 </VStack>
-              )}
+
+                <VStack align="stretch" gap={2}>
+                  <Text fontWeight="bold" fontSize="md">
+                    ⚙️ 失敗時の動作
+                  </Text>
+                  <AppButton
+                    variant={room.options?.allowContinueAfterFail ? "solid" : "outline"}
+                    colorPalette="orange"
+                    onClick={() => handleFailModeToggle()}
+                  >
+                    {room.options?.allowContinueAfterFail 
+                      ? "✅ 失敗後も継続" 
+                      : "❌ 失敗時即終了"}
+                  </AppButton>
+                  <Text fontSize="xs" color="gray.600">
+                    失敗時の動作を選択。継続モードでは最後まで遊べます。
+                  </Text>
+                </VStack>
+
+                <VStack align="stretch" gap={2}>
+                  <Text fontWeight="bold" fontSize="md">
+                    🎮 ゲーム管理
+                  </Text>
+                  <HStack gap={2}>
+                    <AppButton
+                      onClick={handleResetRoom}
+                      variant="ghost"
+                      colorPalette="red"
+                      flex="1"
+                    >
+                      ルームリセット
+                    </AppButton>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600">
+                    ゲームを待機状態に戻します。
+                  </Text>
+                </VStack>
+              </VStack>
 
               <Box
-                bg="yellow.50"
+                bg="blue.50"
                 p={3}
                 borderRadius="md"
                 border="1px solid"
-                borderColor="yellow.200"
+                borderColor="blue.200"
               >
-                <Text fontSize="sm" color="yellow.800">
-                  💡 <strong>ヒント:</strong> 通常は「ワンクリック開始」がおすすめです。
-                  こちらの詳細設定は、お題を細かく調整したい場合にお使いください。
+                <Text fontSize="sm" color="blue.800">
+                  🔧 <strong>上級者向け設定:</strong> 
+                  お題変更・数字配り直しは手札エリアの専用ボタンをご利用ください。
+                  こちらではモード変更など高度な設定を行えます。
                 </Text>
               </Box>
             </VStack>

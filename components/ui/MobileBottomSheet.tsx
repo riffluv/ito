@@ -282,7 +282,6 @@ export function MobileBottomSheet({
           {/* 左側: ナビゲーションボタン */}
           <Flex gap={1}>
             <AppButton
-              ref={firstButtonRef}
               size="sm"
               variant="ghost"
               onClick={() => setContentType("chat")}
