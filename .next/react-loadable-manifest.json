@@ -1,18 +1,18 @@
 {
   "app\\rooms\\[roomId]\\page.tsx -> @/components/CluePanel": {
-    "id": 14051,
+    "id": "app\\rooms\\[roomId]\\page.tsx -> @/components/CluePanel",
     "files": [
-      "static/chunks/51.37db7d41b9846063.js"
+      "static/chunks/_app-pages-browser_components_CluePanel_tsx.js"
     ]
   },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
-    "id": 56166,
+    "id": "lib\\services\\roomService.ts -> @/lib/game/random",
     "files": []
   },
   "lib\\services\\roomService.ts -> firebase/firestore": {
-    "id": 69842,
+    "id": "lib\\services\\roomService.ts -> firebase/firestore",
     "files": [
-      "static/chunks/842.bfc2cce9e989e21d.js"
+      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
     ]
   }
 }

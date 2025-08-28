@@ -1,10 +1,13 @@
 "use client";
-import { submitSortedOrder, startGame as startGameAction } from "@/lib/game/room";
-import { topicControls } from "@/lib/game/topicControls";
 import { notify } from "@/components/ui/notify";
-import { topicTypeLabels } from "@/lib/topics";
+import {
+  startGame as startGameAction,
+  submitSortedOrder,
+} from "@/lib/game/room";
+import { topicControls } from "@/lib/game/topicControls";
 import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
-import type { RoomDoc, PlayerDoc } from "@/lib/types";
+import { topicTypeLabels } from "@/lib/topics";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 export type HostAction = {
   key: string;
@@ -26,7 +29,12 @@ export function useHostActions({
   room: RoomDoc & { id?: string };
   players: (PlayerDoc & { id: string })[];
   roomId: string;
-  hostPrimaryAction?: { label: string; onClick: () => void | Promise<void>; disabled?: boolean; title?: string } | null;
+  hostPrimaryAction?: {
+    label: string;
+    onClick: () => void | Promise<void>;
+    disabled?: boolean;
+    title?: string;
+  } | null;
   onlineCount?: number;
 }): HostAction[] {
   const intents = buildHostActionModel(
@@ -38,97 +46,77 @@ export function useHostActions({
   );
 
   const actions: HostAction[] = intents.map((i: HostIntent): HostAction => {
-    const uniqueKey = i.key + (i?.payload?.category ? `-${i.payload.category}` : "");
-    const base = {
+    const uniqueKey =
+      i.key + (i?.payload?.category ? `-${i.payload.category}` : "");
+    const make = (onClick: () => Promise<void> | void): HostAction => ({
       key: uniqueKey,
       label: i.label,
       disabled: i.disabled,
       title: i.reason,
       palette: i.palette,
       variant: i.variant,
-    } as Omit<HostAction, "onClick">;
+      onClick,
+    });
 
-    switch (i.key) {
-      case "primary":
-        return {
-          ...base,
-          disabled: hostPrimaryAction?.disabled,
-          title: hostPrimaryAction?.title,
-          onClick: hostPrimaryAction?.onClick || (() => {}),
-        } as HostAction;
-      case "pickTopic":
-        return {
-          ...base,
-          onClick: async () => {
-            await topicControls.selectCategory(roomId, i?.payload?.category as any);
-          },
-        } as HostAction;
-      case "shuffle":
-        return {
-          ...base,
-          onClick: async () => {
-            await topicControls.shuffleTopic(roomId, ((room as any)?.topicBox as string) || null);
-          },
-        } as HostAction;
-      case "deal":
-        return {
-          ...base,
-          onClick: async () => {
-            if (!((room as any)?.topic)) {
-              notify({ title: "カテゴリを選択してください", type: "warning" });
-              return;
-            }
-            await topicControls.dealNumbers(roomId);
-            notify({ title: "番号を配布しました", type: "success" });
-          },
-        } as HostAction;
-      case "reselect":
-        return {
-          ...base,
-          onClick: async () => {
-            await topicControls.resetTopic(roomId);
-          },
-        } as HostAction;
-      case "evaluate":
-        return {
-          ...base,
-          onClick: async () => {
-            const proposal: string[] = ((room as any)?.order?.proposal || []) as string[];
-            const assigned = players.filter((p) => typeof (p as any)?.number === "number").length;
-            if (proposal.length === 0) {
-              notify({ title: "カード案がまだありません", type: "info" });
-              return;
-            }
-            if (proposal.length !== assigned) {
-              notify({ title: "全員分のカードが揃っていません", type: "warning" });
-              return;
-            }
-            await submitSortedOrder(roomId, proposal);
-            notify({ title: "並びを確定", type: "success" });
-          },
-        } as HostAction;
-      case "quickStart":
-        return {
-          ...base,
-          onClick: async () => {
-            try {
-              const defaultType = (room as any)?.options?.defaultTopicType || "通常版";
-              if ((room as any)?.status === "waiting") {
-                await startGameAction(roomId);
-              }
-              await topicControls.selectCategory(roomId, defaultType as any);
-              await topicControls.dealNumbers(roomId);
-              notify({ title: "🚀 クイック開始しました", type: "success" });
-            } catch (error: any) {
-              notify({ title: "クイック開始に失敗", description: error?.message, type: "error" });
-            }
-          },
-        } as HostAction;
-      case "advancedMode":
-        return { ...base, onClick: () => {} } as HostAction;
-      default:
-        return { ...base, onClick: () => {} } as HostAction;
+    if (i.key === "primary") {
+      return make(hostPrimaryAction?.onClick || (() => {}));
     }
+    if (i.key === "evaluate") {
+      return make(async () => {
+        const proposal: string[] = ((room as any)?.order?.proposal ||
+          []) as string[];
+        const orderList: string[] = ((room as any)?.order?.list ||
+          []) as string[];
+        const activeCount =
+          typeof onlineCount === "number" ? onlineCount : players.length;
+        const placedCount =
+          proposal.length > 0 ? proposal.length : orderList.length;
+        if (placedCount < 2 || placedCount !== activeCount) {
+          notify({
+            title: "まだ全員分が揃っていません",
+            description: `提出: ${placedCount}/${activeCount}`,
+            type: "warning",
+          });
+          return;
+        }
+        const finalOrder = proposal.length > 0 ? proposal : orderList;
+        await submitSortedOrder(roomId, finalOrder);
+        notify({ title: "並びを確定", type: "success" });
+      });
+    }
+    if (i.key === "quickStart") {
+      return make(async () => {
+        try {
+          // 最新 props に基づく人数再検証（稀な遅延差分対策）
+          const activeCount =
+            typeof onlineCount === "number" ? onlineCount : players.length;
+          if (activeCount < 2) {
+            notify({ title: "プレイヤーは2人以上必要です", type: "info" });
+            return;
+          }
+          const defaultType =
+            (room as any)?.options?.defaultTopicType || "通常版";
+          // 手順を明確化: status 遷移 -> topic -> deal
+          if ((room as any)?.status === "waiting") {
+            await startGameAction(roomId); // sets status: clue
+          }
+          await topicControls.selectCategory(roomId, defaultType as any);
+          await topicControls.dealNumbers(roomId);
+          notify({ title: "🚀 クイック開始しました", type: "success" });
+        } catch (error: any) {
+          notify({
+            title: "クイック開始に失敗",
+            description: error?.message,
+            type: "error",
+          });
+        }
+      });
+    }
+    if (i.key === "advancedMode") {
+      return make(() => {});
+    }
+    // それ以外(旧pickTopic等) は no-op
+    return make(() => {});
   });
 
   return actions;

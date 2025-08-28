@@ -1,68 +1,95 @@
 "use client";
+import { useHostActions } from "@/components/hooks/useHostActions";
+import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 import { AppButton } from "@/components/ui/AppButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { Box, Text, Dialog } from "@chakra-ui/react";
-import { FiRefreshCw } from "react-icons/fi";
+import { Box, Dialog, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
-import { useHostActions } from "@/components/hooks/useHostActions";
-import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
+import { FiRefreshCw } from "react-icons/fi";
 
-export type HostControlDockProps = {
-  roomId: string;
+export interface HostControlDockProps {
   room: RoomDoc & { id?: string };
+  roomId: string;
   players: (PlayerDoc & { id: string })[];
   onlineCount?: number;
-  hostPrimaryAction: {
+  hostPrimaryAction?: {
     label: string;
     onClick: () => void | Promise<void>;
     disabled?: boolean;
     title?: string;
   } | null;
-  onReset: () => void | Promise<void>;
-};
+  onReset: () => Promise<void>;
+}
 
-export function HostControlDock({
-  roomId,
+function HostControlDock({
   room,
+  roomId,
   players,
-  onlineCount = 0,
+  onlineCount,
   hostPrimaryAction,
   onReset,
 }: HostControlDockProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const actions = useHostActions({ room, players, roomId, hostPrimaryAction, onlineCount });
+  const actions = useHostActions({
+    room,
+    players,
+    roomId,
+    hostPrimaryAction,
+    onlineCount,
+  });
   const status = (room as any)?.status as string | undefined;
   const isWaiting = status === "waiting";
   const pickingCategory = status === "clue" && !(room as any)?.topic;
 
-  // Arrange: QuickStart -> Reset -> Advanced (waiting only)
+  // 並び順: waiting => [開始, 詳細] / clue(sort-submit) => [詳細, evaluate] / その他 => 取得順
   const quick = actions.find((a) => a.key.startsWith("quickStart"));
-  const advanced = actions.find((a) => a.key.startsWith("advancedMode") || a.key === "advancedMode");
-  const others = actions.filter((a) => a !== quick && a !== advanced);
-  const ordered = useMemo(() => (isWaiting ? ([quick, ...others].filter(Boolean) as typeof actions) : actions), [isWaiting, actions.length]);
+  const evaluate = actions.find((a) => a.key.startsWith("evaluate"));
+  const advanced = actions.find((a) => a.key.includes("advancedMode"));
+  const baseOthers = actions.filter(
+    (a) => a !== quick && a !== evaluate && a !== advanced
+  );
+  const ordered = useMemo(() => {
+    if (isWaiting) {
+      return [quick, advanced, ...baseOthers].filter(Boolean) as typeof actions;
+    }
+    const resolveMode = (room as any)?.options?.resolveMode;
+    if (status === "clue" && resolveMode === "sort-submit") {
+      return [advanced, ...baseOthers, evaluate].filter(
+        Boolean
+      ) as typeof actions;
+    }
+    return actions;
+    // actions 配列内の disabled 変化も拾うため actions を直接依存に含める
+  }, [isWaiting, status, (room as any)?.options?.resolveMode, actions]);
 
   return (
     <>
       <Box display="flex" gap={3} flexWrap="wrap" justifyContent="flex-end">
-        {ordered.map((a) => (
-          <Tooltip key={a.key} content={a.title || ""} disabled={!a.title}>
-            <AppButton
-              onClick={a.key === "advancedMode" ? () => setAdvancedOpen(true) : a.onClick}
-              disabled={a.disabled}
-              colorPalette={a.palette as any}
-              variant={a.variant as any}
-              size="sm"
-            >
-              {a.label}
-            </AppButton>
-          </Tooltip>
-        ))}
+        {ordered.map((a) => {
+          const isAdvanced = a.key.includes("advancedMode");
+          const tooltip = a.title || (a.disabled ? "利用できません" : "");
+          return (
+            <Tooltip key={a.key} content={tooltip} disabled={!tooltip}>
+              <AppButton
+                aria-disabled={a.disabled ? true : undefined}
+                aria-label={a.label}
+                onClick={isAdvanced ? () => setAdvancedOpen(true) : a.onClick}
+                disabled={a.disabled}
+                colorPalette={a.palette as any}
+                variant={a.variant as any}
+                size="sm"
+              >
+                {a.label}
+              </AppButton>
+            </Tooltip>
+          );
+        })}
 
-        {!pickingCategory && (
+        {!pickingCategory && !isWaiting && (
           <AppButton
             variant="ghost"
             size="sm"
@@ -71,20 +98,6 @@ export function HostControlDock({
           >
             <FiRefreshCw style={{ marginRight: 6 }} /> リセット
           </AppButton>
-        )}
-
-        {isWaiting && advanced && (
-          <Tooltip key={advanced.key} content={advanced.title || ""} disabled={!advanced.title}>
-            <AppButton
-              onClick={() => setAdvancedOpen(true)}
-              disabled={advanced.disabled}
-              colorPalette={advanced.palette as any}
-              variant={advanced.variant as any}
-              size="sm"
-            >
-              {advanced.label}
-            </AppButton>
-          </Tooltip>
         )}
       </Box>
 
@@ -97,7 +110,10 @@ export function HostControlDock({
         onlineCount={onlineCount}
       />
 
-      <Dialog.Root open={confirmOpen} onOpenChange={(d) => setConfirmOpen(d.open)}>
+      <Dialog.Root
+        open={confirmOpen}
+        onOpenChange={(d) => setConfirmOpen(d.open)}
+      >
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
@@ -118,7 +134,11 @@ export function HostControlDock({
                     await onReset();
                     notify({ title: "リセットしました", type: "success" });
                   } catch (e: any) {
-                    notify({ title: "リセットに失敗", description: e?.message, type: "error" });
+                    notify({
+                      title: "リセットに失敗",
+                      description: e?.message,
+                      type: "error",
+                    });
                   } finally {
                     setConfirmOpen(false);
                   }
@@ -135,4 +155,3 @@ export function HostControlDock({
 }
 
 export default HostControlDock;
-
