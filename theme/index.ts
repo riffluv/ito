@@ -384,8 +384,8 @@ const config = defineConfig({
           },
           frame: {
             p: 3,
-            minW: "{sizes.cardW}",
-            minH: "{sizes.cardH}",
+            width: "{sizes.cardW}",
+            height: "{sizes.cardH}",
             rounded: "lg",
             display: "flex",
             flexDirection: "column",

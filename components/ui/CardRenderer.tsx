@@ -114,14 +114,6 @@ export function CardRenderer({
           shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
         }
       />
-      {typeof effectiveFailedAt === "number" &&
-        typeof idx === "number" &&
-        effectiveFailedAt === idx + 1 &&
-        cardIsRevealed && (
-          <Text mt={2} fontSize="xs" color="red.300" fontWeight="bold">
-            ← ここで失敗！
-          </Text>
-        )}
     </>
   );
 }
