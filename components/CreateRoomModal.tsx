@@ -6,16 +6,9 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import { Dialog, Field, Input, Stack } from "@chakra-ui/react";
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-// お題候補は部屋作成後に選択（TopicDisplay側で処理）
 
 export function CreateRoomModal({
   isOpen,
@@ -29,19 +22,16 @@ export function CreateRoomModal({
   const { user, displayName } = useAuth() as any;
   const router = useRouter();
   const [name, setName] = useState("");
-  const [allowContinueAfterFail, setAllowContinueAfterFail] = useState(true);
+  const [allowContinueAfterFail] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
     if (!firebaseEnabled) {
-      notify({ title: "Firebase設定が見つかりません", type: "error" });
+      notify({ title: "Firebaseの設定が見つかりません", type: "error" });
       return;
     }
     if (!user) {
-      notify({
-        title: "匿名ログインを完了するまでお待ちください",
-        type: "info",
-      });
+      notify({ title: "サインイン処理中です。少し待ってから再試行してください", type: "info" });
       return;
     }
     if (!name.trim()) {
@@ -50,16 +40,16 @@ export function CreateRoomModal({
     }
     setSubmitting(true);
     try {
-      const options: RoomOptions = { 
+      const options: RoomOptions = {
         allowContinueAfterFail,
-        defaultTopicType: "通常版" // ワンクリック開始のデフォルト
+        defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
         options,
-        status: "clue", // 即座にゲーム準備状態に
-        visibility: "public", // 他の参加者に表示されるように
+        status: "waiting", // 新規作成時は待機
+        visibility: "public",
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,
@@ -70,9 +60,8 @@ export function CreateRoomModal({
         result: null,
       };
       const roomRef = await addDoc(collection(db!, "rooms"), room);
-      // 自分をプレイヤーとして登録
       const pdoc: PlayerDoc = {
-        name: displayName || "匿名",
+        name: displayName || "プレイヤー",
         avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
         number: null,
         clue1: "",
@@ -92,15 +81,11 @@ export function CreateRoomModal({
       } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      notify({
-        title: "作成に失敗しました",
-        description: e?.message,
-        type: "error",
-      });
+      notify({ title: "作成に失敗しました", description: e?.message, type: "error" });
     } finally {
       setSubmitting(false);
     }
-  };;;
+  };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
@@ -109,25 +94,24 @@ export function CreateRoomModal({
         <Dialog.Content>
           <Dialog.CloseTrigger />
           <Dialog.Header>
-            <Dialog.Title>部屋を作る</Dialog.Title>
+            <Dialog.Title>部屋を作成</Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
             <Stack gap={4}>
               {!user && (
                 <Stack fontSize="sm" color="fgMuted">
-                  <span>匿名ログインを初期化しています…</span>
-                  <span>少し待ってから「作成」を押してください。</span>
+                  <span>まだサインインしていませんが、部屋は作成できます。</span>
+                  <span>参加には後で名前の設定をおすすめします。</span>
                 </Stack>
               )}
               <Field.Root>
                 <Field.Label>部屋名</Field.Label>
                 <Input
-                  placeholder="例）皆でITO"
+                  placeholder="例: ITO"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field.Root>
-              {/* 継続オプションは UI から削除しました（ホスト操作で制御します） */}
             </Stack>
           </Dialog.Body>
           <Dialog.Footer>
@@ -149,3 +133,4 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
+
