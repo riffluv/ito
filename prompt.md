@@ -13,7 +13,7 @@ UI/UXとフロントエンド開発のエキスパートとして、このitoゲ
 【制約】
 - ゲーム機能は維持する
 - Firebase + Next.js + Chakra UI技術スタックは維持
-- docs/itorule.mdのゲームルールは変更禁止
+- [docs/itorule.md](docs/itorule.md) のゲームルールは変更禁止
 
 【期待する成果】
 プロダクションレディな、保守性が高く、全デバイスで快適に動作するWebアプリケーション
