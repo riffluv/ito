@@ -19,7 +19,7 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
-import HostControlDock from "@/components/ui/HostControlDock";
+import HostControlDockPC from "@/components/ui/HostControlDock.pc";
 import { notify } from "@/components/ui/notify";
 import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
@@ -532,14 +532,11 @@ export default function RoomPage() {
       ) : (
         <Box flex={1} />
       )}
+
+      {/* PC画面でのホスト操作パネル - フッターエリアに統合 */}
       {isHost && (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent={{ base: "center", md: "flex-end" }}
-          css={{ "@media (max-width: 768px)": { width: "100%" } }}
-        >
-          <HostControlDock
+        <Box display={{ base: "none", md: "block" }}>
+          <HostControlDockPC
             roomId={roomId}
             room={room}
             players={players}
