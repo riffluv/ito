@@ -42,10 +42,13 @@
   }
 }
 
+/* height制約はGameLayoutで統一管理 */
 html,
-body,
+body {
+  height: 100%; /* 基本的なブラウザサポート */
+}
 #__next {
-  height: 100%;
+  /* height: 100%; 除去 - GameLayoutが管理 */
 }
 html,
 body {

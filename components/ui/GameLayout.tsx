@@ -47,7 +47,7 @@ export function GameLayout({
   return (
     <>
       <Box
-        h="100dvh"
+        minH="100dvh" // コンテンツに応じて伸縮可能
         display="grid"
         gridTemplateAreas={`
           "header header header"
@@ -55,7 +55,10 @@ export function GameLayout({
           "hand hand hand"
         `}
         gridTemplateColumns={{ base: "1fr", xl: "280px 1fr 320px" }}
-        gridTemplateRows={{ base: "auto 1fr auto", xl: "auto 1fr 160px" }}
+        gridTemplateRows={{ 
+          base: "auto minmax(0, 1fr) auto", 
+          xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`
+        }}
         gap="1px"
         bg="#f8fafc" // --slate-50
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
@@ -71,7 +74,12 @@ export function GameLayout({
               "hand"
             `,
             gridTemplateColumns: "1fr",
-            gridTemplateRows: "auto minmax(0, 1fr) minmax(140px, auto)",
+            gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
+          },
+          // DPI125% 小型ノートPC 特別対応 - 2025年ベストプラクティス
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT}`,
+            // height制約を除去しglobals.cssに一任
           },
         }}
       >
@@ -103,7 +111,12 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg="white"
-          padding={{ base: "1rem", md: "2rem" }}
+          padding={{
+            base: "0.75rem",  // DPI125%小型ノートPC対応
+            md: "1rem",      // 通常環境用
+            lg: "1.5rem",    // 大型画面用
+            xl: "2rem"       // 超大型画面用
+          }}
           overflow="visible" // カードボードの自然な伸縮を許可
           display="flex"
           flexDirection="column"
@@ -136,8 +149,8 @@ export function GameLayout({
           justifyContent="space-between"
           gap={{ base: "1rem", md: "2rem" }}
           boxShadow="0 -1px 3px 0 rgb(0 0 0 / 0.1)"
-          minHeight={{ base: "140px", md: "160px" }}
-          maxHeight={{ base: "180px", md: "200px" }}
+          minHeight={UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT} // DPI対応動的サイズ
+          maxHeight="none" // コンテンツに応じて自然伸縮
           css={{
             "@media (max-width: 768px)": {
               flexDirection: "column",

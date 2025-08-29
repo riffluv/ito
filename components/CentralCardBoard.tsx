@@ -146,18 +146,19 @@ export function CentralCardBoard({
       display="flex"
       flexDirection="column"
     >
-      {/* Board Header - Professional Style */}
+      {/* コンパクトヘッダー - DPI125%対応 */}
       <Box
         textAlign="center"
-        marginBottom="1.5rem"
+        marginBottom={{ base: "0.5rem", md: "0.75rem" }}
         flex="0 0 auto"
       >
         <Box
-          fontWeight={600}
-          color="#334155" // --slate-700
-          marginBottom="1.5rem"
+          fontWeight={500}
+          color="#334155"
+          fontSize={{ base: "0.75rem", md: "0.875rem" }}
+          lineHeight={1.3}
         >
-          カードを小さい順（左）から大きい順（右）に並べよう！
+          小さい順から大きい順に並べよう
         </Box>
       </Box>
 
@@ -167,15 +168,20 @@ export function CentralCardBoard({
         display="flex" 
         flexDirection="column" 
         alignItems="center" 
-        justifyContent="center"
-        overflow="visible" // カードスロットの完全表示を保証
-        position="relative" // Flex子要素の適切な配置コンテキスト
+        justifyContent="flex-start" // DPI125%で上部を確実に表示
+        overflow="visible"
+        position="relative"
+        minHeight={0} // flexアイテムの適切なサイズ調整
       >
         <Box
           bg="#f8fafc" // --slate-50
           border="2px dashed #cbd5e1" // --slate-300
           borderRadius="1rem" // --radius-xl
-          padding={{ base: "1rem", md: "1.5rem" }}
+          padding={{
+            base: "0.75rem", // DPI125%小型ノートPC対応
+            md: "1rem",     // 通常サイズ
+            lg: "1.5rem"    // 大型画面
+          }}
           minHeight="auto" // 自然な高さ調整でカット off解決
           // 動的サイズ: カード数とレイアウトに応じて自動調整
           display="flex"
@@ -183,7 +189,7 @@ export function CentralCardBoard({
           justifyContent="center"
           gap={{ base: "0.5rem", md: "1rem" }}
           flexWrap="wrap"
-          marginBottom={{ base: "1rem", md: "1.5rem" }}
+          marginBottom={{ base: "0.5rem", md: "0.75rem" }} // コンパクト化
           width="100%"
           // スクロールは不要 - コンテンツに応じて自然に伸縮
           css={{
@@ -272,8 +278,8 @@ export function CentralCardBoard({
                     ) : (
                       <Box
                         key={`slot-${idx}`}
-                        width={UNIFIED_LAYOUT.CARD.WIDTH} // 手札と同じサイズ
-                        height={UNIFIED_LAYOUT.CARD.HEIGHT} // 手札と同じサイズ
+                        width={{ base: "90px", md: "100px", lg: "120px" }} // DPI対応サイズ
+                        height={{ base: "126px", md: "140px", lg: "168px" }} // DPI対応サイズ
                         border="2px dashed #cbd5e1" // --slate-300
                         borderRadius="1rem" // --radius-xl (手札と統一)
                         display="flex"
@@ -303,8 +309,8 @@ export function CentralCardBoard({
                   ) : (
                     <Box
                       key={`drop-zone-${idx}`}
-                      width={UNIFIED_LAYOUT.CARD.WIDTH} // 手札と同じサイズ
-                      height={UNIFIED_LAYOUT.CARD.HEIGHT} // 手札と同じサイズ
+                      width={{ base: "90px", md: "100px", lg: "120px" }} // DPI対応サイズ
+                      height={{ base: "126px", md: "140px", lg: "168px" }} // DPI対応サイズ
                       border="2px dashed #cbd5e1"
                       borderRadius="1rem" // --radius-xl (手札と統一)
                       display="flex"
@@ -338,50 +344,36 @@ export function CentralCardBoard({
 
         </Box>
         
-        {/* Progress Section - Professional Style (Mock準拠) */}
+        {/* コンパクト準備状況 - DPI125%完全対応 */}
         <Box
-          bg="#f8fafc" // --slate-50
-          borderRadius="0.75rem"
-          padding="1rem"
-          textAlign="center"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={{ base: "0.25rem", md: "0.5rem" }}
+          flexWrap="wrap"
+          padding={{ base: "0.25rem", md: "0.5rem" }}
+          fontSize={{ base: "0.625rem", md: "0.75rem" }}
+          color="#64748b"
+          minHeight="auto" // 最小高さでコンパクト化
         >
-          <Box
-            color="#64748b" // --slate-600
-            marginBottom="0.75rem"
-          >
-            準備状況: <Box as="strong">
-              {resolveMode === "sort-submit" 
-                ? `${proposal?.length || 0}/${eligibleIds.length}人` 
-                : `${orderList?.length || 0}/${eligibleIds.length}人`
-              }
-            </Box> がカードを出しました
-          </Box>
-          <Box
-            display="flex"
-            gap="0.5rem"
-            justifyContent="center"
-            flexWrap="wrap"
-          >
-            {eligibleIds.map((id) => {
-              const placed = resolveMode === "sort-submit" 
-                ? proposal?.includes(id) 
-                : orderList?.includes(id);
-              const player = map.get(id);
-              return (
-                <Box
-                  key={id}
-                  bg={placed ? "#dcfce7" : "#fef3c7"} // green-100 : amber-100
-                  color={placed ? "#16a34a" : "#f59e0b"} // green-600 : amber-500
-                  fontSize="0.75rem"
-                  padding="0.25rem 0.5rem"
-                  borderRadius="0.375rem"
-                  fontWeight={500}
-                >
-                  {player?.name || "Unknown"}
-                </Box>
-              );
-            })}
-          </Box>
+          {/* 進行状況インジケーターのみ */}
+          {eligibleIds.map((id) => {
+            const placed = resolveMode === "sort-submit" 
+              ? proposal?.includes(id) 
+              : orderList?.includes(id);
+            const player = map.get(id);
+            return (
+              <Box
+                key={id}
+                width={{ base: "4px", md: "6px" }}
+                height={{ base: "4px", md: "6px" }}
+                borderRadius="50%"
+                bg={placed ? "#16a34a" : "#e5e7eb"} // green-600 : gray-200
+                title={`${player?.name || "Unknown"}: ${placed ? "配置済み" : "未配置"}`}
+                flexShrink={0}
+              />
+            );
+          })}
         </Box>
         
         {roomStatus === "finished" && (
