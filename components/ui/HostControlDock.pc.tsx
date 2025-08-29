@@ -9,13 +9,7 @@ import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Badge, Dialog, Flex, HStack, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
-import {
-  FiCheck,
-  FiPlay,
-  FiRefreshCw,
-  FiSettings,
-  FiUsers,
-} from "react-icons/fi";
+import { FiCheck, FiPlay, FiRefreshCw, FiSettings } from "react-icons/fi";
 
 export interface HostControlDockProps {
   room: RoomDoc & { id?: string };
@@ -110,17 +104,11 @@ function HostControlDockPC({
         maxW="800px"
         width="auto"
       >
-        {/* 左側: ゲーム状態表示 */}
+        {/* 左側: ゲーム状態表示 (人数アイコンはホスト専用の装飾のため削除済) */}
         <HStack gap={3} flex="0 0 auto">
           <Badge colorPalette={gameState.color} variant="solid" size="sm">
             {gameState.phase}
           </Badge>
-          <HStack gap={1} color="gray.600">
-            <FiUsers size={14} />
-            <Text fontSize="sm" fontWeight="medium">
-              {activeCount}人
-            </Text>
-          </HStack>
         </HStack>
 
         {/* 中央: メインアクション */}

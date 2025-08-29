@@ -124,8 +124,7 @@ function HostControlDockImproved({
             {gameState.phase}
           </Badge>
           <HStack gap={1} color="gray.600">
-            <FiUsers size={14} />
-            <Text fontSize="sm" fontWeight="medium">{activeCount}人</Text>
+            {/* user count removed per UX request */}
           </HStack>
         </HStack>
 
@@ -225,8 +224,7 @@ function HostControlDockImproved({
                   {gameState.phase}
                 </Badge>
                 <HStack gap={1} color="gray.600">
-                  <FiUsers size={14} />
-                  <Text fontSize="sm">{activeCount}人</Text>
+                  {/* user count removed per UX request */}
                 </HStack>
               </HStack>
               <Text fontSize="xs" color="gray.500" mt={1}>

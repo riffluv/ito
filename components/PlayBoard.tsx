@@ -124,6 +124,7 @@ export function PlayBoard({
                   boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
                 >
                   <Text>{p.name}</Text>
+                  {/* Removed category/badge/icon per request; keep only the action button */}
                   {p.id === meId ? (
                     <AppButton
                       onClick={onPlay}
