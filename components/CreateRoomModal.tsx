@@ -6,7 +6,13 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
 import { Dialog, Field, Input, Stack } from "@chakra-ui/react";
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,7 +28,6 @@ export function CreateRoomModal({
   const { user, displayName } = useAuth() as any;
   const router = useRouter();
   const [name, setName] = useState("");
-  const [allowContinueAfterFail] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
@@ -31,7 +36,10 @@ export function CreateRoomModal({
       return;
     }
     if (!user) {
-      notify({ title: "サインイン処理中です。少し待ってから再試行してください", type: "info" });
+      notify({
+        title: "サインイン処理中です。少し待ってから再試行してください",
+        type: "info",
+      });
       return;
     }
     if (!name.trim()) {
@@ -41,7 +49,7 @@ export function CreateRoomModal({
     setSubmitting(true);
     try {
       const options: RoomOptions = {
-        allowContinueAfterFail,
+        allowContinueAfterFail: true, // デフォルト: 最後まで並べる
         defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
       const room: RoomDoc = {
@@ -81,7 +89,11 @@ export function CreateRoomModal({
       } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
-      notify({ title: "作成に失敗しました", description: e?.message, type: "error" });
+      notify({
+        title: "作成に失敗しました",
+        description: e?.message,
+        type: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +112,9 @@ export function CreateRoomModal({
             <Stack gap={4}>
               {!user && (
                 <Stack fontSize="sm" color="fgMuted">
-                  <span>まだサインインしていませんが、部屋は作成できます。</span>
+                  <span>
+                    まだサインインしていませんが、部屋は作成できます。
+                  </span>
                   <span>参加には後で名前の設定をおすすめします。</span>
                 </Stack>
               )}
@@ -133,4 +147,3 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
-

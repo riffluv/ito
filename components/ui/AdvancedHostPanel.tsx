@@ -2,7 +2,6 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { topicControls } from "@/lib/game/topicControls";
-import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Box, Dialog, HStack, Text, VStack } from "@chakra-ui/react";
 import { X } from "lucide-react";
@@ -27,7 +26,7 @@ export function AdvancedHostPanel({
   const MIN_PLAYERS_FOR_DEAL = 2;
   const topicSelected = !!(room as any)?.topic;
   const tooFewPlayers = onlineCount < MIN_PLAYERS_FOR_DEAL;
-  
+
   // デフォルトモードは "sequential" (通常モード)
   const currentMode = room.options?.resolveMode || "sequential";
 
@@ -46,7 +45,10 @@ export function AdvancedHostPanel({
 
   const handleShuffle = async () => {
     try {
-      await topicControls.shuffleTopic(roomId, ((room as any)?.topicBox as string) || null);
+      await topicControls.shuffleTopic(
+        roomId,
+        ((room as any)?.topicBox as string) || null
+      );
     } catch (error: any) {
       notify({
         title: "シャッフルに失敗",
@@ -60,41 +62,18 @@ export function AdvancedHostPanel({
     try {
       const { updateDoc, doc } = await import("firebase/firestore");
       const { db } = await import("@/lib/firebase/client");
-      
+
       await updateDoc(doc(db!, "rooms", roomId), {
         "options.resolveMode": mode,
       });
-      
-      notify({ 
-        title: `モードを${mode === "sequential" ? "通常モード" : "一括判定モード"}に変更しました`, 
-        type: "success" 
+
+      notify({
+        title: `モードを${mode === "sequential" ? "通常モード" : "一括判定モード"}に変更しました`,
+        type: "success",
       });
     } catch (error: any) {
       notify({
         title: "モード変更に失敗",
-        description: error?.message,
-        type: "error",
-      });
-    }
-  };
-
-  const handleFailModeToggle = async () => {
-    try {
-      const { updateDoc, doc } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase/client");
-      
-      const newMode = !room.options?.allowContinueAfterFail;
-      await updateDoc(doc(db!, "rooms", roomId), {
-        "options.allowContinueAfterFail": newMode,
-      });
-      
-      notify({ 
-        title: newMode ? "失敗後継続モードを有効化" : "失敗時即終了モードを有効化", 
-        type: "success" 
-      });
-    } catch (error: any) {
-      notify({
-        title: "設定変更に失敗",
         description: error?.message,
         type: "error",
       });
@@ -146,7 +125,7 @@ export function AdvancedHostPanel({
               </AppButton>
             </HStack>
           </Dialog.Header>
-          
+
           <Dialog.Body>
             <VStack gap={6} align="stretch">
               {/* 上級者向け設定のみ */}
@@ -157,7 +136,9 @@ export function AdvancedHostPanel({
                   </Text>
                   <HStack gap={2}>
                     <AppButton
-                      variant={currentMode === "sequential" ? "solid" : "outline"}
+                      variant={
+                        currentMode === "sequential" ? "solid" : "outline"
+                      }
                       colorPalette="blue"
                       flex="1"
                       onClick={() => handleModeChange("sequential")}
@@ -165,7 +146,9 @@ export function AdvancedHostPanel({
                       通常モード
                     </AppButton>
                     <AppButton
-                      variant={currentMode === "sort-submit" ? "solid" : "outline"}
+                      variant={
+                        currentMode === "sort-submit" ? "solid" : "outline"
+                      }
                       colorPalette="blue"
                       flex="1"
                       onClick={() => handleModeChange("sort-submit")}
@@ -175,24 +158,6 @@ export function AdvancedHostPanel({
                   </HStack>
                   <Text fontSize="xs" color="gray.600">
                     通常: リアルタイム判定　｜　一括: 相談して並び替え後判定
-                  </Text>
-                </VStack>
-
-                <VStack align="stretch" gap={2}>
-                  <Text fontWeight="bold" fontSize="md">
-                    ⚙️ 失敗時の動作
-                  </Text>
-                  <AppButton
-                    variant={room.options?.allowContinueAfterFail ? "solid" : "outline"}
-                    colorPalette="orange"
-                    onClick={() => handleFailModeToggle()}
-                  >
-                    {room.options?.allowContinueAfterFail 
-                      ? "✅ 失敗後も継続" 
-                      : "❌ 失敗時即終了"}
-                  </AppButton>
-                  <Text fontSize="xs" color="gray.600">
-                    失敗時の動作を選択。継続モードでは最後まで遊べます。
                   </Text>
                 </VStack>
 
@@ -224,9 +189,9 @@ export function AdvancedHostPanel({
                 borderColor="blue.200"
               >
                 <Text fontSize="sm" color="blue.800">
-                  🔧 <strong>上級者向け設定:</strong> 
+                  🔧 <strong>上級者向け設定:</strong>
                   お題変更・数字配り直しは手札エリアの専用ボタンをご利用ください。
-                  こちらではモード変更など高度な設定を行えます。
+                  ゲームは失敗しても最後まで楽しめます。
                 </Text>
               </Box>
             </VStack>
