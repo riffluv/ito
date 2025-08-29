@@ -4,14 +4,8 @@ import { notify } from "@/components/ui/notify";
 import { topicControls } from "@/lib/game/topicControls";
 import { topicTypeLabels } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
-import { 
-  Dialog, 
-  HStack, 
-  Text, 
-  VStack,
-  Menu 
-} from "@chakra-ui/react";
-import { RefreshCw, ChevronDown } from "lucide-react";
+import { Menu, Text, VStack } from "@chakra-ui/react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 export type QuickTopicChangeProps = {
@@ -21,20 +15,20 @@ export type QuickTopicChangeProps = {
   size?: "sm" | "md" | "lg";
 };
 
-export function QuickTopicChange({ 
-  roomId, 
-  room, 
+export function QuickTopicChange({
+  roomId,
+  room,
   variant = "menu",
-  size = "sm" 
+  size = "sm",
 }: QuickTopicChangeProps) {
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const currentTopic = (room as any)?.topic;
   const currentTopicBox = (room as any)?.topicBox;
 
   const handleCategorySelect = async (category: string) => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     try {
       await topicControls.selectCategory(roomId, category as any);
@@ -57,7 +51,7 @@ export function QuickTopicChange({
 
   const handleShuffle = async () => {
     if (isLoading || !currentTopicBox) return;
-    
+
     setIsLoading(true);
     try {
       await topicControls.shuffleTopic(roomId, currentTopicBox);
@@ -86,34 +80,32 @@ export function QuickTopicChange({
             variant="outline"
             size={size}
             loading={isLoading}
-            leftIcon={<RefreshCw size={14} />}
           >
+            <RefreshCw size={14} />
             お題をシャッフル
           </AppButton>
         )}
         <Menu.Root>
           <Menu.Trigger asChild>
-            <AppButton
-              variant="outline"
-              size={size}
-              rightIcon={<ChevronDown size={14} />}
-              loading={isLoading}
-            >
+            <AppButton variant="outline" size={size} loading={isLoading}>
               📝 お題変更
+              <ChevronDown size={14} />
             </AppButton>
           </Menu.Trigger>
-          <Menu.Content>
-            {topicTypeLabels.map((category) => (
-              <Menu.Item
-                key={category}
-                value={category}
-                onClick={() => handleCategorySelect(category)}
-              >
-                {category}
-                {currentTopicBox === category && " ✓"}
-              </Menu.Item>
-            ))}
-          </Menu.Content>
+          <Menu.Positioner>
+            <Menu.Content>
+              {topicTypeLabels.map((category) => (
+                <Menu.Item
+                  key={category}
+                  value={category}
+                  onSelect={() => handleCategorySelect(category)}
+                >
+                  {category}
+                  {currentTopicBox === category && " ✓"}
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+          </Menu.Positioner>
         </Menu.Root>
       </VStack>
     );
@@ -124,43 +116,50 @@ export function QuickTopicChange({
     <Menu.Root>
       <Menu.Trigger asChild>
         <AppButton
-          variant="outline" 
+          variant="outline"
           size={size}
-          rightIcon={<ChevronDown size={14} />}
           loading={isLoading}
           title={currentTopic ? `現在: ${currentTopic}` : "お題を選択"}
         >
           📝 お題変更
+          <ChevronDown size={14} />
         </AppButton>
       </Menu.Trigger>
-      <Menu.Content>
-        {currentTopic && currentTopicBox && (
-          <>
-            <Menu.Item
-              value="shuffle"
-              onClick={handleShuffle}
+      <Menu.Positioner>
+        <Menu.Content>
+          {currentTopic && currentTopicBox && (
+            <>
+              <Menu.Item value="shuffle" onSelect={handleShuffle}>
+                🎲 同じカテゴリでシャッフル
+              </Menu.Item>
+              <Menu.Separator />
+            </>
+          )}
+
+          <Menu.ItemGroup>
+            <Text
+              fontSize="xs"
+              color="gray.600"
+              px={3}
+              py={1}
+              fontWeight="medium"
             >
-              🎲 同じカテゴリでシャッフル
-            </Menu.Item>
-            <hr style={{ margin: "0.5rem 0", borderColor: "#e2e8f0" }} />
-          </>
-        )}
-        
-        <Text fontSize="xs" color="gray.600" px={3} py={1} fontWeight="medium">
-          カテゴリを選択
-        </Text>
-        
-        {topicTypeLabels.map((category) => (
-          <Menu.Item
-            key={category}
-            value={category}
-            onClick={() => handleCategorySelect(category)}
-          >
-            {category}
-            {currentTopicBox === category && " ✓"}
-          </Menu.Item>
-        ))}
-      </Menu.Content>
+              カテゴリを選択
+            </Text>
+
+            {topicTypeLabels.map((category) => (
+              <Menu.Item
+                key={category}
+                value={category}
+                onSelect={() => handleCategorySelect(category)}
+              >
+                {category}
+                {currentTopicBox === category && " ✓"}
+              </Menu.Item>
+            ))}
+          </Menu.ItemGroup>
+        </Menu.Content>
+      </Menu.Positioner>
     </Menu.Root>
   );
 }
