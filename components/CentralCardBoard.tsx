@@ -168,7 +168,7 @@ export function CentralCardBoard({
         flexDirection="column" 
         alignItems="center" 
         justifyContent="center"
-        overflow="hidden" // 根本解決: Flexコンテナの適切なoverflow制御
+        overflow="visible" // カードスロットの完全表示を保証
         position="relative" // Flex子要素の適切な配置コンテキスト
       >
         <Box
@@ -176,8 +176,8 @@ export function CentralCardBoard({
           border="2px dashed #cbd5e1" // --slate-300
           borderRadius="1rem" // --radius-xl
           padding={{ base: "1rem", md: "1.5rem" }}
-          minHeight={{ base: "200px", md: "240px" }} // カードサイズに対応した最小高さ
-          // maxHeightを除去 - コンテントに応じて自然に伸縮
+          minHeight="auto" // 自然な高さ調整でカット off解決
+          // 動的サイズ: カード数とレイアウトに応じて自動調整
           display="flex"
           alignItems="center" // カードが中央に美しく配置
           justifyContent="center"

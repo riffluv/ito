@@ -96,7 +96,7 @@ function HostControlDockPC({
     <>
       {/* PCフッター統合版: 横並びのシンプルレイアウト */}
       <Flex
-        align="center"
+        alignItems="center"
         gap={4}
         bg="gray.50"
         border="1px solid"
