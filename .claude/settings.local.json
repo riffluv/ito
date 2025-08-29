@@ -23,7 +23,10 @@
       "mcp__serena__find_file",
       "Bash(npm test)",
       "Bash(npm test:*)",
-      "mcp__serena__think_about_whether_you_are_done"
+      "mcp__serena__think_about_whether_you_are_done",
+      "Read(c:\\Users\\hr-hm\\Desktop\\codex\\claudedocs/**)",
+      "Bash(find:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

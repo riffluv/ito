@@ -104,7 +104,7 @@ export function GameLayout({
           gridArea="main-area"
           bg="white"
           padding={{ base: "1rem", md: "2rem" }}
-          overflow="hidden" // 根本解決: Grid子要素の適切なoverflow制御
+          overflow="visible" // カードボードの自然な伸縮を許可
           display="flex"
           flexDirection="column"
           position="relative" // Grid子要素の適切な配置コンテキスト
