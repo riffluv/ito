@@ -1,5 +1,5 @@
 "use client";
-import { Box, Button, Flex, Text, VStack, HStack, Badge, Collapse, useDisclosure } from "@chakra-ui/react";
+import { Box, Button, Flex, Text, VStack, HStack, Badge, useDisclosure } from "@chakra-ui/react";
 import { useState, useEffect, useRef } from "react";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
 
@@ -15,14 +15,14 @@ interface DebugSnapshot {
 }
 
 interface GameDebuggerProps {
-  room: RoomDoc | null;
+  room: (RoomDoc & { id?: string }) | null;
   players: (PlayerDoc & { id: string })[];
   onlineCount?: number;
   lastAction?: string;
 }
 
 export function GameDebugger({ room, players, onlineCount, lastAction }: GameDebuggerProps) {
-  const { isOpen, onToggle } = useDisclosure();
+  const { open: isOpen, onToggle } = useDisclosure();
   const [snapshots, setSnapshots] = useState<DebugSnapshot[]>([]);
   const [isRecording, setIsRecording] = useState(true);
   const lastSnapshotRef = useRef<string>("");
@@ -110,7 +110,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
         <Badge colorScheme="blue" variant="solid" size="sm">
           DEBUG
         </Badge>
-        <HStack spacing={1}>
+        <HStack gap={1}>
           <Button size="xs" onClick={toggleRecording} colorScheme={isRecording ? "red" : "green"}>
             {isRecording ? "⏸️" : "▶️"}
           </Button>
@@ -121,7 +121,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
       </Flex>
 
       {/* Current State (Always Visible) */}
-      <VStack align="stretch" spacing={1}>
+      <VStack align="stretch" gap={1}>
         <HStack justify="space-between">
           <Text fontWeight="bold">Status:</Text>
           <Badge colorScheme={getStatusColor(room?.status)}>{room?.status || 'N/A'}</Badge>
@@ -155,8 +155,8 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
       </VStack>
 
       {/* Expanded Debug Panel */}
-      <Collapse in={isOpen}>
-        <VStack align="stretch" spacing={2} mt={3} pt={3} borderTop="1px solid rgba(255, 255, 255, 0.2)">
+      {isOpen && (
+        <VStack align="stretch" gap={2} mt={3} pt={3} borderTop="1px solid rgba(255, 255, 255, 0.2)">
           
           {/* Controls */}
           <HStack justify="space-between">
@@ -171,7 +171,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
           {/* Room Details */}
           <Box>
             <Text fontWeight="bold" mb={1}>Room Details:</Text>
-            <VStack align="stretch" fontSize="10px" spacing={1}>
+            <VStack align="stretch" fontSize="10px" gap={1}>
               <Text>ID: {room?.id || 'N/A'}</Text>
               <Text>Host: {room?.hostId || 'N/A'}</Text>
               <Text>Topic: {room?.topic || 'None'}</Text>
@@ -192,7 +192,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
           {/* Players List */}
           <Box>
             <Text fontWeight="bold" mb={1}>Players ({players.length}):</Text>
-            <VStack align="stretch" fontSize="10px" spacing={1}>
+            <VStack align="stretch" fontSize="10px" gap={1}>
               {players.map((player, idx) => (
                 <HStack key={player.id} justify="space-between">
                   <Text>{player.name}</Text>
@@ -205,13 +205,13 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
           {/* State History */}
           <Box>
             <Text fontWeight="bold" mb={1}>History ({snapshots.length}/20):</Text>
-            <VStack align="stretch" fontSize="10px" spacing={1} maxHeight="150px" overflowY="auto">
+            <VStack align="stretch" fontSize="10px" gap={1} maxHeight="150px" overflowY="auto">
               {snapshots.slice(-10).reverse().map((snapshot, idx) => (
                 <HStack key={snapshot.timestamp} justify="space-between" 
                        bg={idx === 0 ? "rgba(255, 255, 0, 0.1)" : "transparent"}
                        p={1} borderRadius="2px">
                   <Text>{new Date(snapshot.timestamp).toLocaleTimeString()}</Text>
-                  <HStack spacing={1}>
+                  <HStack gap={1}>
                     <Badge size="xs" colorScheme={getStatusColor(snapshot.roomStatus)}>
                       {snapshot.roomStatus}
                     </Badge>
@@ -225,7 +225,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
           </Box>
 
         </VStack>
-      </Collapse>
+      )}
     </Box>
   );
 }

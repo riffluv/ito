@@ -33,6 +33,8 @@
     "node_modules",
     "**/*.stories.tsx",
     "**/*.stories.ts",
-    ".storybook"
+    ".storybook",
+    "server/**/*.ts",
+    "server/**/*.js"
   ]
 }

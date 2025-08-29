@@ -61,8 +61,8 @@ export const MobileOptimizedCard = forwardRef<HTMLDivElement, MobileOptimizedCar
     // Touch feedback optimization
     const touchStyles = {
       WebkitTapHighlightColor: "transparent",
-      WebkitTouchCallout: "none",
-      WebkitUserSelect: "none",
+      WebkitTouchCallout: "none" as const,
+      WebkitUserSelect: "none" as const,
       userSelect: "none" as const,
     };
 
@@ -178,7 +178,6 @@ export const MobileOptimizedCard = forwardRef<HTMLDivElement, MobileOptimizedCar
             fontWeight="600"
             color={isFailed ? "red.600" : "gray.800"}
             lineHeight={1.2}
-            noOfLines={2}
             wordBreak="break-word"
             w="100%"
           >

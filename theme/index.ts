@@ -156,18 +156,18 @@ const config = defineConfig({
         containerMd: { value: "768px" },
         containerLg: { value: "1024px" },
 
-        // === ゲーム要素 (統一システム) ===
-        // カードサイズ: DPI対応の流動/固定トークン
-        cardSm: { value: "clamp(100px, 12vw, 140px)" },
-        cardMd: { value: "clamp(140px, 16vw, 180px)" },
-        cardW: { value: "140px" },
-        cardH: { value: "180px" },
+        // === ゲーム要素 (UNIFIED_LAYOUTと統一) ===
+        // カードサイズ: レスポンシブ対応
+        cardW: { value: "120px" }, // UNIFIED_LAYOUT.CARD.WIDTH.mdと統一
+        cardH: { value: "168px" }, // UNIFIED_LAYOUT.CARD.HEIGHT.mdと統一
+        cardWBase: { value: "100px" }, // モバイル用
+        cardHBase: { value: "140px" }, // モバイル用
 
-        // レイアウトサイズ: 統一レイアウトシステムと連携
-        headerHeight: { value: "clamp(48px, 4vh, 64px)" },
-        sidebarWidth: { value: "clamp(240px, 22vw, 300px)" },
-        rightPanelWidth: { value: "clamp(280px, 26vw, 360px)" },
-        handAreaHeight: { value: "clamp(100px, 12vh, 150px)" },
+        // レイアウトサイズ: UNIFIED_LAYOUTと統一
+        headerHeight: { value: "clamp(80px, 8vh, 120px)" }, // UNIFIED_LAYOUT.HEADER_HEIGHT
+        sidebarWidth: { value: "clamp(240px, 22vw, 300px)" }, // UNIFIED_LAYOUT.SIDEBAR_WIDTH
+        rightPanelWidth: { value: "clamp(280px, 26vw, 360px)" }, // UNIFIED_LAYOUT.RIGHT_PANEL_WIDTH
+        handAreaHeight: { value: "clamp(220px, 25vh, 280px)" }, // UNIFIED_LAYOUT.HAND_AREA_HEIGHT
 
         // === 3Dアニメーション用 ===
         // perspective token (3D flip 用) ※ px: モーション自然さ考慮し将来 fluid 化検討

@@ -1,6 +1,5 @@
 "use client";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 export type GameCardProps = {
   index?: number | null;
@@ -33,8 +32,8 @@ export function GameCard({
         role="group"
         aria-label="card"
         tabIndex={0}
-        width={UNIFIED_LAYOUT.CARD.WIDTH}
-        height={UNIFIED_LAYOUT.CARD.HEIGHT}
+        width={{ base: "{sizes.cardWBase}", md: "{sizes.cardW}" }}
+        height={{ base: "{sizes.cardHBase}", md: "{sizes.cardH}" }}
         _focusVisible={{
           outline: "2px solid",
           outlineColor: "focusRing",
@@ -78,8 +77,8 @@ export function GameCard({
     <Box
       css={styles.frame}
       tabIndex={0}
-      width={UNIFIED_LAYOUT.CARD.WIDTH}
-      height={UNIFIED_LAYOUT.CARD.HEIGHT}
+      width={{ base: "{sizes.cardWBase}", md: "{sizes.cardW}" }}
+      height={{ base: "{sizes.cardHBase}", md: "{sizes.cardH}" }}
       _focusVisible={{
         outline: "2px solid",
         outlineColor: "focusRing",
@@ -103,14 +102,3 @@ export function GameCard({
 
 export default GameCard;
 
-// グローバル: reduced-motion で .gamecard-inner の transition を無効化
-// 既存グローバルCSSがある場合はそちらに吸収しても良い
-if (typeof document !== "undefined") {
-  const id = "gamecard-reduced-motion-style";
-  if (!document.getElementById(id)) {
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = `@media (prefers-reduced-motion: reduce){ .gamecard-inner { transition: none !important; } }`;
-    document.head.appendChild(style);
-  }
-}

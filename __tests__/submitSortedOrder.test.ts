@@ -3,12 +3,15 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator, doc, setDoc, runTransaction } from "firebase/firestore";
 
 // Mocking Firebase for testing
-const testApp = initializeApp({ projectId: `test-project-${Math.random()}` });
+const projectId = `test-project-submit-${Date.now()}-${Math.random()}`;
+const testApp = initializeApp({ projectId }, `test-app-submit-${Date.now()}`);
 const testDb = getFirestore(testApp);
 
 // Connect to Firestore emulator for testing
-if (!testDb._delegate._settings?.host?.includes("localhost")) {
+try {
   connectFirestoreEmulator(testDb, "localhost", 8080);
+} catch (error) {
+  // Emulator already connected
 }
 
 // Mock requireDb to return our test database

@@ -1,15 +1,16 @@
 "use client"
-import { chakra, useRecipe, Button as CButton } from "@chakra-ui/react"
+import { Button as CButton } from "@chakra-ui/react"
 import { buttonRecipe } from "../../theme/recipes/button.recipe"
 
-type Visual = "solid" | "outline" | "ghost" | "subtle" | "soft" | "link"
-type Palette = "brand" | "orange" | "gray"
-
-type AppButtonProps = React.ComponentProps<typeof CButton> & {
+// theme/recipes/button.recipe.ts から型を抽出
+type ButtonVariants = {
   size?: "xs" | "sm" | "md" | "lg"
   density?: "compact" | "comfortable"
-  visual?: Visual
-  palette?: Palette
+  visual?: "solid" | "outline" | "ghost" | "subtle" | "surface" | "plain"
+  palette?: "brand" | "orange" | "gray"
+}
+
+type AppButtonProps = React.ComponentProps<typeof CButton> & ButtonVariants & {
   // Linkサポート（as={Link}時にhrefを型的に許可）
   href?: string
 }
@@ -17,24 +18,25 @@ type AppButtonProps = React.ComponentProps<typeof CButton> & {
 export function AppButton({
   size = "md",
   density = "comfortable",
-  visual,
-  palette,
+  visual = "solid",
+  palette = "brand",
   variant,
   colorPalette,
+  className,
   ...rest
 }: AppButtonProps) {
-  const recipe = useRecipe({ recipe: buttonRecipe })
-  const styles = recipe({ size, density, visual: (visual as any) ?? undefined, palette: (palette as any) ?? undefined })
-
-  // Chakraのvariant/colorPaletteを尊重。recipe指定がある場合のみデフォルトを補う。
-  const computedVariant = variant ?? visual ?? "solid"
-  const computedPalette = colorPalette ?? palette ?? ("brand" as any)
+  // Chakraのvariant/colorPaletteを最優先、次にlocal props
+  const finalVariant = variant ?? visual ?? "solid"
+  const finalPalette = colorPalette ?? palette
+  
+  // recipe classNameを追加（Chakra UI v3のCSS-in-JSとの連携）
+  const combinedClassName = `${buttonRecipe.className ?? ''} ${className ?? ''}`.trim()
 
   return (
     <CButton
-      {...(styles as any)}
-      variant={computedVariant}
-      colorPalette={computedPalette as any}
+      variant={finalVariant}
+      colorPalette={finalPalette}
+      className={combinedClassName}
       {...rest}
     />
   )

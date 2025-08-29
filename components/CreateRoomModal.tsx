@@ -57,7 +57,6 @@ export function CreateRoomModal({
         hostId: user.uid,
         options,
         status: "waiting", // 新規作成時は待機
-        visibility: "public",
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,

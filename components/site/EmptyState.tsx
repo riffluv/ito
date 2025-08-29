@@ -12,7 +12,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
           <SearchX size={40} />
         </Box>
         <Text color="fgMuted">公開ルームがありません。最初の部屋を作りましょう！</Text>
-        <AppButton visual="soft" palette="orange" onClick={onCreate} minW="10rem">
+        <AppButton visual="subtle" palette="orange" onClick={onCreate} minW="10rem">
           部屋を作成
         </AppButton>
       </Stack>
