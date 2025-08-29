@@ -11,17 +11,20 @@ import { Badge, Dialog, Flex, HStack, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { FiCheck, FiPlay, FiRefreshCw, FiSettings } from "react-icons/fi";
 
+// 2025 Best Practice: Strong typing with clear interfaces
+export interface HostPrimaryAction {
+  label: string;
+  onClick: () => void | Promise<void>;
+  disabled?: boolean;
+  title?: string;
+}
+
 export interface HostControlDockProps {
   room: RoomDoc & { id?: string };
   roomId: string;
   players: (PlayerDoc & { id: string })[];
   onlineCount?: number;
-  hostPrimaryAction?: {
-    label: string;
-    onClick: () => void | Promise<void>;
-    disabled?: boolean;
-    title?: string;
-  } | null;
+  hostPrimaryAction?: HostPrimaryAction | null;
   onReset: () => Promise<void>;
 }
 
@@ -44,12 +47,12 @@ function HostControlDockPC({
     onlineCount,
   });
 
-  const status = (room as any)?.status as string | undefined;
+  // Type-safe status handling
+  const status = room.status as string | undefined;
   const isWaiting = status === "waiting";
   const isClue = status === "clue";
-  const pickingCategory = isClue && !(room as any)?.topic;
-  const activeCount =
-    typeof onlineCount === "number" ? onlineCount : players.length;
+  const pickingCategory = isClue && !room.topic;
+  const activeCount = onlineCount ?? players.length;
 
   // アクションの分類
   const primaryAction = actions.find(
@@ -58,34 +61,35 @@ function HostControlDockPC({
   const evaluateAction = actions.find((a) => a.key.startsWith("evaluate"));
   const advancedAction = actions.find((a) => a.key.includes("advancedMode"));
 
-  // ゲーム状態の表示情報
+  // 2025 Best Practice: Type-safe game state with clear states
   const gameState = useMemo(() => {
-    if (isWaiting) {
-      return {
-        phase: "待機中",
+    const states = {
+      waiting: {
+        phase: "待機中" as const,
         description: "ゲームを開始しましょう",
         color: "gray" as const,
-      };
-    }
-    if (pickingCategory) {
-      return {
-        phase: "設定中",
+      },
+      settingUp: {
+        phase: "設定中" as const,
         description: "お題を選択してください",
         color: "orange" as const,
-      };
-    }
-    if (isClue) {
-      return {
-        phase: "プレイ中",
+      },
+      playing: {
+        phase: "プレイ中" as const,
         description: "プレイヤーの操作を待っています",
         color: "green" as const,
-      };
-    }
-    return {
-      phase: "準備完了",
-      description: "ゲームの準備ができました",
-      color: "blue" as const,
+      },
+      ready: {
+        phase: "準備完了" as const,
+        description: "ゲームの準備ができました",
+        color: "blue" as const,
+      },
     };
+
+    if (isWaiting) return states.waiting;
+    if (pickingCategory) return states.settingUp;
+    if (isClue) return states.playing;
+    return states.ready;
   }, [isWaiting, isClue, pickingCategory]);
 
   return (
@@ -156,6 +160,22 @@ function HostControlDockPC({
                   <FiCheck size={14} />
                   <Text>{evaluateAction.label}</Text>
                 </HStack>
+              </AppButton>
+            </Tooltip>
+          )}
+
+          {/* 詳細設定ボタン（小さく表示） */}
+          {advancedAction && (
+            <Tooltip content="詳細設定を開く">
+              <AppButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdvancedOpen(true)}
+                colorPalette="gray"
+                px={2}
+                minW="auto"
+              >
+                <FiSettings size={14} />
               </AppButton>
             </Tooltip>
           )}
