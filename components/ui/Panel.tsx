@@ -2,14 +2,19 @@
 import { Box, Heading, chakra, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-export interface PanelProps
-  extends Omit<React.ComponentProps<typeof Box>, "title"> {
-  title?: ReactNode;
-  actions?: ReactNode;
-  children: ReactNode;
+// theme/index.ts の panel slot recipe から型を抽出
+type PanelVariants = {
   density?: "comfortable" | "compact";
   variant?: "surface" | "subtle" | "outlined" | "accent";
   elevated?: boolean;
+};
+
+export interface PanelProps
+  extends Omit<React.ComponentProps<typeof Box>, "title">,
+    PanelVariants {
+  title?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
 }
 
 export function Panel(props: PanelProps) {
@@ -20,13 +25,18 @@ export function Panel(props: PanelProps) {
     density = "comfortable",
     variant = "surface",
     elevated = false,
+    className,
     ...rest
   } = props;
+  
   const panelRecipe = useSlotRecipe({ key: "panel" });
   const styles = panelRecipe({ density, variant, elevated });
 
+  // classNameを結合してカスタマイズ可能に
+  const combinedClassName = `panel ${className ?? ''}`.trim();
+
   return (
-    <Box css={styles.container} {...rest}>
+    <Box css={styles.container} className={combinedClassName} {...rest}>
       {(title || actions) && (
         <Box css={styles.header}>
           {title ? (
@@ -34,7 +44,7 @@ export function Panel(props: PanelProps) {
               {title}
             </Heading>
           ) : (
-            <span />
+            <Box /> 
           )}
           {actions && <Box css={styles.actions}>{actions}</Box>}
         </Box>

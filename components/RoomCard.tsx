@@ -113,7 +113,7 @@ export function RoomCard({
         {/* 自然なアクションボタン */}
         <AppButton
           colorPalette={isWaiting ? "orange" : "gray"}
-          visual="soft"
+          visual="subtle"
           size="md"
           minW="100%"
           height="2.5rem" // 少し低く

@@ -8,7 +8,7 @@ export function RoomListExample({ socket }: { socket: any }) {
     <div>
       <h3>ロビー</h3>
       <ul>
-        {visibleRooms.map(r => (
+        {visibleRooms.map((r: any) => (
           <li key={r.id}>
             <strong>{r.name}</strong>
             {' '}

@@ -5,7 +5,7 @@ import type { RoomDoc } from '@/lib/types';
 export function useGameMachine() {
   const [state, send] = useMachine(gameMachine, {
     // Add debugging in development
-    devTools: process.env.NODE_ENV === 'development',
+    // devTools: process.env.NODE_ENV === 'development',
   });
 
   const context = state.context;
@@ -88,7 +88,7 @@ export function useGameMachine() {
     currentState,
     context,
     transitions: state.can,
-    nextEvents: state.nextEvents,
+    // nextEvents: state.nextEvents, // XState v5では廃止
   } : {};
 
   return {
@@ -140,7 +140,7 @@ export function useGameDebug() {
       ...debug,
       // Add additional debug information
       stateHistory: [], // Could be implemented with state machine history
-      validTransitions: debug.nextEvents || [],
+      validTransitions: [], // debug.nextEvents || [],
       contextSnapshot: JSON.stringify(context, null, 2),
     },
   };

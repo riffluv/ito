@@ -47,9 +47,10 @@ export function useRoomState(
     };
   }, [roomId]);
 
+  // メモ化の最適化: playersの変更を正確に検知
   const isMember = useMemo(
     () => !!(uid && players.some((p) => p.id === uid)),
-    [uid || "", players.map((p) => p.id).join(",")]
+    [uid, players]
   );
 
   // participants: Firestore players + RTDB presence
@@ -82,19 +83,22 @@ export function useRoomState(
 
   const isHost = useMemo(
     () => !!(room && uid && room.hostId === uid),
-    [room?.hostId, uid || ""]
+    [room?.hostId, uid]
   );
 
-  // exposure to caller
-  const state: RoomState = {
-    room,
-    players,
-    loading,
-    onlineUids,
-    onlinePlayers,
-    isMember,
-    isHost,
-  };
+  // メモ化されたstateオブジェクトで不必要な再レンダリングを防ぐ
+  const state: RoomState = useMemo(
+    () => ({
+      room,
+      players,
+      loading,
+      onlineUids,
+      onlinePlayers,
+      isMember,
+      isHost,
+    }),
+    [room, players, loading, onlineUids, onlinePlayers, isMember, isHost]
+  );
 
   const detachNow = detach;
   return { ...state, detachNow, leavingRef } as const;

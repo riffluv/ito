@@ -55,7 +55,7 @@ export default function Hero({ onPlay, onRules }: Props) {
           {/* アクションボタンエリア - 自然な間隔とホバー */}
           <HStack justify="center" gap={{ base: "4", md: "8" }} flexWrap="wrap">
             <AppButton
-              visual="soft"
+              visual="subtle"
               palette="orange"
               size="lg"
               onClick={onPlay}

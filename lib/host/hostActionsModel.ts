@@ -21,6 +21,19 @@ export type HostIntent = {
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
 };
 
+// 型ガード関数を追加
+function hasValidTopic(room: RoomDoc): boolean {
+  return typeof room.topic === 'string' && room.topic.length > 0;
+}
+
+function getProposalArray(room: RoomDoc): string[] {
+  return room.order?.proposal ? [...room.order.proposal] : [];
+}
+
+function getOrderList(room: RoomDoc): string[] {
+  return room.order?.list ? [...room.order.list] : [];
+}
+
 export function buildHostActionModel(
   room: RoomDoc & { id?: string },
   players: (PlayerDoc & { id: string })[],
@@ -28,12 +41,12 @@ export function buildHostActionModel(
   _topicTypeLabels: readonly string[],
   hostPrimary: { label: string } | null
 ): HostIntent[] {
-  const status = (room as any)?.status as string | undefined;
-  const resolveMode = (room as any)?.options?.resolveMode as string | undefined;
-  const topicSelected = !!(room as any)?.topic;
-  const proposal: string[] = ((room as any)?.order?.proposal || []) as string[];
+  const status = room.status;
+  const resolveMode = room.options?.resolveMode;
+  const topicSelected = hasValidTopic(room);
+  const proposal = getProposalArray(room);
   const assigned = players.filter(
-    (p) => typeof (p as any)?.number === "number"
+    (p) => typeof p.number === "number"
   ).length;
   // アクティブ人数: realtime presence 集計があればそれを、なければ players 配列長
   const effectiveActive =
@@ -79,8 +92,7 @@ export function buildHostActionModel(
     });
 
     if (resolveMode === "sort-submit" && topicSelected) {
-      const orderList: string[] = ((room as any)?.order?.list ||
-        []) as string[];
+      const orderList = getOrderList(room);
       const placedCount =
         proposal.length > 0 ? proposal.length : orderList.length;
       // evaluate 有効条件: 2人以上が場に出し、全アクティブ（effectiveActive）分が揃っている

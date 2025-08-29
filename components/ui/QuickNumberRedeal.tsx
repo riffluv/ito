@@ -76,7 +76,7 @@ export function QuickNumberRedeal({
     return "🎯";
   };
 
-  const getButtonVariant = () => {
+  const getButtonVariant = (): "solid" | "outline" | "ghost" | "subtle" | "surface" | "plain" => {
     if (!canRedeal) return "ghost";
     return numbersDealt ? "ghost" : "ghost";
   };

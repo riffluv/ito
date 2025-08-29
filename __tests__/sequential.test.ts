@@ -4,12 +4,15 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator, doc, setDoc, runTransaction } from "firebase/firestore";
 
 // Mocking Firebase for testing
-const testApp = initializeApp({ projectId: `test-project-seq-${Math.random()}` });
+const projectId = `test-project-seq-${Date.now()}-${Math.random()}`;
+const testApp = initializeApp({ projectId }, `test-app-seq-${Date.now()}`);
 const testDb = getFirestore(testApp);
 
 // Connect to Firestore emulator for testing
-if (!testDb._delegate._settings?.host?.includes("localhost")) {
+try {
   connectFirestoreEmulator(testDb, "localhost", 8080);
+} catch (error) {
+  // Emulator already connected
 }
 
 // Mock the database module
@@ -24,11 +27,20 @@ const mockFetchPresenceUids = jest.fn(() => Promise.resolve([]));
 jest.mock("@/lib/presence/client", () => ({
   presenceSupported: mockPresenceSupported,
   fetchPresenceUids: mockFetchPresenceUids,
-}));
+}), { virtual: true });
 
 const roomId = "test-room-sequential";
 
-async function setupSequentialRoom(roomOverrides = {}, playersData = []) {
+interface TestPlayer {
+  id: string;
+  number: number | null;
+}
+
+interface RoomOverrides {
+  [key: string]: any;
+}
+
+async function setupSequentialRoom(roomOverrides: RoomOverrides = {}, playersData: TestPlayer[] = []) {
   const roomRef = doc(testDb, "rooms", roomId);
   await setDoc(roomRef, {
     status: "clue",
@@ -41,7 +53,7 @@ async function setupSequentialRoom(roomOverrides = {}, playersData = []) {
       lastNumber: null,
       failed: false,
       failedAt: null,
-      total: null,
+      total: undefined,
     },
     ...roomOverrides,
   });
@@ -92,7 +104,7 @@ describe("Sequential Game Logic", () => {
         failed: false,
         failedAt: null,
         decidedAt: null as any,
-        total: null,
+        total: undefined,
       };
 
       const result = applyPlay({
@@ -115,7 +127,7 @@ describe("Sequential Game Logic", () => {
         failed: false,
         failedAt: null,
         decidedAt: null as any,
-        total: null,
+        total: undefined,
       };
 
       const result = applyPlay({
@@ -137,7 +149,7 @@ describe("Sequential Game Logic", () => {
         failed: false,
         failedAt: null,
         decidedAt: null as any,
-        total: null,
+        total: undefined,
       };
 
       const result = applyPlay({
@@ -160,7 +172,7 @@ describe("Sequential Game Logic", () => {
         failed: false,
         failedAt: null,
         decidedAt: null as any,
-        total: null,
+        total: undefined,
       };
 
       const result = applyPlay({
@@ -182,7 +194,7 @@ describe("Sequential Game Logic", () => {
         failed: true,
         failedAt: 1,
         decidedAt: null as any,
-        total: null,
+        total: undefined,
       };
 
       const result = applyPlay({
@@ -251,7 +263,7 @@ describe("Sequential Game Logic", () => {
     test("should use presenceCount when total is null", () => {
       const shouldFinish = shouldFinishAfterPlay({
         nextListLength: 3,
-        total: null,
+        total: undefined,
         presenceCount: 3,
         nextFailed: false,
         allowContinue: false,
@@ -354,7 +366,7 @@ describe("Sequential Game Logic", () => {
           lastNumber: 15,
           failed: false,
           failedAt: null,
-          total: null,
+          total: undefined,
         }
       }, playersData);
 
