@@ -116,13 +116,15 @@ export function QuickTopicChange({
     <Menu.Root>
       <Menu.Trigger asChild>
         <AppButton
-          variant="outline"
-          size={size}
+          variant="ghost"
+          size="sm"
           loading={isLoading}
-          title={currentTopic ? `現在: ${currentTopic}` : "お題を選択"}
+          title={currentTopic ? `お題変更 (現在: ${currentTopic})` : "お題を選択"}
+          px={2}
+          minW="auto"
         >
-          📝 お題変更
-          <ChevronDown size={14} />
+          📝
+          <ChevronDown size={12} />
         </AppButton>
       </Menu.Trigger>
       <Menu.Positioner>
@@ -136,28 +138,26 @@ export function QuickTopicChange({
             </>
           )}
 
-          <Menu.ItemGroup>
-            <Text
-              fontSize="xs"
-              color="gray.600"
-              px={3}
-              py={1}
-              fontWeight="medium"
-            >
-              カテゴリを選択
-            </Text>
+          <Text
+            fontSize="xs"
+            color="gray.600"
+            px={3}
+            py={1}
+            fontWeight="medium"
+          >
+            カテゴリを選択
+          </Text>
 
-            {topicTypeLabels.map((category) => (
-              <Menu.Item
-                key={category}
-                value={category}
-                onSelect={() => handleCategorySelect(category)}
-              >
-                {category}
-                {currentTopicBox === category && " ✓"}
-              </Menu.Item>
-            ))}
-          </Menu.ItemGroup>
+          {topicTypeLabels.map((category) => (
+            <Menu.Item
+              key={category}
+              value={category}
+              onSelect={() => handleCategorySelect(category)}
+            >
+              {category}
+              {currentTopicBox === category && " ✓"}
+            </Menu.Item>
+          ))}
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>

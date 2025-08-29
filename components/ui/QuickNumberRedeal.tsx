@@ -73,14 +73,12 @@ export function QuickNumberRedeal({
   };
 
   const getButtonText = () => {
-    if (!topicSelected) return "🎯 お題設定が必要";
-    if (tooFewPlayers) return `🎯 ${MIN_PLAYERS_FOR_DEAL}人以上必要`;
-    return numbersDealt ? "🎯 数字を配り直し" : "🎯 数字を配布";
+    return "🎯";
   };
 
   const getButtonVariant = () => {
     if (!canRedeal) return "ghost";
-    return numbersDealt ? "outline" : "solid";
+    return numbersDealt ? "ghost" : "ghost";
   };
 
   const getIcon = () => {
@@ -93,20 +91,21 @@ export function QuickNumberRedeal({
       onClick={handleRedeal}
       variant={getButtonVariant()}
       colorPalette={canRedeal ? "orange" : "gray"}
-      size={size}
+      size="sm"
       loading={isLoading}
       disabled={!canRedeal}
-      leftIcon={getIcon()}
       title={
         !canRedeal 
           ? (!topicSelected 
-              ? "先にお題を選択してください" 
-              : `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
+              ? "数字配布: 先にお題を選択してください" 
+              : `数字配布: プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
             )
           : numbersDealt 
-            ? "新しい数字セットを配布し直します"
-            : "各プレイヤーに数字を配布します"
+            ? "数字を配り直す"
+            : "数字を配布"
       }
+      px={2}
+      minW="auto"
     >
       {getButtonText()}
     </AppButton>
