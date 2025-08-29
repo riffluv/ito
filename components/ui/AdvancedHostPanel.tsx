@@ -181,19 +181,6 @@ export function AdvancedHostPanel({
                 </VStack>
               </VStack>
 
-              <Box
-                bg="blue.50"
-                p={3}
-                borderRadius="md"
-                border="1px solid"
-                borderColor="blue.200"
-              >
-                <Text fontSize="sm" color="blue.800">
-                  🔧 <strong>上級者向け設定:</strong>
-                  お題変更・数字配り直しは手札エリアの専用ボタンをご利用ください。
-                  ゲームは失敗しても最後まで楽しめます。
-                </Text>
-              </Box>
             </VStack>
           </Dialog.Body>
         </Dialog.Content>

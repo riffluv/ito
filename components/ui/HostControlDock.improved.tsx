@@ -2,8 +2,8 @@
 import { useHostActions } from "@/components/hooks/useHostActions";
 import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 import { AppButton } from "@/components/ui/AppButton";
-import { QuickNumberRedeal } from "@/components/ui/QuickNumberRedeal";
-import { QuickTopicChange } from "@/components/ui/QuickTopicChange";
+import { NumberDealButton } from "@/components/ui/NumberDealButton";
+import { TopicShuffleButton } from "@/components/ui/TopicShuffleButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -133,12 +133,12 @@ function HostControlDockImproved({
           {/* クイック操作（待機・プレイ中） */}
           {(isWaiting || isClue) && (
             <>
-              <QuickTopicChange 
+              <TopicShuffleButton 
                 roomId={roomId}
                 room={room}
                 size="sm"
               />
-              <QuickNumberRedeal 
+              <NumberDealButton 
                 roomId={roomId}
                 room={room}
                 players={players}
@@ -158,10 +158,7 @@ function HostControlDockImproved({
                 variant="solid"
                 size="sm"
               >
-                <HStack gap={1}>
-                  <FiPlay size={14} />
-                  <Text>{primaryAction.label}</Text>
-                </HStack>
+                <Text>{primaryAction.label}</Text>
               </AppButton>
             </Tooltip>
           )}
@@ -185,22 +182,8 @@ function HostControlDockImproved({
           )}
         </HStack>
 
-        {/* 右側: 設定とリセット */}
+        {/* 右側: リセット */}
         <HStack gap={2}>
-          {/* 詳細設定ボタン */}
-          {advancedAction && (
-            <Tooltip content="詳細設定を開く">
-              <AppButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setAdvancedOpen(true)}
-                colorPalette="gray"
-              >
-                <FiSettings />
-              </AppButton>
-            </Tooltip>
-          )}
-          
           {/* リセットボタン（控えめに） */}
           {!pickingCategory && !isWaiting && (
             <Tooltip content="ゲームをリセット">
@@ -259,8 +242,8 @@ function HostControlDockImproved({
                 </Text>
 
                 <HStack gap={2} justify="stretch">
-                  <QuickTopicChange roomId={roomId} room={room} size="sm" />
-                  <QuickNumberRedeal
+                  <TopicShuffleButton roomId={roomId} room={room} size="sm" />
+                  <NumberDealButton
                     roomId={roomId}
                     room={room}
                     players={players}
@@ -288,10 +271,7 @@ function HostControlDockImproved({
                     width="full"
                     minH="48px" // モバイルタッチ領域
                   >
-                    <HStack gap={2}>
-                      <FiPlay size={16} />
-                      <Text>{primaryAction.label}</Text>
-                    </HStack>
+                    <Text>{primaryAction.label}</Text>
                   </AppButton>
                 </Tooltip>
               </VStack>

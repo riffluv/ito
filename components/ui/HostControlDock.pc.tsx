@@ -2,8 +2,8 @@
 import { useHostActions } from "@/components/hooks/useHostActions";
 import { AdvancedHostPanel } from "@/components/ui/AdvancedHostPanel";
 import { AppButton } from "@/components/ui/AppButton";
-import { QuickNumberRedeal } from "@/components/ui/QuickNumberRedeal";
-import { QuickTopicChange } from "@/components/ui/QuickTopicChange";
+import { NumberDealButton } from "@/components/ui/NumberDealButton";
+import { TopicShuffleButton } from "@/components/ui/TopicShuffleButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { notify } from "@/components/ui/notify";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -116,8 +116,8 @@ function HostControlDockPC({
           {/* クイック操作（待機・プレイ中） */}
           {(isWaiting || isClue) && (
             <>
-              <QuickTopicChange roomId={roomId} room={room} size="sm" />
-              <QuickNumberRedeal
+              <TopicShuffleButton roomId={roomId} room={room} size="sm" />
+              <NumberDealButton
                 roomId={roomId}
                 room={room}
                 players={players}
@@ -137,10 +137,7 @@ function HostControlDockPC({
                 variant="solid"
                 size="sm"
               >
-                <HStack gap={1}>
-                  <FiPlay size={14} />
-                  <Text>{primaryAction.label}</Text>
-                </HStack>
+                <Text>{primaryAction.label}</Text>
               </AppButton>
             </Tooltip>
           )}
@@ -166,19 +163,6 @@ function HostControlDockPC({
 
         {/* 右側: 設定とリセット */}
         <HStack gap={2} flex="0 0 auto">
-          {/* 詳細設定ボタン */}
-          {advancedAction && (
-            <Tooltip content="詳細設定を開く">
-              <AppButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setAdvancedOpen(true)}
-                colorPalette="gray"
-              >
-                <FiSettings />
-              </AppButton>
-            </Tooltip>
-          )}
 
           {/* リセットボタン（控えめに） */}
           {!pickingCategory && !isWaiting && (
