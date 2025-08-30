@@ -1,5 +1,6 @@
 "use client";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 export type GameCardProps = {
   index?: number | null;
@@ -48,10 +49,8 @@ export function GameCard({
         css={{
           ...styles.container,
           // === 2025年 DPI対応 コンテナサイズ ===
-          aspectRatio: "var(--card-aspect)",
-          width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
-          minWidth: "var(--card-min)",
-          maxWidth: "var(--card-max)",
+          aspectRatio: "5 / 7",
+          width: UNIFIED_LAYOUT.CARD.WIDTH,
           height: "auto", // aspect-ratioが制御
           
           // Grid アイテムとしての最適化
@@ -116,10 +115,8 @@ export function GameCard({
       css={{
         ...styles.frame,
         // === 2025年 DPI対応 フレームサイズ ===
-        aspectRatio: "var(--card-aspect)",
-        width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
-        minWidth: "var(--card-min)",
-        maxWidth: "var(--card-max)",
+        aspectRatio: "5 / 7",
+        width: UNIFIED_LAYOUT.CARD.WIDTH,
         height: "auto", // aspect-ratioが制御
         
         // Grid アイテムとしての最適化

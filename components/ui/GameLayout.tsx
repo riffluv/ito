@@ -60,34 +60,39 @@ export function GameLayout({
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`
         }}
         gap={0}
-        bg="#f8fafc" // --slate-50
+        bg="canvasBg"
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
-        color="#0f172a" // --slate-900
+        color="fgDefault"
         lineHeight={1.5}
-        css={{
-          "WebkitFontSmoothing": "antialiased",
-          // レスポンシブ対応: モバイルでは縦積み
-          "@media (max-width: 1279px)": {
-            gridTemplateAreas: `
+          css={{
+            "WebkitFontSmoothing": "antialiased",
+            // レスポンシブ対応: モバイルでは縦積み
+            "@media (max-width: 1279px)": {
+              gridTemplateAreas: `
               "header"
               "main-area"
               "hand"
             `,
-            gridTemplateColumns: "1fr",
-            gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
-          },
-          // DPI125% 小型ノートPC 特別対応 - 2025年ベストプラクティス
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT}`,
-            // height制約を除去しglobals.cssに一任
-          },
-        }}
-      >
+              gridTemplateColumns: "1fr",
+              gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
+            },
+            // DPI125% 小型ノートPC 特別対応 - 2025年ベストプラクティス
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT}`,
+              // height制約を除去しglobals.cssに一任
+            },
+            // DPI150% 特別対応
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_150.HAND_AREA_HEIGHT}`,
+            },
+          }}
+        >
         {/* ヘッダー: Professional Game Header - メインメニューと統一 */}
         <Box
           gridArea="header"
           bg="white"
-          borderBottom="1px solid #e2e8f0" // --slate-200
+          borderBottom="1px solid"
+          borderColor="borderDefault"
           display="flex"
           boxShadow="0 1px 3px 0 rgb(0 0 0 / 0.1)"
         >
@@ -99,7 +104,8 @@ export function GameLayout({
           <Box
             gridArea="sidebar"
             bg="white"
-            borderRight="1px solid #e2e8f0" // --slate-200
+            borderRight="1px solid"
+            borderColor="borderDefault"
             overflowY="auto"
             display={{ base: "none", xl: "block" }}
           >
@@ -111,20 +117,10 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg="white"
-          paddingInline={{
-            base: "0.75rem",  // DPI125%小型ノートPC対応
-            md: "1rem",      // 通常環境用
-            lg: "1.5rem",    // 大型画面用
-            xl: "2rem"       // 超大型画面用
-          }}
-          paddingTop={{
-            base: "0.75rem",
-            md: "1rem",
-            lg: "1.5rem",
-            xl: "2rem"
-          }}
+          paddingInline={{ base: 3, md: 4, lg: 6, xl: 8 }}
+          paddingTop={{ base: 3, md: 4, lg: 6, xl: 8 }}
           paddingBottom={0} // 下側の余白は中央コンテンツ側(ステータスドック)で管理
-          overflowY="auto" // 中央だけ内部スクロール許容（ページは無スクロールのまま）
+          overflowY="hidden" // 125%での細いスクロールを抑止（高さはDPI調整で吸収）
           display="flex"
           flexDirection="column"
           position="relative" // Grid子要素の適切な配置コンテキスト
@@ -138,7 +134,8 @@ export function GameLayout({
           <Box
             gridArea="chat"
             bg="white"
-            borderLeft="1px solid #e2e8f0" // --slate-200
+            borderLeft="1px solid"
+            borderColor="borderDefault"
             display={{ base: "none", xl: "flex" }}
             flexDirection="column"
           >
@@ -150,19 +147,28 @@ export function GameLayout({
         <Box
           gridArea="hand"
           bg="white"
-          borderTop="1px solid #e2e8f0" // --slate-200
+          borderTop="1px solid"
+          borderColor="borderDefault"
           padding={{ base: "1rem", md: "1.5rem" }}
           display="flex"
           alignItems="center"
           justifyContent="space-between"
           gap={{ base: "1rem", md: "2rem" }}
           boxShadow="0 -1px 3px 0 rgb(0 0 0 / 0.1)"
-          height={UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT} // DPI対応動的サイズ（行と厳密一致）
+          height={UNIFIED_LAYOUT.HAND_AREA_HEIGHT} // 基本値
           maxHeight="none"
           css={{
             "@media (max-width: 768px)": {
               flexDirection: "column",
               gap: "1rem",
+            },
+            // DPI125% で上書き
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              height: UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
+            },
+            // DPI150% で上書き
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              height: UNIFIED_LAYOUT.DPI_150.HAND_AREA_HEIGHT,
             },
           }}
         >
