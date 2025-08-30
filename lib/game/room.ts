@@ -87,14 +87,9 @@ export async function finishRoom(roomId: string, success: boolean) {
 }
 
 export async function continueAfterFail(roomId: string) {
+  // 次ラウンドへ進む前に waiting に戻す（お題/配札はホストの開始操作で行う）
   const ref = doc(db!, "rooms", roomId);
-  const snap = await getDoc(ref);
-  const curr: any = snap.data();
-  const next = nextStatusForEvent(curr?.status || "waiting", {
-    type: "CONTINUE_AFTER_FAIL",
-  });
-  if (!next) throw new Error("invalid transition: CONTINUE_AFTER_FAIL");
-  await updateDoc(ref, { status: next, result: null });
+  await updateDoc(ref, { status: "waiting", result: null, order: null, deal: null });
 }
 
 export async function resetRoom(roomId: string) {

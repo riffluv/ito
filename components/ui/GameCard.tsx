@@ -55,18 +55,8 @@ export function GameCard({
           
           // Grid アイテムとしての最適化
           placeSelf: "start",
-          // フォントの自動縮小: コンテナクエリで微調整
+          // フォントの自動縮小: コンテナクエリで微調整（簡略化して警告回避）
           containerType: "inline-size",
-          
-          // 子要素のフォントスケールを幅に応じて段階的に調整
-          "@container (max-width: 120px)": {
-            ".gc-main": { fontSize: "0.9rem" },
-            ".gc-name": { fontSize: "0.65rem" },
-          },
-          "@container (max-width: 100px)": {
-            ".gc-main": { fontSize: "0.8rem" },
-            ".gc-name": { fontSize: "0.6rem" },
-          },
         }}
         role="group"
         aria-label="card"
@@ -123,15 +113,7 @@ export function GameCard({
         placeSelf: "start",
         containerType: "inline-size",
         
-        // フォントの段階的縮小
-        "@container (max-width: 120px)": {
-          ".gc-main": { fontSize: "1.1rem" },
-          ".gc-name": { fontSize: "0.7rem" },
-        },
-        "@container (max-width: 100px)": {
-          ".gc-main": { fontSize: "1rem" },
-          ".gc-name": { fontSize: "0.65rem" },
-        },
+        // フォントの段階的縮小は簡略化（ブラウザ警告回避）
       }}
       tabIndex={0}
       _focusVisible={{

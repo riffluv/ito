@@ -18,34 +18,38 @@ export function useRevealAnimation({
   const [revealIndex, setRevealIndex] = useState(0);
   const prevStatusRef = useRef(roomStatus);
 
-  // Start reveal animation when transitioning from clue to reveal
+  // Start reveal animation（堅牢化: 初回マウント時にrevealでも開始）
   useEffect(() => {
     const prev = prevStatusRef.current;
-    const startedReveal =
-      resolveMode === "sort-submit" &&
-      prev === "clue" &&
-      roomStatus === "reveal" &&
-      orderListLength > 0;
-    
-    if (startedReveal) {
+    const becameReveal = prev !== "reveal" && roomStatus === "reveal";
+    const isRevealNow = roomStatus === "reveal";
+    const shouldStart =
+      resolveMode === "sort-submit" && orderListLength > 0 &&
+      (becameReveal || (isRevealNow && !revealAnimating && revealIndex === 0));
+
+    if (shouldStart) {
       setRevealAnimating(true);
       setRevealIndex(0);
     }
     prevStatusRef.current = roomStatus;
-  }, [roomStatus, resolveMode, orderListLength]);
+  }, [roomStatus, resolveMode, orderListLength, revealAnimating, revealIndex]);
 
-  // Handle reveal animation progression
+  // Handle reveal animation progression（最後の1枚後に余韻を入れる）
   useEffect(() => {
     if (!revealAnimating) return;
     
     if (revealIndex >= orderListLength) {
       setRevealAnimating(false);
-      finalizeReveal(roomId).catch(() => void 0);
+      // 余韻: 最後にめくってから1.2秒後にfinishedへ
+      const linger = setTimeout(() => {
+        finalizeReveal(roomId).catch(() => void 0);
+      }, 1200);
+      return () => clearTimeout(linger);
       return;
     }
     
     // First card has shorter delay to avoid "frozen" impression
-    const delay = revealIndex === 0 ? 120 : 800; // ms
+    const delay = revealIndex === 0 ? 600 : 1500; // ms (最初短く→以降ゆっくり)
     const timer = setTimeout(() => {
       setRevealIndex((i) => {
         if (i >= orderListLength) return i;
