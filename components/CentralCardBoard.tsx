@@ -1,7 +1,6 @@
 "use client";
 import { SortableItem } from "@/components/sortable/SortableItem";
-import BoardArea from "@/components/ui/BoardArea";
-import { Panel } from "@/components/ui/Panel";
+// BoardArea / Panel は現行レイアウトでは未使用のため import を削除
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";

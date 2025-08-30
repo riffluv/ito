@@ -109,8 +109,8 @@ export function MobileBottomSheet({
   const getSheetHeight = () => {
     switch (sheetState) {
       case "collapsed": return "60px";
-      case "partial": return "40vh";
-      case "full": return "80vh";
+      case "partial": return "40dvh"; // 動的ビューポート対応
+      case "full": return "80dvh";  // モバイルUI安定化
       default: return "60px";
     }
   };
@@ -196,10 +196,8 @@ export function MobileBottomSheet({
             exit={{ opacity: 0 }}
             style={{
               position: "absolute",
-              top: "-100vh",
-              left: 0,
-              right: 0,
-              height: "100vh",
+              inset: 0,
+              height: "100dvh", // 100vh由来のズレを排除
               backgroundColor: "black",
               pointerEvents: "auto",
             }}
