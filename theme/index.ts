@@ -181,12 +181,16 @@ const config = defineConfig({
     },
     semanticTokens: {
       colors: {
-        canvasBg: { value: "gray.50" }, // ライトモード固定
-        panelBg: { value: "white" }, // ライトモード固定
-        panelSubBg: { value: "gray.50" }, // ライトモード固定
-        fgDefault: { value: "gray.800" }, // ライトモード固定
-        fgMuted: { value: "gray.600" }, // ライトモード固定
-        borderDefault: { value: "gray.200" }, // ライトモード固定
+        // Artifact風 木目背景（グラデーション+パターン）
+        canvasBg: {
+          value:
+            "radial-gradient(ellipse at center, rgba(139,115,85,0.6) 30%, rgba(101,67,33,0.8) 70%), linear-gradient(45deg, rgba(101,67,33,0.15) 0%, rgba(139,115,85,0.2) 25%, rgba(160,133,91,0.15) 50%, rgba(139,115,85,0.2) 75%, rgba(101,67,33,0.15) 100%)",
+        },
+        panelBg: { value: "transparent" },
+        panelSubBg: { value: "rgba(30,15,50,0.08)" },
+        fgDefault: { value: "gray.100" },
+        fgMuted: { value: "rgba(255,255,255,0.75)" },
+        borderDefault: { value: "transparent" },
         accent: {
           value: "{colors.brand.500}", // ライトモード固定
         },
@@ -373,7 +377,8 @@ const config = defineConfig({
             position: "absolute",
             inset: 0,
             transformStyle: "preserve-3d",
-            transition: "transform {durations.normal} {easings.standard}",
+            transition: "transform 700ms cubic-bezier(.2,0,.1,1)",
+            willChange: "transform",
             _focusVisible: {
               outline: "2px solid {colors.focusRing}",
               outlineOffset: "2px",
@@ -382,7 +387,7 @@ const config = defineConfig({
           front: {
             p: 3,
             rounded: "xl",
-            borderWidth: "2px",
+            borderWidth: "3px",
             fontWeight: 700,
             position: "absolute",
             inset: 0,
@@ -395,7 +400,7 @@ const config = defineConfig({
           back: {
             p: 3,
             rounded: "xl",
-            borderWidth: "2px",
+            borderWidth: "3px",
             fontWeight: 900,
             position: "absolute",
             inset: 0,
@@ -447,16 +452,16 @@ const config = defineConfig({
             state: "default",
             css: {
               front: {
-                bg: "panelSubBg",
-                borderColor: "borderDefault",
-                boxShadow: "sm",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
+                borderColor: "rgba(255,215,0,0.85)",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
+                color: "rgba(255,255,255,0.95)",
               },
               back: {
-                bg: "panelSubBg",
-                borderColor: "borderDefault",
-                boxShadow: "sm",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
+                borderColor: "rgba(255,215,0,0.85)",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
+                color: "rgba(255,255,255,0.95)",
               },
             },
           },
@@ -465,16 +470,16 @@ const config = defineConfig({
             state: "success",
             css: {
               front: {
-                bg: "successSubtle",
-                borderColor: "successSolid",
-                boxShadow: "glow",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
+                borderColor: "rgba(76,175,80,1)",
+                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
+                color: "rgba(255,255,255,0.95)",
               },
               back: {
-                bg: "successSubtle",
-                borderColor: "successSolid",
-                boxShadow: "glow",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
+                borderColor: "rgba(76,175,80,1)",
+                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
+                color: "rgba(255,255,255,0.95)",
               },
             },
           },
@@ -483,16 +488,16 @@ const config = defineConfig({
             state: "fail",
             css: {
               front: {
-                bg: "dangerSubtle",
-                borderColor: "dangerSolid",
-                boxShadow: "glowDanger",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
+                borderColor: "rgba(244,67,54,1)",
+                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
+                color: "rgba(255,255,255,0.95)",
               },
               back: {
-                bg: "dangerSubtle",
-                borderColor: "dangerSolid",
-                boxShadow: "glowDanger",
-                color: "fgDefault",
+                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
+                borderColor: "rgba(244,67,54,1)",
+                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
+                color: "rgba(255,255,255,0.95)",
               },
             },
           },
@@ -501,10 +506,11 @@ const config = defineConfig({
             state: "default",
             css: {
               frame: {
-                bg: "panelSubBg",
-                borderWidth: "1px",
-                borderColor: "borderDefault",
-                boxShadow: "xs",
+                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
+                borderWidth: "3px",
+                borderColor: "rgba(255,215,0,0.85)",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
+                color: "rgba(255,255,255,0.95)",
               },
             },
           },
@@ -513,10 +519,10 @@ const config = defineConfig({
             state: "success",
             css: {
               frame: {
-                bg: "successSubtle",
-                borderWidth: "2px",
-                borderColor: "successSolid",
-                boxShadow: "glow",
+                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
+                borderWidth: "3px",
+                borderColor: "rgba(76,175,80,1)",
+                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
               },
             },
           },
@@ -525,10 +531,10 @@ const config = defineConfig({
             state: "fail",
             css: {
               frame: {
-                bg: "dangerSubtle",
-                borderWidth: "2px",
-                borderColor: "dangerSolid",
-                boxShadow: "glowDanger",
+                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
+                borderWidth: "3px",
+                borderColor: "rgba(244,67,54,1)",
+                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
               },
             },
           },

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO - Artifact Style Main Menu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #0a0a0f;
+            color: #ffffff;
+        }
+
+        /* === 宇宙空間背景 === */
+        .cosmic-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a1a2e 30%, #0a0a0f 100%);
+            z-index: 1;
+        }
+
+        /* === 星々のパーティクル === */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        .star {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        .star:nth-child(1) { top: 20%; left: 10%; width: 2px; height: 2px; animation-delay: 0s; }
+        .star:nth-child(2) { top: 80%; left: 20%; width: 1px; height: 1px; animation-delay: 0.5s; }
+        .star:nth-child(3) { top: 30%; left: 80%; width: 3px; height: 3px; animation-delay: 1s; }
+        .star:nth-child(4) { top: 60%; left: 90%; width: 2px; height: 2px; animation-delay: 1.5s; }
+        .star:nth-child(5) { top: 10%; left: 60%; width: 1px; height: 1px; animation-delay: 2s; }
+        .star:nth-child(6) { top: 90%; left: 70%; width: 2px; height: 2px; animation-delay: 2.5s; }
+        .star:nth-child(7) { top: 70%; left: 5%; width: 1px; height: 1px; animation-delay: 0.3s; }
+        .star:nth-child(8) { top: 40%; left: 30%; width: 3px; height: 3px; animation-delay: 0.8s; }
+        .star:nth-child(9) { top: 15%; left: 85%; width: 2px; height: 2px; animation-delay: 1.3s; }
+        .star:nth-child(10) { top: 85%; left: 40%; width: 1px; height: 1px; animation-delay: 1.8s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* === メインコンテナ === */
+        .main-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        /* === 神秘的なサークル背景 === */
+        .mystical-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 500px;
+            z-index: 3;
+        }
+
+        .mystical-circle svg {
+            width: 100%;
+            height: 100%;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* === ITO ロゴタイトル === */
+        .game-title {
+            font-size: 8rem;
+            font-weight: 900;
+            letter-spacing: 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #e6ccff 0%, #b366ff 50%, #8033ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(179, 102, 255, 0.5);
+            animation: pulse-glow 3s ease-in-out infinite;
+            z-index: 15;
+            position: relative;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 20px rgba(179, 102, 255, 0.3));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 40px rgba(179, 102, 255, 0.6));
+                transform: scale(1.02);
+            }
+        }
+
+        /* === サブタイトル === */
+        .game-subtitle {
+            font-size: 1.2rem;
+            color: #b366ff;
+            text-align: center;
+            margin-bottom: 4rem;
+            letter-spacing: 0.3rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+            z-index: 15;
+            position: relative;
+        }
+
+        /* === メニューボタンコンテナ === */
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+            z-index: 15;
+            position: relative;
+        }
+
+        /* === Artifact スタイル ボタン === */
+        .artifact-button {
+            position: relative;
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.1rem;
+            text-transform: uppercase;
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.2) 0%, rgba(128, 51, 255, 0.2) 100%);
+            border: 2px solid #b366ff;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .artifact-button:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.4) 0%, rgba(128, 51, 255, 0.4) 100%);
+            border-color: #e6ccff;
+            box-shadow: 
+                0 0 20px rgba(179, 102, 255, 0.5),
+                inset 0 0 20px rgba(179, 102, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .artifact-button:active {
+            transform: translateY(0);
+            box-shadow: 
+                0 0 30px rgba(179, 102, 255, 0.7),
+                inset 0 0 30px rgba(179, 102, 255, 0.2);
+        }
+
+        /* === ボタン内側のグロウエフェクト === */
+        .artifact-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(230, 204, 255, 0.1) 0%, rgba(179, 102, 255, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .artifact-button:hover::before {
+            opacity: 1;
+        }
+
+        /* === プライマリボタン（ルーム作成） === */
+        .artifact-button.primary {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 165, 0, 0.3) 100%);
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+
+        .artifact-button.primary:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.5) 0%, rgba(255, 165, 0, 0.5) 100%);
+            border-color: #ffec8b;
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.6),
+                inset 0 0 20px rgba(255, 215, 0, 0.1);
+        }
+
+        /* === フッター情報 === */
+        .footer-info {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: rgba(179, 102, 255, 0.6);
+            z-index: 15;
+        }
+
+        .footer-info a {
+            color: rgba(179, 102, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-info a:hover {
+            color: #b366ff;
+        }
+
+        /* === 司令部ニュースパネル === */
+        .news-panel {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            bottom: 2rem;
+            width: 340px;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.12) 0%, rgba(128, 51, 255, 0.08) 100%);
+            border: 1px solid rgba(179, 102, 255, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(15px);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(179, 102, 255, 0.2);
+            text-align: center;
+        }
+
+        .news-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e6ccff;
+            letter-spacing: 0.05rem;
+        }
+
+        .news-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .news-item {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(179, 102, 255, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .news-item:hover {
+            background: rgba(179, 102, 255, 0.08);
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+        }
+
+        .news-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-badge.update {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .news-badge.event {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .news-badge.maintenance {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .news-item-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e6ccff;
+            margin-bottom: 0.3rem;
+            line-height: 1.3;
+        }
+
+        .news-item-desc {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-item-date {
+            font-size: 0.7rem;
+            color: rgba(179, 102, 255, 0.6);
+        }
+
+        .feedback-section {
+            padding: 1rem;
+            border-top: 1px solid rgba(179, 102, 255, 0.2);
+            background: rgba(179, 102, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .feedback-btn {
+            width: 100%;
+            padding: 0.7rem;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.2) 0%, rgba(128, 51, 255, 0.2) 100%);
+            border: 1px solid rgba(179, 102, 255, 0.4);
+            color: #b366ff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-btn:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.3) 0%, rgba(128, 51, 255, 0.3) 100%);
+            box-shadow: 0 0 15px rgba(179, 102, 255, 0.3);
+        }
+
+        /* === 通知ドット === */
+        .notification-dot {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse-notification 2s infinite;
+        }
+
+        @keyframes pulse-notification {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.3); }
+        }
+
+        /* === レスポンシブデザイン === */
+        @media (max-width: 1200px) {
+            .news-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 4rem;
+                letter-spacing: 0.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .game-subtitle {
+                font-size: 1rem;
+                margin-bottom: 3rem;
+                letter-spacing: 0.2rem;
+            }
+
+            .artifact-button {
+                min-width: 280px;
+                padding: 0.8rem 2rem;
+                font-size: 1.1rem;
+            }
+
+            .mystical-circle {
+                width: 300px;
+                height: 300px;
+            }
+
+            .footer-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 3rem;
+                letter-spacing: 0.3rem;
+            }
+
+            .artifact-button {
+                min-width: 250px;
+                padding: 0.7rem 1.5rem;
+                font-size: 1rem;
+            }
+
+            .mystical-circle {
+                width: 200px;
+                height: 200px;
+            }
+        }
+
+        /* === 追加のビジュアルエフェクト === */
+        .energy-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 8s infinite ease-in-out;
+        }
+
+        .particle:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; }
+        .particle:nth-child(2) { top: 80%; left: 85%; animation-delay: 2s; }
+        .particle:nth-child(3) { top: 30%; left: 75%; animation-delay: 4s; }
+        .particle:nth-child(4) { top: 70%; left: 25%; animation-delay: 6s; }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px) scale(1);
+                opacity: 0.3;
+            }
+            50% { 
+                transform: translateY(-20px) scale(1.2);
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 宇宙空間背景 -->
+    <div class="cosmic-background"></div>
+
+    <!-- 星々 -->
+    <div class="stars">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+    </div>
+
+    <!-- エネルギーパーティクル -->
+    <div class="energy-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- 神秘的なサークル背景 -->
+    <div class="mystical-circle">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:rgba(179, 102, 255, 0.3);stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:rgba(128, 51, 255, 0.2);stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:rgba(179, 102, 255, 0.1);stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            
+            <!-- 外側の円 -->
+            <circle cx="100" cy="100" r="90" 
+                    fill="none" 
+                    stroke="url(#circleGradient)" 
+                    stroke-width="1"
+                    opacity="0.6"/>
+            
+            <!-- 中間の円 -->
+            <circle cx="100" cy="100" r="60" 
+                    fill="none" 
+                    stroke="rgba(179, 102, 255, 0.4)" 
+                    stroke-width="1"
+                    opacity="0.8"/>
+            
+            <!-- 内側の円 -->
+            <circle cx="100" cy="100" r="30" 
+                    fill="none" 
+                    stroke="rgba(230, 204, 255, 0.6)" 
+                    stroke-width="1"/>
+                    
+            <!-- 六芒星パターン -->
+            <path d="M100,40 L115,70 L145,70 L125,90 L135,120 L100,105 L65,120 L75,90 L55,70 L85,70 Z" 
+                  fill="none" 
+                  stroke="rgba(179, 102, 255, 0.3)" 
+                  stroke-width="1"/>
+            
+            <!-- クロスライン -->
+            <line x1="100" y1="20" x2="100" y2="180" 
+                  stroke="rgba(179, 102, 255, 0.2)" 
+                  stroke-width="0.5"/>
+            <line x1="20" y1="100" x2="180" y2="100" 
+                  stroke="rgba(179, 102, 255, 0.2)" 
+                  stroke-width="0.5"/>
+        </svg>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="main-container">
+        <!-- ゲームタイトル -->
+        <div class="game-title">ITO</div>
+        
+        <!-- サブタイトル -->
+        <div class="game-subtitle">Cooperative Number Game</div>
+
+        <!-- メニューボタン -->
+        <div class="menu-buttons">
+            <button class="artifact-button primary" onclick="showMessage('ルームを作成')">
+                ルームを作成
+            </button>
+            
+            <button class="artifact-button" onclick="showMessage('ルームに参加')">
+                ルームに参加
+            </button>
+            
+            <button class="artifact-button" onclick="showMessage('遊び方')">
+                遊び方
+            </button>
+            
+            <button class="artifact-button" onclick="showMessage('設定')">
+                設定
+            </button>
+        </div>
+
+        <!-- フッター情報 -->
+        <div class="footer-info">
+            <span>Version 2.0</span>
+            <a href="#" onclick="showMessage('お問い合わせ')">お問い合わせ</a>
+            <a href="#" onclick="showMessage('プライバシーポリシー')">プライバシー</a>
+        </div>
+    </div>
+
+    <!-- === 司令部ニュースパネル === -->
+    <div class="news-panel">
+        <div class="notification-dot"></div>
+        
+        <div class="news-header">
+            <div class="news-title">更新情報</div>
+        </div>
+
+        <div class="news-content">
+            <!-- 最新アップデート -->
+            <div class="news-item">
+                <div class="news-badge update">UPDATE</div>
+                <div class="news-item-title">没入モード追加</div>
+                <div class="news-item-desc">カードゲームらしい新しいUIが利用できます。設定から切り替え可能。</div>
+                <div class="news-item-date">8/30</div>
+            </div>
+
+            <!-- イベント告知 -->
+            <div class="news-item">
+                <div class="news-badge event">EVENT</div>
+                <div class="news-item-title">夏季大会</div>
+                <div class="news-item-desc">9月上旬開催予定。参加者全員にエモート配布、上位者には限定称号あり。</div>
+                <div class="news-item-date">8/28</div>
+            </div>
+
+            <!-- 機能追加 -->
+            <div class="news-item">
+                <div class="news-badge update">FEATURE</div>
+                <div class="news-item-title">戦績システム</div>
+                <div class="news-item-desc">勝率・連勝数・プレイ履歴の記録開始。プロフィールから確認できます。</div>
+                <div class="news-item-date">8/25</div>
+            </div>
+
+            <!-- バランス調整 -->
+            <div class="news-item">
+                <div class="news-badge update">BALANCE</div>
+                <div class="news-item-title">判定時間調整</div>
+                <div class="news-item-desc">8人戦での判定フェーズを10秒延長。より考えやすくなりました。</div>
+                <div class="news-item-date">8/23</div>
+            </div>
+
+            <!-- バグ修正 -->
+            <div class="news-item">
+                <div class="news-badge maintenance">FIX</div>
+                <div class="news-item-title">接続安定性向上</div>
+                <div class="news-item-desc">ゲーム途中での切断問題を修正。再接続も改善。</div>
+                <div class="news-item-date">8/20</div>
+            </div>
+
+            <!-- 既知の問題 -->
+            <div class="news-item">
+                <div class="news-badge maintenance">KNOWN</div>
+                <div class="news-item-title">既知の問題</div>
+                <div class="news-item-desc">Safari での表示崩れを調査中。Chrome/Edge推奨。</div>
+                <div class="news-item-date">8/18</div>
+            </div>
+        </div>
+
+        <div class="feedback-section">
+            <button class="feedback-btn" onclick="openFeedback()">不具合・要望報告</button>
+        </div>
+    </div>
+
+    <script>
+        // ボタンクリックのフィードバック
+        function showMessage(action) {
+            console.log(`${action} がクリックされました`);
+            
+            // 簡単なフィードバックエフェクト
+            const buttons = document.querySelectorAll('.artifact-button');
+            const clickedButton = event.target;
+            
+            // クリックされたボタンに特別なエフェクト
+            clickedButton.style.transform = 'scale(0.95)';
+            clickedButton.style.boxShadow = '0 0 40px rgba(179, 102, 255, 0.8), inset 0 0 40px rgba(179, 102, 255, 0.3)';
+            
+            setTimeout(() => {
+                clickedButton.style.transform = '';
+                clickedButton.style.boxShadow = '';
+            }, 200);
+            
+            // 実際のアプリケーションでは、ここで各機能への遷移を行う
+            alert(`${action} 機能は実装中です`);
+        }
+
+        // フィードバック・要望フォーム
+        function openFeedback() {
+            // モーダル風のフィードバックフォーム
+            const feedbackModal = `
+                <div id="feedback-modal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                    backdrop-filter: blur(10px);
+                ">
+                    <div style="
+                        background: linear-gradient(135deg, rgba(179, 102, 255, 0.15) 0%, rgba(128, 51, 255, 0.08) 100%);
+                        border: 1px solid rgba(179, 102, 255, 0.3);
+                        border-radius: 12px;
+                        padding: 2rem;
+                        max-width: 500px;
+                        width: 90%;
+                        backdrop-filter: blur(20px);
+                        color: white;
+                    ">
+                        <h3 style="color: #b366ff; margin-bottom: 1rem; text-align: center; font-size: 1.2rem;">報告・要望</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #e6ccff;">カテゴリー</label>
+                            <select style="width: 100%; padding: 0.5rem; background: rgba(179, 102, 255, 0.1); border: 1px solid rgba(179, 102, 255, 0.3); border-radius: 4px; color: white;">
+                                <option>バグ・不具合</option>
+                                <option>新機能の要望</option>
+                                <option>UI改善</option>
+                                <option>ゲームバランス</option>
+                                <option>その他</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #e6ccff;">内容</label>
+                            <textarea placeholder="詳細を入力してください" style="
+                                width: 100%; 
+                                height: 120px; 
+                                padding: 0.5rem; 
+                                background: rgba(179, 102, 255, 0.1); 
+                                border: 1px solid rgba(179, 102, 255, 0.3); 
+                                border-radius: 4px; 
+                                color: white; 
+                                resize: vertical;
+                            "></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button onclick="closeFeedback()" style="
+                                padding: 0.7rem 1.5rem;
+                                background: rgba(128, 128, 128, 0.3);
+                                border: 1px solid #666;
+                                color: #ccc;
+                                border-radius: 6px;
+                                cursor: pointer;
+                            ">キャンセル</button>
+                            <button onclick="submitFeedback()" style="
+                                padding: 0.7rem 1.5rem;
+                                background: linear-gradient(135deg, rgba(179, 102, 255, 0.3) 0%, rgba(128, 51, 255, 0.3) 100%);
+                                border: 1px solid #b366ff;
+                                color: #b366ff;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-weight: 600;
+                            ">送信</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', feedbackModal);
+        }
+
+        function closeFeedback() {
+            const modal = document.getElementById('feedback-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function submitFeedback() {
+            alert('送信完了');
+            closeFeedback();
+        }
+
+        // 追加のビジュアルエフェクト: マウス追従パーティクル
+        document.addEventListener('mousemove', (e) => {
+            // 低頻度でパーティクルを生成（パフォーマンス考慮）
+            if (Math.random() > 0.95) {
+                createMouseParticle(e.clientX, e.clientY);
+            }
+        });
+
+        function createMouseParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.style.position = 'fixed';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.width = '3px';
+            particle.style.height = '3px';
+            particle.style.background = 'radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, transparent 70%)';
+            particle.style.borderRadius = '50%';
+            particle.style.pointerEvents = 'none';
+            particle.style.zIndex = '5';
+            particle.style.animation = 'fadeOut 2s ease-out forwards';
+            
+            document.body.appendChild(particle);
+            
+            setTimeout(() => {
+                if (particle.parentNode) {
+                    particle.parentNode.removeChild(particle);
+                }
+            }, 2000);
+        }
+
+        // フェードアウトアニメーション
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                0% { 
+                    opacity: 1; 
+                    transform: translateY(0px) scale(1);
+                }
+                100% { 
+                    opacity: 0; 
+                    transform: translateY(-20px) scale(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

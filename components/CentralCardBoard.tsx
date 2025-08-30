@@ -3,18 +3,21 @@ import { SortableItem } from "@/components/sortable/SortableItem";
 // BoardArea / Panel は現行レイアウトでは未使用のため import を削除
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
+import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
+import WaitingArea from "@/components/ui/WaitingArea";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useLocalFailureDetection } from "@/components/hooks/useLocalFailureDetection";
-import { setOrderProposal } from "@/lib/game/room";
+import { setOrderProposal, submitSortedOrder } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Button, Text } from "@chakra-ui/react";
+import ConfirmDock from "@/components/ui/ConfirmDock";
 import StatusDock from "@/components/ui/StatusDock";
 import { DndContext, DragEndEvent, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 export function CentralCardBoard({
   roomId,
@@ -28,6 +31,7 @@ export function CentralCardBoard({
   failed,
   failedAt,
   resolveMode,
+  isHost,
 }: {
   roomId: string;
   players: (PlayerDoc & { id: string })[];
@@ -40,10 +44,16 @@ export function CentralCardBoard({
   failed?: boolean;
   failedAt?: number | null;
   resolveMode?: string;
+  isHost?: boolean;
 }) {
   const map = new Map(players.map((p) => [p.id, p]));
   const me = map.get(meId as string) as any;
   const hasNumber = typeof (me as any)?.number === "number";
+  // 未提出＝まだ上（提出/提案）に出していない人（準備済みでも残す）
+  const placedIds = new Set([...(orderList || []), ...((proposal || []) as string[])]);
+  const waitingPlayers = (eligibleIds || [])
+    .map((id) => map.get(id)!)
+    .filter((p) => p && !placedIds.has(p.id));
 
   // Accessibility sensors for keyboard and pointer interactions
   const sensors = useSensors(
@@ -98,6 +108,20 @@ export function CentralCardBoard({
     resolveMode,
   });
 
+  // 結果オーバーレイの表示・自動クローズ
+  const [showResult, setShowResult] = useState(false);
+  useEffect(() => {
+    if (roomStatus === "finished") {
+      const appear = setTimeout(() => setShowResult(true), 1200); // 余韻: 1.2秒後に演出
+      const close = setTimeout(() => setShowResult(false), 5200); // 表示は約4秒間
+      return () => {
+        clearTimeout(appear);
+        clearTimeout(close);
+      };
+    }
+    setShowResult(false);
+  }, [roomStatus]);
+
   // Clear pending when orderList updates
   useEffect(() => {
     if (!orderList || orderList.length === 0) return;
@@ -140,6 +164,21 @@ export function CentralCardBoard({
     }
   };
 
+  // sort-submit: 全員提出で「確定」可能
+  const canConfirm =
+    resolveMode === "sort-submit" &&
+    roomStatus === "clue" &&
+    Array.isArray(eligibleIds) &&
+    (proposal?.length || 0) === eligibleIds.length &&
+    eligibleIds.length > 0 &&
+    !!isHost;
+  const onConfirm = async () => {
+    if (!canConfirm) return;
+    try {
+      await submitSortedOrder(roomId, proposal || []);
+    } catch {}
+  };
+
   return (
     <Box
       h="100%"
@@ -171,9 +210,8 @@ export function CentralCardBoard({
         minHeight={0}
       >
         <Box
-          bg="panelSubBg"
-          border="1px dashed"
-          borderColor="borderDefault"
+          bg="transparent"
+          border="0"
           borderRadius="1rem"
           padding={{ base: 2, md: 3 }}
           minHeight="auto"
@@ -188,7 +226,7 @@ export function CentralCardBoard({
           gap={2}
           css={{
             containerType: "inline-size",
-            "&[data-drop-target='true']": { borderColor: "accent", backgroundColor: "accentSubtle" },
+            "&[data-drop-target='true']": { outline: "2px solid var(--colors-brand-400)" },
             // spacing 1.5 (6px) をトークンで表現
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: { gap: "calc(var(--spacing-3) / 2)" },
           }}
@@ -256,13 +294,13 @@ export function CentralCardBoard({
                           aspectRatio: "5 / 7",
                           height: "auto",
                           
-                          border: "2px dashed var(--colors-borderDefault)",
+                          border: "2px dashed rgba(255,215,0,0.4)",
                           borderRadius: "1rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "transparent",
-                          color: "var(--colors-fgMuted)",
+                          backgroundColor: "rgba(30,15,50,0.3)",
+                          color: "rgba(255,215,0,0.6)",
                           fontSize: "0.75rem",
                           fontWeight: 500,
                           
@@ -293,13 +331,13 @@ export function CentralCardBoard({
                         aspectRatio: "5 / 7",
                         height: "auto",
                         
-                        border: "2px dashed var(--colors-borderDefault)",
+                        border: "2px dashed rgba(255,215,0,0.4)",
                         borderRadius: "1rem",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: "transparent",
-                        color: "var(--colors-fgMuted)",
+                        backgroundColor: "rgba(30,15,50,0.3)",
+                        color: "rgba(255,215,0,0.6)",
                         fontSize: "0.75rem",
                         fontWeight: 500,
                         
@@ -328,6 +366,8 @@ export function CentralCardBoard({
             )}
           </Box>
 
+          {/* 旧: ボード内の確定ボタンは撤去し、下部の待機領域位置に移動 */}
+
         </Box>
         
         <StatusDock show={roomStatus === "finished"}>
@@ -336,6 +376,18 @@ export function CentralCardBoard({
           )}
         </StatusDock>
       </Box>
+      {/* 待機エリア（clue/waiting中・未提出者がいる場合） */}
+      {(roomStatus === "clue" || roomStatus === "waiting") && waitingPlayers.length > 0 ? (
+        <WaitingArea players={waitingPlayers} />
+      ) : null}
+      {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） */}
+      {canConfirm && waitingPlayers.length === 0 ? (
+        <ConfirmDock onConfirm={onConfirm} label="確定！順番を発表" />
+      ) : null}
+      {/* 結果オーバーレイ（モック準拠の演出） */}
+      {roomStatus === "finished" && showResult && (
+        <ArtifactResultOverlay success={!failed} onClose={() => setShowResult(false)} />
+      )}
     </Box>
   );
 }

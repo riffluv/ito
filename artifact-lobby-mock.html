@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO - Artifact Style Lobby</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #0a0a0f;
+            color: #ffffff;
+        }
+
+        /* === 宇宙ステーション背景 === */
+        .space-station-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a1a2e 30%, #0a0a0f 100%);
+            z-index: 1;
+        }
+
+        /* === 星々のパーティクル === */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        .star {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+            animation: twinkle 4s infinite ease-in-out;
+        }
+
+        .star:nth-child(1) { top: 15%; left: 8%; width: 2px; height: 2px; animation-delay: 0s; }
+        .star:nth-child(2) { top: 70%; left: 15%; width: 1px; height: 1px; animation-delay: 0.7s; }
+        .star:nth-child(3) { top: 25%; left: 85%; width: 3px; height: 3px; animation-delay: 1.4s; }
+        .star:nth-child(4) { top: 80%; left: 75%; width: 2px; height: 2px; animation-delay: 2.1s; }
+        .star:nth-child(5) { top: 5%; left: 45%; width: 1px; height: 1px; animation-delay: 2.8s; }
+        .star:nth-child(6) { top: 85%; left: 25%; width: 2px; height: 2px; animation-delay: 3.5s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* === メインレイアウト === */
+        .main-layout {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main-content player-info";
+            grid-template-columns: 300px 1fr 250px;
+            grid-template-rows: 80px 1fr;
+            height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* === ヘッダー === */
+        .header {
+            grid-area: header;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.15) 0%, rgba(128, 51, 255, 0.15) 100%);
+            border-bottom: 1px solid rgba(179, 102, 255, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .game-logo {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #e6ccff 0%, #b366ff 50%, #8033ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(179, 102, 255, 0.5);
+        }
+
+        .nav-breadcrumb {
+            font-size: 0.9rem;
+            color: rgba(179, 102, 255, 0.7);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .player-name {
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid rgba(255, 68, 68, 0.5);
+            color: #ff6b6b;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 68, 68, 0.3);
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+        }
+
+        /* === サイドバー（ルーム作成・検索） === */
+        .sidebar {
+            grid-area: sidebar;
+            background: linear-gradient(180deg, rgba(179, 102, 255, 0.08) 0%, rgba(128, 51, 255, 0.05) 100%);
+            border-right: 1px solid rgba(179, 102, 255, 0.2);
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #b366ff;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        .create-room-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 165, 0, 0.3) 100%);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+        }
+
+        .create-room-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.5) 0%, rgba(255, 165, 0, 0.5) 100%);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(179, 102, 255, 0.1);
+            border: 1px solid rgba(179, 102, 255, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-box::placeholder {
+            color: rgba(179, 102, 255, 0.6);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #b366ff;
+            box-shadow: 0 0 15px rgba(179, 102, 255, 0.3);
+        }
+
+        .filter-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.6rem;
+            background: rgba(179, 102, 255, 0.1);
+            border: 1px solid rgba(179, 102, 255, 0.2);
+            color: rgba(179, 102, 255, 0.8);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(179, 102, 255, 0.2);
+            border-color: #b366ff;
+            color: #b366ff;
+        }
+
+        /* === メインコンテンツ（ルーム一覧） === */
+        .main-content {
+            grid-area: main-content;
+            padding: 2rem;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .content-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #e6ccff;
+        }
+
+        .room-count {
+            color: rgba(179, 102, 255, 0.7);
+            font-size: 1rem;
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+
+        .room-card {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.15) 0%, rgba(128, 51, 255, 0.08) 100%);
+            border: 1px solid rgba(179, 102, 255, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .room-card:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.25) 0%, rgba(128, 51, 255, 0.15) 100%);
+            border-color: #b366ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(179, 102, 255, 0.2);
+        }
+
+        .room-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse-status 2s infinite;
+        }
+
+        .room-status.waiting {
+            background: #4ade80;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+        }
+
+        .room-status.playing {
+            background: #fbbf24;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+        }
+
+        @keyframes pulse-status {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .room-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #e6ccff;
+            margin-bottom: 0.5rem;
+        }
+
+        .room-players {
+            color: rgba(179, 102, 255, 0.8);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .room-description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .room-join-btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.3) 0%, rgba(128, 51, 255, 0.3) 100%);
+            border: 1px solid #b366ff;
+            color: #ffffff;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .room-join-btn:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.5) 0%, rgba(128, 51, 255, 0.5) 100%);
+            box-shadow: 0 0 20px rgba(179, 102, 255, 0.4);
+        }
+
+        .room-join-btn.full {
+            background: rgba(128, 128, 128, 0.3);
+            border-color: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .room-join-btn.full:hover {
+            background: rgba(128, 128, 128, 0.3);
+            box-shadow: none;
+        }
+
+        /* === プレイヤー情報パネル === */
+        .player-info {
+            grid-area: player-info;
+            background: linear-gradient(180deg, rgba(179, 102, 255, 0.08) 0%, rgba(128, 51, 255, 0.05) 100%);
+            border-left: 1px solid rgba(179, 102, 255, 0.2);
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+        }
+
+        .player-profile {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .player-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b366ff 0%, #8033ff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 0 auto 1rem auto;
+            box-shadow: 0 0 25px rgba(179, 102, 255, 0.4);
+        }
+
+        .player-stats {
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(179, 102, 255, 0.1);
+        }
+
+        .stat-label {
+            color: rgba(179, 102, 255, 0.8);
+            font-size: 0.85rem;
+        }
+
+        .stat-value {
+            color: #e6ccff;
+            font-weight: 600;
+        }
+
+        .recent-games {
+            margin-top: 2rem;
+        }
+
+        .recent-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #b366ff;
+            margin-bottom: 1rem;
+        }
+
+        .recent-game {
+            background: rgba(179, 102, 255, 0.1);
+            border-radius: 6px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .recent-result {
+            font-weight: 600;
+        }
+
+        .recent-result.success {
+            color: #4ade80;
+        }
+
+        .recent-result.fail {
+            color: #ef4444;
+        }
+
+        /* === レスポンシブデザイン === */
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-areas: 
+                    "header header"
+                    "main-content player-info";
+                grid-template-columns: 1fr 250px;
+                grid-template-rows: 80px 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-areas: 
+                    "header"
+                    "main-content";
+                grid-template-columns: 1fr;
+                grid-template-rows: 80px 1fr;
+            }
+
+            .sidebar, .player-info {
+                display: none;
+            }
+
+            .header-left .nav-breadcrumb {
+                display: none;
+            }
+
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 宇宙ステーション背景 -->
+    <div class="space-station-bg"></div>
+
+    <!-- 星々 -->
+    <div class="stars">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+    </div>
+
+    <!-- メインレイアウト -->
+    <div class="main-layout">
+        <!-- ヘッダー -->
+        <div class="header">
+            <div class="header-left">
+                <div class="game-logo">ITO</div>
+                <div class="nav-breadcrumb">ロビー</div>
+            </div>
+            <div class="header-right">
+                <span class="player-name">chrome通常</span>
+                <button class="logout-btn" onclick="logout()">退出</button>
+            </div>
+        </div>
+
+        <!-- サイドバー -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">作成</div>
+                <button class="create-room-btn" onclick="createRoom()">新しいルーム</button>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">フィルター</div>
+                <input type="text" class="search-box" placeholder="検索" id="searchBox">
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterRooms('all')">すべて</button>
+                    <button class="filter-btn" onclick="filterRooms('waiting')">待機中</button>
+                    <button class="filter-btn" onclick="filterRooms('playing')">進行中</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="main-content">
+            <div class="content-header">
+                <h2 class="content-title">ルーム一覧</h2>
+                <span class="room-count">4件</span>
+            </div>
+
+            <div class="rooms-grid">
+                <!-- ルームカード1 -->
+                <div class="room-card" onclick="joinRoom('ss')">
+                    <div class="room-status waiting"></div>
+                    <div class="room-name">kato</div>
+                    <div class="room-players">1/4人</div>
+                    <div class="room-description">だれでもどうぞ</div>
+                    <button class="room-join-btn">参加</button>
+                </div>
+
+                <!-- ルームカード2 -->
+                <div class="room-card" onclick="joinRoom('elite')">
+                    <div class="room-status waiting"></div>
+                    <div class="room-name">初心者向け</div>
+                    <div class="room-players">3/6人</div>
+                    <div class="room-description">ルール説明あり。ゆっくり進行します</div>
+                    <button class="room-join-btn">参加</button>
+                </div>
+
+                <!-- ルームカード3 -->
+                <div class="room-card" onclick="joinRoom('casual')">
+                    <div class="room-status playing"></div>
+                    <div class="room-name">高速戦</div>
+                    <div class="room-players">8/8人</div>
+                    <div class="room-description">サクサク進みます</div>
+                    <button class="room-join-btn">観戦</button>
+                </div>
+
+                <!-- ルームカード4 -->
+                <div class="room-card" onclick="joinRoom('test')">
+                    <div class="room-status waiting"></div>
+                    <div class="room-name">テスト部屋</div>
+                    <div class="room-players">2/8人</div>
+                    <div class="room-description"></div>
+                    <button class="room-join-btn">参加</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- プレイヤー情報 -->
+        <div class="player-info">
+            <div class="player-profile">
+                <div class="player-avatar">C</div>
+                <div class="player-name">chrome通常</div>
+            </div>
+
+            <div class="player-stats">
+                <div class="sidebar-title">戦績</div>
+                <div class="stat-item">
+                    <span class="stat-label">プレイ数</span>
+                    <span class="stat-value">23</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">成功率</span>
+                    <span class="stat-value">61%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">連勝</span>
+                    <span class="stat-value">3</span>
+                </div>
+            </div>
+
+            <div class="recent-games">
+                <div class="recent-title">履歴</div>
+                <div class="recent-game">
+                    <div class="recent-result success">成功</div>
+                    <div>高速戦 - 8人</div>
+                </div>
+                <div class="recent-game">
+                    <div class="recent-result fail">失敗</div>
+                    <div>kato - 4人</div>
+                </div>
+                <div class="recent-game">
+                    <div class="recent-result success">成功</div>
+                    <div>初心者向け - 6人</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ルーム関連の機能
+        function createRoom() {
+            console.log('新規ルーム作成');
+            alert('ルーム作成');
+        }
+
+        function joinRoom(roomId) {
+            console.log(`ルーム ${roomId} に参加`);
+            alert(`${roomId} に参加`);
+        }
+
+        function logout() {
+            console.log('ログアウト');
+            if (confirm('退出しますか？')) {
+                alert('メインメニューに戻ります');
+            }
+        }
+
+        // フィルター機能
+        function filterRooms(filter) {
+            console.log(`フィルター: ${filter}`);
+            
+            // すべてのフィルターボタンから active クラスを除去
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // クリックされたボタンに active クラスを追加
+            event.target.classList.add('active');
+        }
+
+        // 検索機能
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            console.log(`検索: ${searchTerm}`);
+            // 実際の検索機能はここで実装
+        });
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('ロビー読み込み完了');
+            
+            // 動的な効果の追加
+            const roomCards = document.querySelectorAll('.room-card');
+            roomCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.zIndex = '20';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.zIndex = '10';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -35,6 +35,7 @@ export function useDropHandler({
     if (roomStatus !== "clue") return false;
     if (!hasNumber || mePlaced) return false;
     if (resolveMode === "sort-submit") return true;
+    // 順次モード: 全員がready（cluesReady）になってから初めて出せる
     return !!cluesReady;
   }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady]);
 

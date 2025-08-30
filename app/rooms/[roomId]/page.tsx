@@ -19,10 +19,11 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
-import HostControlDockPC from "@/components/ui/HostControlDock.pc";
 import { notify } from "@/components/ui/notify";
-import SelfNumberCard from "@/components/ui/SelfNumberCard";
 import UniversalMonitor from "@/components/UniversalMonitor";
+import MinimalChat from "@/components/ui/MinimalChat";
+import PlayerIndicators from "@/components/ui/PlayerIndicators";
+import MiniHandDock from "@/components/ui/MiniHandDock";
 import { useAuth } from "@/context/AuthContext";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
@@ -432,21 +433,7 @@ export default function RoomPage() {
     />
   );
 
-  const sidebarNode = (
-    <Box h="100%">
-      <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">
-          プレイヤー
-        </Box>
-        <Box fontSize="0.875rem" color="#64748b">
-          {onlinePlayers.length}/{players.length}人
-        </Box>
-      </Box>
-      <Box overflowY="auto" flex={1}>
-        <Participants players={onlinePlayers} />
-      </Box>
-    </Box>
-  );
+  const sidebarNode = undefined; // モック仕様: 左の参加者リストは廃止（待機エリアで代替）
 
   const mainNode = (
     <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3} minH={0}>
@@ -467,6 +454,7 @@ export default function RoomPage() {
           failedAt={room.order?.failedAt}
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
+          isHost={isHost}
         />
       </Box>
     </Box>
@@ -485,80 +473,39 @@ export default function RoomPage() {
     </Box>
   );
 
-  const handAreaNode = (
-    <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      gap={6}
-      css={{
-        "@media (max-width: 768px)": { flexDirection: "column", gap: "1.5rem" },
-      }}
-    >
-      {me ? (
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={{ base: 4, md: 6 }}
-          flex={1}
-          css={{
-            "@media (max-width: 768px)": {
-              flexDirection: "column",
-              alignItems: "flex-start",
-            },
-          }}
-        >
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={{ base: 3, md: 6 }}
-            css={{
-              "@media (max-width: 768px)": {
-                width: "100%",
-                justifyContent: "center",
-              },
-            }}
-          >
-            <SelfNumberCard value={me.number} draggableId={me.id} />
-          </Box>
-          <Box flex={1} maxWidth={{ base: "100%", md: "400px" }}>
-            {/* 常時表示: フェーズに関わらず連想ワードを更新可能 */}
-            <ClueInputMini
-              roomId={roomId}
-              playerId={me.id}
-              currentValue={me?.clue1 || ""}
-            />
-          </Box>
-        </Box>
-      ) : (
-        <Box flex={1} />
-      )}
-
-      {/* PC画面でのホスト操作パネル - フッターエリアに統合 */}
-      {isHost && (
-        <Box display={{ base: "none", md: "block" }}>
-          <HostControlDockPC
-            roomId={roomId}
-            room={room}
-            players={players}
-            onlineCount={onlinePlayers.length}
-            hostPrimaryAction={hostPrimaryAction}
-            onReset={resetToWaiting}
-          />
-        </Box>
-      )}
-    </Box>
+  const handAreaNode = me ? (
+    <MiniHandDock
+      roomId={roomId}
+      me={me}
+      resolveMode={room.options?.resolveMode}
+      proposal={room.order?.proposal || []}
+      eligibleIds={eligibleIds}
+      cluesReady={allCluesReady}
+      isHost={isHost}
+      roomStatus={room.status}
+      defaultTopicType={room.options?.defaultTopicType || "通常版"}
+      allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
+    />
+  ) : (
+    <Box h="1px" />
   );
 
   return (
     <>
       <GameLayout
+        variant="immersive"
         header={headerNode}
         sidebar={sidebarNode}
         main={mainNode}
         rightPanel={rightPanelNode}
         handArea={handAreaNode}
       />
+
+      {/* ミニマルUI（固定配置） */}
+      <MinimalChat roomId={roomId} />
+      <PlayerIndicators players={players} onlineCount={onlinePlayers.length} />
+
+      {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
 
       <SettingsModal
         isOpen={isSettingsOpen}
