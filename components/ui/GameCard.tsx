@@ -28,12 +28,21 @@ export function GameCard({
   if (variant === "flip") {
     return (
       <Box
-        css={styles.container}
+        css={{
+          ...styles.container,
+          // === 2025年 DPI対応 コンテナサイズ ===
+          aspectRatio: "var(--card-aspect)",
+          width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+          minWidth: "var(--card-min)",
+          maxWidth: "var(--card-max)",
+          height: "auto", // aspect-ratioが制御
+          
+          // Grid アイテムとしての最適化
+          placeSelf: "start",
+        }}
         role="group"
         aria-label="card"
         tabIndex={0}
-        width={{ base: "{sizes.cardWBase}", md: "{sizes.cardW}" }}
-        height={{ base: "{sizes.cardHBase}", md: "{sizes.cardH}" }}
         _focusVisible={{
           outline: "2px solid",
           outlineColor: "focusRing",
@@ -75,10 +84,19 @@ export function GameCard({
 
   return (
     <Box
-      css={styles.frame}
+      css={{
+        ...styles.frame,
+        // === 2025年 DPI対応 フレームサイズ ===
+        aspectRatio: "var(--card-aspect)",
+        width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+        minWidth: "var(--card-min)",
+        maxWidth: "var(--card-max)",
+        height: "auto", // aspect-ratioが制御
+        
+        // Grid アイテムとしての最適化
+        placeSelf: "start",
+      }}
       tabIndex={0}
-      width={{ base: "{sizes.cardWBase}", md: "{sizes.cardW}" }}
-      height={{ base: "{sizes.cardHBase}", md: "{sizes.cardH}" }}
       _focusVisible={{
         outline: "2px solid",
         outlineColor: "focusRing",
