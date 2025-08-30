@@ -47,7 +47,7 @@ export function GameLayout({
   return (
     <>
       <Box
-        minH="100dvh" // コンテンツに応じて伸縮可能
+        h="100dvh" // 画面高を厳密固定（DPI125%でも溢れさせない）
         display="grid"
         gridTemplateAreas={`
           "header header header"
@@ -117,10 +117,11 @@ export function GameLayout({
             lg: "1.5rem",    // 大型画面用
             xl: "2rem"       // 超大型画面用
           }}
-          overflow="visible" // カードボードの自然な伸縮を許可
+          overflowY="auto" // 中央だけ内部スクロール許容（ページは無スクロールのまま）
           display="flex"
           flexDirection="column"
           position="relative" // Grid子要素の適切な配置コンテキスト
+          minH={0} // Grid内で高さ計算を正しく行う
         >
           {main}
         </Box>
@@ -149,8 +150,8 @@ export function GameLayout({
           justifyContent="space-between"
           gap={{ base: "1rem", md: "2rem" }}
           boxShadow="0 -1px 3px 0 rgb(0 0 0 / 0.1)"
-          minHeight={UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT} // DPI対応動的サイズ
-          maxHeight="none" // コンテンツに応じて自然伸縮
+          height={UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT} // DPI対応動的サイズ（行と厳密一致）
+          maxHeight="none"
           css={{
             "@media (max-width: 768px)": {
               flexDirection: "column",
