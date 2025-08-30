@@ -449,11 +449,12 @@ export default function RoomPage() {
   );
 
   const mainNode = (
-    <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3}>
+    <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3} minH={0}>
       <Box p={0}>
         <UniversalMonitor room={room} players={players} />
       </Box>
-      <Box overflow="hidden">
+      {/* ドット行が親でクリップされないように: visible + minH=0 */}
+      <Box overflow="visible" minH={0}>
         <CentralCardBoard
           roomId={roomId}
           players={players}

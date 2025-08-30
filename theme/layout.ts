@@ -15,17 +15,17 @@
 // === プライマリレイアウト定数 ===
 export const UNIFIED_LAYOUT = {
   // ビューポート適応サイズ (DPI最適化)
-  HEADER_HEIGHT: "clamp(80px, 8vh, 120px)",
+  HEADER_HEIGHT: "clamp(80px, 8dvh, 120px)",
   SIDEBAR_WIDTH: "clamp(240px, 22vw, 300px)",
   RIGHT_PANEL_WIDTH: "clamp(280px, 26vw, 360px)",
   // 手札エリア: トランプ型カード（120px）+ ゆとりを持った安定した高さ（ゲーム感重視）
-  HAND_AREA_HEIGHT: "clamp(220px, 25vh, 280px)",
+  HAND_AREA_HEIGHT: "clamp(220px, 25dvh, 280px)",
 
   // 125% DPI特別対応
   DPI_125: {
-    HEADER_HEIGHT: "clamp(72px, 7vh, 104px)",
+    HEADER_HEIGHT: "clamp(72px, 7dvh, 104px)",
     // 125%DPI環境でもトランプ型カードに十分な高さを確保（ゲーム感重視）
-    HAND_AREA_HEIGHT: "clamp(200px, 22vh, 250px)",
+    HAND_AREA_HEIGHT: "clamp(200px, 22dvh, 250px)",
   },
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
@@ -63,10 +63,10 @@ export const UNIFIED_LAYOUT = {
   },
 
   // ボード要素（DPI適応）- コンパクト化で手札エリアを強化
-  BOARD_MIN_HEIGHT: "clamp(200px, 22vh, 260px)",
+  BOARD_MIN_HEIGHT: "clamp(200px, 22dvh, 260px)",
 
   // モニター要素（コンパクト化対応）
-  MONITOR_MIN_HEIGHT: "clamp(160px, 18vh, 200px)", // 180px固定値の代替
+  MONITOR_MIN_HEIGHT: "clamp(160px, 18dvh, 200px)", // 180px固定値の代替
 
   // コンポーネント間スペーシング（統一制御）
   SPACING: {
