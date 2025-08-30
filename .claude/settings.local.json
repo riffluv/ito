@@ -26,7 +26,8 @@
       "mcp__serena__think_about_whether_you_are_done",
       "Read(c:\\Users\\hr-hm\\Desktop\\codex\\claudedocs/**)",
       "Bash(find:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

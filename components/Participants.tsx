@@ -18,17 +18,16 @@ export const Participants = memo(function Participants({
     );
   }
   return (
-    <Box
-      padding="1rem 1.5rem"
-    >
+    <Box padding={{ base: 3, md: 4 }}>
       {players.map((p) => (
         <Box
           key={p.id}
           display="flex"
           justifyContent="space-between"
           alignItems="flex-start"
-          padding="0.75rem 0"
-          borderBottom="1px solid #f1f5f9" // --slate-100
+          paddingY={3}
+          borderBottom="1px solid"
+          borderColor="borderDefault"
           _last={{
             borderBottom: "none"
           }}
@@ -41,23 +40,12 @@ export const Participants = memo(function Participants({
               gap={2}
               marginBottom={1}
             >
-              <Text
-                fontWeight={600}
-                color="#0f172a" // --slate-900
-                fontSize="sm"
-              >
+              <Text fontWeight={600} color="fgDefault" fontSize="sm">
                 {p.name}
               </Text>
               
               {/* Player Badge */}
-              <Box
-                bg="#dbeafe" // --blue-100
-                color="#0369a1" // --blue-700
-                fontSize="0.75rem"
-                padding="0.125rem 0.5rem"
-                borderRadius="0.125rem"
-                fontWeight={500}
-              >
+              <Box bg="blue.100" color="blue.700" fontSize="xs" px={2} py={0.5} borderRadius="2px" fontWeight={500}>
                 プレイヤー
               </Box>
             </Box>
@@ -65,7 +53,7 @@ export const Participants = memo(function Participants({
             {/* Player Clue: レイアウトの高さを常に確保してCLSを防止 */}
             <Box fontSize="0.875rem" minH="1.25rem">
               {p.clue1 ? (
-                <Box color="#64748b">{p.clue1}</Box>
+                <Box color="fgMuted">{p.clue1}</Box>
               ) : (
                 // スクリーンリーダーには読み上げさせない透明プレースホルダー
                 <Box aria-hidden="true" visibility="hidden">placeholder</Box>
@@ -74,13 +62,7 @@ export const Participants = memo(function Participants({
           </Box>
           
           {/* Player Status */}
-          <Box
-            width="8px"
-            height="8px"
-            borderRadius="50%"
-            bg={p.ready ? "#22c55e" : "#10b981"} // --green-500 : --emerald-500 (オンライン感のある緑)
-            marginTop={1}
-          />
+          <Box w="8px" h="8px" borderRadius="50%" bg={p.ready ? "green.500" : "emerald.500"} mt={1} />
         </Box>
       ))}
     </Box>

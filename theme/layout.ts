@@ -23,9 +23,15 @@ export const UNIFIED_LAYOUT = {
 
   // 125% DPI特別対応
   DPI_125: {
-    HEADER_HEIGHT: "clamp(72px, 7dvh, 104px)",
+    HEADER_HEIGHT: "clamp(64px, 6dvh, 96px)",
     // 125%DPI環境でもトランプ型カードに十分な高さを確保（ゲーム感重視）
-    HAND_AREA_HEIGHT: "clamp(200px, 22dvh, 250px)",
+    HAND_AREA_HEIGHT: "clamp(180px, 18dvh, 220px)",
+  },
+
+  // 150% DPI特別対応（小型ノートPCでの高さ確保を優先）
+  DPI_150: {
+    HEADER_HEIGHT: "clamp(56px, 5.5dvh, 88px)",
+    HAND_AREA_HEIGHT: "clamp(160px, 16dvh, 200px)",
   },
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
@@ -63,10 +69,10 @@ export const UNIFIED_LAYOUT = {
   },
 
   // ボード要素（DPI適応）- コンパクト化で手札エリアを強化
-  BOARD_MIN_HEIGHT: "clamp(200px, 22dvh, 260px)",
+  BOARD_MIN_HEIGHT: "clamp(180px, 18dvh, 240px)",
 
   // モニター要素（コンパクト化対応）
-  MONITOR_MIN_HEIGHT: "clamp(160px, 18dvh, 200px)", // 180px固定値の代替
+  MONITOR_MIN_HEIGHT: "clamp(140px, 14dvh, 180px)", // 180px固定値の代替
 
   // コンポーネント間スペーシング（統一制御）
   SPACING: {

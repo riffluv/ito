@@ -24,10 +24,11 @@ export function RoomCard({
       className="animate-fadeInUp" 
       minH={{ base: 36, md: 40 }}
       position="relative"
-      border="1px solid #e2e8f0" // --slate-200 (ゲーム画面と統一)
+      border="1px solid"
+      borderColor="borderDefault"
       _hover={{
-        borderColor: "#cbd5e1", // --slate-300
-        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)", // cardElevated
+        borderColor: "gray.300",
+        boxShadow: "var(--shadows-cardElevated)",
       }}
     >
       {/* シンプルなステータス表示 */}
@@ -38,7 +39,7 @@ export function RoomCard({
         w="8px" // より控えめ
         h="8px"
         borderRadius="full"
-        bg={isWaiting ? "#16a34a" : "#ea580c"} // green-600 : orange-600 より深い色
+        bg={isWaiting ? "green.600" : "orange.600"}
       />
       
       <Stack gap={4}>
@@ -47,7 +48,7 @@ export function RoomCard({
           <Text
             fontWeight={700}
             fontSize={{ base: "lg", md: "xl" }}
-            color="#0f172a" // --slate-900
+            color="fgDefault"
             fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
             overflow="hidden"
             textOverflow="ellipsis"
@@ -59,7 +60,7 @@ export function RoomCard({
           </Text>
           <Text
             fontSize="sm"
-            color="#6b7280" // より自然なグレー
+            color="fgMuted"
             fontWeight={400} // より軽く
           >
             {statusLabel}
@@ -67,43 +68,21 @@ export function RoomCard({
         </Box>
 
         {/* シンプルな統計表示 */}
-        <Box
-          bg="#f9fafb" // より控えめな背景
-          borderRadius="6px" // 少し角を立てる
-          padding="0.625rem" // 微妙に小さく
-        >
+        <Box bg="gray.50" borderRadius="6px" padding="0.625rem">
           <HStack justify="space-between" align="center">
             <Box>
-              <Text
-                fontSize="xs"
-                color="#9ca3af" // より薄いグレー
-                fontWeight={400}
-                mb="1px"
-              >
+              <Text fontSize="xs" color="gray.400" fontWeight={400} mb="1px">
                 参加者数
               </Text>
-              <Text
-                fontSize="lg" // 少し小さく
-                fontWeight={600}
-                color="#111827"
-              >
+              <Text fontSize="lg" fontWeight={600} color="gray.900">
                 {count}人
               </Text>
             </Box>
             <Box textAlign="right">
-              <Text
-                fontSize="xs"
-                color="#9ca3af"
-                fontWeight={400}
-                mb="1px"
-              >
+              <Text fontSize="xs" color="gray.400" fontWeight={400} mb="1px">
                 状態
               </Text>
-              <Text
-                fontSize="sm"
-                fontWeight={500}
-                color={isWaiting ? "#059669" : "#dc2626"} // red-600 でよりわかりやすく
-              >
+              <Text fontSize="sm" fontWeight={500} color={isWaiting ? "green.600" : "red.600"}>
                 {isWaiting ? "募集中" : "開始済"}
               </Text>
             </Box>

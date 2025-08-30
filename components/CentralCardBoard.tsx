@@ -10,6 +10,7 @@ import { setOrderProposal } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
+import StatusDock from "@/components/ui/StatusDock";
 import { DndContext, DragEndEvent, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
@@ -146,25 +147,14 @@ export function CentralCardBoard({
       flexDirection="column"
     >
       {/* コンパクトヘッダー - DPI125%対応 */}
-      <Box
-        textAlign="center"
-        marginBottom={{ base: "0.5rem", md: "0.5rem" }}
-        flex="0 0 auto"
-        width="100%"
-        maxWidth="var(--board-max-width)"
-        marginInline="auto"
+      <Box textAlign="center" marginBottom={{ base: "0.5rem", md: "0.5rem" }} flex="0 0 auto" width="100%" maxWidth="var(--board-max-width)" marginInline="auto"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            marginBottom: "0.375rem",
+            marginBottom: "0.25rem",
           },
         }}
       >
-        <Box
-          fontWeight={500}
-          color="#334155"
-          fontSize={{ base: "0.75rem", md: "0.875rem" }}
-          lineHeight={1.3}
-        >
+        <Box fontWeight={500} color="fgMuted" fontSize={{ base: "0.75rem", md: "0.875rem" }} lineHeight={1.3}>
           小さい順から大きい順に並べよう
         </Box>
       </Box>
@@ -181,31 +171,26 @@ export function CentralCardBoard({
         minHeight={0}
       >
         <Box
-          bg="#f8fafc"
-          border="2px dashed #cbd5e1"
+          bg="panelSubBg"
+          border="1px dashed"
+          borderColor="borderDefault"
           borderRadius="1rem"
-          padding="var(--card-padding)"
+          padding={{ base: 2, md: 3 }}
           minHeight="auto"
           width="100%"
           maxWidth="var(--board-max-width)"
           marginInline="auto"
+          display="flex"
+          flexWrap="wrap"
+          justifyContent="center"
+          alignContent="flex-start"
+          alignItems="flex-start"
+          gap={2}
           css={{
-            // コンテナクエリを有効化
             containerType: "inline-size",
-
-            // === 新: Flexボード（常に行全体を中央配置） ===
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            alignContent: "flex-start",
-            alignItems: "flex-start",
-            gap: "var(--card-gap)",
-
-            // ドロップターゲット状態
-            "&[data-drop-target='true']": {
-              borderColor: "#0ea5e9",
-              backgroundColor: "#f0f9ff",
-            },
+            "&[data-drop-target='true']": { borderColor: "accent", backgroundColor: "accentSubtle" },
+            // spacing 1.5 (6px) をトークンで表現
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: { gap: "calc(var(--spacing-3) / 2)" },
           }}
           data-drop-target={isOver && canDrop ? "true" : "false"}
         >
@@ -268,27 +253,23 @@ export function CentralCardBoard({
                       <Box
                         key={`slot-${idx}`}
                         css={{
-                          // アスペクト比固定
-                          aspectRatio: "var(--card-aspect)",
-                          // 動的サイズ: CSS変数でDPI自動調整
-                          width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
-                          minWidth: "var(--card-min)",
-                          maxWidth: "var(--card-max)",
-                          height: "auto", // aspect-ratioが制御
+                          aspectRatio: "5 / 7",
+                          height: "auto",
                           
-                          border: "2px dashed #cbd5e1",
+                          border: "2px dashed var(--colors-borderDefault)",
                           borderRadius: "1rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           backgroundColor: "transparent",
-                          color: "#94a3b8",
+                          color: "var(--colors-fgMuted)",
                           fontSize: "0.75rem",
                           fontWeight: 500,
                           
                           // Grid アイテムとしての設定
                           placeSelf: "start", // Grid内で上揃え
                         }}
+                        width={UNIFIED_LAYOUT.CARD.WIDTH}
                       >
                         {idx + 1}
                       </Box>
@@ -309,27 +290,23 @@ export function CentralCardBoard({
                     <Box
                       key={`drop-zone-${idx}`}
                       css={{
-                        // アスペクト比固定
-                        aspectRatio: "var(--card-aspect)",
-                        // 動的サイズ: CSS変数でDPI自動調整
-                        width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
-                        minWidth: "var(--card-min)",
-                        maxWidth: "var(--card-max)",
-                        height: "auto", // aspect-ratioが制御
+                        aspectRatio: "5 / 7",
+                        height: "auto",
                         
-                        border: "2px dashed #cbd5e1",
+                        border: "2px dashed var(--colors-borderDefault)",
                         borderRadius: "1rem",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: "transparent",
-                        color: "#94a3b8",
+                        color: "var(--colors-fgMuted)",
                         fontSize: "0.75rem",
                         fontWeight: 500,
                         
                         // Grid アイテムとしての設定
                         placeSelf: "start", // Grid内で上揃え
                       }}
+                      width={UNIFIED_LAYOUT.CARD.WIDTH}
                     >
                       {idx + 1}
                     </Box>
@@ -353,34 +330,11 @@ export function CentralCardBoard({
 
         </Box>
         
-        {/* ステータスドック（インライン結果専用） */}
-        <Box
-          paddingBlock={{ base: "0.25rem", md: "0.5rem" }}
-          mt={{ base: "0.5rem", md: "0.5rem" }}
-          // 結果がある時のみ高さを確保（帯外側）
-          minHeight={roomStatus === "finished" ? { base: "28px", md: "32px" } : 0}
-        >
-          {/* ボードと同じ幅・同じ左右パディングの内側ラッパー */}
-          <Box
-            width="100%"
-            maxWidth="var(--board-max-width)"
-            marginInline="auto"
-            paddingInline="var(--card-padding)"
-            css={{
-              // var(--card-padding) は cqi を含むため、同一計算基準にする
-              containerType: "inline-size",
-            }}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize={{ base: "0.625rem", md: "0.75rem" }}
-            color="#64748b"
-          >
-            {roomStatus === "finished" && (
-              <GameResultOverlay failed={failed} failedAt={failedAt} mode="inline" />
-            )}
-          </Box>
-        </Box>
+        <StatusDock show={roomStatus === "finished"}>
+          {roomStatus === "finished" && (
+            <GameResultOverlay failed={failed} failedAt={failedAt} mode="inline" />
+          )}
+        </StatusDock>
       </Box>
     </Box>
   );
