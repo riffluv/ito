@@ -59,7 +59,7 @@ export function GameLayout({
           base: "auto minmax(0, 1fr) auto", 
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`
         }}
-        gap="1px"
+        gap={0}
         bg="#f8fafc" // --slate-50
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
         color="#0f172a" // --slate-900
@@ -111,12 +111,19 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg="white"
-          padding={{
+          paddingInline={{
             base: "0.75rem",  // DPI125%小型ノートPC対応
             md: "1rem",      // 通常環境用
             lg: "1.5rem",    // 大型画面用
             xl: "2rem"       // 超大型画面用
           }}
+          paddingTop={{
+            base: "0.75rem",
+            md: "1rem",
+            lg: "1.5rem",
+            xl: "2rem"
+          }}
+          paddingBottom={0} // 下側の余白は中央コンテンツ側(ステータスドック)で管理
           overflowY="auto" // 中央だけ内部スクロール許容（ページは無スクロールのまま）
           display="flex"
           flexDirection="column"

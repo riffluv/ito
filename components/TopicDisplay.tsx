@@ -16,7 +16,8 @@ export function TopicDisplay({
   // 表示専用: 固定高さで完全にCLS防止
   const content = (
     <Box
-      minH="80px"
+      // DPI差でスクロールが出ないよう固定最小高をやや低めに
+      minH={{ base: "64px", md: "72px" }}
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -24,11 +25,11 @@ export function TopicDisplay({
       <Box w="full" textAlign="center">
         {hasTopic ? (
           <>
-            <Text fontWeight="bold" fontSize="lg" mb={1}>
+            <Text fontWeight="bold" fontSize={{ base: "md", md: "lg" }} mb={1}>
               {room.topic}
             </Text>
             {topicBox && (
-              <Text color="fgMuted" fontSize="sm">
+              <Text color="fgMuted" fontSize={{ base: "xs", md: "sm" }}>
                 カテゴリ: {topicBox}
               </Text>
             )}
