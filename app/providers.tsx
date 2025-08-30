@@ -24,7 +24,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       {/* next-themes を完全除去 - ライトモード固定 */}
       <ThemePresetProvider>
         <AuthProvider>
-          <Box bg="canvasBg" color="fgDefault" minH="100vh">
+          <Box bg="canvasBg" color="fgDefault" h="100dvh">
             <LightModeOnlyBridge />
             {children}
             <Toaster />
