@@ -5,9 +5,57 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 interface GameResultOverlayProps {
   failed?: boolean;
   failedAt?: number | null;
+  mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
 }
 
-export function GameResultOverlay({ failed, failedAt }: GameResultOverlayProps) {
+export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameResultOverlayProps) {
+  // インライン表示: カードと被せず帯として表示
+  if (mode === "inline") {
+    return failed ? (
+      <Box
+        as="span"
+        display="inline-flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        rounded="lg"
+        fontWeight={800}
+        fontSize={{ base: "sm", md: "md" }}
+        color="#991b1b" // red-800
+        boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+        bg="#fee2e2" // red-100（bgGradient未定義時のフォールバック）
+        border="1px solid #fecaca" // red-200
+        whiteSpace="nowrap"
+        aria-live="polite"
+        role="status"
+      >
+        <span aria-hidden>💥</span> FAILED{typeof failedAt === "number" ? ` #${failedAt}` : ""}
+      </Box>
+    ) : (
+      <Box
+        as="span"
+        display="inline-flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        rounded="lg"
+        fontWeight={800}
+        fontSize={{ base: "sm", md: "md" }}
+        color="#065f46" // emerald-800
+        boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+        bg="#d1fae5" // emerald-100
+        border="1px solid #a7f3d0" // emerald-200
+        whiteSpace="nowrap"
+        aria-live="polite"
+        role="status"
+      >
+        <span aria-hidden>🎉</span> SUCCESS!!
+      </Box>
+    );
+  }
+
   if (failed) {
     return (
       <Box

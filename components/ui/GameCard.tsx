@@ -25,6 +25,23 @@ export function GameCard({
   // reduced motion 対応: CSS prefers-reduced-motion を利用し inner の transition を打ち消し
   const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
+  // テキストのはみ出し対策（共通）
+  const clamp2Css: any = {
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+  };
+  const oneLineEllipsis: any = {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "100%",
+  };
+
   if (variant === "flip") {
     return (
       <Box
@@ -39,6 +56,18 @@ export function GameCard({
           
           // Grid アイテムとしての最適化
           placeSelf: "start",
+          // フォントの自動縮小: コンテナクエリで微調整
+          containerType: "inline-size",
+          
+          // 子要素のフォントスケールを幅に応じて段階的に調整
+          "@container (max-width: 120px)": {
+            ".gc-main": { fontSize: "0.9rem" },
+            ".gc-name": { fontSize: "0.65rem" },
+          },
+          "@container (max-width: 100px)": {
+            ".gc-main": { fontSize: "0.8rem" },
+            ".gc-name": { fontSize: "0.6rem" },
+          },
         }}
         role="group"
         aria-label="card"
@@ -59,10 +88,10 @@ export function GameCard({
             <Text fontSize="xs" color="fgMuted" mb={1}>
               #{typeof index === "number" ? index + 1 : "?"}
             </Text>
-            <Text fontWeight="900" fontSize="md" textAlign="center">
+            <Text className="gc-main" fontWeight="900" fontSize="md" textAlign="center" css={clamp2Css}>
               {clue || "(連想なし)"}
             </Text>
-            <Text mt={2} fontSize="xs" color="fgMuted">
+            <Text mt={2} className="gc-name" fontSize="xs" color="fgMuted" css={oneLineEllipsis}>
               {name ?? "(不明)"}
             </Text>
           </Box>
@@ -73,7 +102,7 @@ export function GameCard({
             <Text fontWeight="900" fontSize="3xl" textAlign="center">
               {typeof number === "number" ? number : "?"}
             </Text>
-            <Text mt={2} fontSize="xs" color="fgMuted">
+            <Text mt={2} className="gc-name" fontSize="xs" color="fgMuted" css={oneLineEllipsis}>
               {name ?? "(不明)"}
             </Text>
           </Box>
@@ -95,6 +124,17 @@ export function GameCard({
         
         // Grid アイテムとしての最適化
         placeSelf: "start",
+        containerType: "inline-size",
+        
+        // フォントの段階的縮小
+        "@container (max-width: 120px)": {
+          ".gc-main": { fontSize: "1.1rem" },
+          ".gc-name": { fontSize: "0.7rem" },
+        },
+        "@container (max-width: 100px)": {
+          ".gc-main": { fontSize: "1rem" },
+          ".gc-name": { fontSize: "0.65rem" },
+        },
       }}
       tabIndex={0}
       _focusVisible={{
@@ -108,10 +148,16 @@ export function GameCard({
           #{index + 1}
         </Text>
       )}
-      <Text fontWeight="900" fontSize="xl" textAlign="center">
+      <Text
+        className="gc-main"
+        fontWeight="900"
+        fontSize="xl"
+        textAlign="center"
+        css={typeof number === "number" ? undefined : clamp2Css}
+      >
         {typeof number === "number" ? number : clue || "?"}
       </Text>
-      <Text mt={2} fontSize="xs" color="fgMuted">
+      <Text mt={2} className="gc-name" fontSize="xs" color="fgMuted" css={oneLineEllipsis}>
         {name ?? "(不明)"}
       </Text>
     </Box>
@@ -119,4 +165,3 @@ export function GameCard({
 }
 
 export default GameCard;
-

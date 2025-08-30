@@ -17,16 +17,28 @@ export default function UniversalMonitor({
   return (
     <Box
       textAlign="center"
-      marginBottom={{ base: "1rem", md: "2rem" }}
+      marginBottom={{ base: "0.75rem", md: "1.25rem" }}
+      css={{
+        // 125% DPI では上下余白をさらに微調整して中央のスクロール発生を抑止
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          marginBottom: "0.5rem",
+        },
+      }}
     >
       {/* Professional Theme Card - モックデザイン準拠 */}
       <Box
         bg="#0f172a" // --slate-900
         color="white"
-        padding={{ base: "1.5rem", md: "2rem" }}
+        padding={{ base: "1.25rem", md: "1.75rem" }}
         borderRadius="1.5rem" // --radius-2xl
         boxShadow="0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" // --shadow-lg
-        marginBottom={{ base: "0.75rem", md: "1rem" }}
+        marginBottom={{ base: "0.5rem", md: "0.75rem" }}
+        css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            padding: "1rem",
+            marginBottom: "0.5rem",
+          },
+        }}
       >
         <Box
           fontSize="0.875rem"

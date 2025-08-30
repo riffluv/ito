@@ -148,8 +148,16 @@ export function CentralCardBoard({
       {/* コンパクトヘッダー - DPI125%対応 */}
       <Box
         textAlign="center"
-        marginBottom={{ base: "0.5rem", md: "0.75rem" }}
+        marginBottom={{ base: "0.5rem", md: "0.5rem" }}
         flex="0 0 auto"
+        width="100%"
+        maxWidth="var(--board-max-width)"
+        marginInline="auto"
+        css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            marginBottom: "0.375rem",
+          },
+        }}
       >
         <Box
           fontWeight={500}
@@ -180,39 +188,23 @@ export function CentralCardBoard({
           minHeight="auto"
           width="100%"
           maxWidth="var(--board-max-width)"
+          marginInline="auto"
           css={{
             // コンテナクエリを有効化
             containerType: "inline-size",
-            
-            // Grid レイアウト: 端数に強いminmax設計
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))",
-            gap: "var(--card-gap)",
+
+            // === 新: Flexボード（常に行全体を中央配置） ===
+            display: "flex",
+            flexWrap: "wrap",
             justifyContent: "center",
-            alignItems: "start",
-            
+            alignContent: "flex-start",
+            alignItems: "flex-start",
+            gap: "var(--card-gap)",
+
             // ドロップターゲット状態
             "&[data-drop-target='true']": {
               borderColor: "#0ea5e9",
               backgroundColor: "#f0f9ff",
-            },
-            
-            // === DPI 125%特別対応 ===
-            "@media (resolution: 120dpi), (resolution: 1.25dppx)": {
-              gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))",
-              gap: "var(--card-gap)", // CSS変数が自動調整
-            },
-            
-            // === コンテナクエリ対応: 幅に応じた最適化 ===
-            "@container (max-width: 400px)": {
-              gridTemplateColumns: "repeat(auto-fit, minmax(4rem, 1fr))", // 狭い時は1列
-              gap: "0.5rem",
-            },
-            "@container (min-width: 401px) and (max-width: 800px)": {
-              gridTemplateColumns: "repeat(auto-fit, minmax(5rem, 6rem))", // 中間サイズ
-            },
-            "@container (min-width: 801px)": {
-              gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))", // 標準サイズ
             },
           }}
           data-drop-target={isOver && canDrop ? "true" : "false"}
@@ -227,9 +219,7 @@ export function CentralCardBoard({
             onDragLeave={() => setIsOver(false)}
             onDrop={onDrop}
             width="100%"
-            css={{
-              display: "contents", // Grid直接制御
-            }}
+            css={{ display: "contents" }}
           >
             {/* Drop Slots and Cards */}
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
@@ -363,41 +353,34 @@ export function CentralCardBoard({
 
         </Box>
         
-        {/* コンパクト準備状況 - DPI125%完全対応 */}
+        {/* ステータスドック（インライン結果専用） */}
         <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          gap={{ base: "0.25rem", md: "0.5rem" }}
-          flexWrap="wrap"
-          padding={{ base: "0.25rem", md: "0.5rem" }}
-          fontSize={{ base: "0.625rem", md: "0.75rem" }}
-          color="#64748b"
-          minHeight="auto" // 最小高さでコンパクト化
+          paddingBlock={{ base: "0.25rem", md: "0.5rem" }}
+          mt={{ base: "0.5rem", md: "0.5rem" }}
+          // 結果がある時のみ高さを確保（帯外側）
+          minHeight={roomStatus === "finished" ? { base: "28px", md: "32px" } : 0}
         >
-          {/* 進行状況インジケーターのみ */}
-          {eligibleIds.map((id) => {
-            const placed = resolveMode === "sort-submit" 
-              ? proposal?.includes(id) 
-              : orderList?.includes(id);
-            const player = map.get(id);
-            return (
-              <Box
-                key={id}
-                width={{ base: "4px", md: "6px" }}
-                height={{ base: "4px", md: "6px" }}
-                borderRadius="50%"
-                bg={placed ? "#16a34a" : "#e5e7eb"} // green-600 : gray-200
-                title={`${player?.name || "Unknown"}: ${placed ? "配置済み" : "未配置"}`}
-                flexShrink={0}
-              />
-            );
-          })}
+          {/* ボードと同じ幅・同じ左右パディングの内側ラッパー */}
+          <Box
+            width="100%"
+            maxWidth="var(--board-max-width)"
+            marginInline="auto"
+            paddingInline="var(--card-padding)"
+            css={{
+              // var(--card-padding) は cqi を含むため、同一計算基準にする
+              containerType: "inline-size",
+            }}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            fontSize={{ base: "0.625rem", md: "0.75rem" }}
+            color="#64748b"
+          >
+            {roomStatus === "finished" && (
+              <GameResultOverlay failed={failed} failedAt={failedAt} mode="inline" />
+            )}
+          </Box>
         </Box>
-        
-        {roomStatus === "finished" && (
-          <GameResultOverlay failed={failed} failedAt={failedAt} />
-        )}
       </Box>
     </Box>
   );
