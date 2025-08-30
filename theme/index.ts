@@ -156,12 +156,17 @@ const config = defineConfig({
         containerMd: { value: "768px" },
         containerLg: { value: "1024px" },
 
-        // === ゲーム要素 (UNIFIED_LAYOUTと統一) ===
-        // カードサイズ: レスポンシブ対応
-        cardW: { value: "120px" }, // UNIFIED_LAYOUT.CARD.WIDTH.mdと統一
-        cardH: { value: "168px" }, // UNIFIED_LAYOUT.CARD.HEIGHT.mdと統一
-        cardWBase: { value: "100px" }, // モバイル用
-        cardHBase: { value: "140px" }, // モバイル用
+        // === ゲーム要素 - 2025年DPI対応コンテナクエリベース ===
+        // カードサイズ: fluid + container query 対応
+        cardMin: { value: "clamp(5rem, 6cqi, 7rem)" },     // 80px-112px
+        cardIdeal: { value: "clamp(6rem, 9cqi, 8rem)" },   // 96px-128px  
+        cardMax: { value: "clamp(7rem, 12cqi, 9rem)" },    // 112px-144px
+        
+        // レガシー互換性 (段階的移行用)
+        cardW: { value: "clamp(6rem, 9cqi, 8rem)" },       // cardIdealと同値
+        cardH: { value: "auto" },                          // aspect-ratioで制御
+        cardWBase: { value: "clamp(5rem, 6cqi, 6.5rem)" }, // モバイル用
+        cardHBase: { value: "auto" },                      // aspect-ratioで制御
 
         // レイアウトサイズ: UNIFIED_LAYOUTと統一
         headerHeight: { value: "clamp(80px, 8vh, 120px)" }, // UNIFIED_LAYOUT.HEADER_HEIGHT
@@ -209,6 +214,18 @@ const config = defineConfig({
         // Banner / Self number foreground brand-ish
         panelBannerFg: { value: "#0f1724" }, // ライトモード固定
         selfNumberFg: { value: "#0F3460" }, // ライトモード固定
+      },
+      // === 2025年 カードシステム専用セマンティックトークン ===
+      sizes: {
+        "card.min": { value: "clamp(4.5rem, 5cqi, 6rem)" },     // 72px-96px
+        "card.ideal": { value: "{sizes.cardIdeal}" },
+        "card.max": { value: "clamp(8rem, 15cqi, 10rem)" },     // 128px-160px
+        "card.gap": { value: "clamp(0.25rem, 1cqi, 0.75rem)" }, // 4px-12px
+        "card.padding": { value: "clamp(0.5rem, 2cqi, 1rem)" }, // 8px-16px
+        "board.maxWidth": { value: "min(100%, 90rem)" },        // 1440px max
+      },
+      aspectRatios: {
+        "card": { value: "5 / 7" }, // トランプカード比率
       },
       shadows: {
         interactive: { value: "{shadows.sm}" }, // ライトモード固定
@@ -342,8 +359,15 @@ const config = defineConfig({
           container: {
             perspective: "1000px",
             position: "relative",
-            width: "{sizes.cardW}",
-            height: "{sizes.cardH}",
+            // === 2025年 DPI対応サイズ ===
+            aspectRatio: "var(--card-aspect)",
+            width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+            minWidth: "var(--card-min)",
+            maxWidth: "var(--card-max)",
+            height: "auto", // aspect-ratioが制御
+            
+            // Grid アイテムとしての最適化
+            placeSelf: "start",
           },
           inner: {
             position: "absolute",
@@ -384,13 +408,22 @@ const config = defineConfig({
           },
           frame: {
             p: 3,
-            width: "{sizes.cardW}",
-            height: "{sizes.cardH}",
+            // === 2025年 DPI対応フレーム ===
+            aspectRatio: "var(--card-aspect)",
+            width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+            minWidth: "var(--card-min)",
+            maxWidth: "var(--card-max)",
+            height: "auto", // aspect-ratioが制御
+            
             rounded: "lg",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            
+            // Grid アイテムとしての最適化
+            placeSelf: "start",
+            
             _focusVisible: {
               outline: "2px solid {colors.focusRing}",
               outlineOffset: "2px",

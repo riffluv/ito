@@ -162,55 +162,58 @@ export function CentralCardBoard({
         </Box>
       </Box>
 
-      {/* Professional Card Area - Responsive Design */}
+      {/* === 2025年 DPI対応 コンテナクエリベース カードボード === */}
       <Box 
         flex="1" 
         display="flex" 
         flexDirection="column" 
         alignItems="center" 
-        justifyContent="flex-start" // DPI125%で上部を確実に表示
+        justifyContent="flex-start"
         overflow="visible"
         position="relative"
-        minHeight={0} // flexアイテムの適切なサイズ調整
+        minHeight={0}
       >
         <Box
-          bg="#f8fafc" // --slate-50
-          border="2px dashed #cbd5e1" // --slate-300
-          borderRadius="1rem" // --radius-xl
-          padding={{
-            base: "0.75rem", // DPI125%小型ノートPC対応
-            md: "1rem",     // 通常サイズ
-            lg: "1.5rem"    // 大型画面
-          }}
-          minHeight="auto" // 自然な高さ調整でカット off解決
-          // 動的サイズ: カード数とレイアウトに応じて自動調整
-          display="flex"
-          alignItems="center" // カードが中央に美しく配置
-          justifyContent="center"
-          gap={{ base: "0.5rem", md: "1rem" }}
-          flexWrap="wrap"
-          marginBottom={{ base: "0.5rem", md: "0.75rem" }} // コンパクト化
+          bg="#f8fafc"
+          border="2px dashed #cbd5e1"
+          borderRadius="1rem"
+          padding="var(--card-padding)"
+          minHeight="auto"
           width="100%"
-          // スクロールは不要 - コンテンツに応じて自然に伸縮
+          maxWidth="var(--board-max-width)"
           css={{
+            // コンテナクエリを有効化
+            containerType: "inline-size",
+            
+            // Grid レイアウト: 端数に強いminmax設計
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))",
+            gap: "var(--card-gap)",
+            justifyContent: "center",
+            alignItems: "start",
+            
+            // ドロップターゲット状態
             "&[data-drop-target='true']": {
-              borderColor: "#0ea5e9", // --blue-500
-              backgroundColor: "#f0f9ff", // --blue-50
+              borderColor: "#0ea5e9",
+              backgroundColor: "#f0f9ff",
             },
-            // スクロールバーのスタイル改善
-            "&::-webkit-scrollbar": {
-              width: "8px",
+            
+            // === DPI 125%特別対応 ===
+            "@media (resolution: 120dpi), (resolution: 1.25dppx)": {
+              gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))",
+              gap: "var(--card-gap)", // CSS変数が自動調整
             },
-            "&::-webkit-scrollbar-track": {
-              background: "#f1f5f9",
-              borderRadius: "4px",
+            
+            // === コンテナクエリ対応: 幅に応じた最適化 ===
+            "@container (max-width: 400px)": {
+              gridTemplateColumns: "repeat(auto-fit, minmax(4rem, 1fr))", // 狭い時は1列
+              gap: "0.5rem",
             },
-            "&::-webkit-scrollbar-thumb": {
-              background: "#cbd5e1",
-              borderRadius: "4px",
+            "@container (min-width: 401px) and (max-width: 800px)": {
+              gridTemplateColumns: "repeat(auto-fit, minmax(5rem, 6rem))", // 中間サイズ
             },
-            "&::-webkit-scrollbar-thumb:hover": {
-              background: "#94a3b8",
+            "@container (min-width: 801px)": {
+              gridTemplateColumns: "repeat(auto-fit, minmax(var(--card-min), var(--card-ideal)))", // 標準サイズ
             },
           }}
           data-drop-target={isOver && canDrop ? "true" : "false"}
@@ -225,12 +228,9 @@ export function CentralCardBoard({
             onDragLeave={() => setIsOver(false)}
             onDrop={onDrop}
             width="100%"
-            display="flex"
-            alignItems="flex-start" // 上揃えで一貫性保持
-            justifyContent="center"
-            gap={{ base: "0.5rem", md: "1rem" }}
-            flexWrap="wrap"
-            minHeight="inherit" // 親の minHeight を継承
+            css={{
+              display: "contents", // Grid直接制御
+            }}
           >
             {/* Drop Slots and Cards */}
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
@@ -278,18 +278,28 @@ export function CentralCardBoard({
                     ) : (
                       <Box
                         key={`slot-${idx}`}
-                        width={{ base: "90px", md: "100px", lg: "120px" }} // DPI対応サイズ
-                        height={{ base: "126px", md: "140px", lg: "168px" }} // DPI対応サイズ
-                        border="2px dashed #cbd5e1" // --slate-300
-                        borderRadius="1rem" // --radius-xl (手札と統一)
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        bg="transparent"
-                        flexShrink={0}
-                        color="#94a3b8"
-                        fontSize="0.75rem"
-                        fontWeight={500}
+                        css={{
+                          // アスペクト比固定
+                          aspectRatio: "var(--card-aspect)",
+                          // 動的サイズ: CSS変数でDPI自動調整
+                          width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+                          minWidth: "var(--card-min)",
+                          maxWidth: "var(--card-max)",
+                          height: "auto", // aspect-ratioが制御
+                          
+                          border: "2px dashed #cbd5e1",
+                          borderRadius: "1rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "transparent",
+                          color: "#94a3b8",
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                          
+                          // Grid アイテムとしての設定
+                          placeSelf: "start", // Grid内で上揃え
+                        }}
                       >
                         {idx + 1}
                       </Box>
@@ -309,18 +319,28 @@ export function CentralCardBoard({
                   ) : (
                     <Box
                       key={`drop-zone-${idx}`}
-                      width={{ base: "90px", md: "100px", lg: "120px" }} // DPI対応サイズ
-                      height={{ base: "126px", md: "140px", lg: "168px" }} // DPI対応サイズ
-                      border="2px dashed #cbd5e1"
-                      borderRadius="1rem" // --radius-xl (手札と統一)
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      bg="transparent"
-                      flexShrink={0}
-                      color="#94a3b8"
-                      fontSize="0.75rem"
-                      fontWeight={500}
+                      css={{
+                        // アスペクト比固定
+                        aspectRatio: "var(--card-aspect)",
+                        // 動的サイズ: CSS変数でDPI自動調整
+                        width: "clamp(var(--card-min), var(--card-ideal), var(--card-max))",
+                        minWidth: "var(--card-min)",
+                        maxWidth: "var(--card-max)",
+                        height: "auto", // aspect-ratioが制御
+                        
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: "1rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "transparent",
+                        color: "#94a3b8",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        
+                        // Grid アイテムとしての設定
+                        placeSelf: "start", // Grid内で上揃え
+                      }}
                     >
                       {idx + 1}
                     </Box>

@@ -355,10 +355,13 @@ export type Token =
   | "sizes.containerSm"
   | "sizes.containerMd"
   | "sizes.containerLg"
-  | "sizes.cardSm"
-  | "sizes.cardMd"
+  | "sizes.cardMin"
+  | "sizes.cardIdeal"
+  | "sizes.cardMax"
   | "sizes.cardW"
   | "sizes.cardH"
+  | "sizes.cardWBase"
+  | "sizes.cardHBase"
   | "sizes.headerHeight"
   | "sizes.sidebarWidth"
   | "sizes.rightPanelWidth"
@@ -410,6 +413,12 @@ export type Token =
   | "gradients.accentSoft"
   | "gradients.dangerStrong"
   | "gradients.playerNumber"
+  | "cardSystem.gap"
+  | "cardSystem.padding"
+  | "cardSystem.aspectRatio"
+  | "cardSystem.minCardSize"
+  | "cardSystem.maxCardSize"
+  | "cardSystem.boardMaxWidth"
   | "colors.bg"
   | "colors.bg.subtle"
   | "colors.bg.muted"
@@ -534,6 +543,13 @@ export type Token =
   | "radii.l1"
   | "radii.l2"
   | "radii.l3"
+  | "sizes.card.min"
+  | "sizes.card.ideal"
+  | "sizes.card.max"
+  | "sizes.card.gap"
+  | "sizes.card.padding"
+  | "sizes.board.maxWidth"
+  | "aspectRatios.card"
   | "gradients.boardPattern"
   | "spacing.-0"
   | "spacing.-1"
@@ -635,7 +651,7 @@ export type ColorPalette =
   | "panelBannerFg"
   | "selfNumberFg"
 
-export type AspectRatiosToken = "square" | "landscape" | "portrait" | "wide" | "ultrawide" | "golden"
+export type AspectRatiosToken = "square" | "landscape" | "portrait" | "wide" | "ultrawide" | "golden" | "card"
 
 export type AnimationsToken = "spin" | "ping" | "pulse" | "bounce" | "fadeIn" | "scaleIn"
 
@@ -1108,10 +1124,13 @@ export type SizesToken =
   | "containerSm"
   | "containerMd"
   | "containerLg"
-  | "cardSm"
-  | "cardMd"
+  | "cardMin"
+  | "cardIdeal"
+  | "cardMax"
   | "cardW"
   | "cardH"
+  | "cardWBase"
+  | "cardHBase"
   | "headerHeight"
   | "sidebarWidth"
   | "rightPanelWidth"
@@ -1122,6 +1141,12 @@ export type SizesToken =
   | "breakpoint-lg"
   | "breakpoint-xl"
   | "breakpoint-2xl"
+  | "card.min"
+  | "card.ideal"
+  | "card.max"
+  | "card.gap"
+  | "card.padding"
+  | "board.maxWidth"
 
 export type ZIndexToken =
   | "hide"
@@ -1165,6 +1190,8 @@ export type ShadowsToken =
 
 export type GradientsToken = "accentSoft" | "dangerStrong" | "playerNumber" | "boardPattern"
 
+export type CardSystemToken = "gap" | "padding" | "aspectRatio" | "minCardSize" | "maxCardSize" | "boardMaxWidth"
+
 export type Tokens = {
   aspectRatios: AspectRatiosToken
   animations: AnimationsToken
@@ -1186,4 +1213,5 @@ export type Tokens = {
   breakpoints: BreakpointsToken
   shadows: ShadowsToken
   gradients: GradientsToken
+  cardSystem: CardSystemToken
 } & { [token: string]: never }
