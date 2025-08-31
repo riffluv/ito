@@ -66,7 +66,22 @@ export function SortBoard({
   };
 
   return (
-    <Panel title="並べ替える">
+    <Panel 
+      title="並べ替える"
+      css={{
+        // 🎮 PREMIUM SORT PANEL
+        background: `
+          linear-gradient(135deg, 
+            rgba(101,67,33,0.1) 0%, 
+            rgba(80,53,26,0.2) 100%
+          )
+        `,
+        border: "1px solid rgba(160,133,91,0.3)",
+        backdropFilter: "blur(10px)",
+        borderRadius: "16px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+      }}
+    >
       <DndContext
         sensors={sensors}
         onDragStart={(e) => setActiveId(String(e.active.id))}
@@ -104,7 +119,7 @@ export function SortBoard({
           <Box
             display="grid"
             gridTemplateColumns={{ base: "1fr 1fr", md: "repeat(3, 1fr)" }}
-            gap={3}
+            gap={4}
           >
             {ids.map((id, idx) => {
               const p = map.get(id);
@@ -112,18 +127,63 @@ export function SortBoard({
               return (
                 <SortableItem key={id} id={id} disabled={disabled}>
                   <Box
-                    p={3}
-                    borderRadius="xl"
-                    bg="panelSubBg"
-                    boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+                    p={4}
+                    borderRadius="16px"
+                    css={{
+                      // 🎮 PREMIUM SORTABLE CARD
+                      background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                      backdropFilter: "blur(10px)",
+                      transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                      cursor: disabled ? "default" : "grab",
+                      "&:hover": !disabled ? {
+                        transform: "translateY(-4px) scale(1.02)",
+                        boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+                        border: "1px solid rgba(255,215,0,0.4)",
+                      } : {},
+                      "&:active": !disabled ? {
+                        cursor: "grabbing",
+                        transform: "scale(0.98)",
+                      } : {},
+                    }}
                   >
                     <HStack justify="space-between">
-                      <Text lineClamp={1}>{p.name}</Text>
-                      <Text fontSize="xs" color="fgMuted">
+                      <Text 
+                        lineClamp={1}
+                        css={{
+                          color: "#ffffff",
+                          textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {p.name}
+                      </Text>
+                      <Text 
+                        fontSize="xs"
+                        css={{
+                          color: "#ffd700",
+                          textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                          fontWeight: 700,
+                          background: "rgba(255,215,0,0.1)",
+                          px: 2,
+                          py: 1,
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255,215,0,0.3)",
+                        }}
+                      >
                         #{idx + 1}
                       </Text>
                     </HStack>
-                    <Text mt={1} fontSize="sm" color="fgMuted" lineClamp={2}>
+                    <Text 
+                      mt={2} 
+                      fontSize="sm" 
+                      lineClamp={2}
+                      css={{
+                        color: "rgba(255,255,255,0.7)",
+                        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+                      }}
+                    >
                       連想: {p.clue1 || "（未設定）"}
                     </Text>
                   </Box>
@@ -135,23 +195,59 @@ export function SortBoard({
         <DragOverlay>
           {activeId ? (
             <Box
-              p={3}
-              borderRadius="xl"
-              bg="panelBg"
-              boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.FLOATING}
-              transform="scale(1.04) rotate(0.5deg)"
+              p={4}
+              borderRadius="16px"
+              css={{
+                // 🎮 PREMIUM DRAG OVERLAY
+                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.1) 100%)",
+                border: "2px solid rgba(255,215,0,0.6)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,215,0,0.3)",
+                backdropFilter: "blur(15px)",
+                transform: "scale(1.08) rotate(2deg)",
+                zIndex: 1000,
+              }}
             >
-              <Text>{map.get(activeId)?.name}</Text>
+              <Text css={{
+                color: "#ffd700",
+                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+                fontWeight: 700,
+              }}>
+                {map.get(activeId)?.name}
+              </Text>
             </Box>
           ) : null}
         </DragOverlay>
       </DndContext>
 
-      <HStack mt={4} justify="flex-end">
+      <HStack mt={6} justify="flex-end">
         <AppButton
           colorPalette="orange"
           onClick={onConfirm}
           disabled={disabled}
+          css={{
+            // 🎮 PREMIUM CONFIRM BUTTON
+            background: "linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(217,119,6,0.3) 100%)",
+            border: "1px solid rgba(245,158,11,0.5)",
+            color: "#fbbf24",
+            px: 8,
+            py: 3,
+            fontSize: "1rem",
+            fontWeight: 700,
+            borderRadius: "12px",
+            _hover: {
+              background: "linear-gradient(135deg, rgba(245,158,11,0.3) 0%, rgba(217,119,6,0.4) 100%)",
+              transform: "translateY(-2px)",
+              boxShadow: "0 8px 24px rgba(245,158,11,0.3)",
+            },
+            _disabled: {
+              opacity: 0.5,
+              cursor: "not-allowed",
+              _hover: {
+                transform: "none",
+                background: "initial",
+              },
+            },
+          }}
         >
           並びを確定
         </AppButton>

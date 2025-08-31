@@ -23,6 +23,7 @@ export function AppButton({
   variant,
   colorPalette,
   className,
+  css,
   ...rest
 }: AppButtonProps) {
   // Chakraのvariant/colorPaletteを最優先、次にlocal props
@@ -32,11 +33,41 @@ export function AppButton({
   // recipe classNameを追加（Chakra UI v3のCSS-in-JSとの連携）
   const combinedClassName = `${buttonRecipe.className ?? ''} ${className ?? ''}`.trim()
 
+  // 🎮 PREMIUM BUTTON ENHANCEMENT
+  const premiumStyles = css || {};
+
   return (
     <CButton
       variant={finalVariant}
       colorPalette={finalPalette}
       className={combinedClassName}
+      css={{
+        // Base premium styling for all buttons
+        transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        cursor: "pointer",
+        userSelect: "none",
+        
+        // Enhanced focus states
+        _focusVisible: {
+          outline: "2px solid rgba(59,130,246,0.6)",
+          outlineOffset: "2px",
+        },
+        
+        // Enhanced disabled states
+        _disabled: {
+          opacity: 0.6,
+          cursor: "not-allowed",
+          transform: "none !important",
+        },
+        
+        // Enhanced active states
+        _active: {
+          transform: "scale(0.98)",
+        },
+        
+        // Apply custom styles last to allow overrides
+        ...premiumStyles,
+      }}
       {...rest}
     />
   )

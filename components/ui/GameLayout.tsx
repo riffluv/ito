@@ -1,5 +1,6 @@
 "use client";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { COSMIC_BACKGROUNDS } from "@/theme/premiumGameStyles";
 import { Box } from "@chakra-ui/react";
 import React, { ReactNode } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
@@ -49,41 +50,80 @@ export function GameLayout({
 
   // === 没入型（Artifact風）バリアント ===
   if (variant === "immersive") {
+    // ヘッダーありなしで動的に高さを計算（125%DPI最適化）
+    const headerHeight = header ? "70px" : "0px";
+    const headerDPI125 = header ? "56px" : "0px"; // 125%DPI: 20%削減
+    const headerDPI150 = header ? "48px" : "0px"; // 150%DPI: さらに削減
+    
     return (
       <>
         <Box
           h="100dvh"
           position="relative"
-          bg="canvasBg"
-          color="fgDefault"
+          background={COSMIC_BACKGROUNDS.DEEP_SPACE}
+          color="white"
           lineHeight={1.5}
-          css={{ WebkitFontSmoothing: "antialiased" }}
+          css={{ 
+            WebkitFontSmoothing: "antialiased",
+            // 動的パーティクル効果のベース
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `
+                radial-gradient(2px 2px at 20px 30px, #ffffff, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, #ffffff, transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(2px 2px at 160px 30px, #ffffff, transparent)
+              `,
+              backgroundSize: "200px 100px",
+              animation: "sparkle 15s linear infinite",
+              pointerEvents: "none",
+              zIndex: 1,
+            },
+            "@keyframes sparkle": {
+              "0%": { transform: "translateY(0px)" },
+              "100%": { transform: "translateY(-200px)" }
+            }
+          }}
         >
-          {/* ヘッダー: 木目上の半透明グラデーション */}
-          <Box
-            position="fixed"
-            top={0}
-            left={0}
-            right={0}
-            height="70px"
-            zIndex={UNIFIED_LAYOUT.Z_INDEX.HEADER}
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            px={{ base: 4, md: 6 }}
-            css={{
-              background:
-                "linear-gradient(180deg, rgba(101,67,33,0.9) 0%, rgba(101,67,33,0.7) 50%, rgba(101,67,33,0.3) 100%)",
-              backdropFilter: "blur(15px)",
-            }}
-          >
-            {header}
-          </Box>
+          {/* ヘッダー: ヘッダーがある場合のみレンダリング */}
+          {header && (
+            <Box
+              position="fixed"
+              top={0}
+              left={0}
+              right={0}
+              height={headerHeight}
+              zIndex={UNIFIED_LAYOUT.Z_INDEX.HEADER}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              px={{ base: 4, md: 6 }}
+              css={{
+                background:
+                  "linear-gradient(180deg, rgba(101,67,33,0.9) 0%, rgba(101,67,33,0.7) 50%, rgba(101,67,33,0.3) 100%)",
+                backdropFilter: "blur(15px)",
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  height: headerDPI125,
+                },
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                  height: headerDPI150,
+                },
+              }}
+            >
+              {header}
+            </Box>
+          )}
 
-          {/* メイン（全幅・境界なし） */}
+          {/* メイン（全幅・境界なし）- ヘッダー有無で動的top調整 */}
           <Box
             position="absolute"
-            top="70px"
+            top={headerHeight}
             left={0}
             right={0}
             bottom={0}
@@ -91,8 +131,23 @@ export function GameLayout({
             display="flex"
             flexDirection="column"
             alignItems="center"
+            css={{
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                top: headerDPI125,
+              },
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                top: headerDPI150,
+              },
+            }}
           >
-            <Box w="100%" h="100%" px={{ base: 3, md: 6 }} py={{ base: 3, md: 6 }}>
+            <Box 
+              w="100%" 
+              h="100%" 
+              px={{ base: 3, md: 6 }} 
+              py={{ base: 3, md: 6 }}
+              position="relative"
+              zIndex={2}
+            >
               {main}
             </Box>
           </Box>
