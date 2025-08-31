@@ -50,6 +50,7 @@ export function CreateRoomModal({
     try {
       const options: RoomOptions = {
         allowContinueAfterFail: true, // デフォルト: 最後まで並べる
+        resolveMode: "sequential", // デフォルト: 順番出し
         defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
       const room: RoomDoc = {

@@ -131,3 +131,38 @@ export const UNIFIED_LAYOUT = {
 
 // 🎯 推奨システム型定義（型安全性とIDEサポート向上）
 export type UnifiedLayoutConstants = typeof UNIFIED_LAYOUT;
+
+// 🚀 BORDER WIDTH UTILITY FUNCTIONS
+// getBorderWidth: セマンティック、またはレベル指定でborder widthを取得
+export function getBorderWidth(level: "SEMANTIC" | "LAYOUT" | "NONE" | "THIN" | "MEDIUM" | "THICK"): string {
+  switch (level) {
+    case "SEMANTIC":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.THIN; // SEMANTICは標準的なthinを使用
+    case "LAYOUT":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.THIN; // LAYOUTもthinを使用
+    case "NONE":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.NONE;
+    case "THIN":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+    case "MEDIUM":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM;
+    case "THICK":
+      return UNIFIED_LAYOUT.BORDER.WIDTH.THICK;
+    default:
+      return UNIFIED_LAYOUT.BORDER.WIDTH.THIN; // フォールバック
+  }
+}
+
+// getDynamicBorder: 動的なボーダー設定（状態に応じてボーダーを変更）
+export function getDynamicBorder(
+  options: { isActive: boolean; activeContext?: string; defaultContext?: string } | boolean = false
+): string {
+  // backward compatibility: boolean引数の場合
+  if (typeof options === "boolean") {
+    return options ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+  }
+  
+  // オブジェクト引数の場合
+  const { isActive } = options;
+  return isActive ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+}
