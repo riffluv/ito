@@ -1,31 +1,101 @@
-css.js:52 Uncaught TypeError: Cannot create property '@keyframes geomIn' on string 'translate(-50%, -50%) scale(0)'
-    at mergeByPath (css.js:52:35)
-    at eval (css.js:43:13)
-    at inner (walk-object.js:34:16)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at walkObject (walk-object.js:36:12)
-    at cssFn (css.js:31:74)
-    at get (memo.js:15:49)
-    at eval (use-resolved-props.js:62:16)
-    at mountMemo (react-dom.development.js:12600:19)
-    at Object.useMemo (react-dom.development.js:13305:16)
-    at useMemo (react.development.js:2537:21)
-    at useResolvedProps (use-resolved-props.js:61:66)
-    at eval (factory.js:171:120)
-    at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at updateForwardRef (react-dom.development.js:15854:20)
-    at beginWork$1 (react-dom.development.js:18521:16)
-    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
-    at invokeGuardedCallback (react-dom.development.js:20689:29)
-    at beginWork (react-dom.development.js:26949:7)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+  GET http://localhost:3000/rooms/Jo1eLvx1MkYpRmxCIwmX 500 (Internal Server Error)
+Router @ webpack-internal:///…s/app-router.js:390
+renderWithHooks @ webpack-internal:///…evelopment.js:11121
+updateFunctionComponent @ webpack-internal:///…evelopment.js:16290
+beginWork$1 @ webpack-internal:///…evelopment.js:18472
+beginWork @ webpack-internal:///…evelopment.js:26927
+performUnitOfWork @ webpack-internal:///…evelopment.js:25748
+workLoopSync @ webpack-internal:///…evelopment.js:25464
+renderRootSync @ webpack-internal:///…evelopment.js:25419
+performConcurrentWorkOnRoot @ webpack-internal:///…evelopment.js:24504
+workLoop @ webpack-internal:///….development.js:256
+flushWork @ webpack-internal:///….development.js:225
+performWorkUntilDeadline @ webpack-internal:///….development.js:534
+index.js:627 Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  × Expression expected
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:233:1]
+ 233 │     </HStack>
+ 234 │   );
+ 235 │ }
+ 236 │       >
+     ·       ─
+ 237 │         {typeof me?.number === "number" ? me.number : "?"}
+ 238 │       </Box>
+ 238 │ 
+     ╰────
+
+  × Unexpected token `me`. Expected ... , *,  (, [, :, , ?, =, an identifier, public, protected, private, readonly, <.
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:234:1]
+ 234 │   );
+ 235 │ }
+ 236 │       >
+ 237 │         {typeof me?.number === "number" ? me.number : "?"}
+     ·                 ──
+ 238 │       </Box>
+ 239 │ 
+ 239 │       {/* 連想ワード入力 */}
+     ╰────
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+getServerError @ nodeStackFrames.js:38
+eval @ index.js:627
+setTimeout
+hydrate @ index.js:615
+await in hydrate
+pageBootrap @ page-bootstrap.js:27
+eval @ next-dev.js:25
+Promise.then
+eval @ next-dev.js:23
+./node_modules/next/dist/client/next-dev.js @ main.js:809
+options.factory @ webpack.js:647
+__webpack_require__ @ webpack.js:37
+__webpack_exec__ @ main.js:1942
+（匿名） @ main.js:1943
+webpackJsonpCallback @ webpack.js:1195
+（匿名） @ main.js:9
+hydration-error-info.js:63 ./components/ui/MiniHandDock.tsx
+Error: 
+  × Expression expected
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:233:1]
+ 233 │     </HStack>
+ 234 │   );
+ 235 │ }
+ 236 │       >
+     ·       ─
+ 237 │         {typeof me?.number === "number" ? me.number : "?"}
+ 238 │       </Box>
+ 238 │ 
+     ╰────
+
+  × Unexpected token `me`. Expected ... , *,  (, [, :, , ?, =, an identifier, public, protected, private, readonly, <.
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:234:1]
+ 234 │   );
+ 235 │ }
+ 236 │       >
+ 237 │         {typeof me?.number === "number" ? me.number : "?"}
+     ·                 ──
+ 238 │       </Box>
+ 239 │ 
+ 239 │       {/* 連想ワード入力 */}
+     ╰────
+
+Caused by:
+    Syntax Error
+console.error @ hydration-error-info.js:63
+window.console.error @ setup-hydration-warning.js:18
+handleErrors @ hot-reloader-client.js:162
+processMessage @ hot-reloader-client.js:239
+eval @ hot-reloader-client.js:67
+handleMessage @ websocket.js:52
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+（匿名） @ content.js:1
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+（匿名） @ content.js:1
