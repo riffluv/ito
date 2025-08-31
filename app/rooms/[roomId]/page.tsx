@@ -3,7 +3,6 @@ import dynamic from "next/dynamic";
 
 // 重要コンポーネント: Eager loading（初期表示性能優先）
 import { Hud } from "@/components/Hud";
-import { Participants } from "@/components/Participants";
 
 // 非重要コンポーネント: Dynamic import（必要時に読み込み）
 const CluePanel = dynamic(

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { finalizeReveal } from "@/lib/game/room";
+import { REVEAL_FIRST_DELAY, REVEAL_STEP_DELAY, REVEAL_LINGER } from "@/lib/ui/motion";
 
 interface UseRevealAnimationProps {
   roomId: string;
@@ -40,16 +41,16 @@ export function useRevealAnimation({
     
     if (revealIndex >= orderListLength) {
       setRevealAnimating(false);
-      // 余韻: 最後にめくってから1.2秒後にfinishedへ
+      // 余韻: 最後にめくってから一定時間後にfinishedへ
       const linger = setTimeout(() => {
         finalizeReveal(roomId).catch(() => void 0);
-      }, 1200);
+      }, REVEAL_LINGER);
       return () => clearTimeout(linger);
       return;
     }
     
     // First card has shorter delay to avoid "frozen" impression
-    const delay = revealIndex === 0 ? 600 : 1500; // ms (最初短く→以降ゆっくり)
+    const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
     const timer = setTimeout(() => {
       setRevealIndex((i) => {
         if (i >= orderListLength) return i;
