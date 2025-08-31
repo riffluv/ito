@@ -50,7 +50,7 @@ describe("buildHostActionModel", () => {
       order: {
         list: [],
         proposal: ["u1"], // Only 1 out of 3 players
-        decidedAt: null,
+        decidedAt: undefined,
         failed: false,
         failedAt: null,
         lastNumber: null,
@@ -72,7 +72,7 @@ describe("buildHostActionModel", () => {
       order: {
         list: [],
         proposal: [],
-        decidedAt: null,
+        decidedAt: undefined,
         failed: false,
         failedAt: null,
         lastNumber: null,
@@ -148,7 +148,7 @@ describe("buildHostActionModel", () => {
       order: {
         list: [],
         proposal: [],
-        decidedAt: null,
+        decidedAt: undefined,
         failed: false,
         failedAt: null,
         lastNumber: null,
@@ -164,7 +164,7 @@ describe("buildHostActionModel", () => {
       order: {
         list: [],
         proposal: ["u1", "u2", "u3"],
-        decidedAt: null,
+        decidedAt: undefined,
         failed: false,
         failedAt: null,
         lastNumber: null,

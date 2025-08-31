@@ -6,7 +6,7 @@ import type { PlayerDoc } from "@/lib/types";
 interface UseDropHandlerProps {
   roomId: string;
   meId: string;
-  me: PlayerDoc & { id: string };
+  me: (PlayerDoc & { id: string }) | undefined;
   roomStatus?: string;
   resolveMode?: string;
   cluesReady?: boolean;

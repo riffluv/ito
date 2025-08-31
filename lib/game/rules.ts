@@ -95,8 +95,11 @@ export function shouldFinishAfterPlay({
   nextFailed: boolean;
   allowContinue: boolean;
 }): boolean {
-  // 失敗が起きても、既定では最後までプレイを続けられるようにする。
-  // 即時終了は total / presence による判定のみに限定する。
+  // 方針:
+  // - 失敗が発生し、allowContinueAfterFail=false の場合は即終了
+  if (nextFailed && !allowContinue) return true;
+
+  // - それ以外は「出し切り」または presence 到達で終了判定
   const totalNum = typeof total === "number" ? total : null;
   // 全員が出し終わっていれば終了
   if (totalNum !== null && nextListLength >= totalNum) return true;

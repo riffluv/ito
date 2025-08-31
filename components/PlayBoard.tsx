@@ -2,7 +2,7 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { Panel } from "@/components/ui/Panel";
 import { notify } from "@/components/ui/notify";
-import { playCard } from "@/lib/game/room";
+import { commitPlayFromClue } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { HStack, Stack, Text } from "@chakra-ui/react";
@@ -56,7 +56,7 @@ export function PlayBoard({
     if (!canPlay) return;
     setSubmitting(true);
     try {
-      await playCard(roomId, meId);
+      await commitPlayFromClue(roomId, meId);
     } catch (e: any) {
       notify({
         title: "出せませんでした",

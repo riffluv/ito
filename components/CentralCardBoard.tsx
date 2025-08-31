@@ -50,8 +50,8 @@ export function CentralCardBoard({
   isHost?: boolean;
 }) {
   const map = new Map(players.map((p) => [p.id, p]));
-  const me = map.get(meId as string) as any;
-  const hasNumber = typeof (me as any)?.number === "number";
+  const me = map.get(meId);
+  const hasNumber = typeof me?.number === "number";
   // 未提出＝まだ上（提出/提案）に出していない人（準備済みでも残す）
   const placedIds = new Set([...(orderList || []), ...((proposal || []) as string[])]);
   const waitingPlayers = (eligibleIds || [])
@@ -410,7 +410,7 @@ export function CentralCardBoard({
       ) : null}
       {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） */}
       {canConfirm && waitingPlayers.length === 0 ? (
-        <ConfirmDock onConfirm={onConfirm} label="確定！順番を発表" />
+        <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
       ) : null}
       {/* 結果オーバーレイ（モック準拠の演出） */}
       {roomStatus === "finished" && showResult && (

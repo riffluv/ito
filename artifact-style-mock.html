@@ -1663,17 +1663,16 @@
                 <div class="my-card-number">27</div>
             </div>
             
-            <div class="word-input-area">
-                <input type="text" class="word-input" placeholder="連想ワードを入力..." value="雷">
-                <button class="btn btn-primary submit-word">提出</button>
+            <div class="word-input-area" id="word-input-area">
+                <input type="text" class="word-input" id="word-input" placeholder="連想ワードを入力...">
+                <button class="btn btn-primary submit-word" id="submit-btn" onclick="submitMyWord()">提出</button>
             </div>
             
             <div class="action-buttons">
                 <div class="confirm-dock" style="display: none;" id="confirm-dock">
-                    <button class="final-check">確定！順番を発表</button>
+                    <button class="final-check" onclick="startRevealSequence()">確定！順番を発表</button>
                 </div>
-                <button class="btn btn-secondary">準備完了</button>
-                <button class="btn btn-primary">もう一度</button>
+                <button class="btn btn-secondary" onclick="restartGame()" style="display: none;" id="restart-btn">もう一度</button>
             </div>
             
             <div class="refresh-btn">↻</div>
@@ -1681,48 +1680,264 @@
     </div>
 
     <script>
-        // 簡単なインタラクション
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 150);
-            });
-        });
+        // === 完全なゲームフロー実装 ===
+        
+        // ゲーム状態管理
+        let gameState = {
+            phase: 'clue',
+            myNumber: 27,
+            submittedWords: [],
+            totalPlayers: 3,
+            submittedCount: 0
+        };
 
-        document.querySelector('.refresh-btn').addEventListener('click', function() {
-            this.style.transform = 'rotate(360deg)';
-            setTimeout(() => {
-                this.style.transform = '';
-            }, 500);
-        });
+        // AI プレイヤーの連想ワードとプレイヤー名のプール
+        const aiWordPool = [
+            'お化け屋敷', '蜘蛛の巣', '雷', '象', '羽毛', 'ピアノ', '小石', 
+            'バス', 'ティッシュ', '恐竜', 'アリ', '雲', '建物', '鉛筆'
+        ];
+        const aiPlayerNames = ['chrome通常', 'シークレットMODE'];
 
-        // チャットトグル機能
-        document.querySelector('.chat-toggle').addEventListener('click', function() {
-            const panel = document.querySelector('.chat-panel');
-            const isVisible = panel.style.display === 'flex';
-            panel.style.display = isVisible ? 'none' : 'flex';
-        });
+        // AI プレイヤーデータ生成
+        function generateAIPlayers() {
+            return aiPlayerNames.map(name => ({
+                name: name,
+                word: aiWordPool[Math.floor(Math.random() * aiWordPool.length)],
+                number: Math.floor(Math.random() * 100) + 1
+            }));
+        }
+        
+        // 初期AIプレイヤー生成
+        let aiPlayers = generateAIPlayers();
 
-        // 連想ワード提出機能
-        document.querySelector('.submit-word').addEventListener('click', function() {
-            const wordInput = document.querySelector('.word-input');
+        // プレイヤーの連想ワード提出
+        function submitMyWord() {
+            const wordInput = document.getElementById('word-input');
             const word = wordInput.value.trim();
             
-            if (word) {
-                // カードを上のエリアに移動（アニメーション付き）
-                submitWord(word);
-                wordInput.value = '';
+            if (!word) {
+                alert('連想ワードを入力してください');
+                return;
             }
-        });
 
-        // Enterキーでも提出
-        document.querySelector('.word-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.querySelector('.submit-word').click();
+            // 提出済みカード作成
+            const cardPlayArea = document.querySelector('.card-play-area');
+            const newCard = document.createElement('div');
+            newCard.className = 'player-card submitted';
+            newCard.style.opacity = '0';
+            newCard.style.transform = 'translateY(100px)';
+            
+            gameState.submittedCount++;
+            
+            newCard.innerHTML = `
+                <div class="card-position">#${gameState.submittedCount}</div>
+                <div class="card-header">
+                    <div class="card-word">${word}</div>
+                </div>
+                <div class="card-number">?</div>
+                <div class="card-footer">
+                    <div class="card-player">あなた</div>
+                </div>
+            `;
+            
+            cardPlayArea.appendChild(newCard);
+            
+            // カード表示アニメーション
+            setTimeout(() => {
+                newCard.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'translateY(0)';
+            }, 50);
+
+            // プレイヤーデータ記録
+            gameState.submittedWords.push({
+                word: word,
+                number: gameState.myNumber,
+                player: 'あなた'
+            });
+
+            // 入力欄一時無効化
+            wordInput.disabled = true;
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('word-input-area').style.opacity = '0.5';
+            
+            console.log('プレイヤー提出:', word, 'プレイヤー数字:', gameState.myNumber);
+
+            // 待機カード削除
+            const waitingCards = document.querySelectorAll('.player-card.waiting');
+            if (waitingCards.length > 0) {
+                const lastWaiting = waitingCards[waitingCards.length - 1];
+                lastWaiting.style.transition = 'all 0.3s ease';
+                lastWaiting.style.opacity = '0';
+                lastWaiting.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    lastWaiting.remove();
+                }, 300);
             }
-        });
+
+            // AIプレイヤー自動提出
+            setTimeout(() => {
+                submitAIWords();
+            }, Math.random() * 2000 + 1000);
+        }
+
+        // AIプレイヤー自動提出
+        function submitAIWords() {
+            const remainingAI = aiPlayers.slice(gameState.submittedCount - 1);
+            
+            remainingAI.forEach((ai, index) => {
+                setTimeout(() => {
+                    const cardPlayArea = document.querySelector('.card-play-area');
+                    const newCard = document.createElement('div');
+                    newCard.className = 'player-card submitted';
+                    newCard.style.opacity = '0';
+                    newCard.style.transform = 'translateY(100px)';
+                    
+                    gameState.submittedCount++;
+                    
+                    newCard.innerHTML = `
+                        <div class="card-position">#${gameState.submittedCount}</div>
+                        <div class="card-header">
+                            <div class="card-word">${ai.word}</div>
+                        </div>
+                        <div class="card-number">?</div>
+                        <div class="card-footer">
+                            <div class="card-player">${ai.name}</div>
+                        </div>
+                    `;
+                    
+                    cardPlayArea.appendChild(newCard);
+                    
+                    // アニメーション
+                    setTimeout(() => {
+                        newCard.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        newCard.style.opacity = '1';
+                        newCard.style.transform = 'translateY(0)';
+                    }, 50);
+
+                    gameState.submittedWords.push({
+                        word: ai.word,
+                        number: ai.number,
+                        player: ai.name
+                    });
+
+                    // 待機カード削除
+                    const waitingCards = document.querySelectorAll('.player-card.waiting');
+                    if (waitingCards.length > 0) {
+                        const lastWaiting = waitingCards[waitingCards.length - 1];
+                        lastWaiting.style.transition = 'all 0.3s ease';
+                        lastWaiting.style.opacity = '0';
+                        lastWaiting.style.transform = 'scale(0.8)';
+                        setTimeout(() => {
+                            lastWaiting.remove();
+                        }, 300);
+                    }
+
+                    // 全員提出完了チェック
+                    if (gameState.submittedCount >= gameState.totalPlayers) {
+                        setTimeout(() => {
+                            showConfirmButton();
+                        }, 500);
+                    }
+                }, index * 1500);
+            });
+        }
+
+        // 確定ボタン表示
+        function showConfirmButton() {
+            const waitingArea = document.querySelector('.waiting-area');
+            const confirmDock = document.getElementById('confirm-dock');
+            
+            // 待機エリア非表示
+            waitingArea.style.transition = 'all 0.4s ease';
+            waitingArea.style.opacity = '0';
+            waitingArea.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                waitingArea.style.display = 'none';
+            }, 400);
+            
+            // 確定ボタン表示
+            setTimeout(() => {
+                confirmDock.style.display = 'flex';
+                confirmDock.style.opacity = '0';
+                confirmDock.style.transform = 'scale(0.8)';
+                
+                setTimeout(() => {
+                    confirmDock.style.transition = 'all 0.5s ease';
+                    confirmDock.style.opacity = '1';
+                    confirmDock.style.transform = 'scale(1)';
+                }, 50);
+            }, 200);
+
+            updatePhase('playing');
+            document.querySelector('.instruction').textContent = '全員の提出が完了しました！順番を確定してください';
+        }
+
+        // カードめくり演出開始
+        async function startRevealSequence() {
+            updatePhase('reveal');
+            document.querySelector('.instruction').textContent = '順番を発表します！ドキドキ...';
+            
+            // 確定ボタン非表示
+            document.getElementById('confirm-dock').style.display = 'none';
+            
+            const cards = document.querySelectorAll('.player-card.submitted');
+            
+            // 昇順判定ロジック
+            let previousNumber = 0;
+            let allCorrectSoFar = true;
+            
+            // 各カードに正解/不正解を設定
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const wordText = card.querySelector('.card-word').textContent;
+                const playerData = gameState.submittedWords.find(p => p.word === wordText);
+                
+                if (allCorrectSoFar && playerData.number > previousNumber) {
+                    playerData.correct = true;
+                    previousNumber = playerData.number;
+                } else {
+                    playerData.correct = false;
+                    allCorrectSoFar = false;
+                }
+            }
+            
+            // 1枚ずつカードをめくる
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const wordText = card.querySelector('.card-word').textContent;
+                const playerData = gameState.submittedWords.find(p => p.word === wordText);
+                
+                // フリップアニメーション開始
+                card.classList.add('flipping');
+                
+                // 0.4秒後に数字を表示
+                setTimeout(() => {
+                    const numberElement = card.querySelector('.card-number');
+                    numberElement.textContent = playerData.number;
+                }, 400);
+                
+                // 0.8秒後に判定結果を表示
+                setTimeout(() => {
+                    card.classList.remove('flipping');
+                    if (playerData.correct) {
+                        card.classList.add('correct');
+                    } else {
+                        card.classList.add('incorrect');
+                    }
+                }, 800);
+                
+                // 次のカードまで1.5秒待機
+                if (i < cards.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            
+            // 全カード判定完了後、最終結果表示
+            setTimeout(() => {
+                showFinalResult();
+            }, 2000);
+        }
 
         // 連想ワード提出処理
         function submitWord(word) {
@@ -1987,6 +2202,244 @@
             if (phaseIndex >= 0 && phaseIndex < phases.length) {
                 updatePhase(phases[phaseIndex]);
             }
+        });
+
+        // === 新しいゲームフロー関数 ===
+        
+        // 最終結果表示
+        function showFinalResult() {
+            const allCorrect = gameState.submittedWords.every(data => data.correct);
+            
+            // 結果オーバーレイ作成
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                opacity: 0;
+                transition: all 0.5s ease;
+            `;
+            
+            const resultHtml = allCorrect ? 
+                `<div style="
+                    background: radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, rgba(128, 51, 255, 0.6) 100%);
+                    border: 3px solid rgba(255, 215, 0, 0.8);
+                    border-radius: 30px;
+                    padding: 60px;
+                    text-align: center;
+                    box-shadow: 0 0 50px rgba(179, 102, 255, 0.5);
+                ">
+                    <div style="
+                        font-family: 'Cinzel', serif;
+                        font-size: 64px;
+                        font-weight: 700;
+                        color: #FFD700;
+                        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+                        margin-bottom: 20px;
+                        letter-spacing: 8px;
+                    ">SUCCESS</div>
+                    <div style="
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.9);
+                        letter-spacing: 2px;
+                        font-weight: 500;
+                    ">完璧な順序でした！</div>
+                </div>` :
+                `<div style="
+                    background: radial-gradient(circle, rgba(128, 51, 255, 0.8) 0%, rgba(80, 26, 26, 0.8) 100%);
+                    border: 3px solid rgba(220, 38, 38, 0.8);
+                    border-radius: 30px;
+                    padding: 60px;
+                    text-align: center;
+                    box-shadow: 0 0 50px rgba(220, 38, 38, 0.5);
+                ">
+                    <div style="
+                        font-family: 'Cinzel', serif;
+                        font-size: 64px;
+                        font-weight: 700;
+                        color: #dc2626;
+                        text-shadow: 0 0 30px rgba(220, 38, 38, 0.8);
+                        margin-bottom: 20px;
+                        letter-spacing: 8px;
+                    ">FAILED</div>
+                    <div style="
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.9);
+                        letter-spacing: 2px;
+                        font-weight: 500;
+                    ">順序が間違っていました</div>
+                </div>`;
+            
+            overlay.innerHTML = resultHtml;
+            document.body.appendChild(overlay);
+            
+            // オーバーレイ表示アニメーション
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+            }, 50);
+            
+            // 3秒後にリスタートボタン表示
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    
+                    // 入力欄を確実に無効化状態にする（ゲーム終了状態）
+                    const wordInput = document.getElementById('word-input');
+                    wordInput.disabled = true;
+                    document.getElementById('submit-btn').disabled = true;
+                    document.getElementById('word-input-area').style.opacity = '0.5';
+                    
+                    document.getElementById('restart-btn').style.display = 'block';
+                    updatePhase('finished');
+                    document.querySelector('.instruction').textContent = 'ゲーム終了！もう一度プレイしますか？';
+                    
+                    console.log('ゲーム終了、リスタートボタン表示');
+                }, 500);
+            }, 3000);
+        }
+
+        // ゲームリスタート
+        function restartGame() {
+            console.log('ゲームリスタート開始');
+            
+            // 状態完全リセット
+            gameState = {
+                phase: 'clue',
+                myNumber: Math.floor(Math.random() * 100) + 1, // 新しい数字
+                submittedWords: [],
+                totalPlayers: 3,
+                submittedCount: 0
+            };
+            
+            // 新しいAIプレイヤー生成
+            aiPlayers = generateAIPlayers();
+            
+            // 全ての既存カードを完全削除
+            const allCards = document.querySelectorAll('.player-card');
+            allCards.forEach(card => {
+                if (card.classList.contains('submitted')) {
+                    card.remove();
+                }
+            });
+
+            // カードプレイエリア完全クリア
+            const cardPlayArea = document.querySelector('.card-play-area');
+            cardPlayArea.innerHTML = `
+                <div class="card-placeholder">
+                    <div class="placeholder-text">連想ワード待ち</div>
+                </div>
+            `;
+
+            // 待機エリア完全復元
+            const waitingArea = document.querySelector('.waiting-area');
+            waitingArea.innerHTML = `
+                <div class="waiting-title">未提出の参加者</div>
+                <div class="waiting-cards">
+                    <div class="player-card waiting">
+                        <div class="card-header">
+                            <div class="waiting-label">連想ワード入力中</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="thinking-icon">🤔</div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-player">chrome通常</div>
+                        </div>
+                    </div>
+                    <div class="player-card waiting">
+                        <div class="card-header">
+                            <div class="waiting-label">連想ワード入力中</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="thinking-icon">💭</div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-player">シークレットMODE</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 待機エリア表示状態リセット
+            waitingArea.style.display = 'block';
+            waitingArea.style.opacity = '1';
+            waitingArea.style.transform = 'translateY(0)';
+            waitingArea.style.transition = '';
+
+            // 入力欄完全リセット
+            const wordInput = document.getElementById('word-input');
+            wordInput.value = '';
+            wordInput.disabled = false;
+            wordInput.style.opacity = '1';
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            
+            const wordInputArea = document.getElementById('word-input-area');
+            wordInputArea.style.display = 'flex';
+            wordInputArea.style.opacity = '1';
+
+            // ボタン表示制御
+            document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('confirm-dock').style.display = 'none';
+
+            // プレイヤー数字更新
+            const myCardNumber = document.querySelector('.my-card-number');
+            if (myCardNumber) {
+                myCardNumber.textContent = gameState.myNumber;
+            }
+
+            // フェーズとメッセージリセット
+            updatePhase('clue');
+            document.querySelector('.instruction').textContent = '小さい順から大きい順に並べよう';
+            
+            console.log('ゲームリスタート完了', gameState);
+        }
+
+        // Enterキーで提出
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.id === 'word-input') {
+                submitMyWord();
+            }
+        });
+
+        // ボタンクリック効果
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn') || e.target.classList.contains('header-button')) {
+                e.target.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    e.target.style.transform = '';
+                }, 150);
+            }
+        });
+
+        // チャットトグル機能
+        document.querySelector('.chat-toggle').addEventListener('click', function() {
+            const panel = document.querySelector('.chat-panel');
+            const isVisible = panel.style.display === 'flex';
+            panel.style.display = isVisible ? 'none' : 'flex';
+        });
+
+        // ゲーム初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePhase('clue');
+            
+            // 初期プレイヤー数字表示
+            const myCardNumber = document.querySelector('.my-card-number');
+            if (myCardNumber) {
+                myCardNumber.textContent = gameState.myNumber;
+            }
+            
+            console.log('ゲーム初期化完了', gameState, aiPlayers);
         });
     </script>
 </body>

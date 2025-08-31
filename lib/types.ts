@@ -1,3 +1,5 @@
+import { Timestamp, FieldValue } from 'firebase/firestore';
+
 export type RoomOptions = {
   allowContinueAfterFail: boolean;
   /**
@@ -17,13 +19,13 @@ export type RoomDoc = {
   name: string;
   hostId: string;
   options: RoomOptions;
-  // フェーズはUI仕様に合わせて拡張（後方互換のため "playing" も許容）
-  status: "waiting" | "clue" | "reveal" | "finished" | "playing";
-  createdAt?: any;
-  lastActiveAt?: any;
+  // フェーズは waiting -> clue -> (reveal) -> finished に限定
+  status: "waiting" | "clue" | "reveal" | "finished";
+  createdAt?: Timestamp | FieldValue;
+  lastActiveAt?: Timestamp | FieldValue;
   // ソフトクローズ管理
-  closedAt?: any | null;
-  expiresAt?: any | null;
+  closedAt?: Timestamp | FieldValue | null;
+  expiresAt?: Timestamp | FieldValue | null;
   // お題
   topic?: string | null;
   topicOptions?: string[] | null;
@@ -32,7 +34,7 @@ export type RoomDoc = {
   // ホスト確定時の順序
   order?: {
     list: string[];
-    decidedAt?: any;
+    decidedAt?: Timestamp | FieldValue;
     lastNumber?: number | null;
     failed?: boolean;
     failedAt?: number | null;
@@ -41,7 +43,7 @@ export type RoomDoc = {
   } | null;
   result?: {
     success: boolean;
-    revealedAt: any;
+    revealedAt: Timestamp | FieldValue;
   } | null;
   deal?: {
     seed: string;
@@ -60,12 +62,12 @@ export type PlayerDoc = {
   ready: boolean;
   orderIndex: number;
   uid?: string;
-  lastSeen?: any;
+  lastSeen?: Timestamp | FieldValue;
 };
 
 export type ChatDoc = {
   sender: string;
   uid?: string | null;
   text: string;
-  createdAt?: any;
+  createdAt?: Timestamp | FieldValue;
 };
