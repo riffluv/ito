@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online ITO - Artifact Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a1a2e 30%, #0a0a0f 100%);
+            color: #e6ccff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* === 星々のパーティクル === */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+            animation: twinkle 4s infinite ease-in-out;
+        }
+
+        .star:nth-child(1) { top: 15%; left: 8%; width: 2px; height: 2px; animation-delay: 0s; }
+        .star:nth-child(2) { top: 70%; left: 15%; width: 1px; height: 1px; animation-delay: 0.7s; }
+        .star:nth-child(3) { top: 25%; left: 85%; width: 3px; height: 3px; animation-delay: 1.4s; }
+        .star:nth-child(4) { top: 80%; left: 75%; width: 2px; height: 2px; animation-delay: 2.1s; }
+        .star:nth-child(5) { top: 5%; left: 45%; width: 1px; height: 1px; animation-delay: 2.8s; }
+        .star:nth-child(6) { top: 85%; left: 25%; width: 2px; height: 2px; animation-delay: 3.5s; }
+        .star:nth-child(7) { top: 40%; left: 60%; width: 1px; height: 1px; animation-delay: 1.2s; }
+        .star:nth-child(8) { top: 60%; left: 90%; width: 2px; height: 2px; animation-delay: 0.9s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* === メインコンテナ === */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        /* === ヘッダー === */
+        .header {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.15) 0%, rgba(128, 51, 255, 0.15) 100%);
+            border-bottom: 1px solid rgba(179, 102, 255, 0.3);
+            backdrop-filter: blur(20px);
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0;
+        }
+
+        .header-logo {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #e6ccff;
+            text-shadow: 0 0 20px rgba(179, 102, 255, 0.6);
+        }
+
+        .header-rule-btn {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.2) 0%, rgba(128, 51, 255, 0.2) 100%);
+            border: 1px solid rgba(179, 102, 255, 0.4);
+            color: #b366ff;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .header-rule-btn:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.3) 0%, rgba(128, 51, 255, 0.3) 100%);
+            box-shadow: 0 0 15px rgba(179, 102, 255, 0.4);
+        }
+
+        /* === ITOセクション === */
+        .ito-section {
+            text-align: center;
+            margin: 2rem 2rem 0 2rem;
+            padding: 3rem 2rem 2rem 2rem;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.08) 0%, rgba(128, 51, 255, 0.05) 100%);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(179, 102, 255, 0.2);
+            position: relative;
+        }
+
+        .ito-title {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.8rem;
+            background: linear-gradient(135deg, #e6ccff 0%, #b366ff 50%, #8033ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(179, 102, 255, 0.5);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 20px rgba(179, 102, 255, 0.3));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 40px rgba(179, 102, 255, 0.6));
+                transform: scale(1.02);
+            }
+        }
+
+        .ito-subtitle {
+            font-size: 1.1rem;
+            color: rgba(179, 102, 255, 0.8);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .ito-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 165, 0, 0.3) 100%);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            padding: 1rem 2.5rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        .primary-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.5) 0%, rgba(255, 165, 0, 0.5) 100%);
+            border-color: #ffec8b;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .secondary-btn {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.2) 0%, rgba(128, 51, 255, 0.2) 100%);
+            border: 2px solid #b366ff;
+            color: #e6ccff;
+            padding: 1rem 2.5rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .secondary-btn:hover {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.4) 0%, rgba(128, 51, 255, 0.4) 100%);
+            border-color: #e6ccff;
+            box-shadow: 0 0 20px rgba(179, 102, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* === メインコンテンツエリア === */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin: 2rem;
+            align-items: start;
+        }
+
+        /* === ルーム一覧セクション === */
+        .room-section {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.05) 0%, rgba(128, 51, 255, 0.03) 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(179, 102, 255, 0.2);
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .room-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e6ccff;
+        }
+
+        .player-info {
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.15) 0%, rgba(128, 51, 255, 0.08) 100%);
+            border: 1px solid rgba(179, 102, 255, 0.3);
+            border-radius: 8px;
+            padding: 0.7rem 1.2rem;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .player-name {
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .change-btn {
+            background: rgba(179, 102, 255, 0.2);
+            border: 1px solid rgba(179, 102, 255, 0.4);
+            color: #b366ff;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .change-btn:hover {
+            background: rgba(179, 102, 255, 0.3);
+            box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
+        }
+
+        /* === 空ルーム状態 === */
+        .empty-room {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: linear-gradient(135deg, rgba(179, 102, 255, 0.05) 0%, rgba(128, 51, 255, 0.03) 100%);
+            border-radius: 16px;
+            border: 2px dashed rgba(179, 102, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            color: rgba(179, 102, 255, 0.5);
+            margin-bottom: 1rem;
+        }
+
+        .empty-title {
+            font-size: 1.3rem;
+            color: rgba(179, 102, 255, 0.8);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .empty-description {
+            color: rgba(179, 102, 255, 0.6);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .create-room-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 165, 0, 0.25) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            color: #ffd700;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .create-room-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 165, 0, 0.4) 100%);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* === サイドバー === */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* === 部屋作成フォーム === */
+        .create-room-form {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 165, 0, 0.05) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+        }
+
+        .form-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #ffd700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 215, 0, 0.9);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(179, 102, 255, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(179, 102, 255, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            cursor: pointer;
+        }
+
+        .form-submit {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 165, 0, 0.3) 100%);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-submit:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.5) 0%, rgba(255, 165, 0, 0.5) 100%);
+            border-color: #ffec8b;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* === 初心者向けセクション === */
+        .beginner-section {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            padding: 1.8rem;
+            backdrop-filter: blur(15px);
+        }
+
+        .beginner-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #4ade80;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .beginner-content {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .beginner-btn {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.25) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #4ade80;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .beginner-btn:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(16, 185, 129, 0.4) 100%);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+        }
+
+        /* === アップデート情報 === */
+        .update-section {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 16px;
+            padding: 1.8rem;
+            backdrop-filter: blur(15px);
+        }
+
+        /* === フッターセクション === */
+        .footer-section {
+            margin: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .update-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #60a5fa;
+            margin-bottom: 1rem;
+        }
+
+        .update-content {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        /* === フッター === */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(179, 102, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        /* === レスポンシブデザイン === */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+
+            .footer-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .ito-title {
+                font-size: 2.5rem;
+            }
+
+            .ito-section {
+                padding: 2.5rem 1.5rem;
+                margin: 1rem;
+            }
+
+            .ito-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .main-content,
+            .footer-section {
+                margin: 1rem;
+            }
+
+            .room-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .player-info {
+                justify-content: space-between;
+            }
+
+            .create-room-form,
+            .beginner-section,
+            .update-section {
+                padding: 1.5rem;
+            }
+        }
+
+        /* === エネルギーパーティクル === */
+        .energy-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 8s infinite ease-in-out;
+        }
+
+        .particle:nth-child(1) { top: 20%; left: 15%; animation-delay: 0s; }
+        .particle:nth-child(2) { top: 60%; left: 85%; animation-delay: 2s; }
+        .particle:nth-child(3) { top: 80%; left: 25%; animation-delay: 4s; }
+        .particle:nth-child(4) { top: 40%; left: 70%; animation-delay: 6s; }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px) scale(1);
+                opacity: 0.3;
+            }
+            50% { 
+                transform: translateY(-20px) scale(1.2);
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星々 -->
+    <div class="stars">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+    </div>
+
+    <!-- エネルギーパーティクル -->
+    <div class="energy-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="main-container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <div class="header-logo">Online ITO</div>
+            <button class="header-rule-btn" onclick="showRules()">ルール</button>
+        </div>
+
+        <!-- ITOメインセクション -->
+        <div class="ito-section">
+            <div class="ito-title">ITO</div>
+            <div class="ito-subtitle">協力型カードゲーム　数字を使わずに順番を見つけよう</div>
+            
+            <div class="ito-buttons">
+                <button class="primary-btn" onclick="startGame()">今すぐプレイ</button>
+                <button class="secondary-btn" onclick="showRules()">ルールを確認</button>
+            </div>
+        </div>
+
+        <!-- メインコンテンツエリア -->
+        <div class="main-content">
+            <!-- ルーム一覧セクション -->
+            <div class="room-section">
+                <div class="room-header">
+                    <h2 class="room-title">ルーム一覧</h2>
+                    <div class="player-info">
+                        <span>プレイヤー名</span>
+                        <span class="player-name">chrome通常</span>
+                        <button class="change-btn" onclick="changeName()">変更</button>
+                    </div>
+                </div>
+
+                <!-- 空のルーム状態 -->
+                <div class="empty-room">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-title">公開ルームがありません</div>
+                    <div class="empty-description">最初の部屋を作りましょう！</div>
+                </div>
+            </div>
+
+            <!-- サイドバー -->
+            <div class="sidebar">
+                <!-- 部屋作成フォーム -->
+                <div class="create-room-form">
+                    <div class="form-title">新しい部屋を作成</div>
+                    <form onsubmit="submitRoom(event)">
+                        <div class="form-group">
+                            <label class="form-label">部屋名</label>
+                            <input type="text" class="form-input" placeholder="例: 初心者歓迎" maxlength="20" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">参加人数</label>
+                            <select class="form-select" required>
+                                <option value="">選択してください</option>
+                                <option value="2">2人</option>
+                                <option value="3">3人</option>
+                                <option value="4">4人</option>
+                                <option value="6">6人</option>
+                                <option value="8">8人</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">難易度</label>
+                            <select class="form-select" required>
+                                <option value="">選択してください</option>
+                                <option value="easy">初心者向け</option>
+                                <option value="normal">標準</option>
+                                <option value="hard">上級者向け</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="form-submit">作成する</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- フッターセクション -->
+        <div class="footer-section">
+            <!-- 初心者向けセクション -->
+            <div class="beginner-section">
+                <div class="beginner-title">
+                    <span>🌟</span>
+                    <span>はじめての方へ</span>
+                </div>
+                <div class="beginner-content">
+                    部屋を作成または参加して、お題に沿って数字の大小を並べ替えよう。全員で協力して正解を目指します。
+                </div>
+                <button class="beginner-btn" onclick="showRules()">ルールを見る</button>
+            </div>
+
+            <!-- アップデート情報 -->
+            <div class="update-section">
+                <div class="update-title">アップデート情報</div>
+                <div class="update-content">
+                    UI を刷新し、左右に情報を配置。リストはスクロール領域で快適に閲覧できます。
+                </div>
+            </div>
+        </div>
+
+        <!-- フッター -->
+        <div class="footer">
+            <div>Version 2.0</div>
+        </div>
+    </div>
+
+    <script>
+        // インタラクション関数
+        function startGame() {
+            console.log('ゲーム開始');
+            alert('ゲームを開始します');
+        }
+
+        function showRules() {
+            console.log('ルール表示');
+            alert('ルールページを表示');
+        }
+
+        function createRoom() {
+            console.log('ルーム作成');
+            alert('新しいルームを作成');
+        }
+
+        function submitRoom(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const roomData = {
+                name: event.target.querySelector('input').value,
+                players: event.target.querySelector('select').value,
+                difficulty: event.target.querySelectorAll('select')[1].value
+            };
+            
+            console.log('部屋作成データ:', roomData);
+            alert(`部屋「${roomData.name}」を作成しました！\n人数: ${roomData.players}人\n難易度: ${roomData.difficulty}`);
+            
+            // フォームリセット
+            event.target.reset();
+        }
+
+        function changeName() {
+            console.log('名前変更');
+            const newName = prompt('新しいプレイヤー名を入力してください:', 'chrome通常');
+            if (newName && newName.trim()) {
+                document.querySelector('.player-name').textContent = newName.trim();
+            }
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Artifact Style ITO メインメニュー読み込み完了');
+            
+            // スムーズスクロール効果
+            document.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+            });
+        });
+
+        // マウス追従エフェクト
+        document.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.97) {
+                createMouseTrail(e.clientX, e.clientY);
+            }
+        });
+
+        function createMouseTrail(x, y) {
+            const trail = document.createElement('div');
+            trail.style.position = 'fixed';
+            trail.style.left = x + 'px';
+            trail.style.top = y + 'px';
+            trail.style.width = '3px';
+            trail.style.height = '3px';
+            trail.style.background = 'radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, transparent 70%)';
+            trail.style.borderRadius = '50%';
+            trail.style.pointerEvents = 'none';
+            trail.style.zIndex = '5';
+            trail.style.animation = 'fadeOut 2s ease-out forwards';
+            
+            document.body.appendChild(trail);
+            
+            setTimeout(() => {
+                if (trail.parentNode) {
+                    trail.parentNode.removeChild(trail);
+                }
+            }, 2000);
+        }
+
+        // CSSアニメーション追加
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                0% { 
+                    opacity: 1; 
+                    transform: translateY(0px) scale(1);
+                }
+                100% { 
+                    opacity: 0; 
+                    transform: translateY(-15px) scale(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

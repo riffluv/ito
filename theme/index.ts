@@ -218,6 +218,11 @@ const config = defineConfig({
         // Banner / Self number foreground brand-ish
         panelBannerFg: { value: "#0f1724" }, // ライトモード固定
         selfNumberFg: { value: "#0F3460" }, // ライトモード固定
+        // Artifact系 追加トークン
+        borderGold: { value: "rgba(255,215,0,0.85)" },
+        successBorder: { value: "rgba(76,175,80,1)" },
+        dangerBorder: { value: "rgba(244,67,54,1)" },
+        woodBorder: { value: "rgba(160,133,91,0.6)" },
       },
       // === 2025年 カードシステム専用セマンティックトークン ===
       sizes: {
@@ -234,6 +239,10 @@ const config = defineConfig({
       shadows: {
         interactive: { value: "{shadows.sm}" }, // ライトモード固定
         elevated: { value: "{shadows.md}" }, // ライトモード固定
+        goldGlow: { value: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)" },
+        successGlow: { value: "0 0 30px rgba(76,175,80,0.6)" },
+        dangerGlow: { value: "0 0 30px rgba(244,67,54,0.6)" },
+        panelWood: { value: "0 8px 25px rgba(0,0,0,0.7), inset 0 2px 0 rgba(160,133,91,0.3)" },
       },
       gradients: {
         accentSoft: { value: "{gradients.accentSoft}" }, // ライトモード固定
@@ -242,6 +251,10 @@ const config = defineConfig({
         boardPattern: {
           value: "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)", // ライトモード固定
         },
+        cardPurple: { value: "linear(135deg, rgba(30,15,50,0.95), rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95))" },
+        cardSuccess: { value: "linear(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))" },
+        cardFail: { value: "linear(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))" },
+        panelWood: { value: "linear(180deg, rgba(101,67,33,0.8) 0%, rgba(80,53,26,0.9) 100%)" },
       },
     },
     recipes: {

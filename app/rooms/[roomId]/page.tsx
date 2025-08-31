@@ -1,17 +1,9 @@
 "use client";
-import dynamic from "next/dynamic";
 
 // 重要コンポーネント: Eager loading（初期表示性能優先）
 import { Hud } from "@/components/Hud";
 
-// 非重要コンポーネント: Dynamic import（必要時に読み込み）
-const CluePanel = dynamic(
-  () => import("@/components/CluePanel").then((m) => m.CluePanel),
-  {
-    ssr: false,
-    loading: () => null,
-  }
-);
+// 旧CluePanelは未使用（刷新した中央UIに統合済み）
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
 import SettingsModal from "@/components/SettingsModal";

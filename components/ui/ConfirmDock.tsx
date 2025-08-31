@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Box, Button } from "@chakra-ui/react";
+import { DOCK_BOTTOM_MOBILE, DOCK_BOTTOM_DESKTOP } from "@/lib/ui/layout";
 
 export default function ConfirmDock({
   onConfirm,
@@ -14,20 +15,17 @@ export default function ConfirmDock({
       position="fixed"
       left={{ base: 3, md: 6 }}
       right={{ base: 3, md: 6 }}
-      bottom={{ base: "120px", md: "144px" }}
+      bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={22}
       borderRadius="20px"
       p={{ base: 3, md: 4 }}
       display="flex"
       alignItems="center"
       justifyContent="center"
-      css={{
-        background:
-          "linear-gradient(180deg, rgba(101,67,33,0.8) 0%, rgba(80,53,26,0.9) 100%)",
-        border: "2px solid rgba(160,133,91,0.6)",
-        backdropFilter: "blur(15px)",
-        boxShadow: "0 8px 25px rgba(0,0,0,0.7), inset 0 2px 0 rgba(160,133,91,0.3)",
-      }}
+      bgGradient="panelWood"
+      borderWidth="2px"
+      borderColor="woodBorder"
+      css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
     >
       <Button
         size="lg"
@@ -47,4 +45,3 @@ export default function ConfirmDock({
     </Box>
   );
 }
-
