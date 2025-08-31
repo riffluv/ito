@@ -144,6 +144,9 @@ describe("buildHostActionModel", () => {
       null
     );
     expect(intents.map((i) => i.key)).toEqual(["advancedMode", "reset"]);
+    const reset = intents.find((i) => i.key === "reset")!;
+    expect(reset.confirm).toBeDefined();
+    expect(reset.confirm?.title).toContain("中断");
   });
 
   test("clue 選択済み・sequential → advancedのみ（簡素化後）", () => {

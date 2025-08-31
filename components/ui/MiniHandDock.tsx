@@ -3,6 +3,13 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { updateClue1 } from "@/lib/firebase/players";
 import {
+  canSubmitCard,
+  computeAllSubmitted,
+  isSortSubmit,
+  normalizeResolveMode,
+  ResolveMode,
+} from "@/lib/game/resolveMode";
+import {
   addCardToProposal,
   commitPlayFromClue,
   continueAfterFail as continueAfterFailAction,
@@ -11,10 +18,9 @@ import {
 } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
+import { handDockStyles } from "@/theme/itoStyles";
 import { Box, HStack, Input } from "@chakra-ui/react";
 import React from "react";
-
-type ResolveMode = "sequential" | "sort-submit";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -48,17 +54,19 @@ export default function MiniHandDock({
     !!me?.id && typeof me?.number === "number" && text.trim().length > 0;
 
   // sanitize: Firestore 未設定時には sequential を既定値とする
-  const actualResolveMode: ResolveMode =
-    resolveMode === "sort-submit" ? "sort-submit" : "sequential";
-  const sequentialGate =
-    actualResolveMode === "sort-submit" ? true : !!cluesReady;
-  const canSubmit = canDecide && ready && !placed && sequentialGate;
-  const allSubmitted =
-    actualResolveMode === "sort-submit" &&
-    Array.isArray(eligibleIds) &&
-    Array.isArray(proposal) &&
-    eligibleIds.length > 0 &&
-    eligibleIds.length === proposal.length;
+  const actualResolveMode = normalizeResolveMode(resolveMode);
+  const allSubmitted = computeAllSubmitted({
+    mode: actualResolveMode,
+    eligibleIds,
+    proposal,
+  });
+  const canSubmit = canSubmitCard({
+    mode: actualResolveMode,
+    canDecide,
+    ready,
+    placed,
+    cluesReady,
+  });
 
   React.useEffect(() => {
     setText(me?.clue1 || "");
@@ -82,6 +90,11 @@ export default function MiniHandDock({
     try {
       await updateClue1(roomId, me!.id, text.trim());
       notify({ title: "連想ワードを確定しました", type: "success" });
+      if (process.env.NODE_ENV !== "production") {
+        const g: any = globalThis as any;
+        g.__ITO_DEV_STATS ||= {};
+        g.__ITO_DEV_STATS.decide = (g.__ITO_DEV_STATS.decide || 0) + 1;
+      }
     } catch (e: any) {
       notify({
         title: "確定に失敗しました",
@@ -92,11 +105,19 @@ export default function MiniHandDock({
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit) return; // ガード: UI 無効時は動作しない
+    if (!canSubmit) return;
+    if (!me?.id) return;
     try {
-      if (actualResolveMode === "sort-submit") {
-        if (!placed) await addCardToProposal(roomId, me!.id);
-        notify({ title: "提出しました", type: "success" });
+      if (isSortSubmit(actualResolveMode)) {
+        if (!placed) {
+          await addCardToProposal(roomId, me.id);
+          notify({ title: "提出しました", type: "success" });
+          if (process.env.NODE_ENV !== "production") {
+            const g: any = globalThis as any;
+            g.__ITO_DEV_STATS ||= {};
+            g.__ITO_DEV_STATS.submit = (g.__ITO_DEV_STATS.submit || 0) + 1;
+          }
+        }
       } else {
         if (!cluesReady) {
           notify({
@@ -105,8 +126,13 @@ export default function MiniHandDock({
           });
           return;
         }
-        await commitPlayFromClue(roomId, me!.id);
+        await commitPlayFromClue(roomId, me.id);
         notify({ title: "場に出しました", type: "success" });
+        if (process.env.NODE_ENV !== "production") {
+          const g: any = globalThis as any;
+          g.__ITO_DEV_STATS ||= {};
+          g.__ITO_DEV_STATS.play = (g.__ITO_DEV_STATS.play || 0) + 1;
+        }
       }
     } catch (e: any) {
       notify({
@@ -175,15 +201,10 @@ export default function MiniHandDock({
           justifyContent="center"
           fontWeight={800}
           fontSize="lg"
-          css={{
-            background: "#0f172a",
-            color: "#fff",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.35)",
-          }}
+          css={handDockStyles.numberBox}
         >
           {typeof me?.number === "number" ? me.number : "?"}
         </Box>
-
         <Input
           placeholder="連想ワード"
           value={text}
@@ -194,12 +215,7 @@ export default function MiniHandDock({
           size="sm"
           w={{ base: "180px", md: "240px" }}
           borderRadius="20px"
-          css={{
-            background: "rgba(101,67,33,0.8)",
-            border: "1px solid rgba(160,133,91,0.6)",
-            color: "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(10px)",
-          }}
+          css={handDockStyles.clueInput}
         />
 
         <AppButton
@@ -226,72 +242,34 @@ export default function MiniHandDock({
           <AppButton
             size="md"
             onClick={quickStart}
-            css={{
-              background: "linear-gradient(135deg, #10b981, #059669)",
-              color: "#fff",
-              fontWeight: "700",
-              px: "24px",
-              py: "12px",
-              boxShadow: "0 8px 20px rgba(16, 185, 129, 0.4)",
-              _hover: {
-                transform: "translateY(-2px)",
-                boxShadow: "0 12px 28px rgba(16, 185, 129, 0.5)",
-              },
-              transition: "all 0.2s ease",
-            }}
+            css={handDockStyles.startButton}
           >
             🎮 ゲーム開始
           </AppButton>
         )}
 
-        {isHost &&
-          roomStatus === "clue" &&
-          actualResolveMode === "sort-submit" && (
-            <AppButton
-              size="md"
-              onClick={evalSorted}
-              disabled={!allSubmitted}
-              css={{
-                background: allSubmitted
-                  ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                  : "linear-gradient(135deg, #6b7280, #4b5563)",
-                color: "#fff",
-                fontWeight: "700",
-                px: "24px",
-                py: "12px",
-                boxShadow: allSubmitted
-                  ? "0 8px 20px rgba(245, 158, 11, 0.4)"
-                  : "0 4px 12px rgba(107, 114, 128, 0.3)",
-                _hover: allSubmitted
-                  ? {
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 12px 28px rgba(245, 158, 11, 0.5)",
-                    }
-                  : {},
-                transition: "all 0.2s ease",
-              }}
-            >
-              {allSubmitted ? "🎯 判定開始" : "⏳ 提出待ち"}
-            </AppButton>
-          )}
+        {isHost && roomStatus === "clue" && isSortSubmit(actualResolveMode) && (
+          <AppButton
+            size="md"
+            onClick={evalSorted}
+            disabled={!allSubmitted}
+            css={{
+              ...(allSubmitted
+                ? handDockStyles.evaluateEnabled
+                : handDockStyles.evaluateDisabled),
+              ...handDockStyles.evaluateShared,
+              _hover: allSubmitted ? handDockStyles.evaluateShared._hover : {},
+            }}
+          >
+            {allSubmitted ? "🎯 判定開始" : "⏳ 提出待ち"}
+          </AppButton>
+        )}
 
         {isHost && roomStatus === "finished" && (
           <AppButton
             size="md"
             onClick={continueRound}
-            css={{
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              color: "#fff",
-              fontWeight: "700",
-              px: "24px",
-              py: "12px",
-              boxShadow: "0 8px 20px rgba(59, 130, 246, 0.4)",
-              _hover: {
-                transform: "translateY(-2px)",
-                boxShadow: "0 12px 28px rgba(59, 130, 246, 0.5)",
-              },
-              transition: "all 0.2s ease",
-            }}
+            css={handDockStyles.retryButton}
           >
             🔄 もう一度
           </AppButton>
@@ -304,11 +282,7 @@ export default function MiniHandDock({
           gap={2}
           align="center"
           flex="0 0 auto"
-          css={{
-            borderLeft: "2px solid rgba(107, 114, 128, 0.3)",
-            paddingLeft: "12px",
-            marginLeft: "8px",
-          }}
+          css={handDockStyles.hostDivider}
         >
           {roomStatus === "clue" && (
             <>
@@ -328,17 +302,7 @@ export default function MiniHandDock({
                   onClick={() =>
                     topicControls.shuffleTopic(roomId, defaultTopicType as any)
                   }
-                  css={{
-                    fontSize: "xs",
-                    px: "10px",
-                    py: "6px",
-                    border: "1.5px solid rgba(107, 114, 128, 0.4)",
-                    color: "rgba(107, 114, 128, 0.9)",
-                    _hover: {
-                      borderColor: "rgba(107, 114, 128, 0.6)",
-                      background: "rgba(107, 114, 128, 0.1)",
-                    },
-                  }}
+                  css={handDockStyles.tinyOutlineNeutral}
                 >
                   🎲 お題
                 </AppButton>
@@ -346,17 +310,7 @@ export default function MiniHandDock({
                   size="sm"
                   visual="outline"
                   onClick={() => topicControls.dealNumbers(roomId)}
-                  css={{
-                    fontSize: "xs",
-                    px: "10px",
-                    py: "6px",
-                    border: "1.5px solid rgba(107, 114, 128, 0.4)",
-                    color: "rgba(107, 114, 128, 0.9)",
-                    _hover: {
-                      borderColor: "rgba(107, 114, 128, 0.6)",
-                      background: "rgba(107, 114, 128, 0.1)",
-                    },
-                  }}
+                  css={handDockStyles.tinyOutlineNeutral}
                 >
                   🔢 数字
                 </AppButton>
@@ -364,17 +318,7 @@ export default function MiniHandDock({
                   size="sm"
                   visual="outline"
                   onClick={resetGame}
-                  css={{
-                    fontSize: "xs",
-                    px: "10px",
-                    py: "6px",
-                    border: "1.5px solid rgba(239, 68, 68, 0.4)",
-                    color: "rgba(239, 68, 68, 0.9)",
-                    _hover: {
-                      borderColor: "rgba(239, 68, 68, 0.6)",
-                      background: "rgba(239, 68, 68, 0.1)",
-                    },
-                  }}
+                  css={handDockStyles.tinyOutlineDanger}
                 >
                   🔄
                 </AppButton>
@@ -388,21 +332,9 @@ export default function MiniHandDock({
             borderRadius="4px"
             fontSize="xs"
             fontWeight="500"
-            css={{
-              background:
-                actualResolveMode === "sort-submit"
-                  ? "rgba(16, 185, 129, 0.4)"
-                  : "rgba(101,67,33,0.4)",
-              color: "rgba(255,255,255,0.9)",
-              border: `1px solid ${
-                actualResolveMode === "sort-submit"
-                  ? "rgba(16, 185, 129, 0.5)"
-                  : "rgba(160,133,91,0.3)"
-              }`,
-              whiteSpace: "nowrap",
-            }}
+            css={handDockStyles.modeBadge(isSortSubmit(actualResolveMode))}
           >
-            {actualResolveMode === "sequential" ? "順次" : "一括"}
+            {isSortSubmit(actualResolveMode) ? "一括" : "順次"}
           </Box>
         </HStack>
       )}

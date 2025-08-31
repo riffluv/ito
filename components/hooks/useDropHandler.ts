@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
 import { notify } from "@/components/ui/notify";
+import { isSortSubmit, normalizeResolveMode } from "@/lib/game/resolveMode";
 import { addCardToProposal, commitPlayFromClue } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
+import { useMemo, useState } from "react";
 
 interface UseDropHandlerProps {
   roomId: string;
@@ -34,9 +35,9 @@ export function useDropHandler({
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber || mePlaced) return false;
-    if (resolveMode === "sort-submit") return true;
-    // 順次モード: 全員がready（cluesReady）になってから初めて出せる
-    return !!cluesReady;
+    const mode = normalizeResolveMode(resolveMode);
+    if (isSortSubmit(mode)) return true; // 提出は常時可（ヒント確定前はUI側で制御可能）
+    return !!cluesReady; // sequential gate
   }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady]);
 
   const currentPlaced = useMemo(() => {
@@ -49,25 +50,25 @@ export function useDropHandler({
     e.preventDefault();
     const pid = e.dataTransfer.getData("text/plain");
     if (!pid) return;
-    
+
     setIsOver(false);
-    
+
     if (!canDrop) {
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
-    
+
     if (pid !== meId) {
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
-    
+
     if (!me || typeof me.number !== "number") {
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
-    
-    if (resolveMode === "sort-submit") {
+
+    if (isSortSubmit(normalizeResolveMode(resolveMode))) {
       try {
         await addCardToProposal(roomId, meId);
         setPending((p) => (p.includes(pid) ? p : [...p, pid]));
@@ -81,7 +82,7 @@ export function useDropHandler({
       }
       return;
     }
-    
+
     if (!cluesReady) {
       notify({
         title: "全員が連想ワードを決定してから出してください",
@@ -89,7 +90,7 @@ export function useDropHandler({
       });
       return;
     }
-    
+
     try {
       await commitPlayFromClue(roomId, meId);
       setPending((p) => (p.includes(pid) ? p : [...p, pid]));

@@ -1,3 +1,4 @@
+import { normalizeResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 export function sanitizeRoom(input: any): RoomDoc {
@@ -15,11 +16,7 @@ export function sanitizeRoom(input: any): RoomDoc {
     hostId: String(input?.hostId || ""),
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
-      resolveMode:
-        options.resolveMode === "sort-submit" ||
-        options.resolveMode === "sequential"
-          ? options.resolveMode
-          : "sequential",
+      resolveMode: normalizeResolveMode(options.resolveMode),
       defaultTopicType: validTopic(options?.defaultTopicType)
         ? options.defaultTopicType
         : undefined,
