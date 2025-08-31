@@ -5,7 +5,7 @@ import { sanitizeRoom, sanitizePlayer } from "@/lib/state/sanitize"
 // Firestore <-> TypeScript 型の橋渡し。取得時に最小限のサニタイズも行う。
 export const roomConverter: FirestoreDataConverter<RoomDoc & { id: string }> = {
   toFirestore(value) {
-    const { id: _omit, ...rest } = value as any
+    const { id: _omit, ...rest } = value
     return rest
   },
   fromFirestore(snapshot, _options) {
@@ -16,7 +16,7 @@ export const roomConverter: FirestoreDataConverter<RoomDoc & { id: string }> = {
 
 export const playerConverter: FirestoreDataConverter<PlayerDoc & { id: string }> = {
   toFirestore(value) {
-    const { id: _omit, ...rest } = value as any
+    const { id: _omit, ...rest } = value
     return rest
   },
   fromFirestore(snapshot, _options) {

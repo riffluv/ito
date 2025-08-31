@@ -303,15 +303,15 @@ export default function LobbyPage() {
               </Box>
             )}
 
-            {/* 将来追加予定のセクション例 */}
-            {/* TODO: 掲示板セクション
+            {/* 将来実装予定の機能セクション */}
+            {/* 
+            掲示板セクション（将来実装）:
             <Box mt={8}>
               <Heading size="lg" mb={4}>お知らせ</Heading>
               <NoticeBoard />
             </Box>
-            */}
-
-            {/* TODO: 統計セクション
+            
+            統計セクション（将来実装）:
             <Box mt={8}>
               <Heading size="lg" mb={4}>統計情報</Heading>
               <StatsPanel />

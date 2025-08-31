@@ -1,7 +1,9 @@
 {
   "lib\\services\\roomService.ts -> @/lib/game/random": {
     "id": "lib\\services\\roomService.ts -> @/lib/game/random",
-    "files": []
+    "files": [
+      "static/chunks/_app-pages-browser_lib_game_random_ts.js"
+    ]
   },
   "lib\\services\\roomService.ts -> firebase/firestore": {
     "id": "lib\\services\\roomService.ts -> firebase/firestore",

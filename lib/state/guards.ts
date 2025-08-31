@@ -8,14 +8,11 @@ export type RoomEvent =
   | { type: "RESET" };
 
 const transitions: Record<RoomStatus, RoomStatus[]> = {
-  // Simplified: waiting -> clue -> finished (or back to waiting)
+  // waiting -> clue -> (reveal) -> finished
   waiting: ["clue"],
-  clue: ["finished", "waiting"],
-  // 'playing' removed; keep compatibility if old docs contain it by not listing forward transitions
-  playing: [],
-  finished: ["waiting", "clue"],
+  clue: ["finished", "waiting", "reveal"],
   reveal: ["finished"],
-  // any legacy 'playing' status will be allowed to jump to finished via FINISH event fallback (handled below)
+  finished: ["waiting", "clue"],
 };
 
 export function canTransition(from: RoomStatus, to: RoomStatus) {
@@ -32,10 +29,8 @@ export function nextStatusForEvent(
     case "CONTINUE_AFTER_FAIL":
       return canTransition(current, "clue") ? "clue" : null;
     case "FINISH":
-      // allow finishing from clue or legacy playing/reveal
-      if (canTransition(current, "finished")) return "finished";
-      if (current === "playing") return "finished"; // legacy support
-      return null;
+      // allow finishing from clue or reveal
+      return canTransition(current, "finished") ? "finished" : null;
     case "RESET":
       return canTransition(current, "waiting") ? "waiting" : null;
     default:

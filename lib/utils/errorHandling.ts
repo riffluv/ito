@@ -10,7 +10,7 @@ export interface AppError extends Error {
   code?: string;
   severity?: ErrorSeverity;
   userMessage?: string;
-  technicalDetails?: Record<string, any>;
+  technicalDetails?: Record<string, unknown>;
 }
 
 export class AppError extends Error {
@@ -20,7 +20,7 @@ export class AppError extends Error {
       code?: string;
       severity?: ErrorSeverity;
       userMessage?: string;
-      technicalDetails?: Record<string, any>;
+      technicalDetails?: Record<string, unknown>;
     } = {}
   ) {
     super(message);
@@ -35,8 +35,9 @@ export class AppError extends Error {
 /**
  * Firebase関連のエラーメッセージを日本語化
  */
-export function getFirebaseErrorMessage(error: any): string {
-  const code = error?.code;
+export function getFirebaseErrorMessage(error: unknown): string {
+  const firebaseError = error as { code?: string; message?: string };
+  const code = firebaseError?.code;
   
   switch (code) {
     case "permission-denied":
@@ -52,7 +53,7 @@ export function getFirebaseErrorMessage(error: any): string {
     case "unavailable":
       return "サービスが一時的に利用できません。";
     default:
-      return error?.message ?? "予期せぬエラーが発生しました。";
+      return firebaseError?.message ?? "予期せぬエラーが発生しました。";
   }
 }
 

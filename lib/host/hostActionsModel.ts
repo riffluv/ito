@@ -16,7 +16,7 @@ export type HostIntent = {
   label: string;
   disabled?: boolean;
   reason?: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
   palette?: "brand" | "orange" | "gray" | "teal";
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
 };

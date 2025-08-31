@@ -3,15 +3,13 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 export function sanitizeRoom(input: any): RoomDoc {
   const status = ((): RoomDoc["status"] => {
     const s = input?.status;
-    return s === "waiting" ||
-      s === "clue" ||
-      s === "playing" ||
-      s === "reveal" ||
-      s === "finished"
+    return s === "waiting" || s === "clue" || s === "reveal" || s === "finished"
       ? s
       : "waiting";
   })();
   const options = input?.options || { allowContinueAfterFail: true };
+  const validTopic = (t: any) =>
+    t === "通常版" || t === "レインボー版" || t === "クラシック版";
   return {
     name: String(input?.name || "Untitled"),
     hostId: String(input?.hostId || ""),
@@ -22,6 +20,9 @@ export function sanitizeRoom(input: any): RoomDoc {
         options.resolveMode === "sequential"
           ? options.resolveMode
           : "sequential",
+      defaultTopicType: validTopic(options?.defaultTopicType)
+        ? options.defaultTopicType
+        : undefined,
     },
     status,
     createdAt: input?.createdAt,
@@ -54,5 +55,5 @@ export function sanitizePlayer(
     orderIndex: typeof input?.orderIndex === "number" ? input.orderIndex : 0,
     uid: input?.uid || undefined,
     lastSeen: input?.lastSeen,
-  } as any;
+  };
 }

@@ -27,7 +27,8 @@ export async function startGame(roomId: string) {
     type: "START_GAME",
   });
   if (!next) throw new Error("invalid transition: START_GAME");
-  await updateDoc(ref, { status: next, result: null, deal: null });
+  // 新ラウンド開始時は前ラウンドの order/result/deal をクリア
+  await updateDoc(ref, { status: next, result: null, deal: null, order: null });
 }
 
 // ホストがトピック選択後に配札（重複なし）
@@ -98,84 +99,7 @@ export async function resetRoom(roomId: string) {
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
   if (!next) throw new Error("invalid transition: RESET");
-  await updateDoc(ref, { status: next, result: null, deal: null });
-}
-
-// 順番出し方式の開始（ホストが実行）
-// startPlaying deprecated: simplified flow keeps status 'clue' throughout plays
-export async function startPlaying(_roomId: string) {
-  // No-op for backward compatibility
-  return;
-}
-
-// 自分のカードを場に出す（昇順チェックを行い、失敗なら即終了）
-export async function playCard(roomId: string, playerId: string) {
-  const roomRef = doc(db!, "rooms", roomId);
-  const meRef = doc(db!, "rooms", roomId, "players", playerId);
-
-  // presence count取得（可能なら）を先に行い、トランザクション内で参照する
-  let presenceCount: number | null = null;
-  try {
-    if (presenceSupported()) {
-      const uids = await fetchPresenceUids(roomId);
-      if (Array.isArray(uids)) presenceCount = uids.length;
-    }
-  } catch {
-    presenceCount = null;
-  }
-
-  await runTransaction(db!, async (tx) => {
-    const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
-    // Accept plays in 'clue' (legacy 'playing' also allowed for backward compatibility)
-    if (room.status !== "clue" && room.status !== "playing") return;
-    const allowContinue: boolean = !!room?.options?.allowContinueAfterFail;
-
-    const meSnap = await tx.get(meRef);
-    if (!meSnap.exists()) throw new Error("player not found");
-    const me: any = meSnap.data();
-    const myNum: number | null = me?.number ?? null;
-    if (typeof myNum !== "number") throw new Error("number not set");
-
-    const currentOrder = {
-      list: room?.order?.list || [],
-      lastNumber: room?.order?.lastNumber ?? null,
-      failed: !!room?.order?.failed,
-      failedAt: room?.order?.failedAt ?? null,
-      decidedAt: room?.order?.decidedAt || serverTimestamp(),
-      total: room?.order?.total ?? null,
-    };
-
-    if (currentOrder.list.includes(playerId)) return; // 二重出し防止
-
-    const { next } = applyPlay({
-      order: currentOrder as any,
-      playerId,
-      myNum,
-      allowContinue,
-    });
-
-    const shouldFinish = shouldFinishAfterPlay({
-      nextListLength: next.list.length,
-      total: next.total ?? room?.order?.total ?? null,
-      presenceCount,
-      nextFailed: !!next.failed,
-      allowContinue,
-    });
-
-    if (shouldFinish) {
-      const success = !next.failed;
-      tx.update(roomRef, {
-        status: "finished",
-        order: next,
-        result: { success, revealedAt: serverTimestamp() },
-      });
-      return;
-    }
-
-    tx.update(roomRef, { order: next });
-  });
+  await updateDoc(ref, { status: next, result: null, deal: null, order: null });
 }
 
 // chooseAfterFail は不要（失敗後は自動継続または即終了）
@@ -284,6 +208,15 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 
 // 並び替えで一括判定モード: 提出された順序で昇順チェックし、結果を確定
 export async function submitSortedOrder(roomId: string, list: string[]) {
+  // サーバー側バリデーション: 実アクティブ人数を取得（可能ならpresence、不可なら後でdeal.playersで代替）
+  let activeCount: number | null = null;
+  try {
+    if (presenceSupported()) {
+      const uids = await fetchPresenceUids(roomId);
+      if (Array.isArray(uids)) activeCount = uids.length;
+    }
+  } catch { activeCount = null; }
+
   const _db = requireDb();
   await runTransaction(_db, async (tx) => {
     const roomRef = doc(_db, "rooms", roomId);
@@ -295,7 +228,15 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     if (mode !== "sort-submit")
       throw new Error("このルームでは一括判定は無効です");
     if (status !== "clue") throw new Error("現在は提出できません");
-    // プレイヤーの数字を取得して昇順チェック（純関数へ）
+    // 提出リストの妥当性チェック（重複/人数）
+    const uniqueOk = new Set(list).size === list.length;
+    if (!uniqueOk) throw new Error("提出リストに重複があります");
+    const expected = typeof activeCount === 'number'
+      ? activeCount
+      : (Array.isArray(room?.deal?.players) ? (room.deal.players as string[]).length : list.length);
+    if (expected >= 2 && list.length !== expected) {
+      throw new Error(`提出数が有効人数(${expected})と一致しません`);
+    }    // プレイヤーの数字を取得して昇順チェック（純関数へ）
     const numbers: Record<string, number | null | undefined> = {};
     for (const pid of list) {
       const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));

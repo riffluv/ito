@@ -70,7 +70,7 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
   if (!playersArr.includes(uid)) playersArr.push(uid);
 
   const patch: any = { deal: { ...(deal || {}), players: playersArr } };
-  if (data?.status === "playing") {
+  if (data?.status === "clue") {
     const total =
       typeof data?.order?.total === "number"
         ? data.order.total + 1
@@ -116,27 +116,6 @@ export async function assignNumberIfNeeded(roomId: string, uid: string) {
         orderIndex: 0,
       });
     }
-  } else if (room.status === "playing") {
-    if (typeof me.number === "number") return;
-    const playersSnap = await getDocs(
-      collection(db!, "rooms", roomId, "players")
-    );
-    const used = new Set<number>();
-    playersSnap.forEach((d) => {
-      const v: any = d.data();
-      if (typeof v?.number === "number") used.add(v.number);
-    });
-    const available: number[] = [];
-    for (let n = min; n <= max; n++) if (!used.has(n)) available.push(n);
-    if (available.length === 0) return;
-    const h = hashString(String(deal.seed) + ":" + uid);
-    const pick = available[h % available.length];
-    await updateDoc(doc(db!, "rooms", roomId, "players", uid), {
-      number: pick,
-      clue1: me.clue1 || "",
-      ready: false,
-      orderIndex: 0,
-    });
   }
 }
 
