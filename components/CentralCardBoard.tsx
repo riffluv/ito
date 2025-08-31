@@ -17,7 +17,10 @@ import StatusDock from "@/components/ui/StatusDock";
 import { DndContext, DragEndEvent, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { REVEAL_LINGER, RESULT_VISIBLE_MS } from "@/lib/ui/motion";
+import { REVEAL_FIRST_DELAY, REVEAL_STEP_DELAY } from "@/lib/ui/motion";
+import { finalizeReveal } from "@/lib/game/room";
 
 export function CentralCardBoard({
   roomId,
@@ -112,8 +115,8 @@ export function CentralCardBoard({
   const [showResult, setShowResult] = useState(false);
   useEffect(() => {
     if (roomStatus === "finished") {
-      const appear = setTimeout(() => setShowResult(true), 1200); // 余韻: 1.2秒後に演出
-      const close = setTimeout(() => setShowResult(false), 5200); // 表示は約4秒間
+      const appear = setTimeout(() => setShowResult(true), REVEAL_LINGER); // 余韻後に演出
+      const close = setTimeout(() => setShowResult(false), REVEAL_LINGER + RESULT_VISIBLE_MS);
       return () => {
         clearTimeout(appear);
         clearTimeout(close);
@@ -163,6 +166,31 @@ export function CentralCardBoard({
       /* ignore */
     }
   };
+
+  // 安全装置: sort-submit で "reveal" に入ったが何らかの理由でアニメ完了検知が漏れた場合、
+  // 理論上の総所要時間後に finalizeReveal を呼ぶ。
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (resolveMode === "sort-submit" && roomStatus === "reveal") {
+      const n = (orderList || []).length;
+      if (n > 0) {
+        const total = REVEAL_FIRST_DELAY + Math.max(0, n - 1) * REVEAL_STEP_DELAY + REVEAL_LINGER + 200; // safety margin
+        if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = setTimeout(() => {
+          finalizeReveal(roomId).catch(() => void 0);
+        }, total);
+        return () => {
+          if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
+        };
+      }
+    }
+    // 状態が変わったらタイマー破棄
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, [roomStatus, resolveMode, orderList?.length, roomId]);
 
   // sort-submit: 全員提出で「確定」可能
   const canConfirm =
