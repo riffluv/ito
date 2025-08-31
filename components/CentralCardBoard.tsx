@@ -92,6 +92,9 @@ export function CentralCardBoard({
     canDrop,
     currentPlaced,
     onDrop,
+    onDropAtPosition,
+    nextSequentialPosition,
+    canDropAtPosition,
   } = useDropHandler({
     roomId,
     meId,
@@ -212,16 +215,42 @@ export function CentralCardBoard({
       h="100%"
       display="flex"
       flexDirection="column"
+      css={{
+        // 🎮 PREMIUM BOARD CONTAINER
+        background: "transparent",
+        position: "relative",
+      }}
     >
       {/* コンパクトヘッダー - DPI125%対応 */}
-      <Box textAlign="center" marginBottom={{ base: "0.5rem", md: "0.5rem" }} flex="0 0 auto" width="100%" maxWidth="var(--board-max-width)" marginInline="auto"
+      <Box 
+        textAlign="center" 
+        marginBottom={{ base: "0.5rem", md: "0.5rem" }} 
+        flex="0 0 auto" 
+        width="100%" 
+        maxWidth="var(--board-max-width)" 
+        marginInline="auto"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             marginBottom: "0.25rem",
           },
         }}
       >
-        <Box fontWeight={500} color="fgMuted" fontSize={{ base: "0.75rem", md: "0.875rem" }} lineHeight={1.3}>
+        <Box 
+          fontWeight={600} 
+          fontSize={{ base: "0.875rem", md: "1rem" }} 
+          lineHeight={1.3}
+          css={{
+            // 🎮 PREMIUM HEADER TEXT
+            color: "#ffd700",
+            textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+            background: "linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(184,134,11,0.1) 100%)",
+            border: "1px solid rgba(255,215,0,0.3)",
+            borderRadius: "12px",
+            py: 2,
+            px: 4,
+            backdropFilter: "blur(8px)",
+          }}
+        >
           小さい順から大きい順に並べよう
         </Box>
       </Box>
@@ -238,10 +267,9 @@ export function CentralCardBoard({
         minHeight={0}
       >
         <Box
-          bg="transparent"
           border="0"
-          borderRadius="1rem"
-          padding={{ base: 2, md: 3 }}
+          borderRadius="1.5rem"
+          padding={{ base: 3, md: 4 }}
           minHeight="auto"
           width="100%"
           maxWidth="var(--board-max-width)"
@@ -251,12 +279,31 @@ export function CentralCardBoard({
           justifyContent="center"
           alignContent="flex-start"
           alignItems="flex-start"
-          gap={2}
+          gap={3}
           css={{
+            // 🎮 PREMIUM CARD BOARD
+            background: `
+              linear-gradient(135deg, 
+                rgba(101,67,33,0.05) 0%, 
+                rgba(80,53,26,0.1) 50%,
+                rgba(60,40,20,0.05) 100%
+              )
+            `,
+            border: "2px solid rgba(160,133,91,0.2)",
+            boxShadow: `
+              0 12px 40px rgba(0,0,0,0.3),
+              inset 0 1px 0 rgba(255,255,255,0.05)
+            `,
+            backdropFilter: "blur(15px)",
             containerType: "inline-size",
-            "&[data-drop-target='true']": { outline: "2px solid var(--colors-brand-400)" },
-            // spacing 1.5 (6px) をトークンで表現
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: { gap: "calc(var(--spacing-3) / 2)" },
+            "&[data-drop-target='true']": { 
+              borderColor: "rgba(255,215,0,0.8)",
+              boxShadow: "0 0 40px rgba(255,215,0,0.3), 0 12px 40px rgba(0,0,0,0.3)",
+            },
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: { 
+              gap: "calc(var(--spacing-3) / 2)",
+              padding: "0.75rem 1rem",
+            },
           }}
           data-drop-target={isOver && canDrop ? "true" : "false"}
         >
@@ -322,15 +369,35 @@ export function CentralCardBoard({
                           aspectRatio: "5 / 7",
                           height: "auto",
                           
+                          // 🎮 PREMIUM EMPTY SLOT
                           border: "2px dashed rgba(255,215,0,0.4)",
                           borderRadius: "1rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "rgba(30,15,50,0.3)",
-                          color: "rgba(255,215,0,0.6)",
-                          fontSize: "0.75rem",
-                          fontWeight: 500,
+                          background: `
+                            linear-gradient(135deg, 
+                              rgba(30,15,50,0.3) 0%, 
+                              rgba(40,20,60,0.2) 100%
+                            )
+                          `,
+                          color: "#ffd700",
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                          boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)",
+                          backdropFilter: "blur(5px)",
+                          transition: "all 0.3s ease",
+                          
+                          "&:hover": {
+                            borderColor: "rgba(255,215,0,0.6)",
+                            background: `
+                              linear-gradient(135deg, 
+                                rgba(30,15,50,0.4) 0%, 
+                                rgba(40,20,60,0.3) 100%
+                              )
+                            `,
+                          },
                           
                           // Grid アイテムとしての設定
                           placeSelf: "start", // Grid内で上揃え
@@ -346,8 +413,9 @@ export function CentralCardBoard({
             ) : (
               <>
                 {/* 順次判定モード: 固定スロットレイアウト（orderList使用） */}
-                {Array.from({ length: eligibleIds.length }).map((_, idx) => {
+                {Array.from({ length: Math.min(eligibleIds.length, (orderList?.length || 0) + 1) }).map((_, idx) => {
                   const cardId = orderList?.[idx];
+                  const isDroppableSlot = canDropAtPosition(idx);
                   return cardId ? (
                     <React.Fragment key={cardId}>
                       {renderCard(cardId, idx)}
@@ -355,19 +423,56 @@ export function CentralCardBoard({
                   ) : (
                     <Box
                       key={`drop-zone-${idx}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (isDroppableSlot) {
+                          setIsOver(true);
+                        }
+                      }}
+                      onDragLeave={() => setIsOver(false)}
+                      onDrop={(e) => onDropAtPosition(e, idx)}
                       css={{
                         aspectRatio: "5 / 7",
                         height: "auto",
                         
-                        border: "2px dashed rgba(255,215,0,0.4)",
+                        // 🎮 PREMIUM DROP ZONE
+                        border: isDroppableSlot 
+                          ? "2px dashed rgba(255,215,0,0.6)" 
+                          : "2px dashed rgba(107,114,128,0.3)",
                         borderRadius: "1rem",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: "rgba(30,15,50,0.3)",
-                        color: "rgba(255,215,0,0.6)",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
+                        background: isDroppableSlot ? `
+                          linear-gradient(135deg, 
+                            rgba(255,215,0,0.1) 0%, 
+                            rgba(184,134,11,0.2) 100%
+                          )
+                        ` : `
+                          linear-gradient(135deg, 
+                            rgba(30,15,50,0.3) 0%, 
+                            rgba(40,20,60,0.2) 100%
+                          )
+                        `,
+                        color: isDroppableSlot ? "#ffd700" : "#6b7280",
+                        fontSize: "1rem",
+                        fontWeight: 700,
+                        textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                        boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)",
+                        backdropFilter: "blur(5px)",
+                        transition: "all 0.3s ease",
+                        cursor: isDroppableSlot ? "copy" : "not-allowed",
+                        
+                        "&:hover": isDroppableSlot ? {
+                          borderColor: "rgba(255,215,0,0.8)",
+                          background: `
+                            linear-gradient(135deg, 
+                              rgba(255,215,0,0.15) 0%, 
+                              rgba(184,134,11,0.25) 100%
+                            )
+                          `,
+                          boxShadow: "0 0 20px rgba(255,215,0,0.3), inset 0 2px 8px rgba(0,0,0,0.3)",
+                        } : {},
                         
                         // Grid アイテムとしての設定
                         placeSelf: "start", // Grid内で上揃え
@@ -393,8 +498,6 @@ export function CentralCardBoard({
               </>
             )}
           </Box>
-
-          {/* 旧: ボード内の確定ボタンは撤去し、下部の待機領域位置に移動 */}
 
         </Box>
         

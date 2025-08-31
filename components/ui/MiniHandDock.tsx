@@ -19,7 +19,9 @@ import {
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
 import { handDockStyles } from "@/theme/itoStyles";
-import { Box, HStack, Input } from "@chakra-ui/react";
+import { PREMIUM_COMPONENTS, PREMIUM_TYPOGRAPHY, CARD_MATERIALS } from "@/theme/premiumGameStyles";
+import { Box, HStack, Input, IconButton, Text } from "@chakra-ui/react";
+import { FiSettings, FiLogOut } from "react-icons/fi";
 import React from "react";
 
 interface MiniHandDockProps {
@@ -33,6 +35,10 @@ interface MiniHandDockProps {
   roomStatus?: string;
   defaultTopicType?: string;
   allowContinueAfterFail?: boolean; // ここでは現在未使用（将来: 失敗継続ボタン制御で利用予定）
+  // ヘッダー統合機能
+  roomName?: string;
+  onOpenSettings?: () => void;
+  onLeaveRoom?: () => void | Promise<void>;
 }
 
 export default function MiniHandDock({
@@ -46,6 +52,10 @@ export default function MiniHandDock({
   roomStatus,
   defaultTopicType = "通常版",
   allowContinueAfterFail = false,
+  // ヘッダー統合機能
+  roomName = "",
+  onOpenSettings,
+  onLeaveRoom,
 }: MiniHandDockProps) {
   const [text, setText] = React.useState<string>(me?.clue1 || "");
   const placed = !!proposal?.includes(me?.id || "");
@@ -181,6 +191,15 @@ export default function MiniHandDock({
     }
   };
 
+  // フェーズ表示ラベル（ヘッダー統合）
+  const phaseLabel = {
+    waiting: "待機",
+    clue: "入力",
+    playing: "並べ替え",
+    reveal: "公開",
+    finished: "結果",
+  }[roomStatus as string] || "準備中";
+
   return (
     <HStack
       gap={4}
@@ -188,6 +207,25 @@ export default function MiniHandDock({
       justify="space-between"
       w="100%"
       position="relative"
+      css={{
+        // 🎮 PREMIUM HAND DOCK STYLING
+        ...PREMIUM_COMPONENTS.LUXURY_FRAME,
+        padding: "1rem 1.5rem",
+        borderRadius: "16px",
+        backdropFilter: "blur(15px)",
+        background: `
+          linear-gradient(135deg, 
+            rgba(101,67,33,0.8) 0%, 
+            rgba(80,53,26,0.9) 100%
+          )
+        `,
+        boxShadow: `
+          0 8px 32px rgba(0,0,0,0.6),
+          inset 0 1px 0 rgba(160,133,91,0.3),
+          inset 0 -1px 0 rgba(0,0,0,0.2)
+        `,
+        border: "2px solid rgba(160,133,91,0.6)",
+      }}
     >
       {/* 左側: プレイヤーアクション（最優先） */}
       <HStack gap={3} align="center" flex="0 0 auto">
@@ -201,7 +239,42 @@ export default function MiniHandDock({
           justifyContent="center"
           fontWeight={800}
           fontSize="lg"
-          css={handDockStyles.numberBox}
+          cursor={canSubmit ? "grab" : "pointer"}
+          draggable={canSubmit}
+          onDragStart={(e) => {
+            if (canSubmit && me?.id) {
+              e.dataTransfer.setData("text/plain", me.id);
+              e.currentTarget.style.cursor = "grabbing";
+            }
+          }}
+          onDragEnd={(e) => {
+            e.currentTarget.style.cursor = canSubmit ? "grab" : "pointer";
+          }}
+          css={{
+            // 🎮 PREMIUM NUMBER BOX
+            ...CARD_MATERIALS.PREMIUM_BASE,
+            border: "2px solid rgba(255,215,0,0.5)",
+            background: `
+              linear-gradient(135deg, 
+                rgba(255,215,0,0.2) 0%, 
+                rgba(184,134,11,0.3) 100%
+              )
+            `,
+            boxShadow: `
+              0 4px 16px rgba(0,0,0,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.2)
+            `,
+            color: "#ffd700",
+            ...PREMIUM_TYPOGRAPHY.CARD_NUMBER,
+            // ドラッグ可能時のホバー効果
+            "&:hover": canSubmit ? {
+              transform: "translateY(-2px) scale(1.02)",
+              boxShadow: `
+                0 8px 24px rgba(0,0,0,0.5),
+                0 0 20px rgba(255,215,0,0.3)
+              `,
+            } : {},
+          }}
         >
           {typeof me?.number === "number" ? me.number : "?"}
         </Box>
@@ -215,7 +288,25 @@ export default function MiniHandDock({
           size="sm"
           w={{ base: "180px", md: "240px" }}
           borderRadius="20px"
-          css={handDockStyles.clueInput}
+          css={{
+            // 🎮 PREMIUM CLUE INPUT
+            ...CARD_MATERIALS.PREMIUM_BASE,
+            background: "rgba(255,255,255,0.1)",
+            border: "2px solid rgba(255,255,255,0.2)",
+            color: "#ffffff",
+            placeholder: "rgba(255,255,255,0.6)",
+            _placeholder: { color: "rgba(255,255,255,0.6)" },
+            _focus: {
+              borderColor: "rgba(255,215,0,0.8)",
+              boxShadow: "0 0 20px rgba(255,215,0,0.3)",
+              background: "rgba(255,255,255,0.15)",
+            },
+            _hover: {
+              borderColor: "rgba(255,255,255,0.4)",
+            },
+            backdropFilter: "blur(8px)",
+            ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+          }}
         />
 
         <AppButton
@@ -223,10 +314,52 @@ export default function MiniHandDock({
           visual="subtle"
           onClick={handleDecide}
           disabled={!canDecide}
+          css={{
+            // 🎮 PREMIUM BUTTON STYLING
+            ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+            color: "#ffd700",
+            _hover: { 
+              background: "linear-gradient(135deg, rgba(255,215,0,0.3) 0%, rgba(184,134,11,0.4) 100%)",
+              transform: "translateY(-2px)",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+            },
+            _disabled: {
+              opacity: 0.5,
+              cursor: "not-allowed",
+              _hover: {
+                transform: "none",
+                background: "initial",
+              },
+            },
+          }}
         >
           確定
         </AppButton>
-        <AppButton size="sm" onClick={handleSubmit} disabled={!canSubmit}>
+        <AppButton 
+          size="sm" 
+          onClick={handleSubmit} 
+          disabled={!canSubmit}
+          css={{
+            // 🎮 PREMIUM SUBMIT BUTTON
+            ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+            background: "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(21,128,61,0.3) 100%)",
+            border: "1px solid rgba(34,197,94,0.5)",
+            color: "#22c55e",
+            _hover: { 
+              background: "linear-gradient(135deg, rgba(34,197,94,0.3) 0%, rgba(21,128,61,0.4) 100%)",
+              transform: "translateY(-2px)",
+              boxShadow: "0 6px 20px rgba(34,197,94,0.2)",
+            },
+            _disabled: {
+              opacity: 0.5,
+              cursor: "not-allowed",
+              _hover: {
+                transform: "none",
+                background: "initial",
+              },
+            },
+          }}
+        >
           出す
         </AppButton>
       </HStack>
@@ -242,7 +375,38 @@ export default function MiniHandDock({
           <AppButton
             size="md"
             onClick={quickStart}
-            css={handDockStyles.startButton}
+            css={{
+              // 🎮 PREMIUM START BUTTON
+              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              background: `
+                linear-gradient(135deg, 
+                  rgba(59,130,246,0.2) 0%, 
+                  rgba(37,99,235,0.4) 50%,
+                  rgba(29,78,216,0.3) 100%
+                )
+              `,
+              border: "2px solid rgba(59,130,246,0.6)",
+              color: "#60a5fa",
+              fontSize: "1rem",
+              px: 6,
+              py: 3,
+              borderRadius: "16px",
+              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              _hover: {
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(59,130,246,0.3) 0%, 
+                    rgba(37,99,235,0.5) 50%,
+                    rgba(29,78,216,0.4) 100%
+                  )
+                `,
+                transform: "translateY(-3px) scale(1.05)",
+                boxShadow: `
+                  0 12px 40px rgba(59,130,246,0.3),
+                  0 4px 16px rgba(0,0,0,0.4)
+                `,
+              },
+            }}
           >
             🎮 ゲーム開始
           </AppButton>
@@ -254,11 +418,38 @@ export default function MiniHandDock({
             onClick={evalSorted}
             disabled={!allSubmitted}
             css={{
-              ...(allSubmitted
-                ? handDockStyles.evaluateEnabled
-                : handDockStyles.evaluateDisabled),
-              ...handDockStyles.evaluateShared,
-              _hover: allSubmitted ? handDockStyles.evaluateShared._hover : {},
+              // 🎮 PREMIUM EVALUATE BUTTON
+              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              background: allSubmitted
+                ? `linear-gradient(135deg, 
+                    rgba(245,158,11,0.2) 0%, 
+                    rgba(217,119,6,0.4) 50%,
+                    rgba(180,83,9,0.3) 100%
+                  )`
+                : "rgba(107,114,128,0.2)",
+              border: allSubmitted 
+                ? "2px solid rgba(245,158,11,0.6)"
+                : "2px solid rgba(107,114,128,0.4)",
+              color: allSubmitted ? "#fbbf24" : "#9ca3af",
+              fontSize: "1rem",
+              px: 6,
+              py: 3,
+              borderRadius: "16px",
+              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              _hover: allSubmitted ? {
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(245,158,11,0.3) 0%, 
+                    rgba(217,119,6,0.5) 50%,
+                    rgba(180,83,9,0.4) 100%
+                  )
+                `,
+                transform: "translateY(-3px) scale(1.05)",
+                boxShadow: `
+                  0 12px 40px rgba(245,158,11,0.3),
+                  0 4px 16px rgba(0,0,0,0.4)
+                `,
+              } : {},
             }}
           >
             {allSubmitted ? "🎯 判定開始" : "⏳ 提出待ち"}
@@ -269,75 +460,256 @@ export default function MiniHandDock({
           <AppButton
             size="md"
             onClick={continueRound}
-            css={handDockStyles.retryButton}
+            css={{
+              // 🎮 PREMIUM RETRY BUTTON
+              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              background: `
+                linear-gradient(135deg, 
+                  rgba(139,92,246,0.2) 0%, 
+                  rgba(124,58,237,0.4) 50%,
+                  rgba(109,40,217,0.3) 100%
+                )
+              `,
+              border: "2px solid rgba(139,92,246,0.6)",
+              color: "#a78bfa",
+              fontSize: "1rem",
+              px: 6,
+              py: 3,
+              borderRadius: "16px",
+              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              _hover: {
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(139,92,246,0.3) 0%, 
+                    rgba(124,58,237,0.5) 50%,
+                    rgba(109,40,217,0.4) 100%
+                  )
+                `,
+                transform: "translateY(-3px) scale(1.05)",
+                boxShadow: `
+                  0 12px 40px rgba(139,92,246,0.3),
+                  0 4px 16px rgba(0,0,0,0.4)
+                `,
+              },
+            }}
           >
             🔄 もう一度
           </AppButton>
         )}
       </Box>
 
-      {/* 右側: ホスト管理機能（視覚的に分離・プロ仕様） */}
-      {isHost && (
-        <HStack
-          gap={2}
-          align="center"
-          flex="0 0 auto"
-          css={handDockStyles.hostDivider}
-        >
-          {roomStatus === "clue" && (
-            <>
-              <Box
-                fontSize="xs"
-                fontWeight="600"
-                color="rgba(107, 114, 128, 0.8)"
-                mb="1px"
-                css={{ textTransform: "uppercase", letterSpacing: "0.5px" }}
-              >
-                HOST
-              </Box>
-              <HStack gap={1}>
-                <AppButton
-                  size="sm"
-                  visual="outline"
-                  onClick={() =>
-                    topicControls.shuffleTopic(roomId, defaultTopicType as any)
-                  }
-                  css={handDockStyles.tinyOutlineNeutral}
+      {/* 右側: ホスト管理機能 + ヘッダー機能統合 */}
+      <HStack gap={2} align="center" flex="0 0 auto">
+        {/* ホスト管理機能（ホストの場合のみ） */}
+        {isHost && (
+          <HStack gap={2} align="center" css={{
+            // 🎮 HOST DIVIDER PREMIUM STYLING
+            position: "relative",
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              left: "-8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "2px",
+              height: "60%",
+              background: "linear-gradient(to bottom, transparent, rgba(160,133,91,0.6), transparent)",
+            },
+            pl: 3,
+          }}>
+            {roomStatus === "clue" && (
+              <>
+                <Box
+                  fontSize="xs"
+                  fontWeight="600"
+                  color="rgba(255,215,0,0.8)"
+                  mb="1px"
+                  css={{ 
+                    textTransform: "uppercase", 
+                    ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+                    textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                  }}
                 >
-                  🎲 お題
-                </AppButton>
-                <AppButton
-                  size="sm"
-                  visual="outline"
-                  onClick={() => topicControls.dealNumbers(roomId)}
-                  css={handDockStyles.tinyOutlineNeutral}
-                >
-                  🔢 数字
-                </AppButton>
-                <AppButton
-                  size="sm"
-                  visual="outline"
-                  onClick={resetGame}
-                  css={handDockStyles.tinyOutlineDanger}
-                >
-                  🔄
-                </AppButton>
-              </HStack>
-            </>
-          )}
+                  HOST
+                </Box>
+                <HStack gap={1}>
+                  <AppButton
+                    size="sm"
+                    visual="outline"
+                    onClick={() =>
+                      topicControls.shuffleTopic(roomId, defaultTopicType as any)
+                    }
+                    css={{
+                      // 🎮 PREMIUM TINY BUTTON
+                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      fontSize: "0.75rem",
+                      px: 2,
+                      py: 1,
+                      minH: "auto",
+                      color: "rgba(255,255,255,0.8)",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      _hover: {
+                        background: "rgba(255,255,255,0.1)",
+                        transform: "translateY(-1px)",
+                        color: "#ffffff",
+                      },
+                    }}
+                  >
+                    🎲 お題
+                  </AppButton>
+                  <AppButton
+                    size="sm"
+                    visual="outline"
+                    onClick={() => topicControls.dealNumbers(roomId)}
+                    css={{
+                      // 🎮 PREMIUM TINY BUTTON
+                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      fontSize: "0.75rem",
+                      px: 2,
+                      py: 1,
+                      minH: "auto",
+                      color: "rgba(255,255,255,0.8)",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      _hover: {
+                        background: "rgba(255,255,255,0.1)",
+                        transform: "translateY(-1px)",
+                        color: "#ffffff",
+                      },
+                    }}
+                  >
+                    🔢 数字
+                  </AppButton>
+                  <AppButton
+                    size="sm"
+                    visual="outline"
+                    onClick={resetGame}
+                    css={{
+                      // 🎮 PREMIUM DANGER BUTTON
+                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      fontSize: "0.75rem",
+                      px: 2,
+                      py: 1,
+                      minH: "auto",
+                      color: "rgba(239,68,68,0.8)",
+                      border: "1px solid rgba(239,68,68,0.4)",
+                      _hover: {
+                        background: "rgba(239,68,68,0.1)",
+                        transform: "translateY(-1px)",
+                        color: "#f87171",
+                      },
+                    }}
+                  >
+                    🔄
+                  </AppButton>
+                </HStack>
+              </>
+            )}
 
-          <Box
-            px={2}
-            py={1}
-            borderRadius="4px"
-            fontSize="xs"
-            fontWeight="500"
-            css={handDockStyles.modeBadge(isSortSubmit(actualResolveMode))}
-          >
-            {isSortSubmit(actualResolveMode) ? "一括" : "順次"}
-          </Box>
+            <Box
+              px={2}
+              py={1}
+              borderRadius="6px"
+              fontSize="xs"
+              fontWeight="500"
+              css={{
+                // 🎮 MODE BADGE PREMIUM STYLING
+                background: isSortSubmit(actualResolveMode)
+                  ? "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(21,128,61,0.3) 100%)"
+                  : "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(37,99,235,0.3) 100%)",
+                border: isSortSubmit(actualResolveMode)
+                  ? "1px solid rgba(34,197,94,0.5)"
+                  : "1px solid rgba(59,130,246,0.5)",
+                color: isSortSubmit(actualResolveMode) ? "#22c55e" : "#60a5fa",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              }}
+            >
+              {isSortSubmit(actualResolveMode) ? "一括" : "順次"}
+            </Box>
+          </HStack>
+        )}
+
+        {/* ルーム情報 */}
+        {roomName && (
+          <HStack gap={1} align="center">
+            <Text
+              fontSize="xs"
+              fontWeight="500"
+              color="rgba(255,255,255,0.8)"
+              fontFamily="'Monaco', monospace"
+              css={{
+                textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+              }}
+            >
+              {roomName}
+            </Text>
+            <Text
+              fontSize="xs"
+              fontWeight="500"
+              px={2}
+              py={1}
+              borderRadius="md"
+              css={{
+                // 🎮 PHASE BADGE PREMIUM STYLING
+                background: "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(37,99,235,0.3) 100%)",
+                border: "1px solid rgba(59,130,246,0.5)",
+                color: "#60a5fa",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              }}
+            >
+              {phaseLabel}
+            </Text>
+          </HStack>
+        )}
+
+        {/* 設定・退室ボタン */}
+        <HStack gap={1} align="center">
+          {onOpenSettings && (
+            <IconButton
+              aria-label="設定"
+              onClick={onOpenSettings}
+              size="sm"
+              variant="ghost"
+              css={{
+                // 🎮 PREMIUM ICON BUTTON
+                color: "rgba(255,255,255,0.7)",
+                _hover: { 
+                  background: "rgba(255,255,255,0.1)", 
+                  color: "#ffffff",
+                  transform: "translateY(-1px)",
+                },
+                borderRadius: "8px",
+                transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              }}
+            >
+              <FiSettings />
+            </IconButton>
+          )}
+          {onLeaveRoom && (
+            <IconButton
+              aria-label="ルームを退出"
+              onClick={onLeaveRoom}
+              size="sm"
+              variant="ghost"
+              title="メインメニューに戻る"
+              css={{
+                // 🎮 PREMIUM LOGOUT BUTTON
+                color: "rgba(239,68,68,0.7)",
+                _hover: { 
+                  background: "rgba(239,68,68,0.1)", 
+                  color: "#f87171",
+                  transform: "translateY(-1px)",
+                },
+                borderRadius: "8px",
+                transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              }}
+            >
+              <FiLogOut />
+            </IconButton>
+          )}
         </HStack>
-      )}
+      </HStack>
     </HStack>
   );
 }

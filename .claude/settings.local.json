@@ -35,7 +35,8 @@
       "Bash(grep:*)",
       "Read(c:\\Users\\hr-hm\\Desktop\\codex/**)",
       "Read(c:\\Users\\hr-hm\\Desktop\\codex/**)",
-      "Read(c:\\Users\\hr-hm\\Desktop\\codex/**)"
+      "Read(c:\\Users\\hr-hm\\Desktop\\codex/**)",
+      "Read(c:\\Users\\hr-hm\\Desktop\\codex\\Artifact/**)"
     ],
     "deny": [],
     "ask": []

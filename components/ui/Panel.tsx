@@ -26,6 +26,7 @@ export function Panel(props: PanelProps) {
     variant = "surface",
     elevated = false,
     className,
+    css: customCss,
     ...rest
   } = props;
   
@@ -35,12 +36,38 @@ export function Panel(props: PanelProps) {
   // classNameを結合してカスタマイズ可能に
   const combinedClassName = `panel ${className ?? ''}`.trim();
 
+  // 🎮 PREMIUM PANEL ENHANCEMENT
+  const premiumStyles = customCss || {};
+
   return (
-    <Box css={styles.container} className={combinedClassName} {...rest}>
+    <Box 
+      css={{
+        // Base recipe styles
+        ...styles.container,
+        // Premium enhancements
+        transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        // Custom styles override
+        ...premiumStyles,
+      }} 
+      className={combinedClassName} 
+      {...rest}
+    >
       {(title || actions) && (
-        <Box css={styles.header}>
+        <Box css={{
+          ...styles.header,
+          // 🎮 PREMIUM HEADER STYLING
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
+          backdropFilter: "blur(5px)",
+        }}>
           {title ? (
-            <Heading as={chakra.h3} css={styles.title}>
+            <Heading as={chakra.h3} css={{
+              ...styles.title,
+              // 🎮 PREMIUM TITLE STYLING
+              color: "#ffd700",
+              textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              fontWeight: 700,
+            }}>
               {title}
             </Heading>
           ) : (
@@ -49,7 +76,13 @@ export function Panel(props: PanelProps) {
           {actions && <Box css={styles.actions}>{actions}</Box>}
         </Box>
       )}
-      <Box css={styles.body}>{children}</Box>
+      <Box css={{
+        ...styles.body,
+        // 🎮 PREMIUM BODY STYLING
+        color: "rgba(255,255,255,0.9)",
+      }}>
+        {children}
+      </Box>
     </Box>
   );
 }

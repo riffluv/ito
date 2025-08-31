@@ -1,7 +1,7 @@
 "use client";
 
 // 重要コンポーネント: Eager loading（初期表示性能優先）
-import { Hud } from "@/components/Hud";
+// import { Hud } from "@/components/Hud"; // ヘッダー削除: MiniHandDockに統合済み
 
 // 旧CluePanelは未使用（刷新した中央UIに統合済み）
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
@@ -409,20 +409,7 @@ export default function RoomPage() {
 
   // 新しいGameLayoutを使用した予測可能な構造
   // Layout nodes split to avoid JSX nesting pitfalls
-  const headerNode = (
-    <Hud
-      roomName={room.name}
-      phase={room.status}
-      activeCount={onlinePlayers.length}
-      totalCount={players.length}
-      remainMs={null}
-      totalMs={null}
-      hostPrimary={showHostInHud ? hostPrimaryAction : null}
-      isHost={isHost}
-      onOpenSettings={() => setIsSettingsOpen(true)}
-      onLeaveRoom={leaveRoom}
-    />
-  );
+  const headerNode = undefined; // ヘッダー削除: MiniHandDockに機能統合済み
 
   const sidebarNode = undefined; // モック仕様: 左の参加者リストは廃止（待機エリアで代替）
 
@@ -476,6 +463,10 @@ export default function RoomPage() {
       roomStatus={room.status}
       defaultTopicType={room.options?.defaultTopicType || "通常版"}
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
+      // ヘッダー機能統合
+      roomName={room.name}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      onLeaveRoom={leaveRoom}
     />
   ) : (
     <Box h="1px" />

@@ -1,1 +1,18 @@
-{}
+{
+  "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms": {
+    "id": 12453,
+    "files": []
+  },
+  "lib\\services\\roomService.ts -> @/lib/game/random": {
+    "id": 56166,
+    "files": [
+      "static/chunks/166.31fef1d2476925ad.js"
+    ]
+  },
+  "lib\\services\\roomService.ts -> firebase/firestore": {
+    "id": 69842,
+    "files": [
+      "static/chunks/842.bfc2cce9e989e21d.js"
+    ]
+  }
+}
