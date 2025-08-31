@@ -95,6 +95,16 @@ export function useHostActions({
     }
   }, [onlineCount, players.length, room.options?.defaultTopicType, room.status, roomId]);
 
+  // resetアクションのハンドラーを個別にメモ化
+  const handleReset = useCallback(async () => {
+    try {
+      await topicControls.resetTopic(roomId);
+      notify({ title: "ゲームをリセットしました", type: "success" });
+    } catch (error) {
+      handleGameError(error, "ゲームリセット");
+    }
+  }, [roomId]);
+
   // actionsをメモ化してパフォーマンスを向上
   const actions: HostAction[] = useMemo(() => intents.map((i: HostIntent): HostAction => {
     const uniqueKey =
@@ -121,9 +131,12 @@ export function useHostActions({
     if (i.key === "advancedMode") {
       return make(() => {});
     }
+    if (i.key === "reset") {
+      return make(handleReset);
+    }
     // それ以外(旧pickTopic等) は no-op
     return make(() => {});
-  }), [intents, hostPrimaryAction, handleEvaluate, handleQuickStart]);
+  }), [intents, hostPrimaryAction, handleEvaluate, handleQuickStart, handleReset]);
 
   return actions;
 }

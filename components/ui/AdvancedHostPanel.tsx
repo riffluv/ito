@@ -29,6 +29,16 @@ export function AdvancedHostPanel({
 
   // デフォルトモードは "sequential" (通常モード)
   const currentMode = room.options?.resolveMode || "sequential";
+  
+  // ゲーム開始後はresolveMode変更を無効化
+  const canChangeMode = room.status === "waiting";
+  
+  // Debug log for troubleshooting
+  console.log("AdvancedHostPanel Debug:", {
+    status: room.status,
+    canChangeMode,
+    currentMode,
+  });
 
   const handleCategorySelect = async (category: string) => {
     try {
@@ -141,6 +151,7 @@ export function AdvancedHostPanel({
                       }
                       colorPalette="blue"
                       flex="1"
+                      disabled={!canChangeMode}
                       onClick={() => handleModeChange("sequential")}
                     >
                       通常モード
@@ -151,13 +162,16 @@ export function AdvancedHostPanel({
                       }
                       colorPalette="blue"
                       flex="1"
+                      disabled={!canChangeMode}
                       onClick={() => handleModeChange("sort-submit")}
                     >
                       一括判定
                     </AppButton>
                   </HStack>
                   <Text fontSize="xs" color="gray.600">
-                    通常: リアルタイム判定　｜　一括: 相談して並び替え後判定
+                    {canChangeMode 
+                      ? "通常: リアルタイム判定　｜　一括: 相談して並び替え後判定"
+                      : "ゲーム開始後はモード変更できません"}
                   </Text>
                 </VStack>
 
