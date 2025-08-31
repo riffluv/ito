@@ -289,31 +289,22 @@ const config = defineConfig({
               bg: "accentSubtle",
               color: "accent",
               _hover: {
-                bg: { base: "{colors.brand.100}", _dark: "{colors.brand.800}" },
+                bg: "{colors.brand.100}",
               },
               _active: {
-                bg: { base: "{colors.brand.200}", _dark: "{colors.brand.700}" },
+                bg: "{colors.brand.200}",
               },
             },
             soft: {
-              bg: { base: "{colors.orange.50}", _dark: "{colors.orange.900}" },
-              color: {
-                base: "{colors.orange.600}",
-                _dark: "{colors.orange.300}",
-              },
+              bg: "{colors.orange.50}",
+              color: "{colors.orange.600}",
               shadow: "xs",
               _hover: {
-                bg: {
-                  base: "{colors.orange.100}",
-                  _dark: "{colors.orange.800}",
-                },
+                bg: "{colors.orange.100}",
                 shadow: "sm",
               },
               _active: {
-                bg: {
-                  base: "{colors.orange.200}",
-                  _dark: "{colors.orange.700}",
-                },
+                bg: "{colors.orange.200}",
               },
             },
             link: {
