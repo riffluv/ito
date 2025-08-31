@@ -188,6 +188,58 @@ npm run dev
 - 参加者数表示（ロビー）は簡略化しています。
 - セキュリティルールは含まれません（本番運用時は Firestore ルールの設定が必須）。
 
+## Storybook / Mock HTML の位置づけ
+
+デザイン検証にはこれまで `artifact-*.html` 的な静的 Mock を利用していましたが、**Storybook** を導入したことで以下の利点があります。
+
+| 項目               | Mock HTML       | Storybook                                     |
+| ------------------ | --------------- | --------------------------------------------- |
+| 相互作用           | ほぼ不可 (静的) | Props/Controls で即時反映                     |
+| 回帰検知           | 手動目視        | Chromatic / Screenshot Diff 拡張可能          |
+| ドキュメント化     | 別ファイル      | Component Docs 自動生成                       |
+| 状態バリエーション | 手作業複製      | Story 単位 (順次/一括・waiting/finished など) |
+| チーム共有         | ファイル配布    | ホスト URL (CI 生成)                          |
+
+既存の Mock HTML は「初期デザイン意図のスナップショット」として残しつつ、新規 UI 実験は Storybook 上で行う方針です。
+
+起動:
+
+```bash
+npm run storybook
+```
+
+## resolveMode ユーティリティ抽象化
+
+`sequential` / `sort-submit` のモード分岐が散在していたため、`lib/game/resolveMode.ts` に以下を集約しました:
+
+- `normalizeResolveMode(mode)` 不正値 → `sequential` へフォールバック
+- `isSortSubmit(mode)` / `isSequential(mode)` 型ガード
+- `computeAllSubmitted({ mode, eligibleIds, proposal })` 一括提出完了判定
+- `canSubmitCard({ mode, canDecide, ready, placed, cluesReady })` UI ボタン制御
+
+これにより MiniHandDock / ドラッグドロップハンドラ / ルームロジックの重複 if 文を削減し、将来的に第三の解決方式を追加する場合もファイル 1 箇所で拡張が可能です。
+
+## スタイル方針 (MiniHandDock 抽象化)
+
+高頻度で視覚調整が入りそうな手札操作バーを対象に、視覚パターンを `theme/itoStyles.ts` にオブジェクト形式で切り出しました。 Chakra の `css` prop へ直接渡せる構造に統一し、**非デザイントークン (magic number)** をこのファイルへ集約: number バッジ、並び確定ボタン状態（有効/無効/共有スタイル）、ホスト分離線、バッジ色など。
+
+リファクタ成果:
+
+- JSX 側は語彙レベル (semantic) のみ保持し視覚差分 PR を最小化
+- Evaluate ボタンの有効/無効 複合スタイルを 3 パターン統合 (`evaluateShared` + state 別)
+- メトリクス (submit/decide/play) 開発用カウンタを globalThis に追加し将来の本格 telemetry 差し替えを容易化
+
+## ESLint 強化
+
+`.eslintrc.cjs` を新設し以下ルールを有効化:
+`eqeqeq`, `no-duplicate-imports`, `prefer-const`, `consistent-return`, `no-console (warn)`。既存の開発用デバッグ `console.log` は環境条件付きで残し warning 管理。
+
+## 今後の拡張指針 (抜粋)
+
+- resolveMode 第3案 (例: ターン制 reveal) は `resolveMode.ts` に列挙追加し predicate を拡張
+- Storybook へ Visual Regression (Chromatic) 統合 => PR 毎 snapshot
+- Telemetry: dev カウンタ置換として Firebase Analytics もしくは PostHog を feature flag 下で導入
+
 ## アーキテクチャ（リファクタ後の構成要点）
 
 - UI レイヤ

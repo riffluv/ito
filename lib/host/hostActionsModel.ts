@@ -20,11 +20,15 @@ export type HostIntent = {
   payload?: Record<string, unknown>;
   palette?: "brand" | "orange" | "gray" | "teal";
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
+  confirm?: {
+    title: string;
+    body?: string;
+  };
 };
 
 // 型ガード関数を追加
 function hasValidTopic(room: RoomDoc): boolean {
-  return typeof room.topic === 'string' && room.topic.length > 0;
+  return typeof room.topic === "string" && room.topic.length > 0;
 }
 
 function getProposalArray(room: RoomDoc): string[] {
@@ -46,9 +50,7 @@ export function buildHostActionModel(
   const resolveMode = room.options?.resolveMode;
   const topicSelected = hasValidTopic(room);
   const proposal = getProposalArray(room);
-  const assigned = players.filter(
-    (p) => typeof p.number === "number"
-  ).length;
+  const assigned = players.filter((p) => typeof p.number === "number").length;
   // アクティブ人数: realtime presence 集計があればそれを、なければ players 配列長
   const effectiveActive =
     typeof _onlineCount === "number" ? _onlineCount : players.length;
@@ -98,6 +100,10 @@ export function buildHostActionModel(
       label: "中断",
       palette: "gray",
       variant: "ghost",
+      confirm: {
+        title: "ゲームを中断しますか?",
+        body: "現在の進行状況は失われ、待機状態に戻ります。よろしいですか?",
+      },
     });
 
     if (resolveMode === "sort-submit" && topicSelected) {

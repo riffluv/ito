@@ -1,13 +1,13 @@
-import { Timestamp, FieldValue } from 'firebase/firestore';
+import { FieldValue, Timestamp } from "firebase/firestore";
 
 export type RoomOptions = {
   allowContinueAfterFail: boolean;
   /**
-   * クリア方式 (resolveMode)
+   * クリア方式 (resolveMode) - sanitize 時に常に正規化され、必須となる
    * - "sequential": 従来の 1 枚ずつ昇順で出して随時判定
    * - "sort-submit": 全員がカード(伏せ/連想ワード表示)を場に置き、相談しながら並べ替えてホストが一括判定
    */
-  resolveMode?: "sequential" | "sort-submit";
+  resolveMode: "sequential" | "sort-submit";
   /**
    * デフォルトお題タイプ
    * ワンクリック開始時に使用されるお題の山札タイプ

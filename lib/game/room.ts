@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { requireDb } from "@/lib/firebase/require";
+import { normalizeResolveMode } from "@/lib/game/resolveMode";
 import {
   applyPlay,
   evaluateSorted,
@@ -90,7 +91,12 @@ export async function finishRoom(roomId: string, success: boolean) {
 export async function continueAfterFail(roomId: string) {
   // 次ラウンドへ進む前に waiting に戻す（お題/配札はホストの開始操作で行う）
   const ref = doc(db!, "rooms", roomId);
-  await updateDoc(ref, { status: "waiting", result: null, order: null, deal: null });
+  await updateDoc(ref, {
+    status: "waiting",
+    result: null,
+    order: null,
+    deal: null,
+  });
 }
 
 export async function resetRoom(roomId: string) {
@@ -215,7 +221,9 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids)) activeCount = uids.length;
     }
-  } catch { activeCount = null; }
+  } catch {
+    activeCount = null;
+  }
 
   const _db = requireDb();
   await runTransaction(_db, async (tx) => {
@@ -223,7 +231,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
     const room: any = roomSnap.data();
-    const mode: string = room?.options?.resolveMode || "sequential";
+    const mode = normalizeResolveMode(room?.options?.resolveMode);
     const status: string = room?.status || "waiting";
     if (mode !== "sort-submit")
       throw new Error("このルームでは一括判定は無効です");
@@ -231,12 +239,15 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     // 提出リストの妥当性チェック（重複/人数）
     const uniqueOk = new Set(list).size === list.length;
     if (!uniqueOk) throw new Error("提出リストに重複があります");
-    const expected = typeof activeCount === 'number'
-      ? activeCount
-      : (Array.isArray(room?.deal?.players) ? (room.deal.players as string[]).length : list.length);
+    const expected =
+      typeof activeCount === "number"
+        ? activeCount
+        : Array.isArray(room?.deal?.players)
+          ? (room.deal.players as string[]).length
+          : list.length;
     if (expected >= 2 && list.length !== expected) {
       throw new Error(`提出数が有効人数(${expected})と一致しません`);
-    }    // プレイヤーの数字を取得して昇順チェック（純関数へ）
+    } // プレイヤーの数字を取得して昇順チェック（純関数へ）
     const numbers: Record<string, number | null | undefined> = {};
     for (const pid of list) {
       const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
