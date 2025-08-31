@@ -43,11 +43,22 @@ export function CardRenderer({
   const numberVisibleBase = typeof number === "number" && isPlaced;
   let showNumber = numberVisibleBase;
 
-  if (resolveMode === "sort-submit" && roomStatus !== "finished") {
-    showNumber = false;
+  // 🎮 一括モードの正しい数字表示ロジック
+  if (resolveMode === "sort-submit") {
+    if (roomStatus === "finished") {
+      // ゲーム終了時は全て表示
+      showNumber = numberVisibleBase;
+    } else if (roomStatus === "reveal" && revealAnimating && typeof idx === "number") {
+      // リビール演出中は順次表示
+      showNumber = numberVisibleBase && idx < revealIndex;
+    } else {
+      // 配置時は連想ワードのまま（数字は隠す）
+      showNumber = false;
+    }
   }
 
-  if (revealAnimating && typeof idx === "number") {
+  // 順次モードの場合はrevealAnimating処理
+  if (revealAnimating && typeof idx === "number" && resolveMode !== "sort-submit") {
     showNumber = idx < revealIndex;
   }
 
@@ -72,48 +83,23 @@ export function CardRenderer({
   const shouldShowGreen = cardIsRevealed && !failureConfirmed;
   const shouldShowRed = cardIsRevealed && failureConfirmed;
 
-  const persistentFlip =
-    resolveMode === "sort-submit" && typeof idx === "number";
-  const flipped =
-    persistentFlip &&
-    (roomStatus === "finished"
-      ? true
-      : roomStatus === "reveal" && idx < revealIndex);
-
-  if (persistentFlip) {
-    return (
-      <GameCard
-        key={id}
-        variant="flip"
-        flipped={flipped}
-        index={typeof idx === "number" ? idx : null}
-        name={player?.name}
-        clue={player?.clue1}
-        number={typeof number === "number" ? number : null}
-        state={
-          shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
-        }
-      />
-    );
-  }
-
+  // 🎮 UNIFIED CARD DESIGN: すべてのモードでflat variantに統一
+  // 一括モードも順次モードも同じGameCardデザインを使用
   return (
-    <>
-      <GameCard
-        key={id}
-        variant="flat"
-        index={typeof idx === "number" ? idx : null}
-        name={player?.name}
-        clue={
-          resolveMode === "sort-submit" && roomStatus !== "finished"
-            ? player?.clue1 || "(連想待ち)"
-            : player?.clue1
-        }
-        number={showNumber && typeof number === "number" ? number : null}
-        state={
-          shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
-        }
-      />
-    </>
+    <GameCard
+      key={id}
+      variant="flat"
+      index={typeof idx === "number" ? idx : null}
+      name={player?.name}
+      clue={
+        resolveMode === "sort-submit" && roomStatus !== "finished"
+          ? player?.clue1 || "(連想待ち)"
+          : player?.clue1
+      }
+      number={showNumber && typeof number === "number" ? number : null}
+      state={
+        shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
+      }
+    />
   );
 }
