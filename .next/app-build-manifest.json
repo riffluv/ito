@@ -41,6 +41,15 @@
       "static/chunks/411-a9badd2fccd7b4d4.js",
       "static/chunks/app/design/compare/page-e6232212f8d8e0f4.js"
     ],
+    "/design/tokens/page": [
+      "static/chunks/webpack-d29ef509453d7783.js",
+      "static/chunks/fd9d1056-8070a0c266a6788e.js",
+      "static/chunks/23-c1c78d67f46d9a65.js",
+      "static/chunks/main-app-70f62b2eb8cae7c7.js",
+      "static/chunks/ui-3cd7c4097c8c1d3a.js",
+      "static/chunks/411-a9badd2fccd7b4d4.js",
+      "static/chunks/app/design/tokens/page-fbe78386576e1acc.js"
+    ],
     "/page": [
       "static/chunks/webpack-d29ef509453d7783.js",
       "static/chunks/fd9d1056-8070a0c266a6788e.js",
@@ -71,7 +80,8 @@
       "static/chunks/691-fe232203363339c7.js",
       "static/chunks/893-60f2529d847352ce.js",
       "static/chunks/327-24a32dd9cbae4074.js",
-      "static/chunks/app/rooms/[roomId]/page-d8c757c0d1334919.js"
+      "static/chunks/285-df48f15e5fd7a73e.js",
+      "static/chunks/app/rooms/[roomId]/page-aaf0b1ee3a06641f.js"
     ],
     "/rooms/[roomId]/error": [
       "static/chunks/webpack-d29ef509453d7783.js",
@@ -91,15 +101,6 @@
       "static/chunks/411-a9badd2fccd7b4d4.js",
       "static/chunks/app/rooms/[roomId]/loading-7ff9ff279145403c.js"
     ],
-    "/design/tokens/page": [
-      "static/chunks/webpack-d29ef509453d7783.js",
-      "static/chunks/fd9d1056-8070a0c266a6788e.js",
-      "static/chunks/23-c1c78d67f46d9a65.js",
-      "static/chunks/main-app-70f62b2eb8cae7c7.js",
-      "static/chunks/ui-3cd7c4097c8c1d3a.js",
-      "static/chunks/411-a9badd2fccd7b4d4.js",
-      "static/chunks/app/design/tokens/page-fbe78386576e1acc.js"
-    ],
     "/design/preview/page": [
       "static/chunks/webpack-d29ef509453d7783.js",
       "static/chunks/fd9d1056-8070a0c266a6788e.js",
@@ -107,7 +108,8 @@
       "static/chunks/main-app-70f62b2eb8cae7c7.js",
       "static/chunks/ui-3cd7c4097c8c1d3a.js",
       "static/chunks/411-a9badd2fccd7b4d4.js",
-      "static/chunks/app/design/preview/page-25dec0fc90e45a5d.js"
+      "static/chunks/285-df48f15e5fd7a73e.js",
+      "static/chunks/app/design/preview/page-bdda16b3f1d622c2.js"
     ],
     "/rules/page": [
       "static/chunks/webpack-d29ef509453d7783.js",

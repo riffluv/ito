@@ -11,13 +11,25 @@
 
 // 🌌 COSMIC BACKGROUND SYSTEM
 export const COSMIC_BACKGROUNDS = {
-  // Main game background - deep space nebula
+  // Main game background - Artifact-style deep purple mystical space
   DEEP_SPACE: `
-    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 80% 50%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse 100% 80% at 0% 90%, rgba(255, 225, 119, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse 100% 160% at 70% 10%, rgba(120, 200, 255, 0.4) 0%, transparent 50%),
-    linear-gradient(135deg, #0c0c1d 0%, #1a1a2e 25%, #16213e 50%, #0f1419 100%)
+    radial-gradient(ellipse 120% 80% at 50% 20%, rgba(94, 39, 176, 0.6) 0%, rgba(67, 56, 202, 0.4) 30%, transparent 70%),
+    radial-gradient(ellipse 100% 60% at 20% 70%, rgba(147, 51, 234, 0.5) 0%, rgba(109, 40, 217, 0.3) 40%, transparent 70%),
+    radial-gradient(ellipse 80% 100% at 80% 30%, rgba(168, 85, 247, 0.4) 0%, rgba(139, 92, 246, 0.2) 50%, transparent 70%),
+    radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(147, 51, 234, 0.3) 0%, transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.2) 0%, transparent 45%),
+    linear-gradient(145deg, 
+      rgba(17, 24, 39, 1) 0%,
+      rgba(30, 27, 75, 0.98) 12%,
+      rgba(55, 48, 163, 0.95) 28%,
+      rgba(67, 56, 202, 0.92) 45%,
+      rgba(76, 29, 149, 0.94) 62%,
+      rgba(45, 37, 125, 0.96) 78%,
+      rgba(30, 27, 75, 0.98) 88%,
+      rgba(17, 24, 39, 1) 100%
+    )
   `,
   
   // Card hover states
@@ -205,35 +217,70 @@ export function getFactionStyles(num: number) {
   };
 }
 
-// 🌟 PREMIUM UI COMPONENTS STYLES
+// 🌟 PREMIUM UI COMPONENTS STYLES - Artifact Inspired
 export const PREMIUM_COMPONENTS = {
-  // Game board luxury frame
-  LUXURY_FRAME: {
-    background: `
-      linear-gradient(45deg, 
-        rgba(255,215,0,0.1) 0%, 
-        rgba(255,215,0,0.05) 50%, 
-        rgba(139,69,19,0.1) 100%
-      )
-    `,
-    border: "2px solid",
-    borderImage: "linear-gradient(45deg, #ffd700, #daa520, #b8860b) 1",
-    boxShadow: `
-      0 0 30px rgba(255,215,0,0.3),
-      inset 0 1px 0 rgba(255,255,255,0.1)
-    `,
-  },
-  
-  // Premium button system
-  PREMIUM_BUTTON: {
+  // Artifact-style mystical panel frame  
+  MYSTICAL_PANEL: {
     background: `
       linear-gradient(135deg, 
-        rgba(255,215,0,0.2) 0%, 
-        rgba(184,134,11,0.3) 100%
+        rgba(139, 92, 246, 0.12) 0%,
+        rgba(168, 85, 247, 0.08) 25%,
+        rgba(147, 51, 234, 0.1) 50%,
+        rgba(109, 40, 217, 0.08) 75%,
+        rgba(94, 39, 176, 0.12) 100%
       )
     `,
-    border: "1px solid rgba(255,215,0,0.5)",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
-    backdropFilter: "blur(8px)",
+    border: "1px solid rgba(168, 85, 247, 0.4)",
+    borderRadius: "12px",
+    boxShadow: `
+      0 8px 32px rgba(94, 39, 176, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(168, 85, 247, 0.2),
+      inset 0 -1px 0 rgba(67, 56, 202, 0.3)
+    `,
+    backdropFilter: "blur(16px) saturate(1.2)",
+  },
+  
+  // Artifact-style premium button
+  ARTIFACT_BUTTON: {
+    background: `
+      linear-gradient(135deg, 
+        rgba(168, 85, 247, 0.2) 0%,
+        rgba(139, 92, 246, 0.15) 25%,
+        rgba(147, 51, 234, 0.18) 50%,
+        rgba(109, 40, 217, 0.15) 75%,
+        rgba(94, 39, 176, 0.2) 100%
+      )
+    `,
+    border: "1px solid rgba(168, 85, 247, 0.6)",
+    borderRadius: "8px",
+    boxShadow: `
+      0 4px 16px rgba(94, 39, 176, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(168, 85, 247, 0.3)
+    `,
+    backdropFilter: "blur(12px)",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  
+  // Mystical card frame (hand-crafted feel)
+  MYSTICAL_CARD: {
+    background: `
+      linear-gradient(145deg, 
+        rgba(168, 85, 247, 0.15) 0%,
+        rgba(139, 92, 246, 0.1) 30%,
+        rgba(147, 51, 234, 0.12) 60%,
+        rgba(109, 40, 217, 0.08) 100%
+      )
+    `,
+    border: "2px solid rgba(168, 85, 247, 0.5)",
+    borderRadius: "16px",
+    boxShadow: `
+      0 12px 40px rgba(94, 39, 176, 0.4),
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      inset 0 2px 0 rgba(168, 85, 247, 0.2),
+      inset 0 -2px 0 rgba(67, 56, 202, 0.3)
+    `,
+    backdropFilter: "blur(20px) saturate(1.3)",
   },
 } as const;

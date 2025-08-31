@@ -240,15 +240,11 @@ export function CentralCardBoard({
           fontSize={{ base: "0.875rem", md: "1rem" }} 
           lineHeight={1.3}
           css={{
-            // 🎮 PREMIUM HEADER TEXT
+            // 🎮 CLEAN PREMIUM HEADER TEXT - 背景・枠線なしでクリーンに
             color: "#ffd700",
             textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-            background: "linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(184,134,11,0.1) 100%)",
-            border: "1px solid rgba(255,215,0,0.3)",
-            borderRadius: "12px",
             py: 2,
             px: 4,
-            backdropFilter: "blur(8px)",
           }}
         >
           小さい順から大きい順に並べよう

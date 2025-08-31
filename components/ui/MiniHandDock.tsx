@@ -208,23 +208,27 @@ export default function MiniHandDock({
       w="100%"
       position="relative"
       css={{
-        // 🎮 PREMIUM HAND DOCK STYLING
-        ...PREMIUM_COMPONENTS.LUXURY_FRAME,
+        // 🔮 ARTIFACT-STYLE MYSTICAL DOCK
+        ...PREMIUM_COMPONENTS.MYSTICAL_PANEL,
         padding: "1rem 1.5rem",
-        borderRadius: "16px",
-        backdropFilter: "blur(15px)",
+        borderRadius: "20px",
+        border: "1px solid rgba(168, 85, 247, 0.6)",
         background: `
           linear-gradient(135deg, 
-            rgba(101,67,33,0.8) 0%, 
-            rgba(80,53,26,0.9) 100%
+            rgba(139, 92, 246, 0.16) 0%,
+            rgba(168, 85, 247, 0.12) 25%,
+            rgba(147, 51, 234, 0.14) 50%,
+            rgba(109, 40, 217, 0.12) 75%,
+            rgba(94, 39, 176, 0.16) 100%
           )
         `,
         boxShadow: `
-          0 8px 32px rgba(0,0,0,0.6),
-          inset 0 1px 0 rgba(160,133,91,0.3),
-          inset 0 -1px 0 rgba(0,0,0,0.2)
+          0 16px 48px rgba(94, 39, 176, 0.4),
+          0 8px 24px rgba(0, 0, 0, 0.6),
+          inset 0 2px 0 rgba(168, 85, 247, 0.3),
+          inset 0 -2px 0 rgba(67, 56, 202, 0.4)
         `,
-        border: "2px solid rgba(160,133,91,0.6)",
+        backdropFilter: "blur(28px) saturate(1.4)",
       }}
     >
       {/* 左側: プレイヤーアクション（最優先） */}
@@ -316,7 +320,7 @@ export default function MiniHandDock({
           disabled={!canDecide}
           css={{
             // 🎮 PREMIUM BUTTON STYLING
-            ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+            ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
             color: "#ffd700",
             _hover: { 
               background: "linear-gradient(135deg, rgba(255,215,0,0.3) 0%, rgba(184,134,11,0.4) 100%)",
@@ -341,7 +345,7 @@ export default function MiniHandDock({
           disabled={!canSubmit}
           css={{
             // 🎮 PREMIUM SUBMIT BUTTON
-            ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+            ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
             background: "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(21,128,61,0.3) 100%)",
             border: "1px solid rgba(34,197,94,0.5)",
             color: "#22c55e",
@@ -377,7 +381,7 @@ export default function MiniHandDock({
             onClick={quickStart}
             css={{
               // 🎮 PREMIUM START BUTTON
-              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
               background: `
                 linear-gradient(135deg, 
                   rgba(59,130,246,0.2) 0%, 
@@ -419,7 +423,7 @@ export default function MiniHandDock({
             disabled={!allSubmitted}
             css={{
               // 🎮 PREMIUM EVALUATE BUTTON
-              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
               background: allSubmitted
                 ? `linear-gradient(135deg, 
                     rgba(245,158,11,0.2) 0%, 
@@ -462,7 +466,7 @@ export default function MiniHandDock({
             onClick={continueRound}
             css={{
               // 🎮 PREMIUM RETRY BUTTON
-              ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
               background: `
                 linear-gradient(135deg, 
                   rgba(139,92,246,0.2) 0%, 
@@ -541,7 +545,7 @@ export default function MiniHandDock({
                     }
                     css={{
                       // 🎮 PREMIUM TINY BUTTON
-                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
                       fontSize: "0.75rem",
                       px: 2,
                       py: 1,
@@ -563,7 +567,7 @@ export default function MiniHandDock({
                     onClick={() => topicControls.dealNumbers(roomId)}
                     css={{
                       // 🎮 PREMIUM TINY BUTTON
-                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
                       fontSize: "0.75rem",
                       px: 2,
                       py: 1,
@@ -585,7 +589,7 @@ export default function MiniHandDock({
                     onClick={resetGame}
                     css={{
                       // 🎮 PREMIUM DANGER BUTTON
-                      ...PREMIUM_COMPONENTS.PREMIUM_BUTTON,
+                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
                       fontSize: "0.75rem",
                       px: 2,
                       py: 1,
@@ -629,39 +633,8 @@ export default function MiniHandDock({
           </HStack>
         )}
 
-        {/* ルーム情報 */}
-        {roomName && (
-          <HStack gap={1} align="center">
-            <Text
-              fontSize="xs"
-              fontWeight="500"
-              color="rgba(255,255,255,0.8)"
-              fontFamily="'Monaco', monospace"
-              css={{
-                textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-              }}
-            >
-              {roomName}
-            </Text>
-            <Text
-              fontSize="xs"
-              fontWeight="500"
-              px={2}
-              py={1}
-              borderRadius="md"
-              css={{
-                // 🎮 PHASE BADGE PREMIUM STYLING
-                background: "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(37,99,235,0.3) 100%)",
-                border: "1px solid rgba(59,130,246,0.5)",
-                color: "#60a5fa",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-              }}
-            >
-              {phaseLabel}
-            </Text>
-          </HStack>
-        )}
+        {/* ルーム情報: UI表示は削除、内部システムは保持 
+            将来的には他の場所（ヘッダーやデバッグパネルなど）で使用可能 */}
 
         {/* 設定・退室ボタン */}
         <HStack gap={1} align="center">
