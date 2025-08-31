@@ -1,0 +1,2539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITO - Mystical Convergence</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a1a2e 30%, #0a0a0f 100%);
+            color: #e6ccff;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 宇宙星々パーティクル効果 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(1px 1px at 150px 80px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(2px 2px at 320px 140px, rgba(179, 102, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 500px 60px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 700px 200px, rgba(179, 102, 255, 0.2), transparent),
+                radial-gradient(3px 3px at 900px 120px, rgba(255, 255, 255, 0.5), transparent);
+            background-repeat: repeat;
+            background-size: 1000px 300px;
+            animation: starTwinkle 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* 神秘的なゲーム空間 */
+        .game-table {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: transparent;
+            z-index: 1;
+        }
+
+        /* 神秘的なトライアングルを除去 */
+
+        /* HUD Header - Professional Style (実装に合わせる) */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: 
+                linear-gradient(180deg, 
+                    rgba(179, 102, 255, 0.15) 0%, 
+                    rgba(128, 51, 255, 0.1) 50%,
+                    rgba(179, 102, 255, 0.05) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(179, 102, 255, 0.3);
+        }
+
+        /* Game Title - Professional Style */
+        .logo {
+            font-family: 'Inter', 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #e6ccff;
+            text-shadow: 
+                0 0 20px rgba(179, 102, 255, 0.6),
+                1px 1px 3px rgba(0, 0, 0, 0.8);
+            letter-spacing: 0;
+        }
+
+        /* Room Info Area - Professional Style */
+        .room-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .room-name {
+            background: rgba(40, 40, 50, 0.8);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: 'Monaco', monospace;
+            font-size: 14px;
+            color: #e6ccff;
+            border: 1px solid rgba(179, 102, 255, 0.4);
+        }
+
+        .phase-indicator {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            box-shadow: none;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        /* Header Buttons */
+        .header-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .header-button.settings {
+            color: #6b7280;
+        }
+
+        .header-button.settings:hover {
+            background: rgba(156, 163, 175, 0.1);
+            color: #374151;
+        }
+
+        .header-button.leave {
+            color: #dc2626;
+        }
+
+        .header-button.leave:hover {
+            background: rgba(220, 38, 38, 0.05);
+            color: #b91c1c;
+        }
+
+        /* メインゲームエリア */
+        .main-game {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ミニマルなプレイヤー表示 - 物理的テーブル感 */
+        .player-indicator {
+            position: fixed;
+            background: 
+                linear-gradient(135deg,
+                    rgba(128, 51, 255, 0.4),
+                    rgba(179, 102, 255, 0.4));
+            border: 2px solid rgba(160, 133, 91, 0.7);
+            border-radius: 15px;
+            padding: 12px 20px;
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(255, 215, 0, 0.3),
+                inset 0 2px 0 rgba(255, 215, 0, 0.4);
+            z-index: 15;
+        }
+
+        .player-indicator.top-left {
+            top: 100px;
+            left: 30px;
+        }
+
+        .player-indicator.top-right {
+            top: 100px;
+            right: 30px;
+        }
+
+        .player-name-display {
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        .player-count-display {
+            color: rgba(160, 133, 91, 1);
+            font-size: 12px;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        /* 中央エリア - フルスクリーン最適化 */
+        .central-area {
+            margin: 0;
+            padding: 15px 40px;
+            height: calc(100vh - 70px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 40px;
+        }
+
+        /* 物理的テーブル上のトピック表示 */
+        .topic-card {
+            background: 
+                linear-gradient(135deg,
+                    rgba(128, 51, 255, 0.4) 0%,
+                    rgba(179, 102, 255, 0.4) 30%,
+                    rgba(160, 133, 91, 0.9) 70%,
+                    rgba(128, 51, 255, 0.4) 100%);
+            border: 3px solid rgba(160, 133, 91, 0.8);
+            border-radius: 20px;
+            padding: 30px 45px;
+            margin-bottom: 35px;
+            text-align: center;
+            box-shadow: 
+                0 12px 35px rgba(0, 0, 0, 0.8),
+                0 0 25px rgba(255, 215, 0, 0.3),
+                inset 0 3px 0 rgba(255, 215, 0, 0.4),
+                inset 0 0 20px rgba(128, 51, 255, 0.1);
+            width: 600px;
+            min-height: 100px;
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .topic-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(160, 133, 91, 0.8) 30%,
+                rgba(160, 133, 91, 1) 50%,
+                rgba(160, 133, 91, 0.8) 70%,
+                transparent 100%);
+        }
+
+        .topic-title {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 10px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+
+        .topic-value {
+            font-family: 'Cinzel', serif;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 26px;
+            font-weight: 600;
+            text-shadow: 
+                0 0 8px rgba(160, 133, 91, 0.8),
+                2px 2px 4px rgba(0, 0, 0, 1);
+            margin: 4px 0;
+            letter-spacing: 1px;
+            line-height: 1.2;
+            word-wrap: break-word;
+            hyphens: auto;
+            max-width: 100%;
+        }
+
+        .topic-category {
+            color: rgba(160, 133, 91, 0.9);
+            font-size: 9px;
+            margin-top: 6px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            opacity: 0.85;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        /* 透明なカードエリア - 直接テーブル上に配置 */
+        .card-play-area {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 25px 15px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 12px;
+            max-width: 1300px;
+            width: 100%;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        /* ::before擬似要素を削除 - 完全に透明なエリア */
+
+        /* 連想ワード表示 */
+        .card-word {
+            font-size: 10px;
+            color: rgba(255, 215, 0, 0.9);
+            text-transform: none;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        /* 提出済みカード */
+        .player-card.submitted {
+            border-color: rgba(255, 215, 0, 1);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                0 0 25px rgba(255, 215, 0, 0.4),
+                inset 0 2px 0 rgba(255, 215, 0, 0.5);
+        }
+
+        /* カードプレースホルダー */
+        .card-placeholder {
+            width: 120px;
+            height: 170px;
+            border: 2px dashed rgba(255, 215, 0, 0.4);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 15, 50, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .card-placeholder:hover {
+            border-color: rgba(255, 215, 0, 0.6);
+            background: rgba(30, 15, 50, 0.4);
+        }
+
+        .placeholder-text {
+            color: rgba(255, 215, 0, 0.6);
+            font-size: 11px;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* 参加者待機エリア */
+        .waiting-area {
+            position: fixed;
+            bottom: 120px;
+            left: 40px;
+            right: 40px;
+            background: 
+                linear-gradient(180deg,
+                    rgba(128, 51, 255, 0.3) 0%,
+                    rgba(80, 53, 26, 0.9) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                inset 0 2px 0 rgba(255, 215, 0, 0.3);
+        }
+
+        .waiting-title {
+            color: rgba(160, 133, 91, 1);
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .waiting-cards {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* 待機中のカード */
+        .player-card.waiting {
+            width: 100px;
+            height: 140px;
+            background: 
+                linear-gradient(135deg,
+                    rgba(60, 30, 90, 0.8) 0%,
+                    rgba(80, 40, 120, 0.8) 100%);
+            border: 2px solid rgba(147, 112, 219, 0.6);
+            opacity: 0.8;
+            animation: waitingPulse 2s ease-in-out infinite alternate;
+        }
+
+        .waiting-label {
+            font-size: 8px;
+            color: rgba(147, 112, 219, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        /* 待機中カードの中央エリア */
+        .card-center {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thinking-icon {
+            font-size: 32px;
+            animation: thinkingPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes thinkingPulse {
+            0% { 
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            100% { 
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes waitingPulse {
+            0% { 
+                border-color: rgba(147, 112, 219, 0.4);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            }
+            100% { 
+                border-color: rgba(147, 112, 219, 0.8);
+                box-shadow: 0 6px 20px rgba(147, 112, 219, 0.3);
+            }
+        }
+
+        /* ワード入力エリア */
+        .word-input-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .word-input {
+            padding: 12px 18px;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 25px;
+            background: rgba(128, 51, 255, 0.3);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .word-input:focus {
+            outline: none;
+            border-color: rgba(160, 133, 91, 0.9);
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.4),
+                inset 0 2px 0 rgba(255, 215, 0, 0.3);
+        }
+
+        .word-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .submit-word {
+            animation: submitPulse 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes submitPulse {
+            0% { 
+                box-shadow: 
+                    0 4px 15px rgba(255, 215, 0, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+            100% { 
+                box-shadow: 
+                    0 6px 20px rgba(255, 215, 0, 0.6),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            }
+        }
+
+        .instruction {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 25px;
+            text-align: center;
+            text-shadow: 
+                0 0 8px rgba(255, 215, 0, 0.3),
+                1px 1px 3px rgba(0, 0, 0, 0.8);
+            letter-spacing: 0.5px;
+        }
+
+        /* 物理的テーブル上のプレイヤーカード - 紫色復活 */
+        .player-card {
+            background: 
+                linear-gradient(135deg,
+                    rgba(30, 15, 50, 0.95) 0%,
+                    rgba(50, 25, 80, 0.95) 30%,
+                    rgba(70, 35, 110, 0.95) 70%,
+                    rgba(30, 15, 50, 0.95) 100%);
+            border: 3px solid rgba(255, 215, 0, 0.8);
+            border-radius: 15px;
+            width: 120px;
+            height: 170px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                0 0 20px rgba(255, 215, 0, 0.3),
+                inset 0 2px 0 rgba(255, 215, 0, 0.4),
+                inset 0 0 15px rgba(30, 15, 50, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            overflow: hidden;
+            backdrop-filter: blur(15px);
+        }
+
+        .player-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 215, 0, 0.9) 50%,
+                transparent 100%);
+        }
+
+        .player-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 
+                0 12px 35px rgba(0, 0, 0, 0.8),
+                0 0 30px rgba(255, 215, 0, 0.5),
+                inset 0 2px 0 rgba(255, 215, 0, 0.6),
+                inset 0 0 20px rgba(30, 15, 50, 0.4);
+            border-color: rgba(255, 215, 0, 1);
+        }
+
+        .card-header {
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.4);
+        }
+
+        .card-number {
+            font-family: 'Cinzel', serif;
+            font-size: 44px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 
+                0 0 12px rgba(255, 215, 0, 0.8),
+                2px 2px 4px rgba(0, 0, 0, 1);
+            margin: 12px 0;
+        }
+
+        .card-footer {
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 215, 0, 0.4);
+        }
+
+        .card-player {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .card-position {
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            background: 
+                linear-gradient(135deg,
+                    rgba(255, 215, 0, 0.9),
+                    rgba(255, 165, 0, 0.9));
+            color: rgba(0, 0, 0, 0.9);
+            width: 26px;
+            height: 26px;
+            border-radius: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 
+                0 2px 6px rgba(255, 215, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        /* カード判定結果表示 */
+        .player-card.correct {
+            border-color: rgba(76, 175, 80, 1) !important;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                0 0 30px rgba(76, 175, 80, 0.6),
+                inset 0 2px 0 rgba(76, 175, 80, 0.8) !important;
+            animation: correctPulse 1s ease-in-out;
+        }
+
+        .player-card.incorrect {
+            border-color: rgba(244, 67, 54, 1) !important;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                0 0 30px rgba(244, 67, 54, 0.6),
+                inset 0 2px 0 rgba(244, 67, 54, 0.8) !important;
+            animation: incorrectShake 0.8s ease-in-out;
+        }
+
+        .player-card.flipping {
+            animation: cardFlip 0.8s ease-in-out;
+        }
+
+        @keyframes cardFlip {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(0deg); }
+        }
+
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes incorrectShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Artifact風最終結果メッセージ */
+        .final-result {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 800px;
+            height: 600px;
+            background: 
+                radial-gradient(ellipse at center, 
+                    rgba(26, 13, 40, 0.98) 0%,
+                    rgba(18, 9, 30, 0.99) 70%,
+                    rgba(12, 6, 20, 1) 100%);
+            border: none;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cinzel', serif;
+            text-align: center;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        /* 星空背景 */
+        .final-result::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 100px 50px, rgba(255, 255, 255, 0.8), transparent),
+                radial-gradient(1px 1px at 200px 120px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 300px 80px, rgba(147, 112, 219, 0.7), transparent),
+                radial-gradient(2px 2px at 400px 160px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(1px 1px at 50px 180px, rgba(255, 255, 255, 0.9), transparent),
+                radial-gradient(1px 1px at 600px 100px, rgba(138, 43, 226, 0.6), transparent),
+                radial-gradient(2px 2px at 150px 300px, rgba(255, 255, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 500px 250px, rgba(255, 255, 255, 0.8), transparent);
+            background-size: 800px 600px;
+            animation: starTwinkle 4s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes starTwinkle {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* 中央の幾何学図形 */
+        .sacred-geometry {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(255, 215, 0, 0.8);
+            opacity: 0;
+            animation: geometryAppear 2s ease-out 0.5s forwards;
+        }
+
+        .sacred-geometry::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            width: 140px;
+            height: 140px;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            animation: geometryRotate 8s linear infinite;
+        }
+
+        .sacred-geometry::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(60deg);
+            width: 100px;
+            height: 100px;
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            animation: geometryRotate 12s linear infinite reverse;
+        }
+
+        @keyframes geometryAppear {
+            0% { 
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+            }
+            100% { 
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotate(360deg);
+            }
+        }
+
+        @keyframes geometryRotate {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* メインテキスト */
+        .result-title {
+            font-size: 72px;
+            font-weight: 300;
+            letter-spacing: 12px;
+            margin-bottom: 20px;
+            opacity: 0;
+            z-index: 10;
+            position: relative;
+        }
+
+        .result-subtitle {
+            font-size: 18px;
+            font-weight: 400;
+            letter-spacing: 4px;
+            opacity: 0.8;
+            margin-top: 40px;
+            opacity: 0;
+            z-index: 10;
+            position: relative;
+        }
+
+        .final-result.success .result-title {
+            color: rgba(255, 215, 0, 1);
+            text-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.8),
+                0 0 40px rgba(255, 215, 0, 0.6),
+                2px 2px 4px rgba(0, 0, 0, 0.9);
+            animation: successTextAppear 2s ease-out 1s forwards;
+        }
+
+        .final-result.failure .result-title {
+            color: rgba(220, 53, 69, 1);
+            text-shadow: 
+                0 0 20px rgba(220, 53, 69, 0.8),
+                0 0 40px rgba(220, 53, 69, 0.6),
+                2px 2px 4px rgba(0, 0, 0, 0.9);
+            animation: failureTextAppear 2s ease-out 1s forwards;
+        }
+
+        .final-result.success .result-subtitle {
+            color: rgba(255, 215, 0, 0.8);
+            animation: subtitleAppear 2s ease-out 1.5s forwards;
+        }
+
+        .final-result.failure .result-subtitle {
+            color: rgba(220, 53, 69, 0.8);
+            animation: subtitleAppear 2s ease-out 1.5s forwards;
+        }
+
+        .final-result.success .sacred-geometry {
+            border-color: rgba(255, 215, 0, 0.8);
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.6),
+                inset 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .final-result.success .sacred-geometry::before {
+            border-color: rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .final-result.success .sacred-geometry::after {
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .final-result.failure .sacred-geometry {
+            border-color: rgba(220, 53, 69, 0.8);
+            box-shadow: 
+                0 0 30px rgba(220, 53, 69, 0.6),
+                inset 0 0 20px rgba(220, 53, 69, 0.2);
+            animation: geometryAppear 2s ease-out 0.5s forwards, failureShatter 1s ease-out 2.5s;
+        }
+
+        .final-result.failure .sacred-geometry::before {
+            border-color: rgba(220, 53, 69, 0.6);
+            box-shadow: 0 0 20px rgba(220, 53, 69, 0.4);
+        }
+
+        .final-result.failure .sacred-geometry::after {
+            border-color: rgba(220, 53, 69, 0.4);
+            box-shadow: 0 0 15px rgba(220, 53, 69, 0.3);
+        }
+
+        @keyframes successTextAppear {
+            0% { 
+                opacity: 0;
+                transform: translateY(30px) scale(0.8);
+                filter: blur(10px);
+            }
+            50% {
+                opacity: 0.7;
+                transform: translateY(0) scale(1.1);
+                filter: blur(2px);
+            }
+            100% { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes failureTextAppear {
+            0% { 
+                opacity: 0;
+                transform: translateY(-30px) scale(0.8);
+                filter: blur(10px);
+            }
+            30% {
+                opacity: 0.5;
+                transform: translateY(5px) scale(1.05);
+                filter: blur(3px);
+            }
+            60% {
+                opacity: 0.8;
+                transform: translateY(-2px) scale(0.98);
+                filter: blur(1px);
+            }
+            100% { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes subtitleAppear {
+            0% { 
+                opacity: 0;
+                transform: translateY(20px);
+                letter-spacing: 0px;
+            }
+            100% { 
+                opacity: 0.8;
+                transform: translateY(0);
+                letter-spacing: 4px;
+            }
+        }
+
+        @keyframes failureShatter {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            20% { transform: translate(-50%, -50%) rotate(-5deg) scale(1.05); }
+            40% { transform: translate(-50%, -50%) rotate(3deg) scale(0.95); }
+            60% { transform: translate(-50%, -50%) rotate(-2deg) scale(1.02); }
+            80% { transform: translate(-50%, -50%) rotate(1deg) scale(0.98); }
+            100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+        }
+
+        /* Artifact風背景オーバーレイ */
+        .result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at center,
+                    rgba(12, 6, 20, 0.9) 0%,
+                    rgba(6, 3, 12, 0.95) 70%,
+                    rgba(0, 0, 0, 0.98) 100%);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .result-overlay.show {
+            opacity: 1;
+        }
+
+        /* 追加のパーティクル効果 */
+        .result-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(1px 1px at 10% 20%, rgba(255, 215, 0, 0.6), transparent),
+                radial-gradient(1px 1px at 80% 30%, rgba(147, 112, 219, 0.4), transparent),
+                radial-gradient(2px 2px at 30% 70%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 90% 80%, rgba(138, 43, 226, 0.5), transparent),
+                radial-gradient(1px 1px at 20% 90%, rgba(255, 215, 0, 0.4), transparent);
+            background-size: 800px 600px;
+            animation: particleFloat 6s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes particleFloat {
+            0% { 
+                transform: translateY(0px) rotate(0deg);
+                opacity: 0.6;
+            }
+            100% { 
+                transform: translateY(-20px) rotate(2deg);
+                opacity: 1;
+            }
+        }
+
+        /* ConfirmDock - 実装に合わせたスタイル */
+        .confirm-dock {
+            position: fixed;
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+            z-index: 22;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: 
+                linear-gradient(135deg,
+                    rgba(128, 51, 255, 0.4),
+                    rgba(80, 53, 26, 0.9));
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                inset 0 2px 0 rgba(255, 215, 0, 0.3);
+        }
+
+        .final-check {
+            background: linear-gradient(135deg, rgba(139,115,85,0.9), rgba(160,133,91,0.9));
+            color: rgba(0,0,0,0.9);
+            border: 1px solid rgba(160,133,91,0.8);
+            box-shadow: 0 6px 18px rgba(139,115,85,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .final-check:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(139,115,85,0.6), inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+
+        /* StatusDock - ゲーム結果表示用 */
+        .status-dock {
+            padding: 8px 16px;
+            margin-top: 16px;
+            width: 100%;
+            max-width: var(--board-max-width, 800px);
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            min-height: 0;
+        }
+
+        .status-dock.show {
+            min-height: 32px;
+        }
+
+        .game-result {
+            text-align: center;
+            color: #e6ccff;
+            font-weight: 600;
+        }
+
+        /* ミニマルチャット（右下角配置） */
+        .minimal-chat {
+            position: fixed;
+            bottom: 120px;
+            right: 20px;
+            z-index: 20;
+        }
+
+        .chat-toggle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: 
+                linear-gradient(135deg,
+                    rgba(128, 51, 255, 0.4),
+                    rgba(179, 102, 255, 0.4));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(255, 215, 0, 0.3);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.7),
+                0 0 20px rgba(160, 133, 91, 0.5);
+        }
+
+        .chat-panel {
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+            width: 280px;
+            height: 320px;
+            background: 
+                linear-gradient(180deg,
+                    rgba(128, 51, 255, 0.5) 0%,
+                    rgba(80, 53, 26, 0.95) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 15px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.8),
+                inset 0 2px 0 rgba(255, 215, 0, 0.3);
+            backdrop-filter: blur(15px);
+        }
+
+        .chat-messages-mini {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .chat-msg-mini {
+            background: rgba(179, 102, 255, 0.15);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 11px;
+            border-left: 2px solid rgba(255, 215, 0, 0.6);
+        }
+
+        .chat-input-mini {
+            padding: 12px;
+            border-top: 1px solid rgba(255, 215, 0, 0.4);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-mini input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid rgba(160, 133, 91, 0.5);
+            border-radius: 15px;
+            background: rgba(179, 102, 255, 0.15);
+            color: #fff;
+            font-size: 11px;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-input-mini input:focus {
+            outline: none;
+            border-color: rgba(160, 133, 91, 0.8);
+        }
+
+        .chat-input-mini button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 15px;
+            background: 
+                linear-gradient(135deg,
+                    rgba(160, 133, 91, 0.9),
+                    rgba(179, 102, 255, 0.4));
+            color: #000;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input-mini button:hover {
+            transform: scale(1.05);
+        }
+
+        /* 物理的テーブル感のある下部コントロール */
+        .bottom-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: 
+                linear-gradient(180deg, 
+                    rgba(128, 51, 255, 0.4) 0%, 
+                    rgba(80, 53, 26, 0.95) 100%),
+                linear-gradient(90deg,
+                    rgba(179, 102, 255, 0.05) 0%,
+                    rgba(160, 133, 91, 0.15) 50%,
+                    rgba(179, 102, 255, 0.05) 100%);
+            border-top: 2px solid rgba(255, 215, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 0 40px;
+            box-shadow: 
+                0 -8px 30px rgba(0, 0, 0, 0.7),
+                inset 0 2px 0 rgba(255, 215, 0, 0.3),
+                inset 0 0 20px rgba(128, 51, 255, 0.1);
+            backdrop-filter: blur(15px);
+            overflow-x: auto;
+        }
+
+        .my-card {
+            background: 
+                linear-gradient(135deg,
+                    rgba(128, 51, 255, 0.4),
+                    rgba(179, 102, 255, 0.4),
+                    rgba(128, 51, 255, 0.4));
+            border: 2px solid rgba(160, 133, 91, 0.7);
+            border-radius: 15px;
+            width: 100px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.6),
+                0 0 15px rgba(255, 215, 0, 0.3),
+                inset 0 2px 0 rgba(255, 215, 0, 0.4);
+            backdrop-filter: blur(15px);
+            flex-shrink: 0;
+        }
+
+        .my-card-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 9px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .my-card-number {
+            font-family: 'Cinzel', serif;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 24px;
+            font-weight: 700;
+            text-shadow: 
+                0 0 8px rgba(160, 133, 91, 0.8),
+                2px 2px 3px rgba(0, 0, 0, 1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 18px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(15px);
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: 
+                linear-gradient(135deg,
+                    rgba(160, 133, 91, 0.9),
+                    rgba(179, 102, 255, 0.4));
+            color: rgba(0, 0, 0, 0.9);
+            border-color: rgba(160, 133, 91, 0.8);
+            box-shadow: 
+                0 4px 15px rgba(255, 215, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: 
+                linear-gradient(135deg,
+                    rgba(179, 102, 255, 0.3),
+                    rgba(128, 51, 255, 0.3));
+            color: rgba(255, 255, 255, 0.95);
+            border-color: rgba(179, 102, 255, 0.3);
+            box-shadow: 
+                0 4px 15px rgba(179, 102, 255, 0.2),
+                inset 0 1px 0 rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-success {
+            background: 
+                linear-gradient(135deg,
+                    rgba(179, 102, 255, 0.3),
+                    rgba(160, 133, 91, 0.8));
+            color: rgba(0, 0, 0, 0.9);
+            border-color: rgba(160, 133, 91, 0.7);
+            box-shadow: 
+                0 4px 15px rgba(179, 102, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 
+                0 8px 25px rgba(160, 133, 91, 0.5),
+                0 0 20px rgba(255, 215, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .refresh-btn {
+            background: rgba(128, 51, 255, 0.3);
+            border: 2px solid rgba(160, 133, 91, 0.7);
+            color: rgba(255, 255, 255, 0.95);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            font-size: 16px;
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.5),
+                0 0 10px rgba(255, 215, 0, 0.3),
+                inset 0 1px 0 rgba(255, 215, 0, 0.4);
+            flex-shrink: 0;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(179, 102, 255, 0.4);
+            border-color: rgba(160, 133, 91, 0.9);
+            transform: rotate(180deg) scale(1.1);
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(160, 133, 91, 0.5),
+                inset 0 1px 0 rgba(255, 215, 0, 0.6);
+        }
+
+        /* レスポンシブ対応 - 8人1列対応 */
+        @media (max-width: 1400px) {
+            .card-play-area {
+                max-width: 1200px;
+                gap: 10px;
+                padding: 20px 12px;
+            }
+            
+            .player-card {
+                width: 110px;
+                height: 160px;
+            }
+            
+            .card-number {
+                font-size: 38px;
+                margin: 10px 0;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .card-play-area {
+                max-width: 900px;
+                gap: 10px;
+                padding: 20px 10px;
+            }
+            
+            .player-card {
+                width: 100px;
+                height: 150px;
+            }
+            
+            .card-number {
+                font-size: 34px;
+                margin: 8px 0;
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .card-play-area {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                max-width: 100%;
+                gap: 6px;
+                min-height: 180px;
+                overflow-x: auto;
+                padding: 15px 8px;
+            }
+            
+            .player-card {
+                width: 85px;
+                height: 130px;
+                flex-shrink: 0;
+            }
+            
+            .card-number {
+                font-size: 28px;
+                margin: 6px 0;
+            }
+            
+            .card-player {
+                font-size: 9px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .player-indicator {
+                display: none;
+            }
+            
+            .central-area {
+                padding: 15px;
+                padding-top: 30px;
+                margin-bottom: 300px; /* 待機エリア分の余白 */
+            }
+            
+            .minimal-chat {
+                bottom: 310px;
+                right: 10px;
+            }
+            
+            .card-play-area {
+                max-width: 100%;
+                gap: 6px;
+                padding: 15px 10px;
+                min-height: 180px;
+            }
+            
+            .player-card {
+                width: 80px;
+                height: 120px;
+            }
+            
+            .card-placeholder {
+                width: 80px;
+                height: 120px;
+            }
+            
+            .card-number {
+                font-size: 26px;
+                margin: 4px 0;
+            }
+            
+            .card-position {
+                width: 22px;
+                height: 22px;
+                font-size: 10px;
+            }
+            
+            .topic-card {
+                width: 90%;
+                min-width: 300px;
+                padding: 20px 25px;
+                margin-bottom: 20px;
+            }
+            
+            .topic-value {
+                font-size: 22px;
+                line-height: 1.3;
+            }
+            
+            .instruction {
+                font-size: 16px;
+                margin-bottom: 20px;
+            }
+            
+            /* 待機エリアのモバイル対応 */
+            .waiting-area {
+                bottom: 120px;
+                left: 10px;
+                right: 10px;
+                padding: 15px;
+            }
+            
+            .waiting-title {
+                font-size: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .player-card.waiting {
+                width: 80px;
+                height: 110px;
+            }
+            
+            /* ワード入力エリアのモバイル対応 */
+            .word-input-area {
+                flex-direction: column;
+                gap: 8px;
+                align-items: center;
+            }
+            
+            .word-input {
+                min-width: 150px;
+                font-size: 12px;
+                padding: 10px 15px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .bottom-controls {
+                flex-direction: column;
+                height: auto;
+                padding: 15px 20px;
+                gap: 12px;
+            }
+            
+            /* Artifact風結果画面のモバイル対応 */
+            .final-result {
+                width: 95vw;
+                height: 80vh;
+                padding: 20px;
+            }
+            
+            .result-title {
+                font-size: 48px;
+                letter-spacing: 8px;
+            }
+            
+            .result-subtitle {
+                font-size: 14px;
+                letter-spacing: 2px;
+            }
+            
+            .sacred-geometry {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .sacred-geometry::before {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .sacred-geometry::after {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+
+<style>
+/* ===== DPI/ズーム対応用ホットフィックス（追記） ===== */
+
+/* スクロール許可（縦） */
+body{
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+}
+
+/* ビューポート高さの安定化 */
+@supports (height: 100dvh){
+  .game-table{ height: 100dvh !important; }
+}
+
+/* 下部ドック可変化 */
+:root{
+  --dock-h: clamp(76px, 12vh, 120px);
+}
+
+/* メイン領域：下ドック分の余白を確保 */
+.main-game{
+  position: relative !important;
+  top: 70px !important; /* header分 */
+  min-height: calc(100dvh - 70px) !important;
+  padding-bottom: calc(var(--dock-h) + 16px) !important;
+}
+
+/* 下部コントロールを sticky に */
+.bottom-controls{
+  position: sticky !important;
+  bottom: 0 !important;
+  height: var(--dock-h) !important;
+  overflow-x: auto !important;
+}
+
+/* 未提出者ボードを sticky に */
+.waiting-area{
+  position: sticky !important;
+  bottom: calc(var(--dock-h) + 12px) !important;
+  left: 16px !important;
+  right: 16px !important;
+  margin-inline: auto !important;
+}
+
+/* 低い画面でチャットバブルを持ち上げる */
+@media (max-height: 820px){
+  .minimal-chat{ bottom: calc(var(--dock-h) + 16px) !important; right: 16px !important; }
+}
+
+/* 125%のFHD(≈1536px)向け縮小 */
+@media (max-width: 1536px){
+  .topic-card{ transform: scale(.95); transform-origin: center top; }
+  .instruction{ font-size: clamp(14px, 1.6vw, 18px); }
+}
+
+/* 高さ優先モード */
+@media (max-height: 760px){
+  .player-indicator{ display: none !important; }
+  .topic-card{ transform: scale(.9); }
+  .central-area{ padding-top: 24px !important; }
+}
+
+/* カード系は可変サイズに */
+.player-card{
+  width: clamp(80px, 8.5vw, 120px) !important;
+  height: clamp(120px, 13vw, 170px) !important;
+}
+.card-number{ font-size: clamp(26px, 3.2vw, 44px) !important; }
+.card-placeholder{
+  width: clamp(80px, 8.5vw, 120px) !important;
+  height: clamp(120px, 13vw, 170px) !important;
+}
+
+/* 右上群は折返し可能に */
+.header .room-info{ flex-wrap: wrap; row-gap: 6px; }
+</style>
+
+</head>
+<body>
+    <div class="game-table">
+        <!-- HUD Header - Professional Style (実装に合わせる) -->
+        <div class="header">
+            <div class="logo">ITO</div>
+            <div class="room-info">
+                <div class="room-name">Sample Room</div>
+                <div class="phase-indicator">結果フェーズ</div>
+                <button class="header-button leave" title="メインメニューに戻る">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16,17 21,12 16,7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+                <button class="header-button settings" title="設定">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="m12 1 3 6 6-3-3 6 6 3-6 3 3 6-6-3-3 6-3-6-6 3 3-6-6-3 6-3-3-6 6 3Z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- ミニマルプレイヤー表示 -->
+        <div class="player-indicator top-left">
+            <div class="player-name-display">chrome通常</div>
+            <div class="player-count-display">● オンライン</div>
+        </div>
+        <div class="player-indicator top-right">
+            <div class="player-name-display">シークレットMODE</div>
+            <div class="player-count-display">● オンライン</div>
+        </div>
+
+
+        <!-- メインゲームエリア -->
+        <div class="main-game">
+            <div class="central-area">
+                <!-- トピック表示 - 動的変更対応 -->
+                <div class="topic-card">
+                    <div class="topic-title">今回のお題</div>
+                    <div class="topic-value">重そうなもの</div>
+                    <div class="topic-category">カテゴリー：通常版</div>
+                </div>
+
+                <!-- 指示テキスト -->
+                <div class="instruction">小さい順から大きい順に並べよう</div>
+
+                <!-- カードプレイエリア - 提出済みカード -->
+                <div class="card-play-area">
+                    <!-- 提出済みのカード例 -->
+                    <div class="player-card submitted">
+                        <div class="card-position">#1</div>
+                        <div class="card-header">
+                            <div class="card-word">お化け屋敷</div>
+                        </div>
+                        <div class="card-number">?</div>
+                        <div class="card-footer">
+                            <div class="card-player">chrome通常</div>
+                        </div>
+                    </div>
+                    <div class="player-card submitted">
+                        <div class="card-position">#2</div>
+                        <div class="card-header">
+                            <div class="card-word">蜘蛛の巣</div>
+                        </div>
+                        <div class="card-number">?</div>
+                        <div class="card-footer">
+                            <div class="card-player">シークレット</div>
+                        </div>
+                    </div>
+                    <!-- 空の枠 -->
+                    <div class="card-placeholder">
+                        <div class="placeholder-text">連想ワード待ち</div>
+                    </div>
+                </div>
+
+                <!-- StatusDock - ゲーム結果表示用 -->
+                <div class="status-dock show">
+                    <div class="game-result">ゲーム終了！結果を確認しています...</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ミニマルチャット（右下角） -->
+        <div class="minimal-chat">
+            <div class="chat-toggle">💬</div>
+            <div class="chat-panel">
+                <div class="chat-messages-mini">
+                    <div class="chat-msg-mini">chrome通常 入室</div>
+                    <div class="chat-msg-mini">シークレット 入室</div>
+                </div>
+                <div class="chat-input-mini">
+                    <input type="text" placeholder="メッセージ">
+                    <button>送信</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 参加者カード待機エリア -->
+        <div class="waiting-area">
+            <div class="waiting-title">未提出の参加者</div>
+            <div class="waiting-cards">
+                <div class="player-card waiting">
+                    <div class="card-header">
+                        <div class="waiting-label">連想ワード入力中</div>
+                    </div>
+                    <div class="card-center">
+                        <div class="thinking-icon">🤔</div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-player">Player03</div>
+                    </div>
+                </div>
+                <div class="player-card waiting">
+                    <div class="card-header">
+                        <div class="waiting-label">連想ワード入力中</div>
+                    </div>
+                    <div class="card-center">
+                        <div class="thinking-icon">💭</div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-player">Player04</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下部コントロール -->
+        <div class="bottom-controls">
+            <div class="my-card">
+                <div class="my-card-label">あなたの数字</div>
+                <div class="my-card-number">27</div>
+            </div>
+            
+            <div class="word-input-area" id="word-input-area">
+                <input type="text" class="word-input" id="word-input" placeholder="連想ワードを入力...">
+                <button class="btn btn-primary submit-word" id="submit-btn" onclick="submitMyWord()">提出</button>
+            </div>
+            
+            <div class="action-buttons">
+                <div class="confirm-dock" style="display: none;" id="confirm-dock">
+                    <button class="final-check" onclick="startRevealSequence()">確定！順番を発表</button>
+                </div>
+                <button class="btn btn-secondary" onclick="restartGame()" style="display: none;" id="restart-btn">もう一度</button>
+            </div>
+            
+            <div class="refresh-btn">↻</div>
+        </div>
+    </div>
+
+    <script>
+        // === 完全なゲームフロー実装 ===
+        
+        // ゲーム状態管理
+        let gameState = {
+            phase: 'clue',
+            myNumber: 27,
+            submittedWords: [],
+            totalPlayers: 3,
+            submittedCount: 0
+        };
+
+        // AI プレイヤーの連想ワードとプレイヤー名のプール
+        const aiWordPool = [
+            'お化け屋敷', '蜘蛛の巣', '雷', '象', '羽毛', 'ピアノ', '小石', 
+            'バス', 'ティッシュ', '恐竜', 'アリ', '雲', '建物', '鉛筆'
+        ];
+        const aiPlayerNames = ['chrome通常', 'シークレットMODE'];
+
+        // AI プレイヤーデータ生成
+        function generateAIPlayers() {
+            return aiPlayerNames.map(name => ({
+                name: name,
+                word: aiWordPool[Math.floor(Math.random() * aiWordPool.length)],
+                number: Math.floor(Math.random() * 100) + 1
+            }));
+        }
+        
+        // 初期AIプレイヤー生成
+        let aiPlayers = generateAIPlayers();
+
+        // プレイヤーの連想ワード提出
+        function submitMyWord() {
+            const wordInput = document.getElementById('word-input');
+            const word = wordInput.value.trim();
+            
+            if (!word) {
+                alert('連想ワードを入力してください');
+                return;
+            }
+
+            // 提出済みカード作成
+            const cardPlayArea = document.querySelector('.card-play-area');
+            const newCard = document.createElement('div');
+            newCard.className = 'player-card submitted';
+            newCard.style.opacity = '0';
+            newCard.style.transform = 'translateY(100px)';
+            
+            gameState.submittedCount++;
+            
+            newCard.innerHTML = `
+                <div class="card-position">#${gameState.submittedCount}</div>
+                <div class="card-header">
+                    <div class="card-word">${word}</div>
+                </div>
+                <div class="card-number">?</div>
+                <div class="card-footer">
+                    <div class="card-player">あなた</div>
+                </div>
+            `;
+            
+            cardPlayArea.appendChild(newCard);
+            
+            // カード表示アニメーション
+            setTimeout(() => {
+                newCard.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'translateY(0)';
+            }, 50);
+
+            // プレイヤーデータ記録
+            gameState.submittedWords.push({
+                word: word,
+                number: gameState.myNumber,
+                player: 'あなた'
+            });
+
+            // 入力欄一時無効化
+            wordInput.disabled = true;
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('word-input-area').style.opacity = '0.5';
+            
+            console.log('プレイヤー提出:', word, 'プレイヤー数字:', gameState.myNumber);
+
+            // 待機カード削除
+            const waitingCards = document.querySelectorAll('.player-card.waiting');
+            if (waitingCards.length > 0) {
+                const lastWaiting = waitingCards[waitingCards.length - 1];
+                lastWaiting.style.transition = 'all 0.3s ease';
+                lastWaiting.style.opacity = '0';
+                lastWaiting.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    lastWaiting.remove();
+                }, 300);
+            }
+
+            // AIプレイヤー自動提出
+            setTimeout(() => {
+                submitAIWords();
+            }, Math.random() * 2000 + 1000);
+        }
+
+        // AIプレイヤー自動提出
+        function submitAIWords() {
+            const remainingAI = aiPlayers.slice(gameState.submittedCount - 1);
+            
+            remainingAI.forEach((ai, index) => {
+                setTimeout(() => {
+                    const cardPlayArea = document.querySelector('.card-play-area');
+                    const newCard = document.createElement('div');
+                    newCard.className = 'player-card submitted';
+                    newCard.style.opacity = '0';
+                    newCard.style.transform = 'translateY(100px)';
+                    
+                    gameState.submittedCount++;
+                    
+                    newCard.innerHTML = `
+                        <div class="card-position">#${gameState.submittedCount}</div>
+                        <div class="card-header">
+                            <div class="card-word">${ai.word}</div>
+                        </div>
+                        <div class="card-number">?</div>
+                        <div class="card-footer">
+                            <div class="card-player">${ai.name}</div>
+                        </div>
+                    `;
+                    
+                    cardPlayArea.appendChild(newCard);
+                    
+                    // アニメーション
+                    setTimeout(() => {
+                        newCard.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        newCard.style.opacity = '1';
+                        newCard.style.transform = 'translateY(0)';
+                    }, 50);
+
+                    gameState.submittedWords.push({
+                        word: ai.word,
+                        number: ai.number,
+                        player: ai.name
+                    });
+
+                    // 待機カード削除
+                    const waitingCards = document.querySelectorAll('.player-card.waiting');
+                    if (waitingCards.length > 0) {
+                        const lastWaiting = waitingCards[waitingCards.length - 1];
+                        lastWaiting.style.transition = 'all 0.3s ease';
+                        lastWaiting.style.opacity = '0';
+                        lastWaiting.style.transform = 'scale(0.8)';
+                        setTimeout(() => {
+                            lastWaiting.remove();
+                        }, 300);
+                    }
+
+                    // 全員提出完了チェック
+                    if (gameState.submittedCount >= gameState.totalPlayers) {
+                        setTimeout(() => {
+                            showConfirmButton();
+                        }, 500);
+                    }
+                }, index * 1500);
+            });
+        }
+
+        // 確定ボタン表示
+        function showConfirmButton() {
+            const waitingArea = document.querySelector('.waiting-area');
+            const confirmDock = document.getElementById('confirm-dock');
+            
+            // 待機エリア非表示
+            waitingArea.style.transition = 'all 0.4s ease';
+            waitingArea.style.opacity = '0';
+            waitingArea.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                waitingArea.style.display = 'none';
+            }, 400);
+            
+            // 確定ボタン表示
+            setTimeout(() => {
+                confirmDock.style.display = 'flex';
+                confirmDock.style.opacity = '0';
+                confirmDock.style.transform = 'scale(0.8)';
+                
+                setTimeout(() => {
+                    confirmDock.style.transition = 'all 0.5s ease';
+                    confirmDock.style.opacity = '1';
+                    confirmDock.style.transform = 'scale(1)';
+                }, 50);
+            }, 200);
+
+            updatePhase('playing');
+            document.querySelector('.instruction').textContent = '全員の提出が完了しました！順番を確定してください';
+        }
+
+        // カードめくり演出開始
+        async function startRevealSequence() {
+            updatePhase('reveal');
+            document.querySelector('.instruction').textContent = '順番を発表します！ドキドキ...';
+            
+            // 確定ボタン非表示
+            document.getElementById('confirm-dock').style.display = 'none';
+            
+            const cards = document.querySelectorAll('.player-card.submitted');
+            
+            // 昇順判定ロジック
+            let previousNumber = 0;
+            let allCorrectSoFar = true;
+            
+            // 各カードに正解/不正解を設定
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const wordText = card.querySelector('.card-word').textContent;
+                const playerData = gameState.submittedWords.find(p => p.word === wordText);
+                
+                if (allCorrectSoFar && playerData.number > previousNumber) {
+                    playerData.correct = true;
+                    previousNumber = playerData.number;
+                } else {
+                    playerData.correct = false;
+                    allCorrectSoFar = false;
+                }
+            }
+            
+            // 1枚ずつカードをめくる
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const wordText = card.querySelector('.card-word').textContent;
+                const playerData = gameState.submittedWords.find(p => p.word === wordText);
+                
+                // フリップアニメーション開始
+                card.classList.add('flipping');
+                
+                // 0.4秒後に数字を表示
+                setTimeout(() => {
+                    const numberElement = card.querySelector('.card-number');
+                    numberElement.textContent = playerData.number;
+                }, 400);
+                
+                // 0.8秒後に判定結果を表示
+                setTimeout(() => {
+                    card.classList.remove('flipping');
+                    if (playerData.correct) {
+                        card.classList.add('correct');
+                    } else {
+                        card.classList.add('incorrect');
+                    }
+                }, 800);
+                
+                // 次のカードまで1.5秒待機
+                if (i < cards.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            
+            // 全カード判定完了後、最終結果表示
+            setTimeout(() => {
+                showFinalResult();
+            }, 2000);
+        }
+
+        // 連想ワード提出処理
+        function submitWord(word) {
+            const cardPlayArea = document.querySelector('.card-play-area');
+            const placeholder = document.querySelector('.card-placeholder');
+            
+            // 新しい提出済みカードを作成
+            const newCard = document.createElement('div');
+            newCard.className = 'player-card submitted';
+            newCard.style.opacity = '0';
+            newCard.style.transform = 'translateY(100px)';
+            
+            const cardCount = document.querySelectorAll('.player-card.submitted').length + 1;
+            
+            newCard.innerHTML = `
+                <div class="card-position">#${cardCount}</div>
+                <div class="card-header">
+                    <div class="card-word">${word}</div>
+                </div>
+                <div class="card-number">?</div>
+                <div class="card-footer">
+                    <div class="card-player">あなた</div>
+                </div>
+            `;
+            
+            // プレースホルダーの前に挿入
+            cardPlayArea.insertBefore(newCard, placeholder);
+            
+            // アニメーション
+            setTimeout(() => {
+                newCard.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'translateY(0)';
+            }, 50);
+            
+            // 待機中のカードを1枚削除
+            const waitingCards = document.querySelectorAll('.player-card.waiting');
+            if (waitingCards.length > 0) {
+                const lastWaiting = waitingCards[waitingCards.length - 1];
+                lastWaiting.style.transition = 'all 0.3s ease';
+                lastWaiting.style.opacity = '0';
+                lastWaiting.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    lastWaiting.remove();
+                }, 300);
+            }
+            
+            // 待機エリアが空になったら確定ボタン表示
+            setTimeout(() => {
+                const remainingWaiting = document.querySelectorAll('.player-card.waiting');
+                if (remainingWaiting.length === 0) {
+                    const waitingArea = document.querySelector('.waiting-area');
+                    const finalCheckBtn = document.querySelector('.final-check');
+                    
+                    // 待機エリア非表示
+                    waitingArea.style.transition = 'all 0.4s ease';
+                    waitingArea.style.opacity = '0';
+                    waitingArea.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        waitingArea.style.display = 'none';
+                    }, 400);
+                    
+                    // 確定ボタン表示
+                    setTimeout(() => {
+                        finalCheckBtn.style.display = 'block';
+                        finalCheckBtn.style.opacity = '0';
+                        finalCheckBtn.style.transform = 'scale(0.8)';
+                        
+                        setTimeout(() => {
+                            finalCheckBtn.style.transition = 'all 0.5s ease';
+                            finalCheckBtn.style.opacity = '1';
+                            finalCheckBtn.style.transform = 'scale(1)';
+                        }, 50);
+                    }, 200);
+                }
+            }, 350);
+        }
+
+        // 最終判定演出
+        async function startFinalJudgment() {
+            const cards = document.querySelectorAll('.player-card.submitted');
+            const instruction = document.querySelector('.instruction');
+            
+            // インストラクション更新
+            instruction.textContent = '順番を発表します！ドキドキ...';
+            
+            // 各カードのデータ（実際の数字とワード）
+            const cardData = [
+                { word: 'お化け屋敷', number: 85 },
+                { word: '蜘蛛の巣', number: 25 },
+                { word: '雷', number: 78 }
+            ];
+            
+            // 昇順判定ロジック
+            let previousNumber = 0;
+            let allCorrectSoFar = true;
+            
+            for (let i = 0; i < cardData.length; i++) {
+                const currentNumber = cardData[i].number;
+                
+                if (allCorrectSoFar && currentNumber > previousNumber) {
+                    cardData[i].correct = true;
+                    previousNumber = currentNumber;
+                } else {
+                    // 昇順が崩れた瞬間から全て間違い
+                    cardData[i].correct = false;
+                    allCorrectSoFar = false;
+                }
+            }
+            
+            // 1枚ずつ判定
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const data = cardData[i];
+                
+                // フリップアニメーション
+                card.classList.add('flipping');
+                
+                // 0.4秒後に数字を表示
+                setTimeout(() => {
+                    const numberElement = card.querySelector('.card-number');
+                    numberElement.textContent = data.number;
+                }, 400);
+                
+                // 0.8秒後に判定結果を表示
+                setTimeout(() => {
+                    card.classList.remove('flipping');
+                    if (data.correct) {
+                        card.classList.add('correct');
+                    } else {
+                        card.classList.add('incorrect');
+                    }
+                }, 800);
+                
+                // 次のカードまで1.5秒待機
+                if (i < cards.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            
+            // 全カード判定完了後、最終結果表示
+            setTimeout(() => {
+                showFinalResult(cardData);
+            }, 2000);
+        }
+
+        // 最終結果表示
+        function showFinalResult(cardData) {
+            const allCorrect = cardData.every(data => data.correct);
+            
+            // オーバーレイ作成
+            const overlay = document.createElement('div');
+            overlay.className = 'result-overlay';
+            document.body.appendChild(overlay);
+            
+            // 結果メッセージ作成
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `final-result ${allCorrect ? 'success' : 'failure'}`;
+            
+            if (allCorrect) {
+                resultDiv.innerHTML = `
+                    <div class="sacred-geometry"></div>
+                    <div class="result-particles"></div>
+                    <div class="result-title">VICTORY</div>
+                    <div class="result-subtitle">PERFECT SEQUENCE ACHIEVED</div>
+                `;
+            } else {
+                const correctCount = cardData.filter(data => data.correct).length;
+                resultDiv.innerHTML = `
+                    <div class="sacred-geometry"></div>
+                    <div class="result-particles"></div>
+                    <div class="result-title">DEFEAT</div>
+                    <div class="result-subtitle">SEQUENCE BROKEN · ${correctCount}/${cardData.length} CORRECT</div>
+                `;
+            }
+            
+            document.body.appendChild(resultDiv);
+            
+            // アニメーション開始
+            setTimeout(() => {
+                overlay.classList.add('show');
+                resultDiv.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 100);
+            
+            // 5秒後に結果を閉じる
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                resultDiv.style.transform = 'translate(-50%, -50%) scale(0)';
+                setTimeout(() => {
+                    document.body.removeChild(overlay);
+                    document.body.removeChild(resultDiv);
+                    
+                    // インストラクションを元に戻す
+                    document.querySelector('.instruction').textContent = '連想ワードを入力して提出！全員揃ったら並び順を決めよう';
+                }, 500);
+            }, 5000);
+        }
+
+        // 確定ボタンのイベントリスナー
+        document.addEventListener('DOMContentLoaded', function() {
+            const finalCheckBtn = document.querySelector('.final-check');
+            if (finalCheckBtn) {
+                finalCheckBtn.addEventListener('click', function() {
+                    this.style.display = 'none';
+                    startFinalJudgment();
+                });
+            }
+        });
+
+        // 動的お題変更デモ（固定幅でUX安定）
+        const topics = [
+            { value: '重そうなもの', category: 'カテゴリー：通常版' },
+            { value: '温かいもの', category: 'カテゴリー：感覚版' },
+            { value: '日本で有名な観光地', category: 'カテゴリー：地理版' },
+            { value: '子供の頃好きだったもの', category: 'カテゴリー：思い出版' },
+            { value: '高級そうなもの', category: 'カテゴリー：価値版' },
+            { value: '朝にやること', category: 'カテゴリー：日常版' }
+        ];
+
+        let currentTopicIndex = 0;
+        
+        // 5秒ごとにお題を変更（デモ用）
+        setInterval(() => {
+            currentTopicIndex = (currentTopicIndex + 1) % topics.length;
+            const topic = topics[currentTopicIndex];
+            
+            const topicValue = document.querySelector('.topic-value');
+            const topicCategory = document.querySelector('.topic-category');
+            
+            // フェードアウト効果
+            topicValue.style.opacity = '0.3';
+            topicCategory.style.opacity = '0.3';
+            
+            setTimeout(() => {
+                topicValue.textContent = topic.value;
+                topicCategory.textContent = topic.category;
+                
+                // フェードイン効果
+                topicValue.style.opacity = '1';
+                topicCategory.style.opacity = '0.85';
+            }, 200);
+            
+        }, 5000);
+
+        // フェーズ変更機能 - 実装仕様に合わせる
+        function updatePhase(phase) {
+            const phaseIndicator = document.querySelector('.phase-indicator');
+            const phaseLabels = {
+                'waiting': '待機フェーズ',
+                'clue': '入力フェーズ',
+                'playing': '並べ替えフェーズ',
+                'reveal': '公開フェーズ',
+                'finished': '結果フェーズ'
+            };
+            phaseIndicator.textContent = phaseLabels[phase] || phase + 'フェーズ';
+        }
+
+        // デモ用：キーボードでフェーズ変更 (1-5キー)
+        document.addEventListener('keydown', function(e) {
+            const phases = ['waiting', 'clue', 'playing', 'reveal', 'finished'];
+            const phaseIndex = parseInt(e.key) - 1;
+            if (phaseIndex >= 0 && phaseIndex < phases.length) {
+                updatePhase(phases[phaseIndex]);
+            }
+        });
+
+        // === 新しいゲームフロー関数 ===
+        
+        // 最終結果表示
+        function showFinalResult() {
+            const allCorrect = gameState.submittedWords.every(data => data.correct);
+            
+            // 結果オーバーレイ作成
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                opacity: 0;
+                transition: all 0.5s ease;
+            `;
+            
+            const resultHtml = allCorrect ? 
+                `<div style="
+                    background: radial-gradient(circle, rgba(179, 102, 255, 0.8) 0%, rgba(128, 51, 255, 0.6) 100%);
+                    border: 3px solid rgba(255, 215, 0, 0.8);
+                    border-radius: 30px;
+                    padding: 60px;
+                    text-align: center;
+                    box-shadow: 0 0 50px rgba(179, 102, 255, 0.5);
+                ">
+                    <div style="
+                        font-family: 'Cinzel', serif;
+                        font-size: 64px;
+                        font-weight: 700;
+                        color: #FFD700;
+                        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+                        margin-bottom: 20px;
+                        letter-spacing: 8px;
+                    ">SUCCESS</div>
+                    <div style="
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.9);
+                        letter-spacing: 2px;
+                        font-weight: 500;
+                    ">完璧な順序でした！</div>
+                </div>` :
+                `<div style="
+                    background: radial-gradient(circle, rgba(128, 51, 255, 0.8) 0%, rgba(80, 26, 26, 0.8) 100%);
+                    border: 3px solid rgba(220, 38, 38, 0.8);
+                    border-radius: 30px;
+                    padding: 60px;
+                    text-align: center;
+                    box-shadow: 0 0 50px rgba(220, 38, 38, 0.5);
+                ">
+                    <div style="
+                        font-family: 'Cinzel', serif;
+                        font-size: 64px;
+                        font-weight: 700;
+                        color: #dc2626;
+                        text-shadow: 0 0 30px rgba(220, 38, 38, 0.8);
+                        margin-bottom: 20px;
+                        letter-spacing: 8px;
+                    ">FAILED</div>
+                    <div style="
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.9);
+                        letter-spacing: 2px;
+                        font-weight: 500;
+                    ">順序が間違っていました</div>
+                </div>`;
+            
+            overlay.innerHTML = resultHtml;
+            document.body.appendChild(overlay);
+            
+            // オーバーレイ表示アニメーション
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+            }, 50);
+            
+            // 3秒後にリスタートボタン表示
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    
+                    // 入力欄を確実に無効化状態にする（ゲーム終了状態）
+                    const wordInput = document.getElementById('word-input');
+                    wordInput.disabled = true;
+                    document.getElementById('submit-btn').disabled = true;
+                    document.getElementById('word-input-area').style.opacity = '0.5';
+                    
+                    document.getElementById('restart-btn').style.display = 'block';
+                    updatePhase('finished');
+                    document.querySelector('.instruction').textContent = 'ゲーム終了！もう一度プレイしますか？';
+                    
+                    console.log('ゲーム終了、リスタートボタン表示');
+                }, 500);
+            }, 3000);
+        }
+
+        // ゲームリスタート
+        function restartGame() {
+            console.log('ゲームリスタート開始');
+            
+            // 状態完全リセット
+            gameState = {
+                phase: 'clue',
+                myNumber: Math.floor(Math.random() * 100) + 1, // 新しい数字
+                submittedWords: [],
+                totalPlayers: 3,
+                submittedCount: 0
+            };
+            
+            // 新しいAIプレイヤー生成
+            aiPlayers = generateAIPlayers();
+            
+            // 全ての既存カードを完全削除
+            const allCards = document.querySelectorAll('.player-card');
+            allCards.forEach(card => {
+                if (card.classList.contains('submitted')) {
+                    card.remove();
+                }
+            });
+
+            // カードプレイエリア完全クリア
+            const cardPlayArea = document.querySelector('.card-play-area');
+            cardPlayArea.innerHTML = `
+                <div class="card-placeholder">
+                    <div class="placeholder-text">連想ワード待ち</div>
+                </div>
+            `;
+
+            // 待機エリア完全復元
+            const waitingArea = document.querySelector('.waiting-area');
+            waitingArea.innerHTML = `
+                <div class="waiting-title">未提出の参加者</div>
+                <div class="waiting-cards">
+                    <div class="player-card waiting">
+                        <div class="card-header">
+                            <div class="waiting-label">連想ワード入力中</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="thinking-icon">🤔</div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-player">chrome通常</div>
+                        </div>
+                    </div>
+                    <div class="player-card waiting">
+                        <div class="card-header">
+                            <div class="waiting-label">連想ワード入力中</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="thinking-icon">💭</div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-player">シークレットMODE</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 待機エリア表示状態リセット
+            waitingArea.style.display = 'block';
+            waitingArea.style.opacity = '1';
+            waitingArea.style.transform = 'translateY(0)';
+            waitingArea.style.transition = '';
+
+            // 入力欄完全リセット
+            const wordInput = document.getElementById('word-input');
+            wordInput.value = '';
+            wordInput.disabled = false;
+            wordInput.style.opacity = '1';
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            
+            const wordInputArea = document.getElementById('word-input-area');
+            wordInputArea.style.display = 'flex';
+            wordInputArea.style.opacity = '1';
+
+            // ボタン表示制御
+            document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('confirm-dock').style.display = 'none';
+
+            // プレイヤー数字更新
+            const myCardNumber = document.querySelector('.my-card-number');
+            if (myCardNumber) {
+                myCardNumber.textContent = gameState.myNumber;
+            }
+
+            // フェーズとメッセージリセット
+            updatePhase('clue');
+            document.querySelector('.instruction').textContent = '小さい順から大きい順に並べよう';
+            
+            console.log('ゲームリスタート完了', gameState);
+        }
+
+        // Enterキーで提出
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.id === 'word-input') {
+                submitMyWord();
+            }
+        });
+
+        // ボタンクリック効果
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn') || e.target.classList.contains('header-button')) {
+                e.target.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    e.target.style.transform = '';
+                }, 150);
+            }
+        });
+
+        // チャットトグル機能
+        document.querySelector('.chat-toggle').addEventListener('click', function() {
+            const panel = document.querySelector('.chat-panel');
+            const isVisible = panel.style.display === 'flex';
+            panel.style.display = isVisible ? 'none' : 'flex';
+        });
+
+        // ゲーム初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePhase('clue');
+            
+            // 初期プレイヤー数字表示
+            const myCardNumber = document.querySelector('.my-card-number');
+            if (myCardNumber) {
+                myCardNumber.textContent = gameState.myNumber;
+            }
+            
+            console.log('ゲーム初期化完了', gameState, aiPlayers);
+        });
+    </script>
+
+<script>
+/* DPI/ズーム対応: コンパクトモードの自動切替 */
+(function(){
+  const apply = () => {
+    const vw = (window.visualViewport && visualViewport.width) || window.innerWidth;
+    const vh = (window.visualViewport && visualViewport.height) || window.innerHeight;
+    document.body.classList.toggle('compact-w', vw < 1536);
+    document.body.classList.toggle('compact-h', vh < 800);
+  };
+  addEventListener('resize', apply, {passive:true});
+  apply();
+})();
+</script>
+
+</body>
+</html>
