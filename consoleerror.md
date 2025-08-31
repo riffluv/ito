@@ -1,101 +1,224 @@
-  GET http://localhost:3000/rooms/bkkP94Qu4rsAvO7HUzR7 500 (Internal Server Error)
-Router @ webpack-internal:///…s/app-router.js:390
-renderWithHooks @ webpack-internal:///…evelopment.js:11121
-updateFunctionComponent @ webpack-internal:///…evelopment.js:16290
-beginWork$1 @ webpack-internal:///…evelopment.js:18472
-beginWork @ webpack-internal:///…evelopment.js:26927
-performUnitOfWork @ webpack-internal:///…evelopment.js:25748
-workLoopSync @ webpack-internal:///…evelopment.js:25464
-renderRootSync @ webpack-internal:///…evelopment.js:25419
-performConcurrentWorkOnRoot @ webpack-internal:///…evelopment.js:24504
-workLoop @ webpack-internal:///….development.js:256
-flushWork @ webpack-internal:///….development.js:225
-performWorkUntilDeadline @ webpack-internal:///….development.js:534
-index.js:627 Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
-Error: 
-  × Expression expected
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:355:1]
- 355 │     </HStack>
- 356 │   );
- 357 │ }
- 358 │         >
-     ·         ─
- 359 │           {typeof me?.number === "number" ? me.number : "?"}
- 360 │         </Box>
- 360 │ 
-     ╰────
+app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`ToastActor`). To locate the bad setState() call inside `ToastActor`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at ToastActor (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/toast/toaster.js:63:121)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/toast/toaster.js:25:13)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at Toaster
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at div
+    at ThemePresetProvider (webpack-internal:///(app-pages-browser)/./context/ThemePresetContext.tsx:58:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:37:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+window.console.error @ app-index.js:33
+toaster.tsx:32 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performSyncWorkOnRoot (react-dom.development.js:24887:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+redirect-boundary.js:57 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performSyncWorkOnRoot (react-dom.development.js:24887:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+not-found-boundary.js:37 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performSyncWorkOnRoot (react-dom.development.js:24887:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+toaster.tsx:32 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performSyncWorkOnRoot (react-dom.development.js:24899:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+redirect-boundary.js:57 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performSyncWorkOnRoot (react-dom.development.js:24899:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+not-found-boundary.js:37 Uncaught TypeError: (0 , _theme_layout__WEBPACK_IMPORTED_MODULE_1__.getBorderWidth) is not a function
+    at children (toaster.tsx:32:38)
+    at Object.children (toaster.js:43:34)
+    at ToastActor (toaster.js:76:25)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performSyncWorkOnRoot (react-dom.development.js:24899:20)
+    at flushSyncWorkAcrossRoots_impl (react-dom.development.js:7758:13)
+    at flushSyncWorkOnAllRoots (react-dom.development.js:7718:3)
+    at flushSync$1 (react-dom.development.js:24999:7)
+    at flushSync (react-dom.development.js:38540:10)
+    at Object.set (index.mjs:68:13)
+    at Object.set (index.mjs:186:135)
+    at eval (index.mjs:376:19)
+    at eval (index.mjs:858:41)
+    at Array.forEach (<anonymous>)
+    at publish (index.mjs:858:17)
+    at addToast (index.mjs:866:5)
+    at Object.create (index.mjs:890:7)
+    at eval (notify.ts:25:13)
+app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> component:
 
-  × Unexpected token `me`. Expected ... , *,  (, [, :, , ?, =, an identifier, public, protected, private, readonly, <.
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:356:1]
- 356 │   );
- 357 │ }
- 358 │         >
- 359 │           {typeof me?.number === "number" ? me.number : "?"}
-     ·                   ──
- 360 │         </Box>
- 361 │ 
- 361 │         <Input
-     ╰────
+    at ToastActor (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/toast/toaster.js:63:121)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/factory.js:29:15)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@ark-ui/react/dist/components/toast/toaster.js:25:13)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at Toaster
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at div
+    at ThemePresetProvider (webpack-internal:///(app-pages-browser)/./context/ThemePresetContext.tsx:58:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at Providers (webpack-internal:///(app-pages-browser)/./app/providers.tsx:37:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
 
-
-Caused by:
-    Syntax Error
-    at processResult (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
-    at r.callback (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
-getServerError @ nodeStackFrames.js:38
-eval @ index.js:627
-setTimeout
-hydrate @ index.js:615
-await in hydrate
-pageBootrap @ page-bootstrap.js:27
-eval @ next-dev.js:25
-Promise.then
-eval @ next-dev.js:23
-./node_modules/next/dist/client/next-dev.js @ main.js:809
-options.factory @ webpack.js:647
-__webpack_require__ @ webpack.js:37
-__webpack_exec__ @ main.js:1942
-（匿名） @ main.js:1943
-webpackJsonpCallback @ webpack.js:1195
-（匿名） @ main.js:9
-hydration-error-info.js:63 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Expression expected
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:355:1]
- 355 │     </HStack>
- 356 │   );
- 357 │ }
- 358 │         >
-     ·         ─
- 359 │           {typeof me?.number === "number" ? me.number : "?"}
- 360 │         </Box>
- 360 │ 
-     ╰────
-
-  × Unexpected token `me`. Expected ... , *,  (, [, :, , ?, =, an identifier, public, protected, private, readonly, <.
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:356:1]
- 356 │   );
- 357 │ }
- 358 │         >
- 359 │           {typeof me?.number === "number" ? me.number : "?"}
-     ·                   ──
- 360 │         </Box>
- 361 │ 
- 361 │         <Input
-     ╰────
-
-Caused by:
-    Syntax Error
-console.error @ hydration-error-info.js:63
-window.console.error @ setup-hydration-warning.js:18
-handleErrors @ hot-reloader-client.js:162
-processMessage @ hot-reloader-client.js:239
-eval @ hot-reloader-client.js:67
-handleMessage @ websocket.js:52
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-（匿名） @ content.js:1
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-（匿名） @ content.js:1
+React will try to recreate this component tree from scratch using the error boundary you provided, ReactDevOverlay.
+window.console.error @ app-index.js:33
