@@ -12,7 +12,6 @@ import {
   continueAfterFail as continueAfterFailAction,
 } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
-import { setRoomOptions } from "@/lib/firebase/rooms";
 import { notify } from "@/components/ui/notify";
 
 export default function MiniHandDock({
@@ -99,6 +98,21 @@ export default function MiniHandDock({
     await continueAfterFailAction(roomId);
   };
 
+  const resetGame = async () => {
+    try {
+      // 完全なゲームリセット - 待機状態に戻す
+      const { resetRoomToWaiting } = await import("@/lib/firebase/rooms");
+      await resetRoomToWaiting(roomId);
+      notify({ title: "ゲームを完全にリセットしました", type: "success" });
+    } catch (error: any) {
+      notify({
+        title: "リセットに失敗しました",
+        description: error?.message,
+        type: "error",
+      });
+    }
+  };
+
   return (
     <HStack gap={3} align="center" justify="space-between" w="100%">
       {/* 左: 数字チップ＋入力＋提出 */}
@@ -165,6 +179,11 @@ export default function MiniHandDock({
               数字配布
             </AppButton>
           )}
+          {roomStatus === "clue" && (
+            <AppButton size="sm" visual="subtle" onClick={resetGame}>
+              リセット
+            </AppButton>
+          )}
           {roomStatus === "clue" && resolveMode === "sort-submit" && (
             <AppButton size="sm" onClick={evalSorted} disabled={!allSubmitted}>
               {allSubmitted ? "せーので判定" : "提出待ち"}
@@ -174,23 +193,21 @@ export default function MiniHandDock({
             <AppButton size="sm" onClick={continueRound}>もう一度</AppButton>
           )}
 
-          {/* モード切替（順次/一括） */}
-          <HStack gap={1} ml={{ base: 1, md: 2 }}>
-            <AppButton
-              size="xs"
-              visual={resolveMode === "sequential" ? "solid" : "subtle"}
-              onClick={() => setRoomOptions(roomId, { allowContinueAfterFail, resolveMode: "sequential", defaultTopicType } as any)}
-            >
-              順次
-            </AppButton>
-            <AppButton
-              size="xs"
-              visual={resolveMode === "sort-submit" ? "solid" : "subtle"}
-              onClick={() => setRoomOptions(roomId, { allowContinueAfterFail, resolveMode: "sort-submit", defaultTopicType } as any)}
-            >
-              一括
-            </AppButton>
-          </HStack>
+          {/* 現在のモード表示 */}
+          <Box
+            px={2}
+            py={1}
+            borderRadius="6px"
+            fontSize="xs"
+            fontWeight="500"
+            css={{
+              background: "rgba(101,67,33,0.6)",
+              color: "rgba(255,255,255,0.8)",
+              border: "1px solid rgba(160,133,91,0.4)",
+            }}
+          >
+            {resolveMode === "sequential" ? "順次モード" : "一括モード"}
+          </Box>
         </HStack>
       )}
     </HStack>

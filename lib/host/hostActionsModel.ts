@@ -9,7 +9,8 @@ export type HostIntentKey =
   | "primary"
   | "quickStart"
   | "advancedMode"
-  | "evaluate";
+  | "evaluate"
+  | "reset";
 
 export type HostIntent = {
   key: HostIntentKey;
@@ -89,6 +90,14 @@ export function buildHostActionModel(
       label: "詳細",
       palette: "gray",
       variant: "outline",
+    });
+
+    // ゲーム中断・リセットボタン
+    intents.push({
+      key: "reset",
+      label: "中断",
+      palette: "gray",
+      variant: "ghost",
     });
 
     if (resolveMode === "sort-submit" && topicSelected) {
