@@ -363,7 +363,11 @@ export function CentralCardBoard({
                 <SortableContext items={activeProposal}>
                   {/* Empty slots for placement */}
                   {Array.from({ length: eligibleIds.length }).map((_, idx) => {
-                    const cardId = activeProposal[idx];
+                    // Prefer proposal value, but fall back to locally optimistic
+                    // `pending` so the UI doesn't temporarily show an empty
+                    // slot if `proposal` briefly mutates.
+                    const cardId =
+                      activeProposal[idx] ?? (pending && pending[idx]) ?? null;
                     return cardId ? (
                       <SortableItem id={cardId} key={cardId}>
                         {renderCard(cardId, idx)}
