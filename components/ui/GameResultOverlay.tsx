@@ -53,7 +53,7 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
         aria-live="polite"
         role="status"
       >
-        <span aria-hidden>🎉</span> SUCCESS!!
+        <span aria-hidden>✨</span> 成功
       </Box>
     );
   }
@@ -139,13 +139,16 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
           },
         }}
       >
-        🎉 SUCCESS!! 🎉
+        ✨ 成功 ✨
         <Text
           fontSize={{ base: "md", md: "lg" }}
           mt={2}
           opacity={0.9}
+          fontFamily='-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
+          fontWeight={500}
+          letterSpacing="-0.01em"
         >
-          完璧な順序でクリア！
+          完璧な順序でクリア
         </Text>
       </Box>
     </Box>

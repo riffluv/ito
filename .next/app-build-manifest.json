@@ -30,12 +30,6 @@
       "static/chunks/main-app.js",
       "static/chunks/ui.js",
       "static/chunks/app/rooms/[roomId]/loading.js"
-    ],
-    "/rules/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/ui.js",
-      "static/chunks/app/rules/page.js"
     ]
   }
 }
