@@ -13,78 +13,130 @@ export default function Hero({ onPlay, onRules }: Props) {
     <Box
       position="relative"
       overflow="hidden"
-      pt={{ base: 12, md: 16 }}
-      pb={{ base: 12, md: 16 }}
-      bg="white" // ゲーム画面と統一した白背景
-      borderBottom="1px solid #e2e8f0" // --slate-200 (ゲーム画面と統一)
-      boxShadow="0 1px 3px 0 rgb(0 0 0 / 0.1)" // ゲーム画面と統一したshadow
+      pt={{ base: 16, md: 20 }}
+      pb={{ base: 16, md: 20 }}
+      bgGradient="radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.08) 25%, {colors.surfaceBase} 60%)"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        bgGradient: 'linear-gradient(135deg, rgba(99,102,241,0.03) 0%, transparent 40%, rgba(139,92,246,0.02) 100%)',
+        pointerEvents: 'none'
+      }}
     >
-      <Container maxW="6xl" position="relative">
+      <Container maxW="5xl" position="relative">
         {/* プロフェッショナルなゲーム風ヒーローセクション */}
         <Box
-          bg="white"
-          border="1px solid #e5e7eb" // より自然なグレー
-          borderRadius="12px" // 微妙に異なる角丸
-          padding={{ base: "1.75rem", md: "2.5rem" }} // 非均等なパディング
-          boxShadow="0 2px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" // より控えめなシャドウ
+          bg="{colors.surfaceRaised}"
+          border="1px solid {colors.borderStrong}"
+          borderRadius="16px"
+          padding={{ base: "2rem", md: "2.5rem", lg: "3rem" }}
+          maxW="800px"
+          mx="auto"
+          boxShadow="0 8px 32px -8px rgba(0,0,0,0.3), 0 4px 16px -4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)"
           position="relative"
+          _before={{
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '16px',
+            padding: '1px',
+            bg: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, transparent 50%, rgba(139,92,246,0.1) 100%)',
+            mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            maskComposite: 'xor',
+            WebkitMaskComposite: 'xor'
+          }}
         >
           {/* カードゲーム風のヘッダーデザイン */}
           <Box textAlign="center" mb="8">
             <Text
-              fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }} // より控えめなサイズ
-              fontWeight={600} // 少し軽く
-              color="#111827" // --gray-900 より自然
-              fontFamily="system-ui, -apple-system, sans-serif" // シンプルなフォント
-              letterSpacing="-0.025em" // 微妙な調整
-              mb="3"
+              fontSize={{ base: "3xl", md: "4xl", lg: "5xl" }}
+              fontWeight={700}
+              color="{colors.fgDefault}"
+              fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif"
+              letterSpacing="-0.03em"
+              mb="4"
+              bgGradient="linear-gradient(135deg, {colors.fgDefault} 0%, rgba(99,102,241,0.8) 100%)"
+              bgClip="text"
+              textShadow="0 2px 8px rgba(99,102,241,0.3)"
             >
               ITO
             </Text>
             <Text
-              fontSize={{ base: "md", md: "lg" }} // 控えめサイズ
-              color="#6b7280" // --gray-500 より自然
-              maxW="480px" // 少し狭く
+              fontSize={{ base: "lg", md: "xl" }}
+              color="{colors.fgMuted}"
+              maxW="520px"
               mx="auto"
-              lineHeight="1.5" // より標準的
+              lineHeight="1.6"
+              fontWeight={400}
+              letterSpacing="-0.01em"
             >
               協力型カードゲーム　数字を使わずに順番を見つけよう
             </Text>
           </Box>
 
           {/* アクションボタンエリア - 自然な間隔とホバー */}
-          <HStack justify="center" gap={{ base: "4", md: "8" }} flexWrap="wrap">
+          <HStack justify="center" gap={{ base: "4", md: "6" }} flexWrap="wrap" mt="10">
             <AppButton
-              visual="subtle"
-              palette="orange"
+              visual="solid"
+              palette="brand"
               size="lg"
               onClick={onPlay}
-              minW={{ base: "10rem", md: "13rem" }}
-              height="3.25rem"
+              minW={{ base: "9rem", md: "11rem" }}
+              height="3rem"
               fontSize="md"
               fontWeight={500}
-              _hover={{
-                opacity: 0.9,
+              borderRadius="8px"
+              letterSpacing="-0.01em"
+              px={8}
+              py={3}
+              css={{
+                background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                border: "none",
+                color: "white",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                transition: "all 0.15s ease",
+                _hover: {
+                  background: "linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.15)"
+                },
+                _active: {
+                  transform: "translateY(0) scale(0.98)",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2), inset 0 1px 3px rgba(0,0,0,0.1)"
+                }
               }}
-              transition="opacity 0.15s ease"
             >
               今すぐプレイ
             </AppButton>
             <AppButton
               size="lg"
-              variant="outline"
+              visual="ghost"
               onClick={onRules}
-              minW={{ base: "9rem", md: "11rem" }}
-              height="3.25rem"
+              minW={{ base: "8rem", md: "10rem" }}
+              height="3rem"
               fontSize="md"
               fontWeight={400}
-              borderColor="#d1d5db" // --gray-300 より自然
-              color="#374151" // --gray-700 より読みやすく
-              _hover={{
-                bg: "#f9fafb", // --gray-50 より微妙
-                borderColor: "#9ca3af", // --gray-400
+              borderRadius="8px"
+              letterSpacing="-0.01em"
+              px={8}
+              py={3}
+              css={{
+                color: "{colors.fgMuted}",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "transparent",
+                transition: "all 0.15s ease",
+                _hover: {
+                  color: "{colors.fgDefault}",
+                  borderColor: "rgba(255,255,255,0.2)",
+                  background: "rgba(255,255,255,0.05)",
+                  transform: "translateY(-1px)"
+                },
+                _active: {
+                  transform: "translateY(0) scale(0.98)",
+                  background: "rgba(255,255,255,0.03)"
+                }
               }}
-              transition="all 0.12s ease"
             >
               ルールを確認
             </AppButton>

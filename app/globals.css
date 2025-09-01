@@ -7,27 +7,52 @@
 
 /* DPI Scale Detection & Base Variables */
 :root {
-  /* 2025年ベストプラクティス: Core DPI detection only */
+  /* 🎮 PREMIUM TYPOGRAPHY SYSTEM */
   --base-scale: 1;
   --adaptive-scale: clamp(0.85, 1vw + 0.5rem, 1.15);
+  
+  /* Professional typography stack */
+  --font-family-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-family-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 
   /* === カードボード専用 2025年DPI対応変数 === */
-  --card-gap: clamp(0.25rem, 1cqi, 0.75rem); /* 4px-12px */
-  --card-padding: clamp(0.5rem, 2cqi, 1rem); /* 8px-16px */
+  --card-gap: clamp(0.375rem, 1.5cqi, 1rem); /* 6px-16px (improved spacing) */
+  --card-padding: clamp(0.75rem, 2.5cqi, 1.25rem); /* 12px-20px */
   --card-min: clamp(4.5rem, 5cqi, 6rem); /* 72px-96px */
   --card-ideal: clamp(6rem, 9cqi, 8rem); /* 96px-128px */
   --card-max: clamp(8rem, 15cqi, 10rem); /* 128px-160px */
   --card-aspect: 5 / 7; /* トランプ比率 */
   --board-max-width: min(100%, 90rem); /* 最大1440px */
+  
+  /* Professional spacing scale */
+  --spacing-micro: 0.125rem; /* 2px */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 0.75rem; /* 12px */
+  --spacing-lg: 1rem; /* 16px */
+  --spacing-xl: 1.5rem; /* 24px */
+  --spacing-2xl: 2rem; /* 32px */
+  
+  /* Layout container widths */
+  --content-max-width: 1400px; /* Lobby/Main pages */
+  --content-narrow: 800px; /* Hero section */
+  --content-article: 1200px; /* Article/Rules pages */
 
   /* Layout variables are managed by Chakra UI theme system */
   /* See theme/layout.ts and theme/index.ts for unified token management */
 }
 
-/* 125% DPI スケール特別対応 + 高解像度最適化統合 */
+/* 💻 125% DPI スケール特別対応 + 高解像度最適化統合 */
 @media (resolution: 120dpi),
   (resolution: 1.25dppx),
   (-webkit-min-device-pixel-ratio: 1.25) {
+  :root {
+    /* Enhanced typography for high DPI */
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   :root {
     --adaptive-scale: 0.92; /* 125%DPI時の微調整 */
     /* カードボード DPI特別対応 */
@@ -63,20 +88,50 @@
   }
 }
 
-/* height制約はGameLayoutで統一管理 */
+/* 🎮 PREMIUM BASE STYLES */
+html {
+  /* Enhanced typography rendering */
+  font-family: var(--font-family-body);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
+}
+
 html,
 body {
-  height: 100%; /* 基本的なブラウザサポート */
+  height: 100%;
+  margin: 0;
+  background: #0C0D10; /* Match surfaceBase */
+  color: #F5F7FA; /* Match fgDefault */
 }
+
 #__next {
   /* height: 100%; 除去 - GameLayoutが管理 */
 }
-html,
-body {
-  margin: 0;
-}
+
 main {
   /* UA デフォルト余白除去でヘッダー直下の空き解消 */
+}
+
+/* 🎯 OPTIMAL READING WIDTHS */
+.content-container {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.content-narrow {
+  max-width: var(--content-narrow);
+  margin: 0 auto;
+}
+
+.content-article {
+  max-width: var(--content-article);
+  margin: 0 auto;
+}
+
+main {
   margin: 0;
   padding: 0;
 }

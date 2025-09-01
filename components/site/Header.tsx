@@ -16,37 +16,55 @@ export default function Header() {
       top={0}
       zIndex="overlay"
       borderBottomWidth="1px"
-      borderColor="borderDefault"
-      bg="panelBg"
-      /* インラインbackdrop除去 → シンプルなフラットヘッダー */
-      h={{ base: "56px", md: "64px" }}
+      borderColor="rgba(255,255,255,0.08)"
+      bg="rgba(12,13,16,0.95)"
+      backdropFilter="blur(20px)"
+      h="64px"
       display="flex"
       alignItems="center"
       css={{
         "--unified-header-height": UNIFIED_LAYOUT.HEADER_HEIGHT,
-        // 125% DPI最適化
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
           "--unified-header-height": UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
           height: UNIFIED_LAYOUT.DPI_125.HEADER_HEIGHT,
         },
       }}
     >
-      <Container maxW="6xl" px={3}>
+      <Container maxW="5xl" px={6}>
         <Flex align="center" justify="space-between" h="100%">
-          <HStack gap="2">
-            <Box boxSize="5" bgGradient="accentSoft" rounded="md" />
+          <HStack gap="3">
+            <Box 
+              boxSize="7" 
+              bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
+              rounded="xl"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              boxShadow="0 2px 8px rgba(99,102,241,0.3)"
+              css={{
+                '&::after': {
+                  content: '""',
+                  width: '60%',
+                  height: '60%',
+                  background: 'rgba(255,255,255,0.9)',
+                  borderRadius: '6px',
+                }
+              }}
+            />
             <Heading
-              fontSize={{ base: "1.05rem", md: "1.15rem" }}
+              fontSize="xl"
+              fontWeight={700}
               lineHeight={1}
-              letterSpacing="tight"
+              letterSpacing="-0.02em"
+              color="white"
+              css={{
+                background: 'linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.8) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
             >
               Online ITO
             </Heading>
-          </HStack>
-          <HStack gap={4}>
-            <AppButton variant="subtle" as={Link} href="/rules">
-              ルール
-            </AppButton>
           </HStack>
         </Flex>
       </Container>

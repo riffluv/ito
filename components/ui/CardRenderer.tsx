@@ -95,12 +95,22 @@ export function CardRenderer({
     cardIsRevealed && !failureConfirmed && animationActive;
   const shouldShowRed = cardIsRevealed && failureConfirmed && animationActive;
 
-  // 🎮 UNIFIED CARD DESIGN: すべてのモードでflat variantに統一
-  // 一括モードも順次モードも同じGameCardデザインを使用
+  // 🎮 DYNAMIC CARD DESIGN: sort-submitモードのリビール時はflip variantを使用
+  const shouldUseFlipVariant = 
+    resolveMode === "sort-submit" && 
+    (roomStatus === "reveal" || roomStatus === "finished");
+    
+  const shouldFlipCard = 
+    shouldUseFlipVariant && 
+    typeof idx === "number" && 
+    revealAnimating && 
+    idx < revealIndex;
+
   return (
     <GameCard
       key={id}
-      variant="flat"
+      variant={shouldUseFlipVariant ? "flip" : "flat"}
+      flipped={shouldFlipCard}
       index={typeof idx === "number" ? idx : null}
       name={player?.name}
       clue={
