@@ -445,7 +445,7 @@ export default function MiniHandDock({
               transition="all 0.2s ease"
               _hover={{
                 transform: "translateY(-1px)",
-                boxShadow: "0 4px 8px rgba(0,0,0,0.15)"
+                boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
               }}
               letterSpacing="tight"
             >
@@ -467,15 +467,20 @@ export default function MiniHandDock({
               bg="transparent"
               color="gray.400"
               borderWidth="0"
-              w={8}
-              h={8}
+              p={1}
+              minW={0}
+              width="auto"
+              height="auto"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
               fontSize="16px"
-              _hover={{ 
+              _hover={{
                 color: "white",
-                transform: "scale(1.1)"
+                transform: "scale(1.1)",
               }}
               _active={{
-                transform: "scale(0.95)"
+                transform: "scale(0.95)",
               }}
               transition="all 0.15s ease"
             >
@@ -491,15 +496,20 @@ export default function MiniHandDock({
               bg="transparent"
               color="gray.400"
               borderWidth="0"
-              w={8}
-              h={8}
+              p={1}
+              minW={0}
+              width="auto"
+              height="auto"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
               fontSize="16px"
-              _hover={{ 
+              _hover={{
                 color: "red.400",
-                transform: "scale(1.1)"
+                transform: "scale(1.1)",
               }}
               _active={{
-                transform: "scale(0.95)"
+                transform: "scale(0.95)",
               }}
               transition="all 0.15s ease"
             >
