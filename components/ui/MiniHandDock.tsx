@@ -458,24 +458,26 @@ export default function MiniHandDock({
             将来的には他の場所（ヘッダーやデバッグパネルなど）で使用可能 */}
 
         {/* 設定・退室ボタン */}
-        <HStack gap={2} align="center">
+        <HStack gap={4} align="center">
           {onOpenSettings && (
             <IconButton
               aria-label="設定"
               onClick={onOpenSettings}
               size="sm"
-              variant="outline"
-              color="fgMuted"
+              bg="transparent"
+              color="gray.400"
+              borderWidth="0"
+              w={8}
+              h={8}
+              fontSize="16px"
               _hover={{ 
-                bg: "surfaceRaised", 
-                color: "accent", 
-                borderColor: "accent",
-                transform: "translateY(-1px)",
-                boxShadow: "0 4px 8px rgba(0,0,0,0.15)"
+                color: "white",
+                transform: "scale(1.1)"
               }}
-              borderRadius="lg"
-              borderColor="borderDefault"
-              transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+              _active={{
+                transform: "scale(0.95)"
+              }}
+              transition="all 0.15s ease"
             >
               <FiSettings />
             </IconButton>
@@ -485,19 +487,21 @@ export default function MiniHandDock({
               aria-label="ルームを退出"
               onClick={onLeaveRoom}
               size="sm"
-              variant="outline"
               title="メインメニューに戻る"
-              color="red.500"
-              borderColor="red.200"
+              bg="transparent"
+              color="gray.400"
+              borderWidth="0"
+              w={8}
+              h={8}
+              fontSize="16px"
               _hover={{ 
-                bg: "red.50", 
-                color: "red.600",
-                borderColor: "red.300",
-                transform: "translateY(-1px)",
-                boxShadow: "0 4px 8px rgba(239, 68, 68, 0.15)"
+                color: "red.400",
+                transform: "scale(1.1)"
               }}
-              borderRadius="lg"
-              transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+              _active={{
+                transform: "scale(0.95)"
+              }}
+              transition="all 0.15s ease"
             >
               <FiLogOut />
             </IconButton>

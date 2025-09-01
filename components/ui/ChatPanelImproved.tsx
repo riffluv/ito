@@ -124,11 +124,11 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
       </Box>
 
       {/* 入力フォーム: 固定行 */}
-      <Box p={3} bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}>
-        <HStack gap={2}>
+      <Box p={4} bg="gray.800" borderTop="1px solid" borderColor="gray.700">
+        <HStack gap={3}>
           <Input
             placeholder={
-              readOnly ? "観戦中は投稿できません" : "メッセージを入力"
+              readOnly ? "観戦中は投稿できません" : "メッセージを入力..."
             }
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -136,24 +136,40 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
               if (e.key === "Enter") send();
             }}
             disabled={readOnly}
-            size="sm"
-            borderRadius="lg"
-            bg="white" // 緊急修正: 確実な白背景
-            color="gray.900" // 緊急修正: 確実な黒文字
+            size="md"
+            borderRadius="xl"
+            bg="gray.900"
+            color="white"
             border="1px solid"
-            borderColor="gray.300" // 緊急修正: 明確な境界線
-            _placeholder={{ color: "gray.500" }}
+            borderColor="gray.600"
+            _placeholder={{ color: "gray.400" }}
             _focus={{ 
-              borderColor: "blue.500", 
-              boxShadow: "0 0 0 1px blue.500" 
+              borderColor: "blue.400", 
+              boxShadow: "0 0 0 1px rgba(96, 165, 250, 0.3)" 
             }}
+            _hover={{ borderColor: "gray.500" }}
+            transition="all 0.2s"
+            px={4}
+            py={3}
           />
           <AppButton
             onClick={send}
-            colorPalette="orange"
             disabled={readOnly || !text.trim()}
-            size="sm"
-            visual="solid"
+            size="md"
+            bg="blue.600"
+            color="white"
+            borderRadius="xl"
+            px={6}
+            py={3}
+            fontWeight="500"
+            _hover={{ bg: "blue.500" }}
+            _active={{ bg: "blue.700" }}
+            _disabled={{ 
+              bg: "gray.700", 
+              color: "gray.400",
+              cursor: "not-allowed"
+            }}
+            transition="all 0.2s"
           >
             送信
           </AppButton>

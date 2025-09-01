@@ -22,26 +22,20 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
         <IconButton
           aria-label={open ? "チャットを閉じる" : "チャットを開く"}
           onClick={() => setOpen((v) => !v)}
-          width="56px"
-          height="56px"
-          rounded="full"
-          bg={open ? "accent" : "surfaceOverlay"}
-          color={open ? "white" : "fgDefault"}
-          borderWidth="1px"
-          borderColor={open ? "accent" : "borderDefault"}
-          fontSize="1.35rem"
-          shadow={open ? "md" : "sm"}
-          transition="background-color .25s var(--easings-standard), color .25s, transform .25s, box-shadow .25s, border-color .25s"
+          width="40px"
+          height="40px"
+          rounded="lg"
+          bg="transparent"
+          color={open ? "blue.400" : "gray.400"}
+          borderWidth="0"
+          fontSize="18px"
+          transition="all 0.2s ease"
           _hover={{
-            bg: open ? "accentHover" : "surfaceRaised",
-            shadow: open ? "lg" : "md",
-            transform: "translateY(-3px)",
+            color: open ? "blue.300" : "gray.200",
+            transform: "scale(1.1)",
           }}
-          _active={{ transform: "translateY(-1px)", shadow: "sm" }}
-          _focusVisible={{
-            outline: "2px solid",
-            outlineColor: "focusRing",
-            outlineOffset: "2px",
+          _active={{ 
+            transform: "scale(0.95)"
           }}
         >
           {open ? "✕" : "💬"}
@@ -61,10 +55,10 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           zIndex={21}
           rounded="xl"
           overflow="hidden"
-          bg="surfaceOverlay"
+          bg="gray.900"
           borderWidth="1px"
-          borderColor="borderDefault"
-          shadow="lg"
+          borderColor="gray.700"
+          boxShadow="0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2)"
           display="flex"
           flexDirection="column"
         >
