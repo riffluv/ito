@@ -3,14 +3,7 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import React, { useState } from "react";
-// LEGACY PREMIUM (to be refactored): premiumGameStyles 依存を今後 surface/accent トークン + recipe へ再マップ予定
-import {
-  PREMIUM_TYPOGRAPHY,
-  getFactionStyles,
-  getNumberFaction,
-} from "@/theme/premiumGameStyles";
-
-// premiumGameStyles 依存除去済み: 旧 import を削除
+// LEGACY PREMIUM: premiumGameStyles 削除済み - 旧ファクションカラーシステムは無効化
 
 export type GameCardProps = {
   index?: number | null;
@@ -35,10 +28,9 @@ export function GameCard({
   const styles: any = recipe({ state, variant });
   const [isHovered, setIsHovered] = useState(false);
 
-  // 🎮 PREMIUM GAME DESIGN: ファクションカラーシステム
-  const factionStyles =
-    typeof number === "number" ? getFactionStyles(number) : null;
-  const faction = typeof number === "number" ? getNumberFaction(number) : null;
+  // 🎮 PREMIUM GAME DESIGN: シンプル化（ファクションカラー無効化）
+  // const factionStyles = null; // 削除済み
+  // const faction = null; // 削除済み
 
   // 🎮 PREMIUM CARD ANIMATIONS
   const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
@@ -213,7 +205,7 @@ export function GameCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       _focusVisible={{
-        outline: `2px solid ${factionStyles?.primary || "#60a5fa"}`,
+        outline: `2px solid #60a5fa`,
         outlineOffset: 2,
       }}
     >
@@ -222,7 +214,10 @@ export function GameCard({
           fontSize="sm"
           color="rgba(255,255,255,0.6)"
           css={{
-            ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+            fontFamily: '"Cinzel Decorative", serif',
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+            textShadow: "0 1px 6px rgba(255,255,255,0.3)",
             fontSize: "0.75rem",
           }}
         >
@@ -236,46 +231,44 @@ export function GameCard({
         textAlign="center"
         css={{
           ...(typeof number === "number" ? undefined : clamp2Css),
-          // プレミアムタイポグラフィ
-          ...(typeof number === "number"
-            ? PREMIUM_TYPOGRAPHY.CARD_NUMBER
-            : PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT),
-          fontSize: typeof number === "number" ? "2.5rem" : "1.25rem",
-          fontWeight: typeof number === "number" ? 900 : 600,
+          // プレミアムタイポグラフィ（インライン化）
+          fontFamily: typeof number === "number" 
+            ? '"Orbitron", "Courier New", monospace'
+            : '"Cinzel Decorative", serif',
+          fontWeight: typeof number === "number" ? 800 : 600,
+          letterSpacing: typeof number === "number" ? "0.02em" : "0.03em",
+          textShadow: typeof number === "number" 
+            ? "0 1px 4px rgba(0,0,0,0.6)" 
+            : "0 1px 6px rgba(255,255,255,0.3)",
+          fontSize: typeof number === "number" ? "2rem" : "1.25rem",
           // ファクション別カラー
-          color:
-            typeof number === "number" && factionStyles
-              ? factionStyles.primary
-              : "rgba(255,255,255,0.95)",
-          // プレミアムテキストエフェクト
-          textShadow:
-            typeof number === "number" && factionStyles
-              ? `0 0 20px ${factionStyles.glow}, 0 2px 8px rgba(0,0,0,0.8)`
-              : "0 2px 8px rgba(0,0,0,0.8)",
+          color: "rgba(255,255,255,0.95)",
           // グロー効果
           filter:
             typeof number === "number"
-              ? `drop-shadow(0 0 8px ${factionStyles?.glow || "rgba(255,255,255,0.3)"})`
+              ? `drop-shadow(0 0 8px rgba(255,255,255,0.3))`
               : undefined,
         }}
       >
         {typeof number === "number" ? number : clue || "?"}
       </Text>
 
-      {/* 🎮 PREMIUM NAME DISPLAY */}
+      {/* 🎮 PREMIUM CLUE DISPLAY */}
       <Text
         mt={2}
-        className="gc-name"
+        className="gc-clue"
         fontSize="xs"
         css={{
           ...oneLineEllipsis,
-          ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-          fontSize: "0.7rem",
-          color: "rgba(255,255,255,0.7)",
-          textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+          fontWeight: 500,
+          letterSpacing: "-0.01em",
+          fontSize: "0.875rem",
+          color: "rgba(255,255,255,0.8)",
+          textShadow: "0 1px 3px rgba(0,0,0,0.4)",
         }}
       >
-        {name ?? "(不明)"}
+        {clue || "(連想なし)"}
       </Text>
     </Box>
   );

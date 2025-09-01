@@ -69,9 +69,13 @@ export function SelfNumberCard({
         あなたの数字
       </Box>
       <Box
-        fontSize={{ base: "2.5rem", md: "3rem" }}
-        fontWeight={700}
+        fontSize={{ base: "2rem", md: "2.5rem" }}
+        fontWeight={600}
         lineHeight={1}
+        css={{
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+          letterSpacing: '-0.02em'
+        }}
       >
         {value ?? "?"}
       </Box>
