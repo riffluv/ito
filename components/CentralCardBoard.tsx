@@ -249,24 +249,42 @@ export function CentralCardBoard({
       {/* コンパクトヘッダー - DPI125%対応 */}
       <Box
         textAlign="center"
-        marginBottom={{ base: "0.5rem", md: "0.5rem" }}
+        marginBottom={{ base: "1rem", md: "1.25rem" }}
         flex="0 0 auto"
         width="100%"
         maxWidth="var(--board-max-width)"
         marginInline="auto"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            marginBottom: "0.25rem",
+            marginBottom: "0.75rem",
           },
         }}
       >
+        {/* 🎯 QUIET LUXURY INSTRUCTION - Sophisticated Guidance */}
         <Box
-          fontWeight={600}
-          fontSize={{ base: "0.875rem", md: "1rem" }}
-          lineHeight={1.3}
-          color="accent"
-          px={4}
-          py={2}
+          css={{
+            fontWeight: 500,
+            fontSize: '0.9375rem',
+            lineHeight: 1.4,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+            letterSpacing: '-0.01em',
+            color: 'rgba(255,255,255,0.8)',
+            padding: '8px 16px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            backdropFilter: 'blur(4px)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease',
+            display: 'inline-block',
+            
+            '&:hover': {
+              background: 'rgba(255,255,255,0.05)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }
+          }}
         >
           小さい順から大きい順に並べよう
         </Box>
@@ -375,28 +393,57 @@ export function CentralCardBoard({
                     ) : (
                       <Box
                         key={`slot-${idx}`}
-                        borderWidth="0"
-                        borderRadius="xl"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        bg="surfaceRaised"
-                        color="fgMuted"
-                        fontSize="lg"
-                        fontWeight={600}
-                        border="2px dashed"
-                        borderColor="borderSubtle"
-                        boxShadow="0 2px 8px rgba(0,0,0,0.1)"
-                        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
-                        _hover={{
-                          bg: "accentSubtle",
-                          color: "accent",
-                          borderColor: "accent",
-                          transform: "translateY(-2px)",
-                          boxShadow: "0 4px 12px rgba(255, 122, 26, 0.15)",
+                        css={{
+                          // === ELEGANT CARD PROPORTIONS ===
+                          aspectRatio: '5 / 7',
+                          width: UNIFIED_LAYOUT.CARD.WIDTH,
+                          placeSelf: 'start',
+                          
+                          // === REFINED LAYOUT ===
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          
+                          // === SOPHISTICATED STYLING ===
+                          background: 'rgba(255,255,255,0.02)',
+                          border: '1.5px dashed rgba(255,255,255,0.15)',
+                          borderRadius: '16px',
+                          
+                          // === PREMIUM VISUAL EFFECTS ===
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.03)',
+                          backdropFilter: 'blur(4px)',
+                          
+                          // === REFINED TYPOGRAPHY ===
+                          fontSize: '1.125rem',
+                          fontWeight: 500,
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+                          color: 'rgba(255,255,255,0.4)',
+                          letterSpacing: '-0.01em',
+                          
+                          // === SOPHISTICATED INTERACTION ===
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          
+                          // === SUBTLE HOVER ENHANCEMENT ===
+                          '&:hover': {
+                            background: 'rgba(255,255,255,0.06)',
+                            borderColor: 'rgba(255,255,255,0.25)',
+                            color: 'rgba(255,255,255,0.7)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)',
+                          },
+                          
+                          // === UNDERSTATED DROP TARGET INDICATOR ===
+                          '&[data-drop-active="true"]': {
+                            background: 'rgba(255,255,255,0.08)',
+                            borderColor: 'rgba(255,255,255,0.3)',
+                            borderStyle: 'solid',
+                            transform: 'scale(1.02)',
+                            boxShadow: '0 6px 16px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.08)',
+                          }
                         }}
-                        css={{ aspectRatio: "5 / 7", placeSelf: "start" }}
-                        width={UNIFIED_LAYOUT.CARD.WIDTH}
                       >
                         {idx + 1}
                       </Box>

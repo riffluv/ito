@@ -1,18 +1,18 @@
 {
   "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms": {
-    "id": 12453,
+    "id": "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms",
     "files": []
   },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
-    "id": 56166,
+    "id": "lib\\services\\roomService.ts -> @/lib/game/random",
     "files": [
-      "static/chunks/166.31fef1d2476925ad.js"
+      "static/chunks/_app-pages-browser_lib_game_random_ts.js"
     ]
   },
   "lib\\services\\roomService.ts -> firebase/firestore": {
-    "id": 69842,
+    "id": "lib\\services\\roomService.ts -> firebase/firestore",
     "files": [
-      "static/chunks/842.bfc2cce9e989e21d.js"
+      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
     ]
   }
 }
