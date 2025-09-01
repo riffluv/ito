@@ -389,7 +389,7 @@ export function CentralCardBoard({
                           color: "accent",
                           borderColor: "accent",
                           transform: "translateY(-2px)",
-                          boxShadow: "0 4px 12px rgba(255, 122, 26, 0.15)"
+                          boxShadow: "0 4px 12px rgba(255, 122, 26, 0.15)",
                         }}
                         css={{ aspectRatio: "5 / 7", placeSelf: "start" }}
                         width={UNIFIED_LAYOUT.CARD.WIDTH}
@@ -409,13 +409,24 @@ export function CentralCardBoard({
                     (orderList?.length || 0) + 1
                   ),
                 }).map((_, idx) => {
-                  const cardId = orderList?.[idx];
+                  // Prefer confirmed orderList entry; fall back to locally pending
+                  // placement so the first card appears immediately in the slot
+                  // even before server-side orderList updates arrive.
+                  const cardId =
+                    orderList?.[idx] ?? (pending && pending[idx]) ?? null;
                   const isDroppableSlot = canDropAtPosition(idx);
-                  // カードを表示するのは適切なゲーム状態のみ
-                  const shouldShowCard = cardId && (roomStatus === 'playing' || roomStatus === 'reveal' || roomStatus === 'finished');
+                  // 順次モードでは、プレイヤーが場に出したカードは
+                  // room.status が 'clue' のままでも即座に表示したい。
+                  // したがって 'clue' を許容する。
+                  const shouldShowCard =
+                    cardId &&
+                    (roomStatus === "clue" ||
+                      roomStatus === "playing" ||
+                      roomStatus === "reveal" ||
+                      roomStatus === "finished");
                   return shouldShowCard ? (
-                    <React.Fragment key={cardId}>
-                      {renderCard(cardId, idx)}
+                    <React.Fragment key={cardId ?? `slot-${idx}`}>
+                      {cardId ? renderCard(cardId, idx) : null}
                     </React.Fragment>
                   ) : (
                     <Box
@@ -430,7 +441,9 @@ export function CentralCardBoard({
                       onDragLeave={(e) => {
                         e.stopPropagation();
                         // 子要素への移動ではリセットしない
-                        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        if (
+                          !e.currentTarget.contains(e.relatedTarget as Node)
+                        ) {
                           setIsOver(false);
                         }
                       }}
@@ -451,12 +464,12 @@ export function CentralCardBoard({
                       cursor={isDroppableSlot ? "copy" : "not-allowed"}
                       _hover={
                         isDroppableSlot
-                          ? { 
-                              bg: "accentSubtle", 
+                          ? {
+                              bg: "accentSubtle",
                               color: "accent",
                               borderColor: "accent",
                               transform: "translateY(-2px)",
-                              boxShadow: "0 8px 24px rgba(255, 122, 26, 0.25)"
+                              boxShadow: "0 8px 24px rgba(255, 122, 26, 0.25)",
                             }
                           : {}
                       }

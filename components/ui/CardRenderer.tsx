@@ -1,5 +1,3 @@
-import React from "react";
-import { Text } from "@chakra-ui/react";
 import GameCard from "@/components/ui/GameCard";
 import type { PlayerDoc } from "@/lib/types";
 
@@ -48,7 +46,11 @@ export function CardRenderer({
     if (roomStatus === "finished") {
       // ゲーム終了時は全て表示
       showNumber = numberVisibleBase;
-    } else if (roomStatus === "reveal" && revealAnimating && typeof idx === "number") {
+    } else if (
+      roomStatus === "reveal" &&
+      revealAnimating &&
+      typeof idx === "number"
+    ) {
       // リビール演出中は順次表示
       showNumber = numberVisibleBase && idx < revealIndex;
     } else {
@@ -58,12 +60,16 @@ export function CardRenderer({
   }
 
   // 順次モードの場合はrevealAnimating処理
-  if (revealAnimating && typeof idx === "number" && resolveMode !== "sort-submit") {
+  if (
+    revealAnimating &&
+    typeof idx === "number" &&
+    resolveMode !== "sort-submit"
+  ) {
     showNumber = idx < revealIndex;
   }
 
   const effectiveFailedAt = localFailedAt ?? failedAt;
-  
+
   const failureConfirmed = (() => {
     if (typeof effectiveFailedAt !== "number") return false;
     if (resolveMode === "sort-submit") {
@@ -80,8 +86,14 @@ export function CardRenderer({
           (roomStatus === "reveal" && idx < revealIndex))
       : isPlaced;
 
-  const shouldShowGreen = cardIsRevealed && !failureConfirmed;
-  const shouldShowRed = cardIsRevealed && failureConfirmed;
+  // Only surface success/fail coloring while reveal animation is active or after
+  // the reveal is finalized (finished). This prevents a brief "all red" flash
+  // immediately when the room status flips to 'reveal' before the client-side
+  // animation index is initialized.
+  const animationActive = roomStatus === "finished" || revealAnimating;
+  const shouldShowGreen =
+    cardIsRevealed && !failureConfirmed && animationActive;
+  const shouldShowRed = cardIsRevealed && failureConfirmed && animationActive;
 
   // 🎮 UNIFIED CARD DESIGN: すべてのモードでflat variantに統一
   // 一括モードも順次モードも同じGameCardデザインを使用
@@ -97,9 +109,7 @@ export function CardRenderer({
           : player?.clue1
       }
       number={showNumber && typeof number === "number" ? number : null}
-      state={
-        shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"
-      }
+      state={shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"}
     />
   );
 }
