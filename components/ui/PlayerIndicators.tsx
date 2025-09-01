@@ -1,7 +1,6 @@
 "use client";
-import React from "react";
-import { Box, Text } from "@chakra-ui/react";
 import type { PlayerDoc } from "@/lib/types";
+import { Box, Text } from "@chakra-ui/react";
 
 export default function PlayerIndicators({
   players,
@@ -11,7 +10,9 @@ export default function PlayerIndicators({
   onlineCount: number;
 }) {
   const total = players.length;
-  const submitted = players.filter((p) => !!p?.clue1 && String(p.clue1).trim() !== "").length;
+  const submitted = players.filter(
+    (p) => !!p?.clue1 && String(p.clue1).trim() !== ""
+  ).length;
 
   const Card = ({ pos }: { pos: "left" | "right" }) => (
     <Box
@@ -21,33 +22,47 @@ export default function PlayerIndicators({
       left={pos === "left" ? { base: 3, md: 6 } : undefined}
       right={pos === "right" ? { base: 3, md: 6 } : undefined}
       zIndex={15}
-      borderRadius="15px"
-      p={3}
-      minW={{ base: "180px", md: "220px" }}
-      css={{
-        background:
-          "linear-gradient(135deg, rgba(101,67,33,0.9), rgba(139,115,85,0.9))",
-        border: "2px solid rgba(160,133,91,0.7)",
-        backdropFilter: "blur(15px)",
-        boxShadow:
-          "0 8px 25px rgba(0,0,0,0.6), 0 0 15px rgba(160,133,91,0.3), inset 0 2px 0 rgba(160,133,91,0.4)",
-      }}
+      rounded="lg"
+      px={4}
+      py={3}
+      minW={{ base: "170px", md: "200px" }}
+      bg="surfaceOverlay"
+      borderWidth="1px"
+      borderColor="borderDefault"
+      shadow="md"
+      display="flex"
+      flexDirection="column"
+      gap={1}
+      transition="background-color .25s, border-color .25s, box-shadow .25s, transform .25s"
+      _hover={{ transform: "translateY(-2px)", shadow: "lg" }}
     >
       {pos === "left" ? (
         <>
-          <Text fontSize="12px" color="rgba(255,255,255,0.9)" fontWeight={600} mb={1}>
+          <Text
+            fontSize="11px"
+            color="fgMuted"
+            fontWeight={600}
+            letterSpacing="0.5px"
+            textTransform="uppercase"
+          >
             提出状況
           </Text>
-          <Text color="rgba(160,133,91,1)" fontWeight={700}>
+          <Text color="accent" fontWeight={700} fontSize="14px">
             {submitted}/{total} 提出
           </Text>
         </>
       ) : (
         <>
-          <Text fontSize="12px" color="rgba(255,255,255,0.9)" fontWeight={600} mb={1}>
+          <Text
+            fontSize="11px"
+            color="fgMuted"
+            fontWeight={600}
+            letterSpacing="0.5px"
+            textTransform="uppercase"
+          >
             プレイヤー
           </Text>
-          <Text color="rgba(160,133,91,1)" fontWeight={700}>
+          <Text color="accent" fontWeight={700} fontSize="14px">
             {onlineCount}/{total} 接続中
           </Text>
         </>
@@ -62,4 +77,3 @@ export default function PlayerIndicators({
     </>
   );
 }
-

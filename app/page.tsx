@@ -3,7 +3,6 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import {
   Box,
-  Container,
   Flex,
   Heading,
   HStack,
@@ -137,64 +136,60 @@ export default function LobbyPage() {
   };
 
   return (
-    <Box bg="#fafafa"> {/* より暖かいグレー背景 - メインメニューはスクロール可能 */}
+    <Box bg="canvasBg">
+      {" "}
+      {/* フルブリード背景: 新リッチブラック */}
       <Hero onPlay={openCreateFlow} onRules={() => router.push("/rules")} />
-      <Container maxW="6xl" py={8}>
-        {/* シンプルなヘッダーセクション */}
+      <Box px={{ base: 4, md: 8, xl: 12 }} py={8} maxW="100%">
+        {/* ヘッダー/フィルター領域: panel風 */}
         <Box
-          bg="white"
-          border="1px solid #e5e7eb" // より自然なボーダー
-          borderRadius="8px" // 少し角を立てる
-          padding={{ base: "1.25rem", md: "1.75rem" }} // 非均等なパディング
-          mb="6" // 少し狭く
-          boxShadow="0 1px 2px rgba(0,0,0,0.05)" // より控えめ
+          bg="surfaceRaised"
+          borderWidth="1px"
+          borderColor="borderDefault"
+          rounded="xl"
+          px={{ base: 5, md: 7 }}
+          py={{ base: 5, md: 7 }}
+          mb={8}
+          boxShadow="0 2px 6px rgba(0,0,0,0.4)"
         >
-          <Flex 
+          <Flex
             direction={{ base: "column", md: "row" }}
-            justify="space-between" 
+            justify="space-between"
             align={{ base: "flex-start", md: "center" }}
-            gap="4"
+            gap={6}
           >
             <Box>
-              <Text
-                fontSize={{ base: "lg", md: "xl" }} // 少し小さく
-                fontWeight={600} // 軽く
-                color="#111827" // より自然な黒
-                fontFamily="system-ui, -apple-system, sans-serif"
-                mb="1" // 狭く
+              <Heading
+                size="md"
+                fontWeight={600}
+                letterSpacing="tight"
+                color="fgDefault"
+                mb={1}
               >
                 ルーム一覧
-              </Text>
-              <Text
-                fontSize="sm"
-                color="#6b7280" // より自然なグレー
-                fontWeight={400}
-              >
+              </Heading>
+              <Text fontSize="sm" color="fgMuted">
                 参加するルームを選んでください
               </Text>
             </Box>
-            
-            {/* シンプルなユーザー情報 */}
             <Box
-              bg="#f9fafb" // より控えめな背景
-              borderRadius="6px"
-              padding="0.875rem" // 14px - 微妙に小さく
-              minW={{ base: "100%", md: "240px" }} // 少し狭く
+              bg="surfaceSubtle"
+              borderWidth="1px"
+              borderColor="borderDefault"
+              rounded="md"
+              px={4}
+              py={3}
+              minW={{ base: "100%", md: "260px" }}
             >
-              <HStack justify="space-between" align="center">
+              <HStack justify="space-between" align="center" gap={4}>
                 <Box>
-                  <Text
-                    fontSize="xs"
-                    color="#9ca3af" // より薄いグレー
-                    fontWeight={400}
-                    mb="2px"
-                  >
+                  <Text fontSize="xs" color="fgSubtle" mb={1}>
                     プレイヤー名
                   </Text>
                   <Text
                     fontSize="sm"
-                    fontWeight={500}
-                    color="#111827"
+                    fontWeight={600}
+                    color="fgDefault"
                     suppressHydrationWarning
                   >
                     {mounted ? displayName || "未設定" : "未設定"}
@@ -209,14 +204,8 @@ export default function LobbyPage() {
                     setPendingJoin(null);
                     nameDialog.onOpen();
                   }}
-                  minW="3.5rem" // 少し小さく
-                  borderColor="#d1d5db"
-                  color="#4b5563"
-                  fontSize="xs" // 小さめのフォント
-                  _hover={{
-                    bg: "#f3f4f6",
-                    borderColor: "#9ca3af",
-                  }}
+                  minW="3.5rem"
+                  fontSize="xs"
                 >
                   変更
                 </AppButton>
@@ -258,11 +247,11 @@ export default function LobbyPage() {
               <Box
                 display="grid"
                 gridTemplateColumns={{
-                  base: "1fr",
-                  sm: "repeat(auto-fill, minmax(280px, 1fr))",
-                  md: "repeat(auto-fill, minmax(320px, 1fr))",
+                  base: "repeat(auto-fill, minmax(260px,1fr))",
+                  md: "repeat(auto-fill, minmax(300px,1fr))",
+                  xl: "repeat(auto-fill, minmax(320px,1fr))",
                 }}
-                gap={4}
+                gap={5}
                 w="100%"
               >
                 {filteredRooms.map((r) => (
@@ -359,7 +348,7 @@ export default function LobbyPage() {
             router.push(`/rooms/${roomId}`);
           }}
         />
-      </Container>
+      </Box>
     </Box>
   );
 }

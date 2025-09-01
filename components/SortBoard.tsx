@@ -3,7 +3,6 @@ import { SortableItem } from "@/components/sortable/SortableItem";
 import { AppButton } from "@/components/ui/AppButton";
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import {
   DndContext,
@@ -15,11 +14,11 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
 
@@ -66,22 +65,7 @@ export function SortBoard({
   };
 
   return (
-    <Panel 
-      title="並べ替える"
-      css={{
-        // 🎮 PREMIUM SORT PANEL
-        background: `
-          linear-gradient(135deg, 
-            rgba(101,67,33,0.1) 0%, 
-            rgba(80,53,26,0.2) 100%
-          )
-        `,
-        border: "1px solid rgba(160,133,91,0.3)",
-        backdropFilter: "blur(10px)",
-        borderRadius: "16px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-      }}
-    >
+    <Panel title="並べ替える" variant="subtle" elevated={false}>
       <DndContext
         sensors={sensors}
         onDragStart={(e) => setActiveId(String(e.active.id))}
@@ -128,62 +112,46 @@ export function SortBoard({
                 <SortableItem key={id} id={id} disabled={disabled}>
                   <Box
                     p={4}
-                    borderRadius="16px"
-                    css={{
-                      // 🎮 PREMIUM SORTABLE CARD
-                      background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)",
-                      border: "1px solid rgba(255,255,255,0.2)",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-                      backdropFilter: "blur(10px)",
-                      transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                      cursor: disabled ? "default" : "grab",
-                      "&:hover": !disabled ? {
-                        transform: "translateY(-4px) scale(1.02)",
-                        boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
-                        border: "1px solid rgba(255,215,0,0.4)",
-                      } : {},
-                      "&:active": !disabled ? {
-                        cursor: "grabbing",
-                        transform: "scale(0.98)",
-                      } : {},
-                    }}
+                    rounded="lg"
+                    bg="surfaceRaised"
+                    borderWidth="1px"
+                    borderColor="borderSubtle"
+                    shadow="xs"
+                    transition="background-color .25s, box-shadow .25s, transform .25s, border-color .25s"
+                    cursor={disabled ? "default" : "grab"}
+                    _hover={
+                      !disabled
+                        ? {
+                            bg: "accentSubtle",
+                            borderColor: "accent",
+                            shadow: "sm",
+                            transform: "translateY(-3px)",
+                          }
+                        : undefined
+                    }
+                    _active={
+                      !disabled ? { transform: "translateY(-1px)" } : undefined
+                    }
                   >
                     <HStack justify="space-between">
-                      <Text 
-                        lineClamp={1}
-                        css={{
-                          color: "#ffffff",
-                          textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-                          fontWeight: 600,
-                        }}
-                      >
+                      <Text lineClamp={1} fontWeight={600} color="fgDefault">
                         {p.name}
                       </Text>
-                      <Text 
+                      <Text
                         fontSize="xs"
-                        css={{
-                          color: "#ffd700",
-                          textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-                          fontWeight: 700,
-                          background: "rgba(255,215,0,0.1)",
-                          px: 2,
-                          py: 1,
-                          borderRadius: "6px",
-                          border: "1px solid rgba(255,215,0,0.3)",
-                        }}
+                        fontWeight={700}
+                        px={2}
+                        py={1}
+                        rounded="sm"
+                        bg="accentSubtle"
+                        color="accent"
+                        borderWidth="1px"
+                        borderColor="accent"
                       >
                         #{idx + 1}
                       </Text>
                     </HStack>
-                    <Text 
-                      mt={2} 
-                      fontSize="sm" 
-                      lineClamp={2}
-                      css={{
-                        color: "rgba(255,255,255,0.7)",
-                        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-                      }}
-                    >
+                    <Text mt={2} fontSize="sm" lineClamp={2} color="fgMuted">
                       連想: {p.clue1 || "（未設定）"}
                     </Text>
                   </Box>
@@ -196,22 +164,15 @@ export function SortBoard({
           {activeId ? (
             <Box
               p={4}
-              borderRadius="16px"
-              css={{
-                // 🎮 PREMIUM DRAG OVERLAY
-                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.1) 100%)",
-                border: "2px solid rgba(255,215,0,0.6)",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,215,0,0.3)",
-                backdropFilter: "blur(15px)",
-                transform: "scale(1.08) rotate(2deg)",
-                zIndex: 1000,
-              }}
+              rounded="lg"
+              bg="accentSubtle"
+              borderWidth="2px"
+              borderColor="accent"
+              shadow="lg"
+              transform="scale(1.05)"
+              zIndex={1000}
             >
-              <Text css={{
-                color: "#ffd700",
-                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-                fontWeight: 700,
-              }}>
+              <Text color="accent" fontWeight={700}>
                 {map.get(activeId)?.name}
               </Text>
             </Box>
@@ -224,30 +185,7 @@ export function SortBoard({
           colorPalette="orange"
           onClick={onConfirm}
           disabled={disabled}
-          css={{
-            // 🎮 PREMIUM CONFIRM BUTTON
-            background: "linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(217,119,6,0.3) 100%)",
-            border: "1px solid rgba(245,158,11,0.5)",
-            color: "#fbbf24",
-            px: 8,
-            py: 3,
-            fontSize: "1rem",
-            fontWeight: 700,
-            borderRadius: "12px",
-            _hover: {
-              background: "linear-gradient(135deg, rgba(245,158,11,0.3) 0%, rgba(217,119,6,0.4) 100%)",
-              transform: "translateY(-2px)",
-              boxShadow: "0 8px 24px rgba(245,158,11,0.3)",
-            },
-            _disabled: {
-              opacity: 0.5,
-              cursor: "not-allowed",
-              _hover: {
-                transform: "none",
-                background: "initial",
-              },
-            },
-          }}
+          size="md"
         >
           並びを確定
         </AppButton>

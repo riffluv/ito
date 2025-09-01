@@ -10,11 +10,11 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
-import { notify } from "@/components/ui/notify";
-import UniversalMonitor from "@/components/UniversalMonitor";
-import MinimalChat from "@/components/ui/MinimalChat";
-import PlayerIndicators from "@/components/ui/PlayerIndicators";
 import MiniHandDock from "@/components/ui/MiniHandDock";
+import MinimalChat from "@/components/ui/MinimalChat";
+import { notify } from "@/components/ui/notify";
+import PlayerIndicators from "@/components/ui/PlayerIndicators";
+import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
@@ -89,15 +89,16 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
         }}
         size="sm"
         w={{ base: "120px", md: "160px", lg: "200px" }}
-        bg="white" // 緊急修正: 確実な白背景
-        color="gray.900" // 緊急修正: 確実な黒文字
+        bg="surfaceRaised"
+        color="fgDefault"
         border="1px solid"
-        borderColor="gray.300" // 緊急修正: 明確な境界線
-        _placeholder={{ color: "gray.500" }} // プレースホルダー視認性
+        borderColor="borderSubtle"
+        _placeholder={{ color: "fgMuted" }}
         _focus={{
-          borderColor: "blue.500",
-          boxShadow: "0 0 0 1px blue.500",
-        }} // フォーカス状態の明確化
+          borderColor: "accent",
+          boxShadow: "0 0 0 1px var(--chakra-colors-accent)",
+        }}
+        _hover={{ borderColor: "borderDefault" }}
         flex="1"
         maxW="200px"
       />
@@ -439,9 +440,22 @@ export default function RoomPage() {
   );
 
   const rightPanelNode = (
-    <Box h="100%" display="flex" flexDirection="column">
-      <Box padding="1.5rem 1.5rem 1rem" borderBottom="1px solid #e2e8f0">
-        <Box fontSize="1.125rem" fontWeight={600} color="#0f172a">
+    <Box
+      h="100%"
+      display="flex"
+      flexDirection="column"
+      bg="surfaceRaised"
+      borderLeft="1px solid"
+      borderColor="borderSubtle"
+    >
+      <Box
+        px={6}
+        py={4}
+        borderBottom="1px solid"
+        borderColor="borderSubtle"
+        bg="surfaceBase"
+      >
+        <Box fontSize="1.125rem" fontWeight={600} color="fgDefault">
           チャット
         </Box>
       </Box>

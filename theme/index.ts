@@ -1,4 +1,9 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
+// 分割された foundations / semantic token モジュール
+import { borderWidths, radii } from "./foundations/borders";
+import { semanticColors } from "./semantic/colors";
+import { semanticGradients } from "./semantic/gradients";
+import { semanticShadows } from "./semantic/shadows";
 
 // Chakra UI v3: System ベース設定 (defineConfig 形式) + 2025 CSS 設計拡張
 const config = defineConfig({
@@ -14,6 +19,9 @@ const config = defineConfig({
   strictTokens: true, // 型生成完了後 true に昇格
   theme: {
     tokens: {
+      // === foundations (分割移行中) ===
+      borderWidths,
+      radii,
       breakpoints: {
         sm: { value: "30em" },
         md: { value: "48em" },
@@ -41,15 +49,6 @@ const config = defineConfig({
         "2xl": { value: "clamp(1.5rem, 1.35rem + 0.9vw, 1.9rem)" },
         "3xl": { value: "clamp(1.85rem, 1.6rem + 1.2vw, 2.4rem)" },
         "4xl": { value: "clamp(2.25rem, 2rem + 1.8vw, 3rem)" },
-      },
-      radii: {
-        // シャープで現代的なトーン（Chakra公式に近い 4/8/12/16 ステップ）
-        xs: { value: "4px" },
-        sm: { value: "6px" },
-        md: { value: "8px" },
-        lg: { value: "12px" },
-        xl: { value: "16px" },
-        full: { value: "9999px" },
       },
       colors: {
         brand: {
@@ -83,10 +82,21 @@ const config = defineConfig({
         md: { value: "0 4px 10px -2px rgba(0,0,0,0.28)" },
         // Panel / Card 用の統一シャドウトークン
         panelSubtle: { value: "0 1px 2px 0 rgba(0,0,0,0.05)" },
-        panelDistinct: { value: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)" },
-        cardRaised: { value: "0 1px 3px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)" },
-        cardFloating: { value: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)" },
-        cardElevated: { value: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)" },
+        panelDistinct: {
+          value: "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)",
+        },
+        cardRaised: {
+          value:
+            "0 1px 3px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)",
+        },
+        cardFloating: {
+          value:
+            "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+        },
+        cardElevated: {
+          value:
+            "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+        },
         activeArea: { value: "inset 0 1px 2px 0 rgba(0,0,0,0.06)" },
         glow: {
           value:
@@ -158,15 +168,15 @@ const config = defineConfig({
 
         // === ゲーム要素 - 2025年DPI対応コンテナクエリベース ===
         // カードサイズ: fluid + container query 対応
-        cardMin: { value: "clamp(5rem, 6cqi, 7rem)" },     // 80px-112px
-        cardIdeal: { value: "clamp(6rem, 9cqi, 8rem)" },   // 96px-128px  
-        cardMax: { value: "clamp(7rem, 12cqi, 9rem)" },    // 112px-144px
-        
+        cardMin: { value: "clamp(5rem, 6cqi, 7rem)" }, // 80px-112px
+        cardIdeal: { value: "clamp(6rem, 9cqi, 8rem)" }, // 96px-128px
+        cardMax: { value: "clamp(7.5rem, 13cqi, 10rem)" }, // 120px-160px (拡大)
+
         // レガシー互換性 (段階的移行用)
-        cardW: { value: "clamp(6rem, 9cqi, 8rem)" },       // cardIdealと同値
-        cardH: { value: "auto" },                          // aspect-ratioで制御
+        cardW: { value: "clamp(6rem, 9cqi, 8rem)" }, // cardIdealと同値
+        cardH: { value: "auto" }, // aspect-ratioで制御
         cardWBase: { value: "clamp(5rem, 6cqi, 6.5rem)" }, // モバイル用
-        cardHBase: { value: "auto" },                      // aspect-ratioで制御
+        cardHBase: { value: "auto" }, // aspect-ratioで制御
 
         // レイアウトサイズ: UNIFIED_LAYOUTと統一
         headerHeight: { value: "clamp(80px, 8vh, 120px)" }, // UNIFIED_LAYOUT.HEADER_HEIGHT
@@ -180,82 +190,21 @@ const config = defineConfig({
       },
     },
     semanticTokens: {
-      colors: {
-        // Artifact風 木目背景（グラデーション+パターン）
-        canvasBg: {
-          value:
-            "radial-gradient(ellipse at center, rgba(139,115,85,0.6) 30%, rgba(101,67,33,0.8) 70%), linear-gradient(45deg, rgba(101,67,33,0.15) 0%, rgba(139,115,85,0.2) 25%, rgba(160,133,91,0.15) 50%, rgba(139,115,85,0.2) 75%, rgba(101,67,33,0.15) 100%)",
-        },
-        panelBg: { value: "transparent" },
-        panelSubBg: { value: "rgba(30,15,50,0.08)" },
-        fgDefault: { value: "gray.100" },
-        fgMuted: { value: "rgba(255,255,255,0.75)" },
-        borderDefault: { value: "transparent" },
-        accent: {
-          value: "{colors.brand.500}", // ライトモード固定
-        },
-        accentSubtle: {
-          value: "{colors.brand.50}", // ライトモード固定
-        },
-        // success/fail の subtle 背景を明示化
-        successSubtle: {
-          value: "rgba(56,178,172,0.10)", // ライトモード固定
-        },
-        dangerSubtle: {
-          value: "rgba(255,80,80,0.10)", // ライトモード固定
-        },
-        cardHoverBg: {
-          value: "gray.100", // ライトモード固定
-        },
-        link: { value: "blue.600" }, // ライトモード固定
-        // focus ring token (Chakra v3 semantic palette 仕様に近似)
-        focusRing: {
-          value: "{colors.brand.400}", // ライトモード固定
-        },
-        // 状態色 (今後 colorPalette による上書きを想定)
-        dangerSolid: { value: "red.500" }, // ライトモード固定
-        successSolid: { value: "green.500" }, // ライトモード固定
-        // Banner / Self number foreground brand-ish
-        panelBannerFg: { value: "#0f1724" }, // ライトモード固定
-        selfNumberFg: { value: "#0F3460" }, // ライトモード固定
-        // Artifact系 追加トークン
-        borderGold: { value: "rgba(255,215,0,0.85)" },
-        successBorder: { value: "rgba(76,175,80,1)" },
-        dangerBorder: { value: "rgba(244,67,54,1)" },
-        woodBorder: { value: "rgba(160,133,91,0.6)" },
-      },
-      // === 2025年 カードシステム専用セマンティックトークン ===
+      colors: semanticColors,
+      // カード関連 sizes (そのまま再利用)
       sizes: {
-        "card.min": { value: "clamp(4.5rem, 5cqi, 6rem)" },     // 72px-96px
+        "card.min": { value: "clamp(4.5rem, 5cqi, 6rem)" }, // 72px-96px
         "card.ideal": { value: "{sizes.cardIdeal}" },
-        "card.max": { value: "clamp(8rem, 15cqi, 10rem)" },     // 128px-160px
+        "card.max": { value: "clamp(8.5rem, 16cqi, 11rem)" }, // 136px-176px (拡大)
         "card.gap": { value: "clamp(0.25rem, 1cqi, 0.75rem)" }, // 4px-12px
         "card.padding": { value: "clamp(0.5rem, 2cqi, 1rem)" }, // 8px-16px
-        "board.maxWidth": { value: "min(100%, 90rem)" },        // 1440px max
+        "board.maxWidth": { value: "min(100%, 90rem)" }, // 1440px max
       },
       aspectRatios: {
-        "card": { value: "5 / 7" }, // トランプカード比率
+        card: { value: "5 / 7" }, // トランプカード比率
       },
-      shadows: {
-        interactive: { value: "{shadows.sm}" }, // ライトモード固定
-        elevated: { value: "{shadows.md}" }, // ライトモード固定
-        goldGlow: { value: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)" },
-        successGlow: { value: "0 0 30px rgba(76,175,80,0.6)" },
-        dangerGlow: { value: "0 0 30px rgba(244,67,54,0.6)" },
-        panelWood: { value: "0 8px 25px rgba(0,0,0,0.7), inset 0 2px 0 rgba(160,133,91,0.3)" },
-      },
-      gradients: {
-        accentSoft: { value: "{gradients.accentSoft}" }, // ライトモード固定
-        dangerStrong: { value: "{gradients.dangerStrong}" }, // ライトモード固定
-        playerNumber: { value: "{gradients.playerNumber}" }, // ライトモード固定
-        boardPattern: {
-          value: "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 8px, transparent 8px, transparent 16px)", // ライトモード固定
-        },
-        cardPurple: { value: "linear(135deg, rgba(30,15,50,0.95), rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95))" },
-        cardSuccess: { value: "linear(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))" },
-        cardFail: { value: "linear(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))" },
-        panelWood: { value: "linear(180deg, rgba(101,67,33,0.8) 0%, rgba(80,53,26,0.9) 100%)" },
-      },
+      shadows: semanticShadows,
+      gradients: semanticGradients,
     },
     recipes: {
       button: {
@@ -373,7 +322,7 @@ const config = defineConfig({
             minWidth: "var(--card-min)",
             maxWidth: "var(--card-max)",
             height: "auto", // aspect-ratioが制御
-            
+
             // Grid アイテムとしての最適化
             placeSelf: "start",
           },
@@ -423,16 +372,16 @@ const config = defineConfig({
             minWidth: "var(--card-min)",
             maxWidth: "var(--card-max)",
             height: "auto", // aspect-ratioが制御
-            
+
             rounded: "lg",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            
+
             // Grid アイテムとしての最適化
             placeSelf: "start",
-            
+
             _focusVisible: {
               outline: "2px solid {colors.focusRing}",
               outlineOffset: "2px",
@@ -451,21 +400,22 @@ const config = defineConfig({
           },
         },
         compoundVariants: [
+          // 新シンプルスタイル: flip variant 背面/前面を同一 surfaceRaised ベース + state 枠色のみ変更
           {
             variant: "flip",
             state: "default",
             css: {
               front: {
-                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
-                borderColor: "rgba(255,215,0,0.85)",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
-                color: "rgba(255,255,255,0.95)",
+                bg: "surfaceRaised",
+                borderColor: "borderDefault",
+                color: "fgDefault",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
               },
               back: {
-                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
-                borderColor: "rgba(255,215,0,0.85)",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
-                color: "rgba(255,255,255,0.95)",
+                bg: "surfaceRaised",
+                borderColor: "borderDefault",
+                color: "fgDefault",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
               },
             },
           },
@@ -473,36 +423,16 @@ const config = defineConfig({
             variant: "flip",
             state: "success",
             css: {
-              front: {
-                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
-                borderColor: "rgba(76,175,80,1)",
-                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
-                color: "rgba(255,255,255,0.95)",
-              },
-              back: {
-                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
-                borderColor: "rgba(76,175,80,1)",
-                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
-                color: "rgba(255,255,255,0.95)",
-              },
+              front: { borderColor: "successBorder", bg: "successSubtle" },
+              back: { borderColor: "successBorder", bg: "successSubtle" },
             },
           },
           {
             variant: "flip",
             state: "fail",
             css: {
-              front: {
-                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
-                borderColor: "rgba(244,67,54,1)",
-                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
-                color: "rgba(255,255,255,0.95)",
-              },
-              back: {
-                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
-                borderColor: "rgba(244,67,54,1)",
-                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
-                color: "rgba(255,255,255,0.95)",
-              },
+              front: { borderColor: "dangerBorder", bg: "dangerSubtle" },
+              back: { borderColor: "dangerBorder", bg: "dangerSubtle" },
             },
           },
           {
@@ -510,11 +440,10 @@ const config = defineConfig({
             state: "default",
             css: {
               frame: {
-                bg: "linear-gradient(135deg, rgba(30,15,50,0.95) 0%, rgba(50,25,80,0.95) 30%, rgba(70,35,110,0.95) 70%, rgba(30,15,50,0.95) 100%)",
-                borderWidth: "3px",
-                borderColor: "rgba(255,215,0,0.85)",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 0 rgba(255,215,0,0.4)",
-                color: "rgba(255,255,255,0.95)",
+                bg: "surfaceRaised",
+                borderColor: "borderDefault",
+                color: "fgDefault",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
               },
             },
           },
@@ -522,25 +451,13 @@ const config = defineConfig({
             variant: "flat",
             state: "success",
             css: {
-              frame: {
-                bg: "linear-gradient(135deg, rgba(20,60,30,0.9), rgba(20,35,20,0.9))",
-                borderWidth: "3px",
-                borderColor: "rgba(76,175,80,1)",
-                boxShadow: "0 0 30px rgba(76,175,80,0.6)",
-              },
+              frame: { borderColor: "successBorder", bg: "successSubtle" },
             },
           },
           {
             variant: "flat",
             state: "fail",
-            css: {
-              frame: {
-                bg: "linear-gradient(135deg, rgba(60,20,20,0.9), rgba(35,10,10,0.95))",
-                borderWidth: "3px",
-                borderColor: "rgba(244,67,54,1)",
-                boxShadow: "0 0 30px rgba(244,67,54,0.6)",
-              },
-            },
+            css: { frame: { borderColor: "dangerBorder", bg: "dangerSubtle" } },
           },
         ],
       },

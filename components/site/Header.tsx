@@ -1,9 +1,9 @@
 "use client";
+import { AppButton } from "@/components/ui/AppButton";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
-import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { AppButton } from "@/components/ui/AppButton";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Header() {
   const pathname = usePathname();
@@ -18,8 +18,8 @@ export default function Header() {
       borderBottomWidth="1px"
       borderColor="borderDefault"
       bg="panelBg"
-      style={{ backdropFilter: "saturate(180%) blur(8px)" }}
-      h={UNIFIED_LAYOUT.HEADER_HEIGHT}
+      /* インラインbackdrop除去 → シンプルなフラットヘッダー */
+      h={{ base: "56px", md: "64px" }}
       display="flex"
       alignItems="center"
       css={{
@@ -31,11 +31,15 @@ export default function Header() {
         },
       }}
     >
-      <Container maxW="6xl" px={4}>
-        <Flex align="center" justify="space-between">
-          <HStack gap="3">
-            <Box boxSize="6" bgGradient="accentSoft" rounded="md" />
-            <Heading size="lg" letterSpacing="tight">
+      <Container maxW="6xl" px={3}>
+        <Flex align="center" justify="space-between" h="100%">
+          <HStack gap="2">
+            <Box boxSize="5" bgGradient="accentSoft" rounded="md" />
+            <Heading
+              fontSize={{ base: "1.05rem", md: "1.15rem" }}
+              lineHeight={1}
+              letterSpacing="tight"
+            >
               Online ITO
             </Heading>
           </HStack>

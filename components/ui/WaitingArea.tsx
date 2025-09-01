@@ -21,8 +21,7 @@ export default function WaitingArea({ players, title = "未提出の参加者" }
       borderRadius="20px"
       p={{ base: 3, md: 4 }}
       bgGradient="panelWood"
-      borderWidth="2px"
-      borderColor="woodBorder"
+      borderWidth="0"
       css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
     >
       <Text

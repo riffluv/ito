@@ -11,9 +11,20 @@ export interface StatusDockProps extends Omit<BoxProps, "children"> {
  * ボード直下に置くステータス帯。
  * 幅・左右余白・中央線をカードボードと完全一致させる。
  */
-export default function StatusDock({ children, show = false, ...rest }: StatusDockProps) {
+export default function StatusDock({
+  children,
+  show = false,
+  ...rest
+}: StatusDockProps) {
   return (
-    <Box paddingBlock={{ base: 1, md: 2 }} mt={{ base: 2, md: 2 }} {...rest}>
+    <Box
+      paddingBlock={{ base: 1, md: 2 }}
+      mt={{ base: 2, md: 2 }}
+      bg="surfaceSubtle"
+      borderTopWidth="1px"
+      borderColor="borderSubtle"
+      {...rest}
+    >
       <Box
         width="100%"
         maxWidth="var(--board-max-width)"

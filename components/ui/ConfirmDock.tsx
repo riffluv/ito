@@ -1,7 +1,6 @@
 "use client";
-import React from "react";
+import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
 import { Box, Button } from "@chakra-ui/react";
-import { DOCK_BOTTOM_MOBILE, DOCK_BOTTOM_DESKTOP } from "@/lib/ui/layout";
 
 export default function ConfirmDock({
   onConfirm,
@@ -17,28 +16,32 @@ export default function ConfirmDock({
       right={{ base: 3, md: 6 }}
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={22}
-      borderRadius="20px"
+      rounded="xl"
       p={{ base: 3, md: 4 }}
       display="flex"
       alignItems="center"
       justifyContent="center"
-      bgGradient="panelWood"
-      borderWidth="2px"
-      borderColor="woodBorder"
-      css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
+      bg="surfaceOverlay"
+      borderWidth="1px"
+      borderColor="borderDefault"
+      shadow="md"
+      backdropFilter="blur(12px)"
     >
       <Button
         size="lg"
         onClick={onConfirm}
-        css={{
-          background:
-            "linear-gradient(135deg, rgba(139,115,85,0.9), rgba(160,133,91,0.9))",
-          color: "rgba(0,0,0,0.9)",
-          border: "1px solid rgba(160,133,91,0.8)",
-          boxShadow:
-            "0 6px 18px rgba(139,115,85,0.45), inset 0 1px 0 rgba(255,255,255,0.35)",
-          paddingInline: "1.5rem",
+        rounded="lg"
+        fontWeight={700}
+        px={8}
+        bg="accent"
+        color="white"
+        _hover={{
+          bg: "accentHover",
+          shadow: "lg",
+          transform: "translateY(-2px)",
         }}
+        _active={{ bg: "accentActive", transform: "translateY(-1px)" }}
+        transition="background-color .25s, box-shadow .25s, transform .25s"
       >
         {label}
       </Button>
