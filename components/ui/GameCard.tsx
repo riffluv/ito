@@ -1,6 +1,8 @@
 "use client";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
+import React, { useState } from "react";
 // LEGACY PREMIUM (to be refactored): premiumGameStyles 依存を今後 surface/accent トークン + recipe へ再マップ予定
 import {
   PREMIUM_TYPOGRAPHY,
@@ -31,14 +33,19 @@ export function GameCard({
 }: GameCardProps) {
   const recipe = useSlotRecipe({ key: "gameCard" });
   const styles: any = recipe({ state, variant });
+  const [isHovered, setIsHovered] = useState(false);
 
   // 🎮 PREMIUM GAME DESIGN: ファクションカラーシステム
   const factionStyles =
     typeof number === "number" ? getFactionStyles(number) : null;
   const faction = typeof number === "number" ? getNumberFaction(number) : null;
 
-  // reduced motion 対応: CSS prefers-reduced-motion を利用し inner の transition を打ち消し
+  // 🎮 PREMIUM CARD ANIMATIONS
   const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
+  const hoverTransform = isHovered ? "translateY(-8px) scale(1.05)" : "translateY(0) scale(1)";
+  const hoverShadow = isHovered 
+    ? "0 20px 40px rgba(0,0,0,0.4), 0 8px 16px rgba(255,122,26,0.3)"
+    : "0 4px 12px rgba(0,0,0,0.15)";
 
   // テキストのはみ出し対策（共通）
   const clamp2Css: any = {
@@ -65,24 +72,36 @@ export function GameCard({
           // === 2025年 DPI対応 コンテナサイズ ===
           aspectRatio: "5 / 7",
           width: UNIFIED_LAYOUT.CARD.WIDTH,
-          height: "auto", // aspect-ratioが制御
-
-          // Grid アイテムとしての最適化
+          height: "auto",
           placeSelf: "start",
-          // フォントの自動縮小: コンテナクエリで微調整（簡略化して警告回避）
           containerType: "inline-size",
+          
+          // 🎮 PREMIUM INTERACTION STATES
+          cursor: "pointer",
+          transform: hoverTransform,
+          boxShadow: hoverShadow,
+          transition: `transform 0.3s ${HOVER_EASING}, box-shadow 0.3s ${HOVER_EASING}`,
+          willChange: "transform, box-shadow",
         }}
         role="group"
         aria-label="card"
         tabIndex={0}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         _focusVisible={{
           outline: "2px solid",
           outlineColor: "focusRing",
           outlineOffset: 2,
         }}
+        _active={{
+          transform: "translateY(-4px) scale(1.02)",
+        }}
       >
         <Box
-          css={styles.inner}
+          css={{
+            ...styles.inner,
+            transition: `transform 0.9s ${CARD_FLIP_EASING}`,
+          }}
           style={{ transform: flipTransform }}
           aria-live="polite"
           className="gamecard-inner"
@@ -173,18 +192,26 @@ export function GameCard({
         boxShadow: frameShadow,
         color: "var(--chakra-colors-fgDefault)",
 
-        // プレミアムアニメーション
-        transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        // 🎮 PREMIUM FLAT CARD INTERACTIONS
         cursor: "pointer",
+        transform: hoverTransform,
+        transition: `all 0.3s ${HOVER_EASING}`,
+        willChange: "transform, box-shadow, border-color",
 
         // ホバー効果
         "&:hover": {
-          background:
-            state === "default" ? "var(--chakra-colors-cardHoverBg)" : frameBg,
+          background: state === "default" ? "var(--chakra-colors-cardHoverBg)" : frameBg,
+          borderColor: state === "default" ? "var(--chakra-colors-borderAccent)" : frameBorderColor,
+          boxShadow: hoverShadow,
         },
-        "&:active": { transform: "translateY(1px) scale(.98)" },
+        "&:active": { 
+          transform: "translateY(-2px) scale(0.98)",
+          boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+        },
       }}
       tabIndex={0}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       _focusVisible={{
         outline: `2px solid ${factionStyles?.primary || "#60a5fa"}`,
         outlineOffset: 2,

@@ -137,59 +137,89 @@ export default function LobbyPage() {
 
   return (
     <Box bg="canvasBg">
-      {" "}
       {/* フルブリード背景: 新リッチブラック */}
       <Hero onPlay={openCreateFlow} onRules={() => router.push("/rules")} />
-      <Box px={{ base: 4, md: 8, xl: 12 }} py={8} maxW="100%">
-        {/* ヘッダー/フィルター領域: panel風 */}
+      
+      {/* 🎯 PREMIUM LOBBY CONTAINER */}
+      <Box 
+        maxW="1200px" 
+        mx="auto" 
+        px={{ base: 6, md: 8 }} 
+        py={{ base: 12, md: 16 }}
+      >
+        {/* 📊 Stats & User Info - Modern Card Design */}
         <Box
-          bg="surfaceRaised"
-          borderWidth="1px"
-          borderColor="borderDefault"
-          rounded="xl"
-          px={{ base: 5, md: 7 }}
-          py={{ base: 5, md: 7 }}
-          mb={8}
-          boxShadow="0 2px 6px rgba(0,0,0,0.4)"
+          bg="rgba(25,27,33,0.6)"
+          backdropFilter="blur(20px)"
+          border="1px solid rgba(255,255,255,0.1)"
+          borderRadius="20px"
+          p={{ base: 6, md: 8 }}
+          mb={12}
+          boxShadow="0 8px 32px -8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
+          position="relative"
+          _before={{
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.04) 100%)',
+            pointerEvents: 'none'
+          }}
         >
           <Flex
-            direction={{ base: "column", md: "row" }}
+            direction={{ base: "column", lg: "row" }}
             justify="space-between"
-            align={{ base: "flex-start", md: "center" }}
-            gap={6}
+            align={{ base: "flex-start", lg: "center" }}
+            gap={{ base: 6, lg: 8 }}
           >
-            <Box>
-              <Heading
-                size="md"
-                fontWeight={600}
-                letterSpacing="tight"
-                color="fgDefault"
-                mb={1}
-              >
-                ルーム一覧
-              </Heading>
-              <Text fontSize="sm" color="fgMuted">
-                参加するルームを選んでください
-              </Text>
+            <Box flex={1}>
+              <HStack gap={4} mb={3}>
+                <Box 
+                  w={12} h={12}
+                  bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
+                  borderRadius="16px"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  boxShadow="0 4px 16px rgba(99,102,241,0.3)"
+                >
+                  <Box w="60%" h="60%" bg="white" borderRadius="8px" />
+                </Box>
+                <Box>
+                  <Heading
+                    size="lg"
+                    fontWeight={700}
+                    letterSpacing="-0.02em"
+                    color="white"
+                    mb={1}
+                  >
+                    アクティブルーム
+                  </Heading>
+                  <Text fontSize="md" color="rgba(255,255,255,0.7)">
+                    参加するルームを選んでください
+                  </Text>
+                </Box>
+              </HStack>
             </Box>
+            
             <Box
-              bg="surfaceSubtle"
-              borderWidth="1px"
-              borderColor="borderDefault"
-              rounded="md"
-              px={4}
-              py={3}
-              minW={{ base: "100%", md: "260px" }}
+              bg="rgba(255,255,255,0.05)"
+              backdropFilter="blur(12px)"
+              border="1px solid rgba(255,255,255,0.1)"
+              borderRadius="16px"
+              p={5}
+              minW={{ base: "100%", lg: "320px" }}
+              boxShadow="0 4px 16px rgba(0,0,0,0.1)"
             >
               <HStack justify="space-between" align="center" gap={4}>
-                <Box>
-                  <Text fontSize="xs" color="fgSubtle" mb={1}>
+                <Box flex={1}>
+                  <Text fontSize="xs" color="rgba(255,255,255,0.6)" mb={2} fontWeight={600} textTransform="uppercase" letterSpacing="0.05em">
                     プレイヤー名
                   </Text>
                   <Text
-                    fontSize="sm"
+                    fontSize="md"
                     fontWeight={600}
-                    color="fgDefault"
+                    color="white"
                     suppressHydrationWarning
                   >
                     {mounted ? displayName || "未設定" : "未設定"}
@@ -197,15 +227,27 @@ export default function LobbyPage() {
                 </Box>
                 <AppButton
                   size="sm"
-                  variant="outline"
+                  visual="ghost"
                   onClick={() => {
                     setTempName(displayName || "");
                     setAfterNameCreate(false);
                     setPendingJoin(null);
                     nameDialog.onOpen();
                   }}
-                  minW="3.5rem"
-                  fontSize="xs"
+                  css={{
+                    minWidth: '60px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'transparent',
+                    color: 'rgba(255,255,255,0.9)',
+                    _hover: {
+                      background: 'rgba(255,255,255,0.1)',
+                      borderColor: 'rgba(255,255,255,0.3)'
+                    }
+                  }}
                 >
                   変更
                 </AppButton>
@@ -220,25 +262,27 @@ export default function LobbyPage() {
           - ブラウザネイティブスクロールで自然な操作感を提供
           - レイアウトの制約なく縦方向に要素を自由配置可能
         */}
+        {/* 🎮 MAIN CONTENT AREA */}
         <Flex
-          direction={{ base: "column", lg: "row" }}
-          gap={{ base: 6, lg: 8 }}
+          direction={{ base: "column", xl: "row" }}
+          gap={8}
           align="flex-start"
-          minH="50vh" // 最小高さを確保してコンテンツが少なくても見栄えを保つ
         >
           <Box flex="1" minW={0}>
             {!firebaseEnabled ? (
               <Box
-                p={8}
+                p={12}
                 textAlign="center"
-                borderWidth={UNIFIED_LAYOUT.BORDER.WIDTH.THIN}
-                borderColor="borderDefault"
-                rounded="lg"
-                bg="panelSubBg"
+                bg="rgba(239,68,68,0.1)"
+                border="1px solid rgba(239,68,68,0.2)"
+                borderRadius="20px"
+                boxShadow="0 4px 16px rgba(239,68,68,0.1)"
               >
-                <Text>
-                  Firebase設定が見つかりません。`.env.local`
-                  を設定してください。
+                <Text fontSize="lg" color="rgb(248,113,113)" fontWeight={600}>
+                  Firebase設定が見つかりません
+                </Text>
+                <Text mt={2} color="rgba(255,255,255,0.7)">
+                  `.env.local` ファイルを設定してください
                 </Text>
               </Box>
             ) : roomsLoading && showSkeletons ? (
@@ -247,11 +291,13 @@ export default function LobbyPage() {
               <Box
                 display="grid"
                 gridTemplateColumns={{
-                  base: "repeat(auto-fill, minmax(260px,1fr))",
-                  md: "repeat(auto-fill, minmax(300px,1fr))",
-                  xl: "repeat(auto-fill, minmax(320px,1fr))",
+                  base: "1fr",
+                  sm: "repeat(auto-fill, minmax(300px,1fr))",
+                  md: "repeat(auto-fill, minmax(340px,1fr))",
+                  lg: "repeat(auto-fill, minmax(320px,1fr))",
+                  xl: "repeat(auto-fill, minmax(300px,1fr))",
                 }}
-                gap={5}
+                gap={6}
                 w="100%"
               >
                 {filteredRooms.map((r) => (
@@ -309,15 +355,17 @@ export default function LobbyPage() {
           </Box>
 
           <Box
-            w={{ base: "100%", lg: "320px" }}
+            w={{ base: "100%", xl: "320px" }}
             flexShrink={0}
-            display={{ base: "none", lg: "block" }}
+            display={{ base: "none", xl: "block" }}
           >
             <LobbyRightRail />
           </Box>
         </Flex>
-
-        <NameDialog
+      </Box>
+      
+      {/* Name & Create modals outside of container for proper overlay */}
+      <NameDialog
           isOpen={nameDialog.open}
           defaultValue={tempName}
           onCancel={() => nameDialog.onClose()}
@@ -348,7 +396,6 @@ export default function LobbyPage() {
             router.push(`/rooms/${roomId}`);
           }}
         />
-      </Box>
     </Box>
   );
 }

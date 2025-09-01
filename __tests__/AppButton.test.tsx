@@ -30,10 +30,10 @@ describe("AppButton", () => {
 
   it("should render with custom palette", () => {
     renderWithChakra(
-      <AppButton palette="orange">オレンジボタン</AppButton>
+      <AppButton palette="brand">ブランドボタン</AppButton>
     );
     
-    const button = screen.getByRole("button", { name: "オレンジボタン" });
+    const button = screen.getByRole("button", { name: "ブランドボタン" });
     expect(button).toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe("AppButton", () => {
     renderWithChakra(
       <AppButton
         visual="outline"
-        palette="orange"
+        palette="brand"
         variant="solid"
         colorPalette="brand"
       >

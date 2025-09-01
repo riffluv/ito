@@ -22,7 +22,7 @@ export function DesignShowcase() {
 
   const solidMd = button({ visual: "solid", size: "md" } as ButtonVariants);
   const subtleSm = button({ visual: "subtle", size: "sm" } as ButtonVariants);
-  const softLg = button({ visual: "soft", size: "lg" } as ButtonVariants);
+  const ghostLg = button({ visual: "ghost", size: "lg" } as ButtonVariants);
 
   const baseCard = card({ interactive: true, density: "comfortable" });
 
@@ -43,8 +43,8 @@ export function DesignShowcase() {
           <Box as="button" css={subtleSm}>
             Subtle sm
           </Box>
-          <Box as="button" css={softLg}>
-            Soft lg
+          <Box as="button" css={ghostLg}>
+            Ghost lg
           </Box>
         </Stack>
       </Box>

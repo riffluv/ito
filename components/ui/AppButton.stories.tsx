@@ -7,11 +7,11 @@ const meta: Meta<typeof AppButton> = {
   argTypes: {
     visual: {
       control: 'select',
-      options: ['solid', 'outline', 'ghost', 'subtle', 'soft', 'link'],
+      options: ['solid', 'outline', 'ghost', 'subtle', 'surface', 'plain'],
     },
     palette: {
       control: 'select',
-      options: ['brand', 'orange', 'gray'],
+      options: ['brand', 'gray', 'danger', 'success'],
     },
     size: { control: 'select', options: ['xs', 'sm', 'md', 'lg'] },
   },
@@ -35,8 +35,8 @@ export const Variants: Story = {
       <AppButton {...args} visual="outline">Outline</AppButton>
       <AppButton {...args} visual="ghost">Ghost</AppButton>
       <AppButton {...args} visual="subtle">Subtle</AppButton>
-      <AppButton {...args} visual="soft" palette="orange">Soft</AppButton>
-      <AppButton {...args} visual="link">Link</AppButton>
+      <AppButton {...args} visual="surface">Surface</AppButton>
+      <AppButton {...args} visual="plain">Plain</AppButton>
     </div>
   ),
 };
