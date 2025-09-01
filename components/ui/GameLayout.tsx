@@ -247,15 +247,11 @@ export function GameLayout({
 
         <Box
           gridArea="hand"
-          bg="surfaceSubtle"
-          borderTopWidth="1px"
-          borderColor="borderDefault"
-          padding={{ base: "1rem", md: "1.5rem" }}
+          bg="transparent"
+          padding={{ base: "20px", md: "20px" }}
           display="flex"
           alignItems="center"
-          justifyContent="space-between"
-          gap={{ base: "1rem", md: "2rem" }}
-          boxShadow="0 -2px 8px rgba(0,0,0,0.4)"
+          justifyContent="center"
           height={UNIFIED_LAYOUT.HAND_AREA_HEIGHT}
           maxHeight="none"
           css={{

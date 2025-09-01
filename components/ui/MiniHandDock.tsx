@@ -23,6 +23,7 @@ import type { PlayerDoc } from "@/lib/types";
 // import { PREMIUM_COMPONENTS, PREMIUM_TYPOGRAPHY, CARD_MATERIALS } from "@/theme/premiumGameStyles";
 import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
 import React from "react";
+import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
 interface MiniHandDockProps {
@@ -204,32 +205,77 @@ export default function MiniHandDock({
 
   return (
     <HStack
-      gap={4}
+      gap={6}
       align="center"
       justify="space-between"
       w="100%"
       position="relative"
-      px={6}
-      py={3}
-      borderRadius="18px"
-      bg="surfaceOverlay"
-      border="1px solid"
-      borderColor="borderSubtle"
-      boxShadow="0 4px 16px rgba(0,0,0,0.4)"
+      css={{
+        padding: '20px 32px',
+        background: 'rgba(18,19,23,0.85)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '20px',
+        boxShadow: '0 8px 32px -8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+        
+        // === SOPHISTICATED VISUAL ACCENT ===
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '80px',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)',
+          borderRadius: '1px'
+        }
+      }}
     >
       {/* 左側: プレイヤーアクション（最優先） */}
       <HStack gap={3} align="center" flex="0 0 auto">
+        {/* 🎯 PREMIUM NUMBER DISPLAY - Sophisticated Card Number */}
         <Box
-          minW="60px"
-          h="44px"
-          px={3}
-          borderRadius="10px"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          fontWeight={700}
-          fontSize="lg"
-          cursor={canSubmit ? "grab" : "pointer"}
+          css={{
+            minWidth: '64px',
+            height: '48px',
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            
+            // === REFINED TYPOGRAPHY ===
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+            letterSpacing: '-0.02em',
+            
+            // === SOPHISTICATED STYLING ===
+            background: canSubmit ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+            border: `1.5px solid ${canSubmit ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
+            borderRadius: '12px',
+            color: canSubmit ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+            
+            // === PREMIUM INTERACTION ===
+            cursor: canSubmit ? 'grab' : 'default',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            
+            // === SUBTLE VISUAL EFFECTS ===
+            boxShadow: canSubmit ? 
+              '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)' : 
+              '0 1px 3px rgba(0,0,0,0.1)',
+            
+            '&:hover': canSubmit ? {
+              background: 'rgba(255,255,255,0.12)',
+              borderColor: 'rgba(255,255,255,0.2)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+            } : {},
+            
+            '&:active': canSubmit ? {
+              transform: 'translateY(0) scale(0.98)'
+            } : {}
+          }}
           draggable={canSubmit}
           onDragStart={(e) => {
             if (canSubmit && me?.id) {
@@ -240,19 +286,11 @@ export default function MiniHandDock({
           onDragEnd={(e) => {
             e.currentTarget.style.cursor = canSubmit ? "grab" : "pointer";
           }}
-          bg={canSubmit ? "accentSubtle" : "surfaceSubtle"}
-          border="1px solid"
-          borderColor={canSubmit ? "borderAccent" : "borderSubtle"}
-          color={canSubmit ? "accent" : "fgMuted"}
-          transition="all .18s"
-          _hover={
-            canSubmit
-              ? { bg: "accentSubtle", transform: "translateY(-2px)" }
-              : {}
-          }
         >
           {typeof me?.number === "number" ? me.number : "?"}
         </Box>
+
+        {/* 🎯 REFINED INPUT FIELD - Sophisticated Text Entry */}
         <Input
           placeholder="連想ワード"
           value={text}
@@ -260,37 +298,100 @@ export default function MiniHandDock({
           onKeyDown={(e) => {
             if (e.key === "Enter") handleDecide();
           }}
-          size="sm"
-          w={{ base: "180px", md: "240px" }}
-          borderRadius="20px"
-          bg="surfaceRaised"
-          border="1px solid"
-          borderColor="borderSubtle"
-          color="fgDefault"
-          _placeholder={{ color: "fgMuted" }}
-          _focus={{
-            borderColor: "accent",
-            boxShadow: "0 0 0 1px var(--chakra-colors-accent)",
+          css={{
+            width: { base: "180px", md: "240px" },
+            height: '48px',
+            padding: '0 16px',
+            
+            // === SOPHISTICATED STYLING ===
+            background: 'rgba(255,255,255,0.04)',
+            border: '1.5px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            
+            // === REFINED TYPOGRAPHY ===
+            fontSize: '0.9375rem',
+            fontWeight: 500,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+            color: 'rgba(255,255,255,0.95)',
+            letterSpacing: '-0.01em',
+            
+            // === PREMIUM INTERACTION ===
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            
+            '&::placeholder': {
+              color: 'rgba(255,255,255,0.5)',
+              fontWeight: 400
+            },
+            
+            '&:focus': {
+              background: 'rgba(255,255,255,0.06)',
+              borderColor: 'rgba(255,255,255,0.2)',
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.08)',
+              outline: 'none'
+            },
+            
+            '&:hover:not(:focus)': {
+              background: 'rgba(255,255,255,0.05)',
+              borderColor: 'rgba(255,255,255,0.12)'
+            }
           }}
-          _hover={{ borderColor: "borderDefault" }}
-          fontWeight={500}
         />
 
         <AppButton
-          size="sm"
-          visual={canDecide ? "solid" : "subtle"}
+          size="md"
+          visual={canDecide ? "solid" : "ghost"}
+          palette={canDecide ? "brand" : "gray"}
           onClick={handleDecide}
           disabled={!canDecide}
-          colorScheme={canDecide ? "orange" : undefined}
+          css={{
+            height: '48px',
+            padding: '0 20px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+            letterSpacing: '-0.01em',
+            background: canDecide ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${canDecide ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)'}`,
+            color: canDecide ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+            boxShadow: canDecide ? '0 2px 8px rgba(0,0,0,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': canDecide ? {
+              background: 'rgba(255,255,255,0.12)',
+              borderColor: 'rgba(255,255,255,0.2)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            } : {}
+          }}
         >
           確定
         </AppButton>
         <AppButton
-          size="sm"
+          size="md"
+          visual={canSubmit ? "solid" : "ghost"}
+          palette={canSubmit ? "brand" : "gray"}
           onClick={handleSubmit}
           disabled={!canSubmit}
-          visual={canSubmit ? "solid" : "subtle"}
-          colorScheme={canSubmit ? "orange" : undefined}
+          css={{
+            height: '48px',
+            padding: '0 20px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+            letterSpacing: '-0.01em',
+            background: canSubmit ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${canSubmit ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)'}`,
+            color: canSubmit ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+            boxShadow: canSubmit ? '0 2px 8px rgba(0,0,0,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': canSubmit ? {
+              background: 'rgba(255,255,255,0.12)',
+              borderColor: 'rgba(255,255,255,0.2)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            } : {}
+          }}
         >
           出す
         </AppButton>
@@ -305,12 +406,31 @@ export default function MiniHandDock({
       >
         {isHost && roomStatus === "waiting" && (
           <AppButton
-            size="md"
+            size="lg"
             onClick={quickStart}
             visual="solid"
-            colorScheme="orange"
-            px={6}
-            py={3}
+            palette="brand"
+            css={{
+              height: '52px',
+              padding: '0 32px',
+              borderRadius: '16px',
+              fontWeight: 600,
+              fontSize: '1rem',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+              letterSpacing: '-0.01em',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.95)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(8px)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: 'rgba(255,255,255,0.12)',
+                borderColor: 'rgba(255,255,255,0.25)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)'
+              }
+            }}
           >
             🎮 ゲーム開始
           </AppButton>
@@ -318,13 +438,32 @@ export default function MiniHandDock({
 
         {isHost && roomStatus === "clue" && isSortSubmit(actualResolveMode) && (
           <AppButton
-            size="md"
+            size="lg"
             onClick={evalSorted}
             disabled={!allSubmitted}
-            px={6}
-            py={3}
-            visual={allSubmitted ? "solid" : "subtle"}
-            colorScheme={allSubmitted ? "orange" : undefined}
+            visual={allSubmitted ? "solid" : "surface"}
+            palette={allSubmitted ? "brand" : "gray"}
+            css={{
+              height: '52px',
+              padding: '0 32px',
+              borderRadius: '16px',
+              fontWeight: 600,
+              fontSize: '1rem',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+              letterSpacing: '-0.01em',
+              background: allSubmitted ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${allSubmitted ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)'}`,
+              color: allSubmitted ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+              boxShadow: allSubmitted ? '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 1px 3px rgba(0,0,0,0.1)',
+              backdropFilter: 'blur(8px)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': allSubmitted ? {
+                background: 'rgba(255,255,255,0.12)',
+                borderColor: 'rgba(255,255,255,0.25)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)'
+              } : {}
+            }}
           >
             {allSubmitted ? "🎯 判定開始" : "⏳ 提出待ち"}
           </AppButton>
@@ -332,12 +471,31 @@ export default function MiniHandDock({
 
         {isHost && roomStatus === "finished" && (
           <AppButton
-            size="md"
+            size="lg"
             onClick={continueRound}
-            px={6}
-            py={3}
             visual="solid"
-            colorScheme="orange"
+            palette="brand"
+            css={{
+              height: '52px',
+              padding: '0 32px',
+              borderRadius: '16px',
+              fontWeight: 600,
+              fontSize: '1rem',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+              letterSpacing: '-0.01em',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.95)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(8px)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: 'rgba(255,255,255,0.12)',
+                borderColor: 'rgba(255,255,255,0.25)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)'
+              }
+            }}
           >
             🔄 もう一度
           </AppButton>
@@ -349,19 +507,15 @@ export default function MiniHandDock({
         {/* ホスト管理機能（ホストの場合のみ） */}
         {isHost && (
           <HStack
-            gap={2}
+            gap={4}
             align="center"
-            pl={3}
             position="relative"
-            _before={{
-              content: '""',
-              position: "absolute",
-              left: "-8px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "1px",
-              height: "60%",
-              bg: "borderSubtle",
+            css={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '12px',
+              backdropFilter: 'blur(4px)'
             }}
           >
             {roomStatus === "clue" && (
@@ -377,53 +531,79 @@ export default function MiniHandDock({
                   HOST
                 </Box>
                 <HStack gap={2}>
-                  <AppButton
-                    size="sm"
-                    variant="outline"
+                  <IconButton
+                    aria-label="お題をシャッフル"
                     onClick={() =>
                       topicControls.shuffleTopic(
                         roomId,
                         defaultTopicType as any
                       )
                     }
-                    colorScheme="orange"
-                    fontSize="xs"
-                    fontWeight={500}
-                    px={3}
-                    py={2}
-                    borderRadius="lg"
-                    letterSpacing="tight"
-                  >
-                    🎲 お題
-                  </AppButton>
-                  <AppButton
                     size="sm"
-                    variant="outline"
+                    bg="accentSubtle"
+                    borderWidth={0}
+                    color="accent"
+                    borderRadius="md"
+                    p={2}
+                    minW={0}
+                    width="auto"
+                    height="auto"
+                    display="inline-flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    _hover={{ transform: "scale(1.05)" }}
+                    _active={{ transform: "scale(0.98)" }}
+                    transition="all 0.12s ease"
+                    css={{ fontSize: '20px' }}
+                  >
+                    <FaRegCreditCard />
+                  </IconButton>
+
+                  <IconButton
+                    aria-label="数字をシャッフル"
                     onClick={() => topicControls.dealNumbers(roomId)}
-                    colorScheme="orange"
-                    fontSize="xs"
-                    fontWeight={500}
-                    px={3}
-                    py={2}
-                    borderRadius="lg"
-                    letterSpacing="tight"
-                  >
-                    🔢 数字
-                  </AppButton>
-                  <AppButton
                     size="sm"
-                    variant="outline"
-                    onClick={resetGame}
-                    colorScheme="red"
-                    fontSize="xs"
-                    fontWeight={500}
-                    px={3}
-                    py={2}
-                    borderRadius="lg"
-                    letterSpacing="tight"
+                    bg="accentSubtle"
+                    borderWidth={0}
+                    color="accent"
+                    borderRadius="md"
+                    p={2}
+                    minW={0}
+                    width="auto"
+                    height="auto"
+                    display="inline-flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    _hover={{ transform: "scale(1.05)" }}
+                    _active={{ transform: "scale(0.98)" }}
+                    transition="all 0.12s ease"
+                    css={{ fontSize: '20px' }}
                   >
-                    🔄 リセット
-                  </AppButton>
+                    <FaDice />
+                  </IconButton>
+
+                  <IconButton
+                    aria-label="ゲームをリセット"
+                    onClick={resetGame}
+                    size="sm"
+                    bg="accentSubtle"
+                    borderWidth={0}
+                    color="accent"
+                    borderRadius="md"
+                    p={2}
+                    minW={0}
+                    width="auto"
+                    height="auto"
+                    display="inline-flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    _hover={{ transform: "scale(1.05)" }}
+                    _active={{ transform: "scale(0.98)" }}
+                    transition="all 0.12s ease"
+                    css={{ fontSize: '20px' }}
+                  >
+                    <FaRedo />
+                  </IconButton>
                 </HStack>
               </>
             )}
