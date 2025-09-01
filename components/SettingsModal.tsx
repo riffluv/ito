@@ -3,7 +3,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
-import { Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { Dialog, HStack, Stack, Text, VStack, Box } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { FiSettings, FiUsers, FiZap } from "react-icons/fi";
@@ -71,15 +71,11 @@ export function SettingsModal({
       value: "sequential",
       title: "順次判定モード",
       description: "カードを出すたびに即座に判定",
-      icon: <FiZap />,
-      subtitle: "スピーディー",
     },
     {
       value: "sort-submit",
-      title: "一括判定モード",
-      description: "全員カードを並べてからまとめて判定",
-      icon: <FiUsers />,
-      subtitle: "戦略的",
+      title: "一括判定モード", 
+      description: "全員カードを並べてから判定",
     },
   ];
 
@@ -88,19 +84,16 @@ export function SettingsModal({
       value: "通常版",
       title: "通常版",
       description: "バランスの取れた定番のお題",
-      emoji: "🎯",
     },
     {
-      value: "レインボー版",
+      value: "レインボー版", 
       title: "レインボー版",
       description: "カラフルで創造的なお題",
-      emoji: "🌈",
     },
     {
       value: "クラシック版",
-      title: "クラシック版",
+      title: "クラシック版", 
       description: "シンプルで分かりやすいお題",
-      emoji: "⭐",
     },
   ];
 
@@ -109,128 +102,207 @@ export function SettingsModal({
       open={isOpen}
       onOpenChange={(details) => !details.open && onClose()}
     >
-      <Dialog.Backdrop />
+      <Dialog.Backdrop bg="blackAlpha.800" />
       <Dialog.Positioner>
-        <Dialog.Content maxW="lg">
-          <Dialog.Header>
+        <Dialog.Content 
+          maxW="md" 
+          bg="gray.900"
+          borderRadius="xl"
+          border="1px solid"
+          borderColor="gray.700"
+          boxShadow="xl"
+        >
+          <Dialog.Header px={6} py={5}>
             <Dialog.Title>
-              <HStack>
-                <FiSettings />
-                <Text>ゲーム設定</Text>
-              </HStack>
+              <Text fontSize="xl" fontWeight="600" color="white">
+                ゲーム設定
+              </Text>
             </Dialog.Title>
           </Dialog.Header>
-          <Dialog.Body>
+
+          <Dialog.Body px={6} pb={2}>
             <Stack gap={6}>
-              <VStack align="start" gap={2}>
-                <Text fontWeight="bold" fontSize="md">
+              {/* クリア方式セクション */}
+              <Box>
+                <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
                   クリア方式
                 </Text>
-                <Text fontSize="sm" color="fgMuted">
-                  ゲーム進行のルールを選択してください
-                </Text>
-              </VStack>
+                <Stack gap={2}>
+                  {modeOptions.map((option) => {
+                    const isSelected = resolveMode === option.value;
+                    return (
+                      <Box
+                        key={option.value}
+                        cursor="pointer"
+                        onClick={() => setResolveMode(option.value)}
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor={isSelected ? "blue.400" : "gray.700"}
+                        bg={isSelected ? "blue.900" : "gray.800"}
+                        transition="all 0.2s"
+                        _hover={{ 
+                          borderColor: isSelected ? "blue.300" : "gray.600",
+                          bg: isSelected ? "blue.800" : "gray.750"
+                        }}
+                      >
+                        <HStack justify="space-between" align="start">
+                          <VStack align="start" gap={1} flex="1">
+                            <Text
+                              fontSize="md"
+                              fontWeight="600"
+                              color="white"
+                            >
+                              {option.title}
+                            </Text>
+                            <Text
+                              fontSize="sm"
+                              color="gray.400"
+                              lineHeight="short"
+                            >
+                              {option.description}
+                            </Text>
+                          </VStack>
+                          <Box
+                            w={4}
+                            h={4}
+                            borderRadius="full"
+                            border="2px solid"
+                            borderColor={isSelected ? "blue.400" : "gray.500"}
+                            bg={isSelected ? "blue.400" : "transparent"}
+                            mt={0.5}
+                            position="relative"
+                          >
+                            {isSelected && (
+                              <Box
+                                position="absolute"
+                                top="50%"
+                                left="50%"
+                                transform="translate(-50%, -50%)"
+                                w="6px"
+                                h="6px"
+                                borderRadius="full"
+                                bg="white"
+                              />
+                            )}
+                          </Box>
+                        </HStack>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
 
-              <Stack gap={3}>
-                {modeOptions.map((option) => (
-                  <AppButton
-                    key={option.value}
-                    variant={resolveMode === option.value ? "solid" : "outline"}
-                    colorPalette={
-                      resolveMode === option.value ? "orange" : "gray"
-                    }
-                    onClick={() => setResolveMode(option.value)}
-                    w="100%"
-                    h="auto"
-                    p={4}
-                    justifyContent="flex-start"
-                    disabled={!isHost || roomStatus !== "waiting"}
-                  >
-                    <HStack w="100%" gap={3}>
-                      <VStack align="center" gap={1} minW="50px">
-                        <Text fontSize="2xl">{option.icon}</Text>
-                        <Text fontSize="xs" fontWeight="bold">
-                          {option.subtitle}
-                        </Text>
-                      </VStack>
-                      <VStack align="start" gap={1} flex="1">
-                        <Text fontWeight="bold" fontSize="md">
-                          {option.title}
-                        </Text>
-                        <Text fontSize="sm" opacity={0.8}>
-                          {option.description}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                  </AppButton>
-                ))}
-              </Stack>
-
-              {/* デフォルトお題タイプ設定 */}
-              <VStack align="start" gap={2}>
-                <Text fontWeight="bold" fontSize="md">
+              {/* お題タイプセクション */}
+              <Box>
+                <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
                   デフォルトお題タイプ
                 </Text>
-                <Text fontSize="sm" color="fgMuted">
-                  ワンクリック開始時に使用される山札を選択
-                </Text>
-              </VStack>
-
-              <Stack gap={2}>
-                {topicTypeOptions.map((option) => (
-                  <AppButton
-                    key={option.value}
-                    variant={
-                      defaultTopicType === option.value ? "solid" : "outline"
-                    }
-                    colorPalette={
-                      defaultTopicType === option.value ? "orange" : "gray"
-                    }
-                    onClick={() => setDefaultTopicType(option.value)}
-                    w="100%"
-                    h="auto"
-                    p={4}
-                    justifyContent="flex-start"
-                    disabled={!isHost || roomStatus !== "waiting"}
-                  >
-                    <HStack w="100%" gap={3}>
-                      <VStack align="center" gap={1} minW="50px">
-                        <Text fontSize="2xl">{option.emoji}</Text>
-                      </VStack>
-                      <VStack align="start" gap={1} flex="1">
-                        <Text fontWeight="bold" fontSize="md">
-                          {option.title}
-                        </Text>
-                        <Text fontSize="sm" opacity={0.8}>
-                          {option.description}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                  </AppButton>
-                ))}
-              </Stack>
+                <Stack gap={2}>
+                  {topicTypeOptions.map((option) => {
+                    const isSelected = defaultTopicType === option.value;
+                    return (
+                      <Box
+                        key={option.value}
+                        cursor="pointer"
+                        onClick={() => setDefaultTopicType(option.value)}
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor={isSelected ? "blue.400" : "gray.700"}
+                        bg={isSelected ? "blue.900" : "gray.800"}
+                        transition="all 0.2s"
+                        _hover={{ 
+                          borderColor: isSelected ? "blue.300" : "gray.600",
+                          bg: isSelected ? "blue.800" : "gray.750"
+                        }}
+                      >
+                        <HStack justify="space-between" align="start">
+                          <VStack align="start" gap={1} flex="1">
+                            <Text
+                              fontSize="md"
+                              fontWeight="600"
+                              color="white"
+                            >
+                              {option.title}
+                            </Text>
+                            <Text
+                              fontSize="sm"
+                              color="gray.400"
+                              lineHeight="short"
+                            >
+                              {option.description}
+                            </Text>
+                          </VStack>
+                          <Box
+                            w={4}
+                            h={4}
+                            borderRadius="full"
+                            border="2px solid"
+                            borderColor={isSelected ? "blue.400" : "gray.500"}
+                            bg={isSelected ? "blue.400" : "transparent"}
+                            mt={0.5}
+                            position="relative"
+                          >
+                            {isSelected && (
+                              <Box
+                                position="absolute"
+                                top="50%"
+                                left="50%"
+                                transform="translate(-50%, -50%)"
+                                w="6px"
+                                h="6px"
+                                borderRadius="full"
+                                bg="white"
+                              />
+                            )}
+                          </Box>
+                        </HStack>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
 
               {(!isHost || roomStatus !== "waiting") && (
-                <Text fontSize="sm" color="fgMuted" textAlign="center">
-                  {!isHost
-                    ? "設定の変更はホストのみ可能です"
-                    : "設定の変更は待機中のみ可能です"}
-                </Text>
+                <Box
+                  p={3}
+                  bg="yellow.900"
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="yellow.700"
+                >
+                  <Text fontSize="sm" color="yellow.300" textAlign="center">
+                    {!isHost
+                      ? "設定の変更はホストのみ可能です"
+                      : "設定の変更は待機中のみ可能です"}
+                  </Text>
+                </Box>
               )}
             </Stack>
           </Dialog.Body>
-          <Dialog.Footer>
-            <AppButton variant="ghost" onClick={onClose}>
-              キャンセル
-            </AppButton>
-            <AppButton
-              colorPalette="orange"
-              onClick={handleSave}
-              loading={saving}
-              disabled={!isHost || roomStatus !== "waiting" || saving}
-            >
-              保存
-            </AppButton>
+
+          <Dialog.Footer px={6} py={4} borderTop="1px solid" borderColor="gray.700">
+            <HStack w="full" justify="flex-end" gap={3}>
+              <AppButton 
+                variant="ghost" 
+                onClick={onClose}
+                color="gray.400"
+                _hover={{ bg: "gray.800", color: "white" }}
+              >
+                キャンセル
+              </AppButton>
+              <AppButton
+                bg="blue.600"
+                color="white"
+                onClick={handleSave}
+                loading={saving}
+                disabled={!isHost || roomStatus !== "waiting" || saving}
+                _hover={{ bg: "blue.500" }}
+              >
+                保存
+              </AppButton>
+            </HStack>
           </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Positioner>

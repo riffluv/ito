@@ -18,11 +18,12 @@ import {
 } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
-import { handDockStyles } from "@/theme/itoStyles";
-import { PREMIUM_COMPONENTS, PREMIUM_TYPOGRAPHY, CARD_MATERIALS } from "@/theme/premiumGameStyles";
-import { Box, HStack, Input, IconButton, Text } from "@chakra-ui/react";
-import { FiSettings, FiLogOut } from "react-icons/fi";
+// LEGACY PREMIUM (to be refactored): premiumGameStyles 依存を今後 surface/accent トークン + recipe 化予定
+// PREMIUM_* 依存除去中: 旧ゴールド/パープル装飾を semantic tokens ベースのフラット/マットスタイルへ移行
+// import { PREMIUM_COMPONENTS, PREMIUM_TYPOGRAPHY, CARD_MATERIALS } from "@/theme/premiumGameStyles";
+import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
 import React from "react";
+import { FiLogOut, FiSettings } from "react-icons/fi";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -192,13 +193,14 @@ export default function MiniHandDock({
   };
 
   // フェーズ表示ラベル（ヘッダー統合）
-  const phaseLabel = {
-    waiting: "待機",
-    clue: "入力",
-    playing: "並べ替え",
-    reveal: "公開",
-    finished: "結果",
-  }[roomStatus as string] || "準備中";
+  const phaseLabel =
+    {
+      waiting: "待機",
+      clue: "入力",
+      playing: "並べ替え",
+      reveal: "公開",
+      finished: "結果",
+    }[roomStatus as string] || "準備中";
 
   return (
     <HStack
@@ -207,41 +209,25 @@ export default function MiniHandDock({
       justify="space-between"
       w="100%"
       position="relative"
-      css={{
-        // 🔮 ARTIFACT-STYLE MYSTICAL DOCK
-        ...PREMIUM_COMPONENTS.MYSTICAL_PANEL,
-        padding: "1rem 1.5rem",
-        borderRadius: "20px",
-        border: "1px solid rgba(168, 85, 247, 0.6)",
-        background: `
-          linear-gradient(135deg, 
-            rgba(139, 92, 246, 0.16) 0%,
-            rgba(168, 85, 247, 0.12) 25%,
-            rgba(147, 51, 234, 0.14) 50%,
-            rgba(109, 40, 217, 0.12) 75%,
-            rgba(94, 39, 176, 0.16) 100%
-          )
-        `,
-        boxShadow: `
-          0 16px 48px rgba(94, 39, 176, 0.4),
-          0 8px 24px rgba(0, 0, 0, 0.6),
-          inset 0 2px 0 rgba(168, 85, 247, 0.3),
-          inset 0 -2px 0 rgba(67, 56, 202, 0.4)
-        `,
-        backdropFilter: "blur(28px) saturate(1.4)",
-      }}
+      px={6}
+      py={3}
+      borderRadius="18px"
+      bg="surfaceOverlay"
+      border="1px solid"
+      borderColor="borderSubtle"
+      boxShadow="0 4px 16px rgba(0,0,0,0.4)"
     >
       {/* 左側: プレイヤーアクション（最優先） */}
       <HStack gap={3} align="center" flex="0 0 auto">
         <Box
-          minW="64px"
+          minW="60px"
           h="44px"
           px={3}
-          borderRadius="12px"
+          borderRadius="10px"
           display="flex"
           alignItems="center"
           justifyContent="center"
-          fontWeight={800}
+          fontWeight={700}
           fontSize="lg"
           cursor={canSubmit ? "grab" : "pointer"}
           draggable={canSubmit}
@@ -254,31 +240,16 @@ export default function MiniHandDock({
           onDragEnd={(e) => {
             e.currentTarget.style.cursor = canSubmit ? "grab" : "pointer";
           }}
-          css={{
-            // 🎮 PREMIUM NUMBER BOX
-            ...CARD_MATERIALS.PREMIUM_BASE,
-            border: "2px solid rgba(255,215,0,0.5)",
-            background: `
-              linear-gradient(135deg, 
-                rgba(255,215,0,0.2) 0%, 
-                rgba(184,134,11,0.3) 100%
-              )
-            `,
-            boxShadow: `
-              0 4px 16px rgba(0,0,0,0.4),
-              inset 0 1px 0 rgba(255,255,255,0.2)
-            `,
-            color: "#ffd700",
-            ...PREMIUM_TYPOGRAPHY.CARD_NUMBER,
-            // ドラッグ可能時のホバー効果
-            "&:hover": canSubmit ? {
-              transform: "translateY(-2px) scale(1.02)",
-              boxShadow: `
-                0 8px 24px rgba(0,0,0,0.5),
-                0 0 20px rgba(255,215,0,0.3)
-              `,
-            } : {},
-          }}
+          bg={canSubmit ? "accentSubtle" : "surfaceSubtle"}
+          border="1px solid"
+          borderColor={canSubmit ? "borderAccent" : "borderSubtle"}
+          color={canSubmit ? "accent" : "fgMuted"}
+          transition="all .18s"
+          _hover={
+            canSubmit
+              ? { bg: "accentSubtle", transform: "translateY(-2px)" }
+              : {}
+          }
         >
           {typeof me?.number === "number" ? me.number : "?"}
         </Box>
@@ -292,77 +263,34 @@ export default function MiniHandDock({
           size="sm"
           w={{ base: "180px", md: "240px" }}
           borderRadius="20px"
-          css={{
-            // 🎮 PREMIUM CLUE INPUT
-            ...CARD_MATERIALS.PREMIUM_BASE,
-            background: "rgba(255,255,255,0.1)",
-            border: "2px solid rgba(255,255,255,0.2)",
-            color: "#ffffff",
-            placeholder: "rgba(255,255,255,0.6)",
-            _placeholder: { color: "rgba(255,255,255,0.6)" },
-            _focus: {
-              borderColor: "rgba(255,215,0,0.8)",
-              boxShadow: "0 0 20px rgba(255,215,0,0.3)",
-              background: "rgba(255,255,255,0.15)",
-            },
-            _hover: {
-              borderColor: "rgba(255,255,255,0.4)",
-            },
-            backdropFilter: "blur(8px)",
-            ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+          bg="surfaceRaised"
+          border="1px solid"
+          borderColor="borderSubtle"
+          color="fgDefault"
+          _placeholder={{ color: "fgMuted" }}
+          _focus={{
+            borderColor: "accent",
+            boxShadow: "0 0 0 1px var(--chakra-colors-accent)",
           }}
+          _hover={{ borderColor: "borderDefault" }}
+          fontWeight={500}
         />
 
         <AppButton
           size="sm"
-          visual="subtle"
+          visual={canDecide ? "solid" : "subtle"}
           onClick={handleDecide}
           disabled={!canDecide}
-          css={{
-            // 🎮 PREMIUM BUTTON STYLING
-            ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-            color: "#ffd700",
-            _hover: { 
-              background: "linear-gradient(135deg, rgba(255,215,0,0.3) 0%, rgba(184,134,11,0.4) 100%)",
-              transform: "translateY(-2px)",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-            },
-            _disabled: {
-              opacity: 0.5,
-              cursor: "not-allowed",
-              _hover: {
-                transform: "none",
-                background: "initial",
-              },
-            },
-          }}
+          colorScheme={canDecide ? "orange" : undefined}
         >
           確定
         </AppButton>
-        <AppButton 
-          size="sm" 
-          onClick={handleSubmit} 
+        <AppButton
+          size="sm"
+          onClick={handleSubmit}
           disabled={!canSubmit}
-          css={{
-            // 🎮 PREMIUM SUBMIT BUTTON
-            ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-            background: "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(21,128,61,0.3) 100%)",
-            border: "1px solid rgba(34,197,94,0.5)",
-            color: "#22c55e",
-            _hover: { 
-              background: "linear-gradient(135deg, rgba(34,197,94,0.3) 0%, rgba(21,128,61,0.4) 100%)",
-              transform: "translateY(-2px)",
-              boxShadow: "0 6px 20px rgba(34,197,94,0.2)",
-            },
-            _disabled: {
-              opacity: 0.5,
-              cursor: "not-allowed",
-              _hover: {
-                transform: "none",
-                background: "initial",
-              },
-            },
-          }}
+          visual={canSubmit ? "solid" : "subtle"}
+          colorScheme={canSubmit ? "orange" : undefined}
         >
           出す
         </AppButton>
@@ -379,38 +307,10 @@ export default function MiniHandDock({
           <AppButton
             size="md"
             onClick={quickStart}
-            css={{
-              // 🎮 PREMIUM START BUTTON
-              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-              background: `
-                linear-gradient(135deg, 
-                  rgba(59,130,246,0.2) 0%, 
-                  rgba(37,99,235,0.4) 50%,
-                  rgba(29,78,216,0.3) 100%
-                )
-              `,
-              border: "2px solid rgba(59,130,246,0.6)",
-              color: "#60a5fa",
-              fontSize: "1rem",
-              px: 6,
-              py: 3,
-              borderRadius: "16px",
-              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-              _hover: {
-                background: `
-                  linear-gradient(135deg, 
-                    rgba(59,130,246,0.3) 0%, 
-                    rgba(37,99,235,0.5) 50%,
-                    rgba(29,78,216,0.4) 100%
-                  )
-                `,
-                transform: "translateY(-3px) scale(1.05)",
-                boxShadow: `
-                  0 12px 40px rgba(59,130,246,0.3),
-                  0 4px 16px rgba(0,0,0,0.4)
-                `,
-              },
-            }}
+            visual="solid"
+            colorScheme="orange"
+            px={6}
+            py={3}
           >
             🎮 ゲーム開始
           </AppButton>
@@ -421,40 +321,10 @@ export default function MiniHandDock({
             size="md"
             onClick={evalSorted}
             disabled={!allSubmitted}
-            css={{
-              // 🎮 PREMIUM EVALUATE BUTTON
-              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-              background: allSubmitted
-                ? `linear-gradient(135deg, 
-                    rgba(245,158,11,0.2) 0%, 
-                    rgba(217,119,6,0.4) 50%,
-                    rgba(180,83,9,0.3) 100%
-                  )`
-                : "rgba(107,114,128,0.2)",
-              border: allSubmitted 
-                ? "2px solid rgba(245,158,11,0.6)"
-                : "2px solid rgba(107,114,128,0.4)",
-              color: allSubmitted ? "#fbbf24" : "#9ca3af",
-              fontSize: "1rem",
-              px: 6,
-              py: 3,
-              borderRadius: "16px",
-              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-              _hover: allSubmitted ? {
-                background: `
-                  linear-gradient(135deg, 
-                    rgba(245,158,11,0.3) 0%, 
-                    rgba(217,119,6,0.5) 50%,
-                    rgba(180,83,9,0.4) 100%
-                  )
-                `,
-                transform: "translateY(-3px) scale(1.05)",
-                boxShadow: `
-                  0 12px 40px rgba(245,158,11,0.3),
-                  0 4px 16px rgba(0,0,0,0.4)
-                `,
-              } : {},
-            }}
+            px={6}
+            py={3}
+            visual={allSubmitted ? "solid" : "subtle"}
+            colorScheme={allSubmitted ? "orange" : undefined}
           >
             {allSubmitted ? "🎯 判定開始" : "⏳ 提出待ち"}
           </AppButton>
@@ -464,38 +334,10 @@ export default function MiniHandDock({
           <AppButton
             size="md"
             onClick={continueRound}
-            css={{
-              // 🎮 PREMIUM RETRY BUTTON
-              ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-              background: `
-                linear-gradient(135deg, 
-                  rgba(139,92,246,0.2) 0%, 
-                  rgba(124,58,237,0.4) 50%,
-                  rgba(109,40,217,0.3) 100%
-                )
-              `,
-              border: "2px solid rgba(139,92,246,0.6)",
-              color: "#a78bfa",
-              fontSize: "1rem",
-              px: 6,
-              py: 3,
-              borderRadius: "16px",
-              ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-              _hover: {
-                background: `
-                  linear-gradient(135deg, 
-                    rgba(139,92,246,0.3) 0%, 
-                    rgba(124,58,237,0.5) 50%,
-                    rgba(109,40,217,0.4) 100%
-                  )
-                `,
-                transform: "translateY(-3px) scale(1.05)",
-                boxShadow: `
-                  0 12px 40px rgba(139,92,246,0.3),
-                  0 4px 16px rgba(0,0,0,0.4)
-                `,
-              },
-            }}
+            px={6}
+            py={3}
+            visual="solid"
+            colorScheme="orange"
           >
             🔄 もう一度
           </AppButton>
@@ -506,129 +348,108 @@ export default function MiniHandDock({
       <HStack gap={2} align="center" flex="0 0 auto">
         {/* ホスト管理機能（ホストの場合のみ） */}
         {isHost && (
-          <HStack gap={2} align="center" css={{
-            // 🎮 HOST DIVIDER PREMIUM STYLING
-            position: "relative",
-            "&::before": {
+          <HStack
+            gap={2}
+            align="center"
+            pl={3}
+            position="relative"
+            _before={{
               content: '""',
               position: "absolute",
               left: "-8px",
               top: "50%",
               transform: "translateY(-50%)",
-              width: "2px",
+              width: "1px",
               height: "60%",
-              background: "linear-gradient(to bottom, transparent, rgba(160,133,91,0.6), transparent)",
-            },
-            pl: 3,
-          }}>
+              bg: "borderSubtle",
+            }}
+          >
             {roomStatus === "clue" && (
               <>
                 <Box
                   fontSize="xs"
                   fontWeight="600"
-                  color="rgba(255,215,0,0.8)"
+                  color="accent"
                   mb="1px"
-                  css={{ 
-                    textTransform: "uppercase", 
-                    ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
-                    textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-                  }}
+                  textTransform="uppercase"
+                  letterSpacing="0.5px"
                 >
                   HOST
                 </Box>
-                <HStack gap={1}>
+                <HStack gap={2}>
                   <AppButton
                     size="sm"
-                    visual="outline"
+                    variant="outline"
                     onClick={() =>
-                      topicControls.shuffleTopic(roomId, defaultTopicType as any)
+                      topicControls.shuffleTopic(
+                        roomId,
+                        defaultTopicType as any
+                      )
                     }
-                    css={{
-                      // 🎮 PREMIUM TINY BUTTON
-                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-                      fontSize: "0.75rem",
-                      px: 2,
-                      py: 1,
-                      minH: "auto",
-                      color: "rgba(255,255,255,0.8)",
-                      border: "1px solid rgba(255,255,255,0.3)",
-                      _hover: {
-                        background: "rgba(255,255,255,0.1)",
-                        transform: "translateY(-1px)",
-                        color: "#ffffff",
-                      },
-                    }}
+                    colorScheme="orange"
+                    fontSize="xs"
+                    fontWeight={500}
+                    px={3}
+                    py={2}
+                    borderRadius="lg"
+                    letterSpacing="tight"
                   >
                     🎲 お題
                   </AppButton>
                   <AppButton
                     size="sm"
-                    visual="outline"
+                    variant="outline"
                     onClick={() => topicControls.dealNumbers(roomId)}
-                    css={{
-                      // 🎮 PREMIUM TINY BUTTON
-                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-                      fontSize: "0.75rem",
-                      px: 2,
-                      py: 1,
-                      minH: "auto",
-                      color: "rgba(255,255,255,0.8)",
-                      border: "1px solid rgba(255,255,255,0.3)",
-                      _hover: {
-                        background: "rgba(255,255,255,0.1)",
-                        transform: "translateY(-1px)",
-                        color: "#ffffff",
-                      },
-                    }}
+                    colorScheme="orange"
+                    fontSize="xs"
+                    fontWeight={500}
+                    px={3}
+                    py={2}
+                    borderRadius="lg"
+                    letterSpacing="tight"
                   >
                     🔢 数字
                   </AppButton>
                   <AppButton
                     size="sm"
-                    visual="outline"
+                    variant="outline"
                     onClick={resetGame}
-                    css={{
-                      // 🎮 PREMIUM DANGER BUTTON
-                      ...PREMIUM_COMPONENTS.ARTIFACT_BUTTON,
-                      fontSize: "0.75rem",
-                      px: 2,
-                      py: 1,
-                      minH: "auto",
-                      color: "rgba(239,68,68,0.8)",
-                      border: "1px solid rgba(239,68,68,0.4)",
-                      _hover: {
-                        background: "rgba(239,68,68,0.1)",
-                        transform: "translateY(-1px)",
-                        color: "#f87171",
-                      },
-                    }}
+                    colorScheme="red"
+                    fontSize="xs"
+                    fontWeight={500}
+                    px={3}
+                    py={2}
+                    borderRadius="lg"
+                    letterSpacing="tight"
                   >
-                    🔄
+                    🔄 リセット
                   </AppButton>
                 </HStack>
               </>
             )}
 
             <Box
-              px={2}
-              py={1}
-              borderRadius="6px"
+              px={3}
+              py={2}
+              borderRadius="lg"
               fontSize="xs"
-              fontWeight="500"
-              css={{
-                // 🎮 MODE BADGE PREMIUM STYLING
-                background: isSortSubmit(actualResolveMode)
-                  ? "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(21,128,61,0.3) 100%)"
-                  : "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(37,99,235,0.3) 100%)",
-                border: isSortSubmit(actualResolveMode)
-                  ? "1px solid rgba(34,197,94,0.5)"
-                  : "1px solid rgba(59,130,246,0.5)",
-                color: isSortSubmit(actualResolveMode) ? "#22c55e" : "#60a5fa",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
+              fontWeight={600}
+              bg={
+                isSortSubmit(actualResolveMode)
+                  ? "successSubtle"
+                  : "accentSubtle"
+              }
+              color={isSortSubmit(actualResolveMode) ? "success" : "accent"}
+              border="0"
+              boxShadow={"0 2px 4px rgba(0,0,0,0.1)"}
+              transition="all 0.2s ease"
+              _hover={{
+                transform: "translateY(-1px)",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.15)"
               }}
+              letterSpacing="tight"
             >
-              {isSortSubmit(actualResolveMode) ? "一括" : "順次"}
+              {isSortSubmit(actualResolveMode) ? "一括モード" : "順次モード"}
             </Box>
           </HStack>
         )}
@@ -637,24 +458,24 @@ export default function MiniHandDock({
             将来的には他の場所（ヘッダーやデバッグパネルなど）で使用可能 */}
 
         {/* 設定・退室ボタン */}
-        <HStack gap={1} align="center">
+        <HStack gap={2} align="center">
           {onOpenSettings && (
             <IconButton
               aria-label="設定"
               onClick={onOpenSettings}
               size="sm"
-              variant="ghost"
-              css={{
-                // 🎮 PREMIUM ICON BUTTON
-                color: "rgba(255,255,255,0.7)",
-                _hover: { 
-                  background: "rgba(255,255,255,0.1)", 
-                  color: "#ffffff",
-                  transform: "translateY(-1px)",
-                },
-                borderRadius: "8px",
-                transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              variant="outline"
+              color="fgMuted"
+              _hover={{ 
+                bg: "surfaceRaised", 
+                color: "accent", 
+                borderColor: "accent",
+                transform: "translateY(-1px)",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.15)"
               }}
+              borderRadius="lg"
+              borderColor="borderDefault"
+              transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
             >
               <FiSettings />
             </IconButton>
@@ -664,19 +485,19 @@ export default function MiniHandDock({
               aria-label="ルームを退出"
               onClick={onLeaveRoom}
               size="sm"
-              variant="ghost"
+              variant="outline"
               title="メインメニューに戻る"
-              css={{
-                // 🎮 PREMIUM LOGOUT BUTTON
-                color: "rgba(239,68,68,0.7)",
-                _hover: { 
-                  background: "rgba(239,68,68,0.1)", 
-                  color: "#f87171",
-                  transform: "translateY(-1px)",
-                },
-                borderRadius: "8px",
-                transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              color="red.500"
+              borderColor="red.200"
+              _hover={{ 
+                bg: "red.50", 
+                color: "red.600",
+                borderColor: "red.300",
+                transform: "translateY(-1px)",
+                boxShadow: "0 4px 8px rgba(239, 68, 68, 0.15)"
               }}
+              borderRadius="lg"
+              transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
             >
               <FiLogOut />
             </IconButton>

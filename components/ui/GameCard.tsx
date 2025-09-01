@@ -1,13 +1,14 @@
 "use client";
-import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { 
-  CARD_MATERIALS, 
-  FACTION_COLORS, 
-  PREMIUM_TYPOGRAPHY, 
-  getFactionStyles, 
-  getNumberFaction 
+import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+// LEGACY PREMIUM (to be refactored): premiumGameStyles 依存を今後 surface/accent トークン + recipe へ再マップ予定
+import {
+  PREMIUM_TYPOGRAPHY,
+  getFactionStyles,
+  getNumberFaction,
 } from "@/theme/premiumGameStyles";
+
+// premiumGameStyles 依存除去済み: 旧 import を削除
 
 export type GameCardProps = {
   index?: number | null;
@@ -30,11 +31,12 @@ export function GameCard({
 }: GameCardProps) {
   const recipe = useSlotRecipe({ key: "gameCard" });
   const styles: any = recipe({ state, variant });
-  
+
   // 🎮 PREMIUM GAME DESIGN: ファクションカラーシステム
-  const factionStyles = typeof number === "number" ? getFactionStyles(number) : null;
+  const factionStyles =
+    typeof number === "number" ? getFactionStyles(number) : null;
   const faction = typeof number === "number" ? getNumberFaction(number) : null;
-  
+
   // reduced motion 対応: CSS prefers-reduced-motion を利用し inner の transition を打ち消し
   const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
@@ -64,7 +66,7 @@ export function GameCard({
           aspectRatio: "5 / 7",
           width: UNIFIED_LAYOUT.CARD.WIDTH,
           height: "auto", // aspect-ratioが制御
-          
+
           // Grid アイテムとしての最適化
           placeSelf: "start",
           // フォントの自動縮小: コンテナクエリで微調整（簡略化して警告回避）
@@ -89,10 +91,22 @@ export function GameCard({
             <Text fontSize="xs" color="fgMuted" mb={1}>
               #{typeof index === "number" ? index + 1 : "?"}
             </Text>
-            <Text className="gc-main" fontWeight="900" fontSize="md" textAlign="center" css={clamp2Css}>
+            <Text
+              className="gc-main"
+              fontWeight="900"
+              fontSize="md"
+              textAlign="center"
+              css={clamp2Css}
+            >
               {clue || "(連想なし)"}
             </Text>
-            <Text mt={2} className="gc-name" fontSize="xs" color="fgMuted" css={oneLineEllipsis}>
+            <Text
+              mt={2}
+              className="gc-name"
+              fontSize="xs"
+              color="fgMuted"
+              css={oneLineEllipsis}
+            >
               {name ?? "(不明)"}
             </Text>
           </Box>
@@ -103,7 +117,13 @@ export function GameCard({
             <Text fontWeight="900" fontSize="3xl" textAlign="center">
               {typeof number === "number" ? number : "?"}
             </Text>
-            <Text mt={2} className="gc-name" fontSize="xs" color="fgMuted" css={oneLineEllipsis}>
+            <Text
+              mt={2}
+              className="gc-name"
+              fontSize="xs"
+              color="fgMuted"
+              css={oneLineEllipsis}
+            >
               {name ?? "(不明)"}
             </Text>
           </Box>
@@ -112,37 +132,23 @@ export function GameCard({
     );
   }
 
-  // 🎮 PREMIUM CARD STYLES
-  const premiumCardStyles = {
-    // ベース3D効果
-    ...CARD_MATERIALS.PREMIUM_BASE,
-    // ファクション別の枠線とグロー
-    border: factionStyles ? `2px solid ${factionStyles.frame}` : "2px solid rgba(255,255,255,0.2)",
-    boxShadow: factionStyles ? `
-      0 12px 40px rgba(0,0,0,0.5),
-      0 4px 16px rgba(0,0,0,0.3),
-      0 0 20px ${factionStyles.glow},
-      inset 0 1px 0 rgba(255,255,255,0.15),
-      inset 0 -1px 0 rgba(0,0,0,0.2)
-    ` : CARD_MATERIALS.PREMIUM_BASE.boxShadow,
-    // 成功・失敗状態のオーバーライド
-    ...(state === "success" && {
-      border: "2px solid #22c55e",
-      boxShadow: `
-        0 12px 40px rgba(0,0,0,0.5),
-        0 0 30px rgba(34,197,94,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.2)
-      `
-    }),
-    ...(state === "fail" && {
-      border: "2px solid #ef4444", 
-      boxShadow: `
-        0 12px 40px rgba(0,0,0,0.5),
-        0 0 30px rgba(239,68,68,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.2)
-      `
-    }),
-  };
+  // Token ベースの簡素スタイル (flat variant 用)
+  const frameBorderColor =
+    state === "success"
+      ? "successBorder"
+      : state === "fail"
+        ? "dangerBorder"
+        : "borderDefault";
+  const frameBg =
+    state === "success"
+      ? "successSubtle"
+      : state === "fail"
+        ? "dangerSubtle"
+        : "surfaceRaised";
+  const frameShadow =
+    state === "default"
+      ? "0 2px 6px rgba(0,0,0,0.4)"
+      : "0 0 0 1px rgba(0,0,0,0.4)";
 
   return (
     <Box
@@ -151,43 +157,37 @@ export function GameCard({
         aspectRatio: "5 / 7",
         width: UNIFIED_LAYOUT.CARD.WIDTH,
         height: "auto", // aspect-ratioが制御
-        
+
         // Grid アイテムとしての最適化
         placeSelf: "start",
         containerType: "inline-size",
-        
-        // 🌟 PREMIUM 3D CARD MATERIALS
-        ...premiumCardStyles,
-        
+
+        background: frameBg,
+        border: `1px solid`,
+        borderColor: frameBorderColor,
+        boxShadow: frameShadow,
+        color: "var(--chakra-colors-fgDefault)",
+
         // プレミアムアニメーション
         transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
         cursor: "pointer",
-        
+
         // ホバー効果
         "&:hover": {
-          ...CARD_MATERIALS.PREMIUM_HOVER,
-          ...(factionStyles && {
-            boxShadow: `
-              0 20px 60px rgba(0,0,0,0.6),
-              0 8px 24px rgba(0,0,0,0.4),
-              0 0 40px ${factionStyles.glow},
-              inset 0 1px 0 rgba(255,255,255,0.2)
-            `
-          })
+          background:
+            state === "default" ? "var(--chakra-colors-cardHoverBg)" : frameBg,
         },
-        
-        // アクティブ効果
-        "&:active": CARD_MATERIALS.PREMIUM_ACTIVE,
+        "&:active": { transform: "translateY(1px) scale(.98)" },
       }}
       tabIndex={0}
       _focusVisible={{
-        outline: `2px solid ${factionStyles?.primary || '#60a5fa'}`,
+        outline: `2px solid ${factionStyles?.primary || "#60a5fa"}`,
         outlineOffset: 2,
       }}
     >
       {typeof index === "number" && (
-        <Text 
-          fontSize="sm" 
+        <Text
+          fontSize="sm"
           color="rgba(255,255,255,0.6)"
           css={{
             ...PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT,
@@ -197,7 +197,7 @@ export function GameCard({
           #{index + 1}
         </Text>
       )}
-      
+
       {/* 🎮 PREMIUM NUMBER DISPLAY */}
       <Text
         className="gc-main"
@@ -205,26 +205,35 @@ export function GameCard({
         css={{
           ...(typeof number === "number" ? undefined : clamp2Css),
           // プレミアムタイポグラフィ
-          ...(typeof number === "number" ? PREMIUM_TYPOGRAPHY.CARD_NUMBER : PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT),
+          ...(typeof number === "number"
+            ? PREMIUM_TYPOGRAPHY.CARD_NUMBER
+            : PREMIUM_TYPOGRAPHY.MYSTICAL_TEXT),
           fontSize: typeof number === "number" ? "2.5rem" : "1.25rem",
           fontWeight: typeof number === "number" ? 900 : 600,
           // ファクション別カラー
-          color: typeof number === "number" && factionStyles ? factionStyles.primary : "rgba(255,255,255,0.95)",
+          color:
+            typeof number === "number" && factionStyles
+              ? factionStyles.primary
+              : "rgba(255,255,255,0.95)",
           // プレミアムテキストエフェクト
-          textShadow: typeof number === "number" && factionStyles ? 
-            `0 0 20px ${factionStyles.glow}, 0 2px 8px rgba(0,0,0,0.8)` :
-            "0 2px 8px rgba(0,0,0,0.8)",
+          textShadow:
+            typeof number === "number" && factionStyles
+              ? `0 0 20px ${factionStyles.glow}, 0 2px 8px rgba(0,0,0,0.8)`
+              : "0 2px 8px rgba(0,0,0,0.8)",
           // グロー効果
-          filter: typeof number === "number" ? `drop-shadow(0 0 8px ${factionStyles?.glow || 'rgba(255,255,255,0.3)'})` : undefined,
+          filter:
+            typeof number === "number"
+              ? `drop-shadow(0 0 8px ${factionStyles?.glow || "rgba(255,255,255,0.3)"})`
+              : undefined,
         }}
       >
         {typeof number === "number" ? number : clue || "?"}
       </Text>
-      
+
       {/* 🎮 PREMIUM NAME DISPLAY */}
-      <Text 
-        mt={2} 
-        className="gc-name" 
+      <Text
+        mt={2}
+        className="gc-name"
         fontSize="xs"
         css={{
           ...oneLineEllipsis,

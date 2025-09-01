@@ -149,7 +149,7 @@ export function AdvancedHostPanel({
                       variant={
                         currentMode === "sequential" ? "solid" : "outline"
                       }
-                      colorPalette="blue"
+                      colorPalette="orange"
                       flex="1"
                       disabled={!canChangeMode}
                       onClick={() => handleModeChange("sequential")}
@@ -160,7 +160,7 @@ export function AdvancedHostPanel({
                       variant={
                         currentMode === "sort-submit" ? "solid" : "outline"
                       }
-                      colorPalette="blue"
+                      colorPalette="orange"
                       flex="1"
                       disabled={!canChangeMode}
                       onClick={() => handleModeChange("sort-submit")}

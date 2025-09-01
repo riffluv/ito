@@ -87,7 +87,7 @@ Avoid fixed heights; use min/max and flex.
 
 - Stylelint 推奨設定 + 禁止ルール: `declaration-no-important`, `unit-no-unknown`, `property-no-vendor-prefix`。
 - 追加プラグイン: `stylelint-order` で宣言順序 (Layout -> Box Model -> Typography -> Visual -> Misc)。
- - CSS Nesting: ブラウザネイティブの CSS Nesting を採用（主要最新版に限定）。互換重視の場合は `postcss-nesting` を導入。
+- CSS Nesting: ブラウザネイティブの CSS Nesting を採用（主要最新版に限定）。互換重視の場合は `postcss-nesting` を導入。
 
 ## 12. 変更フロー
 
@@ -204,4 +204,20 @@ Avoid fixed heights; use min/max and flex.
 
 ---
 
-最終更新: 2025-08-24 (GameCard v2 追加)
+## 2025-09 Premium Purge 概要
+
+旧アーティファクト風 (紫+金グラデ/多層シャドウ/ガラスブラー) スタイルを撤廃し Rich Black + Orange Aesthetic へ統一。
+
+| コンポーネント            | 主な変更                            | 置換指針                                                       |
+| ------------------------- | ----------------------------------- | -------------------------------------------------------------- |
+| GameCard                  | 金縁/紫グラデ compoundVariants 削除 | `surfaceRaised` + state 枠 (`successBorder`/`dangerBorder`)    |
+| MiniHandDock              | MYSTICAL_PANEL/ARTIFACT_BUTTON 削除 | `surfaceOverlay` パネル + `accent` ボタン                      |
+| CentralCardBoard / Slots  | 金/木質調グラデ除去                 | `surfaceRaised` + dashed `borderSubtle` / hover `borderAccent` |
+| Room Inputs / Chat Header | 白/灰直値                           | `surfaceRaised` / `fgDefault` / `borderSubtle`                 |
+| premiumGameStyles.ts      | 新規参照禁止                        | 段階的削除予定 (必要分は tokens 化)                            |
+
+目的: 視覚的一貫性 / パフォーマンス (レイヤ影削減) / 可読性 (高コントラスト) / メンテ性 (token 依存)。
+
+今後: focus-visible 統一リング, Storybook 回帰テスト, premium ファイル完全除去。
+
+最終更新: 2025-09-01 (Premium Purge 追加)

@@ -1,12 +1,14 @@
 /**
- * 🎮 PREMIUM CARD GAME VISUAL SYSTEM
- * Artifact-inspired AAA game design language for ITO
- * 
- * Design Philosophy:
- * - Deep space mystique with particle effects
- * - Luxurious card materials with 3D depth
- * - Faction-based color psychology
- * - Professional typography hierarchy
+ * LEGACY VISUAL SYSTEM (DEPRECATED / TO BE PHASED OUT)
+ * 🎮 PREMIUM CARD GAME VISUAL SYSTEM (Artifact-inspired) – 旧スタイル
+ * 現在は Rich Black + Orange Aesthetic への移行中のため、新規UIでは surface.* / accent.* semantic tokens
+ * と recipes を優先使用。以下の資産は段階的に削除または再マッピング予定。
+ *  - COSMIC_BACKGROUNDS: GameLayout immersive では未使用化済み
+ *  - PREMIUM_COMPONENTS / CARD_MATERIALS などは GameCard, MiniHandDock で利用中 (TODO)
+ * Refactor Plan:
+ *  1. Faction-based 色計算 → semantic tokens + variant props 化
+ *  2. inline gradient / boxShadow → shadow tokens / gradient tokens 再構築
+ *  3. PREMIUM_TYPOGRAPHY → textStyle recipe or typography scale
  */
 
 // 🌌 COSMIC BACKGROUND SYSTEM
@@ -31,7 +33,7 @@ export const COSMIC_BACKGROUNDS = {
       rgba(17, 24, 39, 1) 100%
     )
   `,
-  
+
   // Card hover states
   CARD_AURA_GREEN: `
     radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.2) 0%, transparent 70%)
@@ -52,37 +54,37 @@ export const FACTION_COLORS = {
   // Nature Faction (1-25) - Emerald
   EMERALD: {
     primary: "#10b981",
-    secondary: "#059669", 
+    secondary: "#059669",
     accent: "#34d399",
     glow: "rgba(16, 185, 129, 0.4)",
     shadow: "rgba(5, 150, 105, 0.6)",
     frame: "rgba(52, 211, 153, 0.8)",
   },
-  
-  // Knowledge Faction (26-50) - Sapphire  
+
+  // Knowledge Faction (26-50) - Sapphire
   SAPPHIRE: {
     primary: "#3b82f6",
     secondary: "#2563eb",
-    accent: "#60a5fa", 
+    accent: "#60a5fa",
     glow: "rgba(59, 130, 246, 0.4)",
     shadow: "rgba(37, 99, 235, 0.6)",
     frame: "rgba(96, 165, 250, 0.8)",
   },
-  
+
   // Power Faction (51-75) - Ruby
   RUBY: {
     primary: "#ef4444",
     secondary: "#dc2626",
     accent: "#f87171",
-    glow: "rgba(239, 68, 68, 0.4)", 
+    glow: "rgba(239, 68, 68, 0.4)",
     shadow: "rgba(220, 38, 38, 0.6)",
     frame: "rgba(248, 113, 113, 0.8)",
   },
-  
+
   // Light Faction (76-100) - Amber
   AMBER: {
     primary: "#f59e0b",
-    secondary: "#d97706", 
+    secondary: "#d97706",
     accent: "#fbbf24",
     glow: "rgba(245, 158, 11, 0.4)",
     shadow: "rgba(217, 119, 6, 0.6)",
@@ -110,7 +112,7 @@ export const CARD_MATERIALS = {
       inset 0 -1px 0 rgba(0,0,0,0.2)
     `,
   },
-  
+
   // Hover enhancement
   PREMIUM_HOVER: {
     transform: "translateY(-8px) scale(1.05)",
@@ -121,7 +123,7 @@ export const CARD_MATERIALS = {
     `,
     transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
   },
-  
+
   // Active/selected state
   PREMIUM_ACTIVE: {
     transform: "translateY(-12px) scale(1.08)",
@@ -137,14 +139,14 @@ export const PREMIUM_TYPOGRAPHY = {
     letterSpacing: "0.05em",
     textShadow: "0 2px 8px rgba(0,0,0,0.8)",
   },
-  
+
   CARD_NUMBER: {
-    fontFamily: '"Orbitron", "Courier New", monospace', 
+    fontFamily: '"Orbitron", "Courier New", monospace',
     fontWeight: 800,
     letterSpacing: "0.02em",
     textShadow: "0 1px 4px rgba(0,0,0,0.6)",
   },
-  
+
   MYSTICAL_TEXT: {
     fontFamily: '"Cinzel Decorative", serif',
     fontWeight: 600,
@@ -162,7 +164,7 @@ export const PREMIUM_EFFECTS = {
       50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
     }
   `,
-  
+
   // Card reveal animation
   CARD_REVEAL: `
     @keyframes cardReveal {
@@ -180,7 +182,7 @@ export const PREMIUM_EFFECTS = {
       }
     }
   `,
-  
+
   // Mystical glow pulse
   MYSTICAL_GLOW: `
     @keyframes mysticalGlow {
@@ -192,17 +194,17 @@ export const PREMIUM_EFFECTS = {
 
 // 🎮 NUMBER TO FACTION MAPPER
 export function getNumberFaction(num: number): keyof typeof FACTION_COLORS {
-  if (num <= 25) return 'EMERALD';
-  if (num <= 50) return 'SAPPHIRE'; 
-  if (num <= 75) return 'RUBY';
-  return 'AMBER';
+  if (num <= 25) return "EMERALD";
+  if (num <= 50) return "SAPPHIRE";
+  if (num <= 75) return "RUBY";
+  return "AMBER";
 }
 
 // 🎨 FACTION STYLE GENERATOR
 export function getFactionStyles(num: number) {
   const faction = getNumberFaction(num);
   const colors = FACTION_COLORS[faction];
-  
+
   return {
     primary: colors.primary,
     secondary: colors.secondary,
@@ -210,16 +212,20 @@ export function getFactionStyles(num: number) {
     glow: colors.glow,
     shadow: colors.shadow,
     frame: colors.frame,
-    aura: faction === 'EMERALD' ? COSMIC_BACKGROUNDS.CARD_AURA_GREEN :
-          faction === 'SAPPHIRE' ? COSMIC_BACKGROUNDS.CARD_AURA_BLUE :
-          faction === 'RUBY' ? COSMIC_BACKGROUNDS.CARD_AURA_RED :
-          COSMIC_BACKGROUNDS.CARD_AURA_AMBER,
+    aura:
+      faction === "EMERALD"
+        ? COSMIC_BACKGROUNDS.CARD_AURA_GREEN
+        : faction === "SAPPHIRE"
+          ? COSMIC_BACKGROUNDS.CARD_AURA_BLUE
+          : faction === "RUBY"
+            ? COSMIC_BACKGROUNDS.CARD_AURA_RED
+            : COSMIC_BACKGROUNDS.CARD_AURA_AMBER,
   };
 }
 
 // 🌟 PREMIUM UI COMPONENTS STYLES - Artifact Inspired
 export const PREMIUM_COMPONENTS = {
-  // Artifact-style mystical panel frame  
+  // Artifact-style mystical panel frame
   MYSTICAL_PANEL: {
     background: `
       linear-gradient(135deg, 
@@ -240,7 +246,7 @@ export const PREMIUM_COMPONENTS = {
     `,
     backdropFilter: "blur(16px) saturate(1.2)",
   },
-  
+
   // Artifact-style premium button
   ARTIFACT_BUTTON: {
     background: `
@@ -262,7 +268,7 @@ export const PREMIUM_COMPONENTS = {
     backdropFilter: "blur(12px)",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
-  
+
   // Mystical card frame (hand-crafted feel)
   MYSTICAL_CARD: {
     background: `

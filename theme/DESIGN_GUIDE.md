@@ -182,3 +182,44 @@ ThemePresetProvider
 - Chakra Theming Overview: https://www.chakra-ui.com/docs/theming/overview
 - Slot Recipes: https://chakra-ui.com/docs/theming/slot-recipes
 - CLI: https://chakra-ui.com/docs/get-started/cli
+
+## 2025 Aesthetic Refresh: Rich Black + Orange
+
+本リファクタで導入した新しいビジュアル基盤の要点:
+
+| Layer              | Token                          | Value (Light Only)              | Purpose                                |
+| ------------------ | ------------------------------ | ------------------------------- | -------------------------------------- |
+| Surface Base       | `surfaceBase` / `canvasBg`     | `#0C0D10`                       | ページ最下層 (無地)                    |
+| Surface Subtle     | `surfaceSubtle` / `panelBg`    | `#121317`                       | セクション背景 / パネル基本            |
+| Surface Raised     | `surfaceRaised` / `panelSubBg` | `#191B21`                       | カード/リスト/サブパネル               |
+| Surface Overlay    | `surfaceOverlay`               | `rgba(28,30,36,0.72)`           | ガラス/浮遊エレメント (hand dock など) |
+| Foreground Primary | `fgDefault`                    | `#F5F7FA`                       | 主要テキスト                           |
+| Foreground Muted   | `fgMuted`                      | `rgba(245,247,250,0.65)`        | 補足テキスト                           |
+| Foreground Subtle  | `fgSubtle`                     | `rgba(245,247,250,0.4)`         | アイコン/ラベル                        |
+| Accent Solid       | `accent`                       | `{colors.orange.500}` (#FF7A1A) | コア強調 (CTA, 状態)                   |
+| Accent Hover       | `accentHover`                  | `{colors.orange.400}`           | ホバー状態                             |
+| Accent Active      | `accentActive`                 | `{colors.orange.600}`           | アクティブ/押下                        |
+| Accent Subtle Bg   | `accentSubtle`                 | `rgba(255,122,26,0.12)`         | バッジ/弱調ボタン背景                  |
+| Accent Ring        | `accentRing`                   | `rgba(255,122,26,0.6)`          | FocusRing / Outline                    |
+| Border Default     | `borderDefault`                | `rgba(255,255,255,0.08)`        | 低コントラスト仕切り                   |
+| Border Strong      | `borderStrong`                 | `rgba(255,255,255,0.16)`        | カード/重要境界                        |
+| Border Accent      | `borderAccent`                 | `rgba(255,122,26,0.6)`          | 状態強調境界                           |
+
+アクセシビリティ:
+
+- `fgDefault` (#F5F7FA) : `surfaceBase` (#0C0D10) に対し 18:1 以上 (AAA)
+- `accent` (#FF7A1A) : `surfaceBase` に対し 約 7.3:1 (AAA 大文字 / AA 大小)
+- 今後ダークモードが導入される場合は base/dark 値を semantic token の mode 拡張で定義。
+
+運用指針:
+
+1. 新規UIは `surface*` と `fg*` のみで基礎配色完結させ raw hex 使用を避ける。
+2. ボタン/バッジなど「状態強調」は `accent` + variant レイヤー (recipe) に任せる。
+3. 一時的に残るレガシー gradient / ゴールド系は段階的に `legacy-*` コメント付で削除。
+4. 重いグロー/複数 box-shadow はパフォーマンス影響を計測し、頻出要素から排除。
+
+Migration TODO (次フェーズ):
+
+- GameCard / MiniHandDock の PREMIUM\_\* 依存を slot recipe + semantic tokens に再マップ。
+- gradient/shadow インライン値を tokens (`gradients.*`, `shadows.*`) へ昇格。
+- focus outline を全て `accentRing` に統一し例外を ESLint ルールで検出。

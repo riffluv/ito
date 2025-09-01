@@ -19,19 +19,19 @@ export const UNIFIED_LAYOUT = {
   SIDEBAR_WIDTH: "clamp(240px, 22vw, 300px)",
   RIGHT_PANEL_WIDTH: "clamp(280px, 26vw, 360px)",
   // 手札エリア: トランプ型カード（120px）+ ゆとりを持った安定した高さ（ゲーム感重視）
-  HAND_AREA_HEIGHT: "clamp(220px, 25dvh, 280px)",
+  HAND_AREA_HEIGHT: "clamp(200px, 22dvh, 260px)",
 
   // 125% DPI特別対応
   DPI_125: {
     HEADER_HEIGHT: "clamp(64px, 6dvh, 96px)",
     // 125%DPI環境でもトランプ型カードに十分な高さを確保（ゲーム感重視）
-    HAND_AREA_HEIGHT: "clamp(180px, 18dvh, 220px)",
+    HAND_AREA_HEIGHT: "clamp(170px, 17dvh, 210px)",
   },
 
   // 150% DPI特別対応（小型ノートPCでの高さ確保を優先）
   DPI_150: {
     HEADER_HEIGHT: "clamp(56px, 5.5dvh, 88px)",
-    HAND_AREA_HEIGHT: "clamp(160px, 16dvh, 200px)",
+    HAND_AREA_HEIGHT: "clamp(150px, 15dvh, 190px)",
   },
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
@@ -134,7 +134,9 @@ export type UnifiedLayoutConstants = typeof UNIFIED_LAYOUT;
 
 // 🚀 BORDER WIDTH UTILITY FUNCTIONS
 // getBorderWidth: セマンティック、またはレベル指定でborder widthを取得
-export function getBorderWidth(level: "SEMANTIC" | "LAYOUT" | "NONE" | "THIN" | "MEDIUM" | "THICK"): string {
+export function getBorderWidth(
+  level: "SEMANTIC" | "LAYOUT" | "NONE" | "THIN" | "MEDIUM" | "THICK"
+): string {
   switch (level) {
     case "SEMANTIC":
       return UNIFIED_LAYOUT.BORDER.WIDTH.THIN; // SEMANTICは標準的なthinを使用
@@ -155,14 +157,20 @@ export function getBorderWidth(level: "SEMANTIC" | "LAYOUT" | "NONE" | "THIN" | 
 
 // getDynamicBorder: 動的なボーダー設定（状態に応じてボーダーを変更）
 export function getDynamicBorder(
-  options: { isActive: boolean; activeContext?: string; defaultContext?: string } | boolean = false
+  options:
+    | { isActive: boolean; activeContext?: string; defaultContext?: string }
+    | boolean = false
 ): string {
   // backward compatibility: boolean引数の場合
   if (typeof options === "boolean") {
-    return options ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+    return options
+      ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM
+      : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
   }
-  
+
   // オブジェクト引数の場合
   const { isActive } = options;
-  return isActive ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
+  return isActive
+    ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM
+    : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
 }
