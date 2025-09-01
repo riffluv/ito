@@ -203,23 +203,48 @@ export default function LobbyPage() {
             </Box>
             
             <Box
-              bg="rgba(255,255,255,0.05)"
-              backdropFilter="blur(12px)"
-              border="1px solid rgba(255,255,255,0.1)"
-              borderRadius="16px"
-              p={5}
-              minW={{ base: "100%", lg: "320px" }}
-              boxShadow="0 4px 16px rgba(0,0,0,0.1)"
+              css={{
+                background: 'rgba(25,27,33,0.6)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '16px',
+                padding: '20px',
+                minWidth: { base: "100%", lg: "320px" },
+                boxShadow: '0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+                position: 'relative',
+                
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.03) 100%)',
+                  pointerEvents: 'none'
+                }
+              }}
             >
-              <HStack justify="space-between" align="center" gap={4}>
+              <HStack justify="space-between" align="center" gap={4} position="relative">
                 <Box flex={1}>
-                  <Text fontSize="xs" color="rgba(255,255,255,0.6)" mb={2} fontWeight={600} textTransform="uppercase" letterSpacing="0.05em">
+                  <Text 
+                    css={{
+                      fontSize: '0.75rem',
+                      color: 'rgba(255,255,255,0.7)',
+                      marginBottom: '8px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}
+                  >
                     プレイヤー名
                   </Text>
                   <Text
-                    fontSize="md"
-                    fontWeight={600}
-                    color="white"
+                    css={{
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: 'rgba(255,255,255,0.95)',
+                      letterSpacing: '-0.01em',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                    }}
                     suppressHydrationWarning
                   >
                     {mounted ? displayName || "未設定" : "未設定"}
@@ -235,17 +260,20 @@ export default function LobbyPage() {
                     nameDialog.onOpen();
                   }}
                   css={{
-                    minWidth: '60px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    background: 'transparent',
+                    minWidth: '70px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'rgba(255,255,255,0.05)',
                     color: 'rgba(255,255,255,0.9)',
-                    _hover: {
-                      background: 'rgba(255,255,255,0.1)',
-                      borderColor: 'rgba(255,255,255,0.3)'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      background: 'rgba(255,255,255,0.12)',
+                      borderColor: 'rgba(99,102,241,0.5)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
                     }
                   }}
                 >

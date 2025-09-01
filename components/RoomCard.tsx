@@ -18,96 +18,176 @@ export function RoomCard({
   const isWaiting = status === "waiting";
   
   return (
-    <AppCard 
+    <Box
       role="group" 
-      interactive 
-      className="animate-fadeInUp" 
-      minH={{ base: 36, md: 40 }}
       position="relative"
-      border="1px solid"
-      borderColor="borderDefault"
-      _hover={{
-        borderColor: "gray.300",
-        boxShadow: "var(--shadows-cardElevated)",
+      css={{
+        // 🎯 PREMIUM ROOM CARD DESIGN - Chakra Official Quality
+        background: 'rgba(25,27,33,0.6)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '16px',
+        padding: '20px',
+        minHeight: '180px',
+        backdropFilter: 'blur(16px)',
+        boxShadow: '0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+        cursor: 'pointer',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'transform, box-shadow, border-color',
+
+        '&:hover': {
+          background: 'rgba(31,35,44,0.8)',
+          borderColor: 'rgba(99,102,241,0.3)',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 8px 24px -4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)'
+        }
       }}
     >
-      {/* シンプルなステータス表示 */}
+      {/* 🎯 PREMIUM STATUS INDICATOR */}
       <Box
         position="absolute"
-        top="0.875rem" // 14px - 微妙にずらす
-        right="0.875rem" // 14px - 微妙にずらす
-        w="8px" // より控えめ
-        h="8px"
-        borderRadius="full"
-        bg={isWaiting ? "green.600" : "orange.600"}
+        top="16px"
+        right="16px"
+        css={{
+          width: '10px',
+          height: '10px',
+          borderRadius: '50%',
+          background: isWaiting ? 
+            'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : 
+            'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+          boxShadow: isWaiting ?
+            '0 0 8px rgba(34,197,94,0.6)' :
+            '0 0 8px rgba(239,68,68,0.6)',
+          animation: isWaiting ? 'pulse 2s ease-in-out infinite' : undefined
+        }}
       />
       
-      <Stack gap={4}>
-        {/* ルーム名 - ゲーム画面スタイル */}
+      <Stack gap={5}>
+        {/* 🎯 PREMIUM ROOM TITLE */}
         <Box>
           <Text
-            fontWeight={700}
-            fontSize={{ base: "lg", md: "xl" }}
-            color="fgDefault"
-            fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
-            overflow="hidden"
-            textOverflow="ellipsis"
-            whiteSpace="nowrap"
-            letterSpacing="tight"
-            mb="2"
+            css={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: 'rgba(255,255,255,0.95)',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.3,
+              marginBottom: '8px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+            }}
           >
             {name}
           </Text>
           <Text
-            fontSize="sm"
-            color="fgMuted"
-            fontWeight={400} // より軽く
+            css={{
+              fontSize: '0.875rem',
+              color: 'rgba(255,255,255,0.7)',
+              fontWeight: 500
+            }}
           >
             {statusLabel}
           </Text>
         </Box>
 
-        {/* シンプルな統計表示 */}
-        <Box bg="gray.50" borderRadius="6px" padding="0.625rem">
+        {/* 🎯 PREMIUM STATISTICS DISPLAY */}
+        <Box 
+          css={{
+            background: 'rgba(99,102,241,0.08)',
+            border: '1px solid rgba(99,102,241,0.15)',
+            borderRadius: '12px',
+            padding: '16px',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
           <HStack justify="space-between" align="center">
             <Box>
-              <Text fontSize="xs" color="gray.400" fontWeight={400} mb="1px">
+              <Text 
+                css={{
+                  fontSize: '0.75rem',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontWeight: 500,
+                  marginBottom: '4px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
                 参加者数
               </Text>
-              <Text fontSize="lg" fontWeight={600} color="gray.900">
+              <Text 
+                css={{
+                  fontSize: '1.125rem',
+                  fontWeight: 700,
+                  color: 'rgba(255,255,255,0.95)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                }}
+              >
                 {count}人
               </Text>
             </Box>
             <Box textAlign="right">
-              <Text fontSize="xs" color="gray.400" fontWeight={400} mb="1px">
+              <Text 
+                css={{
+                  fontSize: '0.75rem',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontWeight: 500,
+                  marginBottom: '4px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
                 状態
               </Text>
-              <Text fontSize="sm" fontWeight={500} color={isWaiting ? "green.600" : "red.600"}>
+              <Text 
+                css={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: isWaiting ? '#BBF7D0' : '#FECACA'
+                }}
+              >
                 {isWaiting ? "募集中" : "開始済"}
               </Text>
             </Box>
           </HStack>
         </Box>
 
-        {/* 自然なアクションボタン */}
+        {/* 🎯 PREMIUM ACTION BUTTON */}
         <AppButton
-          colorPalette={isWaiting ? "orange" : "gray"}
-          visual="subtle"
+          palette={isWaiting ? "brand" : "gray"}
+          visual={isWaiting ? "solid" : "surface"}
           size="md"
-          minW="100%"
-          height="2.5rem" // 少し低く
           onClick={onJoin}
           aria-label={`${name}に参加`}
           disabled={!isWaiting}
-          fontWeight={500} // 軽く
-          _hover={{
-            opacity: isWaiting ? 0.85 : 1,
+          css={{
+            width: '100%',
+            height: '44px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            background: isWaiting ? 
+              'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' : 
+              'rgba(107,114,128,0.3)',
+            boxShadow: isWaiting ? 
+              '0 4px 16px rgba(99,102,241,0.4)' : 
+              'none',
+            '&:hover:not(:disabled)': {
+              transform: 'translateY(-1px)',
+              boxShadow: isWaiting ? 
+                '0 6px 20px rgba(99,102,241,0.5)' : 
+                '0 2px 8px rgba(107,114,128,0.3)'
+            },
+            '&:disabled': {
+              opacity: 0.6,
+              cursor: 'not-allowed'
+            }
           }}
-          transition="opacity 0.1s ease"
         >
           {isWaiting ? "参加する" : "開始済み"}
         </AppButton>
       </Stack>
-    </AppCard>
+    </Box>
   );
 }
