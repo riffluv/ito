@@ -139,12 +139,17 @@ export function GameCard({
       : state === "fail"
         ? "dangerBorder"
         : "borderDefault";
+  // If the card doesn't have a numeric value (we're showing a clue), use a
+  // slightly lighter surface so placed-but-unrevealed cards don't look like
+  // the final dark "back" state.
   const frameBg =
     state === "success"
       ? "successSubtle"
       : state === "fail"
         ? "dangerSubtle"
-        : "surfaceRaised";
+        : typeof number === "number"
+          ? "surfaceRaised"
+          : "surfaceSubtle";
   const frameShadow =
     state === "default"
       ? "0 2px 6px rgba(0,0,0,0.4)"
