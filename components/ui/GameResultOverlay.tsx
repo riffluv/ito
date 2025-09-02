@@ -1,6 +1,5 @@
-import React from "react";
-import { Box, Text } from "@chakra-ui/react";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { Box, Text } from "@chakra-ui/react";
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -8,7 +7,11 @@ interface GameResultOverlayProps {
   mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
 }
 
-export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameResultOverlayProps) {
+export function GameResultOverlay({
+  failed,
+  failedAt,
+  mode = "overlay",
+}: GameResultOverlayProps) {
   // インライン表示: カードと被せず帯として表示
   if (mode === "inline") {
     return failed ? (
@@ -22,16 +25,17 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
         rounded="lg"
         fontWeight={800}
         fontSize={{ base: "sm", md: "md" }}
-        color="red.800"
+        color="red.300"
         boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
-        bg="red.100"
+        bg="#1a1a1a"
         border="1px solid"
-        borderColor="red.200"
+        borderColor="rgba(220,38,38,0.4)"
         whiteSpace="nowrap"
         aria-live="polite"
         role="status"
       >
-        <span aria-hidden>💥</span> FAILED{typeof failedAt === "number" ? ` #${failedAt}` : ""}
+        <span aria-hidden>💥</span> FAILED
+        {typeof failedAt === "number" ? ` #${failedAt}` : ""}
       </Box>
     ) : (
       <Box
@@ -44,11 +48,11 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
         rounded="lg"
         fontWeight={800}
         fontSize={{ base: "sm", md: "md" }}
-        color="green.800"
+        color="#22c55e"
         boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
-        bg="green.100"
+        bg="#1a1a1a"
         border="1px solid"
-        borderColor="green.200"
+        borderColor="rgba(34,197,94,0.35)"
         whiteSpace="nowrap"
         aria-live="polite"
         role="status"
@@ -90,11 +94,7 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
           }}
         >
           💥 FAILED 💥
-          <Text
-            fontSize={{ base: "sm", md: "md" }}
-            mt={1}
-            opacity={0.9}
-          >
+          <Text fontSize={{ base: "sm", md: "md" }} mt={1} opacity={0.9}>
             #{failedAt} 枚目で昇順が崩れました
           </Text>
         </Box>
@@ -116,7 +116,7 @@ export function GameResultOverlay({ failed, failedAt, mode = "overlay" }: GameRe
         rounded="2xl"
         fontWeight={800}
         fontSize={{ base: "2xl", md: "3xl" }}
-        color="successSolid"
+        color="#22c55e"
         letterSpacing={2}
         boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.ELEVATED}
         transform="scale(1) rotate(0deg)"

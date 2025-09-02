@@ -1,7 +1,6 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export type GameCardProps = {
   index?: number | null;
@@ -28,7 +27,7 @@ export function GameCard({
   if (variant === "flip") {
     const hoverTransform = isHovered ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
-    
+
     return (
       <div
         style={{
@@ -58,32 +57,59 @@ export function GameCard({
               height: "100%",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
-              padding: "1rem",
+              padding: "0.75rem 0.85rem 0.75rem",
               borderRadius: "1rem",
               border: "2px solid #d4af37",
               backgroundColor: "#1a1a1a",
               color: "#ffffff",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              boxShadow: isHovered ? "0 8px 25px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.15)",
+              display: "grid",
+              gridTemplateRows: "16px 1fr 16px",
+              alignItems: "stretch",
+              boxShadow: isHovered
+                ? "0 8px 25px rgba(0,0,0,0.3)"
+                : "0 4px 12px rgba(0,0,0,0.15)",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "#999" }}>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                lineHeight: 1,
+                color: "#999",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               #{typeof index === "number" ? index + 1 : "?"}
             </div>
-            <div style={{ 
-              fontWeight: 700, 
-              fontSize: "1.25rem", 
-              textAlign: "center",
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              {clue || "(連想なし)"}
+            <div style={{ position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontWeight: 700,
+                  fontSize: "1.22rem",
+                  textAlign: "center",
+                  lineHeight: 1.15,
+                  width: "100%",
+                  padding: "0 0.25rem",
+                  wordBreak: "keep-all",
+                }}
+              >
+                {clue || "(連想なし)"}
+              </div>
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#999" }}>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                lineHeight: 1,
+                color: "#999",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+              }}
+            >
               {name ?? "(不明)"}
             </div>
           </div>
@@ -97,35 +123,63 @@ export function GameCard({
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
-              padding: "1rem",
+              padding: "0.75rem 0.85rem 0.75rem",
               borderRadius: "1rem",
               border: `2px solid ${state === "success" ? "#22c55e" : state === "fail" ? "#dc2626" : "#d4af37"}`,
-              backgroundColor: state === "success" ? "#1a1a1a" : state === "fail" ? "#fecaca" : "#1a1a1a",
-              boxShadow: state === "success" 
-                ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)" 
-                : isHovered ? "0 8px 25px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.15)",
+              backgroundColor: "#1a1a1a",
+              boxShadow:
+                state === "success"
+                  ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)"
+                  : state === "fail"
+                    ? "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+                    : isHovered
+                      ? "0 8px 25px rgba(0,0,0,0.3)"
+                      : "0 4px 12px rgba(0,0,0,0.15)",
               color: "white",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              textAlign: "center",
-              boxShadow: isHovered ? "0 8px 25px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.15)",
+              display: "grid",
+              gridTemplateRows: "16px 1fr 16px",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.8)", marginBottom: "0.5rem" }}>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                lineHeight: 1,
+                color: "rgba(255,255,255,0.75)",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               #{typeof index === "number" ? index + 1 : "?"}
             </div>
-            <div style={{ 
-              fontWeight: 900, 
-              fontSize: "3rem", 
-              color: "#d4af37",
-              lineHeight: 1,
-              textShadow: "0 2px 4px rgba(0,0,0,0.5)"
-            }}>
-              {typeof number === "number" ? number : "?"}
+            <div style={{ position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontWeight: 900,
+                  fontSize: "3rem",
+                  color: "#d4af37",
+                  lineHeight: 1,
+                  textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                  width: "100%",
+                  textAlign: "center",
+                }}
+              >
+                {typeof number === "number" ? number : "?"}
+              </div>
             </div>
-            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.8)", marginTop: "0.5rem" }}>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                lineHeight: 1,
+                color: "rgba(255,255,255,0.75)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+              }}
+            >
               {name ?? "(不明)"}
             </div>
           </div>
@@ -135,8 +189,10 @@ export function GameCard({
   }
 
   // FLAT VARIANT - 通常のカード表示
-  const hoverTransform = isHovered ? "translateY(-4px) scale(1.02)" : "translateY(0) scale(1)";
-  
+  const hoverTransform = isHovered
+    ? "translateY(-4px) scale(1.02)"
+    : "translateY(0) scale(1)";
+
   return (
     <div
       style={{
@@ -146,7 +202,7 @@ export function GameCard({
         padding: "1rem",
         borderRadius: "1rem",
         border: `2px solid ${state === "success" ? "#22c55e" : state === "fail" ? "#dc2626" : "#d4af37"}`,
-        backgroundColor: state === "success" ? "#1a1a1a" : state === "fail" ? "#fecaca" : "#1a1a1a",
+        backgroundColor: "#1a1a1a",
         color: "#ffffff",
         display: "flex",
         flexDirection: "column",
@@ -154,9 +210,14 @@ export function GameCard({
         cursor: "pointer",
         transform: hoverTransform,
         transition: `all 0.3s ${HOVER_EASING}`,
-        boxShadow: state === "success" 
-          ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)" 
-          : isHovered ? "0 8px 25px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.15)",
+        boxShadow:
+          state === "success"
+            ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)"
+            : state === "fail"
+              ? "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+              : isHovered
+                ? "0 8px 25px rgba(0,0,0,0.3)"
+                : "0 4px 12px rgba(0,0,0,0.15)",
       }}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
@@ -165,17 +226,20 @@ export function GameCard({
       <div style={{ fontSize: "0.75rem", color: "#999" }}>
         #{typeof index === "number" ? index + 1 : "?"}
       </div>
-      <div style={{ 
-        fontWeight: 800, 
-        fontSize: typeof number === "number" ? "2rem" : "1.25rem",
-        textAlign: "center",
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: typeof number === "number" ? "#d4af37" : "#ffffff",
-        textShadow: typeof number === "number" ? "0 2px 4px rgba(0,0,0,0.5)" : "none"
-      }}>
+      <div
+        style={{
+          fontWeight: 800,
+          fontSize: typeof number === "number" ? "2rem" : "1.25rem",
+          textAlign: "center",
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: typeof number === "number" ? "#d4af37" : "#ffffff",
+          textShadow:
+            typeof number === "number" ? "0 2px 4px rgba(0,0,0,0.5)" : "none",
+        }}
+      >
         {typeof number === "number" ? number : clue || "?"}
       </div>
       <div style={{ fontSize: "0.75rem", color: "#999" }}>
