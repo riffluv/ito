@@ -36,6 +36,7 @@ export interface ComputedCardState {
   flipped: boolean; // for flip variant: whether backside (number) is shown
   state: "default" | "success" | "fail"; // coloring state
   boundary?: boolean; // marks the card right before failure for subtle emphasis
+  successLevel?: "mild" | "final"; // refine success into per-card mild vs final celebration
   clueText: string | null; // clue to show (may be placeholder)
   number: number | null; // numeric value or null if hidden
   revealed: boolean; // whether the card is considered revealed in game logic
@@ -120,6 +121,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const flipPhaseReached = typeof idx === "number" && idx < revealIndex;
   let isFail = false;
   let isSuccess = false;
+  let successLevel: ComputedCardState["successLevel"] = undefined;
   let boundary = false;
 
   if (modeSort) {
@@ -135,6 +137,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       coloringActive &&
       !failureConfirmed &&
       roomStatus === "finished";
+    if (isSuccess) successLevel = "final"; // sort-submit only celebrates at end
   } else {
     // sequential per optimal spec:
     // - show fail immediately on failing card flip
@@ -150,6 +153,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
         } else if (typeof effectiveFailedAt !== "number") {
           // only apply mild success if no failure yet
           isSuccess = true;
+          successLevel = "mild";
         }
       }
       if (
@@ -161,6 +165,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       // After overall finish and success (no failure), keep success state (already true)
       if (roomStatus === "finished" && !failureConfirmed) {
         isSuccess = true;
+        successLevel = "final"; // escalate to final
       }
       // After finish with failure, keep failing card red, others default
     }
@@ -203,6 +208,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     flipped,
     state: isFail ? "fail" : isSuccess ? "success" : "default",
     boundary,
+    successLevel,
     clueText,
     number: showNumber && typeof number === "number" ? number : null,
     revealed,

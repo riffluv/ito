@@ -8,6 +8,8 @@ export type GameCardProps = {
   clue?: string;
   number?: number | null;
   state?: "default" | "success" | "fail";
+  successLevel?: "mild" | "final";
+  boundary?: boolean;
   variant?: "flat" | "flip";
   flipped?: boolean;
 };
@@ -18,15 +20,49 @@ export function GameCard({
   clue,
   number,
   state = "default",
+  successLevel,
+  boundary = false,
   variant = "flat",
   flipped = false,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Shared semantic colors
+  const baseGold = "#d4af37";
+  const failColor = "#dc2626";
+  const successStrong = "#22c55e";
+  const mildGlow = "0 0 0 2px rgba(34,197,94,0.18)";
+  const strongGlow = "0 0 0 3px rgba(34,197,94,0.35)";
+  const successBorder =
+    state === "success"
+      ? successLevel === "mild"
+        ? baseGold
+        : successStrong
+      : baseGold;
+  const successShadow =
+    state === "success"
+      ? successLevel === "mild"
+        ? mildGlow
+        : strongGlow
+      : undefined;
+  const boundaryRing =
+    boundary && state !== "fail" ? "0 0 0 1px rgba(217,119,6,0.65)" : ""; // amber accent
+
+  const mergeShadow = (core: string) =>
+    boundaryRing ? `${boundaryRing}, ${core}` : core;
+
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
     const hoverTransform = isHovered ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
+
+    const digits = typeof number === "number" ? String(number).length : 0;
+    const backNumberFontSize = (() => {
+      if (digits <= 1) return "3rem";
+      if (digits === 2) return "2.8rem";
+      if (digits === 3) return "2.35rem"; // 100 用に縮小
+      return "2.2rem"; // フォールバック (想定外の多桁)
+    })();
 
     return (
       <div
@@ -59,7 +95,7 @@ export function GameCard({
               WebkitBackfaceVisibility: "hidden",
               padding: "0.75rem 0.85rem 0.75rem",
               borderRadius: "1rem",
-              border: "2px solid #d4af37",
+              border: `2px solid ${baseGold}`,
               backgroundColor: "#1a1a1a",
               color: "#ffffff",
               display: "grid",
@@ -126,16 +162,18 @@ export function GameCard({
               transform: "rotateY(180deg)",
               padding: "0.75rem 0.85rem 0.75rem",
               borderRadius: "1rem",
-              border: `2px solid ${state === "success" ? "#22c55e" : state === "fail" ? "#dc2626" : "#d4af37"}`,
+              border: `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
               backgroundColor: "#1a1a1a",
               boxShadow:
                 state === "success"
-                  ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)"
+                  ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
                   : state === "fail"
-                    ? "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+                    ? mergeShadow(
+                        "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+                      )
                     : isHovered
-                      ? "0 8px 25px rgba(0,0,0,0.3)"
-                      : "0 4px 12px rgba(0,0,0,0.15)",
+                      ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
+                      : mergeShadow("0 4px 12px rgba(0,0,0,0.15)"),
               color: "white",
               display: "grid",
               gridTemplateRows: "16px 1fr 16px",
@@ -160,12 +198,14 @@ export function GameCard({
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   fontWeight: 900,
-                  fontSize: "3rem",
+                  fontSize: backNumberFontSize,
                   color: "#d4af37",
                   lineHeight: 1,
                   textShadow: "0 2px 4px rgba(0,0,0,0.5)",
                   width: "100%",
                   textAlign: "center",
+                  whiteSpace: "nowrap",
+                  letterSpacing: digits >= 3 ? "-1px" : undefined,
                 }}
               >
                 {typeof number === "number" ? number : "?"}
@@ -203,7 +243,7 @@ export function GameCard({
         height: "auto",
         padding: "0.75rem 0.85rem 0.75rem",
         borderRadius: "1rem",
-        border: `2px solid ${state === "success" ? "#22c55e" : state === "fail" ? "#dc2626" : "#d4af37"}`,
+        border: `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
         backgroundColor: "#1a1a1a",
         color: "#ffffff",
         display: "grid",
@@ -213,12 +253,14 @@ export function GameCard({
         transition: `all 0.3s ${HOVER_EASING}`,
         boxShadow:
           state === "success"
-            ? "0 0 0 3px rgba(34, 197, 94, 0.3), 0 8px 25px rgba(0,0,0,0.3)"
+            ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
             : state === "fail"
-              ? "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+              ? mergeShadow(
+                  "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+                )
               : isHovered
-                ? "0 8px 25px rgba(0,0,0,0.3)"
-                : "0 4px 12px rgba(0,0,0,0.15)",
+                ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
+                : mergeShadow("0 4px 12px rgba(0,0,0,0.15)"),
       }}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
@@ -243,7 +285,16 @@ export function GameCard({
             left: "50%",
             transform: "translate(-50%, -50%)",
             fontWeight: typeof number === "number" ? 900 : 700,
-            fontSize: typeof number === "number" ? "2.6rem" : "1.22rem",
+            fontSize:
+              typeof number === "number"
+                ? (() => {
+                    const digits = String(number).length;
+                    if (digits <= 1) return "2.6rem";
+                    if (digits === 2) return "2.45rem";
+                    if (digits === 3) return "2.05rem"; // 100 対策
+                    return "1.9rem";
+                  })()
+                : "1.22rem",
             color: typeof number === "number" ? "#d4af37" : "#ffffff",
             lineHeight: 1.05,
             textShadow:
@@ -252,6 +303,11 @@ export function GameCard({
             textAlign: "center",
             padding: "0 0.25rem",
             wordBreak: "keep-all",
+            whiteSpace: "nowrap",
+            letterSpacing:
+              typeof number === "number" && String(number).length >= 3
+                ? "-1px"
+                : undefined,
           }}
         >
           {typeof number === "number" ? number : clue || "?"}
