@@ -80,7 +80,9 @@ export function useSequentialReveal({
       if (newIds.length > 0) {
         setAnimating(true);
         newIds.forEach((id, i) => {
-          const delay = firstDelayMs + i * flipDelayMs;
+          // 1枚目は firstDelayMs、2枚目以降は flipDelayMs
+          const globalIndex = flippedIds.size + i;
+          const delay = globalIndex === 0 ? firstDelayMs : flipDelayMs;
           const t = window.setTimeout(() => {
             setFlippedIds((s) => {
               if (s.has(id)) return s; // 冪等
@@ -98,8 +100,11 @@ export function useSequentialReveal({
           timersRef.current.push(t as unknown as number);
         });
         // アニメ終了判定: 最大遅延 + 安全に 10ms
-        const totalDelay =
-          firstDelayMs + (newIds.length - 1) * flipDelayMs + 10;
+        const maxDelay = Math.max(...newIds.map((_, i) => {
+          const globalIndex = flippedIds.size + i;
+          return globalIndex === 0 ? firstDelayMs : flipDelayMs;
+        }));
+        const totalDelay = maxDelay + 10;
         const endT = window.setTimeout(() => {
           setAnimating(false);
           if (process.env.NODE_ENV !== "production") {
