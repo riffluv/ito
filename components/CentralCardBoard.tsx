@@ -135,7 +135,7 @@ export function CentralCardBoard({
     mePlaced,
   });
 
-  const { localFailedAt } = useLocalFailureDetection({
+  const { localFailedAt, boundaryPreviousIndex } = useLocalFailureDetection({
     currentPlaced,
     players,
     resolveMode,
@@ -189,6 +189,7 @@ export function CentralCardBoard({
       failed={failed}
       failedAt={failedAt}
       localFailedAt={localFailedAt}
+      boundaryPreviousIndex={boundaryPreviousIndex}
     />
   );
 

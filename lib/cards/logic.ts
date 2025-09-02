@@ -25,6 +25,7 @@ export interface ComputeCardStateParams {
   failed?: boolean; // server confirmed overall failure
   failedAt?: number | null; // server confirmed failure index (1-based)
   localFailedAt?: number | null; // client-only provisional failure index (1-based)
+  boundaryPreviousIndex?: number | null; // index (0-based) of card just before failure boundary (for subtle highlight)
   // sequential flip support
   sequentialFlip?: boolean; // enable flip style also for sequential mode
 }
@@ -34,6 +35,7 @@ export interface ComputedCardState {
   variant: "flat" | "flip"; // which card visual to use
   flipped: boolean; // for flip variant: whether backside (number) is shown
   state: "default" | "success" | "fail"; // coloring state
+  boundary?: boolean; // marks the card right before failure for subtle emphasis
   clueText: string | null; // clue to show (may be placeholder)
   number: number | null; // numeric value or null if hidden
   revealed: boolean; // whether the card is considered revealed in game logic
@@ -55,6 +57,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     failed,
     failedAt,
     localFailedAt,
+    boundaryPreviousIndex,
     sequentialFlip,
   } = p;
 
@@ -111,17 +114,57 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     : isPlaced;
 
   // Timing for coloring:
-  // - sort-submit: only color after its own card has flipped (idx < revealIndex) OR finished.
-  // - sequential: only color after flip (idx < revealIndex) OR finished.
-  // This prevents premature all-red flash.
+  //   sort-submit -> color per-card once that card has flipped OR when finished.
+  //   sequential  -> defer all coloring until the overall sequence finishes (requested UX),
+  //                  so no early mass red flash between flips.
   const flipPhaseReached = typeof idx === "number" && idx < revealIndex;
-  const coloringActive = roomStatus === "finished" || flipPhaseReached;
-  const isFail = revealed && failureConfirmed && coloringActive;
-  const isSuccess =
-    revealed &&
-    !failureConfirmed &&
-    coloringActive &&
-    roomStatus === "finished";
+  let isFail = false;
+  let isSuccess = false;
+  let boundary = false;
+
+  if (modeSort) {
+    const coloringActive = roomStatus === "finished" || flipPhaseReached;
+    isFail =
+      revealed &&
+      coloringActive &&
+      typeof effectiveFailedAt === "number" &&
+      typeof idx === "number" &&
+      idx === effectiveFailedAt - 1;
+    isSuccess =
+      revealed &&
+      coloringActive &&
+      !failureConfirmed &&
+      roomStatus === "finished";
+  } else {
+    // sequential per optimal spec:
+    // - show fail immediately on failing card flip
+    // - show subtle success (state 'success') per flipped correct card (not final strong) until finished
+    // - boundary highlight for card before failing pair
+    if (typeof idx === "number") {
+      const flippedNow = flipPhaseReached; // idx < revealIndex
+      const failingCard =
+        typeof effectiveFailedAt === "number" && idx === effectiveFailedAt - 1;
+      if (flippedNow) {
+        if (failingCard) {
+          isFail = true;
+        } else if (typeof effectiveFailedAt !== "number") {
+          // only apply mild success if no failure yet
+          isSuccess = true;
+        }
+      }
+      if (
+        typeof boundaryPreviousIndex === "number" &&
+        idx === boundaryPreviousIndex
+      ) {
+        boundary = true;
+      }
+      // After overall finish and success (no failure), keep success state (already true)
+      if (roomStatus === "finished" && !failureConfirmed) {
+        isSuccess = true;
+      }
+      // After finish with failure, keep failing card red, others default
+    }
+  }
 
   // Variant / flipping
   const variant: ComputedCardState["variant"] = (() => {
@@ -159,6 +202,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     variant,
     flipped,
     state: isFail ? "fail" : isSuccess ? "success" : "default",
+    boundary,
     clueText,
     number: showNumber && typeof number === "number" ? number : null,
     revealed,
