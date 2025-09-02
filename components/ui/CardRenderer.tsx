@@ -17,7 +17,6 @@ interface CardRendererProps {
   failedAt?: number | null;
   localFailedAt?: number | null;
   boundaryPreviousIndex?: number | null;
-  sequentialFlippedIds?: Set<string>; // 順次モード用の正確なフリップ状態
 }
 
 export function CardRenderer(props: CardRendererProps) {
@@ -37,8 +36,6 @@ export function CardRenderer(props: CardRendererProps) {
     failedAt: props.failedAt ?? null,
     localFailedAt: props.localFailedAt ?? null,
     boundaryPreviousIndex: props.boundaryPreviousIndex ?? null,
-    sequentialFlip: props.resolveMode !== "sort-submit", // enable flip for sequential
-    sequentialFlippedIds: props.sequentialFlippedIds, // 正確なフリップ状態を渡す
   });
 
   return (

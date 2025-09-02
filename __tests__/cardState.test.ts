@@ -60,56 +60,6 @@ describe("computeCardState", () => {
     expect(s.number).toBe(7);
   });
 
-  test("sequential: flip enabled, first card not yet flipped (revealIndex=0)", () => {
-    const s = computeCardState({
-      ...base,
-      player: {
-        id: "p1",
-        name: "A",
-        avatar: "",
-        number: 10,
-        clue1: "cat",
-        ready: true,
-        orderIndex: 0,
-      },
-      id: "p1",
-      orderList: ["p1"],
-      resolveMode: "sequential",
-      roomStatus: "clue",
-      idx: 0,
-      sequentialFlip: true,
-    });
-    expect(s.variant).toBe("flip");
-    expect(s.flipped).toBe(false);
-    // number hidden until revealIndex advances
-    expect(s.number).toBeNull();
-  });
-
-  test("sequential: after revealIndex passes card index, number visible", () => {
-    const s = computeCardState({
-      ...base,
-      player: {
-        id: "p1",
-        name: "A",
-        avatar: "",
-        number: 55,
-        clue1: "desk",
-        ready: true,
-        orderIndex: 0,
-      },
-      id: "p1",
-      orderList: ["p1"],
-      resolveMode: "sequential",
-      roomStatus: "clue",
-      idx: 0,
-      sequentialFlip: true,
-      revealIndex: 1,
-      revealAnimating: true,
-    });
-    expect(s.flipped).toBe(true);
-    expect(s.number).toBe(55);
-  });
-
   test("sort-submit: finished state forces all cards flipped regardless of revealIndex", () => {
     const s = computeCardState({
       ...base,
