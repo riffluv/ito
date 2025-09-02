@@ -109,4 +109,30 @@ describe("computeCardState", () => {
     expect(s.flipped).toBe(true);
     expect(s.number).toBe(55);
   });
+
+  test("sort-submit: finished state forces all cards flipped regardless of revealIndex", () => {
+    const s = computeCardState({
+      ...base,
+      player: {
+        id: "p1",
+        name: "A",
+        avatar: "",
+        number: 99,
+        clue1: "zoo",
+        ready: true,
+        orderIndex: 0,
+      },
+      id: "p1",
+      orderList: ["p1"],
+      proposal: ["p1"],
+      resolveMode: "sort-submit",
+      roomStatus: "finished",
+      idx: 0,
+      revealIndex: 0, // hypothetically not advanced on this client before finalize
+      revealAnimating: false,
+    });
+    expect(s.variant).toBe("flip");
+    expect(s.flipped).toBe(true);
+    expect(s.number).toBe(99);
+  });
 });

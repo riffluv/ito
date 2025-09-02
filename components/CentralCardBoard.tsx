@@ -158,6 +158,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   sequentialReveal = useSequentialReveal({
     orderListLength: placedVisualCount,
+    placedIds: (() => {
+      // orderList の確定順 + pending で視覚順を構成
+      const seq: string[] = [];
+      (orderList || []).forEach((id) => {
+        if (!seq.includes(id)) seq.push(id);
+      });
+      (pending || []).forEach((id) => {
+        if (!seq.includes(id)) seq.push(id);
+      });
+      return seq;
+    })(),
     roomStatus,
     resolveMode,
     enabled: resolveMode !== "sort-submit",
