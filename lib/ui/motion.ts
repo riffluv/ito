@@ -6,9 +6,9 @@ export const RESULT_VISIBLE_MS = 5000; // ms - Longer celebration
 export const FLIP_DURATION_MS = 900; // ms - Cinematic card flip
 
 // Sequential mode specific dwell timings (clue -> flip pacing)
-// Slightly longer than previous defaults to allow players to absorb the clue
+// Aligned with sort-submit mode for consistent experience
 export const SEQ_FIRST_CLUE_MS = 900; // ms - first clue linger before flip
-export const SEQ_FLIP_INTERVAL_MS = 800; // ms - interval between subsequent flips
+export const SEQ_FLIP_INTERVAL_MS = 1200; // ms - same as REVEAL_STEP_DELAY for perfect rhythm
 
 // Enhanced animation curves for professional feel
 export const CARD_FLIP_EASING = "cubic-bezier(0.23, 1, 0.32, 1)";
