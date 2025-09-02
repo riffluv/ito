@@ -18,14 +18,15 @@ export default function StatusDock({
 }: StatusDockProps) {
   return (
     <Box
+      data-status-dock
       paddingBlock={{ base: 1, md: 2 }}
       mt={{ base: 2, md: 2 }}
-      bg="surfaceSubtle"
-      borderTopWidth="1px"
-      borderColor="borderSubtle"
+      // 背景色が artifact に見えている可能性があるため透過化し、内部で色を付けるオプション
+      bg={show ? "transparent" : "transparent"}
       {...rest}
     >
       <Box
+        data-status-dock-inner
         width="100%"
         maxWidth="var(--board-max-width)"
         marginInline="auto"
@@ -37,6 +38,8 @@ export default function StatusDock({
         color="fgMuted"
         css={{ containerType: "inline-size" }}
         minH={show ? { base: 7, md: 8 } : 0}
+        // finished 時に完全透明
+        bg={show ? "transparent" : "transparent"}
       >
         {children}
       </Box>
