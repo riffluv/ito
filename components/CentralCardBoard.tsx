@@ -225,6 +225,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           ? revealAnimating
           : sequentialReveal.revealAnimating
       }
+      // 順次モードでは flippedIds による正確なフリップ状態を渡す
+      sequentialFlippedIds={
+        resolveMode !== "sort-submit" ? sequentialReveal.flippedIds : undefined
+      }
       failed={failed}
       failedAt={failedAt}
       localFailedAt={localFailedAt}

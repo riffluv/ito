@@ -34,11 +34,21 @@ export function useDropHandler({
 
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
-    if (!hasNumber || mePlaced) return false;
+    if (!hasNumber) return false;
+    
+    // アニメーション期間中でも配置を許可（mePlaced チェックを緩和）
     const mode = normalizeResolveMode(resolveMode);
     if (isSortSubmit(mode)) return true; // 提出は常時可（ヒント確定前はUI側で制御可能）
-    return !!cluesReady; // sequential gate
-  }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady]);
+    
+    // 順次モードでは、既に配置済みの場合のみ制限
+    if (mePlaced && !(orderList || []).includes(meId)) {
+      // pending状態の場合は再配置を許可
+      return true;
+    }
+    
+    // 連想ワードの準備状況をより寛容にチェック
+    return !!cluesReady;
+  }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady, meId, orderList]);
 
   // 順次モード: 次に配置可能な位置を計算
   const nextSequentialPosition = useMemo(() => {
@@ -56,8 +66,14 @@ export function useDropHandler({
       const mode = normalizeResolveMode(resolveMode);
       if (isSortSubmit(mode)) return true; // 一括モードでは制限なし
       
-      // 順次モードでは一番左の空きスロットにのみドロップ可能
-      return targetIndex === nextSequentialPosition;
+      // 順次モードでの柔軟な位置制限: 次の位置か、直前の位置まで許可
+      const allowedPositions = [nextSequentialPosition];
+      // アニメーション期間中の競合を避けるため、直前の位置も許可
+      if (nextSequentialPosition > 0) {
+        allowedPositions.push(nextSequentialPosition - 1);
+      }
+      
+      return allowedPositions.includes(targetIndex);
     };
   }, [canDrop, resolveMode, nextSequentialPosition]);
 
@@ -101,6 +117,12 @@ export function useDropHandler({
           type: "error",
         });
       }
+      return;
+    }
+
+    // 順次モードでの重複チェックを改善
+    if (orderList && orderList.includes(meId)) {
+      notify({ title: "既にカードを出しています", type: "info" });
       return;
     }
 
@@ -173,6 +195,12 @@ export function useDropHandler({
           type: "error",
         });
       }
+      return;
+    }
+
+    // 順次モードでの重複チェック
+    if (orderList && orderList.includes(meId)) {
+      notify({ title: "既にカードを出しています", type: "info" });
       return;
     }
 

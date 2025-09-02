@@ -28,6 +28,7 @@ export interface ComputeCardStateParams {
   boundaryPreviousIndex?: number | null; // index (0-based) of card just before failure boundary (for subtle highlight)
   // sequential flip support
   sequentialFlip?: boolean; // enable flip style also for sequential mode
+  sequentialFlippedIds?: Set<string>; // 順次モード用の正確なフリップ状態
 }
 
 export interface ComputedCardState {
@@ -90,7 +91,8 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       if (p.roomStatus === "finished") return !!p.failed;
       return p.revealIndex >= effectiveFailedAt;
     }
-    return true; // sequential: treat failure as soon as local/effective index known
+    // sequential: 失敗確定はフリップ完了後のみ（順次モードの適切なタイミング）
+    return flipPhaseReached; // フリップが完了したカードのみ失敗状態を表示
   })();
 
   let isFail = false;
@@ -113,10 +115,15 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     const failingCard =
       typeof effectiveFailedAt === "number" && idx === effectiveFailedAt - 1;
     if (flipPhaseReached) {
-      if (failingCard) isFail = true;
-      else if (typeof effectiveFailedAt !== "number") {
-        isSuccess = true; // mild until final
-        successLevel = "mild";
+      if (failingCard) {
+        isFail = true;
+      } else if (typeof effectiveFailedAt !== "number") {
+        // 成功状態は、フリップ完了 + ゲーム終了後のみ表示
+        if (p.roomStatus === "finished") {
+          isSuccess = true;
+          successLevel = "final";
+        }
+        // フリップ中は状態を表示しない（デフォルト状態維持）
       }
     }
     if (
@@ -125,7 +132,8 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     ) {
       boundary = true;
     }
-    if (p.roomStatus === "finished" && !failureConfirmed) {
+    // finished状態での最終成功判定（重複だが安全のため保持）
+    if (p.roomStatus === "finished" && !failureConfirmed && flipPhaseReached) {
       isSuccess = true;
       successLevel = "final";
     }
@@ -154,6 +162,16 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     }
     if (!modeSort && p.sequentialFlip) {
       if (typeof idx !== "number") return false;
+      // sequentialFlippedIds が利用可能なら、それを使用して正確なフリップ状態を判定
+      if (p.sequentialFlippedIds) {
+        return p.sequentialFlippedIds.has(p.id);
+      }
+      // 失敗時（finished）で sequentialFlippedIds が無い場合は、
+      // 進行中アニメーションを尊重して false を返す（即座にフリップしない）
+      if (p.roomStatus === "finished" && (p.failed || p.localFailedAt !== null)) {
+        return false; // 失敗時は進行中のアニメーションを継続
+      }
+      // フォールバック: 旧ロジック（revealIndexベース）- 成功時のみ
       return idx < p.revealIndex; // when its index passed, flip stays
     }
     return false;
