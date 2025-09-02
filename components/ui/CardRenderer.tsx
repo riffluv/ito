@@ -1,4 +1,5 @@
 import GameCard from "@/components/ui/GameCard";
+import { computeCardState } from "@/lib/cards/logic";
 import type { PlayerDoc } from "@/lib/types";
 
 interface CardRendererProps {
@@ -17,113 +18,35 @@ interface CardRendererProps {
   localFailedAt?: number | null;
 }
 
-export function CardRenderer({
-  id,
-  player,
-  idx,
-  orderList,
-  pending,
-  proposal,
-  resolveMode,
-  roomStatus,
-  revealIndex,
-  revealAnimating,
-  failed,
-  failedAt,
-  localFailedAt,
-}: CardRendererProps) {
-  const number = player?.number;
-  const isPlaced =
-    (orderList || []).includes(id) ||
-    pending.includes(id) ||
-    (proposal || []).includes(id);
-
-  const numberVisibleBase = typeof number === "number" && isPlaced;
-  let showNumber = numberVisibleBase;
-
-  // 🎮 一括モードの正しい数字表示ロジック
-  if (resolveMode === "sort-submit") {
-    if (roomStatus === "finished") {
-      // ゲーム終了時は全て表示
-      showNumber = numberVisibleBase;
-    } else if (
-      roomStatus === "reveal" &&
-      revealAnimating &&
-      typeof idx === "number"
-    ) {
-      // リビール演出中は順次表示
-      showNumber = numberVisibleBase && idx < revealIndex;
-    } else {
-      // 配置時は連想ワードのまま（数字は隠す）
-      showNumber = false;
-    }
-  }
-
-  // 順次モードの場合はrevealAnimating処理
-  if (
-    revealAnimating &&
-    typeof idx === "number" &&
-    resolveMode !== "sort-submit"
-  ) {
-    showNumber = idx < revealIndex;
-  }
-
-  const effectiveFailedAt = localFailedAt ?? failedAt;
-
-  const failureConfirmed = (() => {
-    if (typeof effectiveFailedAt !== "number") return false;
-    if (resolveMode === "sort-submit") {
-      if (roomStatus === "finished") return !!failed;
-      return revealIndex >= effectiveFailedAt;
-    }
-    return true;
-  })();
-
-  const cardIsRevealed =
-    resolveMode === "sort-submit"
-      ? typeof idx === "number" &&
-        (roomStatus === "finished" ||
-          (roomStatus === "reveal" && idx < revealIndex))
-      : isPlaced;
-
-  // Only surface success/fail coloring while reveal animation is active or after
-  // the reveal is finalized (finished). This prevents a brief "all red" flash
-  // immediately when the room status flips to 'reveal' before the client-side
-  // animation index is initialized.
-  const animationActive = roomStatus === "finished" || revealAnimating;
-  const shouldShowRed = cardIsRevealed && failureConfirmed && animationActive;
-  // 緑色は成功時のみ（ゲーム終了時のみ適用）
-  const shouldShowGreen = cardIsRevealed && !failureConfirmed && animationActive && roomStatus === "finished";
-
-  // 🎮 DYNAMIC CARD DESIGN: sort-submitモードのリビール時はflip variantを使用
-  const shouldUseFlipVariant = 
-    resolveMode === "sort-submit" && 
-    (roomStatus === "reveal" || roomStatus === "finished");
-    
-  const shouldFlipCard = 
-    shouldUseFlipVariant && 
-    typeof idx === "number" && 
-    (roomStatus === "reveal" || roomStatus === "finished") &&
-    idx < revealIndex;
-
+export function CardRenderer(props: CardRendererProps) {
+  const { id, player } = props;
+  const state = computeCardState({
+    player,
+    id,
+    idx: props.idx,
+    orderList: props.orderList,
+    pending: props.pending,
+    proposal: props.proposal,
+    resolveMode: props.resolveMode,
+    roomStatus: props.roomStatus,
+    revealIndex: props.revealIndex,
+    revealAnimating: props.revealAnimating,
+    failed: props.failed,
+    failedAt: props.failedAt ?? null,
+    localFailedAt: props.localFailedAt ?? null,
+    sequentialFlip: props.resolveMode !== "sort-submit", // enable flip for sequential
+  });
 
   return (
     <GameCard
       key={id}
-      variant={shouldUseFlipVariant ? "flip" : "flat"}
-      flipped={shouldFlipCard}
-      index={typeof idx === "number" ? idx : null}
+      variant={state.variant}
+      flipped={state.flipped}
+      index={typeof props.idx === "number" ? props.idx : null}
       name={player?.name}
-      clue={
-        resolveMode === "sort-submit" && roomStatus !== "finished"
-          ? player?.clue1 || "(連想待ち)"
-          : player?.clue1
-      }
-      number={shouldUseFlipVariant 
-        ? (typeof number === "number" ? number : null)
-        : (showNumber && typeof number === "number" ? number : null)
-      }
-      state={shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"}
+      clue={state.clueText || undefined}
+      number={state.number}
+      state={state.state}
     />
   );
 }
