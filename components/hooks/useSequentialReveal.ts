@@ -1,3 +1,4 @@
+import { SEQ_FIRST_CLUE_MS, SEQ_FLIP_INTERVAL_MS } from "@/lib/ui/motion";
 import { useEffect, useRef, useState } from "react";
 
 interface UseSequentialRevealParams {
@@ -16,8 +17,8 @@ export function useSequentialReveal({
   roomStatus,
   resolveMode,
   enabled = true,
-  firstDelayMs = 400,
-  flipDelayMs = 550,
+  firstDelayMs = SEQ_FIRST_CLUE_MS,
+  flipDelayMs = SEQ_FLIP_INTERVAL_MS,
 }: UseSequentialRevealParams) {
   const [revealIndex, setRevealIndex] = useState(0);
   const [animating, setAnimating] = useState(false);

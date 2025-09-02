@@ -110,12 +110,17 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
         (roomStatus === "reveal" && idx < revealIndex))
     : isPlaced;
 
-  const animationActive = roomStatus === "finished" || revealAnimating;
-  const isFail = revealed && failureConfirmed && animationActive;
+  // Timing for coloring:
+  // - sort-submit: only color after its own card has flipped (idx < revealIndex) OR finished.
+  // - sequential: only color after flip (idx < revealIndex) OR finished.
+  // This prevents premature all-red flash.
+  const flipPhaseReached = typeof idx === "number" && idx < revealIndex;
+  const coloringActive = roomStatus === "finished" || flipPhaseReached;
+  const isFail = revealed && failureConfirmed && coloringActive;
   const isSuccess =
     revealed &&
     !failureConfirmed &&
-    animationActive &&
+    coloringActive &&
     roomStatus === "finished";
 
   // Variant / flipping
