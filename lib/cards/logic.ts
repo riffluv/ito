@@ -141,9 +141,14 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const flipped = (() => {
     if (variant !== "flip") return false;
     if (modeSort) {
+      // finished では revealIndex が途中で finalizeReveal されたクライアントでも
+      // 最終的に全カードが数値面を向く必要がある（ホスト以外の遅延対策）。
+      if (p.roomStatus === "finished") {
+        return true; // orderList に含まれない番兵は render されない前提
+      }
       return (
         typeof idx === "number" &&
-        (p.roomStatus === "reveal" || p.roomStatus === "finished") &&
+        p.roomStatus === "reveal" &&
         idx < p.revealIndex
       );
     }
