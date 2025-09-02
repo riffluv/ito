@@ -1,6 +1,9 @@
 "use client";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Box } from "@chakra-ui/react";
+import { DndContext, DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { SortableItem } from "@/components/sortable/SortableItem";
-// BoardArea / Panel は現行レイアウトでは未使用のため import を削除
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useLocalFailureDetection } from "@/components/hooks/useLocalFailureDetection";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
@@ -11,73 +14,67 @@ import ConfirmDock from "@/components/ui/ConfirmDock";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import StatusDock from "@/components/ui/StatusDock";
 import WaitingArea from "@/components/ui/WaitingArea";
-import {
-  finalizeReveal,
-  setOrderProposal,
-  submitSortedOrder,
-} from "@/lib/game/room";
+import { finalizeReveal, setOrderProposal, submitSortedOrder } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
-import {
-  RESULT_VISIBLE_MS,
-  REVEAL_FIRST_DELAY,
-  REVEAL_LINGER,
-  REVEAL_STEP_DELAY,
-} from "@/lib/ui/motion";
+// Layout & animation constants sourced from theme/layout and existing motion logic
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box } from "@chakra-ui/react";
-import {
-  DndContext,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// Fallback hard-coded durations (keep in sync with previous logic/motion.ts if exists)
+const REVEAL_FIRST_DELAY = 600;
+const REVEAL_STEP_DELAY = 650;
+const REVEAL_LINGER = 900;
+const RESULT_VISIBLE_MS = 3000;
 
-export function CentralCardBoard({
+interface CentralCardBoardProps {
+  roomId: string;
+  players: any[]; // loosen typing (original PlayerDoc may lack id field)
+  orderList: string[];
+  meId: string;
+  eligibleIds: string[];
+  roomStatus: string; // union simplified
+  cluesReady?: boolean;
+  failed: boolean;
+  failedAt?: number;
+  proposal?: string[];
+  resolveMode?: string;
+  isHost?: boolean;
+}
+
+const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
   players,
   orderList,
   meId,
   eligibleIds,
   roomStatus,
-  proposal,
   cluesReady,
   failed,
   failedAt,
-  resolveMode,
+  proposal,
+  resolveMode = "sort-submit",
   isHost,
-}: {
-  roomId: string;
-  players: (PlayerDoc & { id: string })[];
-  orderList: string[];
-  meId: string;
-  eligibleIds: string[];
-  roomStatus?: string;
-  proposal?: string[];
-  cluesReady?: boolean;
-  failed?: boolean;
-  failedAt?: number | null;
-  resolveMode?: string;
-  isHost?: boolean;
-}) {
-  const map = new Map(players.map((p) => [p.id, p]));
-  const me = map.get(meId);
-  const hasNumber = typeof me?.number === "number";
-  // 未提出＝まだ上（提出/提案）に出していない人（準備済みでも残す）
-  const placedIds = new Set([
-    ...(orderList || []),
-    ...((proposal || []) as string[]),
-  ]);
+}) => {
+  // Build quick lookup map (id -> player)
+  const playerMap = useMemo(() => {
+    const m = new Map<string, PlayerDoc & { id: string }>();
+    players.forEach((p: any) => {
+      if (p && (p.id || p.uid)) {
+        m.set(p.id || p.uid, { ...(p as any), id: p.id || p.uid });
+      }
+    });
+    return m;
+  }, [players]);
+
+  // Derive placedIds from current order & proposal
+  const placedIds = useMemo(
+    () => new Set<string>([...(orderList || []), ...(proposal || [])]),
+    [orderList?.join(","), proposal?.join(",")]
+  );
+
+  const me = playerMap.get(meId);
+  const hasNumber = !!me?.number; // heuristic; adjust if different field name
+
   const waitingPlayers = (eligibleIds || [])
-    .map((id) => map.get(id)!)
+    .map((id) => playerMap.get(id)!)
     .filter((p) => p && !placedIds.has(p.id));
 
   // Accessibility sensors for keyboard and pointer interactions
@@ -137,7 +134,7 @@ export function CentralCardBoard({
 
   const { localFailedAt, boundaryPreviousIndex } = useLocalFailureDetection({
     currentPlaced,
-    players,
+    players: players as any,
     resolveMode,
   });
 
@@ -166,9 +163,9 @@ export function CentralCardBoard({
 
   const renderCard = (id: string, idx?: number) => (
     <CardRenderer
-      key={id}
-      id={id}
-      player={map.get(id)}
+  key={id}
+  id={id}
+  player={playerMap.get(id)}
       idx={idx}
       orderList={orderList}
       pending={pending}
@@ -256,6 +253,7 @@ export function CentralCardBoard({
 
   return (
     <Box
+      data-board-root
       h="100%"
       display="flex"
       flexDirection="column"
@@ -368,12 +366,12 @@ export function CentralCardBoard({
                 accessibility={{
                   announcements: {
                     onDragStart: ({ active }) => {
-                      const player = map.get(active.id as string);
+                      const player = playerMap.get(active.id as string);
                       return `カード「${player?.name || active.id}」のドラッグを開始しました。`;
                     },
                     onDragOver: ({ active, over }) => {
                       if (over) {
-                        const activePlayer = map.get(active.id as string);
+                        const activePlayer = playerMap.get(active.id as string);
                         const overIndex = activeProposal.indexOf(
                           over.id as string
                         );
@@ -382,7 +380,7 @@ export function CentralCardBoard({
                       return `カード「${active.id}」を移動中です。`;
                     },
                     onDragEnd: ({ active, over }) => {
-                      const activePlayer = map.get(active.id as string);
+                      const activePlayer = playerMap.get(active.id as string);
                       if (over) {
                         const overIndex = activeProposal.indexOf(
                           over.id as string
@@ -392,7 +390,7 @@ export function CentralCardBoard({
                       return `カード「${activePlayer?.name || active.id}」のドラッグを終了しました。`;
                     },
                     onDragCancel: ({ active }) => {
-                      const activePlayer = map.get(active.id as string);
+                      const activePlayer = playerMap.get(active.id as string);
                       return `カード「${activePlayer?.name || active.id}」のドラッグをキャンセルしました。`;
                     },
                   },
@@ -406,50 +404,44 @@ export function CentralCardBoard({
                     // slot if `proposal` briefly mutates.
                     const cardId =
                       activeProposal[idx] ?? (pending && pending[idx]) ?? null;
-                    return cardId ? (
-                      <SortableItem id={cardId} key={cardId}>
-                        {renderCard(cardId, idx)}
-                      </SortableItem>
-                    ) : (
+                    if (cardId) {
+                      return (
+                        <SortableItem id={cardId} key={cardId}>
+                          {renderCard(cardId, idx)}
+                        </SortableItem>
+                      );
+                    }
+                    // Empty slot placeholder (not rendered after finish to avoid artifact)
+                    if ((roomStatus as string) === "finished") {
+                      return <React.Fragment key={`slot-${idx}`} />; // keep key for stability, render nothing
+                    }
+                    return (
                       <Box
                         key={`slot-${idx}`}
+                        data-slot
                         css={{
-                          // === ELEGANT CARD PROPORTIONS ===
                           aspectRatio: "5 / 7",
                           width: UNIFIED_LAYOUT.CARD.WIDTH,
                           placeSelf: "start",
-
-                          // === REFINED LAYOUT ===
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-
-                          // === SOPHISTICATED STYLING ===
                           background: "rgba(255,255,255,0.02)",
-                          // dashed slot border restored
                           border: "1.5px dashed rgba(255,255,255,0.15)",
                           borderRadius: "16px",
-
-                          // === PREMIUM VISUAL EFFECTS ===
                           boxShadow:
                             "0 1px 3px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.03)",
                           backdropFilter: "blur(4px)",
-
-                          // === REFINED TYPOGRAPHY ===
                           fontSize: "1.125rem",
                           fontWeight: 500,
                           fontFamily:
                             '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
                           color: "rgba(255,255,255,0.4)",
                           letterSpacing: "-0.01em",
-
-                          // === SOPHISTICATED INTERACTION ===
                           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                           cursor: "pointer",
                           position: "relative",
                           overflow: "hidden",
-
-                          // === SUBTLE HOVER ENHANCEMENT ===
                           "&:hover": {
                             background: "rgba(255,255,255,0.06)",
                             borderColor: "rgba(255,255,255,0.25)",
@@ -457,16 +449,6 @@ export function CentralCardBoard({
                             transform: "translateY(-2px)",
                             boxShadow:
                               "0 4px 12px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)",
-                          },
-
-                          // === UNDERSTATED DROP TARGET INDICATOR ===
-                          '&[data-drop-active="true"]': {
-                            background: "rgba(255,255,255,0.08)",
-                            borderColor: "rgba(255,255,255,0.3)",
-                            borderStyle: "solid",
-                            transform: "scale(1.02)",
-                            boxShadow:
-                              "0 6px 16px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.08)",
                           },
                         }}
                       >
@@ -574,7 +556,7 @@ export function CentralCardBoard({
           </Box>
         </Box>
 
-        <StatusDock show={roomStatus === "finished"}>
+  <StatusDock show={roomStatus === "finished"} data-finished={roomStatus === "finished"}>
           {roomStatus === "finished" && (
             <GameResultOverlay
               failed={failed}
@@ -602,6 +584,6 @@ export function CentralCardBoard({
       )}
     </Box>
   );
-}
+};
 
 export default CentralCardBoard;
