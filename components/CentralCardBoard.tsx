@@ -69,7 +69,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   resolveMode = "sort-submit",
   isHost,
 }) => {
-  // Build quick lookup map (id -> player)
+  // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
     const m = new Map<string, PlayerDoc & { id: string }>();
     players.forEach((p: any) => {
@@ -80,18 +80,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return m;
   }, [players]);
 
-  // Derive placedIds from current order & proposal
+  // Derive placedIds from current order & proposal - use Set for O(1) lookups
   const placedIds = useMemo(
     () => new Set<string>([...(orderList || []), ...(proposal || [])]),
     [orderList?.join(","), proposal?.join(",")]
   );
 
-  const me = playerMap.get(meId);
-  const hasNumber = !!me?.number; // heuristic; adjust if different field name
+  // Memoize player data to avoid recalculation
+  const me = useMemo(() => playerMap.get(meId), [playerMap, meId]);
+  const hasNumber = useMemo(() => !!me?.number, [me?.number]);
 
-  const waitingPlayers = (eligibleIds || [])
-    .map((id) => playerMap.get(id)!)
-    .filter((p) => p && !placedIds.has(p.id));
+  // Optimize waiting players calculation for 8+ players
+  const waitingPlayers = useMemo(() => {
+    return (eligibleIds || [])
+      .map((id) => playerMap.get(id)!)
+      .filter((p) => p && !placedIds.has(p.id));
+  }, [eligibleIds, playerMap, placedIds]);
 
   // Accessibility sensors for keyboard and pointer interactions
   const sensors = useSensors(
@@ -105,9 +109,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     })
   );
 
+  // Optimize mePlaced calculation using Set for O(1) lookup instead of O(n) includes
   const mePlaced = useMemo(() => {
-    return (orderList || []).includes(meId) || (proposal || []).includes(meId);
-  }, [orderList?.join(","), proposal?.join(","), meId]);
+    return placedIds.has(meId);
+  }, [placedIds, meId]);
 
   const { revealAnimating, revealIndex } = useRevealAnimation({
     roomId,
@@ -164,11 +169,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setShowResult(false);
   }, [roomStatus]);
 
-  // Clear pending when orderList updates
+  // Clear pending when orderList updates - optimized Set lookup for 8+ players
+  const orderListSet = useMemo(
+    () => new Set(orderList || []),
+    [orderList?.join(",")]
+  );
   useEffect(() => {
     if (!orderList || orderList.length === 0) return;
-    setPending((cur) => cur.filter((id) => !orderList.includes(id)));
-  }, [orderList?.join(","), setPending]);
+    setPending((cur) => cur.filter((id) => !orderListSet.has(id)));
+  }, [orderListSet, setPending]);
 
   const renderCard = (id: string, idx?: number) => (
     <CardRenderer
@@ -326,7 +335,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         </Box>
       </Box>
 
-      {/* === 2025年 DPI対応 コンテナクエリベース カードボード === */}
+      {/* === 2025年 DPI対応 8人環境最適化 カードボード === */}
       <Box
         flex="1"
         display="flex"
@@ -350,13 +359,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           justifyContent="center"
           alignContent="flex-start"
           alignItems="flex-start"
-          gap={4}
+          gap={{ base: 3, md: 4, lg: 5 }} // 8人環境で適切なスペーシング
           bg="transparent"
           boxShadow="none"
           transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
+          // 8人環境での最適化統合CSS
           css={{
             containerType: "inline-size",
+            // 8人環境でのレスポンシブ最適化
+            "@media (max-width: 1200px)": {
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              justifyContent: "space-evenly", // 8人でも均等配置
+            },
+            "@media (max-width: 768px)": {
+              gap: "0.5rem",
+              padding: "0.75rem",
+            },
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               gap: "calc(var(--spacing-2) + 2px)",
               padding: "0.6rem 0.9rem",
@@ -415,8 +435,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 }}
               >
                 <SortableContext items={activeProposal}>
-                  {/* Empty slots for placement */}
-                  {Array.from({ length: eligibleIds.length }).map((_, idx) => {
+                  {/* Empty slots for placement - optimized for 8+ players */}
+                  {eligibleIds.map((_, idx) => {
                     // Prefer proposal value, but fall back to locally optimistic
                     // `pending` so the UI doesn't temporarily show an empty
                     // slot if `proposal` briefly mutates.
@@ -475,85 +495,88 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               </DndContext>
             ) : (
               <>
-                {/* 順次判定モード: 固定スロットレイアウト（orderList使用） */}
-                {Array.from({
-                  length: Math.min(
-                    eligibleIds.length,
-                    (orderList?.length || 0) + 1
-                  ),
-                }).map((_, idx) => {
-                  // Prefer confirmed orderList entry; fall back to locally pending
-                  // placement so the first card appears immediately in the slot
-                  // even before server-side orderList updates arrive.
-                  const cardId =
-                    orderList?.[idx] ?? (pending && pending[idx]) ?? null;
-                  const isDroppableSlot = canDropAtPosition(idx);
-                  // 順次モードでは、プレイヤーが場に出したカードは
-                  // room.status が 'clue' のままでも即座に表示したい。
-                  // したがって 'clue' を許容する。
-                  const shouldShowCard =
-                    cardId &&
-                    (roomStatus === "clue" ||
-                      roomStatus === "playing" ||
-                      roomStatus === "reveal" ||
-                      roomStatus === "finished");
-                  return shouldShowCard ? (
-                    <React.Fragment key={cardId ?? `slot-${idx}`}>
-                      {cardId ? renderCard(cardId, idx) : null}
-                    </React.Fragment>
-                  ) : (
-                    <Box
-                      key={`drop-zone-${idx}`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isDroppableSlot && !isOver) {
-                          setIsOver(true);
+                {/* Static game state: use eligible slots count - optimized */}
+                {eligibleIds
+                  .slice(
+                    0,
+                    Math.min(eligibleIds.length, (orderList?.length || 0) + 1)
+                  )
+                  .map((_, idx) => {
+                    // Prefer confirmed orderList entry; fall back to locally pending
+                    // placement so the first card appears immediately in the slot
+                    // even before server-side orderList updates arrive.
+                    const cardId =
+                      orderList?.[idx] ?? (pending && pending[idx]) ?? null;
+                    const isDroppableSlot = canDropAtPosition(idx);
+                    // 順次モードでは、プレイヤーが場に出したカードは
+                    // room.status が 'clue' のままでも即座に表示したい。
+                    // したがって 'clue' を許容する。
+                    const shouldShowCard =
+                      cardId &&
+                      (roomStatus === "clue" ||
+                        roomStatus === "playing" ||
+                        roomStatus === "reveal" ||
+                        roomStatus === "finished");
+                    return shouldShowCard ? (
+                      <React.Fragment key={cardId ?? `slot-${idx}`}>
+                        {cardId ? renderCard(cardId, idx) : null}
+                      </React.Fragment>
+                    ) : (
+                      <Box
+                        key={`drop-zone-${idx}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isDroppableSlot && !isOver) {
+                            setIsOver(true);
+                          }
+                        }}
+                        onDragLeave={(e) => {
+                          e.stopPropagation();
+                          // 子要素への移動ではリセットしない
+                          if (
+                            !e.currentTarget.contains(e.relatedTarget as Node)
+                          ) {
+                            setIsOver(false);
+                          }
+                        }}
+                        onDrop={(e) => onDropAtPosition(e, idx)}
+                        borderWidth="0"
+                        borderRadius="xl"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        bg={isDroppableSlot ? "accentSubtle" : "surfaceRaised"}
+                        color={isDroppableSlot ? "accent" : "fgMuted"}
+                        fontSize="lg"
+                        fontWeight={600}
+                        // restore dashed border to indicate drop target
+                        border="2px dashed"
+                        borderColor={
+                          isDroppableSlot ? "accent" : "borderSubtle"
                         }
-                      }}
-                      onDragLeave={(e) => {
-                        e.stopPropagation();
-                        // 子要素への移動ではリセットしない
-                        if (
-                          !e.currentTarget.contains(e.relatedTarget as Node)
-                        ) {
-                          setIsOver(false);
+                        boxShadow="0 2px 8px rgba(0,0,0,0.1)"
+                        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                        cursor={isDroppableSlot ? "copy" : "not-allowed"}
+                        _hover={
+                          isDroppableSlot
+                            ? {
+                                bg: "accentSubtle",
+                                color: "accent",
+                                borderColor: "accent",
+                                transform: "translateY(-2px)",
+                                boxShadow:
+                                  "0 8px 24px rgba(255, 122, 26, 0.25)",
+                              }
+                            : {}
                         }
-                      }}
-                      onDrop={(e) => onDropAtPosition(e, idx)}
-                      borderWidth="0"
-                      borderRadius="xl"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      bg={isDroppableSlot ? "accentSubtle" : "surfaceRaised"}
-                      color={isDroppableSlot ? "accent" : "fgMuted"}
-                      fontSize="lg"
-                      fontWeight={600}
-                      // restore dashed border to indicate drop target
-                      border="2px dashed"
-                      borderColor={isDroppableSlot ? "accent" : "borderSubtle"}
-                      boxShadow="0 2px 8px rgba(0,0,0,0.1)"
-                      transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
-                      cursor={isDroppableSlot ? "copy" : "not-allowed"}
-                      _hover={
-                        isDroppableSlot
-                          ? {
-                              bg: "accentSubtle",
-                              color: "accent",
-                              borderColor: "accent",
-                              transform: "translateY(-2px)",
-                              boxShadow: "0 8px 24px rgba(255, 122, 26, 0.25)",
-                            }
-                          : {}
-                      }
-                      css={{ aspectRatio: "5 / 7", placeSelf: "start" }}
-                      width={UNIFIED_LAYOUT.CARD.WIDTH}
-                    >
-                      {idx + 1}
-                    </Box>
-                  );
-                })}
+                        css={{ aspectRatio: "5 / 7", placeSelf: "start" }}
+                        width={UNIFIED_LAYOUT.CARD.WIDTH}
+                      >
+                        {idx + 1}
+                      </Box>
+                    );
+                  })}
 
                 {/* Pending cards - 順次判定モード専用 */}
                 {resolveMode !== "sort-submit" &&

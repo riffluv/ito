@@ -25,7 +25,7 @@ export function SettingsModal({
   roomStatus,
 }: SettingsModalProps) {
   const [resolveMode, setResolveMode] = useState<string>(
-    currentOptions?.resolveMode || "sequential"
+    currentOptions?.resolveMode || "sort-submit"
   );
   const [defaultTopicType, setDefaultTopicType] = useState<string>(
     currentOptions?.defaultTopicType || "通常版"
