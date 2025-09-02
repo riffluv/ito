@@ -49,6 +49,8 @@ export function CardRenderer(props: CardRendererProps) {
       clue={state.clueText || undefined}
       number={state.number}
       state={state.state}
+      successLevel={state.successLevel}
+      boundary={state.boundary}
       // boundary styling hint via name prop aria? (Could be extended)
     />
   );
