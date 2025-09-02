@@ -107,7 +107,8 @@ export function GameCard({
                 color: "#999",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
+                justifyContent: "flex-start",
+                textAlign: "left",
               }}
             >
               {name ?? "(不明)"}
@@ -177,7 +178,8 @@ export function GameCard({
                 color: "rgba(255,255,255,0.75)",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
+                justifyContent: "flex-start",
+                textAlign: "left",
               }}
             >
               {name ?? "(不明)"}
@@ -199,14 +201,13 @@ export function GameCard({
         width: "120px",
         aspectRatio: "5 / 7",
         height: "auto",
-        padding: "1rem",
+        padding: "0.75rem 0.85rem 0.75rem",
         borderRadius: "1rem",
         border: `2px solid ${state === "success" ? "#22c55e" : state === "fail" ? "#dc2626" : "#d4af37"}`,
         backgroundColor: "#1a1a1a",
         color: "#ffffff",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
+        display: "grid",
+        gridTemplateRows: "16px 1fr 16px",
         cursor: "pointer",
         transform: hoverTransform,
         transition: `all 0.3s ${HOVER_EASING}`,
@@ -223,26 +224,44 @@ export function GameCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div style={{ fontSize: "0.75rem", color: "#999" }}>
+      <div style={{ fontSize: "0.65rem", lineHeight: 1, color: "#999", display: "flex", alignItems: "center" }}>
         #{typeof index === "number" ? index + 1 : "?"}
+      </div>
+      <div style={{ position: "relative" }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            fontWeight: typeof number === "number" ? 900 : 700,
+            fontSize: typeof number === "number" ? "2.6rem" : "1.22rem",
+            color: typeof number === "number" ? "#d4af37" : "#ffffff",
+            lineHeight: 1.05,
+            textShadow:
+              typeof number === "number"
+                ? "0 2px 4px rgba(0,0,0,0.5)"
+                : "none",
+            width: "100%",
+            textAlign: "center",
+            padding: "0 0.25rem",
+            wordBreak: "keep-all",
+          }}
+        >
+          {typeof number === "number" ? number : clue || "?"}
+        </div>
       </div>
       <div
         style={{
-          fontWeight: 800,
-          fontSize: typeof number === "number" ? "2rem" : "1.25rem",
-          textAlign: "center",
-          flex: 1,
+          fontSize: "0.65rem",
+          lineHeight: 1,
+          color: "#999",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          color: typeof number === "number" ? "#d4af37" : "#ffffff",
-          textShadow:
-            typeof number === "number" ? "0 2px 4px rgba(0,0,0,0.5)" : "none",
+          justifyContent: "flex-start",
+          textAlign: "left",
         }}
       >
-        {typeof number === "number" ? number : clue || "?"}
-      </div>
-      <div style={{ fontSize: "0.75rem", color: "#999" }}>
         {name ?? "(不明)"}
       </div>
     </div>

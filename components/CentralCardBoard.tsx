@@ -425,6 +425,7 @@ export function CentralCardBoard({
 
                           // === SOPHISTICATED STYLING ===
                           background: "rgba(255,255,255,0.02)",
+                          // dashed slot border restored
                           border: "1.5px dashed rgba(255,255,255,0.15)",
                           borderRadius: "16px",
 
@@ -531,6 +532,7 @@ export function CentralCardBoard({
                       color={isDroppableSlot ? "accent" : "fgMuted"}
                       fontSize="lg"
                       fontWeight={600}
+                      // restore dashed border to indicate drop target
                       border="2px dashed"
                       borderColor={isDroppableSlot ? "accent" : "borderSubtle"}
                       boxShadow="0 2px 8px rgba(0,0,0,0.1)"

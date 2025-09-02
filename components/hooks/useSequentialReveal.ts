@@ -22,7 +22,10 @@ export function useSequentialReveal({
 }: UseSequentialRevealParams) {
   const [revealIndex, setRevealIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const prevLenRef = useRef(orderListLength);
+  // Start at 0 so that the very first placed card still triggers the reveal schedule.
+  // This ensures the first card also shows clue then flips after firstDelayMs.
+  const prevLenRef = useRef(0);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -31,6 +34,13 @@ export function useSequentialReveal({
 
     const prev = prevLenRef.current;
     const cur = orderListLength;
+    // On first mount, if there are already cards (e.g. late join or hot reload), set baseline without animating existing.
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      if (cur > 0) {
+        prevLenRef.current = cur; // adopt existing without animation
+      }
+    }
     if (cur > prev) {
       // New card(s) appeared. Schedule incremental flips for each new one.
       let cancelled = false;
