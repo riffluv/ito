@@ -91,9 +91,9 @@ export function CardRenderer({
   // immediately when the room status flips to 'reveal' before the client-side
   // animation index is initialized.
   const animationActive = roomStatus === "finished" || revealAnimating;
-  const shouldShowGreen =
-    cardIsRevealed && !failureConfirmed && animationActive;
   const shouldShowRed = cardIsRevealed && failureConfirmed && animationActive;
+  // 緑色は成功時のみ（ゲーム終了時のみ適用）
+  const shouldShowGreen = cardIsRevealed && !failureConfirmed && animationActive && roomStatus === "finished";
 
   // 🎮 DYNAMIC CARD DESIGN: sort-submitモードのリビール時はflip variantを使用
   const shouldUseFlipVariant = 
@@ -103,8 +103,9 @@ export function CardRenderer({
   const shouldFlipCard = 
     shouldUseFlipVariant && 
     typeof idx === "number" && 
-    revealAnimating && 
+    (roomStatus === "reveal" || roomStatus === "finished") &&
     idx < revealIndex;
+
 
   return (
     <GameCard
@@ -118,7 +119,10 @@ export function CardRenderer({
           ? player?.clue1 || "(連想待ち)"
           : player?.clue1
       }
-      number={showNumber && typeof number === "number" ? number : null}
+      number={shouldUseFlipVariant 
+        ? (typeof number === "number" ? number : null)
+        : (showNumber && typeof number === "number" ? number : null)
+      }
       state={shouldShowRed ? "fail" : shouldShowGreen ? "success" : "default"}
     />
   );
