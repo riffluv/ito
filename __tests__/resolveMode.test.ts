@@ -6,18 +6,17 @@ import {
 } from "@/lib/game/resolveMode";
 
 describe("resolveMode utilities", () => {
-  test("normalizeResolveMode default", () => {
-    expect(normalizeResolveMode(undefined)).toBe("sequential");
-    expect(normalizeResolveMode(null)).toBe("sequential");
-    expect(normalizeResolveMode("foo")).toBe("sequential");
-  });
-  test("normalizeResolveMode keeps sort-submit", () => {
+  test("normalizeResolveMode always returns sort-submit", () => {
+    expect(normalizeResolveMode(undefined)).toBe("sort-submit");
+    expect(normalizeResolveMode(null)).toBe("sort-submit");
+    expect(normalizeResolveMode("foo")).toBe("sort-submit");
     expect(normalizeResolveMode("sort-submit")).toBe("sort-submit");
   });
+
   test("isSortSubmit predicate", () => {
     expect(isSortSubmit("sort-submit")).toBe(true);
-    expect(isSortSubmit("sequential")).toBe(false);
   });
+
   test("computeAllSubmitted true case", () => {
     expect(
       computeAllSubmitted({
@@ -27,14 +26,8 @@ describe("resolveMode utilities", () => {
       })
     ).toBe(true);
   });
-  test("computeAllSubmitted false conditions", () => {
-    expect(
-      computeAllSubmitted({
-        mode: "sequential",
-        eligibleIds: ["a"],
-        proposal: ["a"],
-      })
-    ).toBe(false);
+
+  test("computeAllSubmitted false case - missing cards", () => {
     expect(
       computeAllSubmitted({
         mode: "sort-submit",
@@ -43,26 +36,7 @@ describe("resolveMode utilities", () => {
       })
     ).toBe(false);
   });
-  test("canSubmitCard sequential requires cluesReady", () => {
-    expect(
-      canSubmitCard({
-        mode: "sequential",
-        canDecide: true,
-        ready: true,
-        placed: false,
-        cluesReady: false,
-      })
-    ).toBe(false);
-    expect(
-      canSubmitCard({
-        mode: "sequential",
-        canDecide: true,
-        ready: true,
-        placed: false,
-        cluesReady: true,
-      })
-    ).toBe(true);
-  });
+
   test("canSubmitCard sort-submit ignores cluesReady", () => {
     expect(
       canSubmitCard({

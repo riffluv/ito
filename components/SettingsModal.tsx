@@ -3,10 +3,9 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
-import { Dialog, HStack, Stack, Text, VStack, Box } from "@chakra-ui/react";
+import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
-import { FiSettings, FiUsers, FiZap } from "react-icons/fi";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -68,13 +67,8 @@ export function SettingsModal({
 
   const modeOptions = [
     {
-      value: "sequential",
-      title: "順次判定モード",
-      description: "カードを出すたびに即座に判定",
-    },
-    {
       value: "sort-submit",
-      title: "一括判定モード", 
+      title: "一括判定モード",
       description: "全員カードを並べてから判定",
     },
   ];
@@ -86,13 +80,13 @@ export function SettingsModal({
       description: "バランスの取れた定番のお題",
     },
     {
-      value: "レインボー版", 
+      value: "レインボー版",
       title: "レインボー版",
       description: "カラフルで創造的なお題",
     },
     {
       value: "クラシック版",
-      title: "クラシック版", 
+      title: "クラシック版",
       description: "シンプルで分かりやすいお題",
     },
   ];
@@ -104,8 +98,8 @@ export function SettingsModal({
     >
       <Dialog.Backdrop bg="blackAlpha.800" />
       <Dialog.Positioner>
-        <Dialog.Content 
-          maxW="md" 
+        <Dialog.Content
+          maxW="md"
           bg="gray.900"
           borderRadius="xl"
           border="1px solid"
@@ -141,18 +135,14 @@ export function SettingsModal({
                         borderColor={isSelected ? "blue.400" : "gray.700"}
                         bg={isSelected ? "blue.900" : "gray.800"}
                         transition="all 0.2s"
-                        _hover={{ 
+                        _hover={{
                           borderColor: isSelected ? "blue.300" : "gray.600",
-                          bg: isSelected ? "blue.800" : "gray.750"
+                          bg: isSelected ? "blue.800" : "gray.750",
                         }}
                       >
                         <HStack justify="space-between" align="start">
                           <VStack align="start" gap={1} flex="1">
-                            <Text
-                              fontSize="md"
-                              fontWeight="600"
-                              color="white"
-                            >
+                            <Text fontSize="md" fontWeight="600" color="white">
                               {option.title}
                             </Text>
                             <Text
@@ -212,18 +202,14 @@ export function SettingsModal({
                         borderColor={isSelected ? "blue.400" : "gray.700"}
                         bg={isSelected ? "blue.900" : "gray.800"}
                         transition="all 0.2s"
-                        _hover={{ 
+                        _hover={{
                           borderColor: isSelected ? "blue.300" : "gray.600",
-                          bg: isSelected ? "blue.800" : "gray.750"
+                          bg: isSelected ? "blue.800" : "gray.750",
                         }}
                       >
                         <HStack justify="space-between" align="start">
                           <VStack align="start" gap={1} flex="1">
-                            <Text
-                              fontSize="md"
-                              fontWeight="600"
-                              color="white"
-                            >
+                            <Text fontSize="md" fontWeight="600" color="white">
                               {option.title}
                             </Text>
                             <Text
@@ -282,10 +268,15 @@ export function SettingsModal({
             </Stack>
           </Dialog.Body>
 
-          <Dialog.Footer px={6} py={4} borderTop="1px solid" borderColor="gray.700">
+          <Dialog.Footer
+            px={6}
+            py={4}
+            borderTop="1px solid"
+            borderColor="gray.700"
+          >
             <HStack w="full" justify="flex-end" gap={3}>
-              <AppButton 
-                variant="ghost" 
+              <AppButton
+                variant="ghost"
                 onClick={onClose}
                 color="gray.400"
                 _hover={{ bg: "gray.800", color: "white" }}

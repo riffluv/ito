@@ -1,7 +1,7 @@
-// Utility functions for resolveMode handling (sequential vs sort-submit)
-// Centralizes normalization & shared predicates to avoid scattered string literals.
+// Utility functions for sort-submit mode only
+// Sequential mode has been removed
 
-export type ResolveMode = "sequential" | "sort-submit";
+export type ResolveMode = "sort-submit";
 
 // 開発用簡易テレメトリ (prod では noop)
 function devMetric(name: string) {
@@ -12,17 +12,19 @@ function devMetric(name: string) {
 }
 
 export function normalizeResolveMode(mode: unknown): ResolveMode {
-  const normalized = mode === "sort-submit" ? "sort-submit" : "sequential";
-  devMetric(`normalize:${normalized}`);
-  return normalized;
+  // Always return sort-submit as it's the only supported mode now
+  devMetric("normalize:sort-submit");
+  return "sort-submit";
 }
 
 export function isSortSubmit(mode: unknown): mode is "sort-submit" {
-  return normalizeResolveMode(mode) === "sort-submit";
+  // Always true now that sequential mode is removed
+  return true;
 }
 
 export function isSequential(mode: unknown): mode is "sequential" {
-  return normalizeResolveMode(mode) === "sequential";
+  // Always false - sequential mode removed
+  return false;
 }
 
 export function computeAllSubmitted(params: {
@@ -30,7 +32,7 @@ export function computeAllSubmitted(params: {
   eligibleIds?: string[];
   proposal?: string[];
 }): boolean {
-  if (!isSortSubmit(params.mode)) return false;
+  // Always use sort-submit logic since sequential is removed
   const { eligibleIds, proposal } = params;
   if (!Array.isArray(eligibleIds) || !Array.isArray(proposal)) return false;
   if (eligibleIds.length === 0) return false;
@@ -46,10 +48,8 @@ export function canSubmitCard(params: {
   placed: boolean;
   cluesReady?: boolean;
 }): boolean {
-  const { mode, canDecide, ready, placed, cluesReady } = params;
+  const { canDecide, ready, placed } = params;
   if (!canDecide || !ready || placed) return false;
-  if (isSortSubmit(mode)) return true; // always allowed before evaluate
-  const ok = !!cluesReady; // sequential gate
-  if (ok) devMetric("canSubmitSequential");
-  return ok;
+  // Always allow submission for sort-submit mode (no cluesReady gate)
+  return true;
 }

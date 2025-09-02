@@ -3,7 +3,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { Box, Dialog, HStack, Text, VStack } from "@chakra-ui/react";
+import { Dialog, HStack, Text, VStack } from "@chakra-ui/react";
 import { X } from "lucide-react";
 
 export type AdvancedHostPanelProps = {
@@ -27,12 +27,12 @@ export function AdvancedHostPanel({
   const topicSelected = !!(room as any)?.topic;
   const tooFewPlayers = onlineCount < MIN_PLAYERS_FOR_DEAL;
 
-  // デフォルトモードは "sequential" (通常モード)
-  const currentMode = room.options?.resolveMode || "sequential";
-  
+  // デフォルトモードは "sort-submit" (一括判定モード)
+  const currentMode = room.options?.resolveMode || "sort-submit";
+
   // ゲーム開始後はresolveMode変更を無効化
   const canChangeMode = room.status === "waiting";
-  
+
   // Debug log for troubleshooting
   console.log("AdvancedHostPanel Debug:", {
     status: room.status,
@@ -68,27 +68,7 @@ export function AdvancedHostPanel({
     }
   };
 
-  const handleModeChange = async (mode: "sequential" | "sort-submit") => {
-    try {
-      const { updateDoc, doc } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase/client");
-
-      await updateDoc(doc(db!, "rooms", roomId), {
-        "options.resolveMode": mode,
-      });
-
-      notify({
-        title: `モードを${mode === "sequential" ? "通常モード" : "一括判定モード"}に変更しました`,
-        type: "success",
-      });
-    } catch (error: any) {
-      notify({
-        title: "モード変更に失敗",
-        description: error?.message,
-        type: "error",
-      });
-    }
-  };
+  // Mode change functionality removed - only sort-submit supported
 
   const handleResetRoom = async () => {
     try {
@@ -142,41 +122,6 @@ export function AdvancedHostPanel({
               <VStack align="stretch" gap={4}>
                 <VStack align="stretch" gap={2}>
                   <Text fontWeight="bold" fontSize="md">
-                    🔧 ゲームモード設定
-                  </Text>
-                  <HStack gap={2}>
-                    <AppButton
-                      variant={
-                        currentMode === "sequential" ? "solid" : "outline"
-                      }
-                      colorPalette="orange"
-                      flex="1"
-                      disabled={!canChangeMode}
-                      onClick={() => handleModeChange("sequential")}
-                    >
-                      通常モード
-                    </AppButton>
-                    <AppButton
-                      variant={
-                        currentMode === "sort-submit" ? "solid" : "outline"
-                      }
-                      colorPalette="orange"
-                      flex="1"
-                      disabled={!canChangeMode}
-                      onClick={() => handleModeChange("sort-submit")}
-                    >
-                      一括判定
-                    </AppButton>
-                  </HStack>
-                  <Text fontSize="xs" color="gray.600">
-                    {canChangeMode 
-                      ? "通常: リアルタイム判定　｜　一括: 相談して並び替え後判定"
-                      : "ゲーム開始後はモード変更できません"}
-                  </Text>
-                </VStack>
-
-                <VStack align="stretch" gap={2}>
-                  <Text fontWeight="bold" fontSize="md">
                     🎮 ゲーム管理
                   </Text>
                   <HStack gap={2}>
@@ -194,7 +139,6 @@ export function AdvancedHostPanel({
                   </Text>
                 </VStack>
               </VStack>
-
             </VStack>
           </Dialog.Body>
         </Dialog.Content>

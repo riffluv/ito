@@ -231,14 +231,9 @@ export default function RoomPage() {
       notify({
         id,
         type: "success",
-        title:
-          mode === "sequential"
-            ? "全員が連想ワードを決定しました"
-            : "全員の連想ワードが揃いました",
+        title: "全員の連想ワードが揃いました",
         description:
-          mode === "sequential"
-            ? "昇順だと思う順でカードを場へドラッグしてください"
-            : "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
+          "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
         duration: 6000,
       });
     } catch {}
@@ -431,9 +426,7 @@ export default function RoomPage() {
           roomStatus={room.status}
           cluesReady={allCluesReady}
           failed={!!room.order?.failed}
-          failedAt={
-            room.order?.failedAt == null ? undefined : room.order?.failedAt
-          }
+          failedAt={room.order?.failedAt ?? undefined}
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
           isHost={isHost}

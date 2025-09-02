@@ -154,7 +154,7 @@ describe("buildHostActionModel", () => {
       status: "clue",
       topic: "食べ物",
       topicBox: "通常版",
-      options: { allowContinueAfterFail: true, resolveMode: "sequential" },
+      options: { allowContinueAfterFail: true, resolveMode: "sort-submit" },
     });
     const intents = buildHostActionModel(
       r,

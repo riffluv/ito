@@ -22,30 +22,12 @@ export function RoomOptionsEditor({
         <Field.Label>クリア方式 (resolveMode)</Field.Label>
         <Stack gap={2}>
           <HStack wrap="wrap" gap={2}>
-            <AppButton
-              size="sm"
-              variant={value.resolveMode === "sequential" ? "solid" : "outline"}
-              onClick={() => onChange({ ...value, resolveMode: "sequential" })}
-              disabled={disabled}
-            >
-              順番に出す
-            </AppButton>
-            <AppButton
-              size="sm"
-              variant={
-                value.resolveMode === "sort-submit" ? "solid" : "outline"
-              }
-              onClick={() => onChange({ ...value, resolveMode: "sort-submit" })}
-              disabled={disabled}
-            >
-              せーので出す
+            <AppButton size="sm" variant="solid" disabled={true}>
+              せーので出す (固定)
             </AppButton>
           </HStack>
           <Text fontSize="xs" color="fgMuted">
-            {value.resolveMode === "sequential" &&
-              "1枚ずつ出し、出すたびに昇順違反があれば失敗になります"}
-            {value.resolveMode === "sort-submit" &&
-              "全員が伏せたカード(数字非公開)を出し連想ワードで相談→ホストが一括判定"}
+            全員が伏せたカード(数字非公開)を出し連想ワードで相談→ホストが一括判定
           </Text>
         </Stack>
       </Field.Root>

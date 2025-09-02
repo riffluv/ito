@@ -1,5 +1,5 @@
-import { createMachine, assign } from 'xstate';
-import type { RoomDoc } from '@/lib/types';
+import type { RoomDoc } from "@/lib/types";
+import { assign, createMachine } from "xstate";
 
 export interface GameContext {
   room: RoomDoc | null;
@@ -10,23 +10,22 @@ export interface GameContext {
 }
 
 export type GameEvent =
-  | { type: 'LOAD_ROOM'; room: RoomDoc; players: any[]; onlineCount?: number }
-  | { type: 'START_GAME' }
-  | { type: 'SELECT_TOPIC'; topic: string; topicType: string }
-  | { type: 'DEAL_NUMBERS' }
-  | { type: 'PLAY_CARD'; playerId: string }
-  | { type: 'SUBMIT_SORTED_ORDER'; list: string[] }
-  | { type: 'FINALIZE_REVEAL' }
-  | { type: 'RESET' }
-  | { type: 'ERROR'; error: string };
+  | { type: "LOAD_ROOM"; room: RoomDoc; players: any[]; onlineCount?: number }
+  | { type: "START_GAME" }
+  | { type: "SELECT_TOPIC"; topic: string; topicType: string }
+  | { type: "DEAL_NUMBERS" }
+  | { type: "SUBMIT_SORTED_ORDER"; list: string[] }
+  | { type: "FINALIZE_REVEAL" }
+  | { type: "RESET" }
+  | { type: "ERROR"; error: string };
 
 export const gameMachine = createMachine({
-  id: 'game',
+  id: "game",
   types: {} as {
     context: GameContext;
     events: GameEvent;
   },
-  initial: 'loading',
+  initial: "loading",
   context: {
     room: null,
     players: [],
@@ -38,7 +37,7 @@ export const gameMachine = createMachine({
     loading: {
       on: {
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -47,7 +46,7 @@ export const gameMachine = createMachine({
           }),
         },
         ERROR: {
-          target: 'error',
+          target: "error",
           actions: assign({
             error: ({ event }) => event.error,
           }),
@@ -57,26 +56,38 @@ export const gameMachine = createMachine({
 
     loaded: {
       always: [
-        { target: 'waiting', guard: ({ context }) => context.room?.status === 'waiting' },
-        { target: 'clue', guard: ({ context }) => context.room?.status === 'clue' },
-        { target: 'reveal', guard: ({ context }) => context.room?.status === 'reveal' },
-        { target: 'finished', guard: ({ context }) => context.room?.status === 'finished' },
+        {
+          target: "waiting",
+          guard: ({ context }) => context.room?.status === "waiting",
+        },
+        {
+          target: "clue",
+          guard: ({ context }) => context.room?.status === "clue",
+        },
+        {
+          target: "reveal",
+          guard: ({ context }) => context.room?.status === "reveal",
+        },
+        {
+          target: "finished",
+          guard: ({ context }) => context.room?.status === "finished",
+        },
       ],
     },
 
     waiting: {
       entry: assign({
-        lastAction: 'entered_waiting',
+        lastAction: "entered_waiting",
       }),
       on: {
         START_GAME: {
-          target: 'preparing',
+          target: "preparing",
           actions: assign({
-            lastAction: 'start_game_triggered',
+            lastAction: "start_game_triggered",
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -88,17 +99,17 @@ export const gameMachine = createMachine({
 
     preparing: {
       entry: assign({
-        lastAction: 'preparing_game',
+        lastAction: "preparing_game",
       }),
       on: {
         SELECT_TOPIC: {
-          target: 'topicSelected',
+          target: "topicSelected",
           actions: assign({
             lastAction: ({ event }) => `topic_selected_${event.topic}`,
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -110,17 +121,17 @@ export const gameMachine = createMachine({
 
     topicSelected: {
       entry: assign({
-        lastAction: 'topic_selected',
+        lastAction: "topic_selected",
       }),
       on: {
         DEAL_NUMBERS: {
-          target: 'clue',
+          target: "clue",
           actions: assign({
-            lastAction: 'numbers_dealt',
+            lastAction: "numbers_dealt",
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -132,37 +143,18 @@ export const gameMachine = createMachine({
 
     clue: {
       entry: assign({
-        lastAction: 'entered_clue_phase',
+        lastAction: "entered_clue_phase",
       }),
       on: {
-        PLAY_CARD: [
-          {
-            target: 'finished',
-            guard: ({ context, event }) => {
-              // Check if this card play should finish the game (sequential mode)
-              const room = context.room;
-              return room?.options?.resolveMode === 'sequential' && shouldFinishSequential(context, event.playerId);
-            },
-            actions: assign({
-              lastAction: ({ event }) => `card_played_finish_${event.playerId}`,
-            }),
-          },
-          {
-            target: 'clue',
-            actions: assign({
-              lastAction: ({ event }) => `card_played_${event.playerId}`,
-            }),
-          },
-        ],
         SUBMIT_SORTED_ORDER: {
-          target: 'reveal',
-          guard: ({ context }) => context.room?.options?.resolveMode === 'sort-submit',
+          target: "reveal",
           actions: assign({
-            lastAction: ({ event }) => `order_submitted_${event.list.length}_cards`,
+            lastAction: ({ event }) =>
+              `order_submitted_${event.list.length}_cards`,
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -174,17 +166,17 @@ export const gameMachine = createMachine({
 
     reveal: {
       entry: assign({
-        lastAction: 'entered_reveal_animation',
+        lastAction: "entered_reveal_animation",
       }),
       on: {
         FINALIZE_REVEAL: {
-          target: 'finished',
+          target: "finished",
           actions: assign({
-            lastAction: 'reveal_finalized',
+            lastAction: "reveal_finalized",
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -196,18 +188,19 @@ export const gameMachine = createMachine({
 
     finished: {
       entry: assign({
-        lastAction: ({ context }) => `game_finished_${context.room?.result?.success ? 'success' : 'failed'}`,
+        lastAction: ({ context }) =>
+          `game_finished_${context.room?.result?.success ? "success" : "failed"}`,
       }),
       on: {
         RESET: {
-          target: 'waiting',
+          target: "waiting",
           actions: assign({
-            lastAction: 'game_reset',
+            lastAction: "game_reset",
             error: undefined,
           }),
         },
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -223,7 +216,7 @@ export const gameMachine = createMachine({
       }),
       on: {
         LOAD_ROOM: {
-          target: 'loaded',
+          target: "loaded",
           actions: assign({
             room: ({ event }) => event.room,
             players: ({ event }) => event.players,
@@ -232,10 +225,10 @@ export const gameMachine = createMachine({
           }),
         },
         RESET: {
-          target: 'waiting',
+          target: "waiting",
           actions: assign({
             error: undefined,
-            lastAction: 'reset_from_error',
+            lastAction: "reset_from_error",
           }),
         },
       },
@@ -243,39 +236,26 @@ export const gameMachine = createMachine({
   },
 });
 
-// Helper function to determine if sequential game should finish
-function shouldFinishSequential(context: GameContext, playerId: string): boolean {
-  const room = context.room;
-  if (!room?.order) return false;
-
-  const currentList = room.order.list || [];
-  const wouldBeNewLength = currentList.includes(playerId) ? currentList.length : currentList.length + 1;
-  
-  // Check if this would be the last player or if failure occurred
-  const effectiveActive = context.onlineCount || context.players.length;
-  const total = room.order.total || effectiveActive;
-  
-  // Finish if all players have played or if failure occurred
-  return wouldBeNewLength >= total || !!room.order.failed;
-}
-
 // State machine guards and utilities
 export const gameGuards = {
-  isWaiting: ({ context }: { context: GameContext }) => context.room?.status === 'waiting',
-  isClue: ({ context }: { context: GameContext }) => context.room?.status === 'clue',
-  isReveal: ({ context }: { context: GameContext }) => context.room?.status === 'reveal',
-  isFinished: ({ context }: { context: GameContext }) => context.room?.status === 'finished',
-  isSequentialMode: ({ context }: { context: GameContext }) => context.room?.options?.resolveMode === 'sequential',
-  isSortSubmitMode: ({ context }: { context: GameContext }) => context.room?.options?.resolveMode === 'sort-submit',
+  isWaiting: ({ context }: { context: GameContext }) =>
+    context.room?.status === "waiting",
+  isClue: ({ context }: { context: GameContext }) =>
+    context.room?.status === "clue",
+  isReveal: ({ context }: { context: GameContext }) =>
+    context.room?.status === "reveal",
+  isFinished: ({ context }: { context: GameContext }) =>
+    context.room?.status === "finished",
+  isSortSubmitMode: ({ context }: { context: GameContext }) => true, // Always sort-submit mode
   hasEnoughPlayers: ({ context }: { context: GameContext }) => {
     const effectiveActive = context.onlineCount || context.players.length;
     return effectiveActive >= 2;
   },
   canEvaluateOrder: ({ context }: { context: GameContext }) => {
-    if (context.room?.options?.resolveMode !== 'sort-submit') return false;
     const proposal = context.room?.order?.proposal || [];
     const orderList = context.room?.order?.list || [];
-    const placedCount = proposal.length > 0 ? proposal.length : orderList.length;
+    const placedCount =
+      proposal.length > 0 ? proposal.length : orderList.length;
     const effectiveActive = context.onlineCount || context.players.length;
     return placedCount >= 2 && placedCount === effectiveActive;
   },
@@ -283,9 +263,10 @@ export const gameGuards = {
 
 // Selector functions for UI components
 export const gameSelectors = {
-  getCurrentStatus: (context: GameContext) => context.room?.status || 'loading',
-  getResolveMode: (context: GameContext) => context.room?.options?.resolveMode || 'sequential',
-  getEffectivePlayerCount: (context: GameContext) => context.onlineCount || context.players.length,
+  getCurrentStatus: (context: GameContext) => context.room?.status || "loading",
+  getResolveMode: (context: GameContext) => "sort-submit", // Always sort-submit mode
+  getEffectivePlayerCount: (context: GameContext) =>
+    context.onlineCount || context.players.length,
   getPlacedCardsCount: (context: GameContext) => {
     const proposal = context.room?.order?.proposal || [];
     const orderList = context.room?.order?.list || [];

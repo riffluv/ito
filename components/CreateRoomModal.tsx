@@ -5,7 +5,15 @@ import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import { Dialog, Field, Input, Stack, Box, Text, HStack } from "@chakra-ui/react";
+import {
+  Box,
+  Dialog,
+  Field,
+  HStack,
+  Input,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import {
   addDoc,
   collection,
@@ -50,7 +58,7 @@ export function CreateRoomModal({
     try {
       const options: RoomOptions = {
         allowContinueAfterFail: true, // デフォルト: 最後まで並べる
-        resolveMode: "sequential", // デフォルト: 順番出し
+        resolveMode: "sort-submit", // デフォルト: 一括提出方式
         defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
       const room: RoomDoc = {
@@ -101,57 +109,60 @@ export function CreateRoomModal({
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
-      <Dialog.Backdrop 
+      <Dialog.Backdrop
         css={{
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
+          background: "rgba(0, 0, 0, 0.7)",
+          backdropFilter: "blur(8px)",
         }}
       />
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: '{colors.surfaceRaised}',
-            border: '1px solid {colors.borderStrong}',
-            borderRadius: '20px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-            maxWidth: '420px',
-            width: '90vw',
+            background: "{colors.surfaceRaised}",
+            border: "1px solid {colors.borderStrong}",
+            borderRadius: "20px",
+            boxShadow:
+              "0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+            maxWidth: "420px",
+            width: "90vw",
             padding: 0,
-            overflow: 'hidden'
+            overflow: "hidden",
           }}
         >
-          <Dialog.CloseTrigger 
+          <Dialog.CloseTrigger
             css={{
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
+              position: "absolute",
+              top: "16px",
+              right: "16px",
               zIndex: 10,
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              padding: '8px',
-              border: 'none',
-              color: '{colors.fgMuted}',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: '{colors.fgDefault}'
-              }
+              background: "rgba(255, 255, 255, 0.1)",
+              borderRadius: "8px",
+              padding: "8px",
+              border: "none",
+              color: "{colors.fgMuted}",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                background: "rgba(255, 255, 255, 0.2)",
+                color: "{colors.fgDefault}",
+              },
             }}
           />
-          
+
           {/* Premium Header */}
-          <Box 
-            p={6} 
+          <Box
+            p={6}
             pb={4}
             css={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)',
-              borderBottom: '1px solid rgba(255,255,255,0.08)'
+              background:
+                "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
             }}
           >
             <HStack gap={3} align="center">
-              <Box 
-                w={10} h={10}
+              <Box
+                w={10}
+                h={10}
                 bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
                 borderRadius="12px"
                 display="flex"
@@ -159,39 +170,31 @@ export function CreateRoomModal({
                 justifyContent="center"
                 boxShadow="0 4px 12px rgba(99,102,241,0.3)"
               >
-                <Box 
-                  w="50%" h="50%"
-                  bg="white"
-                  borderRadius="6px"
-                />
+                <Box w="50%" h="50%" bg="white" borderRadius="6px" />
               </Box>
               <Box>
-                <Dialog.Title 
+                <Dialog.Title
                   css={{
-                    fontSize: '1.5rem',
+                    fontSize: "1.5rem",
                     fontWeight: 700,
-                    color: '{colors.fgDefault}',
+                    color: "{colors.fgDefault}",
                     margin: 0,
-                    letterSpacing: '-0.025em'
+                    letterSpacing: "-0.025em",
                   }}
                 >
                   新しいルームを作成
                 </Dialog.Title>
-                <Text 
-                  fontSize="sm" 
-                  color="{colors.fgMuted}" 
-                  mt={1}
-                >
+                <Text fontSize="sm" color="{colors.fgMuted}" mt={1}>
                   友達と一緒にITOを楽しみましょう
                 </Text>
               </Box>
             </HStack>
           </Box>
-          
+
           <Box p={6}>
             <Stack gap={6}>
               {!user && (
-                <Box 
+                <Box
                   p={4}
                   bg="rgba(255, 193, 7, 0.1)"
                   border="1px solid rgba(255, 193, 7, 0.2)"
@@ -205,12 +208,12 @@ export function CreateRoomModal({
                 </Box>
               )}
               <Field.Root>
-                <Field.Label 
+                <Field.Label
                   css={{
-                    fontSize: '0.875rem',
+                    fontSize: "0.875rem",
                     fontWeight: 600,
-                    color: '{colors.fgDefault}',
-                    marginBottom: '8px'
+                    color: "{colors.fgDefault}",
+                    marginBottom: "8px",
                   }}
                 >
                   ルーム名
@@ -220,47 +223,47 @@ export function CreateRoomModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   css={{
-                    height: '48px',
-                    background: '{colors.surfaceSubtle}',
-                    border: '2px solid {colors.borderDefault}',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    padding: '0 16px',
-                    color: '{colors.fgDefault}',
-                    transition: 'all 0.2s ease',
-                    '&:focus': {
-                      borderColor: '{colors.accent}',
-                      boxShadow: '0 0 0 3px rgba(99,102,241,0.1)',
-                      background: '{colors.surfaceRaised}'
+                    height: "48px",
+                    background: "{colors.surfaceSubtle}",
+                    border: "2px solid {colors.borderDefault}",
+                    borderRadius: "12px",
+                    fontSize: "1rem",
+                    padding: "0 16px",
+                    color: "{colors.fgDefault}",
+                    transition: "all 0.2s ease",
+                    "&:focus": {
+                      borderColor: "{colors.accent}",
+                      boxShadow: "0 0 0 3px rgba(99,102,241,0.1)",
+                      background: "{colors.surfaceRaised}",
                     },
-                    '&::placeholder': {
-                      color: '{colors.fgSubtle}'
-                    }
+                    "&::placeholder": {
+                      color: "{colors.fgSubtle}",
+                    },
                   }}
                 />
               </Field.Root>
             </Stack>
           </Box>
-          
+
           {/* Premium Footer */}
-          <Box 
-            p={6} 
+          <Box
+            p={6}
             pt={4}
             css={{
-              background: 'rgba(255,255,255,0.02)',
-              borderTop: '1px solid rgba(255,255,255,0.08)'
+              background: "rgba(255,255,255,0.02)",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
             }}
           >
             <HStack justify="flex-end" gap={3}>
-              <AppButton 
-                onClick={onClose} 
+              <AppButton
+                onClick={onClose}
                 visual="ghost"
                 size="lg"
                 css={{
-                  minWidth: '80px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  fontWeight: 500
+                  minWidth: "80px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  fontWeight: 500,
                 }}
               >
                 キャンセル
@@ -273,15 +276,19 @@ export function CreateRoomModal({
                 loading={submitting}
                 disabled={submitting}
                 css={{
-                  minWidth: '120px',
-                  height: '44px',
-                  borderRadius: '12px',
+                  minWidth: "120px",
+                  height: "44px",
+                  borderRadius: "12px",
                   fontWeight: 600,
-                  background: !submitting ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' : undefined,
-                  boxShadow: !submitting ? '0 4px 16px rgba(99,102,241,0.4)' : undefined
+                  background: !submitting
+                    ? "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
+                    : undefined,
+                  boxShadow: !submitting
+                    ? "0 4px 16px rgba(99,102,241,0.4)"
+                    : undefined,
                 }}
               >
-                {submitting ? '作成中...' : 'ルームを作成'}
+                {submitting ? "作成中..." : "ルームを作成"}
               </AppButton>
             </HStack>
           </Box>

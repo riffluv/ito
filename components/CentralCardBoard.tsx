@@ -2,7 +2,6 @@
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useLocalFailureDetection } from "@/components/hooks/useLocalFailureDetection";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
-import { useSequentialReveal } from "@/components/hooks/useSequentialReveal";
 import { SortableItem } from "@/components/sortable/SortableItem";
 import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
 import { CardRenderer } from "@/components/ui/CardRenderer";
@@ -118,12 +117,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   });
 
   // sequential 用の reveal hook は pending 情報も考慮した枚数を渡したいので
-  // pending 宣言後に再度定義する（下部で定義）
-  let sequentialReveal = {
-    revealIndex: 0,
-    revealAnimating: false,
-  } as ReturnType<typeof useSequentialReveal>;
-
   const {
     pending,
     setPending,
@@ -146,32 +139,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     proposal,
     hasNumber,
     mePlaced,
-  });
-
-  // 現在場に「見えている/置かれた」とユーザが感じる枚数 (確定済み + ローカル pending) を基準にアニメ進行
-  const placedVisualCount = useMemo(() => {
-    const s = new Set<string>();
-    (orderList || []).forEach((id) => s.add(id));
-    (pending || []).forEach((id) => s.add(id));
-    return s.size;
-  }, [orderList?.join(","), pending?.join(",")]);
-
-  sequentialReveal = useSequentialReveal({
-    orderListLength: placedVisualCount,
-    placedIds: (() => {
-      // orderList の確定順 + pending で視覚順を構成
-      const seq: string[] = [];
-      (orderList || []).forEach((id) => {
-        if (!seq.includes(id)) seq.push(id);
-      });
-      (pending || []).forEach((id) => {
-        if (!seq.includes(id)) seq.push(id);
-      });
-      return seq;
-    })(),
-    roomStatus,
-    resolveMode,
-    enabled: resolveMode !== "sort-submit",
   });
 
   const { localFailedAt, boundaryPreviousIndex } = useLocalFailureDetection({
@@ -215,20 +182,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       resolveMode={resolveMode}
       roomStatus={roomStatus}
       // sort-submit ではサーバ駆動の revealIndex、順次ではローカル progressive index
-      revealIndex={
-        resolveMode === "sort-submit"
-          ? revealIndex
-          : sequentialReveal.revealIndex
-      }
-      revealAnimating={
-        resolveMode === "sort-submit"
-          ? revealAnimating
-          : sequentialReveal.revealAnimating
-      }
-      // 順次モードでは flippedIds による正確なフリップ状態を渡す
-      sequentialFlippedIds={
-        resolveMode !== "sort-submit" ? sequentialReveal.flippedIds : undefined
-      }
+      revealIndex={revealIndex}
+      revealAnimating={revealAnimating}
       failed={failed}
       failedAt={failedAt}
       localFailedAt={localFailedAt}
@@ -237,7 +192,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   // DnD sorting for sort-submit mode
-  const activeProposal = useMemo(() => proposal || [], [proposal?.join(",")]);
+  const activeProposal = useMemo(() => {
+    // During finished phase, use confirmed orderList instead of proposal
+    if (roomStatus === "finished") {
+      return orderList || [];
+    }
+    return proposal || [];
+  }, [proposal?.join(","), orderList?.join(","), roomStatus]);
   const onDragEnd = async (e: DragEndEvent) => {
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
@@ -285,7 +246,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   // sequential: サーバが success で reveal をセットした後、最後のカード flip 後に finalize
   useEffect(() => {
     if (resolveMode !== "sort-submit" && roomStatus === "reveal") {
-      // first card flip 遅延 + 余白（既に useSequentialReveal が進行）
+      // first card flip delay
       const timeout = setTimeout(() => {
         finalizeReveal(roomId).catch(() => void 0);
       }, 800); // SEQ_FIRST_CLUE_MS 相当 + alpha
@@ -468,10 +429,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         </SortableItem>
                       );
                     }
-                    // Empty slot placeholder (not rendered after finish to avoid artifact)
-                    if ((roomStatus as string) === "finished") {
-                      return <React.Fragment key={`slot-${idx}`} />; // keep key for stability, render nothing
-                    }
+                    // Empty slot placeholder - show during clue phase
                     return (
                       <Box
                         key={`slot-${idx}`}
