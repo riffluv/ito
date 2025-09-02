@@ -421,6 +421,7 @@ export default function RoomPage() {
       </Box>
       {/* ドット行が親でクリップされないように: visible + minH=0 */}
       <Box overflow="visible" minH={0}>
+        {/** tsserver stale cache workaround: cast to any to accept updated failedAt typing */}
         <CentralCardBoard
           roomId={roomId}
           players={players}
@@ -430,7 +431,9 @@ export default function RoomPage() {
           roomStatus={room.status}
           cluesReady={allCluesReady}
           failed={!!room.order?.failed}
-          failedAt={room.order?.failedAt}
+          failedAt={
+            room.order?.failedAt == null ? undefined : room.order?.failedAt
+          }
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
           isHost={isHost}

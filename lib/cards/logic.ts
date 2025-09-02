@@ -44,138 +44,98 @@ export interface ComputedCardState {
 
 // Consolidated logic extracted from legacy CardRenderer for clarity.
 export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
-  const {
-    player,
-    id,
-    idx,
-    orderList,
-    pending,
-    proposal,
-    resolveMode,
-    roomStatus,
-    revealIndex,
-    revealAnimating,
-    failed,
-    failedAt,
-    localFailedAt,
-    boundaryPreviousIndex,
-    sequentialFlip,
-  } = p;
-
-  const number = player?.number ?? null;
-  const clue1 = player?.clue1 ?? "";
-
+  const modeSort = p.resolveMode === "sort-submit";
+  const idx = p.idx;
+  const number = p.player?.number ?? null;
+  const clue1 = p.player?.clue1 ?? "";
   const isPlaced = !!(
-    (orderList && orderList.includes(id)) ||
-    pending.includes(id) ||
-    (proposal && proposal.includes(id))
+    (p.orderList && p.orderList.includes(p.id)) ||
+    p.pending.includes(p.id) ||
+    (p.proposal && p.proposal.includes(p.id))
   );
 
-  const modeSort = resolveMode === "sort-submit";
-
-  // Reveal + number visibility rules
-  // sort-submit: base is placed numeric
-  // sequential: base hidden (flip later)
-  let showNumber = modeSort ? typeof number === "number" && isPlaced : false;
+  // 1) Number visibility
+  // Strategy:
+  // - sort-submit: original timing (only during reveal anim show progressively, always in finished)
+  // - sequential: if using flip variant, showNumber == flipped; if not using flip variant keep previous progressive gating.
+  let showNumber = false;
   if (modeSort) {
-    if (roomStatus === "finished") {
+    if (p.roomStatus === "reveal" && p.revealAnimating) {
+      if (typeof idx === "number" && idx < p.revealIndex) {
+        showNumber = typeof number === "number" && isPlaced;
+      }
+    } else if (p.roomStatus === "finished") {
       showNumber = typeof number === "number" && isPlaced;
-    } else if (
-      roomStatus === "reveal" &&
-      revealAnimating &&
-      typeof idx === "number"
-    ) {
-      showNumber = typeof number === "number" && isPlaced && idx < revealIndex;
-    } else {
-      showNumber = false; // hide while only placed
     }
   } else {
-    // sequential mode: once revealIndex passes idx, number stays visible even after animation flag drops
-    if (typeof idx === "number" && idx < revealIndex) {
-      showNumber = true;
-    } else if (revealAnimating && typeof idx === "number") {
-      showNumber = idx < revealIndex;
+    if (p.sequentialFlip) {
+      // Will align with flipped later after flipped computed; temporary placeholder, set to false here and override after flipped calculation.
+      // (We can't compute flipped yet because it depends on variant which depends on this flag; we'll patch after flipped computation.)
+    } else if (typeof idx === "number" && idx < p.revealIndex) {
+      showNumber = typeof number === "number" && isPlaced;
     }
   }
 
-  const effectiveFailedAt = localFailedAt ?? failedAt;
+  // 2) Failure / success computation
+  const effectiveFailedAt = p.localFailedAt ?? p.failedAt;
+  const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
+  const revealed = modeSort
+    ? typeof idx === "number" &&
+      (p.roomStatus === "finished" ||
+        (p.roomStatus === "reveal" && idx < p.revealIndex))
+    : isPlaced;
   const failureConfirmed = (() => {
     if (typeof effectiveFailedAt !== "number") return false;
     if (modeSort) {
-      if (roomStatus === "finished") return !!failed;
-      return revealIndex >= effectiveFailedAt;
+      if (p.roomStatus === "finished") return !!p.failed;
+      return p.revealIndex >= effectiveFailedAt;
     }
-    return true;
+    return true; // sequential: treat failure as soon as local/effective index known
   })();
 
-  const revealed = modeSort
-    ? typeof idx === "number" &&
-      (roomStatus === "finished" ||
-        (roomStatus === "reveal" && idx < revealIndex))
-    : isPlaced;
-
-  // Timing for coloring:
-  //   sort-submit -> color per-card once that card has flipped OR when finished.
-  //   sequential  -> defer all coloring until the overall sequence finishes (requested UX),
-  //                  so no early mass red flash between flips.
-  const flipPhaseReached = typeof idx === "number" && idx < revealIndex;
   let isFail = false;
   let isSuccess = false;
   let successLevel: ComputedCardState["successLevel"] = undefined;
   let boundary = false;
 
   if (modeSort) {
-    const coloringActive = roomStatus === "finished" || flipPhaseReached;
+    const active = p.roomStatus === "finished" || flipPhaseReached;
     isFail =
       revealed &&
-      coloringActive &&
+      active &&
       typeof effectiveFailedAt === "number" &&
       typeof idx === "number" &&
       idx === effectiveFailedAt - 1;
     isSuccess =
-      revealed &&
-      coloringActive &&
-      !failureConfirmed &&
-      roomStatus === "finished";
-    if (isSuccess) successLevel = "final"; // sort-submit only celebrates at end
-  } else {
-    // sequential per optimal spec:
-    // - show fail immediately on failing card flip
-    // - show subtle success (state 'success') per flipped correct card (not final strong) until finished
-    // - boundary highlight for card before failing pair
-    if (typeof idx === "number") {
-      const flippedNow = flipPhaseReached; // idx < revealIndex
-      const failingCard =
-        typeof effectiveFailedAt === "number" && idx === effectiveFailedAt - 1;
-      if (flippedNow) {
-        if (failingCard) {
-          isFail = true;
-        } else if (typeof effectiveFailedAt !== "number") {
-          // only apply mild success if no failure yet
-          isSuccess = true;
-          successLevel = "mild";
-        }
+      revealed && active && !failureConfirmed && p.roomStatus === "finished";
+    if (isSuccess) successLevel = "final";
+  } else if (typeof idx === "number") {
+    const failingCard =
+      typeof effectiveFailedAt === "number" && idx === effectiveFailedAt - 1;
+    if (flipPhaseReached) {
+      if (failingCard) isFail = true;
+      else if (typeof effectiveFailedAt !== "number") {
+        isSuccess = true; // mild until final
+        successLevel = "mild";
       }
-      if (
-        typeof boundaryPreviousIndex === "number" &&
-        idx === boundaryPreviousIndex
-      ) {
-        boundary = true;
-      }
-      // After overall finish and success (no failure), keep success state (already true)
-      if (roomStatus === "finished" && !failureConfirmed) {
-        isSuccess = true;
-        successLevel = "final"; // escalate to final
-      }
-      // After finish with failure, keep failing card red, others default
+    }
+    if (
+      typeof p.boundaryPreviousIndex === "number" &&
+      idx === p.boundaryPreviousIndex
+    ) {
+      boundary = true;
+    }
+    if (p.roomStatus === "finished" && !failureConfirmed) {
+      isSuccess = true;
+      successLevel = "final";
     }
   }
 
-  // Variant / flipping
+  // 3) Variant & flip state
   const variant: ComputedCardState["variant"] = (() => {
-    if (modeSort && (roomStatus === "reveal" || roomStatus === "finished"))
+    if (modeSort && (p.roomStatus === "reveal" || p.roomStatus === "finished"))
       return "flip";
-    if (!modeSort && sequentialFlip) return "flip";
+    if (!modeSort && p.sequentialFlip) return "flip";
     return "flat";
   })();
   const flipped = (() => {
@@ -183,24 +143,27 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     if (modeSort) {
       return (
         typeof idx === "number" &&
-        (roomStatus === "reveal" || roomStatus === "finished") &&
-        idx < revealIndex
+        (p.roomStatus === "reveal" || p.roomStatus === "finished") &&
+        idx < p.revealIndex
       );
     }
-    // sequential flip: use revealIndex as progressive counter
-    if (!modeSort && sequentialFlip) {
+    if (!modeSort && p.sequentialFlip) {
       if (typeof idx !== "number") return false;
-      // Keep flipped once it has flipped (revealIndex already advanced beyond idx)
-      return idx < revealIndex;
+      return idx < p.revealIndex; // when its index passed, flip stays
     }
     return false;
   })();
 
-  // Clue placeholder logic
+  // 4) Clue text
   const clueText =
-    modeSort && roomStatus !== "finished"
+    modeSort && p.roomStatus !== "finished"
       ? clue1 || "(連想待ち)"
       : clue1 || null;
+
+  // If sequential flip: override showNumber with flipped
+  if (!modeSort && p.sequentialFlip) {
+    showNumber = flipped && typeof number === "number" && isPlaced;
+  }
 
   return {
     showNumber,

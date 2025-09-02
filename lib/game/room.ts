@@ -199,11 +199,22 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 
     if (shouldFinish) {
       const success = !next.failed;
-      tx.update(roomRef, {
-        status: "finished",
-        order: next,
-        result: { success, revealedAt: serverTimestamp() },
-      });
+      const resolveMode = room?.options?.resolveMode;
+      // sequential 成功時は即 finished にせず reveal 中継状態を挟み、
+      // クライアント側で最後のカード flip 後に finalizeReveal する（見切れ防止）
+      if (success && resolveMode === "sequential") {
+        tx.update(roomRef, {
+          status: "reveal",
+          order: next,
+          result: { success, revealedAt: serverTimestamp() },
+        });
+      } else {
+        tx.update(roomRef, {
+          status: "finished",
+          order: next,
+          result: { success, revealedAt: serverTimestamp() },
+        });
+      }
       return;
     }
 

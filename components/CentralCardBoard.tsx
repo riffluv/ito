@@ -1,21 +1,37 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Box } from "@chakra-ui/react";
-import { DndContext, DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { SortableItem } from "@/components/sortable/SortableItem";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useLocalFailureDetection } from "@/components/hooks/useLocalFailureDetection";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { useSequentialReveal } from "@/components/hooks/useSequentialReveal";
+import { SortableItem } from "@/components/sortable/SortableItem";
 import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import ConfirmDock from "@/components/ui/ConfirmDock";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import StatusDock from "@/components/ui/StatusDock";
 import WaitingArea from "@/components/ui/WaitingArea";
-import { finalizeReveal, setOrderProposal, submitSortedOrder } from "@/lib/game/room";
+import {
+  finalizeReveal,
+  setOrderProposal,
+  submitSortedOrder,
+} from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
+import { Box } from "@chakra-ui/react";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 // Fallback hard-coded durations (keep in sync with previous logic/motion.ts if exists)
@@ -33,7 +49,8 @@ interface CentralCardBoardProps {
   roomStatus: string; // union simplified
   cluesReady?: boolean;
   failed: boolean;
-  failedAt?: number;
+  // 1-based failure index; null = no failure yet. Accept explicit null to match Firestore schema.
+  failedAt: number | null | undefined;
   proposal?: string[];
   resolveMode?: string;
   isHost?: boolean;
@@ -100,13 +117,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     orderListLength: orderList?.length || 0,
   });
 
-  // Sequential mode progressive flip (optional)
-  const sequentialReveal = useSequentialReveal({
-    orderListLength: orderList?.length || 0,
-    roomStatus,
-    resolveMode,
-    enabled: resolveMode !== "sort-submit",
-  });
+  // sequential 用の reveal hook は pending 情報も考慮した枚数を渡したいので
+  // pending 宣言後に再度定義する（下部で定義）
+  let sequentialReveal = {
+    revealIndex: 0,
+    revealAnimating: false,
+  } as ReturnType<typeof useSequentialReveal>;
 
   const {
     pending,
@@ -130,6 +146,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     proposal,
     hasNumber,
     mePlaced,
+  });
+
+  // 現在場に「見えている/置かれた」とユーザが感じる枚数 (確定済み + ローカル pending) を基準にアニメ進行
+  const placedVisualCount = useMemo(() => {
+    const s = new Set<string>();
+    (orderList || []).forEach((id) => s.add(id));
+    (pending || []).forEach((id) => s.add(id));
+    return s.size;
+  }, [orderList?.join(","), pending?.join(",")]);
+
+  sequentialReveal = useSequentialReveal({
+    orderListLength: placedVisualCount,
+    roomStatus,
+    resolveMode,
+    enabled: resolveMode !== "sort-submit",
   });
 
   const { localFailedAt, boundaryPreviousIndex } = useLocalFailureDetection({
@@ -163,9 +194,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const renderCard = (id: string, idx?: number) => (
     <CardRenderer
-  key={id}
-  id={id}
-  player={playerMap.get(id)}
+      key={id}
+      id={id}
+      player={playerMap.get(id)}
       idx={idx}
       orderList={orderList}
       pending={pending}
@@ -235,6 +266,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       fallbackTimerRef.current = null;
     }
   }, [roomStatus, resolveMode, orderList?.length, roomId]);
+
+  // sequential: サーバが success で reveal をセットした後、最後のカード flip 後に finalize
+  useEffect(() => {
+    if (resolveMode !== "sort-submit" && roomStatus === "reveal") {
+      // first card flip 遅延 + 余白（既に useSequentialReveal が進行）
+      const timeout = setTimeout(() => {
+        finalizeReveal(roomId).catch(() => void 0);
+      }, 800); // SEQ_FIRST_CLUE_MS 相当 + alpha
+      return () => clearTimeout(timeout);
+    }
+  }, [resolveMode, roomStatus, roomId]);
 
   // sort-submit: 全員提出で「確定」可能
   const canConfirm =
@@ -556,7 +598,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           </Box>
         </Box>
 
-  <StatusDock show={roomStatus === "finished"} data-finished={roomStatus === "finished"}>
+        <StatusDock
+          show={roomStatus === "finished"}
+          data-finished={roomStatus === "finished"}
+        >
           {roomStatus === "finished" && (
             <GameResultOverlay
               failed={failed}

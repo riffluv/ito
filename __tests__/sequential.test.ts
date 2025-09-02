@@ -1,7 +1,13 @@
 import { commitPlayFromClue } from "@/lib/game/room";
 import { applyPlay, shouldFinishAfterPlay } from "@/lib/game/rules";
-import { initializeApp, deleteApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator, doc, setDoc, runTransaction } from "firebase/firestore";
+import { deleteApp, initializeApp } from "firebase/app";
+import {
+  connectFirestoreEmulator,
+  doc,
+  getFirestore,
+  runTransaction,
+  setDoc,
+} from "firebase/firestore";
 
 // Mocking Firebase for testing
 const projectId = `test-project-seq-${Date.now()}-${Math.random()}`;
@@ -24,10 +30,14 @@ jest.mock("@/lib/firebase/client", () => ({
 const mockPresenceSupported = jest.fn(() => false);
 const mockFetchPresenceUids = jest.fn(() => Promise.resolve([]));
 
-jest.mock("@/lib/presence/client", () => ({
-  presenceSupported: mockPresenceSupported,
-  fetchPresenceUids: mockFetchPresenceUids,
-}), { virtual: true });
+jest.mock(
+  "@/lib/presence/client",
+  () => ({
+    presenceSupported: mockPresenceSupported,
+    fetchPresenceUids: mockFetchPresenceUids,
+  }),
+  { virtual: true }
+);
 
 const roomId = "test-room-sequential";
 
@@ -40,11 +50,14 @@ interface RoomOverrides {
   [key: string]: any;
 }
 
-async function setupSequentialRoom(roomOverrides: RoomOverrides = {}, playersData: TestPlayer[] = []) {
+async function setupSequentialRoom(
+  roomOverrides: RoomOverrides = {},
+  playersData: TestPlayer[] = []
+) {
   const roomRef = doc(testDb, "rooms", roomId);
   await setDoc(roomRef, {
     status: "clue",
-    options: { 
+    options: {
       resolveMode: "sequential",
       allowContinueAfterFail: false,
     },
@@ -280,7 +293,7 @@ describe("Sequential Game Logic", () => {
         { id: "p2", number: 25 },
         { id: "p3", number: 35 },
       ];
-      
+
       await setupSequentialRoom({}, playersData);
 
       await expect(commitPlayFromClue(roomId, "p1")).resolves.not.toThrow();
@@ -304,15 +317,18 @@ describe("Sequential Game Logic", () => {
         { id: "p2", number: 25 },
       ];
 
-      await setupSequentialRoom({
-        order: {
-          list: ["p1"],
-          lastNumber: 15,
-          failed: false,
-          failedAt: null,
-          total: 2, // Set total to 2 for completion
-        }
-      }, playersData);
+      await setupSequentialRoom(
+        {
+          order: {
+            list: ["p1"],
+            lastNumber: 15,
+            failed: false,
+            failedAt: null,
+            total: 2, // Set total to 2 for completion
+          },
+        },
+        playersData
+      );
 
       await commitPlayFromClue(roomId, "p2");
 
@@ -322,7 +338,8 @@ describe("Sequential Game Logic", () => {
       });
 
       const roomData = roomSnap.data();
-      expect(roomData?.status).toBe("finished");
+      // Sequential success now enters intermediate 'reveal' phase; UI will later finalize to 'finished'
+      expect(roomData?.status).toBe("reveal");
       expect(roomData?.result?.success).toBe(true);
       expect(roomData?.order?.list).toEqual(["p1", "p2"]);
     });
@@ -333,15 +350,18 @@ describe("Sequential Game Logic", () => {
         { id: "p2", number: 15 }, // Lower number - will cause failure
       ];
 
-      await setupSequentialRoom({
-        order: {
-          list: ["p1"],
-          lastNumber: 25,
-          failed: false,
-          failedAt: null,
-          total: 2,
-        }
-      }, playersData);
+      await setupSequentialRoom(
+        {
+          order: {
+            list: ["p1"],
+            lastNumber: 25,
+            failed: false,
+            failedAt: null,
+            total: 2,
+          },
+        },
+        playersData
+      );
 
       await commitPlayFromClue(roomId, "p2");
 
@@ -360,15 +380,18 @@ describe("Sequential Game Logic", () => {
     test("should prevent double play from same player", async () => {
       const playersData = [{ id: "p1", number: 15 }];
 
-      await setupSequentialRoom({
-        order: {
-          list: ["p1"], // p1 already played
-          lastNumber: 15,
-          failed: false,
-          failedAt: null,
-          total: undefined,
-        }
-      }, playersData);
+      await setupSequentialRoom(
+        {
+          order: {
+            list: ["p1"], // p1 already played
+            lastNumber: 15,
+            failed: false,
+            failedAt: null,
+            total: undefined,
+          },
+        },
+        playersData
+      );
 
       // This should not throw but also not change the state
       await expect(commitPlayFromClue(roomId, "p1")).resolves.not.toThrow();
@@ -387,8 +410,9 @@ describe("Sequential Game Logic", () => {
 
       await setupSequentialRoom({}, playersData);
 
-      await expect(commitPlayFromClue(roomId, "p1"))
-        .rejects.toThrow("number not set");
+      await expect(commitPlayFromClue(roomId, "p1")).rejects.toThrow(
+        "number not set"
+      );
     });
 
     test("should throw when room status is not clue or playing", async () => {
