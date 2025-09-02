@@ -16,6 +16,7 @@ interface CardRendererProps {
   failed?: boolean;
   failedAt?: number | null;
   localFailedAt?: number | null;
+  boundaryPreviousIndex?: number | null;
 }
 
 export function CardRenderer(props: CardRendererProps) {
@@ -34,6 +35,7 @@ export function CardRenderer(props: CardRendererProps) {
     failed: props.failed,
     failedAt: props.failedAt ?? null,
     localFailedAt: props.localFailedAt ?? null,
+    boundaryPreviousIndex: props.boundaryPreviousIndex ?? null,
     sequentialFlip: props.resolveMode !== "sort-submit", // enable flip for sequential
   });
 
@@ -47,6 +49,7 @@ export function CardRenderer(props: CardRendererProps) {
       clue={state.clueText || undefined}
       number={state.number}
       state={state.state}
+      // boundary styling hint via name prop aria? (Could be extended)
     />
   );
 }

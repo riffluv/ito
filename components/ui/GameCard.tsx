@@ -224,7 +224,15 @@ export function GameCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div style={{ fontSize: "0.65rem", lineHeight: 1, color: "#999", display: "flex", alignItems: "center" }}>
+      <div
+        style={{
+          fontSize: "0.65rem",
+          lineHeight: 1,
+          color: "#999",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
         #{typeof index === "number" ? index + 1 : "?"}
       </div>
       <div style={{ position: "relative" }}>
@@ -239,9 +247,7 @@ export function GameCard({
             color: typeof number === "number" ? "#d4af37" : "#ffffff",
             lineHeight: 1.05,
             textShadow:
-              typeof number === "number"
-                ? "0 2px 4px rgba(0,0,0,0.5)"
-                : "none",
+              typeof number === "number" ? "0 2px 4px rgba(0,0,0,0.5)" : "none",
             width: "100%",
             textAlign: "center",
             padding: "0 0.25rem",
