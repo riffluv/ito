@@ -612,10 +612,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       waitingPlayers.length > 0 ? (
         <WaitingArea players={waitingPlayers} />
       ) : null}
-      {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） */}
-      {canConfirm && waitingPlayers.length === 0 ? (
+      {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） - DISABLED: 重複機能のため削除 */}
+      {/* {canConfirm && waitingPlayers.length === 0 ? (
         <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
-      ) : null}
+      ) : null} */}
       {/* 結果オーバーレイ（モック準拠の演出） */}
       {roomStatus === "finished" && showResult && (
         <ArtifactResultOverlay
