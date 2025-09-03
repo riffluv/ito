@@ -9,7 +9,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
       textAlign="center"
       py={16}
       px={8}
-      borderRadius="20px"
+      borderRadius="xl"
       border="2px dashed rgba(255,255,255,0.1)"
       bg="rgba(255,255,255,0.02)"
       css={{
@@ -25,7 +25,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
           w={16}
           h={16}
           mx="auto"
-          borderRadius="16px"
+          borderRadius="xl"
           bg="linear-gradient(135deg, rgba(107,115,255,0.2) 0%, rgba(153,69,255,0.1) 100%)"
           display="flex"
           alignItems="center"
@@ -55,7 +55,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
           visual="solid"
           palette="brand"
           css={{
-            borderRadius: "12px",
+            borderRadius: "lg",
             background: "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
             boxShadow: "0 4px 12px rgba(107,115,255,0.3)",
             fontWeight: 600,

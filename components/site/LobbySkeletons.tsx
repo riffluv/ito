@@ -4,7 +4,7 @@ import { Box, Grid } from "@chakra-ui/react";
 function RoomCardSkeleton() {
   return (
     <Box
-      borderRadius="20px"
+      borderRadius="xl"
       border="1px solid rgba(255,255,255,0.1)"
       bg="rgba(255,255,255,0.03)"
       backdropFilter="blur(20px)"
@@ -56,7 +56,7 @@ function RoomCardSkeleton() {
         left={6}
         right={6}
         h="40px"
-        borderRadius="12px"
+        borderRadius="lg"
         bg="rgba(107,115,255,0.2)"
       />
     </Box>
