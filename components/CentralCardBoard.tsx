@@ -273,6 +273,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       h="100%"
       display="flex"
       flexDirection="column"
+      border="none"
+      borderWidth="0"
       css={{
         // 🎮 PREMIUM BOARD CONTAINER
         background: "transparent",
