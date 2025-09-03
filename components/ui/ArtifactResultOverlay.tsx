@@ -40,24 +40,27 @@ export default function ArtifactResultOverlay({ success, correctCount, totalCoun
 
       {/* テキスト */}
       <Box textAlign="center" zIndex={10}>
-        <Text
+        <Box
+          as="div"
           fontFamily='-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
           fontSize={{ base: "48px", md: "64px" }}
           fontWeight={600}
           letterSpacing="-0.02em"
           opacity={0}
+          display="flex" 
+          alignItems="center" 
+          justifyContent="center" 
+          gap={3}
           css={{
             color: success ? "rgba(255,255,255,0.95)" : "rgba(239,68,68,1)",
             textShadow: "0 2px 8px rgba(0,0,0,0.3)",
             animation: "titleIn 600ms ease-out 200ms forwards",
           }}
         >
-          <Box display="flex" alignItems="center" justifyContent="center" gap={3}>
-            <Box>{success ? "✨" : "💥"}</Box>
-            <Box>{success ? "成功" : "失敗"}</Box>
-            <Box>{success ? "✨" : "💥"}</Box>
-          </Box>
-        </Text>
+          <Box>{success ? "✨" : "💥"}</Box>
+          <Box>{success ? "成功" : "失敗"}</Box>
+          <Box>{success ? "✨" : "💥"}</Box>
+        </Box>
         <Text
           mt={6}
           fontSize={{ base: "16px", md: "18px" }}

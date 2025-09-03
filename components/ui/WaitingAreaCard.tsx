@@ -1,5 +1,6 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export default function WaitingAreaCard({
@@ -11,7 +12,7 @@ export default function WaitingAreaCard({
   return (
     <Box
       role="group"
-      width="120px"
+      width={UNIFIED_LAYOUT.CARD.WIDTH}
       height="150px"
       borderRadius="xl"
       display="flex"
