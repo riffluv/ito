@@ -20,7 +20,8 @@ export default function WaitingAreaCard({
       justifyContent="space-between"
       p={4}
       bg={ready ? "surfaceRaised" : "surfaceSubtle"}
-      borderWidth="0"
+      borderWidth="1px"
+      borderColor="borderDefault"
       shadow={ready ? "cardRaised" : "panelSubtle"}
       transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
       _groupHover={{}}
