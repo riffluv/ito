@@ -18,6 +18,7 @@ import {
 } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
+
 // LEGACY PREMIUM (to be refactored): premiumGameStyles 依存を今後 surface/accent トークン + recipe 化予定
 // PREMIUM_* 依存除去中: 旧ゴールド/パープル装飾を semantic tokens ベースのフラット/マットスタイルへ移行
 // import { PREMIUM_COMPONENTS, PREMIUM_TYPOGRAPHY, CARD_MATERIALS } from "@/theme/premiumGameStyles";
@@ -211,13 +212,13 @@ export default function MiniHandDock({
       w="100%"
       position="relative"
       css={{
-        padding: "20px 32px",
+        padding: "12px 24px", // 20px -> 12px に削減（DPI 125%対応）
         background: "rgba(18,19,23,0.85)",
         backdropFilter: "blur(20px)",
         border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: "20px",
+        borderRadius: "xl", // 20px -> xl (12px) に調整
         boxShadow:
-          "0 8px 32px -8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
+          "0 4px 16px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)", // より控えめなシャドウ
 
         // === SOPHISTICATED VISUAL ACCENT ===
         "&::before": {
@@ -236,58 +237,43 @@ export default function MiniHandDock({
     >
       {/* 左側: プレイヤーアクション（最優先） */}
       <HStack gap={3} align="center" flex="0 0 auto">
-        {/* 🎯 PREMIUM NUMBER DISPLAY - Sophisticated Card Number */}
+        {/* 🎯 PREMIUM HAND CARD - Enhanced Visibility with White Numbers */}
         <Box
-          css={{
-            minWidth: "64px",
-            height: "48px",
-            padding: "0 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-
-            // === REFINED TYPOGRAPHY ===
-            fontWeight: 700,
-            fontSize: "1.25rem",
-            fontFamily:
-              '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-            letterSpacing: "-0.02em",
-
-            // === SOPHISTICATED STYLING ===
-            background: canSubmit
-              ? "rgba(255,255,255,0.08)"
-              : "rgba(255,255,255,0.03)",
-            border: `1.5px solid ${canSubmit ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
-            borderRadius: "12px",
-            color: canSubmit
-              ? "rgba(255,255,255,0.95)"
-              : "rgba(255,255,255,0.5)",
-
-            // === PREMIUM INTERACTION ===
-            cursor: canSubmit ? "grab" : "default",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-
-            // === SUBTLE VISUAL EFFECTS ===
-            boxShadow: canSubmit
-              ? "0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)"
-              : "0 1px 3px rgba(0,0,0,0.1)",
-
-            "&:hover": canSubmit
+          minW="60px"
+          h="42px"
+          px="3"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          fontWeight="700"
+          fontSize="xl"  // lg -> xl for better visibility
+          fontFamily="heading"
+          letterSpacing="-0.02em"
+          bg={canSubmit ? "#191b21" : "#191b21"}  // Rich black background always
+          border="3px solid"
+          borderColor="#ffffff"  // Pure white border always
+          borderRadius="xl"
+          color="#ffffff"  // Pure white text always
+          cursor={canSubmit ? "grab" : "default"}
+          transition="all 0.3s ease"
+          boxShadow="0 2px 8px rgba(0,0,0,0.5)"  // Strong shadow for depth
+          _hover={
+            canSubmit
               ? {
-                  background: "rgba(255,255,255,0.12)",
-                  borderColor: "rgba(255,255,255,0.2)",
+                  bg: "#191b21",
+                  borderColor: "#ffffff",
                   transform: "translateY(-2px)",
-                  boxShadow:
-                    "0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.7)",
                 }
-              : {},
-
-            "&:active": canSubmit
+              : {}
+          }
+          _active={
+            canSubmit
               ? {
                   transform: "translateY(0) scale(0.98)",
                 }
-              : {},
-          }}
+              : {}
+          }
           draggable={canSubmit}
           onDragStart={(e) => {
             if (canSubmit && me?.id) {
@@ -312,16 +298,16 @@ export default function MiniHandDock({
           }}
           css={{
             width: { base: "180px", md: "240px" },
-            height: "48px",
-            padding: "0 16px",
+            height: "36px", // 48px -> 36px に削減
+            padding: "0 12px", // 16px -> 12px に削減
 
             // === SOPHISTICATED STYLING ===
             background: "rgba(255,255,255,0.04)",
             border: "1.5px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px",
+            borderRadius: "lg", // 12px -> lg (8px) に調整
 
             // === REFINED TYPOGRAPHY ===
-            fontSize: "0.9375rem",
+            fontSize: "0.875rem", // 0.9375rem -> 0.875rem に削減
             fontWeight: 500,
             fontFamily:
               '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
@@ -357,11 +343,11 @@ export default function MiniHandDock({
           onClick={handleDecide}
           disabled={!canDecide}
           css={{
-            height: "48px",
-            padding: "0 20px",
-            borderRadius: "12px",
+            height: "36px", // 48px -> 36px に削減
+            padding: "0 16px", // 20px -> 16px に削減
+            borderRadius: "lg", // 12px -> lg (8px) に調整
             fontWeight: 600,
-            fontSize: "0.875rem",
+            fontSize: "0.8125rem", // 0.875rem -> 0.8125rem に削減
             fontFamily:
               '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
             letterSpacing: "-0.01em",
@@ -395,11 +381,11 @@ export default function MiniHandDock({
           onClick={handleSubmit}
           disabled={!canSubmit}
           css={{
-            height: "48px",
-            padding: "0 20px",
-            borderRadius: "12px",
+            height: "36px", // 48px -> 36px に削減
+            padding: "0 16px", // 20px -> 16px に削減
+            borderRadius: "lg", // 12px -> lg (8px) に調整
             fontWeight: 600,
-            fontSize: "0.875rem",
+            fontSize: "0.8125rem", // 0.875rem -> 0.8125rem に削減
             fontFamily:
               '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
             letterSpacing: "-0.01em",
@@ -442,11 +428,11 @@ export default function MiniHandDock({
             visual="solid"
             palette="brand"
             css={{
-              height: "52px",
-              padding: "0 32px",
-              borderRadius: "16px",
+              height: "40px", // 52px -> 40px に削減
+              padding: "0 24px", // 32px -> 24px に削減
+              borderRadius: "lg", // 16px -> lg (8px) に調整
               fontWeight: 600,
-              fontSize: "1rem",
+              fontSize: "0.9rem", // 1rem -> 0.9rem に削減
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
               letterSpacing: "-0.01em",
@@ -478,11 +464,11 @@ export default function MiniHandDock({
             visual={allSubmitted ? "solid" : "surface"}
             palette={allSubmitted ? "brand" : "gray"}
             css={{
-              height: "52px",
-              padding: "0 32px",
-              borderRadius: "16px",
+              height: "40px", // 52px -> 40px に削減
+              padding: "0 24px", // 32px -> 24px に削減
+              borderRadius: "lg", // 16px -> lg (8px) に調整
               fontWeight: 600,
-              fontSize: "1rem",
+              fontSize: "0.9rem", // 1rem -> 0.9rem に削減
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
               letterSpacing: "-0.01em",
@@ -520,11 +506,11 @@ export default function MiniHandDock({
             visual="solid"
             palette="brand"
             css={{
-              height: "52px",
-              padding: "0 32px",
-              borderRadius: "16px",
+              height: "40px", // 52px -> 40px に削減
+              padding: "0 24px", // 32px -> 24px に削減
+              borderRadius: "lg", // 16px -> lg (8px) に調整
               fontWeight: 600,
-              fontSize: "1rem",
+              fontSize: "0.9rem", // 1rem -> 0.9rem に削減
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
               letterSpacing: "-0.01em",
@@ -558,10 +544,10 @@ export default function MiniHandDock({
             align="center"
             position="relative"
             css={{
-              padding: "8px 16px",
+              padding: "6px 12px", // 8px -> 6px にコンパクト化
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "12px",
+              borderRadius: "lg", // 12px -> lg (8px) に調整
               backdropFilter: "blur(4px)",
             }}
           >
@@ -586,12 +572,12 @@ export default function MiniHandDock({
                         defaultTopicType as any
                       )
                     }
-                    size="sm"
+                    size="xs" // sm -> xs に削減
                     bg="accentSubtle"
                     borderWidth={0}
                     color="accent"
-                    borderRadius="md"
-                    p={2}
+                    borderRadius="sm" // md -> sm に調整
+                    p={1.5} // 2 -> 1.5 に削減
                     minW={0}
                     width="auto"
                     height="auto"
@@ -601,7 +587,7 @@ export default function MiniHandDock({
                     _hover={{ transform: "scale(1.05)" }}
                     _active={{ transform: "scale(0.98)" }}
                     transition="all 0.12s ease"
-                    css={{ fontSize: "20px" }}
+                    css={{ fontSize: "16px" }} // 20px -> 16px に削減
                   >
                     <FaRegCreditCard />
                   </IconButton>
@@ -609,12 +595,12 @@ export default function MiniHandDock({
                   <IconButton
                     aria-label="数字をシャッフル"
                     onClick={() => topicControls.dealNumbers(roomId)}
-                    size="sm"
+                    size="xs" // sm -> xs に削減
                     bg="accentSubtle"
                     borderWidth={0}
                     color="accent"
-                    borderRadius="md"
-                    p={2}
+                    borderRadius="sm" // md -> sm に調整
+                    p={1.5} // 2 -> 1.5 に削減
                     minW={0}
                     width="auto"
                     height="auto"
@@ -624,7 +610,7 @@ export default function MiniHandDock({
                     _hover={{ transform: "scale(1.05)" }}
                     _active={{ transform: "scale(0.98)" }}
                     transition="all 0.12s ease"
-                    css={{ fontSize: "20px" }}
+                    css={{ fontSize: "16px" }} // 20px -> 16px に削減
                   >
                     <FaDice />
                   </IconButton>
@@ -632,12 +618,12 @@ export default function MiniHandDock({
                   <IconButton
                     aria-label="ゲームをリセット"
                     onClick={resetGame}
-                    size="sm"
+                    size="xs" // sm -> xs に削減
                     bg="accentSubtle"
                     borderWidth={0}
                     color="accent"
-                    borderRadius="md"
-                    p={2}
+                    borderRadius="sm" // md -> sm に調整
+                    p={1.5} // 2 -> 1.5 に削減
                     minW={0}
                     width="auto"
                     height="auto"
@@ -647,7 +633,7 @@ export default function MiniHandDock({
                     _hover={{ transform: "scale(1.05)" }}
                     _active={{ transform: "scale(0.98)" }}
                     transition="all 0.12s ease"
-                    css={{ fontSize: "20px" }}
+                    css={{ fontSize: "16px" }} // 20px -> 16px に削減
                   >
                     <FaRedo />
                   </IconButton>
@@ -657,7 +643,7 @@ export default function MiniHandDock({
 
             <Box
               px={3}
-              py={2}
+              py={1} // 2 -> 1 に削減（高さを削減）
               borderRadius="lg"
               fontSize="xs"
               fontWeight={600}
@@ -690,18 +676,18 @@ export default function MiniHandDock({
             <IconButton
               aria-label="設定"
               onClick={onOpenSettings}
-              size="sm"
+              size="xs" // sm -> xs に削減
               bg="transparent"
               color="gray.400"
               borderWidth="0"
-              p={1}
+              p={0.5} // 1 -> 0.5 に削減
               minW={0}
               width="auto"
               height="auto"
               display="inline-flex"
               alignItems="center"
               justifyContent="center"
-              fontSize="16px"
+              fontSize="14px" // 16px -> 14px に削減
               _hover={{
                 color: "white",
                 transform: "scale(1.1)",
@@ -718,19 +704,19 @@ export default function MiniHandDock({
             <IconButton
               aria-label="ルームを退出"
               onClick={onLeaveRoom}
-              size="sm"
+              size="xs" // sm -> xs に削減
               title="メインメニューに戻る"
               bg="transparent"
               color="gray.400"
               borderWidth="0"
-              p={1}
+              p={0.5} // 1 -> 0.5 に削減
               minW={0}
               width="auto"
               height="auto"
               display="inline-flex"
               alignItems="center"
               justifyContent="center"
-              fontSize="16px"
+              fontSize="14px" // 16px -> 14px に削減
               _hover={{
                 color: "red.400",
                 transform: "scale(1.1)",

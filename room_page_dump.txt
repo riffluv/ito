@@ -116,7 +116,7 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
       />
       <AppButton
         size="sm"
-        colorPalette="orange"
+        colorPalette="teal"
         onClick={handleSubmit}
         flexShrink={0}
       >

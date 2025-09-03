@@ -315,7 +315,7 @@ export function CreateRoomModal({
 
               <AppButton
                 visual="solid"
-                palette="brand"
+                colorPalette="teal"
                 size="lg"
                 onClick={handleCreate}
                 loading={submitting}

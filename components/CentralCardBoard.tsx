@@ -5,7 +5,6 @@ import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { SortableItem } from "@/components/sortable/SortableItem";
 import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
 import { CardRenderer } from "@/components/ui/CardRenderer";
-import ConfirmDock from "@/components/ui/ConfirmDock";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import StatusDock from "@/components/ui/StatusDock";
 import WaitingArea from "@/components/ui/WaitingArea";
@@ -304,31 +303,28 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           },
         }}
       >
-        {/* 🎯 QUIET LUXURY INSTRUCTION - Sophisticated Guidance */}
+        {/* 🎯 PREMIUM INSTRUCTION - Professional Game Guidance */}
         <Box
-          css={{
-            fontWeight: 500,
-            fontSize: "0.9375rem",
-            lineHeight: 1.4,
-            fontFamily:
-              '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-            letterSpacing: "-0.01em",
-            color: "rgba(255,255,255,0.8)",
-            padding: "8px 16px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.05)",
-            borderRadius: "12px",
-            backdropFilter: "blur(4px)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            transition: "all 0.2s ease",
-            display: "inline-block",
-
-            "&:hover": {
-              background: "rgba(255,255,255,0.05)",
-              borderColor: "rgba(255,255,255,0.08)",
-              transform: "translateY(-1px)",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-            },
+          bg="cardInstruction"
+          border="1px solid"
+          borderColor="cardInstructionBorder"
+          borderRadius="xl"
+          px={{ base: 4, md: 6 }}
+          py={{ base: 3, md: 4 }}
+          backdropFilter="blur(16px)"
+          boxShadow="sm"
+          transition="all 0.2s ease"
+          display="inline-block"
+          fontFamily="heading"
+          fontSize="sm"
+          fontWeight="500"
+          color="cardInstructionText"
+          letterSpacing="-0.01em"
+          _hover={{
+            bg: "cardInstructionHover",
+            borderColor: "cardInstructionBorderHover",
+            transform: "translateY(-1px)",
+            boxShadow: "md",
           }}
         >
           小さい順から大きい順に並べよう
@@ -454,37 +450,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       <Box
                         key={`slot-${idx}`}
                         data-slot
-                        css={{
-                          aspectRatio: "5 / 7",
-                          width: UNIFIED_LAYOUT.CARD.WIDTH,
-                          placeSelf: "start",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "rgba(255,255,255,0.02)",
-                          border: "1.5px dashed rgba(255,255,255,0.15)",
-                          borderRadius: "16px",
-                          boxShadow:
-                            "0 1px 3px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.03)",
-                          backdropFilter: "blur(4px)",
-                          fontSize: "1.125rem",
-                          fontWeight: 500,
-                          fontFamily:
-                            '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-                          color: "rgba(255,255,255,0.4)",
-                          letterSpacing: "-0.01em",
-                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                          cursor: "pointer",
-                          position: "relative",
-                          overflow: "hidden",
-                          "&:hover": {
-                            background: "rgba(255,255,255,0.06)",
-                            borderColor: "rgba(255,255,255,0.25)",
-                            color: "rgba(255,255,255,0.7)",
-                            transform: "translateY(-2px)",
-                            boxShadow:
-                              "0 4px 12px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)",
-                          },
+                        aspectRatio="5/7"
+                        width={UNIFIED_LAYOUT.CARD.WIDTH}
+                        placeSelf="start"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        bg="surfaceRaised"
+                        border="1.5px dashed"
+                        borderColor="slotBorder"
+                        borderRadius="lg"
+                        boxShadow="sm"
+                        backdropFilter="blur(4px)"
+                        fontSize="lg"
+                        fontWeight="500"
+                        color="slotText"
+                        letterSpacing="-0.01em"
+                        transition="all 0.3s ease"
+                        cursor="pointer"
+                        position="relative"
+                        overflow="hidden"
+                        _hover={{
+                          bg: "slotHover",
+                          borderColor: "slotBorderHover",
+                          color: "slotTextHover",
+                          transform: "translateY(-2px)",
+                          boxShadow: "md",
                         }}
                       >
                         {idx + 1}
@@ -546,27 +537,26 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        bg={isDroppableSlot ? "accentSubtle" : "surfaceRaised"}
-                        color={isDroppableSlot ? "accent" : "fgMuted"}
+                        bg={isDroppableSlot ? "slotDrop" : "surfaceRaised"}
+                        color={isDroppableSlot ? "slotDropText" : "fgMuted"}
                         fontSize="lg"
-                        fontWeight={600}
-                        // restore dashed border to indicate drop target
+                        fontWeight="600"
+                        // Premium teal dashed border for drop targets
                         border="2px dashed"
                         borderColor={
-                          isDroppableSlot ? "accent" : "borderSubtle"
+                          isDroppableSlot ? "slotBorderDrop" : "borderSubtle"
                         }
-                        boxShadow="0 2px 8px rgba(0,0,0,0.1)"
-                        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                        boxShadow="sm"
+                        transition="all 0.2s ease"
                         cursor={isDroppableSlot ? "copy" : "not-allowed"}
                         _hover={
                           isDroppableSlot
                             ? {
-                                bg: "accentSubtle",
-                                color: "accent",
-                                borderColor: "accent",
+                                bg: "slotDropHover",
+                                color: "slotDropTextHover",
+                                borderColor: "slotBorderDropHover",
                                 transform: "translateY(-2px)",
-                                boxShadow:
-                                  "0 8px 24px rgba(255, 122, 26, 0.25)",
+                                boxShadow: "lg",
                               }
                             : {}
                         }

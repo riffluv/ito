@@ -1,5 +1,6 @@
 "use client";
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
+import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 
 export type GameCardProps = {
@@ -12,6 +13,7 @@ export type GameCardProps = {
   boundary?: boolean;
   variant?: "flat" | "flip";
   flipped?: boolean;
+  waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
 };
 
 export function GameCard({
@@ -24,8 +26,18 @@ export function GameCard({
   boundary = false,
   variant = "flat",
   flipped = false,
+  waitingInCentral = false,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Debug log for Dragon Quest style
+  if (waitingInCentral) {
+    console.log("🐉 Dragon Quest style applied to card:", {
+      name,
+      index,
+      clue,
+    });
+  }
 
   // Shared semantic colors
   const baseGold = "#d4af37";
@@ -86,145 +98,170 @@ export function GameCard({
           }}
         >
           {/* FRONT SIDE - 連想ワード面 */}
-          <div
+          <Box
+            position="absolute"
+            width="100%"
+            height="100%"
             style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
-              padding: "0.75rem 0.85rem 0.75rem",
-              borderRadius: "1rem",
-              border: `2px solid ${baseGold}`,
-              backgroundColor: "#1a1a1a",
-              color: "#ffffff",
-              display: "grid",
-              gridTemplateRows: "16px 1fr 16px",
-              alignItems: "stretch",
-              boxShadow: isHovered
-                ? "0 8px 25px rgba(0,0,0,0.3)"
-                : "0 4px 12px rgba(0,0,0,0.15)",
             }}
+            p={{ base: 3, md: "13px" }}
+            borderRadius="lg"
+            border={
+              waitingInCentral
+                ? "3px solid #ffffff"
+                : "2px solid"
+            }
+            borderColor={waitingInCentral ? undefined : "cardBorder"}
+            bg={waitingInCentral ? "#191b21" : "cardFront"}
+            color={waitingInCentral ? "#ffffff" : "cardFrontText"}
+            display="grid"
+            gridTemplateRows="16px 1fr 16px"
+            alignItems="stretch"
+            boxShadow={
+              waitingInCentral
+                ? "0 4px 12px rgba(0,0,0,0.15)"
+                : isHovered
+                  ? "lg"
+                  : "md"
+            }
+            transition="all 0.3s ease"
           >
-            <div
-              style={{
-                fontSize: "0.65rem",
-                lineHeight: 1,
-                color: "#999",
-                display: "flex",
-                alignItems: "center",
-              }}
+            <Box
+              fontSize="2xs"
+              lineHeight="1"
+              color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"}
+              display="flex"
+              alignItems="center"
             >
               #{typeof index === "number" ? index + 1 : "?"}
-            </div>
-            <div style={{ position: "relative" }}>
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontWeight: 700,
-                  fontSize: "1.22rem",
-                  textAlign: "center",
-                  lineHeight: 1.15,
-                  width: "100%",
-                  padding: "0 0.25rem",
-                  wordBreak: "keep-all",
-                }}
+            </Box>
+            <Box position="relative">
+              <Box
+                position="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                fontWeight="700"
+                fontSize={{ base: "lg", md: "xl" }}
+                textAlign="center"
+                lineHeight="1.15"
+                width="100%"
+                px="1"
+                wordBreak="keep-all"
+                color={waitingInCentral ? "#ffffff" : "cardClueText"}
+                style={
+                  waitingInCentral
+                    ? {
+                        textShadow: "none",
+                      }
+                    : undefined
+                }
               >
                 {clue || "(連想なし)"}
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                lineHeight: 1,
-                color: "#999",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                textAlign: "left",
-              }}
+              </Box>
+            </Box>
+            <Box
+              fontSize="2xs"
+              lineHeight="1"
+              color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "cardMeta"}
+              display="flex"
+              alignItems="center"
+              justifyContent="flex-start"
+              textAlign="left"
             >
               {name ?? "(不明)"}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
           {/* BACK SIDE - 数字面 */}
-          <div
+          <Box
+            position="absolute"
+            width="100%"
+            height="100%"
             style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
-              padding: "0.75rem 0.85rem 0.75rem",
-              borderRadius: "1rem",
-              border: `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
-              backgroundColor: "#1a1a1a",
-              boxShadow:
-                state === "success"
-                  ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
-                  : state === "fail"
-                    ? mergeShadow(
-                        "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
-                      )
-                    : isHovered
-                      ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
-                      : mergeShadow("0 4px 12px rgba(0,0,0,0.15)"),
-              color: "white",
-              display: "grid",
-              gridTemplateRows: "16px 1fr 16px",
             }}
+            p={{ base: 3, md: "13px" }}
+            borderRadius="lg"
+            border={
+              waitingInCentral
+                ? "3px solid #ffffff"
+                : "2px solid"
+            }
+            borderColor={
+              waitingInCentral
+                ? undefined
+                : state === "success"
+                  ? "cardSuccessBorder"
+                  : state === "fail"
+                    ? "cardFailBorder"
+                    : "cardBorder"
+            }
+            bg={waitingInCentral ? "#191b21" : "cardBack"}
+            boxShadow={
+              waitingInCentral
+                ? "0 4px 12px rgba(0,0,0,0.15)"
+                : state === "success"
+                  ? "success"
+                  : state === "fail"
+                    ? "fail"
+                    : isHovered
+                      ? "lg"
+                      : "md"
+            }
+            color={waitingInCentral ? "#ffffff" : "cardBackText"}
+            display="grid"
+            gridTemplateRows="16px 1fr 16px"
+            transition="all 0.3s ease"
           >
-            <div
-              style={{
-                fontSize: "0.65rem",
-                lineHeight: 1,
-                color: "rgba(255,255,255,0.75)",
-                display: "flex",
-                alignItems: "center",
-              }}
+            <Box
+              fontSize="2xs"
+              lineHeight="1"
+              color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"}
+              display="flex"
+              alignItems="center"
             >
               #{typeof index === "number" ? index + 1 : "?"}
-            </div>
-            <div style={{ position: "relative" }}>
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontWeight: 900,
-                  fontSize: backNumberFontSize,
-                  color: "#d4af37",
-                  lineHeight: 1,
-                  textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-                  width: "100%",
-                  textAlign: "center",
-                  whiteSpace: "nowrap",
-                  letterSpacing: digits >= 3 ? "-1px" : undefined,
-                }}
+            </Box>
+            <Box position="relative">
+              <Box
+                position="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                fontWeight="900"
+                fontSize={backNumberFontSize}
+                color={waitingInCentral ? "#ffffff" : "cardNumber"}
+                lineHeight="1"
+                textShadow={
+                  waitingInCentral
+                    ? "none"
+                    : "cardNumberShadow"
+                }
+                width="100%"
+                textAlign="center"
+                whiteSpace="nowrap"
+                letterSpacing={digits >= 3 ? "-1px" : undefined}
               >
                 {typeof number === "number" ? number : ""}
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                lineHeight: 1,
-                color: "rgba(255,255,255,0.75)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                textAlign: "left",
-              }}
+              </Box>
+            </Box>
+            <Box
+              fontSize="2xs"
+              lineHeight="1"
+              color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "cardMeta"}
+              display="flex"
+              alignItems="center"
+              justifyContent="flex-start"
+              textAlign="left"
             >
               {name ?? "(不明)"}
-            </div>
-          </div>
+            </Box>
+          </Box>
         </div>
       </div>
     );
@@ -243,16 +280,21 @@ export function GameCard({
         height: "auto",
         padding: "0.75rem 0.85rem 0.75rem",
         borderRadius: "1rem",
-        border: `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
-        backgroundColor: "#1a1a1a",
-        color: "#ffffff",
+        border: waitingInCentral
+          ? "3px solid #ffffff" // Clean white border for waiting cards
+          : `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
+        backgroundColor: waitingInCentral
+          ? "#191b21" // Rich black background same as theme
+          : "#1a1a1a",
+        color: waitingInCentral ? "#ffffff" : "#ffffff",
         display: "grid",
         gridTemplateRows: "16px 1fr 16px",
         cursor: "pointer",
         transform: hoverTransform,
         transition: `all 0.3s ${HOVER_EASING}`,
-        boxShadow:
-          state === "success"
+        boxShadow: waitingInCentral
+          ? "0 4px 12px rgba(0,0,0,0.15)" // Minimal shadow for waiting cards
+          : state === "success"
             ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
             : state === "fail"
               ? mergeShadow(
@@ -270,7 +312,7 @@ export function GameCard({
         style={{
           fontSize: "0.65rem",
           lineHeight: 1,
-          color: "#999",
+          color: waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "#999", // White text for waiting cards
           display: "flex",
           alignItems: "center",
         }}
@@ -295,10 +337,17 @@ export function GameCard({
                     return "1.9rem";
                   })()
                 : "1.22rem",
-            color: typeof number === "number" ? "#d4af37" : "#ffffff",
+            color: waitingInCentral
+              ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
+              : typeof number === "number"
+                ? "#d4af37"
+                : "#ffffff",
             lineHeight: 1.05,
-            textShadow:
-              typeof number === "number" ? "0 2px 4px rgba(0,0,0,0.5)" : "none",
+            textShadow: waitingInCentral
+              ? "none" // Clean white text without shadow for waiting cards
+              : typeof number === "number"
+                ? "0 2px 4px rgba(0,0,0,0.5)"
+                : "none",
             width: "100%",
             textAlign: "center",
             padding: "0 0.25rem",
@@ -317,7 +366,7 @@ export function GameCard({
         style={{
           fontSize: "0.65rem",
           lineHeight: 1,
-          color: "#999",
+          color: waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "#999", // White text for waiting cards
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-start",

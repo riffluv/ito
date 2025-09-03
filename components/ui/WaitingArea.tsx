@@ -10,7 +10,7 @@ export interface WaitingAreaProps {
   title?: string;
 }
 
-export default function WaitingArea({ players, title = "未提出の参加者" }: WaitingAreaProps) {
+export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
   return (
     <Box
       position="fixed"
@@ -24,16 +24,18 @@ export default function WaitingArea({ players, title = "未提出の参加者" }
       borderWidth="0"
       css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
     >
-      <Text
-        textAlign="center"
-        fontWeight={600}
-        fontSize="14px"
-        letterSpacing="1px"
-        color="rgba(160,133,91,1)"
-        mb={3}
-      >
-        {title}
-      </Text>
+      {title && (
+        <Text
+          textAlign="center"
+          fontWeight={600}
+          fontSize="14px"
+          letterSpacing="1px"
+          color="rgba(160,133,91,1)"
+          mb={3}
+        >
+          {title}
+        </Text>
+      )}
 
       <Box display="flex" gap={3} flexWrap="wrap" justifyContent="center">
         {players.map((p) => (
