@@ -50,32 +50,12 @@ export function useDropHandler({
     return !!cluesReady;
   }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady, meId, orderList]);
 
-  // 順次モード: 次に配置可能な位置を計算
-  const nextSequentialPosition = useMemo(() => {
-    const mode = normalizeResolveMode(resolveMode);
-    if (isSortSubmit(mode)) return -1; // 一括モードでは制限なし
-    
-    const placed = orderList || [];
-    return placed.length; // 次の位置は現在の長さと同じインデックス
-  }, [resolveMode, orderList]);
-
-  // 順次モード: 指定位置にドロップ可能かチェック
+  // Sort-submit mode only: position dropping always allowed
   const canDropAtPosition = useMemo(() => {
     return (targetIndex: number) => {
-      if (!canDrop) return false;
-      const mode = normalizeResolveMode(resolveMode);
-      if (isSortSubmit(mode)) return true; // 一括モードでは制限なし
-      
-      // 順次モードでの柔軟な位置制限: 次の位置か、直前の位置まで許可
-      const allowedPositions = [nextSequentialPosition];
-      // アニメーション期間中の競合を避けるため、直前の位置も許可
-      if (nextSequentialPosition > 0) {
-        allowedPositions.push(nextSequentialPosition - 1);
-      }
-      
-      return allowedPositions.includes(targetIndex);
+      return canDrop; // Always allow dropping at any position in sort-submit mode
     };
-  }, [canDrop, resolveMode, nextSequentialPosition]);
+  }, [canDrop]);
 
   const currentPlaced = useMemo(() => {
     const base = orderList || [];
@@ -105,39 +85,11 @@ export function useDropHandler({
       return;
     }
 
-    if (isSortSubmit(normalizeResolveMode(resolveMode))) {
-      try {
-        await addCardToProposal(roomId, meId);
-        setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-        notify({ title: "カードを場に置きました", type: "success" });
-      } catch (err: any) {
-        notify({
-          title: "配置に失敗しました",
-          description: err?.message,
-          type: "error",
-        });
-      }
-      return;
-    }
-
-    // 順次モードでの重複チェックを改善
-    if (orderList && orderList.includes(meId)) {
-      notify({ title: "既にカードを出しています", type: "info" });
-      return;
-    }
-
-    if (!cluesReady) {
-      notify({
-        title: "全員が連想ワードを決定してから出してください",
-        type: "info",
-      });
-      return;
-    }
-
+    // Only sort-submit mode is supported
     try {
-      await commitPlayFromClue(roomId, meId);
+      await addCardToProposal(roomId, meId);
       setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-      notify({ title: "カードを場に置きました（判定実行）", type: "success" });
+      notify({ title: "カードを場に置きました", type: "success" });
     } catch (err: any) {
       notify({
         title: "配置に失敗しました",
@@ -147,26 +99,13 @@ export function useDropHandler({
     }
   };
 
-  // 順次モード用: 位置指定ドロップハンドラー
+  // Sort-submit mode: position drop handler (simplified)
   const onDropAtPosition = async (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
     const pid = e.dataTransfer.getData("text/plain");
     if (!pid) return;
 
     setIsOver(false);
-
-    // 順次モードでの位置制限チェック
-    if (!canDropAtPosition(targetIndex)) {
-      const mode = normalizeResolveMode(resolveMode);
-      if (!isSortSubmit(mode)) {
-        notify({ 
-          title: "順番に出してください", 
-          description: `${nextSequentialPosition + 1}番目の位置に出してください`,
-          type: "info" 
-        });
-        return;
-      }
-    }
 
     if (!canDrop) {
       notify({ title: "今はここに置けません", type: "info" });
@@ -183,39 +122,11 @@ export function useDropHandler({
       return;
     }
 
-    if (isSortSubmit(normalizeResolveMode(resolveMode))) {
-      try {
-        await addCardToProposal(roomId, meId);
-        setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-        notify({ title: "カードを場に置きました", type: "success" });
-      } catch (err: any) {
-        notify({
-          title: "配置に失敗しました",
-          description: err?.message,
-          type: "error",
-        });
-      }
-      return;
-    }
-
-    // 順次モードでの重複チェック
-    if (orderList && orderList.includes(meId)) {
-      notify({ title: "既にカードを出しています", type: "info" });
-      return;
-    }
-
-    if (!cluesReady) {
-      notify({
-        title: "全員が連想ワードを決定してから出してください",
-        type: "info",
-      });
-      return;
-    }
-
+    // Only sort-submit mode is supported
     try {
-      await commitPlayFromClue(roomId, meId);
+      await addCardToProposal(roomId, meId);
       setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-      notify({ title: "カードを場に置きました（判定実行）", type: "success" });
+      notify({ title: "カードを場に置きました", type: "success" });
     } catch (err: any) {
       notify({
         title: "配置に失敗しました",
@@ -234,7 +145,6 @@ export function useDropHandler({
     currentPlaced,
     onDrop,
     onDropAtPosition,
-    nextSequentialPosition,
     canDropAtPosition,
   };
 }

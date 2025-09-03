@@ -40,17 +40,16 @@ export function GameCard({
   }
 
   // Shared semantic colors
-  const baseGold = "#d4af37";
   const failColor = "#dc2626";
   const successStrong = "#22c55e";
   const mildGlow = "0 0 0 2px rgba(34,197,94,0.18)";
   const strongGlow = "0 0 0 3px rgba(34,197,94,0.35)";
   const successBorder =
     state === "success"
-      ? successLevel === "mild"
-        ? baseGold
-        : successStrong
-      : baseGold;
+      ? "#3b82f6" // Blue for success
+      : state === "fail" 
+        ? failColor // Red for failure
+        : "#ffffff"; // White for default/pending
   const successShadow =
     state === "success"
       ? successLevel === "mild"
@@ -111,9 +110,19 @@ export function GameCard({
             border={
               waitingInCentral
                 ? "3px solid #ffffff"
-                : "2px solid"
+                : state === "default"
+                  ? "1.5px dashed"
+                  : "1.5px solid"
             }
-            borderColor={waitingInCentral ? undefined : "cardBorder"}
+            borderColor={
+              waitingInCentral 
+                ? undefined 
+                : state === "success"
+                  ? "#3b82f6" // Blue for success
+                  : state === "fail"
+                    ? failColor // Red for failure
+                    : "#ffffff" // White for default/pending
+            }
             bg={waitingInCentral ? "#191b21" : "cardFront"}
             color={waitingInCentral ? "#ffffff" : "cardFrontText"}
             display="grid"
@@ -190,16 +199,18 @@ export function GameCard({
             border={
               waitingInCentral
                 ? "3px solid #ffffff"
-                : "2px solid"
+                : state === "default"
+                  ? "1.5px dashed"
+                  : "1.5px solid"
             }
             borderColor={
               waitingInCentral
                 ? undefined
                 : state === "success"
-                  ? "cardSuccessBorder"
+                  ? "#3b82f6" // Blue for success
                   : state === "fail"
-                    ? "cardFailBorder"
-                    : "cardBorder"
+                    ? failColor // Red for failure
+                    : "#ffffff" // White for default/pending
             }
             bg={waitingInCentral ? "#191b21" : "cardBack"}
             boxShadow={
@@ -282,7 +293,9 @@ export function GameCard({
         borderRadius: "1rem",
         border: waitingInCentral
           ? "3px solid #ffffff" // Clean white border for waiting cards
-          : `2px solid ${state === "success" ? successBorder : state === "fail" ? failColor : baseGold}`,
+          : state === "default"
+            ? "1.5px dashed #ffffff" // Match empty slots when pending
+            : `1.5px solid ${state === "success" ? "#3b82f6" : failColor}`,
         backgroundColor: waitingInCentral
           ? "#191b21" // Rich black background same as theme
           : "#1a1a1a",
@@ -339,9 +352,11 @@ export function GameCard({
                 : "1.22rem",
             color: waitingInCentral
               ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
-              : typeof number === "number"
-                ? "#d4af37"
-                : "#ffffff",
+              : state === "success"
+                ? "#3b82f6" // Blue for success
+                : state === "fail"
+                  ? failColor // Red for failure  
+                  : "#ffffff", // White for pending/default
             lineHeight: 1.05,
             textShadow: waitingInCentral
               ? "none" // Clean white text without shadow for waiting cards
