@@ -422,7 +422,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               >
                 <SortableContext items={activeProposal}>
                   {/* Empty slots for placement - optimized for 8+ players */}
-                  {eligibleIds.map((_, idx) => {
+                  {Array.from({ length: Math.max(eligibleIds.length, players.length) }).map((_, idx) => {
                     // Prefer proposal value, but fall back to locally optimistic
                     // `pending` so the UI doesn't temporarily show an empty
                     // slot if `proposal` briefly mutates.
@@ -477,11 +477,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             ) : (
               <>
                 {/* Static game state: use eligible slots count - optimized */}
-                {eligibleIds
-                  .slice(
-                    0,
-                    Math.min(eligibleIds.length, (orderList?.length || 0) + 1)
-                  )
+                {Array.from({ 
+                  length: Math.max(eligibleIds.length, players.length) 
+                })
                   .map((_, idx) => {
                     // Prefer confirmed orderList entry; fall back to locally pending
                     // placement so the first card appears immediately in the slot
