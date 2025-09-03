@@ -228,6 +228,7 @@ export default function MainMenu() {
                   visual="solid"
                   palette="brand"
                   onClick={openCreateFlow}
+                  leftIcon={<Plus size={20} />}
                   css={{
                     minW: "200px",
                     height: "56px",
@@ -251,7 +252,6 @@ export default function MainMenu() {
                     },
                   }}
                 >
-                  <Plus size={20} style={{ marginRight: "8px" }} />
                   新しいルームを作成
                 </AppButton>
 
@@ -259,6 +259,7 @@ export default function MainMenu() {
                   size="lg"
                   visual="outline"
                   onClick={() => router.push("/rules")}
+                  leftIcon={<BookOpen size={20} />}
                   css={{
                     minW: "160px",
                     height: "56px",
@@ -277,7 +278,6 @@ export default function MainMenu() {
                     },
                   }}
                 >
-                  <BookOpen size={20} style={{ marginRight: "8px" }} />
                   ルール説明
                 </AppButton>
               </HStack>
@@ -459,6 +459,7 @@ export default function MainMenu() {
                   onClick={openCreateFlow}
                   visual="solid"
                   palette="brand"
+                  leftIcon={<Plus size={18} />}
                   css={{
                     borderRadius: "12px",
                     background:
@@ -466,7 +467,6 @@ export default function MainMenu() {
                     boxShadow: "0 4px 12px rgba(107,115,255,0.3)",
                   }}
                 >
-                  <Plus size={18} style={{ marginRight: "8px" }} />
                   新しいルーム作成
                 </AppButton>
               </Box>
@@ -579,6 +579,7 @@ export default function MainMenu() {
                     <AppButton
                       size="sm"
                       visual="ghost"
+                      leftIcon={<BookOpen size={16} />}
                       onClick={() => router.push("/rules")}
                       css={{
                         justifyContent: "flex-start",
@@ -590,13 +591,13 @@ export default function MainMenu() {
                         },
                       }}
                     >
-                      <BookOpen size={16} style={{ marginRight: "8px" }} />
                       ルール説明を読む
                     </AppButton>
 
                     <AppButton
                       size="sm"
                       visual="ghost"
+                      leftIcon={<Heart size={16} />}
                       css={{
                         justifyContent: "flex-start",
                         borderRadius: "10px",
@@ -607,7 +608,6 @@ export default function MainMenu() {
                         },
                       }}
                     >
-                      <Heart size={16} style={{ marginRight: "8px" }} />
                       フィードバック
                     </AppButton>
                   </VStack>

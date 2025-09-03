@@ -1,8 +1,7 @@
 "use client";
-import { AppCard } from "@/components/ui/AppCard";
-import { Box, HStack, Stack, Text, Badge, VStack } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
-import { Users, Clock, Play, UserCheck } from "lucide-react";
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { Play, UserCheck, Users } from "lucide-react";
 
 export function RoomCard({
   name,
@@ -17,7 +16,7 @@ export function RoomCard({
 }) {
   const statusLabel = status === "waiting" ? "待機中" : "ゲーム中";
   const isWaiting = status === "waiting";
-  
+
   return (
     <Box
       role="group"
@@ -46,26 +45,22 @@ export function RoomCard({
           boxShadow: "0 8px 32px rgba(107,115,255,0.2)",
           _before: {
             opacity: 1,
-          }
+          },
         }}
         _before={{
           content: '""',
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          borderRadius: '20px',
-          background: 'linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)',
+          borderRadius: "20px",
+          background:
+            "linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)",
           opacity: 0,
-          transition: 'opacity 0.3s ease',
-          pointerEvents: 'none'
+          transition: "opacity 0.3s ease",
+          pointerEvents: "none",
         }}
       >
         {/* Status indicator */}
-        <Box
-          position="absolute"
-          top={4}
-          right={4}
-          zIndex={2}
-        >
+        <Box position="absolute" top={4} right={4} zIndex={2}>
           <Badge
             variant={isWaiting ? "subtle" : "solid"}
             colorPalette={isWaiting ? "green" : "orange"}
@@ -94,12 +89,12 @@ export function RoomCard({
                 textOverflow: "ellipsis",
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical"
+                WebkitBoxOrient: "vertical",
               }}
             >
               {name}
             </Text>
-            
+
             {/* Room stats */}
             <HStack gap={4} opacity={0.8}>
               <HStack gap={1.5}>
@@ -108,11 +103,15 @@ export function RoomCard({
                   {count}人参加中
                 </Text>
               </HStack>
-              
+
               {isWaiting && (
                 <HStack gap={1.5}>
                   <UserCheck size={14} color="rgba(34,197,94,0.8)" />
-                  <Text fontSize="sm" color="rgba(34,197,94,0.8)" fontWeight={500}>
+                  <Text
+                    fontSize="sm"
+                    color="rgba(34,197,94,0.8)"
+                    fontWeight={500}
+                  >
                     参加可能
                   </Text>
                 </HStack>
@@ -130,20 +129,24 @@ export function RoomCard({
               width: "100%",
               borderRadius: "12px",
               fontWeight: 600,
-              ...(isWaiting ? {
-                background: "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
-                boxShadow: "0 2px 8px rgba(107,115,255,0.3)",
-                _hover: {
-                  transform: "translateY(-1px)",
-                  boxShadow: "0 4px 16px rgba(107,115,255,0.4)",
-                  background: "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
-                },
-              } : {
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "fgMuted",
-                cursor: "not-allowed",
-              }),
+              ...(isWaiting
+                ? {
+                    background:
+                      "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
+                    boxShadow: "0 2px 8px rgba(107,115,255,0.3)",
+                    _hover: {
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 16px rgba(107,115,255,0.4)",
+                      background:
+                        "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
+                    },
+                  }
+                : {
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "fgMuted",
+                    cursor: "not-allowed",
+                  }),
             }}
             onClick={(e) => {
               e.stopPropagation();

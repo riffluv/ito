@@ -10,11 +10,10 @@ import {
   Dialog,
   Field,
   HStack,
+  IconButton,
   Input,
-  Stack,
   Text,
   VStack,
-  IconButton,
 } from "@chakra-ui/react";
 import {
   addDoc,
@@ -23,9 +22,9 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { AlertCircle, Sparkles, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { X, Users, Sparkles, AlertCircle } from "lucide-react";
 
 export function CreateRoomModal({
   isOpen,
@@ -119,11 +118,12 @@ export function CreateRoomModal({
           backdropFilter: "blur(12px) saturate(1.2)",
         }}
       />
-      
+
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "linear-gradient(135deg, rgba(15,16,20,0.98) 0%, rgba(25,27,33,0.98) 100%)",
+            background:
+              "linear-gradient(135deg, rgba(15,16,20,0.98) 0%, rgba(25,27,33,0.98) 100%)",
             border: "1px solid rgba(107,115,255,0.2)",
             borderRadius: "24px",
             boxShadow: `
@@ -140,11 +140,12 @@ export function CreateRoomModal({
           }}
           _before={{
             content: '""',
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            borderRadius: '24px',
-            background: 'linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)',
-            pointerEvents: 'none'
+            borderRadius: "24px",
+            background:
+              "linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)",
+            pointerEvents: "none",
           }}
         >
           {/* Close button */}
@@ -173,12 +174,7 @@ export function CreateRoomModal({
           </IconButton>
 
           {/* Header */}
-          <Box
-            p={8}
-            pb={6}
-            position="relative"
-            zIndex={1}
-          >
+          <Box p={8} pb={6} position="relative" zIndex={1}>
             <HStack gap={4} align="center" mb={4}>
               <Box
                 w={14}
@@ -192,7 +188,7 @@ export function CreateRoomModal({
               >
                 <Sparkles size={24} color="white" />
               </Box>
-              
+
               <VStack align="start" gap={1}>
                 <Dialog.Title
                   css={{
@@ -201,12 +197,17 @@ export function CreateRoomModal({
                     color: "white",
                     margin: 0,
                     letterSpacing: "-0.02em",
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
+                    fontFamily:
+                      "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
                   }}
                 >
                   新しいルームを作成
                 </Dialog.Title>
-                <Text fontSize="md" color="rgba(255,255,255,0.7)" fontWeight={500}>
+                <Text
+                  fontSize="md"
+                  color="rgba(255,255,255,0.7)"
+                  fontWeight={500}
+                >
                   友達と一緒にITOを楽しもう
                 </Text>
               </VStack>
@@ -232,7 +233,11 @@ export function CreateRoomModal({
                       <Text fontSize="sm" color="white" fontWeight={600}>
                         未ログイン状態
                       </Text>
-                      <Text fontSize="sm" color="rgba(255,255,255,0.8)" lineHeight={1.5}>
+                      <Text
+                        fontSize="sm"
+                        color="rgba(255,255,255,0.8)"
+                        lineHeight={1.5}
+                      >
                         まだサインインしていませんが、ルームは作成できます。
                         後で名前の設定をおすすめします。
                       </Text>
@@ -240,7 +245,7 @@ export function CreateRoomModal({
                   </HStack>
                 </Box>
               )}
-              
+
               <Field.Root>
                 <Field.Label
                   css={{
@@ -285,12 +290,7 @@ export function CreateRoomModal({
           </Box>
 
           {/* Footer */}
-          <Box
-            p={8}
-            pt={0}
-            position="relative"
-            zIndex={1}
-          >
+          <Box p={8} pt={0} position="relative" zIndex={1}>
             <HStack justify="flex-end" gap={3}>
               <AppButton
                 onClick={onClose}
@@ -312,7 +312,7 @@ export function CreateRoomModal({
               >
                 キャンセル
               </AppButton>
-              
+
               <AppButton
                 visual="solid"
                 palette="brand"
@@ -326,18 +326,25 @@ export function CreateRoomModal({
                   borderRadius: "14px",
                   fontWeight: 700,
                   fontSize: "1rem",
-                  background: submitting || !name.trim() 
-                    ? "rgba(107,115,255,0.3)"
-                    : "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
-                  boxShadow: submitting || !name.trim()
-                    ? "none"
-                    : "0 4px 20px rgba(107,115,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                  background:
+                    submitting || !name.trim()
+                      ? "rgba(107,115,255,0.3)"
+                      : "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
+                  boxShadow:
+                    submitting || !name.trim()
+                      ? "none"
+                      : "0 4px 20px rgba(107,115,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  _hover: submitting || !name.trim() ? {} : {
-                    transform: "translateY(-2px)",
-                    background: "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
-                    boxShadow: "0 8px 32px rgba(107,115,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
-                  },
+                  _hover:
+                    submitting || !name.trim()
+                      ? {}
+                      : {
+                          transform: "translateY(-2px)",
+                          background:
+                            "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
+                          boxShadow:
+                            "0 8px 32px rgba(107,115,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
+                        },
                   _active: {
                     transform: "translateY(0px)",
                   },

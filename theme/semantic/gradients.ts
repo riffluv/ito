@@ -1,4 +1,25 @@
 export const semanticGradients = {
+  // === Core UI gradients (Chakra-inspired) ===
+  primaryBrand: {
+    value: "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
+  },
+  primaryBrandSubtle: {
+    value:
+      "linear-gradient(135deg, rgba(107,115,255,0.1) 0%, rgba(153,69,255,0.05) 100%)",
+  },
+  accentWarm: {
+    value: "linear-gradient(135deg, #F7931E 0%, #FF6B35 100%)",
+  },
+  heroBackground: {
+    value:
+      "radial-gradient(ellipse 150% 100% at 50% 0%, rgba(107,115,255,0.15) 0%, rgba(153,69,255,0.08) 25%, transparent 60%)",
+  },
+  heroOverlay: {
+    value:
+      "linear-gradient(135deg, rgba(107,115,255,0.05) 0%, transparent 50%, rgba(247,147,30,0.03) 100%)",
+  },
+
+  // === Legacy gradients (preserved for compatibility) ===
   accentSoft: { value: "{gradients.accentSoft}" },
   dangerStrong: { value: "{gradients.dangerStrong}" },
   playerNumber: { value: "{gradients.playerNumber}" },
