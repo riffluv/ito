@@ -231,7 +231,7 @@ export default function MainMenu() {
                   css={{
                     minW: "200px",
                     height: "56px",
-                    borderRadius: "16px",
+                    borderRadius: "lg",
                     fontSize: "lg",
                     fontWeight: 600,
                     background:
@@ -262,7 +262,7 @@ export default function MainMenu() {
                   css={{
                     minW: "160px",
                     height: "56px",
-                    borderRadius: "16px",
+                    borderRadius: "lg",
                     fontSize: "lg",
                     fontWeight: 500,
                     border: "2px solid rgba(255,255,255,0.15)",
@@ -317,7 +317,7 @@ export default function MainMenu() {
                   <Box
                     w={10}
                     h={10}
-                    borderRadius="12px"
+                    borderRadius="lg"
                     bg="linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)"
                     display="flex"
                     alignItems="center"
@@ -355,7 +355,7 @@ export default function MainMenu() {
               <Box
                 p={12}
                 textAlign="center"
-                borderRadius="20px"
+                borderRadius="xl"
                 border="2px solid rgba(239,68,68,0.2)"
                 bg="rgba(239,68,68,0.05)"
               >
@@ -384,7 +384,7 @@ export default function MainMenu() {
                   <Box
                     key={i}
                     h="200px"
-                    borderRadius="16px"
+                    borderRadius="xl"
                     bg="surfaceRaised"
                     opacity={0.6}
                     css={{
@@ -432,7 +432,7 @@ export default function MainMenu() {
                 textAlign="center"
                 py={16}
                 px={8}
-                borderRadius="20px"
+                borderRadius="xl"
                 border="2px dashed rgba(255,255,255,0.1)"
                 bg="rgba(255,255,255,0.02)"
               >
@@ -441,7 +441,7 @@ export default function MainMenu() {
                   h={16}
                   mx="auto"
                   mb={6}
-                  borderRadius="16px"
+                  borderRadius="xl"
                   bg="linear-gradient(135deg, rgba(107,115,255,0.2) 0%, rgba(153,69,255,0.1) 100%)"
                   display="flex"
                   alignItems="center"
@@ -479,7 +479,7 @@ export default function MainMenu() {
               {/* Player Profile Card */}
               <Box
                 p={6}
-                borderRadius="20px"
+                borderRadius="xl"
                 border="1px solid rgba(255,255,255,0.1)"
                 bg="rgba(255,255,255,0.03)"
                 backdropFilter="blur(20px)"
@@ -499,7 +499,7 @@ export default function MainMenu() {
                     <Box
                       w={12}
                       h={12}
-                      borderRadius="12px"
+                      borderRadius="lg"
                       bg="linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)"
                       display="flex"
                       alignItems="center"
@@ -559,7 +559,7 @@ export default function MainMenu() {
               {/* Quick Actions */}
               <Box
                 p={6}
-                borderRadius="20px"
+                borderRadius="xl"
                 border="1px solid rgba(255,255,255,0.1)"
                 bg="rgba(255,255,255,0.03)"
                 backdropFilter="blur(20px)"
@@ -582,7 +582,7 @@ export default function MainMenu() {
                       onClick={() => router.push("/rules")}
                       css={{
                         justifyContent: "flex-start",
-                        borderRadius: "10px",
+                        borderRadius: "md",
                         background: "rgba(255,255,255,0.03)",
                         _hover: {
                           background: "rgba(247,147,30,0.1)",
@@ -599,7 +599,7 @@ export default function MainMenu() {
                       visual="ghost"
                       css={{
                         justifyContent: "flex-start",
-                        borderRadius: "10px",
+                        borderRadius: "md",
                         background: "rgba(255,255,255,0.03)",
                         _hover: {
                           background: "rgba(239,68,68,0.1)",
@@ -617,7 +617,7 @@ export default function MainMenu() {
               {/* Game Stats */}
               <Box
                 p={6}
-                borderRadius="20px"
+                borderRadius="xl"
                 border="1px solid rgba(255,255,255,0.1)"
                 bg="rgba(255,255,255,0.03)"
                 backdropFilter="blur(20px)"

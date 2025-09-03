@@ -9,11 +9,12 @@ export const borderWidths = {
 };
 
 export const radii = {
-  xs: { value: "4px" },
-  sm: { value: "6px" },
-  md: { value: "8px" },
-  lg: { value: "12px" },
-  xl: { value: "16px" },
+  xs: { value: "2px" }, // 0.125rem
+  sm: { value: "4px" }, // 0.25rem
+  md: { value: "6px" }, // 0.375rem (Chakra UI公式)
+  lg: { value: "8px" }, // 0.5rem (Chakra UI公式)
+  xl: { value: "12px" }, // 0.75rem (Chakra UI公式)
+  "2xl": { value: "16px" }, // 1rem (Chakra UI公式)
   full: { value: "9999px" },
 };
 
