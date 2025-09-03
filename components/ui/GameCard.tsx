@@ -112,7 +112,7 @@ export function GameCard({
             borderRadius="lg"
             border={
               waitingInCentral
-                ? "3px solid #ffffff"
+                ? "none"
                 : state === "default"
                   ? "1.5px dashed"
                   : "1.5px solid"
@@ -201,7 +201,7 @@ export function GameCard({
             borderRadius="lg"
             border={
               waitingInCentral
-                ? "3px solid #ffffff"
+                ? "none"
                 : state === "default"
                   ? "1.5px dashed"
                   : "1.5px solid"
@@ -295,7 +295,7 @@ export function GameCard({
         padding: "0.75rem 0.85rem 0.75rem",
         borderRadius: "12px", // lg相当に統一
         border: waitingInCentral
-          ? "3px solid #ffffff" // Clean white border for waiting cards
+          ? "none" // No border for waiting cards
           : state === "default"
             ? "1.5px dashed #ffffff" // Match empty slots when pending
             : `1.5px solid ${state === "success" ? "#3b82f6" : failColor}`,
