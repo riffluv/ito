@@ -441,8 +441,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         key={`slot-${idx}`}
                         data-slot
                         aspectRatio="5/7"
-                        width={UNIFIED_LAYOUT.CARD.WIDTH}
-                        placeSelf="start"
+                        width="120px"
+                        alignSelf="flex-start"
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
@@ -546,8 +546,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                               }
                             : {}
                         }
-                        css={{ aspectRatio: "5 / 7", placeSelf: "start" }}
-                        width={UNIFIED_LAYOUT.CARD.WIDTH}
+                        css={{ aspectRatio: "5 / 7" }}
+                        alignSelf="flex-start"
+                        width="120px"
                       >
                         {idx + 1}
                       </Box>
