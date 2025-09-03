@@ -1,5 +1,6 @@
 "use client";
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 
@@ -79,9 +80,11 @@ export function GameCard({
       <div
         style={{
           perspective: "1000px",
-          width: "120px",
           aspectRatio: "5 / 7",
           height: "auto",
+        }}
+        style={{
+          width: "120px", // 固定サイズで統一
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -286,11 +289,11 @@ export function GameCard({
   return (
     <div
       style={{
-        width: "120px",
+        width: "120px", // 固定サイズで統一
         aspectRatio: "5 / 7",
         height: "auto",
         padding: "0.75rem 0.85rem 0.75rem",
-        borderRadius: "1rem",
+        borderRadius: "12px", // lg相当に統一
         border: waitingInCentral
           ? "3px solid #ffffff" // Clean white border for waiting cards
           : state === "default"
