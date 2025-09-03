@@ -6,14 +6,14 @@ import system from "@/theme";
 import { Box, ChakraProvider } from "@chakra-ui/react";
 import { useEffect } from "react";
 
-function LightModeOnlyBridge() {
-  // ライトモード1本集中 - data-theme を light に固定
+function DarkModeOnlyBridge() {
+  // ダークモード1本集中 - data-theme を dark に固定
   useEffect(() => {
     if (typeof document === "undefined") return;
     const el = document.documentElement;
-    // ライトモード固定
-    el.classList.remove("dark");
-    el.setAttribute("data-theme", "light");
+    // ダークモード固定
+    el.classList.add("dark");
+    el.setAttribute("data-theme", "dark");
   }, []);
   return null;
 }
@@ -21,11 +21,11 @@ function LightModeOnlyBridge() {
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ChakraProvider value={system}>
-      {/* next-themes を完全除去 - ライトモード固定 */}
+      {/* next-themes を完全除去 - ダークモード固定 */}
       <ThemePresetProvider>
         <AuthProvider>
           <Box bg="canvasBg" color="fgDefault" h="100dvh">
-            <LightModeOnlyBridge />
+            <DarkModeOnlyBridge />
             {children}
             <Toaster />
           </Box>
