@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface ArtifactResultProps {
@@ -9,7 +8,12 @@ export interface ArtifactResultProps {
   onClose?: () => void; // 開発中は使用しない（外部から制御）
 }
 
-export default function ArtifactResultOverlay({ success, correctCount, totalCount, onClose }: ArtifactResultProps) {
+export default function ArtifactResultOverlay({
+  success,
+  correctCount,
+  totalCount,
+  onClose,
+}: ArtifactResultProps) {
   // 自動クローズは開発時の警告を避けるため無効化（ユーザークリックで閉じる）
   return (
     <Box
@@ -47,9 +51,9 @@ export default function ArtifactResultOverlay({ success, correctCount, totalCoun
           fontWeight={600}
           letterSpacing="-0.02em"
           opacity={0}
-          display="flex" 
-          alignItems="center" 
-          justifyContent="center" 
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
           gap={3}
           css={{
             color: success ? "rgba(255,255,255,0.95)" : "rgba(239,68,68,1)",
@@ -68,14 +72,17 @@ export default function ArtifactResultOverlay({ success, correctCount, totalCoun
           fontWeight={500}
           color="rgba(255,255,255,0.8)"
           opacity={0}
-          css={{ 
+          css={{
             animation: "subIn 500ms ease-out 600ms forwards",
-            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
+            fontFamily:
+              '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
           }}
         >
           {typeof correctCount === "number" && typeof totalCount === "number"
             ? `${correctCount}/${totalCount} 正解`
-            : "完璧な順序でクリア"}
+            : success
+              ? "完璧な順序でクリア"
+              : "うーん、今回は失敗。気楽にリトライしよう！"}
         </Text>
       </Box>
     </Box>
