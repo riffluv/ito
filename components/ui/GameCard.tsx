@@ -17,6 +17,28 @@ export type GameCardProps = {
   waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
 };
 
+// 統一されたボーダー設定関数
+const getBorderStyle = (waitingInCentral: boolean, state: string) => {
+  if (waitingInCentral) {
+    return { border: "none", borderColor: undefined };
+  }
+  
+  const borderWidth = "1.5px";
+  const borderStyle = "solid"; // 🎯 統一: 全ての状態で実線ボーダー
+  
+  // テーマトークンを使用した統一ボーダー色
+  const borderColor = state === "success" 
+    ? "borderAccent" // テーマのアクセント色（青系）
+    : state === "fail" 
+      ? "dangerSolid" // テーマの危険色（赤系）
+      : "borderStrong"; // テーマの強い白系ボーダー
+      
+  return {
+    border: `${borderWidth} ${borderStyle}`,
+    borderColor,
+  };
+};
+
 export function GameCard({
   index,
   name,
@@ -30,6 +52,10 @@ export function GameCard({
   waitingInCentral = false,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  
+  
+  // 統一されたボーダースタイルを取得
+  const borderStyle = getBorderStyle(waitingInCentral, state);
 
   // Debug log for Dragon Quest style
   if (waitingInCentral) {
@@ -41,7 +67,6 @@ export function GameCard({
   }
 
   // Shared semantic colors
-  const failColor = "#dc2626";
   const successStrong = "#22c55e";
   const mildGlow = "0 0 0 2px rgba(34,197,94,0.18)";
   const strongGlow = "0 0 0 3px rgba(34,197,94,0.35)";
@@ -49,7 +74,7 @@ export function GameCard({
     state === "success"
       ? "#3b82f6" // Blue for success
       : state === "fail" 
-        ? failColor // Red for failure
+        ? "#dc2626" // Red for failure
         : "#ffffff"; // White for default/pending
   const successShadow =
     state === "success"
@@ -77,15 +102,14 @@ export function GameCard({
     })();
 
     return (
-      <div
+      <Box
         style={{
           perspective: "1000px",
-          aspectRatio: "5 / 7",
-          height: "auto",
         }}
-        style={{
-          width: "120px", // 固定サイズで統一
-        }}
+        width={UNIFIED_LAYOUT.CARD.WIDTH}
+        height={UNIFIED_LAYOUT.CARD.HEIGHT}
+        minW={UNIFIED_LAYOUT.CARD.WIDTH}
+        minH={UNIFIED_LAYOUT.CARD.HEIGHT}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -110,23 +134,9 @@ export function GameCard({
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
-            border={
-              waitingInCentral
-                ? "none"
-                : state === "default"
-                  ? "1.5px dashed"
-                  : "1.5px solid"
-            }
-            borderColor={
-              waitingInCentral 
-                ? undefined 
-                : state === "success"
-                  ? "#3b82f6" // Blue for success
-                  : state === "fail"
-                    ? failColor // Red for failure
-                    : "#ffffff" // White for default/pending
-            }
-            bg={waitingInCentral ? "#191b21" : "cardFront"}
+            border={borderStyle.border}
+            borderColor={borderStyle.borderColor}
+            bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
             color={waitingInCentral ? "#ffffff" : "cardFrontText"}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
@@ -199,23 +209,9 @@ export function GameCard({
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
-            border={
-              waitingInCentral
-                ? "none"
-                : state === "default"
-                  ? "1.5px dashed"
-                  : "1.5px solid"
-            }
-            borderColor={
-              waitingInCentral
-                ? undefined
-                : state === "success"
-                  ? "#3b82f6" // Blue for success
-                  : state === "fail"
-                    ? failColor // Red for failure
-                    : "#ffffff" // White for default/pending
-            }
-            bg={waitingInCentral ? "#191b21" : "cardBack"}
+            border={borderStyle.border}
+            borderColor={borderStyle.borderColor}
+            bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
             boxShadow={
               waitingInCentral
                 ? "0 4px 12px rgba(0,0,0,0.15)"
@@ -277,7 +273,7 @@ export function GameCard({
             </Box>
           </Box>
         </div>
-      </div>
+      </Box>
     );
   }
 
@@ -287,113 +283,107 @@ export function GameCard({
     : "translateY(0) scale(1)";
 
   return (
-    <div
-      style={{
-        width: "120px", // 固定サイズで統一
-        aspectRatio: "5 / 7",
-        height: "auto",
-        padding: "0.75rem 0.85rem 0.75rem",
-        borderRadius: "12px", // lg相当に統一
-        border: waitingInCentral
-          ? "none" // No border for waiting cards
-          : state === "default"
-            ? "1.5px dashed #ffffff" // Match empty slots when pending
-            : `1.5px solid ${state === "success" ? "#3b82f6" : failColor}`,
-        backgroundColor: waitingInCentral
-          ? "#191b21" // Rich black background same as theme
-          : "#1a1a1a",
-        color: waitingInCentral ? "#ffffff" : "#ffffff",
-        display: "grid",
-        gridTemplateRows: "16px 1fr 16px",
-        cursor: "pointer",
-        transform: hoverTransform,
-        transition: `all 0.3s ${HOVER_EASING}`,
-        boxShadow: waitingInCentral
-          ? "0 4px 12px rgba(0,0,0,0.15)" // Minimal shadow for waiting cards
+    <Box
+      width={UNIFIED_LAYOUT.CARD.WIDTH}
+      height={UNIFIED_LAYOUT.CARD.HEIGHT}
+      minW={UNIFIED_LAYOUT.CARD.WIDTH}
+      minH={UNIFIED_LAYOUT.CARD.HEIGHT}
+      p="0.75rem 0.85rem 0.75rem"
+      borderRadius="lg"
+      border={borderStyle.border}
+      borderColor={borderStyle.borderColor}
+      bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
+      color={waitingInCentral ? "#ffffff" : "#ffffff"}
+      display="grid"
+      gridTemplateRows="16px 1fr 16px"
+      cursor="pointer"
+      transform={hoverTransform}
+      transition={`all 0.3s ${HOVER_EASING}`}
+      boxShadow={
+        waitingInCentral
+          ? "0 4px 12px rgba(0,0,0,0.15)"
           : state === "success"
             ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
             : state === "fail"
-              ? mergeShadow(
-                  "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
-                )
+              ? mergeShadow("0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)")
               : isHovered
                 ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
-                : mergeShadow("0 4px 12px rgba(0,0,0,0.15)"),
-      }}
+                : mergeShadow("0 4px 12px rgba(0,0,0,0.15)")
+      }
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div
-        style={{
-          fontSize: "0.65rem",
-          lineHeight: 1,
-          color: waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "#999", // White text for waiting cards
-          display: "flex",
-          alignItems: "center",
-        }}
+      <Box
+        fontSize="2xs"
+        lineHeight={1}
+        color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "#999"}
+        display="flex"
+        alignItems="center"
       >
         #{typeof index === "number" ? index + 1 : "?"}
-      </div>
-      <div style={{ position: "relative" }}>
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            fontWeight: typeof number === "number" ? 900 : 700,
-            fontSize:
-              typeof number === "number"
-                ? (() => {
-                    const digits = String(number).length;
-                    if (digits <= 1) return "2.6rem";
-                    if (digits === 2) return "2.45rem";
-                    if (digits === 3) return "2.05rem"; // 100 対策
-                    return "1.9rem";
-                  })()
-                : "1.22rem",
-            color: waitingInCentral
+      </Box>
+      <Box position="relative">
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          fontWeight={typeof number === "number" ? 900 : 700}
+          fontSize={
+            typeof number === "number"
+              ? (() => {
+                  const digits = String(number).length;
+                  if (digits <= 1) return "2.6rem";
+                  if (digits === 2) return "2.45rem";
+                  if (digits === 3) return "2.05rem"; // 100 対策
+                  return "1.9rem";
+                })()
+              : "1.22rem"
+          }
+          color={
+            waitingInCentral
               ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
               : state === "success"
                 ? "#3b82f6" // Blue for success
                 : state === "fail"
-                  ? failColor // Red for failure  
-                  : "#ffffff", // White for pending/default
-            lineHeight: 1.05,
-            textShadow: waitingInCentral
+                  ? "#dc2626" // Red for failure  
+                  : "#ffffff" // White for pending/default
+          }
+          lineHeight={1.05}
+          textShadow={
+            waitingInCentral
               ? "none" // Clean white text without shadow for waiting cards
               : typeof number === "number"
                 ? "0 2px 4px rgba(0,0,0,0.5)"
-                : "none",
-            width: "100%",
-            textAlign: "center",
-            padding: "0 0.25rem",
-            wordBreak: "keep-all",
-            whiteSpace: "nowrap",
-            letterSpacing:
-              typeof number === "number" && String(number).length >= 3
-                ? "-1px"
-                : undefined,
-          }}
+                : "none"
+          }
+          width="100%"
+          textAlign="center"
+          padding="0 0.25rem"
+          wordBreak="keep-all"
+          whiteSpace="nowrap"
+          letterSpacing={
+            typeof number === "number" && String(number).length >= 3
+              ? "-1px"
+              : undefined
+          }
         >
           {typeof number === "number" ? number : clue || "?"}
-        </div>
-      </div>
-      <div
-        style={{
-          fontSize: "0.65rem",
-          lineHeight: 1,
-          color: waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "#999", // White text for waiting cards
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          textAlign: "left",
-        }}
+        </Box>
+      </Box>
+      <Box
+        fontSize="2xs"
+        lineHeight={1}
+        color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "#999"}
+        display="flex"
+        alignItems="center"
+        justifyContent="flex-start"
+        textAlign="left"
       >
         {name ?? "(不明)"}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
