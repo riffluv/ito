@@ -21,7 +21,8 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
       borderRadius="20px"
       p={{ base: 3, md: 4 }}
       bgGradient="panelWood"
-      borderWidth="0"
+      borderWidth="1px"
+      borderColor="borderSubtle"
       css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
     >
       {title && (
