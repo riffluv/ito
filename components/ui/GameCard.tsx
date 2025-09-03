@@ -208,7 +208,7 @@ export function GameCard({
                   letterSpacing: digits >= 3 ? "-1px" : undefined,
                 }}
               >
-                {typeof number === "number" ? number : (clue || "(連想なし)")}
+                {typeof number === "number" ? number : ""}
               </div>
             </div>
             <div
