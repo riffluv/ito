@@ -50,6 +50,7 @@ export function CardRenderer(props: CardRendererProps) {
       state={state.state}
       successLevel={state.successLevel}
       boundary={state.boundary}
+      waitingInCentral={state.waitingInCentral}
       // boundary styling hint via name prop aria? (Could be extended)
     />
   );

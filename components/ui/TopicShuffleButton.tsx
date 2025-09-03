@@ -60,7 +60,7 @@ export function TopicShuffleButton({
       }
       px={2}
       minW="auto"
-      colorPalette={canShuffle ? "blue" : "gray"}
+      colorPalette={canShuffle ? "teal" : "gray"}
     >
       <RefreshCw size={14} />
     </AppButton>

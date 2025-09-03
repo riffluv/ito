@@ -39,6 +39,7 @@ export interface ComputedCardState {
   clueText: string | null; // clue to show (may be placeholder)
   number: number | null; // numeric value or null if hidden
   revealed: boolean; // whether the card is considered revealed in game logic
+  waitingInCentral: boolean; // whether this card is waiting in central area (Dragon Quest style)
 }
 
 // Consolidated logic for sort-submit mode only (sequential mode removed).
@@ -106,23 +107,44 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
 
   const flipped = (() => {
     if (variant !== "flip") return false;
-    
+
     // finished では全カードが数値面を向く（最終結果表示）
     if (p.roomStatus === "finished") {
       return showNumber; // showNumberの条件を使って一貫性を保つ
     }
-    
+
     // reveal時は順次フリップアニメーション
     if (p.roomStatus === "reveal" && p.revealAnimating) {
       return typeof idx === "number" && idx < p.revealIndex && showNumber;
     }
-    
+
     return false;
   })();
 
   // 4) Clue text
   const clueText =
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
+
+  // 5) Waiting in central detection
+  // カードが中央待機エリアにあるかどうか判定
+  // ・pendingに含まれているが、orderListにもproposalにも含まれていない
+  // ・roomStatusが "clue" または "waiting"
+  const waitingInCentral = !!(
+    p.pending.includes(p.id) &&
+    !(p.orderList || []).includes(p.id) &&
+    !(p.proposal || []).includes(p.id) &&
+    (p.roomStatus === "clue" || p.roomStatus === "waiting")
+  );
+
+  // Debug log for testing
+  if (waitingInCentral) {
+    console.log(`🎯 Dragon Quest style waiting card detected: ${p.id}`, {
+      pending: p.pending.includes(p.id),
+      notInOrderList: !(p.orderList || []).includes(p.id),
+      notInProposal: !(p.proposal || []).includes(p.id),
+      roomStatus: p.roomStatus,
+    });
+  }
 
   return {
     showNumber,
@@ -134,5 +156,6 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     clueText,
     number: showNumber && typeof number === "number" ? number : null,
     revealed,
+    waitingInCentral,
   };
 }
