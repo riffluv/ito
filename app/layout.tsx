@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "all", color: "#ffffff" },
+    { media: "all", color: "#1a1a1a" },
   ],
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning className={inter.className}>
       <head>
-        <meta name="color-scheme" content="light" />
+        <meta name="color-scheme" content="dark" />
       </head>
       <body>
         {/* Client コンポーネント内でパス判定するためラッパーを分離 */}
