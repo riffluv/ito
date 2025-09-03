@@ -1,36 +1,11 @@
-"use client";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/context/AuthContext";
-import { ThemePresetProvider } from "@/context/ThemePresetContext";
-import system from "@/theme";
-import { Box, ChakraProvider } from "@chakra-ui/react";
-import { useEffect } from "react";
+import dynamic from "next/dynamic";
 
-function DarkModeOnlyBridge() {
-  // ダークモード1本集中 - data-theme を dark に固定
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const el = document.documentElement;
-    // ダークモード固定
-    el.classList.add("dark");
-    el.setAttribute("data-theme", "dark");
-  }, []);
-  return null;
-}
+// Load the client-only providers as a single client boundary to avoid importing Chakra/system on the server.
+const ClientProviders = dynamic(() => import("@/components/ClientProviders"), {
+  ssr: false,
+});
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <ChakraProvider value={system}>
-      {/* next-themes を完全除去 - ダークモード固定 */}
-      <ThemePresetProvider>
-        <AuthProvider>
-          <Box bg="canvasBg" color="fgDefault" h="100dvh">
-            <DarkModeOnlyBridge />
-            {children}
-            <Toaster />
-          </Box>
-        </AuthProvider>
-      </ThemePresetProvider>
-    </ChakraProvider>
-  );
+  // Server component - renders minimal shell. ClientProviders hydrates client-only UI.
+  return <ClientProviders>{children}</ClientProviders>;
 }
