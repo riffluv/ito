@@ -106,17 +106,18 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
 
   const flipped = (() => {
     if (variant !== "flip") return false;
-    // finished では全カードが数値面を向く
+    
+    // finished では全カードが数値面を向く（最終結果表示）
     if (p.roomStatus === "finished") {
-      return true;
+      return showNumber; // showNumberの条件を使って一貫性を保つ
     }
-    // 数字が準備できており、かつreveal条件を満たしている場合のみフリップ
-    return (
-      typeof idx === "number" &&
-      typeof number === "number" &&
-      p.roomStatus === "reveal" &&
-      idx < p.revealIndex
-    );
+    
+    // reveal時は順次フリップアニメーション
+    if (p.roomStatus === "reveal" && p.revealAnimating) {
+      return typeof idx === "number" && idx < p.revealIndex && showNumber;
+    }
+    
+    return false;
   })();
 
   // 4) Clue text
