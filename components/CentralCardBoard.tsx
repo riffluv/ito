@@ -130,7 +130,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     currentPlaced,
     onDrop,
     onDropAtPosition,
-    nextSequentialPosition,
     canDropAtPosition,
   } = useDropHandler({
     roomId,
@@ -251,16 +250,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [roomStatus, resolveMode, orderList?.length, roomId]);
 
-  // sequential: サーバが success で reveal をセットした後、最後のカード flip 後に finalize
-  useEffect(() => {
-    if (resolveMode !== "sort-submit" && roomStatus === "reveal") {
-      // first card flip delay
-      const timeout = setTimeout(() => {
-        finalizeReveal(roomId).catch(() => void 0);
-      }, 800); // SEQ_FIRST_CLUE_MS 相当 + alpha
-      return () => clearTimeout(timeout);
-    }
-  }, [resolveMode, roomStatus, roomId]);
+  // Sort-submit mode only - no sequential finalize needed
 
   // sort-submit: 全員提出で「確定」可能
   const canConfirm =
@@ -499,9 +489,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     const cardId =
                       orderList?.[idx] ?? (pending && pending[idx]) ?? null;
                     const isDroppableSlot = canDropAtPosition(idx);
-                    // 順次モードでは、プレイヤーが場に出したカードは
-                    // room.status が 'clue' のままでも即座に表示したい。
-                    // したがって 'clue' を許容する。
+                    // Sort-submit mode: show cards during all relevant phases
                     const shouldShowCard =
                       cardId &&
                       (roomStatus === "clue" ||
@@ -541,22 +529,20 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         color={isDroppableSlot ? "slotDropText" : "fgMuted"}
                         fontSize="lg"
                         fontWeight="600"
-                        // Premium teal dashed border for drop targets
-                        border="2px dashed"
-                        borderColor={
-                          isDroppableSlot ? "slotBorderDrop" : "borderSubtle"
-                        }
+                        // Consistent white dashed border for all slots
+                        border="1.5px dashed"
+                        borderColor="slotBorder"
                         boxShadow="sm"
                         transition="all 0.2s ease"
                         cursor={isDroppableSlot ? "copy" : "not-allowed"}
                         _hover={
                           isDroppableSlot
                             ? {
-                                bg: "slotDropHover",
-                                color: "slotDropTextHover",
-                                borderColor: "slotBorderDropHover",
+                                bg: "slotHover",
+                                borderColor: "slotBorderHover",
+                                color: "slotTextHover",
                                 transform: "translateY(-2px)",
-                                boxShadow: "lg",
+                                boxShadow: "md",
                               }
                             : {}
                         }
@@ -568,17 +554,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     );
                   })}
 
-                {/* Pending cards - 順次判定モード専用 */}
-                {resolveMode !== "sort-submit" &&
-                pending &&
-                pending.length > 0 &&
-                roomStatus !== "finished" &&
-                roomStatus !== "reveal"
-                  ? pending
-                      .filter((id) => !(orderList || []).includes(id))
-                      .filter((id) => !(proposal || []).includes(id))
-                      .map((id) => renderCard(id))
-                  : null}
+                {/* No pending cards needed in sort-submit mode */}
               </>
             )}
           </Box>

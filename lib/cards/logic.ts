@@ -89,8 +89,13 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     typeof effectiveFailedAt === "number" &&
     typeof idx === "number" &&
     idx === effectiveFailedAt - 1;
+  // Only show success (blue) if game succeeded and not failed specifically
   isSuccess =
-    revealed && active && !failureConfirmed && p.roomStatus === "finished";
+    revealed && 
+    active && 
+    p.roomStatus === "finished" && 
+    !isFail && 
+    !p.failed; // Only if overall game was successful
   if (isSuccess) successLevel = "final";
 
   if (
