@@ -110,8 +110,10 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     if (p.roomStatus === "finished") {
       return true;
     }
+    // 数字が準備できており、かつreveal条件を満たしている場合のみフリップ
     return (
       typeof idx === "number" &&
+      typeof number === "number" &&
       p.roomStatus === "reveal" &&
       idx < p.revealIndex
     );
