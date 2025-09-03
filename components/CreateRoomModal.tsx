@@ -13,6 +13,8 @@ import {
   Input,
   Stack,
   Text,
+  VStack,
+  IconButton,
 } from "@chakra-ui/react";
 import {
   addDoc,
@@ -23,6 +25,7 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { X, Users, Sparkles, AlertCircle } from "lucide-react";
 
 export function CreateRoomModal({
   isOpen,
@@ -109,111 +112,143 @@ export function CreateRoomModal({
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
+      {/* Sophisticated backdrop */}
       <Dialog.Backdrop
         css={{
-          background: "rgba(0, 0, 0, 0.7)",
-          backdropFilter: "blur(8px)",
+          background: "rgba(0, 0, 0, 0.8)",
+          backdropFilter: "blur(12px) saturate(1.2)",
         }}
       />
+      
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "{colors.surfaceRaised}",
-            border: "1px solid {colors.borderStrong}",
-            borderRadius: "20px",
-            boxShadow:
-              "0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)",
-            maxWidth: "420px",
+            background: "linear-gradient(135deg, rgba(15,16,20,0.98) 0%, rgba(25,27,33,0.98) 100%)",
+            border: "1px solid rgba(107,115,255,0.2)",
+            borderRadius: "24px",
+            boxShadow: `
+              0 32px 64px -12px rgba(0,0,0,0.8),
+              0 20px 25px -5px rgba(0,0,0,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.1),
+              0 0 0 1px rgba(107,115,255,0.1)
+            `,
+            maxWidth: "440px",
             width: "90vw",
             padding: 0,
             overflow: "hidden",
+            position: "relative",
+          }}
+          _before={{
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)',
+            pointerEvents: 'none'
           }}
         >
-          <Dialog.CloseTrigger
+          {/* Close button */}
+          <IconButton
+            aria-label="閉じる"
+            onClick={onClose}
+            size="sm"
+            variant="ghost"
             css={{
               position: "absolute",
-              top: "16px",
-              right: "16px",
+              top: "20px",
+              right: "20px",
               zIndex: 10,
-              background: "rgba(255, 255, 255, 0.1)",
-              borderRadius: "8px",
-              padding: "8px",
-              border: "none",
-              color: "{colors.fgMuted}",
-              cursor: "pointer",
+              borderRadius: "12px",
+              background: "rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.8)",
               transition: "all 0.2s ease",
-              "&:hover": {
-                background: "rgba(255, 255, 255, 0.2)",
-                color: "{colors.fgDefault}",
+              _hover: {
+                background: "rgba(255,255,255,0.15)",
+                color: "white",
+                transform: "scale(1.05)",
               },
             }}
-          />
-
-          {/* Premium Header */}
-          <Box
-            p={6}
-            pb={4}
-            css={{
-              background:
-                "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
-            }}
           >
-            <HStack gap={3} align="center">
+            <X size={16} />
+          </IconButton>
+
+          {/* Header */}
+          <Box
+            p={8}
+            pb={6}
+            position="relative"
+            zIndex={1}
+          >
+            <HStack gap={4} align="center" mb={4}>
               <Box
-                w={10}
-                h={10}
-                bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
-                borderRadius="12px"
+                w={14}
+                h={14}
+                borderRadius="16px"
+                bg="linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)"
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
-                boxShadow="0 4px 12px rgba(99,102,241,0.3)"
+                boxShadow="0 8px 24px rgba(107,115,255,0.4)"
               >
-                <Box w="50%" h="50%" bg="white" borderRadius="6px" />
+                <Sparkles size={24} color="white" />
               </Box>
-              <Box>
+              
+              <VStack align="start" gap={1}>
                 <Dialog.Title
                   css={{
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    color: "{colors.fgDefault}",
+                    fontSize: "1.75rem",
+                    fontWeight: 800,
+                    color: "white",
                     margin: 0,
-                    letterSpacing: "-0.025em",
+                    letterSpacing: "-0.02em",
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
                   }}
                 >
                   新しいルームを作成
                 </Dialog.Title>
-                <Text fontSize="sm" color="{colors.fgMuted}" mt={1}>
-                  友達と一緒にITOを楽しみましょう
+                <Text fontSize="md" color="rgba(255,255,255,0.7)" fontWeight={500}>
+                  友達と一緒にITOを楽しもう
                 </Text>
-              </Box>
+              </VStack>
             </HStack>
           </Box>
 
-          <Box p={6}>
-            <Stack gap={6}>
+          {/* Form Content */}
+          <Box px={8} pb={8} position="relative" zIndex={1}>
+            <VStack gap={6} align="stretch">
               {!user && (
                 <Box
                   p={4}
-                  bg="rgba(255, 193, 7, 0.1)"
-                  border="1px solid rgba(255, 193, 7, 0.2)"
-                  borderRadius="12px"
+                  bg="rgba(247,147,30,0.1)"
+                  border="1px solid rgba(247,147,30,0.2)"
+                  borderRadius="16px"
+                  css={{
+                    backdropFilter: "blur(4px)",
+                  }}
                 >
-                  <Text fontSize="sm" color="{colors.fgMuted}" lineHeight={1.6}>
-                    まだサインインしていませんが、ルームは作成できます。
-                    <br />
-                    参加には後で名前の設定をおすすめします。
-                  </Text>
+                  <HStack gap={3}>
+                    <AlertCircle size={20} color="#F7931E" />
+                    <VStack align="start" gap={1}>
+                      <Text fontSize="sm" color="white" fontWeight={600}>
+                        未ログイン状態
+                      </Text>
+                      <Text fontSize="sm" color="rgba(255,255,255,0.8)" lineHeight={1.5}>
+                        まだサインインしていませんが、ルームは作成できます。
+                        後で名前の設定をおすすめします。
+                      </Text>
+                    </VStack>
+                  </HStack>
                 </Box>
               )}
+              
               <Field.Root>
                 <Field.Label
                   css={{
-                    fontSize: "0.875rem",
+                    fontSize: "1rem",
                     fontWeight: 600,
-                    color: "{colors.fgDefault}",
-                    marginBottom: "8px",
+                    color: "white",
+                    marginBottom: "12px",
+                    letterSpacing: "-0.01em",
                   }}
                 >
                   ルーム名
@@ -223,36 +258,38 @@ export function CreateRoomModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   css={{
-                    height: "48px",
-                    background: "{colors.surfaceSubtle}",
-                    border: "2px solid {colors.borderDefault}",
-                    borderRadius: "12px",
+                    height: "56px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "2px solid rgba(255,255,255,0.12)",
+                    borderRadius: "16px",
                     fontSize: "1rem",
-                    padding: "0 16px",
-                    color: "{colors.fgDefault}",
+                    padding: "0 20px",
+                    color: "white",
+                    fontWeight: 500,
                     transition: "all 0.2s ease",
-                    "&:focus": {
-                      borderColor: "{colors.accent}",
-                      boxShadow: "0 0 0 3px rgba(99,102,241,0.1)",
-                      background: "{colors.surfaceRaised}",
+                    _placeholder: {
+                      color: "rgba(255,255,255,0.5)",
                     },
-                    "&::placeholder": {
-                      color: "{colors.fgSubtle}",
+                    _focus: {
+                      borderColor: "#6B73FF",
+                      boxShadow: "0 0 0 4px rgba(107,115,255,0.15)",
+                      background: "rgba(255,255,255,0.08)",
+                    },
+                    _hover: {
+                      borderColor: "rgba(255,255,255,0.2)",
                     },
                   }}
                 />
               </Field.Root>
-            </Stack>
+            </VStack>
           </Box>
 
-          {/* Premium Footer */}
+          {/* Footer */}
           <Box
-            p={6}
-            pt={4}
-            css={{
-              background: "rgba(255,255,255,0.02)",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-            }}
+            p={8}
+            pt={0}
+            position="relative"
+            zIndex={1}
           >
             <HStack justify="flex-end" gap={3}>
               <AppButton
@@ -260,34 +297,53 @@ export function CreateRoomModal({
                 visual="ghost"
                 size="lg"
                 css={{
-                  minWidth: "80px",
-                  height: "44px",
-                  borderRadius: "12px",
+                  minWidth: "100px",
+                  height: "48px",
+                  borderRadius: "14px",
                   fontWeight: 500,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.05)",
+                  transition: "all 0.2s ease",
+                  _hover: {
+                    background: "rgba(255,255,255,0.12)",
+                    borderColor: "rgba(255,255,255,0.2)",
+                  },
                 }}
               >
                 キャンセル
               </AppButton>
+              
               <AppButton
                 visual="solid"
                 palette="brand"
                 size="lg"
                 onClick={handleCreate}
                 loading={submitting}
-                disabled={submitting}
+                disabled={submitting || !name.trim()}
                 css={{
-                  minWidth: "120px",
-                  height: "44px",
-                  borderRadius: "12px",
-                  fontWeight: 600,
-                  background: !submitting
-                    ? "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
-                    : undefined,
-                  boxShadow: !submitting
-                    ? "0 4px 16px rgba(99,102,241,0.4)"
-                    : undefined,
+                  minWidth: "140px",
+                  height: "48px",
+                  borderRadius: "14px",
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  background: submitting || !name.trim() 
+                    ? "rgba(107,115,255,0.3)"
+                    : "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
+                  boxShadow: submitting || !name.trim()
+                    ? "none"
+                    : "0 4px 20px rgba(107,115,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  _hover: submitting || !name.trim() ? {} : {
+                    transform: "translateY(-2px)",
+                    background: "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
+                    boxShadow: "0 8px 32px rgba(107,115,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
+                  },
+                  _active: {
+                    transform: "translateY(0px)",
+                  },
                 }}
               >
+                <Users size={18} style={{ marginRight: "8px" }} />
                 {submitting ? "作成中..." : "ルームを作成"}
               </AppButton>
             </HStack>
