@@ -10,6 +10,7 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
+import HostControlDock from "@/components/ui/HostControlDock";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
