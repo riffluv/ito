@@ -7,10 +7,10 @@ import React from "react";
 // /rooms/ 配下ではグローバル Header を非表示にしフルスクリーン AppShell を最大化。
 export function ClientFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideHeader = pathname?.startsWith("/rooms/");
+  const showHeader = pathname === "/"; // ヘッダーはメインメニューのみ
   return (
     <>
-      {!hideHeader && <Header />}
+      {showHeader && <Header />}
       <main id="main" role="main">{children}</main>
     </>
   );
