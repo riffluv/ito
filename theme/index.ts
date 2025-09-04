@@ -64,8 +64,15 @@ const config = defineConfig({
   },
 
   theme: {
-    // プレミアムトークンシステム
-    tokens: premiumTokens,
+    // プレミアムトークンシステム + ドラクエ風ボーダー
+    tokens: {
+      ...premiumTokens,
+      borders: {
+        retrogame: "3px solid white", // ドラクエ風統一ボーダー
+        retrogameInput: "2px solid black", // 入力フィールド用
+        retrogameThin: "2px solid white", // 細めの区切り線用
+      },
+    },
 
     // セマンティックトークン
     semanticTokens: premiumSemanticTokens,
