@@ -122,33 +122,18 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "bgSubtle",
-            border: "1px solid",
-            borderColor: "border",
-            borderRadius: "2xl",
-            boxShadow: `
-              0 32px 64px -12px rgba(0,0,0,0.8),
-              0 20px 25px -5px rgba(0,0,0,0.4),
-              inset 0 1px 0 rgba(255,255,255,0.1),
-              0 0 0 1px rgba(107,115,255,0.1)
-            `,
-            maxWidth: "440px",
+            background: "richBlack.800", // リッチブラック
+            border: "3px solid white", // 白いborder
+            borderRadius: 0, // 角ばった
+            boxShadow: "none", // 影なし
+            maxWidth: "480px",
             width: "90vw",
             padding: 0,
             overflow: "hidden",
             position: "relative",
           }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            borderRadius: "2xl",
-            background:
-              "linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)",
-            pointerEvents: "none",
-          }}
         >
-          {/* Close button */}
+          {/* Close button - ドラクエ風 */}
           <IconButton
             aria-label="閉じる"
             onClick={onClose}
@@ -156,93 +141,85 @@ export function CreateRoomModal({
             variant="ghost"
             css={{
               position: "absolute",
-              top: "20px",
-              right: "20px",
+              top: "12px",
+              right: "12px",
               zIndex: 10,
-              borderRadius: "lg",
-              background: "rgba(255,255,255,0.08)",
-              color: "rgba(255,255,255,0.8)",
-              transition: "all 0.2s ease",
+              borderRadius: 0, // 角ばった
+              background: "transparent",
+              color: "white",
+              border: "2px solid white",
+              width: "32px",
+              height: "32px",
+              transition: "all 0.1s ease",
               _hover: {
-                background: "rgba(255,255,255,0.15)",
-                color: "white",
-                transform: "scale(1.05)",
+                background: "white",
+                color: "richBlack.800",
               },
             }}
           >
             <X size={16} />
           </IconButton>
 
-          {/* Header */}
-          <Box p={8} pb={6} position="relative" zIndex={1}>
-            <HStack gap={4} align="center" mb={4}>
-              <Box
-                w={14}
-                h={14}
-                borderRadius="xl"
-                bg="linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                boxShadow="0 8px 24px rgba(107,115,255,0.4)"
+          {/* Header - ドラクエ風 */}
+          <Box p={6} position="relative" zIndex={1} borderBottom="2px solid white">
+            <VStack gap={2} align="center">
+              <Dialog.Title
+                css={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "white",
+                  margin: 0,
+                  textAlign: "center",
+                  fontFamily: "monospace", // ドラクエっぽいフォント
+                  textShadow: "1px 1px 0px #000",
+                }}
               >
-                <Sparkles size={24} color="white" />
-              </Box>
-
-              <VStack align="start" gap={1}>
-                <Dialog.Title
-                  css={{
-                    fontSize: "1.75rem",
-                    fontWeight: 800,
-                    color: "white",
-                    margin: 0,
-                    letterSpacing: "-0.02em",
-                    fontFamily:
-                      "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
-                  }}
-                >
-                  新しいルームを作成
-                </Dialog.Title>
-                <Text
-                  fontSize="md"
-                  color="rgba(255,255,255,0.7)"
-                  fontWeight={500}
-                >
-                  友達と一緒にITOを楽しもう
-                </Text>
-              </VStack>
-            </HStack>
+                ルームを つくる
+              </Dialog.Title>
+              <Text
+                fontSize="sm"
+                color="white"
+                fontWeight="normal"
+                textAlign="center"
+                fontFamily="monospace"
+                textShadow="1px 1px 0px #000"
+              >
+                あたらしい ぼうけんの はじまり
+              </Text>
+            </VStack>
           </Box>
 
-          {/* Form Content */}
-          <Box px={8} pb={8} position="relative" zIndex={1}>
-            <VStack gap={6} align="stretch">
+          {/* Form Content - ドラクエ風 */}
+          <Box px={6} py={6} position="relative" zIndex={1}>
+            <VStack gap={4} align="stretch">
               {!user && (
                 <Box
                   p={4}
-                  bg="rgba(247,147,30,0.1)"
-                  border="1px solid rgba(247,147,30,0.2)"
-                  borderRadius="xl"
-                  css={{
-                    backdropFilter: "blur(4px)",
-                  }}
+                  bg="richBlack.700" // 少し明るいリッチブラック
+                  border="2px solid white"
+                  borderRadius={0}
                 >
-                  <HStack gap={3}>
-                    <AlertCircle size={20} color="#F7931E" />
-                    <VStack align="start" gap={1}>
-                      <Text fontSize="sm" color="white" fontWeight={600}>
-                        未ログイン状態
-                      </Text>
-                      <Text
-                        fontSize="sm"
-                        color="textMuted"
-                        lineHeight={1.5}
-                      >
-                        まだサインインしていませんが、ルームは作成できます。
-                        後で名前の設定をおすすめします。
-                      </Text>
-                    </VStack>
-                  </HStack>
+                  <VStack align="start" gap={2}>
+                    <Text 
+                      fontSize="sm" 
+                      color="white" 
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textShadow="1px 1px 0px #000"
+                    >
+                      ▼ おしらせ
+                    </Text>
+                    <Text
+                      fontSize="sm"
+                      color="white"
+                      fontFamily="monospace"
+                      lineHeight={1.6}
+                      textShadow="1px 1px 0px #000"
+                    >
+                      なまえが みとうろく です。
+                      あとで せっていを おすすめします。
+                    </Text>
+                  </VStack>
                 </Box>
               )}
 
@@ -250,39 +227,42 @@ export function CreateRoomModal({
                 <Field.Label
                   css={{
                     fontSize: "1rem",
-                    fontWeight: 600,
+                    fontWeight: "bold",
                     color: "white",
-                    marginBottom: "12px",
-                    letterSpacing: "-0.01em",
+                    marginBottom: "8px",
+                    fontFamily: "monospace",
+                    textShadow: "1px 1px 0px #000",
                   }}
                 >
-                  ルーム名
+                  ▼ ルームの なまえ
                 </Field.Label>
                 <Input
-                  placeholder="例: 友達とITOゲーム"
+                  placeholder="れい: ともだちと ITOゲーム"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   css={{
-                    height: "56px",
-                    background: "glassBg05",
-                    border: "2px solid",
-                    borderColor: "glassBorder",
-                    borderRadius: "xl",
+                    height: "48px",
+                    background: "white",
+                    border: "2px solid black",
+                    borderRadius: 0,
                     fontSize: "1rem",
-                    padding: "0 20px",
-                    color: "text",
-                    fontWeight: 500,
-                    transition: "all 0.2s ease",
+                    padding: "0 16px",
+                    color: "black",
+                    fontWeight: "normal",
+                    fontFamily: "monospace",
+                    transition: "none",
                     _placeholder: {
-                      color: "textSubtle",
+                      color: "#666",
+                      fontFamily: "monospace",
                     },
                     _focus: {
-                      borderColor: "primary",
-                      boxShadow: "0 0 0 4px var(--colors-brandRing)",
-                      background: "glassBg08",
+                      borderColor: "black",
+                      boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.2)",
+                      background: "#f8f8f8",
+                      outline: "none",
                     },
                     _hover: {
-                      borderColor: "border",
+                      background: "#f8f8f8",
                     },
                   }}
                 />
@@ -290,69 +270,70 @@ export function CreateRoomModal({
             </VStack>
           </Box>
 
-          {/* Footer */}
-          <Box p={8} pt={0} position="relative" zIndex={1}>
-            <HStack justify="flex-end" gap={3}>
-              <AppButton
+          {/* Footer - ドラクエ風 */}
+          <Box p={4} pt={0} position="relative" zIndex={1} borderTop="2px solid white">
+            <HStack justify="space-between" gap={3} mt={4}>
+              <button
                 onClick={onClose}
-                visual="ghost"
-                size="lg"
-                css={{
-                  minWidth: "100px",
-                  height: "48px",
-                  borderRadius: "lg",
-                  fontWeight: 500,
-                  border: "1px solid",
-                  borderColor: "glassBorder",
-                  background: "glassBg05",
-                  transition: "all 0.2s ease",
-                  _hover: {
-                    background: "glassBg08",
-                    borderColor: "border",
-                  },
-                }}
-              >
-                キャンセル
-              </AppButton>
-
-              <AppButton
-                visual="solid"
-                colorPalette="teal"
-                size="lg"
-                onClick={handleCreate}
-                loading={submitting}
-                disabled={submitting || !name.trim()}
-                css={{
-                  minWidth: "140px",
-                  height: "48px",
-                  borderRadius: "lg",
-                  fontWeight: 700,
+                style={{
+                  minWidth: "120px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
                   fontSize: "1rem",
-                  background:
-                    submitting || !name.trim()
-                      ? "primarySubtle"
-                      : "brandGradient",
-                  boxShadow:
-                    submitting || !name.trim()
-                      ? "none"
-                      : "var(--colors-brandShadow)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  _hover:
-                    submitting || !name.trim()
-                      ? {}
-                      : {
-                          transform: "translateY(-2px)",
-                          background: "brandGradientHover",
-                          boxShadow: "var(--colors-brandShadowHover)",
-                        },
-                  _active: {
-                    transform: "translateY(0px)",
-                  },
+                  fontFamily: "monospace",
+                  border: "2px solid white",
+                  background: "transparent",
+                  color: "white",
+                  cursor: "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "white";
+                  e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "white";
                 }}
               >
-                <Users size={18} style={{ marginRight: "8px" }} />
-                {submitting ? "作成中..." : "ルームを作成"}
-              </AppButton>
+                やめる
+              </button>
+
+              <button
+                onClick={handleCreate}
+                disabled={submitting || !name.trim()}
+                style={{
+                  minWidth: "140px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "2px solid white",
+                  background: submitting || !name.trim() ? "#666" : "var(--colors-richBlack-600)",
+                  color: "white",
+                  cursor: submitting || !name.trim() ? "not-allowed" : "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                  opacity: submitting || !name.trim() ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting && name.trim()) {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!submitting && name.trim()) {
+                    e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                    e.currentTarget.style.color = "white";
+                  }
+                }}
+              >
+                {submitting ? "つくっています..." : "つくる"}
+              </button>
             </HStack>
           </Box>
         </Dialog.Content>
