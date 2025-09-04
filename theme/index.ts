@@ -22,7 +22,7 @@ const config = defineConfig({
     cqSm: "@container (min-width: 32rem)",
     cqMd: "@container (min-width: 48rem)",
     cqLg: "@container (min-width: 64rem)",
-    hover: "@media (hover: hover)",
+    // hover: "@media (hover: hover)", // ← コメントアウト: ホバー機能を常に有効化
     reducedMotion: "@media (prefers-reduced-motion: reduce)",
   },
 

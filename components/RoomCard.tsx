@@ -19,30 +19,36 @@ export function RoomCard({
 
   return (
     <Box
-      role="group"
-      position="relative"
-      cursor="pointer"
-      onClick={onJoin}
-    >
-      {/* Main Card */}
-      <Box
-        borderRadius="xl"
-        border="2px solid"
-        borderColor="border"
-        bg="glassBg05"
-        backdropFilter="blur(20px)"
-        p={6}
-        minH="180px"
+        role="group"
         position="relative"
-        overflow="hidden"
-        boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
-        transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
-        willChange="transform"
-        _groupHover={{
-          borderColor: "primary",
-          bg: "accentSubtle",
-          transform: "translateY(-8px)",
+        cursor="pointer"
+        onClick={onJoin}
+        _hover={{}}
+        sx={{
+          '&:hover .hover-decoration': {
+            opacity: 1,
+          }
         }}
+      >
+        {/* Main Card */}
+        <Box
+          borderRadius="xl"
+          border="2px solid"
+          borderColor="border"
+          bg="glassBg05"
+          backdropFilter="blur(20px)"
+          p={6}
+          minH="180px"
+          position="relative"
+          overflow="hidden"
+          boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
+          transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
+          willChange="transform"
+          _hover={{
+            transform: "translateY(-8px)",
+            borderColor: "primary", 
+            bg: "accentSubtle",
+          }}
       >
         {/* Status indicator */}
         <Box position="absolute" top={4} right={4} zIndex={2}>
@@ -138,6 +144,7 @@ export function RoomCard({
 
         {/* Hover decoration */}
         <Box
+          className="hover-decoration"
           position="absolute"
           top={0}
           left={0}
@@ -147,9 +154,6 @@ export function RoomCard({
           borderTopRadius="20px"
           opacity={0}
           transition="opacity 0.3s ease"
-          _groupHover={{
-            opacity: 1,
-          }}
         />
       </Box>
     </Box>
