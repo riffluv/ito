@@ -1,17 +1,27 @@
 /* GameCard専用のCSS - Chakra UIより高い詳細度 */
 
 .cardMeta {
-  font-weight: 700;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
-  font-size: 0.75rem;
+  /* === Unified small meta text (index + player name) === */
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui,
+    sans-serif;
+  font-size: 0.75rem; /* 12px base */
   line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0; /* avoid browser default widen after transform */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Normalize variable font rendering where available */
-  font-variation-settings: 'wght' 700;
+  font-variation-settings: "wght" 700;
+  /* Avoid sub‑pixel jitter / thickness shift when parent rotates */
+  backface-visibility: hidden;
+  transform: translateZ(0); /* promote layer once to keep AA consistent */
 }
 
-/* 詳細度を上げるためにクラス名を重複指定 */
+/* Increase specificity (module scoping) */
 .cardMeta.cardMeta {
   font-weight: 700;
 }
+
+/* Optional: dedicated class alias if future distinction needed */
+/* (Alias classes removed to satisfy linter; .cardMeta is the unified selector) */
