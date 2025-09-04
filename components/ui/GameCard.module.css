@@ -1,0 +1,17 @@
+/* GameCard専用のCSS - Chakra UIより高い詳細度 */
+
+.cardMeta {
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Normalize variable font rendering where available */
+  font-variation-settings: 'wght' 700;
+}
+
+/* 詳細度を上げるためにクラス名を重複指定 */
+.cardMeta.cardMeta {
+  font-weight: 700;
+}
