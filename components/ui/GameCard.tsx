@@ -4,6 +4,7 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 import styles from "./GameCard.module.css";
+import { CardText, getClueFontSize, getNumberFontSize } from "./CardText";
 
 export type GameCardProps = {
   index?: number | null;
@@ -42,28 +43,7 @@ const getBorderStyle = (waitingInCentral: boolean, state: string) => {
   };
 };
 
-// 🎯 統一されたフォントサイズ計算関数
-const getNumberFontSize = (number: number | null): string => {
-  if (typeof number !== "number") return "1.22rem"; // 連想ワード用
-
-  const digits = String(number).length;
-  if (digits <= 1) return "3rem";
-  if (digits === 2) return "2.8rem";
-  if (digits === 3) return "2.35rem"; // 100 対策
-  return "2.2rem"; // フォールバック (想定外の多桁)
-};
-
-// 🎯 連想ワード用動的フォントサイズ計算関数
-const getClueFontSize = (clue: string | undefined): string => {
-  if (!clue) return "1.22rem";
-  
-  const length = clue.length;
-  if (length <= 4) return "1.22rem";      // 短い（例: "ゲーム"）
-  if (length <= 6) return "1.1rem";       // 中程度（例: "洋食料理"）
-  if (length <= 8) return "1rem";         // やや長い（例: "ホメシチしょう"）
-  if (length <= 10) return "0.9rem";      // 長い（例: "洋食料理・ホメシチ"）
-  return "0.8rem"; // とても長い（例: "洋食料理・ホメシチ・しょうゆ"）
-};
+// 🎯 フォントサイズ計算関数は CardText.tsx に移動済み
 
 // 🎯 統一されたテキストスタイル関数（CSS ベストプラクティス）
 const getUnifiedTextStyle = (): React.CSSProperties => ({
