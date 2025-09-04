@@ -9,6 +9,7 @@ import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { Badge, Box, Container, Grid, GridItem, Heading, HStack, Text, VStack, useDisclosure } from "@chakra-ui/react";
+import DevBoard from "@/components/site/DevBoard";
 import { Plus, BookOpen, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -99,7 +100,7 @@ export default function MainMenu() {
 
       {/* ルーム一覧 */}
       <Container maxW="7xl" py={{ base: 12, md: 16 }}>
-        <Grid templateColumns={{ base: "1fr", xl: "1fr 320px" }} gap={{ base: 8, xl: 12 }} alignItems="start">
+        <Grid templateColumns={{ base: "1fr", xl: "1fr 340px" }} gap={{ base: 8, xl: 12 }} alignItems="start">
           <GridItem>
             <Box mb={8}>
               <HStack justify="space-between" mb={4}>
@@ -108,13 +109,15 @@ export default function MainMenu() {
                     <Users size={20} />
                   </Box>
                   <VStack align="start" gap={1}>
-                    <Heading size="xl" fontWeight={700} color="text">アクティブルーム</Heading>
+                    <HStack gap={2} align="center">
+                      <Heading size="xl" fontWeight={700} color="text">アクティブルーム</Heading>
+                      <Badge variant="subtle" colorPalette="green" px={3} py={1} borderRadius="full" fontSize="sm" fontWeight={600}>
+                        {filteredRooms.length}件
+                      </Badge>
+                    </HStack>
                     <Text fontSize="md" color="fgMuted">参加可能なルームを一覧表示します</Text>
                   </VStack>
                 </HStack>
-                <Badge variant="subtle" colorPalette="green" px={3} py={1} borderRadius="full" fontSize="sm" fontWeight={600}>
-                  {filteredRooms.length}件
-                </Badge>
               </HStack>
             </Box>
 
@@ -152,6 +155,11 @@ export default function MainMenu() {
               </Box>
             )}
           </GridItem>
+        <GridItem display={{ base: "none", xl: "block" }}>
+          <VStack gap={6} align="stretch">
+            <DevBoard />
+          </VStack>
+        </GridItem>
         </Grid>
       </Container>
 

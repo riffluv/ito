@@ -64,7 +64,9 @@
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
-      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)"
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\app/**)"
     ],
     "deny": [],
     "ask": []
