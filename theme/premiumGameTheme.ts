@@ -176,192 +176,147 @@ export const premiumTokens = {
   },
 };
 
-// === SEMANTIC TOKENS - コンテキスト駆動 ===
+// === SEMANTIC TOKENS - ダークモード固定（CLAUDE.md準拠） ===
 export const premiumSemanticTokens = {
   colors: {
     // === BASE SEMANTICS ===
     bg: {
-      value: { base: "{colors.richBlack.900}", _light: "white" },
+      value: "{colors.richBlack.900}",
     },
 
     bgSubtle: {
-      value: {
-        base: "{colors.richBlack.800}",
-        _light: "{colors.richBlack.50}",
-      },
+      value: "{colors.richBlack.800}",
     },
 
     bgMuted: {
-      value: {
-        base: "{colors.richBlack.700}",
-        _light: "{colors.richBlack.100}",
-      },
+      value: "{colors.richBlack.700}",
     },
 
     // === TEXT SEMANTICS ===
     text: {
-      value: {
-        base: "rgba(255, 255, 255, 0.95)",
-        _light: "{colors.richBlack.900}",
-      },
+      value: "rgba(255, 255, 255, 0.95)",
     },
 
     textMuted: {
-      value: {
-        base: "rgba(255, 255, 255, 0.7)",
-        _light: "{colors.richBlack.600}",
-      },
+      value: "rgba(255, 255, 255, 0.7)",
     },
 
     textSubtle: {
-      value: {
-        base: "rgba(255, 255, 255, 0.5)",
-        _light: "{colors.richBlack.500}",
-      },
+      value: "rgba(255, 255, 255, 0.5)",
     },
 
     // === BRAND SEMANTICS ===
     primary: {
-      value: { base: "{colors.teal.500}", _light: "{colors.teal.600}" },
+      value: "{colors.teal.500}",
     },
 
     primarySubtle: {
-      value: { base: "rgba(20, 184, 166, 0.1)", _light: "{colors.teal.50}" },
+      value: "rgba(20, 184, 166, 0.1)",
     },
 
-    // セカンダリーカラー（#14b8a6 ティール）
+    // セカンダリーカラー（#14b8a6 ティール）- ダークモード固定
     secondary: {
-      value: { base: "{colors.teal.500}", _light: "{colors.teal.500}" },
+      value: "{colors.teal.500}",
     },
 
     secondaryHover: {
-      value: { base: "{colors.teal.400}", _light: "{colors.teal.600}" },
+      value: "{colors.teal.400}",
     },
 
     secondaryActive: {
-      value: { base: "{colors.teal.600}", _light: "{colors.teal.700}" },
+      value: "{colors.teal.600}",
     },
 
     secondarySubtle: {
-      value: {
-        base: "rgba(20, 184, 166, 0.15)",
-        _light: "rgba(20, 184, 166, 0.1)",
-      },
+      value: "rgba(20, 184, 166, 0.15)",
     },
 
     // === INTERACTIVE SEMANTICS ===
     border: {
-      value: {
-        base: "rgba(255, 255, 255, 0.1)",
-        _light: "{colors.richBlack.200}",
-      },
+      value: "rgba(255, 255, 255, 0.1)",
     },
 
     borderMuted: {
-      value: {
-        base: "rgba(255, 255, 255, 0.06)",
-        _light: "{colors.richBlack.100}",
-      },
+      value: "rgba(255, 255, 255, 0.06)",
     },
 
     // === GAME SPECIFIC ===
     cardBg: {
-      value: { base: "rgba(255, 255, 255, 0.08)", _light: "white" },
+      value: "rgba(255, 255, 255, 0.08)",
     },
 
     cardBorder: {
-      value: { base: "rgba(20, 184, 166, 0.3)", _light: "{colors.teal.200}" },
+      value: "rgba(20, 184, 166, 0.3)",
     },
 
     slotBorder: {
-      value: { base: "rgba(20, 184, 166, 0.4)", _light: "{colors.teal.300}" },
+      value: "rgba(20, 184, 166, 0.4)",
     },
 
     // === HAND CARD SYSTEM ===
     cardHand: {
-      value: {
-        base: "rgba(25, 27, 33, 0.95)",
-        _light: "rgba(255, 255, 255, 0.95)",
-      },
+      value: "rgba(25, 27, 33, 0.95)",
     },
 
     cardHandDisabled: {
-      value: {
-        base: "rgba(25, 27, 33, 0.6)",
-        _light: "rgba(255, 255, 255, 0.6)",
-      },
+      value: "rgba(25, 27, 33, 0.6)",
     },
 
     cardHandBorder: {
-      value: { base: "rgba(20, 184, 166, 0.6)", _light: "{colors.teal.400}" },
+      value: "rgba(20, 184, 166, 0.6)",
     },
 
     cardHandBorderDisabled: {
-      value: {
-        base: "rgba(255, 255, 255, 0.1)",
-        _light: "{colors.richBlack.200}",
-      },
+      value: "rgba(255, 255, 255, 0.1)",
     },
 
     cardHandBorderHover: {
-      value: { base: "rgba(20, 184, 166, 0.8)", _light: "{colors.teal.500}" },
+      value: "rgba(20, 184, 166, 0.8)",
     },
 
     cardHandText: {
-      value: { base: "#ffffff", _light: "{colors.richBlack.900}" },
+      value: "#ffffff",
     },
 
     cardHandTextDisabled: {
-      value: {
-        base: "rgba(255, 255, 255, 0.4)",
-        _light: "{colors.richBlack.400}",
-      },
+      value: "rgba(255, 255, 255, 0.4)",
     },
 
     cardHandHover: {
-      value: {
-        base: "rgba(25, 27, 33, 1.0)",
-        _light: "rgba(255, 255, 255, 1.0)",
-      },
+      value: "rgba(25, 27, 33, 1.0)",
     },
 
     // === CENTRAL WAITING CARD SYSTEM - Dragon Quest Style ===
     cardCentralWaitingBg: {
-      value: {
-        base: "rgba(25, 27, 33, 0.85)",
-        _light: "rgba(255, 255, 255, 0.85)",
-      },
+      value: "rgba(25, 27, 33, 0.85)",
     },
 
     cardCentralWaitingBorder: {
-      value: { base: "rgba(255, 255, 255, 0.9)", _light: "rgba(0, 0, 0, 0.8)" },
+      value: "rgba(255, 255, 255, 0.9)",
     },
 
     cardCentralWaitingText: {
-      value: { base: "#ffffff", _light: "#000000" },
+      value: "#ffffff",
     },
 
     cardCentralWaitingNumber: {
-      value: { base: "#ffffff", _light: "#000000" },
+      value: "#ffffff",
     },
 
     cardCentralWaitingMeta: {
-      value: { base: "rgba(255, 255, 255, 0.8)", _light: "rgba(0, 0, 0, 0.7)" },
+      value: "rgba(255, 255, 255, 0.8)",
     },
 
     success: {
-      value: { base: "rgba(34, 197, 94, 0.9)", _light: "{colors.success.600}" },
+      value: "rgba(34, 197, 94, 0.9)",
     },
 
     warning: {
-      value: {
-        base: "rgba(245, 158, 11, 0.9)",
-        _light: "{colors.warning.600}",
-      },
+      value: "rgba(245, 158, 11, 0.9)",
     },
 
     danger: {
-      value: { base: "rgba(239, 68, 68, 0.9)", _light: "{colors.danger.600}" },
+      value: "rgba(239, 68, 68, 0.9)",
     },
   },
 };

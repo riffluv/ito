@@ -3,16 +3,17 @@ import { IconButton, VisuallyHidden } from "@chakra-ui/react";
 import { Sun } from "lucide-react";
 
 /**
- * ThemeToggle - ライトモード固定版
- * ダークモード機能を完全除去し、ライトモード1本に集中
+ * ThemeToggle - ダークモード固定版
+ * CLAUDE.mdに従い、ダークモード専用に確定
+ * ライトモード機能を完全除去し、保守性向上
  */
 export default function ThemeToggle() {
-  // ライトモード固定 - 機能的に無効化
-  const label = "ライトモード（固定）";
+  // ダークモード固定 - 機能的に無効化
+  const label = "ダークモード（固定）";
   const icon = <Sun size={18} />;
 
   const handleClick = () => {
-    // 何もしない - ライトモード固定のため
+    // 何もしない - ダークモード固定のため
   };
 
   return (
@@ -23,7 +24,7 @@ export default function ThemeToggle() {
         onClick={handleClick}
         variant="ghost"
         rounded="full"
-        disabled // ライトモード固定のため無効化
+        disabled // ダークモード固定のため無効化
         opacity={0.6} // 視覚的に無効化されていることを表示
         cursor="default"
         _focusVisible={{

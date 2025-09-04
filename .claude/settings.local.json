@@ -42,7 +42,12 @@
       "WebFetch(domain:v3.chakra-ui.com)",
       "WebFetch(domain:www.chakra-ui.com)",
       "Read(c:\\Users\\hr-hm\\Desktop\\codex/**)",
-      "Read(c:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)"
+      "Read(c:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\app/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\theme/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\theme/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\app/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex/**)"
     ],
     "deny": [],
     "ask": []
