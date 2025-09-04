@@ -29,20 +29,22 @@ export function RoomCard({
       }}
     >
       {/* Main Card */}
-      <Box
-        borderRadius="xl"
-        border="1px solid rgba(255,255,255,0.1)"
-        bg="rgba(255,255,255,0.03)"
-        backdropFilter="blur(20px)"
-        p={6}
+        <Box
+          borderRadius="xl"
+          border="1px solid"
+          borderColor="border"
+          bg="glassBg03"
+          backdropFilter="blur(20px)"
+          p={6}
         minH="180px"
         position="relative"
         overflow="hidden"
-        boxShadow="0 4px 16px rgba(0,0,0,0.1)"
-        _groupHover={{
-          border: "1px solid rgba(107,115,255,0.3)",
-          bg: "rgba(107,115,255,0.05)",
-          boxShadow: "0 8px 32px rgba(107,115,255,0.2)",
+          boxShadow="0 4px 16px rgba(0,0,0,0.1)"
+          _groupHover={{
+          border: "1px solid",
+          borderColor: "primary",
+          bg: "primarySubtle",
+          boxShadow: "var(--colors-brandShadow)",
           _before: {
             opacity: 1,
           },
@@ -52,8 +54,7 @@ export function RoomCard({
           position: "absolute",
           inset: 0,
           borderRadius: "xl",
-          background:
-            "linear-gradient(135deg, rgba(107,115,255,0.08) 0%, rgba(153,69,255,0.04) 100%)",
+          background: "brandGradient",
           opacity: 0,
           transition: "opacity 0.3s ease",
           pointerEvents: "none",
@@ -98,7 +99,7 @@ export function RoomCard({
             {/* Room stats */}
             <HStack gap={4} opacity={0.8}>
               <HStack gap={1.5}>
-                <Users size={14} color="rgba(255,255,255,0.6)" />
+                <Users size={14} color="var(--colors-textMuted)" />
                 <Text fontSize="sm" color="fgMuted" fontWeight={500}>
                   {count}人参加中
                 </Text>
@@ -106,10 +107,10 @@ export function RoomCard({
 
               {isWaiting && (
                 <HStack gap={1.5}>
-                  <UserCheck size={14} color="rgba(34,197,94,0.8)" />
+                  <UserCheck size={14} color="var(--colors-success)" />
                   <Text
                     fontSize="sm"
-                    color="rgba(34,197,94,0.8)"
+                    color="var(--colors-success)"
                     fontWeight={500}
                   >
                     参加可能
@@ -131,19 +132,18 @@ export function RoomCard({
               fontWeight: 600,
               ...(isWaiting
                 ? {
-                    background:
-                      "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
-                    boxShadow: "0 2px 8px rgba(107,115,255,0.3)",
+                    background: "brandGradient",
+                    boxShadow: "var(--colors-brandShadow)",
                     _hover: {
                       transform: "translateY(-1px)",
-                      boxShadow: "0 4px 16px rgba(107,115,255,0.4)",
-                      background:
-                        "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
+                      boxShadow: "var(--colors-brandShadowHover)",
+                      background: "brandGradientHover",
                     },
                   }
                 : {
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "glassBg05",
+                    border: "1px solid",
+                    borderColor: "border",
                     color: "fgMuted",
                     cursor: "not-allowed",
                   }),
@@ -165,7 +165,7 @@ export function RoomCard({
           left={0}
           right={0}
           h="2px"
-          bg="linear-gradient(90deg, #6B73FF, #9945FF)"
+          bg="brandGradient"
           borderTopRadius="20px"
           opacity={0}
           transition="opacity 0.3s ease"

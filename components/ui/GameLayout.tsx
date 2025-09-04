@@ -104,6 +104,7 @@ export function GameLayout({
             flexDirection="column"
             alignItems="center"
             css={{
+              containerType: "inline-size",
               [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
                 top: headerDPI125,
               },

@@ -318,6 +318,22 @@ export const premiumSemanticTokens = {
     danger: {
       value: "rgba(239, 68, 68, 0.9)",
     },
+
+    // === OVERLAYS / GLASS / BRAND GRADIENTS (for migration) ===
+    overlayStrong: { value: "rgba(0, 0, 0, 0.8)" },
+    overlayMedium: { value: "rgba(0, 0, 0, 0.7)" },
+
+    glassBg03: { value: "rgba(255, 255, 255, 0.03)" },
+    glassBg05: { value: "rgba(255, 255, 255, 0.05)" },
+    glassBg08: { value: "rgba(255, 255, 255, 0.08)" },
+    glassBorder: { value: "rgba(255, 255, 255, 0.12)" },
+    glassBorderWeak: { value: "rgba(255, 255, 255, 0.08)" },
+
+    brandGradient: { value: "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)" },
+    brandGradientHover: { value: "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)" },
+    brandShadow: { value: "0 4px 20px rgba(107,115,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)" },
+    brandShadowHover: { value: "0 8px 32px rgba(107,115,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3)" },
+    brandRing: { value: "rgba(107,115,255,0.15)" },
   },
 };
 

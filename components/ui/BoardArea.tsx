@@ -32,6 +32,7 @@ export default function BoardArea({ isOver, droppable = true, children, ...rest 
         justifyContent="center" // 単数枚時も中央に配置
         perspective="1000px" // 3Dカードアニメーション用
         css={{
+          containerType: "inline-size",
           "& .gamecard-inner": {
             transformStyle: "preserve-3d",
           },
