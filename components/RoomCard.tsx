@@ -23,10 +23,6 @@ export function RoomCard({
       position="relative"
       cursor="pointer"
       onClick={onJoin}
-      transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-      _hover={{
-        transform: "translateY(-4px)",
-      }}
     >
       {/* Main Card */}
       <Box
@@ -40,10 +36,12 @@ export function RoomCard({
         position="relative"
         overflow="hidden"
         boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
+        transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
+        willChange="transform"
         _groupHover={{
           borderColor: "primary",
           bg: "accentSubtle",
-          transform: "translateY(-2px)",
+          transform: "translateY(-8px)",
         }}
       >
         {/* Status indicator */}
