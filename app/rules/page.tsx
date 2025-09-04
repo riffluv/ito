@@ -22,19 +22,8 @@ export default function RulesPage() {
   return (
     <Box
       minH="100vh"
-      bgGradient="linear(to-br, #191B21, #212329)"
+      bg="richBlack.900" // ドラクエ風リッチブラック背景
       position="relative"
-      _before={{
-        content: '""',
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgGradient:
-          "radial(ellipse at 50% 0%, rgba(107,115,255,0.15), transparent 50%)",
-        pointerEvents: "none",
-      }}
     >
       <Container maxW="4xl" py={{ base: 12, md: 16 }} position="relative">
         {/* Hero Header */}
@@ -74,42 +63,67 @@ export default function RulesPage() {
             <Heading
               size="4xl"
               fontWeight="bold"
-              bgGradient="linear(to-r, white, #E2E8F0)"
-              bgClip="text"
-              letterSpacing="tight"
+              color="white"
+              fontFamily="monospace"
+              textShadow="2px 2px 0px #000"
+              letterSpacing="0.1em"
+              textAlign="center"
+              mb={4}
             >
-              ITO（イト）
+              ▼ ITO の きまり ▼
             </Heading>
-            <Text
-              fontSize="xl"
-              color="gray.300"
-              maxW="2xl"
-              lineHeight="relaxed"
+            <Box
+              p={6}
+              bg="richBlack.800"
+              border="borders.retrogame"
+              borderRadius={0}
+              mx="auto"
+              maxW="3xl"
             >
-              協力型のパーティゲーム。各プレイヤーは1〜100の数字が書かれたカードを1枚ずつ持ち、
-              自分の数字を直接言わずに「お題」に沿った表現で数字の大小を伝え、
-              全員でカードを小さい順に並べることを目指します。
-            </Text>
+              <Text
+                fontSize="lg"
+                color="white"
+                fontFamily="monospace"
+                lineHeight="1.8"
+                textAlign="center"
+                textShadow="1px 1px 0px #000"
+              >
+                きょうりょくがたの パーティーゲーム。
+                <br />
+                かくプレイヤーは 1〜100の かずを もち、
+                <br />
+                じぶんの かずを ちょくせつ いわずに
+                <br />
+                「おだい」に そった ひょうげんで つたえ、
+                <br />
+                ぜんいんで カードを ちいさい じゅんに
+                <br />
+                ならべることを めざします。
+              </Text>
+            </Box>
           </VStack>
         </VStack>
 
         <VStack gap={{ base: 8, md: 10 }} align="stretch">
           {/* ゲームの流れ */}
           <Box
-            bg="rgba(255,255,255,0.03)"
-            backdropFilter="blur(10px)"
-            borderRadius="xl"
-            border="1px solid rgba(255,255,255,0.1)"
+            bg="richBlack.800"
+            border="borders.retrogame"
+            borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Flex align="center" gap={3} mb={6}>
-              <Box p={2} borderRadius="lg" bg="blue.500" color="white">
-                <Users size={20} />
-              </Box>
-              <Heading size="lg" color="white">
-                ゲームの流れ
-              </Heading>
-            </Flex>
+            <Heading 
+              size="lg" 
+              color="white" 
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              textAlign="center"
+              mb={6}
+              borderBottom="borders.retrogameThin"
+              pb={4}
+            >
+              ▼ ゲームの ながれ ▼
+            </Heading>
 
             <List.Root
               as="ol"
@@ -118,52 +132,55 @@ export default function RulesPage() {
             >
               {[
                 {
-                  title: "カード配布",
-                  desc: "各プレイヤーに1〜100のカードを1枚ずつ配ります。自分の数字は他のプレイヤーに教えないでください。",
+                  title: "１．カード くばり",
+                  desc: "かくプレイヤーに １〜１００の カードを １まいずつ くばります。じぶんの すうじは ほかの プレイヤーに おしえては いけません。",
                 },
                 {
-                  title: "お題を決める",
-                  desc: "1枚のお題カードを引いてテーマを決めます（例: 「怖いもの」「好きな食べ物」など）。数字の大小を表現しやすいテーマが良いです。",
+                  title: "２．おだいを きめる",
+                  desc: "１まいの おだいカードを ひいて テーマを きめます（れい：「こわいもの」「すきな たべもの」など）。すうじの だいしょうを ひょうげんしやすい テーマが よいです。",
                 },
                 {
-                  title: "表現（ヒント）",
-                  desc: "各プレイヤーは自分の数字を直接言わず、テーマに沿った「たとえ」や「イメージ」で表現します。",
+                  title: "３．ひょうげん（ヒント）",
+                  desc: "かくプレイヤーは じぶんの すうじを ちょくせつ いわず、テーマに そった「たとえ」や「イメージ」で ひょうげんします。",
                 },
                 {
-                  title: "カードを出す",
-                  desc: "表現を聞いて、自分のカードが小さいと思う順にカードを場に出していきます。",
+                  title: "４．カードを だす",
+                  desc: "ひょうげんを きいて、じぶんの カードが ちいさいと おもう じゅんに カードを ばに だして いきます。",
                 },
                 {
-                  title: "判定",
-                  desc: "全てのカードを場に出し、小さい順に並んでいれば成功です。順序が入れ替わっていたら失敗です。",
+                  title: "５．はんてい",
+                  desc: "すべての カードを ばに だし、ちいさい じゅんに ならんで いれば せいこう です。じゅんじょが いれかわって いたら しっぱい です。",
                 },
               ].map((step, index) => (
                 <List.Item key={index}>
-                  <Flex gap={4} align="start">
-                    <Box
-                      minW="8"
-                      h="8"
-                      borderRadius="full"
-                      bg="gray.700"
-                      color="white"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      fontSize="sm"
-                      fontWeight="bold"
-                      mt={1}
-                    >
-                      {index + 1}
-                    </Box>
-                    <VStack align="start" gap={1} flex={1}>
-                      <Text fontWeight="semibold" color="white">
+                  <Box 
+                    p={4} 
+                    mb={3}
+                    bg="richBlack.700" 
+                    border="borders.retrogameThin" 
+                    borderRadius={0}
+                  >
+                    <VStack align="start" gap={2} flex={1}>
+                      <Text 
+                        fontWeight="bold" 
+                        color="white"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                        fontSize="md"
+                      >
                         {step.title}
                       </Text>
-                      <Text color="gray.300" fontSize="sm" lineHeight="relaxed">
+                      <Text 
+                        color="white" 
+                        fontSize="sm" 
+                        lineHeight="1.6"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                      >
                         {step.desc}
                       </Text>
                     </VStack>
-                  </Flex>
+                  </Box>
                 </List.Item>
               ))}
             </List.Root>
@@ -171,20 +188,23 @@ export default function RulesPage() {
 
           {/* 判定方法（モード） */}
           <Box
-            bg="rgba(255,255,255,0.03)"
-            backdropFilter="blur(10px)"
-            borderRadius="xl"
-            border="1px solid rgba(255,255,255,0.1)"
+            bg="richBlack.800"
+            border="borders.retrogame"
+            borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Flex align="center" gap={3} mb={6}>
-              <Box p={2} borderRadius="lg" bg="purple.500" color="white">
-                <Zap size={20} />
-              </Box>
-              <Heading size="lg" color="white">
-                判定方法（モード）
-              </Heading>
-            </Flex>
+            <Heading 
+              size="lg" 
+              color="white" 
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              textAlign="center"
+              mb={6}
+              borderBottom="borders.retrogameThin"
+              pb={4}
+            >
+              ▼ はんてい ほうほう（モード）▼
+            </Heading>
 
             <List.Root as="ul" gap="4">
               {[
@@ -222,20 +242,23 @@ export default function RulesPage() {
 
           {/* ルール要点・コツ・例 */}
           <Box
-            bg="rgba(255,255,255,0.03)"
-            backdropFilter="blur(10px)"
-            borderRadius="xl"
-            border="1px solid rgba(255,255,255,0.1)"
+            bg="richBlack.800"
+            border="borders.retrogame"
+            borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Flex align="center" gap={3} mb={6}>
-              <Box p={2} borderRadius="lg" bg="green.500" color="white">
-                <Target size={20} />
-              </Box>
-              <Heading size="lg" color="white">
-                攻略のポイント
-              </Heading>
-            </Flex>
+            <Heading 
+              size="lg" 
+              color="white" 
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              textAlign="center"
+              mb={6}
+              borderBottom="borders.retrogameThin"
+              pb={4}
+            >
+              ▼ こうりゃくの ポイント ▼
+            </Heading>
 
             <VStack gap={6} align="stretch">
               <Box>
@@ -320,9 +343,27 @@ export default function RulesPage() {
         </VStack>
 
         <Box mt={{ base: 10, md: 12 }} textAlign="center">
-          <Text fontSize="sm" color="gray.500">
-            このページは簡潔な説明です。詳細やバリアントは別ページで管理可能です
-          </Text>
+          <Box
+            p={4}
+            bg="richBlack.700"
+            border="borders.retrogameThin"
+            borderRadius={0}
+            mx="auto"
+            maxW="2xl"
+          >
+            <Text 
+              fontSize="sm" 
+              color="white"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+            >
+              このページは かんけつな せつめい です。
+              <br />
+              しょうさいや バリアントは べつページで 
+              <br />
+              かんり かのう です。
+            </Text>
+          </Box>
         </Box>
       </Container>
     </Box>

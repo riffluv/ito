@@ -79,7 +79,8 @@
       "Read(/c:\\Users\\hr-hm\\Desktop\\codex\\AIdesign/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components/**)",
-      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\theme/**)"
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\theme/**)",
+      "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\app\\rules/**)"
     ],
     "deny": [],
     "ask": []
