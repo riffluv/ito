@@ -23,17 +23,18 @@ const getBorderStyle = (waitingInCentral: boolean, state: string) => {
   if (waitingInCentral) {
     return { border: "none", borderColor: undefined };
   }
-  
+
   const borderWidth = "1.5px";
   const borderStyle = "solid"; // 🎯 統一: 全ての状態で実線ボーダー
-  
+
   // テーマトークンを使用した統一ボーダー色
-  const borderColor = state === "success" 
-    ? "borderAccent" // テーマのアクセント色（青系）
-    : state === "fail" 
-      ? "dangerSolid" // テーマの危険色（赤系）
-      : "borderStrong"; // テーマの強い白系ボーダー
-      
+  const borderColor =
+    state === "success"
+      ? "borderAccent" // テーマのアクセント色（青系）
+      : state === "fail"
+        ? "dangerSolid" // テーマの危険色（赤系）
+        : "borderStrong"; // テーマの強い白系ボーダー
+
   return {
     border: `${borderWidth} ${borderStyle}`,
     borderColor,
@@ -43,7 +44,7 @@ const getBorderStyle = (waitingInCentral: boolean, state: string) => {
 // 🎯 統一されたフォントサイズ計算関数
 const getNumberFontSize = (number: number | null): string => {
   if (typeof number !== "number") return "1.22rem"; // 連想ワード用
-  
+
   const digits = String(number).length;
   if (digits <= 1) return "3rem";
   if (digits === 2) return "2.8rem";
@@ -75,7 +76,7 @@ export function GameCard({
   waitingInCentral = false,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   // 🎯 強化デバッグログ：フォント問題の徹底調査
   console.log("🔥 GameCard ENHANCED DEBUG:");
   console.log("  📦 variant:", variant);
@@ -84,10 +85,10 @@ export function GameCard({
   console.log("  #️⃣ index:", typeof index === "number" ? index + 1 : "?");
   console.log("  🎨 unifiedStyle:", getUnifiedTextStyle());
   console.log("  🏷️ Card Key:", `${name}-${index}-${variant}-${flipped}`);
-  
+
   // 🚨 CSSクラスが適用されているか確認
   console.log("  🧪 DOM要素確認のため、ユニークIDを付与します");
-  
+
   // 統一されたボーダースタイルを取得
   const borderStyle = getBorderStyle(waitingInCentral, state);
 
@@ -107,7 +108,7 @@ export function GameCard({
   const successBorder =
     state === "success"
       ? "#3b82f6" // Blue for success
-      : state === "fail" 
+      : state === "fail"
         ? "#dc2626" // Red for failure
         : "#ffffff"; // White for default/pending
   const successShadow =
@@ -126,7 +127,9 @@ export function GameCard({
     const hoverTransform = isHovered ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
-    const backNumberFontSize = getNumberFontSize(number);
+    const backNumberFontSize = getNumberFontSize(
+      typeof number === "number" ? number : null
+    );
 
     return (
       <Box
@@ -177,8 +180,17 @@ export function GameCard({
             }
             transition="all 0.3s ease"
           >
-            <Box fontSize="2xs" lineHeight="1" style={getUnifiedTextStyle()} color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"} display="flex" alignItems="center">
-              <span className={`${styles.cardMeta} ${styles.cardMeta}`}>#{typeof index === "number" ? index + 1 : "?"}</span>
+            <Box
+              fontSize="2xs"
+              lineHeight="1"
+              style={getUnifiedTextStyle()}
+              color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"}
+              display="flex"
+              alignItems="center"
+            >
+              <span className={styles.cardMeta}>
+                #{typeof index === "number" ? index + 1 : "?"}
+              </span>
             </Box>
             <Box position="relative">
               <Box
@@ -215,15 +227,7 @@ export function GameCard({
               justifyContent="flex-start"
               textAlign="left"
             >
-              <span style={{
-                fontWeight: '700 !important',
-                fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important`,
-                fontSize: '0.75rem !important',
-                lineHeight: '1 !important',
-                color: 'inherit !important'
-              }}>
-                {name ?? "(不明)"}
-              </span>
+              <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
             </Box>
           </Box>
 
@@ -266,13 +270,7 @@ export function GameCard({
               display="flex"
               alignItems="center"
             >
-              <span style={{
-                fontWeight: '700 !important',
-                fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important`,
-                fontSize: '0.75rem !important',
-                lineHeight: '1 !important',
-                color: 'inherit !important'
-              }}>
+              <span className={styles.cardMeta}>
                 #{typeof index === "number" ? index + 1 : "?"}
               </span>
             </Box>
@@ -286,15 +284,15 @@ export function GameCard({
                 fontSize={backNumberFontSize}
                 color={waitingInCentral ? "#ffffff" : "cardNumber"}
                 lineHeight="1"
-                textShadow={
-                  waitingInCentral
-                    ? "none"
-                    : "cardNumberShadow"
-                }
+                textShadow={waitingInCentral ? "none" : "cardNumberShadow"}
                 width="100%"
                 textAlign="center"
                 whiteSpace="nowrap"
-                letterSpacing={typeof number === "number" && String(number).length >= 3 ? "-1px" : undefined}
+                letterSpacing={
+                  typeof number === "number" && String(number).length >= 3
+                    ? "-1px"
+                    : undefined
+                }
               >
                 {typeof number === "number" ? number : ""}
               </Box>
@@ -309,15 +307,7 @@ export function GameCard({
               justifyContent="flex-start"
               textAlign="left"
             >
-              <span style={{
-                fontWeight: '700 !important',
-                fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important`,
-                fontSize: '0.75rem !important',
-                lineHeight: '1 !important',
-                color: 'inherit !important'
-              }}>
-                {name ?? "(不明)"}
-              </span>
+              <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
             </Box>
           </Box>
         </div>
@@ -354,7 +344,9 @@ export function GameCard({
           : state === "success"
             ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
             : state === "fail"
-              ? mergeShadow("0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)")
+              ? mergeShadow(
+                  "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
+                )
               : isHovered
                 ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
                 : mergeShadow("0 4px 12px rgba(0,0,0,0.15)")
@@ -371,7 +363,7 @@ export function GameCard({
         display="flex"
         alignItems="center"
       >
-        <span className={`${styles.cardMeta} ${styles.cardMeta}`}>
+        <span className={styles.cardMeta}>
           #{typeof index === "number" ? index + 1 : "?"}
         </span>
       </Box>
@@ -382,14 +374,16 @@ export function GameCard({
           left="50%"
           transform="translate(-50%, -50%)"
           fontWeight={700}
-          fontSize={getNumberFontSize(typeof number === "number" ? number : null)}
+          fontSize={getNumberFontSize(
+            typeof number === "number" ? number : null
+          )}
           color={
             waitingInCentral
               ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
               : state === "success"
                 ? "#3b82f6" // Blue for success
                 : state === "fail"
-                  ? "#dc2626" // Red for failure  
+                  ? "#dc2626" // Red for failure
                   : "#ffffff" // White for pending/default
           }
           lineHeight={1.05}
@@ -424,13 +418,10 @@ export function GameCard({
         justifyContent="flex-start"
         textAlign="left"
       >
-        <span className={`${styles.cardMeta} ${styles.cardMeta}`}>
-          {name ?? "(不明)"}
-        </span>
+        <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
       </Box>
     </Box>
   );
 }
 
 export default GameCard;
-
