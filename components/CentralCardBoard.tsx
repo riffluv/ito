@@ -295,28 +295,30 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           },
         }}
       >
-        {/* 🎯 PREMIUM INSTRUCTION - Professional Game Guidance */}
+        {/* 🎯 PREMIUM INSTRUCTION - Dragon Quest Style Guide */}
         <Box
-          bg="cardInstruction"
-          border="1px solid"
-          borderColor="cardInstructionBorder"
+          bg="rgba(25,27,33,0.8)"
+          border="borders.retrogameThin"
+          borderColor="rgba(255,255,255,0.3)"
           borderRadius="xl"
-          px={{ base: 4, md: 6 }}
-          py={{ base: 3, md: 4 }}
-          backdropFilter="blur(16px)"
-          boxShadow="sm"
+          px={{ base: 5, md: 7 }}
+          py={{ base: 4, md: 5 }}
+          backdropFilter="blur(16px) saturate(1.1)"
+          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.2)"
           transition="all 0.2s ease"
           display="inline-block"
           fontFamily="heading"
           fontSize="sm"
-          fontWeight="500"
-          color="cardInstructionText"
-          letterSpacing="-0.01em"
+          fontWeight="600"
+          color="rgba(255,255,255,0.9)"
+          letterSpacing="0.02em"
+          textShadow="0 1px 2px rgba(0,0,0,0.3)"
           _hover={{
-            bg: "cardInstructionHover",
-            borderColor: "cardInstructionBorderHover",
+            bg: "rgba(99,102,241,0.1)",
+            borderColor: "rgba(99,102,241,0.5)",
             transform: "translateY(-1px)",
-            boxShadow: "md",
+            boxShadow: "inset 0 1px 2px rgba(99,102,241,0.1), 0 6px 16px rgba(0,0,0,0.25)",
+            color: "rgba(255,255,255,1)",
           }}
         >
           小さい順から大きい順に並べよう
@@ -336,8 +338,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       >
         <Box
           borderWidth="0"
+          border="borders.retrogameThin"
+          borderColor="rgba(255,255,255,0.15)"
           borderRadius="2xl"
-          padding={{ base: 4, md: 6 }}
+          padding={{ base: 6, md: 8 }}
           minHeight="auto"
           width="100%"
           maxWidth="var(--board-max-width)"
@@ -347,9 +351,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           justifyContent="center"
           alignContent="flex-start"
           alignItems="flex-start"
-          gap={{ base: 3, md: 4, lg: 5 }} // 8人環境で適切なスペーシング
-          bg="transparent"
-          boxShadow="none"
+          gap={{ base: 4, md: 5, lg: 6 }} // 8人環境で適切なスペーシング
+          bg="rgba(25,27,33,0.4)"
+          boxShadow="inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.15)"
+          backdropFilter="blur(8px) saturate(1.1)"
           transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
           // 8人環境での最適化統合CSS
@@ -448,25 +453,27 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        bg="surfaceRaised"
-                        border="1.5px dashed"
-                        borderColor="slotBorder"
+                        bg="rgba(25,27,33,0.6)"
+                        border="borders.retrogameGame"
+                        borderColor="rgba(255,255,255,0.2)"
+                        borderStyle="dashed"
                         borderRadius="16px"
-                        boxShadow="sm"
+                        boxShadow="inset 0 1px 3px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1)"
                         backdropFilter="blur(4px)"
                         fontSize="lg"
-                        fontWeight="500"
-                        color="slotText"
+                        fontWeight="600"
+                        color="rgba(255,255,255,0.6)"
                         letterSpacing="-0.01em"
-                        transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
+                        transition="all 0.2s ease"
                         cursor="pointer"
                         position="relative"
                         overflow="hidden"
                         _hover={{
-                          bg: "slotHover",
-                          borderColor: "slotBorderHover",
-                          color: "slotTextHover",
-                          boxShadow: "md",
+                          bg: "rgba(99,102,241,0.1)",
+                          borderColor: "rgba(99,102,241,0.4)",
+                          color: "rgba(255,255,255,0.8)",
+                          boxShadow: "inset 0 1px 3px rgba(99,102,241,0.1), 0 2px 6px rgba(99,102,241,0.2)",
+                          transform: "translateY(-1px)",
                         }}
                       >
                         {idx + 1}
