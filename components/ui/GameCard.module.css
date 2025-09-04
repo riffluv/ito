@@ -3,7 +3,7 @@
 .cardMeta {
   /* === Unified small meta text (index + player name) === */
   font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui,
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui,
     sans-serif;
   font-size: 0.75rem; /* 12px base */
   line-height: 1;
