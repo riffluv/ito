@@ -123,7 +123,7 @@ export function CreateRoomModal({
         <Dialog.Content
           css={{
             background: "richBlack.800", // リッチブラック
-            border: "3px solid white", // 白いborder
+            border: "borders.retrogame", // ドラクエ風統一ボーダー
             borderRadius: 0, // 角ばった
             boxShadow: "none", // 影なし
             maxWidth: "480px",
@@ -147,7 +147,7 @@ export function CreateRoomModal({
               borderRadius: 0, // 角ばった
               background: "transparent",
               color: "white",
-              border: "2px solid white",
+              border: "borders.retrogameThin",
               width: "32px",
               height: "32px",
               transition: "all 0.1s ease",
@@ -161,7 +161,7 @@ export function CreateRoomModal({
           </IconButton>
 
           {/* Header - ドラクエ風 */}
-          <Box p={6} position="relative" zIndex={1} borderBottom="2px solid white">
+          <Box p={6} position="relative" zIndex={1} borderBottom="borders.retrogameThin">
             <VStack gap={2} align="center">
               <Dialog.Title
                 css={{
@@ -243,7 +243,7 @@ export function CreateRoomModal({
                   css={{
                     height: "48px",
                     background: "white",
-                    border: "2px solid black",
+                    border: "borders.retrogameInput",
                     borderRadius: 0,
                     fontSize: "1rem",
                     padding: "0 16px",
@@ -271,7 +271,7 @@ export function CreateRoomModal({
           </Box>
 
           {/* Footer - ドラクエ風 */}
-          <Box p={4} pt={0} position="relative" zIndex={1} borderTop="2px solid white">
+          <Box p={4} pt={0} position="relative" zIndex={1} borderTop="borders.retrogameThin">
             <HStack justify="space-between" gap={3} mt={4}>
               <button
                 onClick={onClose}
@@ -282,7 +282,7 @@ export function CreateRoomModal({
                   fontWeight: "bold",
                   fontSize: "1rem",
                   fontFamily: "monospace",
-                  border: "2px solid white",
+                  border: "borders.retrogameThin",
                   background: "transparent",
                   color: "white",
                   cursor: "pointer",
@@ -311,7 +311,7 @@ export function CreateRoomModal({
                   fontWeight: "bold",
                   fontSize: "1rem",
                   fontFamily: "monospace",
-                  border: "2px solid white",
+                  border: "borders.retrogameThin",
                   background: submitting || !name.trim() ? "#666" : "var(--colors-richBlack-600)",
                   color: "white",
                   cursor: submitting || !name.trim() ? "not-allowed" : "pointer",
