@@ -249,8 +249,10 @@ const confirmAction = () => { /* 確定処理 */ onClose(); };
 
 ---
 
+
 ## まとめ
 - **トークン調整→状態差→意味のあるモーション→A11y** の順で“AIっぽさ”を脱出。  
 - 原則はフレームワーク非依存。Chakraでは **semanticTokens と component theme** を要に。  
 - 合理・一貫・文脈の3点で、“人の手の仕上げ”に近づける。
+
 

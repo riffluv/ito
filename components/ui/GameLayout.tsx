@@ -116,12 +116,12 @@ export function GameLayout({
             <Box
               w="100%"
               h="100%"
-              px={{ base: 3, md: 8 }}
-              py={{ base: 3, md: 8 }}
+              px={{ base: 4, md: 8 }}
+              py={{ base: 4, md: 8 }}
               position="relative"
               display="flex"
               flexDirection="column"
-              gap={4}
+              gap={{ base: 4, md: 6 }}
               zIndex={1}
             >
               {main}
@@ -130,16 +130,18 @@ export function GameLayout({
 
           <Box
             position="fixed"
-            left={{ base: 3, md: 8 }}
-            right={{ base: 3, md: 8 }}
-            bottom={{ base: 5, md: 8 }}
+            left={{ base: 4, md: 8 }}
+            right={{ base: 4, md: 8 }}
+            bottom={{ base: 6, md: 8 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
             borderRadius="xl"
-            p={{ base: 2.5, md: 3 }}
+            p={{ base: 3, md: 4 }}
             bg="surfaceOverlay"
             borderWidth="0"
             backdropFilter="blur(10px) saturate(1.5)"
             boxShadow="0 4px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.5)"
+            border="borders.retrogameGame"
+            borderColor="rgba(255,255,255,0.2)"
           >
             {handArea || <Box h="1px" />}
           </Box>
@@ -221,14 +223,15 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg="surfaceRaised"
-          paddingInline={{ base: 3, md: 4, lg: 6, xl: 8 }}
-          paddingTop={{ base: 3, md: 4, lg: 6, xl: 8 }}
+          paddingInline={{ base: 4, md: 6, lg: 8, xl: 8 }}
+          paddingTop={{ base: 4, md: 6, lg: 8, xl: 8 }}
           paddingBottom={0}
           overflowY="hidden"
           display="flex"
           flexDirection="column"
           position="relative"
           minH={0}
+          gap={{ base: 4, md: 6 }}
         >
           {main}
         </Box>
@@ -249,12 +252,13 @@ export function GameLayout({
         <Box
           gridArea="hand"
           bg="transparent"
-          padding={{ base: "20px", md: "20px" }}
+          padding={{ base: 4, md: 6 }}
           display="flex"
           alignItems="center"
           justifyContent="center"
           height={UNIFIED_LAYOUT.HAND_AREA_HEIGHT}
           maxHeight="none"
+          gap={{ base: 3, md: 4 }}
           css={{
             "@media (max-width: 768px)": {
               flexDirection: "column",

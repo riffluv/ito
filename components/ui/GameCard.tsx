@@ -18,15 +18,16 @@ export type GameCardProps = {
   waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
 };
 
-// 統一されたボーダー設定関数
+// 統一されたボーダー設定関数 - ドラクエ風強化版
 const getBorderStyle = (waitingInCentral: boolean, state: string) => {
   if (waitingInCentral) {
-    return { border: "none", borderColor: undefined };
+    // 中央ボードではドラクエ風の繊細なボーダー
+    return { border: "borders.retrogameGame", borderColor: "rgba(255,255,255,0.6)" };
   }
 
-  const borderWidth = "1.5px";
-  const borderStyle = "solid"; // 🎯 統一: 全ての状態で実線ボーダー
-
+  // ゲーム内UIは細めのボーダーでドラクエ風統一
+  const baseBorder = "borders.retrogameGame";
+  
   // テーマトークンを使用した統一ボーダー色
   const borderColor =
     state === "success"
@@ -36,7 +37,7 @@ const getBorderStyle = (waitingInCentral: boolean, state: string) => {
         : "borderStrong"; // テーマの強い白系ボーダー
 
   return {
-    border: `${borderWidth} ${borderStyle}`,
+    border: baseBorder,
     borderColor,
   };
 };
@@ -50,6 +51,18 @@ const getNumberFontSize = (number: number | null): string => {
   if (digits === 2) return "2.8rem";
   if (digits === 3) return "2.35rem"; // 100 対策
   return "2.2rem"; // フォールバック (想定外の多桁)
+};
+
+// 🎯 連想ワード用動的フォントサイズ計算関数
+const getClueFontSize = (clue: string | undefined): string => {
+  if (!clue) return "1.22rem";
+  
+  const length = clue.length;
+  if (length <= 4) return "1.22rem";      // 短い（例: "ゲーム"）
+  if (length <= 6) return "1.1rem";       // 中程度（例: "洋食料理"）
+  if (length <= 8) return "1rem";         // やや長い（例: "ホメシチしょう"）
+  if (length <= 10) return "0.9rem";      // 長い（例: "洋食料理・ホメシチ"）
+  return "0.8rem"; // とても長い（例: "洋食料理・ホメシチ・しょうゆ"）
 };
 
 // 🎯 統一されたテキストスタイル関数（CSS ベストプラクティス）
@@ -173,10 +186,14 @@ export function GameCard({
             alignItems="stretch"
             boxShadow={
               waitingInCentral
-                ? "0 4px 12px rgba(0,0,0,0.15)"
-                : isHovered
-                  ? "lg"
-                  : "md"
+                ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.25)"
+                : state === "success"
+                  ? "inset 0 1px 2px rgba(99,102,241,0.2), 0 2px 8px rgba(34,197,94,0.3)"
+                  : state === "fail"
+                    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 8px rgba(239,68,68,0.3)"
+                    : isHovered
+                      ? "inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.2)"
+                      : "inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.15)"
             }
             transition="all 0.3s ease"
           >
@@ -199,20 +216,27 @@ export function GameCard({
                 left="50%"
                 transform="translate(-50%, -50%)"
                 fontWeight={700}
-                fontSize="1.22rem"
-                textAlign="center"
-                lineHeight="1.15"
-                width="100%"
-                px="1"
-                wordBreak="keep-all"
+                fontSize={getClueFontSize(clue)}
                 color={waitingInCentral ? "#ffffff" : "cardClueText"}
-                style={
-                  waitingInCentral
-                    ? {
-                        textShadow: "none",
-                      }
-                    : undefined
-                }
+                lineHeight="1.1"
+                width="100%"
+                maxWidth="calc(100% - 8px)"
+                textAlign="center"
+                padding="0 0.25rem"
+                wordBreak="break-word"
+                whiteSpace="normal"
+                overflowWrap="anywhere"
+                overflow="hidden"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                style={{
+                  textShadow: waitingInCentral ? "none" : undefined,
+                  wordWrap: "break-word",
+                  hyphens: "auto",
+                  WebkitFontSmoothing: "antialiased",
+                  MozOsxFontSmoothing: "grayscale",
+                }}
               >
                 {clue || "(連想なし)"}
               </Box>
@@ -248,14 +272,14 @@ export function GameCard({
             bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
             boxShadow={
               waitingInCentral
-                ? "0 4px 12px rgba(0,0,0,0.15)"
+                ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.25)"
                 : state === "success"
-                  ? "success"
+                  ? "inset 0 1px 2px rgba(99,102,241,0.2), 0 2px 8px rgba(34,197,94,0.3)"
                   : state === "fail"
-                    ? "fail"
+                    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 8px rgba(239,68,68,0.3)"
                     : isHovered
-                      ? "lg"
-                      : "md"
+                      ? "inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.2)"
+                      : "inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.15)"
             }
             color={waitingInCentral ? "#ffffff" : "cardBackText"}
             display="grid"
@@ -374,9 +398,11 @@ export function GameCard({
           left="50%"
           transform="translate(-50%, -50%)"
           fontWeight={700}
-          fontSize={getNumberFontSize(
-            typeof number === "number" ? number : null
-          )}
+          fontSize={
+            typeof number === "number" 
+              ? getNumberFontSize(number)
+              : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
+          }
           color={
             waitingInCentral
               ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
@@ -386,7 +412,7 @@ export function GameCard({
                   ? "#dc2626" // Red for failure
                   : "#ffffff" // White for pending/default
           }
-          lineHeight={1.05}
+          lineHeight={typeof number === "number" ? 1.05 : 1.1}
           textShadow={
             waitingInCentral
               ? "none" // Clean white text without shadow for waiting cards
@@ -395,15 +421,28 @@ export function GameCard({
                 : "none"
           }
           width="100%"
+          maxWidth="calc(100% - 8px)"
           textAlign="center"
           padding="0 0.25rem"
-          wordBreak="keep-all"
-          whiteSpace="nowrap"
+          wordBreak={typeof number === "number" ? "keep-all" : "break-word"}
+          whiteSpace={typeof number === "number" ? "nowrap" : "normal"}
+          overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
+          overflow="hidden"
+          display={typeof number === "number" ? "block" : "flex"}
+          alignItems={typeof number === "number" ? undefined : "center"}
+          justifyContent={typeof number === "number" ? undefined : "center"}
           letterSpacing={
             typeof number === "number" && String(number).length >= 3
               ? "-1px"
               : undefined
           }
+          style={{
+            wordWrap: typeof number === "number" ? "normal" : "break-word",
+            hyphens: typeof number === "number" ? "none" : "auto",
+            // フォント描画の統一のみ適用（transformは除外）
+            WebkitFontSmoothing: "antialiased",
+            MozOsxFontSmoothing: "grayscale",
+          }}
         >
           {typeof number === "number" ? number : clue || "?"}
         </Box>
