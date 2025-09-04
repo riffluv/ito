@@ -350,7 +350,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           gap={{ base: 3, md: 4, lg: 5 }} // 8人環境で適切なスペーシング
           bg="transparent"
           boxShadow="none"
-          transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+          transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
           // 8人環境での最適化統合CSS
           css={{
@@ -451,14 +451,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         bg="surfaceRaised"
                         border="1.5px dashed"
                         borderColor="slotBorder"
-                        borderRadius="lg"
+                        borderRadius="16px"
                         boxShadow="sm"
                         backdropFilter="blur(4px)"
                         fontSize="lg"
                         fontWeight="500"
                         color="slotText"
                         letterSpacing="-0.01em"
-                        transition="all 0.3s ease"
+                        transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
                         cursor="pointer"
                         position="relative"
                         overflow="hidden"
@@ -466,7 +466,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           bg: "slotHover",
                           borderColor: "slotBorderHover",
                           color: "slotTextHover",
-                          transform: "translateY(-2px)",
                           boxShadow: "md",
                         }}
                       >
@@ -533,7 +532,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         border="1.5px dashed"
                         borderColor="slotBorder"
                         boxShadow="sm"
-                        transition="all 0.2s ease"
+                        borderRadius="16px"
+                        transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
                         cursor={isDroppableSlot ? "copy" : "not-allowed"}
                         _hover={
                           isDroppableSlot
@@ -541,7 +541,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                                 bg: "slotHover",
                                 borderColor: "slotBorderHover",
                                 color: "slotTextHover",
-                                transform: "translateY(-2px)",
                                 boxShadow: "md",
                               }
                             : {}
