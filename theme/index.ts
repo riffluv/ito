@@ -1,5 +1,6 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 import { premiumSemanticTokens, premiumTokens } from "./premiumGameTheme";
+import { buttonRecipe } from "./recipes/button.recipe";
 
 /**
  * Premium Game Theme System - Chakra UI Official Inspired
@@ -71,6 +72,8 @@ const config = defineConfig({
 
     // コンポーネントレシピ - プロフェッショナルなスタイリング
     recipes: {
+      // Global App Button recipe (DQ風ベベル、中強度)
+      appButton: buttonRecipe,
       // ゲームカード用レシピ
       gameCard: {
         className: "game-card",

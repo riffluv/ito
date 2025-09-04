@@ -14,7 +14,7 @@ export function RoomCard({
   count: number;
   onJoin: () => void;
 }) {
-  const statusLabel = status === "waiting" ? "待機中" : "ゲーム中";
+  const statusLabel = status === "waiting" ? "待機中" : "進行中";
   const isWaiting = status === "waiting";
 
   return (
@@ -29,35 +29,21 @@ export function RoomCard({
       }}
     >
       {/* Main Card */}
-        <Box
-          borderRadius="xl"
-          border="1px solid"
-          borderColor="border"
-          bg="glassBg03"
-          backdropFilter="blur(20px)"
-          p={6}
+      <Box
+        borderRadius="xl"
+        border="2px solid"
+        borderColor="border"
+        bg="glassBg05"
+        backdropFilter="blur(20px)"
+        p={6}
         minH="180px"
         position="relative"
         overflow="hidden"
-          boxShadow="0 4px 16px rgba(0,0,0,0.1)"
-          _groupHover={{
-          border: "1px solid",
+        boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
+        _groupHover={{
           borderColor: "primary",
-          bg: "primarySubtle",
-          boxShadow: "var(--colors-brandShadow)",
-          _before: {
-            opacity: 1,
-          },
-        }}
-        _before={{
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          borderRadius: "xl",
-          background: "brandGradient",
-          opacity: 0,
-          transition: "opacity 0.3s ease",
-          pointerEvents: "none",
+          bg: "accentSubtle",
+          transform: "translateY(-2px)",
         }}
       >
         {/* Status indicator */}
@@ -81,7 +67,7 @@ export function RoomCard({
             <Text
               fontSize="xl"
               fontWeight={700}
-              color="white"
+              color="text"
               lineHeight={1.3}
               mb={3}
               letterSpacing="-0.01em"
@@ -101,7 +87,7 @@ export function RoomCard({
               <HStack gap={1.5}>
                 <Users size={14} color="var(--colors-textMuted)" />
                 <Text fontSize="sm" color="fgMuted" fontWeight={500}>
-                  {count}人参加中
+                  {count}人オンライン
                 </Text>
               </HStack>
 
@@ -132,13 +118,7 @@ export function RoomCard({
               fontWeight: 600,
               ...(isWaiting
                 ? {
-                    background: "brandGradient",
-                    boxShadow: "var(--colors-brandShadow)",
-                    _hover: {
-                      transform: "translateY(-1px)",
-                      boxShadow: "var(--colors-brandShadowHover)",
-                      background: "brandGradientHover",
-                    },
+                    _hover: { transform: "translateY(-1px)" },
                   }
                 : {
                     background: "glassBg05",
@@ -165,7 +145,7 @@ export function RoomCard({
           left={0}
           right={0}
           h="2px"
-          bg="brandGradient"
+          bg="accentSubtle"
           borderTopRadius="20px"
           opacity={0}
           transition="opacity 0.3s ease"
@@ -177,3 +157,5 @@ export function RoomCard({
     </Box>
   );
 }
+
+

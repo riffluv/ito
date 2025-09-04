@@ -1,161 +1,42 @@
-main-app.js?v=1756968033823:1825 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-content.js:85 [VSC] Content script initialized
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'waiting', isHost: true}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'waiting', isHost: true}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'clue', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flat
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flat
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'reveal', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'finished', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'waiting', isHost: true}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'clue', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flat
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flat
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'reveal', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: false
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-MiniHandDock.tsx:93 [MiniHandDock] Mode Debug {resolveMode: 'sort-submit', actualResolveMode: 'sort-submit', roomStatus: 'finished', isHost: true}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
-GameCard.tsx:79 🎯 GameCard Debug - variant: flip
-GameCard.tsx:80 🎯 GameCard Debug - flipped: true
-GameCard.tsx:81 🎯 GameCard Debug - name: aaaaaa
-GameCard.tsx:82 🎯 GameCard Debug - index: 1
-GameCard.tsx:83 🎯 GameCard Debug - unifiedStyle: {fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif !important", fontWeight: '400 !important', fontStyle: 'normal !important', letterSpacing: 'normal !important', textRendering: 'optimizeLegibility', …}
+index.js:627 Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  × Unexpected token `Box`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\app\page.tsx:138:1]
+ 138 │   ];
+ 139 │ 
+ 140 │   return (
+ 141 │     <Box bg="canvasBg" minH="100vh">
+     ·      ───
+ 142 │       {/* === HERO SECTION === */}
+ 143 │       <Box
+ 143 │         position="relative"
+     ╰────
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+hydration-error-info.js:63 ./app/page.tsx
+Error: 
+  × Unexpected token `Box`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\app\page.tsx:138:1]
+ 138 │   ];
+ 139 │ 
+ 140 │   return (
+ 141 │     <Box bg="canvasBg" minH="100vh">
+     ·      ───
+ 142 │       {/* === HERO SECTION === */}
+ 143 │       <Box
+ 143 │         position="relative"
+     ╰────
+
+Caused by:
+    Syntax Error
+console.error @ hydration-error-info.js:63
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+:3000/favicon.ico:1  Failed to load resource: the server responded with a status of 404 (Not Found)

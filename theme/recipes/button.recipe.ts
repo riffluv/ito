@@ -107,23 +107,20 @@ export const buttonRecipe = defineRecipe({
     visual: {
       // 🎯 SOLID - Premium gradient system like Chakra official
       solid: {
-        background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+        background: "accentActive",
         color: "white",
-        boxShadow:
-          "0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "2px solid",
+        borderColor: "borderAccent",
+        boxShadow: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
 
         _hover: {
-          background: "linear-gradient(135deg, #5B5FE8 0%, #7C3AED 100%)",
-          transform: "translateY(-2px)",
-          boxShadow:
-            "0 8px 25px -5px rgba(99,102,241,0.4), 0 4px 12px -2px rgba(139,92,246,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
-          borderColor: "rgba(255,255,255,0.2)",
+          background: "accent",
+          transform: "translateY(-1px)",
+          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
         },
         _active: {
-          transform: "translateY(0) scale(0.98)",
-          boxShadow:
-            "0 3px 8px rgba(99,102,241,0.3), inset 0 2px 4px rgba(0,0,0,0.1)",
+          transform: "translateY(0)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
         },
       },
 
@@ -156,7 +153,7 @@ export const buttonRecipe = defineRecipe({
         _hover: {
           color: "rgba(255,255,255,0.95)",
           background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "2px solid",
           transform: "translateY(-1px)",
           backdropFilter: "blur(8px)",
         },
@@ -197,7 +194,7 @@ export const buttonRecipe = defineRecipe({
 
         _hover: {
           background: "rgba(31,35,44,0.8)",
-          borderColor: "rgba(255,255,255,0.2)",
+          borderColor: "borderAccent",
           transform: "translateY(-1px)",
           boxShadow:
             "0 8px 24px -4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
@@ -235,12 +232,11 @@ export const buttonRecipe = defineRecipe({
           boxShadow: "0 0 0 4px rgba(99,102,241,0.15)",
         },
         "&[data-visual=solid]": {
-          background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
-          boxShadow:
-            "0 4px 16px -4px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+          background: "accentActive",
+          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
           _hover: {
-            background: "linear-gradient(135deg, #5B5FE8 0%, #7C3AED 100%)",
-            boxShadow: "0 8px 25px -5px rgba(99,102,241,0.5)",
+            background: "accent",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
           },
         },
         "&[data-visual=subtle]": {
@@ -257,16 +253,14 @@ export const buttonRecipe = defineRecipe({
           boxShadow: "0 0 0 4px rgba(156,163,175,0.15)",
         },
         "&[data-visual=solid]": {
-          background:
-            "linear-gradient(135deg, rgba(55,65,81,0.9) 0%, rgba(75,85,99,0.9) 100%)",
+          background: "surfaceRaised",
           color: "rgba(255,255,255,0.95)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "2px solid",
           boxShadow:
-            "0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+            "inset 0 2px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
           _hover: {
-            background:
-              "linear-gradient(135deg, rgba(75,85,99,0.9) 0%, rgba(107,114,128,0.9) 100%)",
-            boxShadow: "0 8px 20px -4px rgba(0,0,0,0.3)",
+            background: "bgMuted",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.25)",
           },
         },
         "&[data-visual=outline]": {
@@ -286,13 +280,13 @@ export const buttonRecipe = defineRecipe({
           boxShadow: "0 0 0 4px rgba(239,68,68,0.15)",
         },
         "&[data-visual=solid]": {
-          background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+          background: "dangerSolid",
           color: "white",
-          border: "1px solid rgba(255,255,255,0.15)",
+          border: "2px solid",
           boxShadow:
             "0 4px 16px -4px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
           _hover: {
-            background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
+            background: "#DC2626",
             boxShadow: "0 8px 25px -5px rgba(239,68,68,0.5)",
           },
         },
@@ -310,14 +304,14 @@ export const buttonRecipe = defineRecipe({
           boxShadow: "0 0 0 4px rgba(34,197,94,0.15)",
         },
         "&[data-visual=solid]": {
-          background: "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)",
+          background: "successSolid",
           color: "white",
-          border: "1px solid rgba(255,255,255,0.15)",
+          border: "2px solid",
           boxShadow:
             "0 4px 16px -4px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
           _hover: {
-            background: "linear-gradient(135deg, #16A34A 0%, #15803D 100%)",
-            boxShadow: "0 8px 25px -5px rgba(34,197,94,0.5)",
+            background: "#16A34A",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
           },
         },
         "&[data-visual=subtle]": {
@@ -334,14 +328,14 @@ export const buttonRecipe = defineRecipe({
           boxShadow: "0 0 0 4px rgba(20,184,166,0.15)",
         },
         "&[data-visual=solid]": {
-          background: "linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)",
+          background: "secondary",
           color: "white",
-          border: "1px solid rgba(255,255,255,0.15)",
+          border: "2px solid",
           boxShadow:
             "0 4px 16px -4px rgba(20,184,166,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
           _hover: {
-            background: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
-            boxShadow: "0 8px 25px -5px rgba(20,184,166,0.5)",
+            background: "secondaryHover",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
           },
         },
         "&[data-visual=subtle]": {
@@ -361,3 +355,11 @@ export const buttonRecipe = defineRecipe({
 });
 
 export default buttonRecipe;
+
+
+
+
+
+
+
+
