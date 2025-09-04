@@ -23,7 +23,7 @@ export function NameDialog({
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onCancel()}>
       <Dialog.Backdrop 
         css={{
-          background: 'rgba(0, 0, 0, 0.7)',
+          background: 'overlayMedium',
           backdropFilter: 'blur(8px)',
         }}
       />
@@ -65,19 +65,20 @@ export function NameDialog({
             p={6} 
             pb={4}
             css={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)',
-              borderBottom: '1px solid rgba(255,255,255,0.08)'
+              background: 'glassBg05',
+              borderBottom: '1px solid',
+              borderColor: 'glassBorderWeak'
             }}
           >
             <HStack gap={3} align="center">
               <Box 
                 w={10} h={10}
-                bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
+                bg="brandGradient"
                 borderRadius="12px"
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
-                boxShadow="0 4px 12px rgba(99,102,241,0.3)"
+                boxShadow="var(--colors-brandShadow)"
               >
                 <Box 
                   w="50%" h="50%"
@@ -127,20 +128,21 @@ export function NameDialog({
                 autoFocus
                 css={{
                   height: '48px',
-                  background: '{colors.surfaceSubtle}',
-                  border: '2px solid {colors.borderDefault}',
+                  background: 'glassBg05',
+                  border: '2px solid',
+                  borderColor: 'glassBorder',
                   borderRadius: '12px',
                   fontSize: '1rem',
                   padding: '0 16px',
-                  color: '{colors.fgDefault}',
+                  color: 'text',
                   transition: 'all 0.2s ease',
                   '&:focus': {
-                    borderColor: '{colors.borderAccent}',
-                    boxShadow: '0 0 0 3px rgba(99,102,241,0.1)',
-                    background: '{colors.surfaceRaised}'
+                    borderColor: 'primary',
+                    boxShadow: '0 0 0 4px var(--colors-brandRing)',
+                    background: 'glassBg08'
                   },
                   '&::placeholder': {
-                    color: '{colors.fgSubtle}'
+                    color: 'textSubtle'
                   }
                 }}
               />
@@ -152,8 +154,9 @@ export function NameDialog({
             p={6} 
             pt={4}
             css={{
-              background: 'rgba(255,255,255,0.02)',
-              borderTop: '1px solid rgba(255,255,255,0.08)'
+              background: 'glassBg03',
+              borderTop: '1px solid',
+              borderColor: 'glassBorderWeak'
             }}
           >
             <HStack justify="flex-end" gap={3}>

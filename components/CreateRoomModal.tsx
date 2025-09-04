@@ -114,7 +114,7 @@ export function CreateRoomModal({
       {/* Sophisticated backdrop */}
       <Dialog.Backdrop
         css={{
-          background: "rgba(0, 0, 0, 0.8)",
+          background: "overlayStrong",
           backdropFilter: "blur(12px) saturate(1.2)",
         }}
       />
@@ -122,9 +122,9 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background:
-              "linear-gradient(135deg, rgba(15,16,20,0.98) 0%, rgba(25,27,33,0.98) 100%)",
-            border: "1px solid rgba(107,115,255,0.2)",
+            background: "bgSubtle",
+            border: "1px solid",
+            borderColor: "border",
             borderRadius: "2xl",
             boxShadow: `
               0 32px 64px -12px rgba(0,0,0,0.8),
@@ -235,7 +235,7 @@ export function CreateRoomModal({
                       </Text>
                       <Text
                         fontSize="sm"
-                        color="rgba(255,255,255,0.8)"
+                        color="textMuted"
                         lineHeight={1.5}
                       >
                         まだサインインしていませんが、ルームは作成できます。
@@ -264,24 +264,25 @@ export function CreateRoomModal({
                   onChange={(e) => setName(e.target.value)}
                   css={{
                     height: "56px",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "2px solid rgba(255,255,255,0.12)",
+                    background: "glassBg05",
+                    border: "2px solid",
+                    borderColor: "glassBorder",
                     borderRadius: "xl",
                     fontSize: "1rem",
                     padding: "0 20px",
-                    color: "white",
+                    color: "text",
                     fontWeight: 500,
                     transition: "all 0.2s ease",
                     _placeholder: {
-                      color: "rgba(255,255,255,0.5)",
+                      color: "textSubtle",
                     },
                     _focus: {
-                      borderColor: "#6B73FF",
-                      boxShadow: "0 0 0 4px rgba(107,115,255,0.15)",
-                      background: "rgba(255,255,255,0.08)",
+                      borderColor: "primary",
+                      boxShadow: "0 0 0 4px var(--colors-brandRing)",
+                      background: "glassBg08",
                     },
                     _hover: {
-                      borderColor: "rgba(255,255,255,0.2)",
+                      borderColor: "border",
                     },
                   }}
                 />
@@ -301,12 +302,13 @@ export function CreateRoomModal({
                   height: "48px",
                   borderRadius: "lg",
                   fontWeight: 500,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid",
+                  borderColor: "glassBorder",
+                  background: "glassBg05",
                   transition: "all 0.2s ease",
                   _hover: {
-                    background: "rgba(255,255,255,0.12)",
-                    borderColor: "rgba(255,255,255,0.2)",
+                    background: "glassBg08",
+                    borderColor: "border",
                   },
                 }}
               >
@@ -328,22 +330,20 @@ export function CreateRoomModal({
                   fontSize: "1rem",
                   background:
                     submitting || !name.trim()
-                      ? "rgba(107,115,255,0.3)"
-                      : "linear-gradient(135deg, #6B73FF 0%, #9945FF 100%)",
+                      ? "primarySubtle"
+                      : "brandGradient",
                   boxShadow:
                     submitting || !name.trim()
                       ? "none"
-                      : "0 4px 20px rgba(107,115,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                      : "var(--colors-brandShadow)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   _hover:
                     submitting || !name.trim()
                       ? {}
                       : {
                           transform: "translateY(-2px)",
-                          background:
-                            "linear-gradient(135deg, #8B92FF 0%, #B565FF 100%)",
-                          boxShadow:
-                            "0 8px 32px rgba(107,115,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
+                          background: "brandGradientHover",
+                          boxShadow: "var(--colors-brandShadowHover)",
                         },
                   _active: {
                     transform: "translateY(0px)",

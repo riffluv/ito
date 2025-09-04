@@ -55,6 +55,7 @@
     --content-max-width: 1400px;
     --content-narrow: 800px;
     --content-article: 1200px;
+    --board-max-width: min(100%, 90rem);
 
     /* ゲームカード関連（コンテナクエリ単位に対応） */
     --card-gap:     clamp(0.375rem, 1.5cqi, 1rem);
