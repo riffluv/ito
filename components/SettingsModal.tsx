@@ -96,19 +96,42 @@ export function SettingsModal({
       open={isOpen}
       onOpenChange={(details) => !details.open && onClose()}
     >
-      <Dialog.Backdrop bg="blackAlpha.800" />
+      <Dialog.Backdrop 
+        css={{
+          background: "overlayStrong",
+          backdropFilter: "blur(12px) saturate(1.2)",
+        }}
+      />
       <Dialog.Positioner>
         <Dialog.Content
           maxW="md"
-          bg="gray.900"
-          borderRadius="xl"
-          border="1px solid"
-          borderColor="gray.700"
-          boxShadow="xl"
+          css={{
+            background: "rgba(8,9,15,0.95)", // ルーム作成と同じリッチブラック
+            border: "3px solid rgba(255,255,255,0.9)", // ドラクエ風統一ボーダー
+            borderRadius: 0, // 角ばった製品レベル
+            boxShadow: "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // 製品レベル立体感
+            padding: 0,
+            overflow: "hidden",
+          }}
         >
-          <Dialog.Header px={6} py={5}>
+          <Dialog.Header 
+            px={6} 
+            py={5}
+            css={{
+              borderBottom: "2px solid rgba(255,255,255,0.3)", // ドラクエ風区切り
+            }}
+          >
             <Dialog.Title>
-              <Text fontSize="xl" fontWeight="600" color="white">
+              <Text 
+                fontSize="xl" 
+                fontWeight="bold" 
+                color="white"
+                css={{
+                  fontFamily: "monospace", // ドラクエフォント
+                  textShadow: "1px 1px 0px #000", // 立体感
+                  textAlign: "center",
+                }}
+              >
                 ゲーム設定
               </Text>
             </Dialog.Title>
@@ -271,25 +294,24 @@ export function SettingsModal({
           <Dialog.Footer
             px={6}
             py={4}
-            borderTop="1px solid"
-            borderColor="gray.700"
+            css={{
+              borderTop: "2px solid rgba(255,255,255,0.3)", // ドラクエ風区切り
+            }}
           >
             <HStack w="full" justify="flex-end" gap={3}>
               <AppButton
-                variant="ghost"
+                visual="outline"
+                palette="gray"
                 onClick={onClose}
-                color="gray.400"
-                _hover={{ bg: "gray.800", color: "white" }}
               >
                 キャンセル
               </AppButton>
               <AppButton
-                bg="blue.600"
-                color="white"
+                visual="solid"
+                palette="brand"
                 onClick={handleSave}
                 loading={saving}
                 disabled={!isHost || roomStatus !== "waiting" || saving}
-                _hover={{ bg: "blue.500" }}
               >
                 保存
               </AppButton>
