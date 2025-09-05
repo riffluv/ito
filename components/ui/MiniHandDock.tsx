@@ -170,51 +170,37 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }}
           size="sm"
           maxW={{ base: "100%", md: "520px" }}
-          bg="rgba(0,0,0,0.6)" // ドラクエ風の深い背景
-          color="#fff"
-          border="1px solid rgba(255,255,255,0.4)" // ドラクエ風のボーダー
-          borderRadius={4}
-          _placeholder={{ color: "rgba(255,255,255,0.6)" }}
+          bg="rgba(8,9,15,0.85)"
+          color="white"
+          border="2px solid rgba(255,255,255,0.6)"
+          borderRadius={6}
+          boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)"
+          _placeholder={{ color: "rgba(255,255,255,0.5)" }}
           _focus={{
-            borderColor: "#4a9eff", // ドラクエ風の青
-            boxShadow: "0 0 0 1px #4a9eff",
-            bg: "rgba(0,0,0,0.8)",
+            borderColor: "#4a9eff",
+            boxShadow: "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
+            bg: "rgba(8,9,15,0.9)",
           }}
-          _hover={{ borderColor: "rgba(255,255,255,0.6)" }}
+          _hover={{ 
+            borderColor: "rgba(255,255,255,0.8)",
+            bg: "rgba(8,9,15,0.9)" 
+          }}
         />
         <AppButton
           size="md"
-          visual="ghost"
-          palette="gray"
+          visual="solid"
+          palette="brand"
           onClick={handleDecide}
           disabled={!canDecide}
-          css={{
-            background: canDecide
-              ? "rgba(74,158,255,0.8)"
-              : "rgba(255,255,255,0.1)",
-            border: `1px solid ${canDecide ? "#4a9eff" : "rgba(255,255,255,0.3)"}`,
-            color: canDecide ? "#fff" : "rgba(255,255,255,0.5)",
-            borderRadius: 4,
-            backdropFilter: "blur(4px)",
-          }}
         >
           決定
         </AppButton>
         <AppButton
           size="md"
-          visual="ghost"
-          palette="gray"
+          visual="solid"
+          palette="brand"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          css={{
-            background: canSubmit
-              ? "rgba(74,158,255,0.8)"
-              : "rgba(255,255,255,0.1)",
-            border: `1px solid ${canSubmit ? "#4a9eff" : "rgba(255,255,255,0.3)"}`,
-            color: canSubmit ? "#fff" : "rgba(255,255,255,0.5)",
-            borderRadius: 4,
-            backdropFilter: "blur(4px)",
-          }}
         >
           出す
         </AppButton>
@@ -228,14 +214,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           textAlign="center"
           px={3}
           py={2}
-          bg="rgba(0,0,0,0.8)" // ドラクエ風の深い背景
-          color="#fff"
-          border="2px solid rgba(255,255,255,0.6)" // ドラクエ風のボーダー
-          borderRadius={6}
+          bg="rgba(8,9,15,0.9)"
+          color="white"
+          border="3px solid rgba(255,255,255,0.9)"
+          borderRadius={8}
           fontWeight={800}
           fontSize={{ base: "36px", md: "44px" }}
           lineHeight={1}
-          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.3)"
+          boxShadow="inset 0 3px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.4), 0 4px 0 rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)"
           css={{
             fontVariantNumeric: "tabular-nums",
             fontFamily:
@@ -259,15 +245,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         {isHost && roomStatus === "waiting" && (
           <AppButton
             size="md"
-            visual="ghost"
-            palette="gray"
+            visual="solid"
+            palette="brand"
             onClick={quickStart}
-            css={{
-              background: "#000",
-              border: "1px solid #fff",
-              color: "#fff",
-              borderRadius: 0,
-            }}
           >
             ゲーム開始
           </AppButton>
@@ -275,16 +255,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
           <AppButton
             size="md"
-            visual="ghost"
-            palette="gray"
+            visual="solid"
+            palette="success"
             onClick={evalSorted}
             disabled={!allSubmitted}
-            css={{
-              background: "#000",
-              border: `1px solid ${allSubmitted ? "#fff" : "#666"}`,
-              color: allSubmitted ? "#fff" : "#888",
-              borderRadius: 0,
-            }}
           >
             判定
           </AppButton>
@@ -294,15 +268,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             roomStatus === "finished") && (
             <AppButton
               size="md"
-              visual="ghost"
-              palette="gray"
+              visual="solid"
+              palette="teal"
               onClick={roomStatus === "finished" ? resetGame : continueRound}
-              css={{
-                background: "#000",
-                border: "1px solid #fff",
-                color: "#fff",
-                borderRadius: 0,
-              }}
             >
               もう一度
             </AppButton>
