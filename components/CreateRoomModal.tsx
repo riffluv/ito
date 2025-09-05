@@ -122,10 +122,10 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "richBlack.800", // リッチブラック
-            border: "borders.retrogame", // ドラクエ風統一ボーダー
-            borderRadius: 0, // 角ばった
-            boxShadow: "none", // 影なし
+            background: 'rgba(8,9,15,0.95)', // NameDialogと同じリッチブラック
+            border: '3px solid rgba(255,255,255,0.9)', // NameDialogと同じボーダー
+            borderRadius: 0, // 角ばった統一
+            boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)', // NameDialogと同じ立体感
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -140,28 +140,37 @@ export function CreateRoomModal({
             size="sm"
             variant="ghost"
             css={{
-              position: "absolute",
-              top: "12px",
-              right: "12px",
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
               zIndex: 10,
-              borderRadius: 0, // 角ばった
-              background: "transparent",
-              color: "white",
-              border: "borders.retrogameThin",
-              width: "32px",
-              height: "32px",
-              transition: "all 0.1s ease",
-              _hover: {
-                background: "white",
-                color: "richBlack.800",
-              },
+              background: 'rgba(8,9,15,0.8)', // NameDialogと同じ
+              borderRadius: 0, // NameDialogと同じ角ばり
+              padding: '0',
+              border: '2px solid rgba(255,255,255,0.9)', // NameDialogと同じ
+              color: 'white',
+              cursor: 'pointer',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                background: 'white',
+                color: 'rgba(8,9,15,0.9)'
+              }
             }}
           >
-            <X size={16} />
+            ✕
           </IconButton>
 
           {/* Header - ドラクエ風 */}
-          <Box p={6} position="relative" zIndex={1} borderBottom="borders.retrogameThin">
+          <Box p={6} position="relative" zIndex={1} css={{
+            borderBottom: '2px solid rgba(255,255,255,0.3)', // NameDialogと同じ区切り
+          }}>
             <VStack gap={2} align="center">
               <Dialog.Title
                 css={{
@@ -170,11 +179,10 @@ export function CreateRoomModal({
                   color: "white",
                   margin: 0,
                   textAlign: "center",
-                  fontFamily: "monospace", // ドラクエっぽいフォント
-                  textShadow: "1px 1px 0px #000",
+                  // NameDialogと同じ通常フォント（monospace削除）
                 }}
               >
-                ルームを つくる
+                ルームを作成
               </Dialog.Title>
               <Text
                 fontSize="sm"
@@ -271,7 +279,9 @@ export function CreateRoomModal({
           </Box>
 
           {/* Footer - ドラクエ風 */}
-          <Box p={4} pt={0} position="relative" zIndex={1} borderTop="borders.retrogameThin">
+          <Box p={4} pt={0} position="relative" zIndex={1} css={{
+            borderTop: '2px solid rgba(255,255,255,0.3)', // NameDialogと同じ区切り
+          }}>
             <HStack justify="space-between" gap={3} mt={4}>
               <button
                 onClick={onClose}
@@ -332,7 +342,7 @@ export function CreateRoomModal({
                   }
                 }}
               >
-                {submitting ? "つくっています..." : "つくる"}
+                {submitting ? "作成中..." : "作成"}
               </button>
             </HStack>
           </Box>
