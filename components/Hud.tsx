@@ -115,7 +115,7 @@ export function Hud({
             onClick={onLeaveRoom}
             size="sm"
             visual="solid"
-            palette="red"
+            palette="brand"
             title="メインメニューに戻る"
           >
             <FiLogOut />

@@ -108,7 +108,8 @@
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
-      "WebSearch"
+      "WebSearch",
+      "mcp__serena__insert_before_symbol"
     ],
     "deny": [],
     "ask": []

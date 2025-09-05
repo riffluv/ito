@@ -135,14 +135,17 @@ export function GameCard({
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            width: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
-            height: UNIFIED_LAYOUT.DPI_125.CARD.HEIGHT.base,
-            [`@media (min-width: 768px)`]: {
-              width: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.md,
-              height: UNIFIED_LAYOUT.DPI_125.CARD.HEIGHT.md,
-            },
-          },
+          // flip variantでも統一サイズを適用（全DPI環境統一）
+          width: "100px",
+          height: "140px",
+          minWidth: "100px",
+          minHeight: "140px",
+          "@media (min-width: 768px)": {
+            width: "120px",
+            height: "168px",
+            minWidth: "120px",
+            minHeight: "168px"
+          }
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
@@ -334,6 +337,19 @@ export function GameCard({
       height={UNIFIED_LAYOUT.CARD.HEIGHT}
       minW={UNIFIED_LAYOUT.CARD.WIDTH}
       minH={UNIFIED_LAYOUT.CARD.HEIGHT}
+      css={{
+        // すべてのDPI環境で統一されたトランプ型サイズを適用
+        width: "100px",
+        height: "140px",
+        minWidth: "100px",
+        minHeight: "140px",
+        "@media (min-width: 768px)": {
+          width: "120px",
+          height: "168px",
+          minWidth: "120px",
+          minHeight: "168px"
+        }
+      }}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
       border={dragonQuestStyle.border}
