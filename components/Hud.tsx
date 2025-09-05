@@ -1,14 +1,7 @@
 "use client";
-import {
-  Badge,
-  Box,
-  HStack,
-  IconButton,
-  Progress,
-  Spacer,
-} from "@chakra-ui/react";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { FiSettings, FiLogOut } from "react-icons/fi";
+import { Box, IconButton } from "@chakra-ui/react";
+import { FiLogOut, FiSettings } from "react-icons/fi";
 
 export type HudProps = {
   roomName: string;
@@ -60,6 +53,9 @@ export function Hud({
       justifyContent="space-between"
       alignItems="center"
       px={6}
+      bg="rgba(10,11,20,0.95)" // ドラクエ風の深い背景
+      borderBottom="2px solid rgba(255,255,255,0.3)"
+      backdropFilter="blur(8px)"
       css={{
         // 125% DPI最適化
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
@@ -71,77 +67,85 @@ export function Hud({
         },
       }}
     >
-      {/* Game Title - Professional Style */}
+      {/* Game Title - Dragon Quest Style */}
       <Box
         fontSize="1.5rem"
         fontWeight={700}
-        color="fgDefault"
+        color="rgba(255,255,255,0.95)"
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
+        textShadow="0 2px 4px rgba(0,0,0,0.7)"
       >
         ITO
       </Box>
-      
-      {/* Room Info - Professional Style */}
-      <Box
-        display="flex"
-        alignItems="center"
-        gap={4}
-      >
+
+      {/* Room Info - Dragon Quest Style */}
+      <Box display="flex" alignItems="center" gap={4}>
         <Box
-          bg="panelSubBg"
+          bg="rgba(15,15,35,0.8)"
           padding="0.5rem 0.75rem"
-          borderRadius="0.5rem" // --radius-md
+          borderRadius="6px"
           fontFamily="'Monaco', monospace"
           fontSize="0.875rem"
-          color="fgDefault"
-          border="1px solid"
-          borderColor="borderDefault"
+          color="rgba(255,255,255,0.9)"
+          border="1px solid rgba(255,255,255,0.4)"
+          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.3)"
+          textShadow="0 1px 2px rgba(0,0,0,0.5)"
         >
           {roomName}
         </Box>
         <Box
-          bg="blue.500"
-          color="white"
+          bg="rgba(74,158,255,0.3)"
+          color="rgba(255,255,255,0.95)"
           padding="0.5rem 0.75rem"
-          borderRadius="0.5rem" // --radius-md
+          borderRadius="6px"
           fontSize="0.875rem"
-          fontWeight={500}
+          fontWeight={600}
+          border="1px solid rgba(74,158,255,0.5)"
+          boxShadow="inset 0 1px 2px rgba(74,158,255,0.2), 0 2px 4px rgba(0,0,0,0.3)"
+          textShadow="0 1px 2px rgba(0,0,0,0.7)"
         >
           {phaseLabel}フェーズ
         </Box>
-        
-        {/* Leave Room Button - Professional Style */}
+
+        {/* Leave Room Button - Dragon Quest Style */}
         {onLeaveRoom && (
           <IconButton
             aria-label="ルームを退出"
             onClick={onLeaveRoom}
             size="sm"
-            colorPalette="red"
-            variant="ghost"
-            color="red.600"
+            bg="rgba(220,53,69,0.3)"
+            color="rgba(255,255,255,0.9)"
+            border="1px solid rgba(220,53,69,0.5)"
+            borderRadius="6px"
             _hover={{
-              bg: "red.50",
-              color: "red.800",
+              bg: "rgba(220,53,69,0.5)",
+              borderColor: "rgba(220,53,69,0.8)",
+              transform: "translateY(-1px)",
             }}
+            boxShadow="0 2px 4px rgba(0,0,0,0.3)"
             title="メインメニューに戻る"
           >
             <FiLogOut />
           </IconButton>
         )}
-        
-        {/* Settings Button - Professional Style */}
+
+        {/* Settings Button - Dragon Quest Style */}
         {onOpenSettings && (
           <IconButton
             aria-label="設定"
             onClick={onOpenSettings}
             size="sm"
-            colorPalette="gray"
-            variant="ghost"
-            color="gray.500"
+            bg="rgba(108,117,125,0.3)"
+            color="rgba(255,255,255,0.8)"
+            border="1px solid rgba(108,117,125,0.5)"
+            borderRadius="6px"
             _hover={{
-              bg: "gray.100",
-              color: "gray.700",
+              bg: "rgba(108,117,125,0.5)",
+              borderColor: "rgba(108,117,125,0.8)",
+              color: "rgba(255,255,255,0.95)",
+              transform: "translateY(-1px)",
             }}
+            boxShadow="0 2px 4px rgba(0,0,0,0.3)"
           >
             <FiSettings />
           </IconButton>

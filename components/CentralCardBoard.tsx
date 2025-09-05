@@ -276,9 +276,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       border="none"
       borderWidth="0"
       css={{
-        // 🎮 PREMIUM BOARD CONTAINER
-        background: "transparent",
+        // ドラクエ風の美しい背景グラデーション
+        background:
+          "linear-gradient(135deg, rgba(10,11,20,0.4) 0%, rgba(15,16,35,0.6) 50%, rgba(10,11,20,0.4) 100%)",
         position: "relative",
+        // 微細なテクスチャ
+        backgroundImage:
+          "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
+        backgroundSize: "24px 24px",
+        borderRadius: "12px",
+        backdropFilter: "blur(2px)",
       }}
     >
       {/* コンパクトヘッダー - DPI125%対応 */}
@@ -295,28 +302,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           },
         }}
       >
-        {/* 🎯 PREMIUM INSTRUCTION - Dragon Quest Style Guide */}
-        <Box
-          bg="#000"
-          border="borders.retrogameThin"
-          borderColor="#fff"
-          borderRadius={0}
-          px={{ base: 5, md: 7 }}
-          py={{ base: 4, md: 5 }}
-          backdropFilter="none"
-          boxShadow="none"
-          transition="all 0.2s ease"
-          display="inline-block"
-          fontFamily="heading"
-          fontSize="sm"
-          fontWeight="600"
-          color="rgba(255,255,255,0.9)"
-          letterSpacing="0.02em"
-          textShadow="none"
-          _hover={{}}
-        >
-          小さい順から大きい順に並べよう
-        </Box>
       </Box>
 
       {/* === 2025年 DPI対応 8人環境最適化 カードボード === */}
@@ -335,7 +320,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           border="borders.retrogameThin"
           borderColor="#fff"
           borderRadius={0}
-          padding={{ base: 6, md: 8 }}
+          padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
           minHeight="auto"
           width="100%"
           maxWidth="var(--board-max-width)"
@@ -345,28 +330,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           justifyContent="center"
           alignContent="flex-start"
           alignItems="flex-start"
-          gap={{ base: 4, md: 5, lg: 6 }} // 8人環境で適切なスペーシング
-          bg="#000"
-          boxShadow="none"
-          backdropFilter="none"
+          gap={{ base: 1, md: 2, lg: 3 }} // さらに縮小してDPI125%対応
           transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
           // 8人環境での最適化統合CSS
           css={{
             containerType: "inline-size",
-            // 8人環境でのレスポンシブ最適化
+            // DPI125%環境でのレスポンシブ最適化  
             "@media (max-width: 1200px)": {
-              gap: "0.75rem",
+              gap: "0.25rem",
               flexWrap: "wrap",
-              justifyContent: "space-evenly", // 8人でも均等配置
+              justifyContent: "center",
             },
             "@media (max-width: 768px)": {
               gap: "0.5rem",
               padding: "0.75rem",
             },
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              gap: "calc(var(--spacing-2) + 2px)",
-              padding: "0.6rem 0.9rem",
+              gap: "0.2rem", // 最小間隔でカードを詰める
+              padding: "0.2rem 0.4rem",
             },
           }}
         >
@@ -423,7 +405,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               >
                 <SortableContext items={activeProposal}>
                   {/* Empty slots for placement - optimized for 8+ players */}
-                  {Array.from({ length: Math.max(eligibleIds.length, players.length) }).map((_, idx) => {
+                  {Array.from({
+                    length: Math.max(eligibleIds.length, players.length),
+                  }).map((_, idx) => {
                     // Prefer proposal value, but fall back to locally optimistic
                     // `pending` so the UI doesn't temporarily show an empty
                     // slot if `proposal` briefly mutates.
@@ -466,7 +450,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           bg: "rgba(99,102,241,0.1)",
                           borderColor: "rgba(99,102,241,0.4)",
                           color: "rgba(255,255,255,0.8)",
-                          boxShadow: "inset 0 1px 3px rgba(99,102,241,0.1), 0 2px 6px rgba(99,102,241,0.2)",
+                          boxShadow:
+                            "inset 0 1px 3px rgba(99,102,241,0.1), 0 2px 6px rgba(99,102,241,0.2)",
                           transform: "translateY(-1px)",
                         }}
                       >
@@ -479,81 +464,80 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             ) : (
               <>
                 {/* Static game state: use eligible slots count - optimized */}
-                {Array.from({ 
-                  length: Math.max(eligibleIds.length, players.length) 
-                })
-                  .map((_, idx) => {
-                    // Prefer confirmed orderList entry; fall back to locally pending
-                    // placement so the first card appears immediately in the slot
-                    // even before server-side orderList updates arrive.
-                    const cardId =
-                      orderList?.[idx] ?? (pending && pending[idx]) ?? null;
-                    const isDroppableSlot = canDropAtPosition(idx);
-                    // Sort-submit mode: show cards during all relevant phases
-                    const shouldShowCard =
-                      cardId &&
-                      (roomStatus === "clue" ||
-                        roomStatus === "playing" ||
-                        roomStatus === "reveal" ||
-                        roomStatus === "finished");
-                    return shouldShowCard ? (
-                      <React.Fragment key={cardId ?? `slot-${idx}`}>
-                        {cardId ? renderCard(cardId, idx) : null}
-                      </React.Fragment>
-                    ) : (
-                      <Box
-                        key={`drop-zone-${idx}`}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (isDroppableSlot && !isOver) {
-                            setIsOver(true);
-                          }
-                        }}
-                        onDragLeave={(e) => {
-                          e.stopPropagation();
-                          // 子要素への移動ではリセットしない
-                          if (
-                            !e.currentTarget.contains(e.relatedTarget as Node)
-                          ) {
-                            setIsOver(false);
-                          }
-                        }}
-                        onDrop={(e) => onDropAtPosition(e, idx)}
-                        borderWidth="0"
-                        borderRadius="xl"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        bg={isDroppableSlot ? "slotDrop" : "surfaceRaised"}
-                        color={isDroppableSlot ? "slotDropText" : "fgMuted"}
-                        fontSize="lg"
-                        fontWeight="600"
-                        // Consistent white dashed border for all slots
-                        border="1.5px dashed"
-                        borderColor="slotBorder"
-                        boxShadow="sm"
-                        /* duplicated borderRadius removed; keep theme token above */
-                        transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
-                        cursor={isDroppableSlot ? "copy" : "not-allowed"}
-                        _hover={
-                          isDroppableSlot
-                            ? {
-                                bg: "slotHover",
-                                borderColor: "slotBorderHover",
-                                color: "slotTextHover",
-                                boxShadow: "md",
-                              }
-                            : {}
+                {Array.from({
+                  length: Math.max(eligibleIds.length, players.length),
+                }).map((_, idx) => {
+                  // Prefer confirmed orderList entry; fall back to locally pending
+                  // placement so the first card appears immediately in the slot
+                  // even before server-side orderList updates arrive.
+                  const cardId =
+                    orderList?.[idx] ?? (pending && pending[idx]) ?? null;
+                  const isDroppableSlot = canDropAtPosition(idx);
+                  // Sort-submit mode: show cards during all relevant phases
+                  const shouldShowCard =
+                    cardId &&
+                    (roomStatus === "clue" ||
+                      roomStatus === "playing" ||
+                      roomStatus === "reveal" ||
+                      roomStatus === "finished");
+                  return shouldShowCard ? (
+                    <React.Fragment key={cardId ?? `slot-${idx}`}>
+                      {cardId ? renderCard(cardId, idx) : null}
+                    </React.Fragment>
+                  ) : (
+                    <Box
+                      key={`drop-zone-${idx}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isDroppableSlot && !isOver) {
+                          setIsOver(true);
                         }
-                        css={{ aspectRatio: "5 / 7" }}
-                        alignSelf="flex-start"
-                        width={UNIFIED_LAYOUT.CARD.WIDTH}
-                      >
-                        {idx + 1}
-                      </Box>
-                    );
-                  })}
+                      }}
+                      onDragLeave={(e) => {
+                        e.stopPropagation();
+                        // 子要素への移動ではリセットしない
+                        if (
+                          !e.currentTarget.contains(e.relatedTarget as Node)
+                        ) {
+                          setIsOver(false);
+                        }
+                      }}
+                      onDrop={(e) => onDropAtPosition(e, idx)}
+                      borderWidth="0"
+                      borderRadius="xl"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      bg={isDroppableSlot ? "slotDrop" : "surfaceRaised"}
+                      color={isDroppableSlot ? "slotDropText" : "fgMuted"}
+                      fontSize="lg"
+                      fontWeight="600"
+                      // Consistent white dashed border for all slots
+                      border="1.5px dashed"
+                      borderColor="slotBorder"
+                      boxShadow="sm"
+                      /* duplicated borderRadius removed; keep theme token above */
+                      transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
+                      cursor={isDroppableSlot ? "copy" : "not-allowed"}
+                      _hover={
+                        isDroppableSlot
+                          ? {
+                              bg: "slotHover",
+                              borderColor: "slotBorderHover",
+                              color: "slotTextHover",
+                              boxShadow: "md",
+                            }
+                          : {}
+                      }
+                      css={{ aspectRatio: "5 / 7" }}
+                      alignSelf="flex-start"
+                      width={UNIFIED_LAYOUT.CARD.WIDTH}
+                    >
+                      {idx + 1}
+                    </Box>
+                  );
+                })}
 
                 {/* No pending cards needed in sort-submit mode */}
               </>

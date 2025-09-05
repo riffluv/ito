@@ -3,8 +3,8 @@ import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
+import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
-import { CardText, getClueFontSize, getNumberFontSize } from "./CardText";
 
 export type GameCardProps = {
   index?: number | null;
@@ -19,31 +19,58 @@ export type GameCardProps = {
   waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
 };
 
-// 統一されたボーダー設定関数 - ドラクエ風強化版
-const getBorderStyle = (waitingInCentral: boolean, state: string) => {
-  if (waitingInCentral) {
-    // 中央ボードではドラクエ風の繊細なボーダー
-    return { border: "borders.retrogameGame", borderColor: "rgba(255,255,255,0.6)" };
-  }
+// ドラクエ風統一デザインシステム - メインメニューとの一体感
+const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
+  // ベース色設定（メインメニューと統一）
+  const baseColors = {
+    bg: waitingInCentral ? "#1a1d23" : "#0f0f23", // 深い青黒
+    border: waitingInCentral
+      ? "rgba(255,255,255,0.8)"
+      : "rgba(255,255,255,0.6)",
+    text: "#ffffff",
+    meta: waitingInCentral ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.7)",
+  };
 
-  // ゲーム内UIは細めのボーダーでドラクエ風統一
-  const baseBorder = "borders.retrogameGame";
-  
-  // テーマトークンを使用した統一ボーダー色
-  const borderColor =
-    state === "success"
-      ? "borderAccent" // テーマのアクセント色（青系）
+  // 状態別アクセント
+  const stateAccent = {
+    success: "#4a9eff", // ドラクエ風の青
+    fail: "#ff6b6b", // 控えめな赤
+    default: baseColors.border,
+  };
+
+  // ドラクエ風の重厚なボーダー（メインメニューと統一）
+  const borderStyle = waitingInCentral
+    ? "2px solid" // 中央では少し太め
+    : "1px solid"; // 通常時は細め
+
+  // ドラクエ風の深みのあるシャドウ
+  const boxShadow = waitingInCentral
+    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 16px rgba(0,0,0,0.4), 0 2px 8px rgba(255,255,255,0.05)"
+    : state === "success"
+      ? "inset 0 1px 2px rgba(74,158,255,0.2), 0 4px 12px rgba(0,0,0,0.3), 0 0 8px rgba(74,158,255,0.15)"
       : state === "fail"
-        ? "dangerSolid" // テーマの危険色（赤系）
-        : "borderStrong"; // テーマの強い白系ボーダー
+        ? "inset 0 1px 2px rgba(255,107,107,0.2), 0 4px 12px rgba(0,0,0,0.3), 0 0 8px rgba(255,107,107,0.15)"
+        : "inset 0 1px 2px rgba(255,255,255,0.05), 0 2px 8px rgba(0,0,0,0.25)";
 
   return {
-    border: baseBorder,
-    borderColor,
+    bg: baseColors.bg,
+    border: borderStyle,
+    borderColor:
+      stateAccent[state as keyof typeof stateAccent] || stateAccent.default,
+    boxShadow,
+    colors: {
+      text: baseColors.text,
+      meta: baseColors.meta,
+      clue: waitingInCentral ? "#ffffff" : "#e2e8f0",
+      number:
+        state === "success"
+          ? "#4a9eff"
+          : state === "fail"
+            ? "#ff6b6b"
+            : "#ffffff",
+    },
   };
 };
-
-// 🎯 フォントサイズ計算関数は CardText.tsx に移動済み
 
 // 🎯 統一されたテキストスタイル関数（CSS ベストプラクティス）
 const getUnifiedTextStyle = (): React.CSSProperties => ({
@@ -70,29 +97,8 @@ export function GameCard({
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // 🎯 強化デバッグログ：フォント問題の徹底調査
-  console.log("🔥 GameCard ENHANCED DEBUG:");
-  console.log("  📦 variant:", variant);
-  console.log("  🔄 flipped:", flipped);
-  console.log("  👤 name:", name);
-  console.log("  #️⃣ index:", typeof index === "number" ? index + 1 : "?");
-  console.log("  🎨 unifiedStyle:", getUnifiedTextStyle());
-  console.log("  🏷️ Card Key:", `${name}-${index}-${variant}-${flipped}`);
-
-  // 🚨 CSSクラスが適用されているか確認
-  console.log("  🧪 DOM要素確認のため、ユニークIDを付与します");
-
-  // 統一されたボーダースタイルを取得
-  const borderStyle = getBorderStyle(waitingInCentral, state);
-
-  // Debug log for Dragon Quest style
-  if (waitingInCentral) {
-    console.log("🐉 Dragon Quest style applied to card:", {
-      name,
-      index,
-      clue,
-    });
-  }
+  // ドラクエ風統一デザイン取得
+  const dragonQuestStyle = getDragonQuestStyle(waitingInCentral, state);
 
   // Shared semantic colors
   const successStrong = "#22c55e";
@@ -131,6 +137,16 @@ export function GameCard({
         }}
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
+        css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            width: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
+            height: UNIFIED_LAYOUT.DPI_125.CARD.HEIGHT.base,
+            [`@media (min-width: 768px)`]: {
+              width: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.md,
+              height: UNIFIED_LAYOUT.DPI_125.CARD.HEIGHT.md,
+            },
+          },
+        }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
         onMouseEnter={() => setIsHovered(true)}
@@ -157,31 +173,21 @@ export function GameCard({
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
-            border={borderStyle.border}
-            borderColor={borderStyle.borderColor}
-            bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
-            color={waitingInCentral ? "#ffffff" : "cardFrontText"}
+            border={dragonQuestStyle.border}
+            borderColor={dragonQuestStyle.borderColor}
+            bg={dragonQuestStyle.bg}
+            color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
             alignItems="stretch"
-            boxShadow={
-              waitingInCentral
-                ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.25)"
-                : state === "success"
-                  ? "inset 0 1px 2px rgba(99,102,241,0.2), 0 2px 8px rgba(34,197,94,0.3)"
-                  : state === "fail"
-                    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 8px rgba(239,68,68,0.3)"
-                    : isHovered
-                      ? "inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.2)"
-                      : "inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.15)"
-            }
+            boxShadow={dragonQuestStyle.boxShadow}
             transition="all 0.3s ease"
           >
             <Box
               fontSize="2xs"
               lineHeight="1"
               style={getUnifiedTextStyle()}
-              color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"}
+              color={dragonQuestStyle.colors.meta}
               display="flex"
               alignItems="center"
             >
@@ -197,7 +203,7 @@ export function GameCard({
                 transform="translate(-50%, -50%)"
                 fontWeight={700}
                 fontSize={getClueFontSize(clue)}
-                color={waitingInCentral ? "#ffffff" : "cardClueText"}
+                color={dragonQuestStyle.colors.clue}
                 lineHeight="1.1"
                 width="100%"
                 maxWidth="calc(100% - 8px)"
@@ -211,7 +217,9 @@ export function GameCard({
                 alignItems="center"
                 justifyContent="center"
                 style={{
-                  textShadow: waitingInCentral ? "none" : undefined,
+                  textShadow: waitingInCentral
+                    ? "none"
+                    : "0 1px 2px rgba(0,0,0,0.5)",
                   wordWrap: "break-word",
                   hyphens: "auto",
                   WebkitFontSmoothing: "antialiased",
@@ -225,7 +233,7 @@ export function GameCard({
               fontSize="2xs"
               lineHeight="1"
               style={getUnifiedTextStyle()}
-              color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "cardMeta"}
+              color={dragonQuestStyle.colors.meta}
               display="flex"
               alignItems="center"
               justifyContent="flex-start"
@@ -247,21 +255,11 @@ export function GameCard({
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
-            border={borderStyle.border}
-            borderColor={borderStyle.borderColor}
-            bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
-            boxShadow={
-              waitingInCentral
-                ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.25)"
-                : state === "success"
-                  ? "inset 0 1px 2px rgba(99,102,241,0.2), 0 2px 8px rgba(34,197,94,0.3)"
-                  : state === "fail"
-                    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 8px rgba(239,68,68,0.3)"
-                    : isHovered
-                      ? "inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.2)"
-                      : "inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.15)"
-            }
-            color={waitingInCentral ? "#ffffff" : "cardBackText"}
+            border={dragonQuestStyle.border}
+            borderColor={dragonQuestStyle.borderColor}
+            bg={dragonQuestStyle.bg}
+            boxShadow={dragonQuestStyle.boxShadow}
+            color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
             transition="all 0.3s ease"
@@ -270,7 +268,7 @@ export function GameCard({
               fontSize="2xs"
               lineHeight="1"
               style={getUnifiedTextStyle()}
-              color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "cardMeta"}
+              color={dragonQuestStyle.colors.meta}
               display="flex"
               alignItems="center"
             >
@@ -286,9 +284,11 @@ export function GameCard({
                 transform="translate(-50%, -50%)"
                 fontWeight={700}
                 fontSize={backNumberFontSize}
-                color={waitingInCentral ? "#ffffff" : "cardNumber"}
+                color={dragonQuestStyle.colors.number}
                 lineHeight="1"
-                textShadow={waitingInCentral ? "none" : "cardNumberShadow"}
+                textShadow={
+                  waitingInCentral ? "none" : "0 1px 2px rgba(0,0,0,0.5)"
+                }
                 width="100%"
                 textAlign="center"
                 whiteSpace="nowrap"
@@ -305,7 +305,7 @@ export function GameCard({
               fontSize="2xs"
               lineHeight="1"
               style={getUnifiedTextStyle()}
-              color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "cardMeta"}
+              color={dragonQuestStyle.colors.meta}
               display="flex"
               alignItems="center"
               justifyContent="flex-start"
@@ -332,29 +332,17 @@ export function GameCard({
       minH={UNIFIED_LAYOUT.CARD.HEIGHT}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
-      border={borderStyle.border}
-      borderColor={borderStyle.borderColor}
-      bg={waitingInCentral ? "#191b21" : "#1a1a1a"}
-      color={waitingInCentral ? "#ffffff" : "#ffffff"}
+      border={dragonQuestStyle.border}
+      borderColor={dragonQuestStyle.borderColor}
+      bg={dragonQuestStyle.bg}
+      color={dragonQuestStyle.colors.text}
       display="grid"
       gridTemplateRows="16px 1fr 16px"
       cursor="pointer"
       transform={hoverTransform}
       style={{ transformStyle: "preserve-3d", willChange: "transform" }}
       transition={`all 0.3s ${HOVER_EASING}`}
-      boxShadow={
-        waitingInCentral
-          ? "0 4px 12px rgba(0,0,0,0.15)"
-          : state === "success"
-            ? mergeShadow(`${successShadow}, 0 8px 25px rgba(0,0,0,0.3)`)
-            : state === "fail"
-              ? mergeShadow(
-                  "0 0 0 3px rgba(220,38,38,0.35), 0 8px 25px rgba(0,0,0,0.3)"
-                )
-              : isHovered
-                ? mergeShadow("0 8px 25px rgba(0,0,0,0.3)")
-                : mergeShadow("0 4px 12px rgba(0,0,0,0.15)")
-      }
+      boxShadow={dragonQuestStyle.boxShadow}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -363,7 +351,7 @@ export function GameCard({
         fontSize="2xs"
         lineHeight={1}
         fontWeight={700}
-        color={waitingInCentral ? "rgba(255, 255, 255, 0.8)" : "#999"}
+        color={dragonQuestStyle.colors.meta}
         display="flex"
         alignItems="center"
       >
@@ -379,25 +367,17 @@ export function GameCard({
           transform="translate(-50%, -50%)"
           fontWeight={700}
           fontSize={
-            typeof number === "number" 
+            typeof number === "number"
               ? getNumberFontSize(number)
               : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
           }
-          color={
-            waitingInCentral
-              ? "#ffffff" // White numbers for waiting cards (Dragon Quest style)
-              : state === "success"
-                ? "#3b82f6" // Blue for success
-                : state === "fail"
-                  ? "#dc2626" // Red for failure
-                  : "#ffffff" // White for pending/default
-          }
+          color={dragonQuestStyle.colors.number}
           lineHeight={typeof number === "number" ? 1.05 : 1.1}
           textShadow={
             waitingInCentral
               ? "none" // Clean white text without shadow for waiting cards
               : typeof number === "number"
-                ? "0 2px 4px rgba(0,0,0,0.5)"
+                ? "0 1px 2px rgba(0,0,0,0.5)"
                 : "none"
           }
           width="100%"
@@ -431,7 +411,7 @@ export function GameCard({
         fontSize="2xs"
         lineHeight={1}
         fontWeight={700}
-        color={waitingInCentral ? "rgba(255, 255, 255, 0.7)" : "#999"}
+        color={dragonQuestStyle.colors.meta}
         display="flex"
         alignItems="center"
         justifyContent="flex-start"

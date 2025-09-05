@@ -19,36 +19,36 @@ export function RoomCard({
 
   return (
     <Box
-        role="group"
+      role="group"
+      position="relative"
+      cursor="pointer"
+      onClick={onJoin}
+      _hover={{}}
+      css={{
+        "&:hover .hover-decoration": {
+          opacity: 1,
+        },
+      }}
+    >
+      {/* Main Card */}
+      <Box
+        borderRadius="xl"
+        border="2px solid"
+        borderColor="border"
+        bg="glassBg05"
+        backdropFilter="blur(20px)"
+        p={6}
+        minH="180px"
         position="relative"
-        cursor="pointer"
-        onClick={onJoin}
-        _hover={{}}
-        sx={{
-          '&:hover .hover-decoration': {
-            opacity: 1,
-          }
+        overflow="hidden"
+        boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
+        transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
+        willChange="transform"
+        _hover={{
+          transform: "translateY(-8px)",
+          borderColor: "primary",
+          bg: "accentSubtle",
         }}
-      >
-        {/* Main Card */}
-        <Box
-          borderRadius="xl"
-          border="2px solid"
-          borderColor="border"
-          bg="glassBg05"
-          backdropFilter="blur(20px)"
-          p={6}
-          minH="180px"
-          position="relative"
-          overflow="hidden"
-          boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
-          transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
-          willChange="transform"
-          _hover={{
-            transform: "translateY(-8px)",
-            borderColor: "primary", 
-            bg: "accentSubtle",
-          }}
       >
         {/* Status indicator */}
         <Box position="absolute" top={4} right={4} zIndex={2}>
@@ -159,5 +159,3 @@ export function RoomCard({
     </Box>
   );
 }
-
-

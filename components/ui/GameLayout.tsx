@@ -59,10 +59,27 @@ export function GameLayout({
         <Box
           h="100dvh"
           position="relative"
-          bg="canvasBg"
+          bg="surfaceBase"
           color="fgDefault"
           lineHeight={1.5}
-          css={{ WebkitFontSmoothing: "antialiased" }}
+          css={{
+            WebkitFontSmoothing: "antialiased",
+            // プロフェッショナルなリッチブラック背景（Hero.tsxと統一）
+            background: `
+              radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.04) 25%, var(--chakra-colors-surfaceBase) 60%),
+              linear-gradient(135deg, rgba(99,102,241,0.02) 0%, transparent 40%, rgba(139,92,246,0.015) 100%)
+            `,
+            // 微細な質感パターン（控えめに）
+            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.015) 1px, transparent 0)",
+            backgroundSize: "40px 40px",
+          }}
+          _before={{
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            bgGradient: 'linear-gradient(135deg, rgba(99,102,241,0.01) 0%, transparent 50%, rgba(139,92,246,0.008) 100%)',
+            pointerEvents: 'none'
+          }}
         >
           {header && (
             <Box
@@ -117,11 +134,11 @@ export function GameLayout({
               w="100%"
               h="100%"
               px={{ base: 4, md: 8 }}
-              py={{ base: 4, md: 8 }}
+              py={{ base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
               position="relative"
               display="flex"
               flexDirection="column"
-              gap={{ base: 4, md: 6 }}
+              gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
               zIndex={1}
             >
               {main}
@@ -132,16 +149,9 @@ export function GameLayout({
             position="fixed"
             left={{ base: 4, md: 8 }}
             right={{ base: 4, md: 8 }}
-            bottom={{ base: 6, md: 8 }}
+            bottom={{ base: 4, md: 6 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
-            borderRadius={0}
-            p={{ base: 3, md: 4 }}
-            bg="#000"
-            borderWidth="0"
-            backdropFilter="none"
-            boxShadow="none"
-            border="borders.retrogame"
-            borderColor="#fff"
+            p={{ base: 2, md: 3 }}
           >
             {handArea || <Box h="1px" />}
           </Box>
