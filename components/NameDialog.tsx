@@ -23,17 +23,17 @@ export function NameDialog({
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onCancel()}>
       <Dialog.Backdrop 
         css={{
-          background: 'overlayMedium',
-          backdropFilter: 'blur(8px)',
+          background: 'overlayStrong',
+          backdropFilter: 'blur(12px) saturate(1.2)', // ルーム作成と同じ高品質バックドロップ
         }}
       />
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: '{colors.surfaceRaised}',
-            border: '1px solid {colors.borderStrong}',
-            borderRadius: '20px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+            background: 'rgba(8,9,15,0.95)', // ルーム作成と同じリッチブラック
+            border: '3px solid rgba(255,255,255,0.9)', // ドラクエ風統一ボーダー
+            borderRadius: 0, // 製品レベルの角ばり
+            boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)', // 製品レベル立体感
             maxWidth: '420px',
             width: '90vw',
             padding: 0,
@@ -43,70 +43,66 @@ export function NameDialog({
           <Dialog.CloseTrigger 
             css={{
               position: 'absolute',
-              top: '16px',
-              right: '16px',
+              top: '12px',
+              right: '12px',
               zIndex: 10,
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              padding: '8px',
-              border: 'none',
-              color: '{colors.fgMuted}',
+              background: 'rgba(8,9,15,0.8)', // 背景を見えるように
+              borderRadius: 0, // ドラクエ風角ばり
+              padding: '0',
+              border: '2px solid rgba(255,255,255,0.9)',
+              color: 'white',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              transition: 'all 0.15s ease',
               '&:hover': {
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: '{colors.fgDefault}'
+                background: 'white',
+                color: 'rgba(8,9,15,0.9)'
               }
             }}
-          />
+          >
+            ✕
+          </Dialog.CloseTrigger>
           
           {/* Premium Header */}
           <Box 
             p={6} 
             pb={4}
             css={{
-              background: 'glassBg05',
-              borderBottom: '1px solid',
-              borderColor: 'glassBorderWeak'
+              background: 'transparent', // 背景をクリアに
+              borderBottom: '2px solid rgba(255,255,255,0.3)', // ドラクエ風区切り
             }}
           >
-            <HStack gap={3} align="center">
-              <Box 
-                w={10} h={10}
-                bg="brandGradient"
-                borderRadius="12px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                boxShadow="var(--colors-brandShadow)"
-              >
-                <Box 
-                  w="50%" h="50%"
-                  bg="white"
-                  borderRadius="6px"
-                />
-              </Box>
-              <Box>
+            <Box width="100%">
                 <Dialog.Title 
                   css={{
                     fontSize: '1.5rem',
-                    fontWeight: 700,
-                    color: '{colors.fgDefault}',
+                    fontWeight: 'bold',
+                    color: 'white',
                     margin: 0,
-                    letterSpacing: '-0.025em'
+                    fontFamily: 'monospace', // ドラクエフォント
+                    textShadow: '1px 1px 0px #000', // 立体感
+                    textAlign: 'center',
                   }}
                 >
                   プレイヤー名を入力
                 </Dialog.Title>
                 <Text 
                   fontSize="sm" 
-                  color="{colors.fgMuted}" 
+                  color="rgba(255,255,255,0.7)" 
                   mt={1}
+                  css={{
+                    textAlign: 'center',
+                  }}
                 >
                   ゲーム中に表示される名前を設定してください
                 </Text>
-              </Box>
-            </HStack>
+            </Box>
           </Box>
           
           <Box p={6}>
@@ -122,7 +118,7 @@ export function NameDialog({
                 名前
               </Field.Label>
               <Input
-                placeholder="例: たろう"
+                placeholder="例: コーヒーやめます"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 autoFocus
