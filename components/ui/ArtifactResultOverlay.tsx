@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface ArtifactResultProps {
@@ -22,7 +23,7 @@ export default function ArtifactResultOverlay({
       left={0}
       right={0}
       bottom={0}
-      zIndex={1000}
+      zIndex={UNIFIED_LAYOUT.Z_INDEX.MODAL}
       display="flex"
       alignItems="center"
       justifyContent="center"

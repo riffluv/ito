@@ -332,25 +332,28 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           justifyContent="center"
           alignContent="flex-start"
           alignItems="flex-start"
-          gap={{ base: 1, md: 2, lg: 3 }} // さらに縮小してDPI125%対応
+          gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
           transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
-          // 8人環境での最適化統合CSS
           css={{
             containerType: "inline-size",
-            // DPI125%環境でのレスポンシブ最適化  
-            "@media (max-width: 1200px)": {
-              gap: "0.25rem",
-              flexWrap: "wrap",
-              justifyContent: "center",
-            },
-            "@media (max-width: 768px)": {
-              gap: "0.5rem",
-              padding: "0.75rem",
-            },
+            // 統一されたレスポンシブスペーシング
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              gap: "0.2rem", // 最小間隔でカードを詰める
-              padding: "0.2rem 0.4rem",
+              gap: "8px", // DPI125%用最適化
+              padding: "8px 12px",
+              // カード配置の最適化
+              "& > *": {
+                minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
+              },
+            },
+            [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
+              gap: "10px",
+              padding: "12px",
+            },
+            // コンテナクエリベースの最適化
+            "@container (max-width: 600px)": {
+              gap: "6px",
+              padding: "8px",
             },
           }}
         >

@@ -2,6 +2,7 @@
 import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
 import type { PlayerDoc } from "@/lib/types";
 import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface WaitingAreaProps {
@@ -16,7 +17,7 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
       left={{ base: 3, md: 6 }}
       right={{ base: 3, md: 6 }}
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
-      zIndex={15}
+      zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
       p={{ base: 3, md: 4 }}
       // 上品な控えめスタイル（AIテンプレ脱却）
       border="borders.retrogame"
@@ -51,7 +52,18 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
         </Text>
       )}
 
-      <Box display="flex" gap={3} flexWrap="wrap" justifyContent="center">
+      <Box 
+        display="flex" 
+        gap={UNIFIED_LAYOUT.SPACING.CARD_GAP} 
+        flexWrap="wrap" 
+        justifyContent="center"
+        css={{
+          // DPI125%での最適化
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            gap: "8px",
+          },
+        }}
+      >
         {players.map((p) => (
           <WaitingAreaCard key={p.id} player={p} />
         ))}
