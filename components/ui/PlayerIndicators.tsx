@@ -1,5 +1,6 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export default function PlayerIndicators({
@@ -20,7 +21,7 @@ export default function PlayerIndicators({
       position="fixed"
       top={{ base: "140px", md: "160px" }}
       left={{ base: 3, md: 6 }}
-      zIndex={15}
+      zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
       rounded="lg"
       px={4}
       py={3}

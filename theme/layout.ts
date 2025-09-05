@@ -132,6 +132,15 @@ export const UNIFIED_LAYOUT = {
     DPI_125: "(resolution: 120dpi), (resolution: 1.25dppx)",
     DPI_150: "(resolution: 144dpi), (resolution: 1.5dppx)",
   },
+
+  // レスポンシブブレークポイント統一
+  BREAKPOINTS: {
+    MOBILE: "(max-width: 767px)", // モバイル
+    TABLET: "(min-width: 768px) and (max-width: 1279px)", // タブレット
+    DESKTOP: "(min-width: 1280px)", // デスクトップ
+    MD_UP: "(min-width: 768px)", // md以上
+    LG_DOWN: "(max-width: 1279px)", // lg以下
+  },
 } as const;
 
 // 🎯 推奨システム型定義（型安全性とIDEサポート向上）

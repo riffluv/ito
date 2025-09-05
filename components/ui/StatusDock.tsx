@@ -1,4 +1,5 @@
 "use client";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
 
 export interface StatusDockProps extends Omit<BoxProps, "children"> {
@@ -19,8 +20,8 @@ export default function StatusDock({
   return (
     <Box
       data-status-dock
-      paddingBlock={{ base: 1, md: 2 }}
-      mt={{ base: 2, md: 2 }}
+      padding={UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING}
+      mt={UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING}
       // メインメニューと同じドラクエ風ボーダー
       border={show ? "borders.retrogame" : "none"}
       borderColor="rgba(255, 255, 255, 0.9)"
@@ -42,7 +43,7 @@ export default function StatusDock({
         width="100%"
         maxWidth="var(--board-max-width)"
         marginInline="auto"
-        paddingInline={{ base: 2, md: 3 }}
+        paddingInline={UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING}
         display="flex"
         alignItems="center"
         justifyContent="center"

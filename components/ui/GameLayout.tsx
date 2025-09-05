@@ -191,7 +191,7 @@ export function GameLayout({
         lineHeight={1.5}
         css={{
           WebkitFontSmoothing: "antialiased",
-          "@media (max-width: 1279px)": {
+          [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.LG_DOWN}`]: {
             gridTemplateAreas: `"header" "main-area" "hand"`,
             gridTemplateColumns: "1fr",
             gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
@@ -270,7 +270,7 @@ export function GameLayout({
           maxHeight="none"
           gap={{ base: 3, md: 4 }}
           css={{
-            "@media (max-width: 768px)": {
+            [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
               flexDirection: "column",
               gap: "1rem",
             },
