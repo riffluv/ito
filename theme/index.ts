@@ -61,6 +61,15 @@ const config = defineConfig({
     "::-webkit-scrollbar-thumb:hover": {
       bg: "rgba(20, 184, 166, 0.5)",
     },
+
+    // 数字表示の4ch制限を詳細度で上書き
+    "div[class*='css-'] div[class*='css-'] [class*='css-1rr3l0b']": {
+      width: "100%",
+      minWidth: "0",
+      maxWidth: "none",
+      fontVariantNumeric: "normal",
+      fontFamily: "inherit"
+    },
   },
 
   theme: {

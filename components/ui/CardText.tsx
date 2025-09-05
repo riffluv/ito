@@ -28,8 +28,8 @@ const getNumberFontSize = (number: number | null): string => {
   const digits = String(number).length;
   if (digits <= 1) return "3rem";
   if (digits === 2) return "2.8rem";
-  if (digits === 3) return "2.1rem"; // 3桁数字のフォントサイズを縮小
-  return "1.9rem"; // 4桁以上はさらに縮小
+  if (digits === 3) return "1.2rem"; // 3桁数字をさらに小さく（100対応）
+  return "1.1rem"; // 4桁以上もさらに縮小
 };
 
 export function CardText({
@@ -65,7 +65,7 @@ export function CardText({
     display: isNumber ? "block" : "flex",
     alignItems: isNumber ? undefined : "center",
     justifyContent: isNumber ? undefined : "center",
-    letterSpacing: isNumber && String(text).length >= 3 ? "-1.5px" : undefined, // 3桁数字の文字詰めを強化
+    letterSpacing: isNumber && String(text).length >= 3 ? "-0.8px" : undefined, // 3桁数字の適切な文字間隔（100の視認性向上）
     // フォント描画統一
     WebkitFontSmoothing: "antialiased" as const,
     MozOsxFontSmoothing: "grayscale" as const,

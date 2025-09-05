@@ -209,8 +209,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* 中央: ヒーロー番号（ドラクエ風） */}
       <Box gridArea="center" display="flex" justifyContent="center">
         <Box
-          w="4ch"
-          minW="4ch"
+          w={typeof me?.number === "number" && String(me.number).length >= 3 ? "5ch" : "4ch"}
+          minW={typeof me?.number === "number" && String(me.number).length >= 3 ? "5ch" : "4ch"}
           textAlign="center"
           px={3}
           py={2}
@@ -219,8 +219,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           border="3px solid rgba(255,255,255,0.9)"
           borderRadius={8}
           fontWeight={800}
-          fontSize={{ base: "36px", md: "44px" }}
+          fontSize={
+            typeof me?.number === "number" && String(me.number).length >= 3
+              ? { base: "26px", md: "32px" }  // 3桁数字（100対応）
+              : { base: "36px", md: "44px" }   // 1-2桁数字
+          }
           lineHeight={1}
+          whiteSpace="nowrap"
           boxShadow="inset 0 3px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.4), 0 4px 0 rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)"
           css={{
             fontVariantNumeric: "tabular-nums",
@@ -234,6 +239,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               typeof me?.number === "number"
                 ? "linear-gradient(135deg, rgba(74,158,255,0.2), rgba(0,0,0,0.8))"
                 : "rgba(0,0,0,0.8)",
+            letterSpacing: typeof me?.number === "number" && String(me.number).length >= 3 ? "-0.05em" : "normal",
           }}
         >
           {typeof me?.number === "number" ? me.number : "??"}

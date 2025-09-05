@@ -13,6 +13,17 @@ export interface SelfNumberCardProps {
  * デザインは theme.tokens.gradients.playerNumber / shadows.selfNumber を利用。
  * 統一レイアウトシステムによるDPI対応。
  */
+// 数値の桁数に応じた適切なフォントサイズを計算
+const getNumberFontSize = (number: number | null | undefined): { base: string; md: string } => {
+  if (typeof number !== "number") return { base: "2rem", md: "2.5rem" };
+  
+  const digits = String(number).length;
+  if (digits <= 1) return { base: "2rem", md: "2.5rem" };
+  if (digits === 2) return { base: "1.8rem", md: "2.2rem" };
+  if (digits === 3) return { base: "1.4rem", md: "1.8rem" }; // 100対応
+  return { base: "1.2rem", md: "1.6rem" }; // 4桁以上
+};
+
 export function SelfNumberCard({
   value,
   draggableId,
@@ -69,12 +80,13 @@ export function SelfNumberCard({
         あなたの数字
       </Box>
       <Box
-        fontSize={{ base: "2rem", md: "2.5rem" }}
+        fontSize={getNumberFontSize(value)}
         fontWeight={600}
         lineHeight={1}
+        whiteSpace="nowrap"
         css={{
           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-          letterSpacing: '-0.02em'
+          letterSpacing: typeof value === "number" && String(value).length >= 3 ? '-0.05em' : '-0.02em'
         }}
       >
         {value ?? "?"}
