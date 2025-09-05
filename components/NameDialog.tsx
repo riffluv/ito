@@ -107,39 +107,47 @@ export function NameDialog({
           
           <Box p={6}>
             <Field.Root>
-              <Field.Label 
+              <Field.Label
                 css={{
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: '{colors.fgDefault}',
-                  marginBottom: '8px'
+                  fontSize: "1rem",
+                  fontWeight: "bold",
+                  color: "white",
+                  marginBottom: "8px",
+                  fontFamily: "monospace",
+                  textShadow: "1px 1px 0px #000",
                 }}
               >
-                名前
+                ▼ プレイヤーの なまえ
               </Field.Label>
               <Input
-                placeholder="例: コーヒーやめます"
+                placeholder="れい: コーヒーやめます"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 autoFocus
                 css={{
-                  height: '48px',
-                  background: 'glassBg05',
-                  border: '2px solid',
-                  borderColor: 'glassBorder',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  padding: '0 16px',
-                  color: 'text',
-                  transition: 'all 0.2s ease',
-                  '&:focus': {
-                    borderColor: 'primary',
-                    boxShadow: '0 0 0 4px var(--colors-brandRing)',
-                    background: 'glassBg08'
+                  height: "48px",
+                  background: "white",
+                  border: "borders.retrogameInput",
+                  borderRadius: 0,
+                  fontSize: "1rem",
+                  padding: "0 16px",
+                  color: "black",
+                  fontWeight: "normal",
+                  fontFamily: "monospace",
+                  transition: "none",
+                  _placeholder: {
+                    color: "#666",
+                    fontFamily: "monospace",
                   },
-                  '&::placeholder': {
-                    color: 'textSubtle'
-                  }
+                  _focus: {
+                    borderColor: "black",
+                    boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.2)",
+                    background: "#f8f8f8",
+                    outline: "none",
+                  },
+                  _hover: {
+                    background: "#f8f8f8",
+                  },
                 }}
               />
             </Field.Root>
@@ -150,43 +158,72 @@ export function NameDialog({
             p={6} 
             pt={4}
             css={{
-              background: 'glassBg03',
-              borderTop: '1px solid',
-              borderColor: 'glassBorderWeak'
+              background: 'transparent', // 背景をクリアに
+              borderTop: '2px solid rgba(255,255,255,0.3)', // ドラクエ風区切り
             }}
           >
-            <HStack justify="flex-end" gap={3}>
-              <AppButton 
-                visual="ghost" 
-                onClick={onCancel} 
-                size="lg"
-                css={{
-                  minWidth: '80px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  fontWeight: 500
+            <HStack justify="space-between" gap={3}>
+              <button
+                onClick={onCancel}
+                style={{
+                  minWidth: "120px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "borders.retrogameThin",
+                  background: "transparent",
+                  color: "white",
+                  cursor: "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "white";
+                  e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "white";
                 }}
               >
-                キャンセル
-              </AppButton>
-              <AppButton
-                visual="solid"
-                palette="brand"
-                size="lg"
-                loading={submitting}
+                やめる
+              </button>
+
+              <button
                 onClick={() => onSubmit(value.trim())}
-                disabled={!value.trim() || submitting}
-                css={{
-                  minWidth: '100px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  fontWeight: 600,
-                  background: !submitting && value.trim() ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' : undefined,
-                  boxShadow: !submitting && value.trim() ? '0 4px 16px rgba(99,102,241,0.4)' : undefined
+                disabled={submitting || !value.trim()}
+                style={{
+                  minWidth: "140px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "borders.retrogameThin",
+                  background: submitting || !value.trim() ? "#666" : "var(--colors-richBlack-600)",
+                  color: "white",
+                  cursor: submitting || !value.trim() ? "not-allowed" : "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                  opacity: submitting || !value.trim() ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting && value.trim()) {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!submitting && value.trim()) {
+                    e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                    e.currentTarget.style.color = "white";
+                  }
                 }}
               >
-                {submitting ? '設定中...' : '決定'}
-              </AppButton>
+                {submitting ? "設定中..." : "決定"}
+              </button>
             </HStack>
           </Box>
         </Dialog.Content>
