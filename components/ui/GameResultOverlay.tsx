@@ -19,16 +19,22 @@ export function GameResultOverlay({
         <Box
           as="span"
           display="inline-block"
-          px={1}
+          px={2}
+          py={1}
           fontWeight={700}
           fontSize={{ base: "sm", md: "sm" }}
-          color="red.400"
+          color="white" // ドラクエ風白文字統一
           letterSpacing={0.5}
           whiteSpace="nowrap"
           aria-live="polite"
           role="status"
+          fontFamily="monospace" // ドラクエ風フォント
+          textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
+          bg="rgba(8,9,15,0.8)" // ドラクエ風リッチブラック背景
+          border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
+          borderRadius={0} // 角ばったデザイン
         >
-          Failed{typeof failedAt === "number" ? ` #${failedAt}` : ""}
+          💥 しっぱい{typeof failedAt === "number" ? ` #${failedAt}` : ""}
         </Box>
       );
     }
@@ -36,16 +42,22 @@ export function GameResultOverlay({
       <Box
         as="span"
         display="inline-block"
-        px={1}
+        px={2}
+        py={1}
         fontWeight={700}
         fontSize={{ base: "sm", md: "sm" }}
-        color="#22c55e"
+        color="white" // ドラクエ風白文字統一
         letterSpacing={0.5}
         whiteSpace="nowrap"
         aria-live="polite"
         role="status"
+        fontFamily="monospace" // ドラクエ風フォント
+        textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
+        bg="rgba(8,9,15,0.8)" // ドラクエ風リッチブラック背景
+        border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
+        borderRadius={0} // 角ばったデザイン
       >
-        Success
+        ✨ クリア!
       </Box>
     );
   }
@@ -64,28 +76,21 @@ export function GameResultOverlay({
         rounded="2xl"
         fontWeight={800}
         fontSize={{ base: "2xl", md: "3xl" }}
-        color={failed ? "#ef4444" : "#22c55e"}
-        letterSpacing={2}
-        // 成功を表現する意味のあるボーダー
-        border="borders.retrogame"
-        borderColor={failed ? "rgba(239, 68, 68, 0.9)" : "rgba(34, 197, 94, 0.9)"}
+        color="white" // ドラクエ風統一白文字
+        letterSpacing={1} // やや控えめに
+        // ドラクエ風ボーダー統一
+        border="3px solid"
+        borderColor="rgba(255,255,255,0.9)" // メインメニューと同じ白ボーダー
+        borderRadius={0} // ドラクエ風角ばった
         transform="scale(1)"
         opacity={1}
         animation={failed ? "shakeFailure 0.6s ease-out" : "successPulse 1.2s ease-out"}
         css={{
-          // 成功/失敗に応じた背景色（人間らしい感情表現）
-          background: failed 
-            ? "rgba(20, 8, 8, 0.95)" // 失敗時は暖色系
-            : "rgba(8, 20, 12, 0.95)", // 成功時は寒色系
-          // 控えめなテクスチャで品格維持
-          backgroundImage:
-            "radial-gradient(circle at 1.5px 1.5px, rgba(255,255,255,0.03) 1px, transparent 0)",
-          backgroundSize: "18px 18px",
-          backdropFilter: "blur(10px)",
-          // 意味のある影 - 成功は上向き、失敗は重い
-          boxShadow: failed
-            ? "0 8px 32px rgba(239,68,68,0.15), 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)"
-            : "0 12px 40px rgba(34,197,94,0.2), 0 4px 12px rgba(34,197,94,0.1), inset 0 1px 0 rgba(255,255,255,0.08)",
+          // ドラクエ風統一リッチブラック背景
+          background: "rgba(8,9,15,0.95)", // メインメニューと同じ
+          // ドラクエ風統一シャドウ
+          boxShadow: "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // メインメニューと同じ立体感
+          backdropFilter: "blur(12px) saturate(1.2)", // メインメニューと同じ
           // 意味のあるアニメーション
           "@keyframes successPulse": {
             "0%": {
@@ -118,16 +123,17 @@ export function GameResultOverlay({
           },
         }}
       >
-        {failed ? "💥 Failed" : "✨ Success ✨"}
+        {failed ? "💥 しっぱい!" : "✨ クリア! ✨"} {/* ドラクエ風日本語 */}
         <Text
           fontSize={{ base: "md", md: "lg" }}
           mt={2}
           opacity={0.9}
-          fontFamily='-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
+          fontFamily="monospace" // ドラクエ風フォント統一
           fontWeight={500}
-          letterSpacing="-0.01em"
+          letterSpacing="0.5px"
+          textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
         >
-          {failed ? "Try again!" : "Perfect order"}
+          {failed ? "もういちど ちょうせんしよう!" : "みごとな じゅんばんでした!"} {/* ドラクエ風メッセージ */}
         </Text>
       </Box>
     </Box>
