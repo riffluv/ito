@@ -9,7 +9,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { ArrowLeft, BookOpen, Target, Users, Zap } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -112,9 +112,9 @@ export default function RulesPage() {
             borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Heading 
-              size="lg" 
-              color="white" 
+            <Heading
+              size="lg"
+              color="white"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
               textAlign="center"
@@ -153,16 +153,16 @@ export default function RulesPage() {
                 },
               ].map((step, index) => (
                 <List.Item key={index}>
-                  <Box 
-                    p={4} 
+                  <Box
+                    p={4}
                     mb={3}
-                    bg="richBlack.700" 
-                    border="borders.retrogameThin" 
+                    bg="richBlack.700"
+                    border="borders.retrogameThin"
                     borderRadius={0}
                   >
                     <VStack align="start" gap={2} flex={1}>
-                      <Text 
-                        fontWeight="bold" 
+                      <Text
+                        fontWeight="bold"
                         color="white"
                         fontFamily="monospace"
                         textShadow="1px 1px 0px #000"
@@ -170,9 +170,9 @@ export default function RulesPage() {
                       >
                         {step.title}
                       </Text>
-                      <Text 
-                        color="white" 
-                        fontSize="sm" 
+                      <Text
+                        color="white"
+                        fontSize="sm"
                         lineHeight="1.6"
                         fontFamily="monospace"
                         textShadow="1px 1px 0px #000"
@@ -193,9 +193,9 @@ export default function RulesPage() {
             borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Heading 
-              size="lg" 
-              color="white" 
+            <Heading
+              size="lg"
+              color="white"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
               textAlign="center"
@@ -247,9 +247,9 @@ export default function RulesPage() {
             borderRadius={0}
             p={{ base: 6, md: 8 }}
           >
-            <Heading 
-              size="lg" 
-              color="white" 
+            <Heading
+              size="lg"
+              color="white"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
               textAlign="center"
@@ -351,8 +351,8 @@ export default function RulesPage() {
             mx="auto"
             maxW="2xl"
           >
-            <Text 
-              fontSize="sm" 
+            <Text
+              fontSize="sm"
               color="white"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
