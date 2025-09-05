@@ -25,17 +25,22 @@ export function TopicDisplay({
       <Box w="full" textAlign="center">
         {hasTopic ? (
           <>
-            <Text fontWeight="bold" fontSize={{ base: "md", md: "lg" }} mb={1}>
+            <Text
+              fontWeight="bold"
+              fontSize={{ base: "md", md: "lg" }}
+              color="rgba(255,255,255,0.95)"
+              textShadow="0 1px 2px rgba(0,0,0,0.5)"
+            >
               {room.topic}
             </Text>
-            {topicBox && (
-              <Text color="fgMuted" fontSize={{ base: "xs", md: "sm" }}>
-                カテゴリ: {topicBox}
-              </Text>
-            )}
           </>
         ) : (
-          <Text color="fgMuted">お題が設定されていません</Text>
+          <Text
+            color="rgba(255,255,255,0.6)"
+            textShadow="0 1px 2px rgba(0,0,0,0.5)"
+          >
+            お題が設定されていません
+          </Text>
         )}
       </Box>
     </Box>

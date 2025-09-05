@@ -61,9 +61,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const placed = !!proposal?.includes(me?.id || "");
   const ready = !!(me && (me as any).ready === true);
-  const canDecide = !!me?.id && typeof me?.number === "number" && text.trim().length > 0;
-  const allSubmitted = computeAllSubmitted({ mode: actualResolveMode, eligibleIds, proposal });
-  const canSubmit = canSubmitCard({ mode: actualResolveMode, canDecide, ready, placed, cluesReady });
+  const canDecide =
+    !!me?.id && typeof me?.number === "number" && text.trim().length > 0;
+  const allSubmitted = computeAllSubmitted({
+    mode: actualResolveMode,
+    eligibleIds,
+    proposal,
+  });
+  const canSubmit = canSubmitCard({
+    mode: actualResolveMode,
+    canDecide,
+    ready,
+    placed,
+    cluesReady,
+  });
 
   const handleDecide = async () => {
     if (!canDecide || !me?.id) return;
@@ -71,7 +82,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       await updateClue1(roomId, me.id, text.trim());
       notify({ title: "連想ワードを記録しました", type: "success" });
     } catch (e: any) {
-      notify({ title: "記録に失敗しました", description: e?.message, type: "error" });
+      notify({
+        title: "記録に失敗しました",
+        description: e?.message,
+        type: "error",
+      });
     }
   };
 
@@ -86,7 +101,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       }
       notify({ title: "提出しました", type: "success" });
     } catch (e: any) {
-      notify({ title: "提出に失敗しました", description: e?.message, type: "error" });
+      notify({
+        title: "提出に失敗しました",
+        description: e?.message,
+        type: "error",
+      });
     }
   };
 
@@ -123,12 +142,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <Box
       display="grid"
-      gridTemplateAreas={{ base: "'left' 'center' 'right'", md: "'left center right'" }}
-      gridTemplateColumns={{ base: "1fr", md: "minmax(0,1fr) auto minmax(0,1fr)" }}
+      gridTemplateAreas={{
+        base: "'left' 'center' 'right'",
+        md: "'left center right'",
+      }}
+      gridTemplateColumns={{
+        base: "1fr",
+        md: "minmax(0,1fr) auto minmax(0,1fr)",
+      }}
       alignItems="center"
       columnGap={{ base: 3, md: 6 }}
       rowGap={{ base: 3, md: 0 }}
       w="100%"
+      p={4}
+      bg="rgba(10,11,20,0.9)" // ドラクエ風の透明感のある背景
+      borderTop="2px solid rgba(255,255,255,0.3)" // ドラクエ風のボーダー
+      backdropFilter="blur(8px)"
     >
       {/* 左: 入力・アクション */}
       <HStack gap={3} align="center" minW={0} gridArea="left">
@@ -136,47 +165,89 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           placeholder="連想ワード"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleDecide(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleDecide();
+          }}
           size="sm"
           maxW={{ base: "100%", md: "520px" }}
-          bg="#000"
+          bg="rgba(0,0,0,0.6)" // ドラクエ風の深い背景
           color="#fff"
-          border="1px solid #fff"
-          borderRadius={0}
-          _placeholder={{ color: "#bbb" }}
-          _focus={{ borderColor: "#6366F1", boxShadow: "none" }}
-          _hover={{ borderColor: "#fff" }}
+          border="1px solid rgba(255,255,255,0.4)" // ドラクエ風のボーダー
+          borderRadius={4}
+          _placeholder={{ color: "rgba(255,255,255,0.6)" }}
+          _focus={{
+            borderColor: "#4a9eff", // ドラクエ風の青
+            boxShadow: "0 0 0 1px #4a9eff",
+            bg: "rgba(0,0,0,0.8)",
+          }}
+          _hover={{ borderColor: "rgba(255,255,255,0.6)" }}
         />
-        <AppButton size="md" visual="ghost" palette="gray" onClick={handleDecide} disabled={!canDecide}
-          css={{ background: "#000", border: `1px solid ${canDecide ? "#fff" : "#666"}`, color: canDecide ? "#fff" : "#888", borderRadius: 0 }}>
+        <AppButton
+          size="md"
+          visual="ghost"
+          palette="gray"
+          onClick={handleDecide}
+          disabled={!canDecide}
+          css={{
+            background: canDecide
+              ? "rgba(74,158,255,0.8)"
+              : "rgba(255,255,255,0.1)",
+            border: `1px solid ${canDecide ? "#4a9eff" : "rgba(255,255,255,0.3)"}`,
+            color: canDecide ? "#fff" : "rgba(255,255,255,0.5)",
+            borderRadius: 4,
+            backdropFilter: "blur(4px)",
+          }}
+        >
           決定
         </AppButton>
-        <AppButton size="md" visual="ghost" palette="gray" onClick={handleSubmit} disabled={!canSubmit}
-          css={{ background: "#000", border: `1px solid ${canSubmit ? "#fff" : "#666"}`, color: canSubmit ? "#fff" : "#888", borderRadius: 0 }}>
+        <AppButton
+          size="md"
+          visual="ghost"
+          palette="gray"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          css={{
+            background: canSubmit
+              ? "rgba(74,158,255,0.8)"
+              : "rgba(255,255,255,0.1)",
+            border: `1px solid ${canSubmit ? "#4a9eff" : "rgba(255,255,255,0.3)"}`,
+            color: canSubmit ? "#fff" : "rgba(255,255,255,0.5)",
+            borderRadius: 4,
+            backdropFilter: "blur(4px)",
+          }}
+        >
           出す
         </AppButton>
       </HStack>
 
-      {/* 中央: ヒーロー番号（固定幅3ch） */}
+      {/* 中央: ヒーロー番号（ドラクエ風） */}
       <Box gridArea="center" display="flex" justifyContent="center">
         <Box
           w="4ch"
           minW="4ch"
           textAlign="center"
           px={3}
-          py={1}
-          bg="#000"
+          py={2}
+          bg="rgba(0,0,0,0.8)" // ドラクエ風の深い背景
           color="#fff"
-          border="1px solid #fff"
-          borderRadius={0}
+          border="2px solid rgba(255,255,255,0.6)" // ドラクエ風のボーダー
+          borderRadius={6}
           fontWeight={800}
           fontSize={{ base: "36px", md: "44px" }}
           lineHeight={1}
+          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.3)"
           css={{
             fontVariantNumeric: "tabular-nums",
-            fontFamily: "'SF Mono','Cascadia Mono','Menlo','Roboto Mono',monospace",
+            fontFamily:
+              "'SF Mono','Cascadia Mono','Menlo','Roboto Mono',monospace",
             transform: pop ? "scale(1.06)" : "scale(1)",
-            transition: "transform 180ms ease, opacity 180ms ease",
+            transition:
+              "transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease",
+            backdropFilter: "blur(4px)",
+            background:
+              typeof me?.number === "number"
+                ? "linear-gradient(135deg, rgba(74,158,255,0.2), rgba(0,0,0,0.8))"
+                : "rgba(0,0,0,0.8)",
           }}
         >
           {typeof me?.number === "number" ? me.number : "??"}
@@ -186,48 +257,122 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* 右: ホスト操作 */}
       <HStack gap={3} align="center" justifyContent="flex-end" gridArea="right">
         {isHost && roomStatus === "waiting" && (
-          <AppButton size="md" visual="ghost" palette="gray" onClick={quickStart}
-            css={{ background: "#000", border: "1px solid #fff", color: "#fff", borderRadius: 0 }}>
+          <AppButton
+            size="md"
+            visual="ghost"
+            palette="gray"
+            onClick={quickStart}
+            css={{
+              background: "#000",
+              border: "1px solid #fff",
+              color: "#fff",
+              borderRadius: 0,
+            }}
+          >
             ゲーム開始
           </AppButton>
         )}
         {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
-          <AppButton size="md" visual="ghost" palette="gray" onClick={evalSorted} disabled={!allSubmitted}
-            css={{ background: "#000", border: `1px solid ${allSubmitted ? "#fff" : "#666"}`, color: allSubmitted ? "#fff" : "#888", borderRadius: 0 }}>
+          <AppButton
+            size="md"
+            visual="ghost"
+            palette="gray"
+            onClick={evalSorted}
+            disabled={!allSubmitted}
+            css={{
+              background: "#000",
+              border: `1px solid ${allSubmitted ? "#fff" : "#666"}`,
+              color: allSubmitted ? "#fff" : "#888",
+              borderRadius: 0,
+            }}
+          >
             判定
           </AppButton>
         )}
-        {isHost && ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished") && (
-          <AppButton size="md" visual="ghost" palette="gray" onClick={roomStatus === "finished" ? resetGame : continueRound}
-            css={{ background: "#000", border: "1px solid #fff", color: "#fff", borderRadius: 0 }}>
-            もう一度
-          </AppButton>
-        )}
+        {isHost &&
+          ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
+            roomStatus === "finished") && (
+            <AppButton
+              size="md"
+              visual="ghost"
+              palette="gray"
+              onClick={roomStatus === "finished" ? resetGame : continueRound}
+              css={{
+                background: "#000",
+                border: "1px solid #fff",
+                color: "#fff",
+                borderRadius: 0,
+              }}
+            >
+              もう一度
+            </AppButton>
+          )}
 
         <HStack gap={2}>
           {isHost && (
             <>
-              <IconButton aria-label="お題シャッフル" onClick={() => topicControls.shuffleTopic(roomId, defaultTopicType as any)} size="xs"
-                bg="#000" color="#fff" borderWidth={1} borderColor="#fff" borderRadius={0}>
+              <IconButton
+                aria-label="お題シャッフル"
+                onClick={() =>
+                  topicControls.shuffleTopic(roomId, defaultTopicType as any)
+                }
+                size="xs"
+                bg="#000"
+                color="#fff"
+                borderWidth={1}
+                borderColor="#fff"
+                borderRadius={0}
+              >
                 <FaRegCreditCard />
               </IconButton>
-              <IconButton aria-label="数字配布" onClick={() => topicControls.dealNumbers(roomId)} size="xs"
-                bg="#000" color="#fff" borderWidth={1} borderColor="#fff" borderRadius={0}>
+              <IconButton
+                aria-label="数字配布"
+                onClick={() => topicControls.dealNumbers(roomId)}
+                size="xs"
+                bg="#000"
+                color="#fff"
+                borderWidth={1}
+                borderColor="#fff"
+                borderRadius={0}
+              >
                 <FaDice />
               </IconButton>
-              <IconButton aria-label="リセット" onClick={resetGame} size="xs"
-                bg="#000" color="#fff" borderWidth={1} borderColor="#fff" borderRadius={0}>
+              <IconButton
+                aria-label="リセット"
+                onClick={resetGame}
+                size="xs"
+                bg="#000"
+                color="#fff"
+                borderWidth={1}
+                borderColor="#fff"
+                borderRadius={0}
+              >
                 <FaRedo />
               </IconButton>
             </>
           )}
           {onOpenSettings && (
-            <IconButton aria-label="設定" onClick={onOpenSettings} size="xs" bg="transparent" color="gray.400" borderWidth={0}>
+            <IconButton
+              aria-label="設定"
+              onClick={onOpenSettings}
+              size="xs"
+              bg="transparent"
+              color="gray.400"
+              borderWidth={0}
+            >
               <FiSettings />
             </IconButton>
           )}
           {onLeaveRoom && (
-            <IconButton aria-label="退出" onClick={onLeaveRoom} size="xs" bg="transparent" color="gray.400" borderWidth={0} title="ロビーに戻る">
+            <IconButton
+              aria-label="退出"
+              onClick={onLeaveRoom}
+              size="xs"
+              bg="transparent"
+              color="gray.400"
+              borderWidth={0}
+              title="ロビーに戻る"
+            >
               <FiLogOut />
             </IconButton>
           )}

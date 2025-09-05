@@ -68,12 +68,12 @@ const config = defineConfig({
     tokens: {
       ...premiumTokens,
       borders: {
-        retrogame: "3px solid white", // ドラクエ風統一ボーダー（メインメニュー用）
-        retrogameInput: "2px solid black", // 入力フィールド用
-        retrogameThin: "2px solid white", // 細めの区切り線用
-        retrogameGame: "1px solid white", // ゲーム内細かいUI用
-        retrogameAccent: "2px solid #6366F1", // アクセント用
-        retrogameBevel: "1px solid rgba(255,255,255,0.3)", // ベベル効果用
+        retrogame: { value: "3px solid white" }, // ドラクエ風統一ボーダー（メインメニュー用）
+        retrogameInput: { value: "2px solid black" }, // 入力フィールド用
+        retrogameThin: { value: "2px solid white" }, // 細めの区切り線用
+        retrogameGame: { value: "1px solid white" }, // ゲーム内細かいUI用
+        retrogameAccent: { value: "2px solid #6366F1" }, // アクセント用
+        retrogameBevel: { value: "1px solid rgba(255,255,255,0.3)" }, // ベベル効果用
       },
     },
 

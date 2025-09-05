@@ -1,9 +1,8 @@
 "use client";
-import React from "react";
-import { Box, Text } from "@chakra-ui/react";
-import type { PlayerDoc } from "@/lib/types";
 import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
-import { DOCK_BOTTOM_MOBILE, DOCK_BOTTOM_DESKTOP } from "@/lib/ui/layout";
+import type { PlayerDoc } from "@/lib/types";
+import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
+import { Box, Text } from "@chakra-ui/react";
 
 export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
@@ -18,11 +17,7 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
       right={{ base: 3, md: 6 }}
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={15}
-      borderRadius="20px"
       p={{ base: 3, md: 4 }}
-      bgGradient="panelWood"
-      borderWidth="0"
-      css={{ backdropFilter: "blur(15px)", boxShadow: "var(--shadows-panelWood)" }}
     >
       {title && (
         <Text
@@ -30,8 +25,9 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
           fontWeight={600}
           fontSize="14px"
           letterSpacing="1px"
-          color="rgba(160,133,91,1)"
+          color="rgba(255,255,255,0.9)" // ドラクエ風の白文字
           mb={3}
+          textShadow="0 1px 2px rgba(0,0,0,0.5)" // ドラクエ風のテキストシャドウ
         >
           {title}
         </Text>

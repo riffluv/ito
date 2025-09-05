@@ -91,11 +91,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     idx === effectiveFailedAt - 1;
   // Only show success (blue) if game succeeded and not failed specifically
   isSuccess =
-    revealed && 
-    active && 
-    p.roomStatus === "finished" && 
-    !isFail && 
-    !p.failed; // Only if overall game was successful
+    revealed && active && p.roomStatus === "finished" && !isFail && !p.failed; // Only if overall game was successful
   if (isSuccess) successLevel = "final";
 
   if (
@@ -113,14 +109,13 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const flipped = (() => {
     if (variant !== "flip") return false;
 
-    // finished では全カードが数値面を向く（最終結果表示）
-    if (p.roomStatus === "finished") {
-      return showNumber; // showNumberの条件を使って一貫性を保つ
-    }
+    // 基本原則：数字を表示すべき状態なら必ずflipする
+    // これによりアニメーション中とデザイン時の一貫性を保つ
+    if (showNumber) return true;
 
-    // reveal時は順次フリップアニメーション
-    if (p.roomStatus === "reveal" && p.revealAnimating) {
-      return typeof idx === "number" && idx < p.revealIndex && showNumber;
+    // finished では全カードが数値面を向く（最終結果表示）
+    if (p.roomStatus === "finished" && isPlaced) {
+      return true;
     }
 
     return false;
@@ -140,16 +135,6 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     !(p.proposal || []).includes(p.id) &&
     (p.roomStatus === "clue" || p.roomStatus === "waiting")
   );
-
-  // Debug log for testing
-  if (waitingInCentral) {
-    console.log(`🎯 Dragon Quest style waiting card detected: ${p.id}`, {
-      pending: p.pending.includes(p.id),
-      notInOrderList: !(p.orderList || []).includes(p.id),
-      notInProposal: !(p.proposal || []).includes(p.id),
-      roomStatus: p.roomStatus,
-    });
-  }
 
   return {
     showNumber,
