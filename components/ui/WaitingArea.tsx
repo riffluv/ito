@@ -18,6 +18,22 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={15}
       p={{ base: 3, md: 4 }}
+      // 上品な控えめスタイル（AIテンプレ脱却）
+      border="borders.retrogame"
+      borderColor="rgba(255, 255, 255, 0.85)"
+      borderRadius="lg"
+      css={{
+        // 控えめで上品な背景 - 可読性重視
+        background: "rgba(12, 13, 16, 0.85)",
+        // 微細なテクスチャは維持するが控えめに
+        backgroundImage:
+          "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0)",
+        backgroundSize: "20px 20px",
+        backdropFilter: "blur(6px)",
+        // 上品で控えめな影 - 人間らしい繊細さ
+        boxShadow: 
+          "0 4px 12px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
+      }}
     >
       {title && (
         <Text
