@@ -118,19 +118,6 @@ export function RoomCard({
             disabled={!isWaiting}
             css={{
               width: "100%",
-              borderRadius: "lg",
-              fontWeight: 600,
-              ...(isWaiting
-                ? {
-                    _hover: { transform: "translateY(-1px)" },
-                  }
-                : {
-                    background: "glassBg05",
-                    border: "1px solid",
-                    borderColor: "border",
-                    color: "fgMuted",
-                    cursor: "not-allowed",
-                  }),
             }}
             onClick={(e) => {
               e.stopPropagation();

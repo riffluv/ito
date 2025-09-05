@@ -16,9 +16,9 @@ export default function Header() {
       top={0}
       zIndex="overlay"
       borderBottomWidth="1px"
-      borderColor="rgba(255,255,255,0.08)"
-      bg="rgba(12,13,16,0.95)"
-      backdropFilter="blur(20px)"
+      borderColor="rgba(255,255,255,0.3)" // Hudと同じボーダー強度で統一
+      bg="rgba(10,11,20,0.95)" // Hudと同じダークベースで統一
+      backdropFilter="blur(8px)" // Hudと同じブラーレベル
       h="64px"
       display="flex"
       alignItems="center"
@@ -56,12 +56,8 @@ export default function Header() {
               fontWeight={700}
               lineHeight={1}
               letterSpacing="-0.02em"
-              color="white"
-              css={{
-                background: 'linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.8) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
+              color="rgba(255,255,255,0.95)" // Hudと同じシンプルな白色
+              textShadow="0 2px 4px rgba(0,0,0,0.7)" // Hudと同じテキストシャドウ
             >
               Online ITO
             </Heading>

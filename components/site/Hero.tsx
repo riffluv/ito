@@ -111,32 +111,9 @@ export default function Hero({ onPlay, onRules }: Props) {
             </AppButton>
             <AppButton
               size="lg"
-              visual="ghost"
+              visual="outline"
+              palette="gray"
               onClick={onRules}
-              minW={{ base: "8rem", md: "10rem" }}
-              height="3rem"
-              fontSize="md"
-              fontWeight={400}
-              borderRadius="8px"
-              letterSpacing="-0.01em"
-              px={8}
-              py={3}
-              css={{
-                color: "{colors.fgMuted}",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "transparent",
-                transition: "all 0.15s ease",
-                _hover: {
-                  color: "{colors.fgDefault}",
-                  borderColor: "rgba(255,255,255,0.2)",
-                  background: "rgba(255,255,255,0.05)",
-                  transform: "translateY(-1px)"
-                },
-                _active: {
-                  transform: "translateY(0) scale(0.98)",
-                  background: "rgba(255,255,255,0.03)"
-                }
-              }}
             >
               ルールを確認
             </AppButton>

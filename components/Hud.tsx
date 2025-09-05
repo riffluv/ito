@@ -1,6 +1,7 @@
 "use client";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, IconButton } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
+import { AppIconButton } from "@/components/ui/AppIconButton";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
 export type HudProps = {
@@ -109,46 +110,29 @@ export function Hud({
 
         {/* Leave Room Button - Dragon Quest Style */}
         {onLeaveRoom && (
-          <IconButton
+          <AppIconButton
             aria-label="ルームを退出"
             onClick={onLeaveRoom}
             size="sm"
-            bg="rgba(220,53,69,0.3)"
-            color="rgba(255,255,255,0.9)"
-            border="1px solid rgba(220,53,69,0.5)"
-            borderRadius="6px"
-            _hover={{
-              bg: "rgba(220,53,69,0.5)",
-              borderColor: "rgba(220,53,69,0.8)",
-              transform: "translateY(-1px)",
-            }}
-            boxShadow="0 2px 4px rgba(0,0,0,0.3)"
+            visual="solid"
+            palette="red"
             title="メインメニューに戻る"
           >
             <FiLogOut />
-          </IconButton>
+          </AppIconButton>
         )}
 
         {/* Settings Button - Dragon Quest Style */}
         {onOpenSettings && (
-          <IconButton
+          <AppIconButton
             aria-label="設定"
             onClick={onOpenSettings}
             size="sm"
-            bg="rgba(108,117,125,0.3)"
-            color="rgba(255,255,255,0.8)"
-            border="1px solid rgba(108,117,125,0.5)"
-            borderRadius="6px"
-            _hover={{
-              bg: "rgba(108,117,125,0.5)",
-              borderColor: "rgba(108,117,125,0.8)",
-              color: "rgba(255,255,255,0.95)",
-              transform: "translateY(-1px)",
-            }}
-            boxShadow="0 2px 4px rgba(0,0,0,0.3)"
+            visual="outline"
+            palette="gray"
           >
             <FiSettings />
-          </IconButton>
+          </AppIconButton>
         )}
       </Box>
     </Box>
