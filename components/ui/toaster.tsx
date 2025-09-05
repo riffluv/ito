@@ -9,7 +9,7 @@ import {
 // Chakra UI v3 official toaster instance.
 // Keep placement centralized to avoid layout interference with app content.
 export const toaster = createToaster({
-  placement: "bottom-end", // show toasts at bottom-right
+  placement: "top-end", // 右上: 手札ドックやホストパネルと重ならない
   max: 3,
   overlap: false,
   gap: 12,

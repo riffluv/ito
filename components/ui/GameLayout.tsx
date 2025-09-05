@@ -134,14 +134,14 @@ export function GameLayout({
             right={{ base: 4, md: 8 }}
             bottom={{ base: 6, md: 8 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
-            borderRadius="xl"
+            borderRadius={0}
             p={{ base: 3, md: 4 }}
-            bg="surfaceOverlay"
+            bg="#000"
             borderWidth="0"
-            backdropFilter="blur(10px) saturate(1.5)"
-            boxShadow="0 4px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.5)"
-            border="borders.retrogameGame"
-            borderColor="rgba(255,255,255,0.2)"
+            backdropFilter="none"
+            boxShadow="none"
+            border="borders.retrogame"
+            borderColor="#fff"
           >
             {handArea || <Box h="1px" />}
           </Box>

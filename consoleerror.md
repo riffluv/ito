@@ -1,42 +1,109 @@
-index.js:627 Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+app-index.js:33 ./components/ui/MiniHandDock.tsx
 Error: 
-  × Unexpected token `Box`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\app\page.tsx:138:1]
- 138 │   ];
- 139 │ 
- 140 │   return (
- 141 │     <Box bg="canvasBg" minH="100vh">
-     ·      ───
- 142 │       {/* === HERO SECTION === */}
- 143 │       <Box
- 143 │         position="relative"
-     ╰────
-
-
-Caused by:
-    Syntax Error
-    at processResult (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
-    at <unknown> (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
-    at r.callback (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
-hydration-error-info.js:63 ./app/page.tsx
-Error: 
-  × Unexpected token `Box`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\app\page.tsx:138:1]
- 138 │   ];
- 139 │ 
- 140 │   return (
- 141 │     <Box bg="canvasBg" minH="100vh">
-     ·      ───
- 142 │       {/* === HERO SECTION === */}
- 143 │       <Box
- 143 │         position="relative"
+  × Unexpected token `HStack`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
+ 205 │     }[roomStatus as string] || "準備中";
+ 206 │ 
+ 207 │   return (
+ 208 │     <HStack
+     ·      ──────
+ 209 │       gap={6}
+ 210 │       align="center"
+ 210 │       justify="space-between"
      ╰────
 
 Caused by:
     Syntax Error
+
+Import trace for requested module:
+./components/ui/MiniHandDock.tsx
+./app/rooms/[roomId]/page.tsx
+window.console.error @ app-index.js:33
+app-index.js:33 ./components/ui/MiniHandDock.tsx
+Error: 
+  × Unexpected token `HStack`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
+ 205 │     }[roomStatus as string] || "準備中";
+ 206 │ 
+ 207 │   return (
+ 208 │     <HStack
+     ·      ──────
+ 209 │       gap={6}
+ 210 │       align="center"
+ 210 │       justify="space-between"
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/ui/MiniHandDock.tsx
+./app/rooms/[roomId]/page.tsx
+window.console.error @ app-index.js:33
+app-index.js:33 ./components/ui/MiniHandDock.tsx
+Error: 
+  × Unexpected token `HStack`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
+ 205 │     }[roomStatus as string] || "準備中";
+ 206 │ 
+ 207 │   return (
+ 208 │     <HStack
+     ·      ──────
+ 209 │       gap={6}
+ 210 │       align="center"
+ 210 │       justify="space-between"
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/ui/MiniHandDock.tsx
+./app/rooms/[roomId]/page.tsx
+window.console.error @ app-index.js:33
+app-index.js:33 ./components/ui/MiniHandDock.tsx
+Error: 
+  × Unexpected token `HStack`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
+ 205 │     }[roomStatus as string] || "準備中";
+ 206 │ 
+ 207 │   return (
+ 208 │     <HStack
+     ·      ──────
+ 209 │       gap={6}
+ 210 │       align="center"
+ 210 │       justify="space-between"
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/ui/MiniHandDock.tsx
+./app/rooms/[roomId]/page.tsx
+window.console.error @ app-index.js:33
+app-index.js:33 ./components/ui/MiniHandDock.tsx
+Error: 
+  × Unexpected token `HStack`. Expected jsx identifier
+     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
+ 205 │     }[roomStatus as string] || "準備中";
+ 206 │ 
+ 207 │   return (
+ 208 │     <HStack
+     ·      ──────
+ 209 │       gap={6}
+ 210 │       align="center"
+ 210 │       justify="space-between"
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/ui/MiniHandDock.tsx
+./app/rooms/[roomId]/page.tsx
+window.console.error @ app-index.js:33
 console.error @ hydration-error-info.js:63
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-content.js:1 Uncaught (in promise) The message port closed before a response was received.
-:3000/favicon.ico:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+handleErrors @ hot-reloader-client.js:166
+processMessage @ hot-reloader-client.js:207
+handler @ hot-reloader-client.js:395
