@@ -39,11 +39,13 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
         <Text
           textAlign="center"
           fontWeight={600}
-          fontSize="14px"
-          letterSpacing="1px"
-          color="rgba(255,255,255,0.9)" // ドラクエ風の白文字
+          fontSize={{ base: "13px", md: "14px" }}
+          letterSpacing="0.5px"
+          color="rgba(255,255,255,0.92)"
           mb={3}
-          textShadow="0 1px 2px rgba(0,0,0,0.5)" // ドラクエ風のテキストシャドウ
+          // メインメニューと同じ上品なフォント
+          fontFamily='-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
+          textShadow="0 1px 3px rgba(0,0,0,0.3)"
         >
           {title}
         </Text>

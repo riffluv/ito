@@ -27,8 +27,12 @@ export default function ArtifactResultOverlay({
       alignItems="center"
       justifyContent="center"
       css={{
-        background: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(20px)",
+        // メインメニューと調和した高級感ある背景
+        background: "linear-gradient(135deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)", // 透明度軽減でカード視認性向上
+        // 控えめなテクスチャで品格演出
+        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)",
+        backgroundSize: "32px 32px",
+        backdropFilter: "blur(8px)", // カード視認性を保つため軽減
         animation: "fadeIn 300ms ease-out",
         "@keyframes fadeIn": { from: { opacity: 0 }, to: { opacity: 1 } },
         pointerEvents: "none",

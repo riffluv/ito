@@ -56,18 +56,15 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     bg: baseColors.bg,
     border: borderStyle,
     borderColor:
-      stateAccent[state as keyof typeof stateAccent] || stateAccent.default,
+      state === "success"
+        ? "rgba(34, 197, 94, 0.8)" // 成功時は緑ボーダーで演出
+        : stateAccent[state as keyof typeof stateAccent] || stateAccent.default,
     boxShadow,
     colors: {
       text: baseColors.text,
       meta: baseColors.meta,
       clue: waitingInCentral ? "#ffffff" : "#e2e8f0",
-      number:
-        state === "success"
-          ? "#4a9eff"
-          : state === "fail"
-            ? "#ff6b6b"
-            : "#ffffff",
+      number: "#ffffff", // 全状態で白色統一 - 視認性最優先
     },
   };
 };
@@ -284,7 +281,7 @@ export function GameCard({
                 transform="translate(-50%, -50%)"
                 fontWeight={700}
                 fontSize={backNumberFontSize}
-                color={dragonQuestStyle.colors.number}
+                color="#ffffff" // 全状態で白色統一
                 lineHeight="1"
                 textShadow={
                   waitingInCentral ? "none" : "0 1px 2px rgba(0,0,0,0.5)"
@@ -371,7 +368,7 @@ export function GameCard({
               ? getNumberFontSize(number)
               : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
           }
-          color={dragonQuestStyle.colors.number}
+          color="#ffffff" // 全状態で白色統一
           lineHeight={typeof number === "number" ? 1.05 : 1.1}
           textShadow={
             waitingInCentral
