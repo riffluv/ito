@@ -297,14 +297,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       >
         {/* 🎯 PREMIUM INSTRUCTION - Dragon Quest Style Guide */}
         <Box
-          bg="rgba(25,27,33,0.8)"
+          bg="#000"
           border="borders.retrogameThin"
-          borderColor="rgba(255,255,255,0.3)"
-          borderRadius="xl"
+          borderColor="#fff"
+          borderRadius={0}
           px={{ base: 5, md: 7 }}
           py={{ base: 4, md: 5 }}
-          backdropFilter="blur(16px) saturate(1.1)"
-          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.2)"
+          backdropFilter="none"
+          boxShadow="none"
           transition="all 0.2s ease"
           display="inline-block"
           fontFamily="heading"
@@ -312,14 +312,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           fontWeight="600"
           color="rgba(255,255,255,0.9)"
           letterSpacing="0.02em"
-          textShadow="0 1px 2px rgba(0,0,0,0.3)"
-          _hover={{
-            bg: "rgba(99,102,241,0.1)",
-            borderColor: "rgba(99,102,241,0.5)",
-            transform: "translateY(-1px)",
-            boxShadow: "inset 0 1px 2px rgba(99,102,241,0.1), 0 6px 16px rgba(0,0,0,0.25)",
-            color: "rgba(255,255,255,1)",
-          }}
+          textShadow="none"
+          _hover={{}}
         >
           小さい順から大きい順に並べよう
         </Box>
@@ -339,8 +333,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         <Box
           borderWidth="0"
           border="borders.retrogameThin"
-          borderColor="rgba(255,255,255,0.15)"
-          borderRadius="2xl"
+          borderColor="#fff"
+          borderRadius={0}
           padding={{ base: 6, md: 8 }}
           minHeight="auto"
           width="100%"
@@ -352,9 +346,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           alignContent="flex-start"
           alignItems="flex-start"
           gap={{ base: 4, md: 5, lg: 6 }} // 8人環境で適切なスペーシング
-          bg="rgba(25,27,33,0.4)"
-          boxShadow="inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.15)"
-          backdropFilter="blur(8px) saturate(1.1)"
+          bg="#000"
+          boxShadow="none"
+          backdropFilter="none"
           transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
           data-drop-target={isOver && canDrop ? "true" : "false"}
           // 8人環境での最適化統合CSS
