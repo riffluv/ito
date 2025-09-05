@@ -43,14 +43,14 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     ? "2px solid" // 中央では少し太め
     : "1px solid"; // 通常時は細め
 
-  // ドラクエ風の深みのあるシャドウ
+  // メインメニューレベルの豪華なドラクエ風シャドウ
   const boxShadow = waitingInCentral
-    ? "inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 16px rgba(0,0,0,0.4), 0 2px 8px rgba(255,255,255,0.05)"
+    ? "0 8px 32px -8px rgba(0,0,0,0.3), 0 4px 16px -4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 2px 0 rgba(255,255,255,0.06)"
     : state === "success"
-      ? "inset 0 1px 2px rgba(74,158,255,0.2), 0 4px 12px rgba(0,0,0,0.3), 0 0 8px rgba(74,158,255,0.15)"
+      ? "0 8px 24px -8px rgba(74,158,255,0.4), 0 4px 12px -4px rgba(74,158,255,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(74,158,255,0.2)"
       : state === "fail"
-        ? "inset 0 1px 2px rgba(255,107,107,0.2), 0 4px 12px rgba(0,0,0,0.3), 0 0 8px rgba(255,107,107,0.15)"
-        : "inset 0 1px 2px rgba(255,255,255,0.05), 0 2px 8px rgba(0,0,0,0.25)";
+        ? "0 8px 24px -8px rgba(255,107,107,0.4), 0 4px 12px -4px rgba(255,107,107,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(255,107,107,0.2)"
+        : "0 4px 16px -4px rgba(0,0,0,0.25), 0 2px 8px -2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)";
 
   return {
     bg: baseColors.bg,
@@ -316,10 +316,17 @@ export function GameCard({
     );
   }
 
-  // FLAT VARIANT - 通常のカード表示
+  // FLAT VARIANT - 通常のカード表示（メインメニューレベルのホバー効果）
   const hoverTransform = isHovered
-    ? "translateY(-4px) scale(1.02) rotateY(0deg)"
+    ? "translateY(-8px) scale(1.03) rotateY(0deg)"
     : "translateY(0) scale(1) rotateY(0deg)";
+  
+  const hoverBoxShadow = isHovered && dragonQuestStyle.boxShadow
+    ? dragonQuestStyle.boxShadow.replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
+                                    .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
+                                    .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
+                                    .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)")
+    : dragonQuestStyle.boxShadow;
 
   return (
     <Box
@@ -339,7 +346,7 @@ export function GameCard({
       transform={hoverTransform}
       style={{ transformStyle: "preserve-3d", willChange: "transform" }}
       transition={`all 0.3s ${HOVER_EASING}`}
-      boxShadow={dragonQuestStyle.boxShadow}
+      boxShadow={hoverBoxShadow}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
