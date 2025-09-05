@@ -276,11 +276,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       border="none"
       borderWidth="0"
       css={{
-        // ドラクエ風の美しい背景グラデーション
+        // 元の背景スタイルに戻す
         background:
           "linear-gradient(135deg, rgba(10,11,20,0.4) 0%, rgba(15,16,35,0.6) 50%, rgba(10,11,20,0.4) 100%)",
         position: "relative",
-        // 微細なテクスチャ
         backgroundImage:
           "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
         backgroundSize: "24px 24px",
@@ -567,6 +566,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {/* {canConfirm && waitingPlayers.length === 0 ? (
         <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
       ) : null} */}
+
       {/* 結果オーバーレイ（モック準拠の演出） */}
       {roomStatus === "finished" && showResult && (
         <ArtifactResultOverlay
