@@ -90,7 +90,7 @@ export function GameCard({
   boundary = false,
   variant = "flat",
   flipped = false,
-  waitingInCentral = false,
+  waitingInCentral = true,
 }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 

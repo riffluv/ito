@@ -125,16 +125,9 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const clueText =
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
 
-  // 5) Waiting in central detection
-  // カードが中央待機エリアにあるかどうか判定
-  // ・pendingに含まれているが、orderListにもproposalにも含まれていない
-  // ・roomStatusが "clue" または "waiting"
-  const waitingInCentral = !!(
-    p.pending.includes(p.id) &&
-    !(p.orderList || []).includes(p.id) &&
-    !(p.proposal || []).includes(p.id) &&
-    (p.roomStatus === "clue" || p.roomStatus === "waiting")
-  );
+  // 5) Waiting in central detection - ALWAYS TRUE for Dragon Quest style
+  // 全てのカードでドラゴンクエスト風デザインを適用
+  const waitingInCentral = true;
 
   return {
     showNumber,
