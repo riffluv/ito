@@ -357,11 +357,9 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
             >
-              このページは かんけつな せつめい です。
+              長々と書きましたが、ルールはとてもシンプルです。
               <br />
-              しょうさいや バリアントは べつページで 
-              <br />
-              かんり かのう です。
+              まずはプレイしてみよう！
             </Text>
           </Box>
         </Box>
