@@ -294,7 +294,7 @@ export function GameCard({
                 whiteSpace="nowrap"
                 letterSpacing={
                   typeof number === "number" && String(number).length >= 3
-                    ? "-1px"
+                    ? "-0.8px"  // flipカードでも同じ適切な文字間隔
                     : undefined
                 }
               >
@@ -357,7 +357,7 @@ export function GameCard({
       bg={dragonQuestStyle.bg}
       color={dragonQuestStyle.colors.text}
       display="grid"
-      gridTemplateRows="16px 1fr 16px"
+      gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
       transform={hoverTransform}
       style={{ transformStyle: "preserve-3d", willChange: "transform" }}
@@ -379,7 +379,7 @@ export function GameCard({
           #{typeof index === "number" ? index + 1 : "?"}
         </span>
       </Box>
-      <Box position="relative">
+      <Box position="relative" overflow="hidden" minHeight="0">
         <Box
           position="absolute"
           top="50%"
@@ -401,19 +401,22 @@ export function GameCard({
                 : "none"
           }
           width="100%"
-          maxWidth="calc(100% - 8px)"
+          maxWidth={typeof number === "number" ? "100%" : "calc(100% - 8px)"}
           textAlign="center"
-          padding="0 0.25rem"
+          padding={typeof number === "number" ? "0" : "0 0.25rem"}
           wordBreak={typeof number === "number" ? "keep-all" : "break-word"}
           whiteSpace={typeof number === "number" ? "nowrap" : "normal"}
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
           overflow="hidden"
           display={typeof number === "number" ? "block" : "flex"}
+          maxHeight={typeof number === "number" ? "1.2em" : undefined}
           alignItems={typeof number === "number" ? undefined : "center"}
           justifyContent={typeof number === "number" ? undefined : "center"}
           letterSpacing={
-            typeof number === "number" && String(number).length >= 3
-              ? "-1px"
+            typeof number === "number"
+              ? String(number).length >= 3 
+                ? "-0.8px"  // 3桁数字の適切な文字間隔
+                : "-0.3px" // 2桁数字の適切な文字間隔
               : undefined
           }
           style={{
@@ -423,8 +426,34 @@ export function GameCard({
             WebkitFontSmoothing: "antialiased",
             MozOsxFontSmoothing: "grayscale",
           }}
+          css={typeof number === "number" ? {
+            // CSS詳細度を上げて適切に上書き
+            width: "100%",
+            minWidth: "0",
+            maxWidth: "100%",
+            fontVariantNumeric: "normal",
+            fontFamily: "inherit",
+            // ネストした子要素も制御
+            "& > *": {
+              width: "100%",
+              minWidth: "0",
+              fontVariantNumeric: "normal"
+            }
+          } : undefined}
         >
-          {typeof number === "number" ? number : clue || "?"}
+          {typeof number === "number" ? (
+            <span style={{
+              display: "block",
+              width: "100%",
+              textAlign: "center",
+              fontVariantNumeric: "normal",
+              whiteSpace: "nowrap"
+            }}>
+              {number}
+            </span>
+          ) : (
+            clue || "?"
+          )}
         </Box>
       </Box>
       <Box
