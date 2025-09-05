@@ -82,8 +82,8 @@
       "static/chunks/691-fe232203363339c7.js",
       "static/chunks/893-60f2529d847352ce.js",
       "static/chunks/288-82c4a831c76634a5.js",
-      "static/chunks/674-f12aadfcc7592089.js",
-      "static/chunks/app/rooms/[roomId]/page-300b0a8dd9206da9.js"
+      "static/chunks/674-8e9653516037fc1f.js",
+      "static/chunks/app/rooms/[roomId]/page-9e2ed8dadbf86ae9.js"
     ],
     "/rooms/[roomId]/error": [
       "static/chunks/webpack-ceed77350ea71642.js",
@@ -111,7 +111,7 @@
       "static/css/6d3311cb78970852.css",
       "static/chunks/ui-6e8e94183d4e5e8e.js",
       "static/chunks/411-a9badd2fccd7b4d4.js",
-      "static/chunks/674-f12aadfcc7592089.js",
+      "static/chunks/674-8e9653516037fc1f.js",
       "static/chunks/app/design/preview/page-f99494253d13e2f6.js"
     ],
     "/rules/page": [
