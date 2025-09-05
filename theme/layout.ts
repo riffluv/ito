@@ -26,10 +26,10 @@ export const UNIFIED_LAYOUT = {
     HEADER_HEIGHT: "clamp(64px, 6dvh, 96px)",
     // 125%DPI環境でもトランプ型カードに十分な高さを確保（ゲーム感重視）
     HAND_AREA_HEIGHT: "clamp(180px, 18dvh, 220px)", // 10px増やしてカード余裕確保
-    // カードサイズ縮小で横並び対応
+    // カードサイズも標準的なトランプ型を維持（統一感優先）
     CARD: {
-      WIDTH: { base: "90px", md: "105px" },
-      HEIGHT: { base: "126px", md: "147px" },
+      WIDTH: { base: "100px", md: "120px" },
+      HEIGHT: { base: "140px", md: "168px" },
     },
   },
 
@@ -37,6 +37,11 @@ export const UNIFIED_LAYOUT = {
   DPI_150: {
     HEADER_HEIGHT: "clamp(56px, 5.5dvh, 88px)",
     HAND_AREA_HEIGHT: "clamp(150px, 15dvh, 190px)",
+    // 150%DPIでも美しいトランプ型を維持
+    CARD: {
+      WIDTH: { base: "100px", md: "120px" },
+      HEIGHT: { base: "140px", md: "168px" },
+    },
   },
 
   // ゲーム要素 (手札エリアと整合性を取る）- ゲーム感強化
