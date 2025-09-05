@@ -59,26 +59,31 @@ export function GameLayout({
         <Box
           h="100dvh"
           position="relative"
-          bg="surfaceBase"
           color="fgDefault"
           lineHeight={1.5}
+          className="game-layout-immersive"
           css={{
             WebkitFontSmoothing: "antialiased",
-            // プロフェッショナルなリッチブラック背景（Hero.tsxと統一）
-            background: `
-              radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.04) 25%, var(--chakra-colors-surfaceBase) 60%),
-              linear-gradient(135deg, rgba(99,102,241,0.02) 0%, transparent 40%, rgba(139,92,246,0.015) 100%)
-            `,
-            // 微細な質感パターン（控えめに）
-            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.015) 1px, transparent 0)",
-            backgroundSize: "40px 40px",
+            // より高い詳細度でChakra UIのデフォルトを上書き
+            '&.game-layout-immersive': {
+              backgroundColor: "#0a0b14",
+              backgroundImage: `
+                radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.08) 25%, transparent 60%),
+                linear-gradient(135deg, rgba(99,102,241,0.03) 0%, transparent 40%, rgba(139,92,246,0.02) 100%),
+                radial-gradient(circle at 1px 1px, rgba(99,102,241,0.08) 1px, transparent 0),
+                radial-gradient(circle at 8px 8px, rgba(139,92,246,0.04) 0.5px, transparent 0),
+                radial-gradient(circle at 16px 4px, rgba(255,255,255,0.02) 0.8px, transparent 0)
+              `,
+              backgroundSize: "auto, auto, 24px 24px, 32px 32px, 48px 24px",
+            }
           }}
           _before={{
             content: '""',
             position: 'absolute',
             inset: 0,
-            bgGradient: 'linear-gradient(135deg, rgba(99,102,241,0.01) 0%, transparent 50%, rgba(139,92,246,0.008) 100%)',
-            pointerEvents: 'none'
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.04) 0%, transparent 50%, rgba(139,92,246,0.025) 100%)',
+            pointerEvents: 'none',
+            zIndex: 0
           }}
         >
           {header && (
@@ -139,7 +144,8 @@ export function GameLayout({
               display="flex"
               flexDirection="column"
               gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
-              zIndex={1}
+              zIndex={10}
+              bg="transparent"
             >
               {main}
             </Box>
