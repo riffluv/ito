@@ -110,21 +110,35 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     await resetRoomToWaiting(roomId);
   };
 
+  // 配布演出: 数字が来た瞬間に軽くポップ（レイアウト不変）
+  const [pop, setPop] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof me?.number === "number") {
+      setPop(true);
+      const id = setTimeout(() => setPop(false), 180);
+      return () => clearTimeout(id);
+    }
+  }, [me?.number]);
+
   return (
-    <HStack gap={6} align="center" justify="space-between" w="100%" position="relative">
-      {/* 左: 番号・入力・アクション */}
-      <HStack gap={3} align="center" flex="1 1 auto" minW={0}>
-        <Box as="span" px={2} py={1} bg="#000" color="#fff" border="1px solid #fff" borderRadius={0} fontWeight={700}
-             css={{ fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
-          {typeof me?.number === "number" ? me.number : "??"}
-        </Box>
+    <Box
+      display="grid"
+      gridTemplateAreas={{ base: "'left' 'center' 'right'", md: "'left center right'" }}
+      gridTemplateColumns={{ base: "1fr", md: "minmax(0,1fr) auto minmax(0,1fr)" }}
+      alignItems="center"
+      columnGap={{ base: 3, md: 6 }}
+      rowGap={{ base: 3, md: 0 }}
+      w="100%"
+    >
+      {/* 左: 入力・アクション */}
+      <HStack gap={3} align="center" minW={0} gridArea="left">
         <Input
           placeholder="連想ワード"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleDecide(); }}
           size="sm"
-          maxW={{ base: "360px", md: "520px" }}
+          maxW={{ base: "100%", md: "520px" }}
           bg="#000"
           color="#fff"
           border="1px solid #fff"
@@ -143,8 +157,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </AppButton>
       </HStack>
 
-      {/* 右: HOST 操作（必要時） */}
-      <HStack gap={3} align="center" flex="0 0 auto">
+      {/* 中央: ヒーロー番号（固定幅3ch） */}
+      <Box gridArea="center" display="flex" justifyContent="center">
+        <Box
+          w="4ch"
+          minW="4ch"
+          textAlign="center"
+          px={3}
+          py={1}
+          bg="#000"
+          color="#fff"
+          border="1px solid #fff"
+          borderRadius={0}
+          fontWeight={800}
+          fontSize={{ base: "36px", md: "44px" }}
+          lineHeight={1}
+          css={{
+            fontVariantNumeric: "tabular-nums",
+            fontFamily: "'SF Mono','Cascadia Mono','Menlo','Roboto Mono',monospace",
+            transform: pop ? "scale(1.06)" : "scale(1)",
+            transition: "transform 180ms ease, opacity 180ms ease",
+          }}
+        >
+          {typeof me?.number === "number" ? me.number : "??"}
+        </Box>
+      </Box>
+
+      {/* 右: ホスト操作 */}
+      <HStack gap={3} align="center" justifyContent="flex-end" gridArea="right">
         {isHost && roomStatus === "waiting" && (
           <AppButton size="md" visual="ghost" palette="gray" onClick={quickStart}
             css={{ background: "#000", border: "1px solid #fff", color: "#fff", borderRadius: 0 }}>
@@ -175,7 +215,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 bg="#000" color="#fff" borderWidth={1} borderColor="#fff" borderRadius={0}>
                 <FaDice />
               </IconButton>
-              <IconButton aria-label="リセット" onClick={async () => { const { resetRoomToWaiting } = await import("@/lib/firebase/rooms"); await resetRoomToWaiting(roomId); }} size="xs"
+              <IconButton aria-label="リセット" onClick={resetGame} size="xs"
                 bg="#000" color="#fff" borderWidth={1} borderColor="#fff" borderRadius={0}>
                 <FaRedo />
               </IconButton>
@@ -193,6 +233,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           )}
         </HStack>
       </HStack>
-    </HStack>
+    </Box>
   );
 }
