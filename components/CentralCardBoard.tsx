@@ -276,18 +276,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       border="none"
       borderWidth="0"
       css={{
-        // メインメニューと調和した洗練された背景
-        background:
-          "linear-gradient(135deg, rgba(12,13,20,0.6) 0%, rgba(18,20,32,0.8) 35%, rgba(15,17,28,0.9) 65%, rgba(12,13,20,0.6) 100%)",
+        // 背景なしでクリーンな表示
+        background: "transparent",
         position: "relative",
-        // 控えめで上品なテクスチャ（人間らしい繊細さ）
-        backgroundImage:
-          "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0)",
-        backgroundSize: "28px 28px",
-        borderRadius: "12px",
-        backdropFilter: "blur(3px)",
-        // 微細な境界線で品格を演出
-        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.15)",
       }}
     >
       {/* コンパクトヘッダー - DPI125%対応 */}
