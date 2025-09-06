@@ -248,27 +248,28 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
           : list.length;
     if (expected >= 2 && list.length !== expected) {
       throw new Error(`提出数が有効人数(${expected})と一致しません`);
-    } // プレイヤーの数字を取得して昇順チェック（純関数へ）
+    }
+    
+    // プレイヤーの数字を取得して保存（リアルタイム判定で使用）
     const numbers: Record<string, number | null | undefined> = {};
     for (const pid of list) {
       const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
       numbers[pid] = (pSnap.data() as any)?.number;
     }
-    const { success, failedAt, last } = evaluateSorted(list, numbers);
+    
     const order = {
       list,
-      lastNumber: last,
-      failed: !success,
-      failedAt: failedAt,
+      numbers, // プレイヤー数字を保存
       decidedAt: serverTimestamp(),
       total: list.length,
+      // リアルタイム判定のため事前計算は行わない
     } as any;
 
     // アニメーションを挟むため status は一旦 "reveal" にする
     tx.update(roomRef, {
       status: "reveal",
       order,
-      result: { success: !!success, revealedAt: serverTimestamp() },
+      // result は初期化しない - リアルタイム判定で設定
     });
   });
 }

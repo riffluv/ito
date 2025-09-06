@@ -114,7 +114,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return placedIds.has(meId);
   }, [placedIds, meId]);
 
-  const { revealAnimating, revealIndex } = useRevealAnimation({
+  const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
     roomStatus,
     resolveMode,
@@ -196,6 +196,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       failedAt={failedAt}
       localFailedAt={localFailedAt}
       boundaryPreviousIndex={boundaryPreviousIndex}
+      realtimeResult={realtimeResult} // リアルタイム判定結果を追加
     />
   );
 
@@ -490,8 +491,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         >
           {roomStatus === "finished" && (
             <GameResultOverlay
-              failed={failed}
-              failedAt={failedAt}
+              failed={realtimeResult ? !realtimeResult.success : failed}
+              failedAt={realtimeResult?.failedAt ?? failedAt}
               mode="inline"
             />
           )}
@@ -510,7 +511,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {/* 結果オーバーレイ（モック準拠の演出） */}
       {roomStatus === "finished" && showResult && (
         <ArtifactResultOverlay
-          success={!failed}
+          success={realtimeResult ? realtimeResult.success : !failed}
           onClose={() => setShowResult(false)}
         />
       )}

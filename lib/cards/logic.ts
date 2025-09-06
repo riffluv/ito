@@ -27,6 +27,11 @@ export interface ComputeCardStateParams {
   failedAt?: number | null; // server confirmed failure index (1-based)
   localFailedAt?: number | null; // client-only provisional failure index (1-based)
   boundaryPreviousIndex?: number | null; // index (0-based) of card just before failure boundary (for subtle highlight)
+  realtimeResult?: {
+    success: boolean;
+    failedAt: number | null;
+    currentIndex: number;
+  } | null; // リアルタイム判定結果
 }
 
 export interface ComputedCardState {
@@ -63,8 +68,11 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     showNumber = typeof number === "number" && isPlaced;
   }
 
-  // 2) Failure / success computation
-  const effectiveFailedAt = p.localFailedAt ?? p.failedAt;
+  // 2) Failure / success computation - リアルタイム判定優先
+  // リアルタイム結果がある場合はそれを優先、なければ従来のロジック
+  const effectiveFailedAt = p.realtimeResult?.failedAt ?? p.localFailedAt ?? p.failedAt;
+  const effectiveFailed = p.realtimeResult ? !p.realtimeResult.success : p.failed;
+  
   const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
   const revealed =
     typeof idx === "number" &&
@@ -73,7 +81,11 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
 
   const failureConfirmed = (() => {
     if (typeof effectiveFailedAt !== "number") return false;
-    if (p.roomStatus === "finished") return !!p.failed;
+    if (p.roomStatus === "finished") return !!effectiveFailed;
+    // リアルタイム判定の場合: 該当カードがめくられた時点で失敗確定
+    if (p.realtimeResult && !p.realtimeResult.success) {
+      return p.revealIndex >= effectiveFailedAt;
+    }
     return p.revealIndex >= effectiveFailedAt;
   })();
 
@@ -91,7 +103,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     idx === effectiveFailedAt - 1;
   // Only show success (blue) if game succeeded and not failed specifically
   isSuccess =
-    revealed && active && p.roomStatus === "finished" && !isFail && !p.failed; // Only if overall game was successful
+    revealed && active && p.roomStatus === "finished" && !isFail && !effectiveFailed; // リアルタイム結果を考慮
   if (isSuccess) successLevel = "final";
 
   if (
