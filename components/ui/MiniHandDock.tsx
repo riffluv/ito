@@ -225,7 +225,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           fontWeight={800}
           fontSize={
             typeof me?.number === "number" && String(me.number).length >= 3
-              ? { base: "28px", md: "34px" }  // 3桁数字（100対応）- ボックス内に収まるサイズ
+              ? { base: "34px", md: "42px" }  // 3桁数字（100対応）- 視認性向上
               : { base: "36px", md: "44px" }   // 1-2桁数字
           }
           lineHeight={1}

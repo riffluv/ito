@@ -32,6 +32,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { EmptyCard } from "@/components/cards";
 // Fallback hard-coded durations (keep in sync with previous logic/motion.ts if exists)
 const REVEAL_FIRST_DELAY = 600;
 const REVEAL_STEP_DELAY = 650;
@@ -419,41 +420,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     }
                     // Empty slot placeholder - show during clue phase
                     return (
-                      <Box
+                      <EmptyCard
                         key={`slot-${idx}`}
-                        data-slot
-                        aspectRatio="5/7"
-                        width={UNIFIED_LAYOUT.CARD.WIDTH}
+                        slotNumber={idx + 1}
                         alignSelf="flex-start"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        bg="#191B21"
-                        borderWidth="1.5px"
-                        borderColor="rgba(20, 184, 166, 0.4)"
-                        borderStyle="dashed"
-                        borderRadius="16px"
-                        boxShadow="inset 0 1px 3px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1)"
-                        backdropFilter="blur(4px)"
-                        fontSize="lg"
-                        fontWeight="600"
-                        color="rgba(255,255,255,0.80)"
-                        letterSpacing="-0.01em"
-                        transition="all 0.2s ease"
-                        cursor="pointer"
-                        position="relative"
-                        overflow="hidden"
-                        _hover={{
-                          bg: "rgba(99,102,241,0.1)",
-                          borderColor: "rgba(99,102,241,0.4)",
-                          color: "rgba(255,255,255,0.8)",
-                          boxShadow:
-                            "inset 0 1px 3px rgba(99,102,241,0.1), 0 2px 6px rgba(99,102,241,0.2)",
-                          transform: "translateY(-1px)",
-                        }}
-                      >
-                        {idx + 1}
-                      </Box>
+                      />
                     );
                   })}
                 </SortableContext>
@@ -483,57 +454,27 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       {renderCard(cardId, idx)}
                     </React.Fragment>
                   ) : (
-                    <Box
+                    <EmptyCard
                       key={`drop-zone-${idx}`}
+                      slotNumber={idx + 1}
+                      isDroppable={isDroppableSlot}
                       onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
                         if (isDroppableSlot && !isOver) {
                           setIsOver(true);
                         }
                       }}
-                      onDragLeave={(e) => {
-                        e.stopPropagation();
-                        // 子要素への移動ではリセットしない
-                        if (
-                          !e.currentTarget.contains(e.relatedTarget as Node)
-                        ) {
-                          setIsOver(false);
-                        }
+                      onDragLeave={() => {
+                        setIsOver(false);
                       }}
                       onDrop={(e) => onDropAtPosition(e, idx)}
-                      borderWidth="0"
-                      borderRadius="16px"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      bg="#191B21"
-                      color="rgba(255,255,255,0.80)"
-                      fontSize="lg"
-                      fontWeight="600"
-                      // Consistent white dashed border for all slots
-                      border="1.5px dashed"
-                      borderColor="rgba(20, 184, 166, 0.4)"
-                      boxShadow="sm"
-                      /* duplicated borderRadius removed; keep theme token above */
-                      transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
-                      cursor={isDroppableSlot ? "copy" : "not-allowed"}
-                      _hover={
-                        isDroppableSlot
-                          ? {
-                              bg: "slotHover",
-                              borderColor: "slotBorderHover",
-                              color: "slotTextHover",
-                              boxShadow: "md",
-                            }
-                          : {}
-                      }
-                      css={{ aspectRatio: "5 / 7" }}
                       alignSelf="flex-start"
-                      width={UNIFIED_LAYOUT.CARD.WIDTH}
-                    >
-                      {idx + 1}
-                    </Box>
+                      _focusVisible={{
+                        outline: "2px solid",
+                        outlineColor: "focusRing",
+                        outlineOffset: 2,
+                      }}
+                      tabIndex={0}
+                    />
                   );
                 })}
 
