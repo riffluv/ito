@@ -137,8 +137,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     meId,
     me,
     roomStatus,
-    resolveMode,
-    cluesReady,
     orderList,
     proposal,
     hasNumber,
