@@ -1,4 +1,18 @@
 {
+  "components\\hooks\\useRevealAnimation.ts -> @/lib/firebase/require": {
+    "id": "components\\hooks\\useRevealAnimation.ts -> @/lib/firebase/require",
+    "files": []
+  },
+  "components\\hooks\\useRevealAnimation.ts -> @/lib/game/rules": {
+    "id": "components\\hooks\\useRevealAnimation.ts -> @/lib/game/rules",
+    "files": []
+  },
+  "components\\hooks\\useRevealAnimation.ts -> firebase/firestore": {
+    "id": "components\\hooks\\useRevealAnimation.ts -> firebase/firestore",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
+    ]
+  },
   "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms": {
     "id": "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms",
     "files": []

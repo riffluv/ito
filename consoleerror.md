@@ -1,109 +1,38 @@
-app-index.js:33 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Unexpected token `HStack`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
- 205 │     }[roomStatus as string] || "準備中";
- 206 │ 
- 207 │   return (
- 208 │     <HStack
-     ·      ──────
- 209 │       gap={6}
- 210 │       align="center"
- 210 │       justify="space-between"
-     ╰────
+index.js:627 Uncaught Error: Module not found: Can't resolve '@/lib/firebase/core'
+  56 |
+  57 |       try {
+> 58 |         const { requireDb } = await import("@/lib/firebase/core");
+     |                                     ^
+  59 |         const { doc, getDoc } = await import("firebase/firestore");
+  60 |         const { evaluateSorted } = await import("@/lib/game/rules");
+  61 |
 
-Caused by:
-    Syntax Error
+https://nextjs.org/docs/messages/module-not-found
 
 Import trace for requested module:
-./components/ui/MiniHandDock.tsx
+./components/CentralCardBoard.tsx
 ./app/rooms/[roomId]/page.tsx
-window.console.error @ app-index.js:33
-app-index.js:33 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Unexpected token `HStack`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
- 205 │     }[roomStatus as string] || "準備中";
- 206 │ 
- 207 │   return (
- 208 │     <HStack
-     ·      ──────
- 209 │       gap={6}
- 210 │       align="center"
- 210 │       justify="space-between"
-     ╰────
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at getNotFoundError (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\build\webpack\plugins\wellknown-errors-plugin\parseNotFoundError.js:124:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async getModuleBuildError (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\build\webpack\plugins\wellknown-errors-plugin\webpackModuleError.js:104:27)
+    at async (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\build\webpack\plugins\wellknown-errors-plugin\index.js:29:49)
+    at async (file://C:\Users\hr-hm\Desktop\codex\node_modules\next\dist\build\webpack\plugins\wellknown-errors-plugin\index.js:27:21)
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+hydration-error-info.js:63 ./components/hooks/useRevealAnimation.ts:58:37
+Module not found: Can't resolve '@/lib/firebase/core'
+  56 |
+  57 |       try {
+> 58 |         const { requireDb } = await import("@/lib/firebase/core");
+     |                                     ^
+  59 |         const { doc, getDoc } = await import("firebase/firestore");
+  60 |         const { evaluateSorted } = await import("@/lib/game/rules");
+  61 |
 
-Caused by:
-    Syntax Error
+https://nextjs.org/docs/messages/module-not-found
 
 Import trace for requested module:
-./components/ui/MiniHandDock.tsx
+./components/CentralCardBoard.tsx
 ./app/rooms/[roomId]/page.tsx
-window.console.error @ app-index.js:33
-app-index.js:33 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Unexpected token `HStack`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
- 205 │     }[roomStatus as string] || "準備中";
- 206 │ 
- 207 │   return (
- 208 │     <HStack
-     ·      ──────
- 209 │       gap={6}
- 210 │       align="center"
- 210 │       justify="space-between"
-     ╰────
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./components/ui/MiniHandDock.tsx
-./app/rooms/[roomId]/page.tsx
-window.console.error @ app-index.js:33
-app-index.js:33 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Unexpected token `HStack`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
- 205 │     }[roomStatus as string] || "準備中";
- 206 │ 
- 207 │   return (
- 208 │     <HStack
-     ·      ──────
- 209 │       gap={6}
- 210 │       align="center"
- 210 │       justify="space-between"
-     ╰────
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./components/ui/MiniHandDock.tsx
-./app/rooms/[roomId]/page.tsx
-window.console.error @ app-index.js:33
-app-index.js:33 ./components/ui/MiniHandDock.tsx
-Error: 
-  × Unexpected token `HStack`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\MiniHandDock.tsx:205:1]
- 205 │     }[roomStatus as string] || "準備中";
- 206 │ 
- 207 │   return (
- 208 │     <HStack
-     ·      ──────
- 209 │       gap={6}
- 210 │       align="center"
- 210 │       justify="space-between"
-     ╰────
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./components/ui/MiniHandDock.tsx
-./app/rooms/[roomId]/page.tsx
-window.console.error @ app-index.js:33
 console.error @ hydration-error-info.js:63
-handleErrors @ hot-reloader-client.js:166
-processMessage @ hot-reloader-client.js:207
-handler @ hot-reloader-client.js:395

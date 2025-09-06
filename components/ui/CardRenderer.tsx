@@ -17,6 +17,11 @@ interface CardRendererProps {
   failedAt?: number | null;
   localFailedAt?: number | null;
   boundaryPreviousIndex?: number | null;
+  realtimeResult?: {
+    success: boolean;
+    failedAt: number | null;
+    currentIndex: number;
+  } | null;
 }
 
 export function CardRenderer(props: CardRendererProps) {
@@ -36,6 +41,7 @@ export function CardRenderer(props: CardRendererProps) {
     failedAt: props.failedAt ?? null,
     localFailedAt: props.localFailedAt ?? null,
     boundaryPreviousIndex: props.boundaryPreviousIndex ?? null,
+    realtimeResult: props.realtimeResult ?? null,
   });
 
   return (
