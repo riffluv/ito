@@ -95,25 +95,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   let boundary = false;
 
   const active = p.roomStatus === "finished" || flipPhaseReached;
-  isFail =
-    revealed &&
-    active &&
-    typeof effectiveFailedAt === "number" &&
-    typeof idx === "number" &&
-    idx === effectiveFailedAt - 1;
-  // Only show success (blue) if game succeeded and not failed specifically
-  isSuccess =
-    revealed && active && p.roomStatus === "finished" && !isFail && !effectiveFailed; // リアルタイム結果を考慮
-  if (isSuccess) successLevel = "final";
-
-  if (
-    typeof idx === "number" &&
-    typeof p.boundaryPreviousIndex === "number" &&
-    idx === p.boundaryPreviousIndex
-  ) {
-    boundary = true;
-  }
-
+  
   // 3) Variant & flip state - sort-submit mode only
   const variant: ComputedCardState["variant"] =
     p.roomStatus === "reveal" || p.roomStatus === "finished" ? "flip" : "flat";
@@ -132,6 +114,31 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
 
     return false;
   })();
+
+  // ★ 修正：カードがflippedまたはshowNumberの状態の時のみ失敗/成功状態を適用
+  // これにより、カードが裏面の時に境界線の色が変わってネタバレすることを防ぐ
+  const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
+  
+  if (shouldShowResult) {
+    isFail =
+      revealed &&
+      active &&
+      typeof effectiveFailedAt === "number" &&
+      typeof idx === "number" &&
+      idx === effectiveFailedAt - 1;
+    // Only show success (blue) if game succeeded and not failed specifically
+    isSuccess =
+      revealed && active && p.roomStatus === "finished" && !isFail && !effectiveFailed; // リアルタイム結果を考慮
+    if (isSuccess) successLevel = "final";
+  }
+
+  if (
+    typeof idx === "number" &&
+    typeof p.boundaryPreviousIndex === "number" &&
+    idx === p.boundaryPreviousIndex
+  ) {
+    boundary = true;
+  }
 
   // 4) Clue text
   const clueText =
