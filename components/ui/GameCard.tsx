@@ -120,7 +120,8 @@ export function GameCard({
     boundaryRing ? `${boundaryRing}, ${core}` : core;
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
-    const hoverTransform = isHovered ? "translateY(-4px)" : "translateY(0)";
+    // アニメーション競合を防ぐため、フリップ中はホバー効果を無効化
+    const hoverTransform = (isHovered && !flipped) ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
