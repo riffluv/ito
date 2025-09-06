@@ -361,6 +361,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             css={{ display: "contents" }}
           >
             {/* Drop Slots and Cards */}
+            {/* DEBUG: resolveMode={resolveMode}, roomStatus={roomStatus} */}
             {resolveMode === "sort-submit" && roomStatus === "clue" ? (
               <DndContext
                 collisionDetection={closestCenter}
@@ -427,16 +428,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        bg="rgba(25,27,33,0.6)"
-                        border="borders.retrogameGame"
-                        borderColor="rgba(255,255,255,0.2)"
+                        bg="#191B21"
+                        borderWidth="1.5px"
+                        borderColor="rgba(20, 184, 166, 0.4)"
                         borderStyle="dashed"
                         borderRadius="16px"
                         boxShadow="inset 0 1px 3px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1)"
                         backdropFilter="blur(4px)"
                         fontSize="lg"
                         fontWeight="600"
-                        color="rgba(255,255,255,0.6)"
+                        color="rgba(255,255,255,0.80)"
                         letterSpacing="-0.01em"
                         transition="all 0.2s ease"
                         cursor="pointer"
@@ -469,16 +470,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   const cardId =
                     orderList?.[idx] ?? (pending && pending[idx]) ?? null;
                   const isDroppableSlot = canDropAtPosition(idx);
-                  // Sort-submit mode: show cards during all relevant phases
-                  const shouldShowCard =
-                    cardId &&
-                    (roomStatus === "clue" ||
-                      roomStatus === "playing" ||
-                      roomStatus === "reveal" ||
-                      roomStatus === "finished");
-                  return shouldShowCard ? (
+                  // ゲーム状態での表示条件確認
+                  const isGameActive =
+                    roomStatus === "clue" ||
+                    roomStatus === "playing" ||
+                    roomStatus === "reveal" ||
+                    roomStatus === "finished";
+                  
+                  // カードがある場合はカード表示、ない場合は空きスロット表示
+                  return cardId && isGameActive ? (
                     <React.Fragment key={cardId ?? `slot-${idx}`}>
-                      {cardId ? renderCard(cardId, idx) : null}
+                      {renderCard(cardId, idx)}
                     </React.Fragment>
                   ) : (
                     <Box
@@ -501,17 +503,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       }}
                       onDrop={(e) => onDropAtPosition(e, idx)}
                       borderWidth="0"
-                      borderRadius="xl"
+                      borderRadius="16px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      bg={isDroppableSlot ? "slotDrop" : "surfaceRaised"}
-                      color={isDroppableSlot ? "slotDropText" : "fgMuted"}
+                      bg="#191B21"
+                      color="rgba(255,255,255,0.80)"
                       fontSize="lg"
                       fontWeight="600"
                       // Consistent white dashed border for all slots
                       border="1.5px dashed"
-                      borderColor="slotBorder"
+                      borderColor="rgba(20, 184, 166, 0.4)"
                       boxShadow="sm"
                       /* duplicated borderRadius removed; keep theme token above */
                       transition="background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease"
