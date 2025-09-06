@@ -28,8 +28,8 @@ const getNumberFontSize = (number: number | null): string => {
   const digits = String(number).length;
   if (digits <= 1) return "3rem";
   if (digits === 2) return "2.8rem";
-  if (digits === 3) return "1.2rem"; // 3桁数字をさらに小さく（100対応）
-  return "1.1rem"; // 4桁以上もさらに縮小
+  if (digits === 3) return "2.5rem"; // 3桁数字を最適サイズに調整（100対応）
+  return "1.8rem"; // 4桁以上も読みやすく調整
 };
 
 export function CardText({
