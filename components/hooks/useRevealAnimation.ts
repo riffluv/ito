@@ -6,6 +6,12 @@ import {
 } from "@/lib/ui/motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+interface RealtimeResult {
+  success: boolean;
+  failedAt: number | null;
+  currentIndex: number;
+}
+
 interface UseRevealAnimationProps {
   roomId: string;
   roomStatus?: string;
@@ -21,11 +27,7 @@ export function useRevealAnimation({
 }: UseRevealAnimationProps) {
   const [revealAnimating, setRevealAnimating] = useState(false);
   const [revealIndex, setRevealIndex] = useState(0);
-  const [realtimeResult, setRealtimeResult] = useState<{
-    success: boolean;
-    failedAt: number | null;
-    currentIndex: number;
-  } | null>(null);
+  const [realtimeResult, setRealtimeResult] = useState<RealtimeResult | null>(null);
   const prevStatusRef = useRef(roomStatus);
 
   // Start reveal animation: useLayoutEffect so we set the flag before the
@@ -71,7 +73,7 @@ export function useRevealAnimation({
         const roomSnap = await getDoc(roomRef);
         
         if (!roomSnap.exists()) return;
-        const room: any = roomSnap.data();
+        const room = roomSnap.data();
         const order = room.order;
         
         if (!order?.list || !order?.numbers) return;
@@ -95,7 +97,7 @@ export function useRevealAnimation({
             await runTransaction(_db, async (tx) => {
               const currentSnap = await tx.get(roomRef);
               if (!currentSnap.exists()) return;
-              const currentRoom: any = currentSnap.data();
+              const currentRoom = currentSnap.data();
               
               // 既に結果が保存されている場合はスキップ
               if (currentRoom.result) return;
@@ -120,7 +122,7 @@ export function useRevealAnimation({
             await runTransaction(_db, async (tx) => {
               const currentSnap = await tx.get(roomRef);
               if (!currentSnap.exists()) return;
-              const currentRoom: any = currentSnap.data();
+              const currentRoom = currentSnap.data();
               
               // 既に結果が保存されている場合はスキップ
               if (currentRoom.result) return;
@@ -144,7 +146,7 @@ export function useRevealAnimation({
     };
 
     performRealtimeJudgment();
-  }, [revealAnimating, revealIndex, roomId, orderListLength]);
+  }, [revealAnimating, revealIndex, roomId, orderListLength, realtimeResult]);
 
   // Handle reveal animation progression（最後の1枚後に余韻を入れる）
   useEffect(() => {
@@ -186,6 +188,6 @@ export function useRevealAnimation({
   return {
     revealAnimating,
     revealIndex,
-    realtimeResult, // リアルタイム判定結果を公開
-  };
+    realtimeResult,
+  } as const;
 }
