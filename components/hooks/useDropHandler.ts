@@ -1,6 +1,5 @@
 import { notify } from "@/components/ui/notify";
-import { isSortSubmit, normalizeResolveMode } from "@/lib/game/resolveMode";
-import { addCardToProposal, commitPlayFromClue } from "@/lib/game/room";
+import { addCardToProposal } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -9,8 +8,6 @@ interface UseDropHandlerProps {
   meId: string;
   me: (PlayerDoc & { id: string }) | undefined;
   roomStatus?: string;
-  resolveMode?: string;
-  cluesReady?: boolean;
   orderList?: string[];
   proposal?: string[];
   hasNumber: boolean;
@@ -22,8 +19,6 @@ export function useDropHandler({
   meId,
   me,
   roomStatus,
-  resolveMode,
-  cluesReady,
   orderList,
   proposal,
   hasNumber,
@@ -36,19 +31,9 @@ export function useDropHandler({
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
     
-    // アニメーション期間中でも配置を許可（mePlaced チェックを緩和）
-    const mode = normalizeResolveMode(resolveMode);
-    if (isSortSubmit(mode)) return true; // 提出は常時可（ヒント確定前はUI側で制御可能）
-    
-    // 順次モードでは、既に配置済みの場合のみ制限
-    if (mePlaced && !(orderList || []).includes(meId)) {
-      // pending状態の場合は再配置を許可
-      return true;
-    }
-    
-    // 連想ワードの準備状況をより寛容にチェック
-    return !!cluesReady;
-  }, [roomStatus, hasNumber, mePlaced, resolveMode, cluesReady, meId, orderList]);
+    // sort-submitモードのみサポート（連想ワード確定前でもドラッグ可能）
+    return true;
+  }, [roomStatus, hasNumber]);
 
   // Sort-submit mode only: position dropping always allowed
   const canDropAtPosition = useMemo(() => {
