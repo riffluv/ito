@@ -10,7 +10,7 @@ import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { Badge, Box, Container, Grid, GridItem, Heading, HStack, Text, VStack, useDisclosure } from "@chakra-ui/react";
 import DevBoard from "@/components/site/DevBoard";
-import { Plus, BookOpen, Users } from "lucide-react";
+import { Plus, BookOpen, Users, User, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,6 +21,7 @@ export default function MainMenu() {
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
   const [showSkeletons, setShowSkeletons] = useState(false);
+  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">("create");
 
   const { rooms, loading: roomsLoading, error: roomsError } = useRooms(!!(firebaseEnabled && user));
 
@@ -57,10 +58,17 @@ export default function MainMenu() {
   const openCreateFlow = () => {
     if (!displayName) {
       setTempName("");
+      setNameDialogMode("create");
       nameDialog.onOpen();
     } else {
       createDialog.onOpen();
     }
+  };
+
+  const openNameChange = () => {
+    setTempName(displayName || "");
+    setNameDialogMode("edit");
+    nameDialog.onOpen();
   };
 
   return (
@@ -92,6 +100,7 @@ export default function MainMenu() {
                     ルールを見る
                   </AppButton>
                 </HStack>
+                
               </VStack>
             </VStack>
           </VStack>
@@ -118,6 +127,22 @@ export default function MainMenu() {
                     <Text fontSize="md" color="fgMuted">参加可能なルームを一覧表示します</Text>
                   </VStack>
                 </HStack>
+                
+                {/* スタイリッシュな名前設定ボタン */}
+                <AppButton
+                  size="sm"
+                  visual={displayName ? "outline" : "solid"}
+                  palette={displayName ? "neutral" : "brand"}
+                  onClick={openNameChange}
+                  leftIcon={<User size={16} />}
+                  _hover={{ 
+                    shadow: "md", 
+                    transform: "translateY(-1px)",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {displayName ? "プレイヤー設定" : "名前を設定"}
+                </AppButton>
               </HStack>
             </Box>
 
@@ -166,12 +191,17 @@ export default function MainMenu() {
       <NameDialog
         isOpen={nameDialog.open}
         defaultValue={tempName}
+        mode={nameDialogMode}
         onCancel={() => nameDialog.onClose()}
         onSubmit={(val) => {
-          if (!val) return;
-          setDisplayName(val);
+          if (!val?.trim()) return;
+          setDisplayName(val.trim());
           nameDialog.onClose();
-          createDialog.onOpen();
+          
+          // 名前変更モードの場合はルーム作成ダイアログを開かない
+          if (nameDialogMode === "create") {
+            createDialog.onOpen();
+          }
         }}
       />
       <CreateRoomModal

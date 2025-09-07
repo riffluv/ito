@@ -56,6 +56,10 @@ export function CreateRoomModal({
       notify({ title: "部屋名を入力してください", type: "warning" });
       return;
     }
+    if (!displayName?.trim()) {
+      notify({ title: "プレイヤー名を設定してください", type: "warning" });
+      return;
+    }
     setSubmitting(true);
     try {
       const options: RoomOptions = {
@@ -79,8 +83,8 @@ export function CreateRoomModal({
       };
       const roomRef = await addDoc(collection(db!, "rooms"), room);
       const pdoc: PlayerDoc = {
-        name: displayName || "プレイヤー",
-        avatar: randomAvatar(displayName || user.uid.slice(0, 6)),
+        name: displayName, // displayNameの存在は上でチェック済み
+        avatar: randomAvatar(displayName),
         number: null,
         clue1: "",
         ready: false,
