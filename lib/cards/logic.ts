@@ -67,16 +67,17 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   }
 
   // 2) Failure / success computation - リアルタイム判定のみ（事前計算削除）
-  const hasRealtimeResult = p.realtimeResult !== null && p.realtimeResult !== undefined;
-  const realtimeFailed = hasRealtimeResult ? !p.realtimeResult.success : false;
-  const realtimeFailedAt = hasRealtimeResult ? p.realtimeResult.failedAt : null;
-  
+  const hasRealtimeResult = p.realtimeResult != null;
+  const realtimeFailed = hasRealtimeResult ? !p.realtimeResult!.success : false;
+  const realtimeFailedAt = hasRealtimeResult
+    ? p.realtimeResult!.failedAt
+    : null;
+
   const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
   const revealed =
     typeof idx === "number" &&
     (p.roomStatus === "finished" ||
       (p.roomStatus === "reveal" && idx < p.revealIndex));
-
 
   let isFail = false;
   let isSuccess = false;
@@ -84,7 +85,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   let boundary = false;
 
   const active = p.roomStatus === "finished" || flipPhaseReached;
-  
+
   // 3) Variant & flip state - sort-submit mode only
   const variant: ComputedCardState["variant"] =
     p.roomStatus === "reveal" || p.roomStatus === "finished" ? "flip" : "flat";
@@ -107,7 +108,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   // ★ 修正：カードがflippedまたはshowNumberの状態の時のみ失敗/成功状態を適用
   // これにより、カードが裏面の時に境界線の色が変わってネタバレすることを防ぐ
   const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
-  
+
   if (shouldShowResult) {
     // リアルタイム判定統一: 協力ゲーム仕様
     if (hasRealtimeResult && realtimeFailed) {
@@ -117,15 +118,11 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       // finished時のサーバー確定判定
       isFail = revealed && active && p.revealIndex >= 2;
     }
-    
+
     // 成功判定: ゲーム成功かつ失敗していない場合のみ
-    isSuccess = 
-      revealed && 
-      active && 
-      p.roomStatus === "finished" && 
-      !isFail && 
-      !p.failed;
-    
+    isSuccess =
+      revealed && active && p.roomStatus === "finished" && !isFail && !p.failed;
+
     if (isSuccess) successLevel = "final";
   }
 

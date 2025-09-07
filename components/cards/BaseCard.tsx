@@ -32,6 +32,9 @@ export const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(
             height: size === "md" ? "168px" : sizeConfig.height,
             minHeight: size === "md" ? "168px" : sizeConfig.height,
           },
+          // フォント描画改善: レイヤー促進
+          transform: "translateZ(0)",
+          willChange: "auto",
           ...((props.css || {}) as any),
         }}
       >

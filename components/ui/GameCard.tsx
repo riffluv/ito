@@ -159,7 +159,8 @@ export function GameCard({
             width: "100%",
             height: "100%",
             transformStyle: "preserve-3d",
-            transform: `${flipTransform} ${hoverTransform}`,
+            transform: `${flipTransform} ${hoverTransform} translateZ(0)`,
+            willChange: "transform",
             transition: `transform 0.6s ${CARD_FLIP_EASING}`,
           }}
         >
@@ -171,6 +172,9 @@ export function GameCard({
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
+              // フォント描画改善: レイヤー促進
+              transform: "translateZ(0)",
+              willChange: "auto",
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
@@ -252,7 +256,8 @@ export function GameCard({
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg)",
+              transform: "rotateY(180deg) translateZ(0)",
+              willChange: "auto",
             }}
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
