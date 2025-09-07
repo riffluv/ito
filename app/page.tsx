@@ -6,6 +6,7 @@ import DevBoard from "@/components/site/DevBoard";
 import { AppButton } from "@/components/ui/AppButton";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
+import { gsap } from "gsap";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
@@ -26,7 +27,7 @@ import {
 } from "@chakra-ui/react";
 import { BookOpen, Plus, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 // ランダムキャラクター選択コンポーネント
 function KnightCharacter() {
@@ -65,6 +66,9 @@ export default function MainMenu() {
   const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
     "create"
   );
+  
+  // タイトルアニメーション用のref
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   const {
     rooms,
@@ -80,6 +84,24 @@ export default function MainMenu() {
       if (t) clearTimeout(t);
     };
   }, [roomsLoading]);
+
+  // シンプルなタイトルアニメーション
+  useEffect(() => {
+    if (titleRef.current) {
+      gsap.fromTo(titleRef.current, {
+        opacity: 0,
+        y: 20,
+        scale: 0.95
+      }, {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 1.2,
+        ease: "power2.out",
+        delay: 0.3
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!roomsError) return;
@@ -150,6 +172,7 @@ export default function MainMenu() {
                 >
                   <KnightCharacter />
                   <Heading
+                    ref={titleRef}
                     fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
                     fontWeight={900}
                     lineHeight={0.9}
