@@ -81,9 +81,9 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
         <ScrollableArea
           label="チャットメッセージ"
           withPadding={true}
-          padding={3}
+          padding={0}
         >
-          <Stack gap={3}>
+          <Stack gap={3} px={4} py={3}>
             {messages.map((m) => {
               const isSystem = m.sender === "system";
               const isMe = m.sender === (displayName || "匿名");
@@ -99,37 +99,42 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                         </Text>
                       </HStack>
                     ) : (
-                      <HStack gap={3} align="flex-start" flexWrap="nowrap">
-                        <Text 
-                          fontSize="sm" 
-                          color={isMe ? "rgba(255,223,0,0.9)" : "rgba(135,206,250,0.9)"} // 自分=ゴールド、他人=ブルー
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                          textShadow="1px 1px 0px #000" // ドラクエ風くっきり文字
-                          minW="100px"
-                          maxW="100px" // 固定幅でコロン位置統一
-                          textAlign="left"
-                          flexShrink={0}
-                          title={m.sender} // ホバーでフルネーム表示
-                          whiteSpace="nowrap"
-                          overflow="hidden"
-                          css={{
-                            textOverflow: "ellipsis" // CSS自動省略 (ベストプラクティス)
-                          }}
-                        >
-                          ▼ {m.sender}
-                        </Text>
-                        <Text 
-                          fontSize="sm" 
-                          color="white"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px #000"
-                          lineHeight={1.4}
-                          flex={1}
-                        >
-                          : {m.text}
-                        </Text>
-                      </HStack>
+                      <Box 
+                        w="100%" // 全幅を使用してバランスを取る
+                      >
+                        <HStack gap={2} align="flex-start" flexWrap="nowrap">
+                          <Text 
+                            fontSize="sm" 
+                            color={isMe ? "rgba(255,223,0,0.9)" : "rgba(135,206,250,0.9)"} // 自分=ゴールド、他人=ブルー
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                            textShadow="1px 1px 0px #000" // ドラクエ風くっきり文字
+                            minW="100px"
+                            maxW="100px" // 固定幅でコロン位置統一
+                            textAlign="left"
+                            flexShrink={0}
+                            title={m.sender} // ホバーでフルネーム表示
+                            whiteSpace="nowrap"
+                            overflow="hidden"
+                            css={{
+                              textOverflow: "ellipsis" // CSS自動省略 (ベストプラクティス)
+                            }}
+                          >
+                            ▼ {m.sender}
+                          </Text>
+                          <Text 
+                            fontSize="sm" 
+                            color="white"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                            lineHeight={1.4}
+                            flex={1}
+                            wordBreak="break-word"
+                          >
+                            : {m.text}
+                          </Text>
+                        </HStack>
+                      </Box>
                     )}
                 </Box>
               );

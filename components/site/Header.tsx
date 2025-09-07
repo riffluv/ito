@@ -33,23 +33,13 @@ export default function Header() {
       <Container maxW="5xl" px={6}>
         <Flex align="center" justify="space-between" h="100%">
           <HStack gap="3">
-            <Box 
-              boxSize="7" 
-              bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
-              rounded="xl"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              boxShadow="0 2px 8px rgba(99,102,241,0.3)"
-              css={{
-                '&::after': {
-                  content: '""',
-                  width: '60%',
-                  height: '60%',
-                  background: 'rgba(255,255,255,0.9)',
-                  borderRadius: '6px',
-                }
-              }}
+            <Box
+              as="img"
+              src="/images/knight1.png"
+              alt="ITO Knight"
+              boxSize="8"
+              objectFit="contain"
+              filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
             />
             <Heading
               fontSize="xl"
