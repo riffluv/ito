@@ -10,12 +10,10 @@ import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
-import HostControlDock from "@/components/ui/HostControlDock";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
-import PlayerIndicators from "@/components/ui/PlayerIndicators";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { sendSystemMessage } from "@/lib/firebase/chat";
@@ -138,6 +136,8 @@ export default function RoomPage() {
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+
+  // ラウンド対象は上部で計算済み（eligibleIds）
 
   // 入室ガード: 自分がメンバーでないかつ待機中でない場合はロビーへ戻す
   // ただし、ホストは常にアクセス可能
@@ -370,20 +370,26 @@ export default function RoomPage() {
   const canStartSorting = useMemo(() => {
     const resolveMode = room?.options?.resolveMode;
     const roomStatus = room?.status;
-    
+
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
       return false;
     }
 
     // waitingPlayersの計算（CentralCardBoardと同じ）
-    const playerMap = new Map(players.map(p => [p.id, p]));
+    const playerMap = new Map(players.map((p) => [p.id, p]));
     const placedIds = new Set(room?.order?.proposal || []);
     const waitingPlayers = (eligibleIds || [])
       .map((id) => playerMap.get(id)!)
       .filter((p) => p && !placedIds.has(p.id));
 
     return waitingPlayers.length === 0;
-  }, [room?.options?.resolveMode, room?.status, players, eligibleIds, room?.order?.proposal]);
+  }, [
+    room?.options?.resolveMode,
+    room?.status,
+    players,
+    eligibleIds,
+    room?.order?.proposal,
+  ]);
 
   // 残りの対象数（結果画面の続行ボタンの表示制御に使用）
   const remainingCount = useMemo(() => {
@@ -518,10 +524,10 @@ export default function RoomPage() {
 
       {/* ミニマルUI（固定配置） */}
       <MinimalChat roomId={roomId} />
-      
+
       {/* シンプル進行状況表示（左上固定） - 進行状況のみ表示 */}
-      <SimplePhaseDisplay 
-        roomStatus={room?.status || "waiting"} 
+      <SimplePhaseDisplay
+        roomStatus={room?.status || "waiting"}
         canStartSorting={canStartSorting}
       />
 
