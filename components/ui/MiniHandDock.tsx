@@ -266,11 +266,37 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           <AppButton
             size="md"
             visual="solid"
-            palette="success"
             onClick={evalSorted}
             disabled={!allSubmitted}
+            bg="rgba(8,9,15,0.9)"
+            color="white"
+            border="2px solid rgba(255,223,0,0.9)"
+            borderRadius={0}
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            _hover={{
+              bg: "rgba(255,223,0,0.95)",
+              color: "rgba(8,9,15,0.9)",
+              textShadow: "none",
+              borderColor: "rgba(255,223,0,1)",
+            }}
+            _active={{
+              bg: "rgba(255,215,0,0.85)",
+              color: "rgba(8,9,15,0.9)",
+              boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)",
+            }}
+            _disabled={{
+              bg: "rgba(60,60,60,0.9)",
+              color: "rgba(255,255,255,0.4)",
+              borderColor: "rgba(120,120,120,0.5)",
+              cursor: "not-allowed",
+              textShadow: "1px 1px 0px #000",
+            }}
+            transition="all 0.15s ease"
           >
-            判定
+            せーの！
           </AppButton>
         )}
         {isHost &&
@@ -279,8 +305,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <AppButton
               size="md"
               visual="solid"
-              palette="teal"
               onClick={roomStatus === "finished" ? resetGame : continueRound}
+              bg="rgba(8,9,15,0.9)"
+              color="white"
+              border="2px solid rgba(0,150,255,0.9)"
+              borderRadius={0}
+              fontWeight="700"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              boxShadow="inset 0 2px 0 rgba(0,150,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+              _hover={{
+                bg: "white",
+                color: "rgba(8,9,15,0.9)",
+                textShadow: "none",
+                borderColor: "rgba(0,150,255,1)",
+              }}
+              _active={{
+                bg: "rgba(0,130,220,0.85)",
+                color: "white",
+                boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)",
+              }}
+              _disabled={{
+                bg: "rgba(60,60,60,0.9)",
+                color: "rgba(255,255,255,0.4)",
+                borderColor: "rgba(120,120,120,0.5)",
+                cursor: "not-allowed",
+                textShadow: "1px 1px 0px #000",
+              }}
+              transition="all 0.15s ease"
             >
               もう一度
             </AppButton>

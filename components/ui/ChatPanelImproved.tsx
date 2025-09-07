@@ -137,18 +137,22 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             }}
             disabled={readOnly}
             size="md"
-            borderRadius="xl"
-            bg="gray.900"
+            bg="rgba(8,9,15,0.85)"
             color="white"
-            border="1px solid"
-            borderColor="gray.600"
-            _placeholder={{ color: "gray.400" }}
-            _focus={{ 
-              borderColor: "blue.400", 
-              boxShadow: "0 0 0 1px rgba(96, 165, 250, 0.3)" 
+            border="2px solid rgba(255,255,255,0.6)"
+            borderRadius={6}
+            boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)"
+            _placeholder={{ color: "rgba(255,255,255,0.5)" }}
+            _focus={{
+              borderColor: "#4a9eff",
+              boxShadow: "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
+              bg: "rgba(8,9,15,0.9)",
             }}
-            _hover={{ borderColor: "gray.500" }}
-            transition="all 0.2s"
+            _hover={{ 
+              borderColor: "rgba(255,255,255,0.8)",
+              bg: "rgba(8,9,15,0.9)" 
+            }}
+            transition="all 0.15s ease"
             px={4}
             py={3}
           />
@@ -156,20 +160,33 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             onClick={send}
             disabled={readOnly || !text.trim()}
             size="md"
-            bg="blue.600"
+            bg="rgba(8,9,15,0.9)"
             color="white"
-            borderRadius="xl"
+            border="2px solid rgba(255,255,255,0.9)"
+            borderRadius={0}
             px={6}
             py={3}
-            fontWeight="500"
-            _hover={{ bg: "blue.500" }}
-            _active={{ bg: "blue.700" }}
-            _disabled={{ 
-              bg: "gray.700", 
-              color: "gray.400",
-              cursor: "not-allowed"
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            _hover={{ 
+              bg: "white", 
+              color: "rgba(8,9,15,0.9)",
+              textShadow: "none"
             }}
-            transition="all 0.2s"
+            _active={{ 
+              bg: "rgba(220,220,220,0.9)",
+              color: "rgba(8,9,15,0.9)",
+              boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)"
+            }}
+            _disabled={{ 
+              bg: "rgba(60,60,60,0.9)", 
+              color: "rgba(255,255,255,0.4)",
+              cursor: "not-allowed",
+              textShadow: "1px 1px 0px #000"
+            }}
+            transition="all 0.15s ease"
           >
             送信
           </AppButton>
