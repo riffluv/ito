@@ -52,6 +52,7 @@ interface CentralCardBoardProps {
   failedAt: number | null | undefined;
   proposal?: string[];
   resolveMode?: string;
+  orderNumbers?: Record<string, number | null | undefined>;
   isHost?: boolean;
 }
 
@@ -68,6 +69,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   proposal,
   resolveMode = "sort-submit",
   isHost,
+  orderNumbers = {},
 }) => {
   // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
@@ -119,6 +121,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     roomStatus,
     resolveMode,
     orderListLength: orderList?.length || 0,
+    orderData: orderList && orderNumbers ? {
+      list: orderList,
+      numbers: orderNumbers
+    } : null,
   });
 
   // sequential 用の reveal hook は pending 情報も考慮した枚数を渡したいので

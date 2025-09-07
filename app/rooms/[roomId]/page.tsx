@@ -459,6 +459,7 @@ export default function RoomPage() {
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
           isHost={isHost}
+          orderNumbers={room.order?.numbers || {}}
         />
       </Box>
     </Box>

@@ -17,6 +17,10 @@ interface UseRevealAnimationProps {
   roomStatus?: string;
   resolveMode?: string;
   orderListLength: number;
+  orderData?: {
+    list: string[];
+    numbers: Record<string, number | null | undefined>;
+  } | null;
 }
 
 export function useRevealAnimation({
@@ -24,6 +28,7 @@ export function useRevealAnimation({
   roomStatus,
   resolveMode,
   orderListLength,
+  orderData,
 }: UseRevealAnimationProps) {
   const [revealAnimating, setRevealAnimating] = useState(false);
   const [revealIndex, setRevealIndex] = useState(0);
@@ -64,23 +69,14 @@ export function useRevealAnimation({
 
 
       try {
-        const { requireDb } = await import("@/lib/firebase/require");
-        const { doc, getDoc } = await import("firebase/firestore");
         const { evaluateSorted } = await import("@/lib/game/rules");
-
-        const _db = requireDb();
-        const roomRef = doc(_db, "rooms", roomId);
-        const roomSnap = await getDoc(roomRef);
         
-        if (!roomSnap.exists()) return;
-        const room = roomSnap.data();
-        const order = room.order;
-        
-        if (!order?.list || !order?.numbers) return;
+        // リアルタイムデータを使用（getDoc削除でデータ不整合を解決）
+        if (!orderData?.list || !orderData?.numbers) return;
 
         // 現在のrevealIndexまでの範囲で判定
-        const currentList = order.list.slice(0, revealIndex);
-        const numbers = order.numbers;
+        const currentList = orderData.list.slice(0, revealIndex);
+        const numbers = orderData.numbers;
         
         const result = evaluateSorted(currentList, numbers);
         
@@ -93,7 +89,12 @@ export function useRevealAnimation({
         // 失敗が検出された場合、最終結果をサーバーに保存（一度だけ）
         if (!result.success && result.failedAt !== null && !realtimeResult) {
           try {
-            const { runTransaction, serverTimestamp } = await import("firebase/firestore");
+            const { requireDb } = await import("@/lib/firebase/require");
+            const { doc, runTransaction, serverTimestamp } = await import("firebase/firestore");
+            
+            const _db = requireDb();
+            const roomRef = doc(_db, "rooms", roomId);
+            
             await runTransaction(_db, async (tx) => {
               const currentSnap = await tx.get(roomRef);
               if (!currentSnap.exists()) return;
@@ -118,7 +119,12 @@ export function useRevealAnimation({
         // 全カードが成功した場合（一度だけ）
         else if (result.success && revealIndex === orderListLength && !realtimeResult) {
           try {
-            const { runTransaction, serverTimestamp } = await import("firebase/firestore");
+            const { requireDb } = await import("@/lib/firebase/require");
+            const { doc, runTransaction, serverTimestamp } = await import("firebase/firestore");
+            
+            const _db = requireDb();
+            const roomRef = doc(_db, "rooms", roomId);
+            
             await runTransaction(_db, async (tx) => {
               const currentSnap = await tx.get(roomRef);
               if (!currentSnap.exists()) return;
