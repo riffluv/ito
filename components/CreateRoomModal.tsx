@@ -1,5 +1,4 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
@@ -22,7 +21,6 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
-import { AlertCircle, Sparkles, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -126,10 +124,11 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: 'rgba(8,9,15,0.95)', // NameDialogと同じリッチブラック
-            border: '3px solid rgba(255,255,255,0.9)', // NameDialogと同じボーダー
+            background: "rgba(8,9,15,0.95)", // NameDialogと同じリッチブラック
+            border: "3px solid rgba(255,255,255,0.9)", // NameDialogと同じボーダー
             borderRadius: 0, // 角ばった統一
-            boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)', // NameDialogと同じ立体感
+            boxShadow:
+              "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // NameDialogと同じ立体感
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -144,37 +143,42 @@ export function CreateRoomModal({
             size="sm"
             variant="ghost"
             css={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
+              position: "absolute",
+              top: "12px",
+              right: "12px",
               zIndex: 10,
-              background: 'rgba(8,9,15,0.8)', // NameDialogと同じ
+              background: "rgba(8,9,15,0.8)", // NameDialogと同じ
               borderRadius: 0, // NameDialogと同じ角ばり
-              padding: '0',
-              border: '2px solid rgba(255,255,255,0.9)', // NameDialogと同じ
-              color: 'white',
-              cursor: 'pointer',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                background: 'white',
-                color: 'rgba(8,9,15,0.9)'
-              }
+              padding: "0",
+              border: "2px solid rgba(255,255,255,0.9)", // NameDialogと同じ
+              color: "white",
+              cursor: "pointer",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "16px",
+              fontWeight: "bold",
+              transition: "all 0.15s ease",
+              "&:hover": {
+                background: "white",
+                color: "rgba(8,9,15,0.9)",
+              },
             }}
           >
             ✕
           </IconButton>
 
           {/* Header - ドラクエ風 */}
-          <Box p={6} position="relative" zIndex={1} css={{
-            borderBottom: '2px solid rgba(255,255,255,0.3)', // NameDialogと同じ区切り
-          }}>
+          <Box
+            p={6}
+            position="relative"
+            zIndex={1}
+            css={{
+              borderBottom: "2px solid rgba(255,255,255,0.3)", // NameDialogと同じ区切り
+            }}
+          >
             <VStack gap={2} align="center">
               <Dialog.Title
                 css={{
@@ -212,9 +216,9 @@ export function CreateRoomModal({
                   borderRadius={0}
                 >
                   <VStack align="start" gap={2}>
-                    <Text 
-                      fontSize="sm" 
-                      color="white" 
+                    <Text
+                      fontSize="sm"
+                      color="white"
                       fontFamily="monospace"
                       fontWeight="bold"
                       textShadow="1px 1px 0px #000"
@@ -228,8 +232,8 @@ export function CreateRoomModal({
                       lineHeight={1.6}
                       textShadow="1px 1px 0px #000"
                     >
-                      なまえが みとうろく です。
-                      あとで せっていを おすすめします。
+                      なまえがみとうろく です。　先に とうろく
+                      をおねがいします。
                     </Text>
                   </VStack>
                 </Box>
@@ -283,9 +287,15 @@ export function CreateRoomModal({
           </Box>
 
           {/* Footer - ドラクエ風 */}
-          <Box p={4} pt={0} position="relative" zIndex={1} css={{
-            borderTop: '2px solid rgba(255,255,255,0.3)', // NameDialogと同じ区切り
-          }}>
+          <Box
+            p={4}
+            pt={0}
+            position="relative"
+            zIndex={1}
+            css={{
+              borderTop: "2px solid rgba(255,255,255,0.3)", // NameDialogと同じ区切り
+            }}
+          >
             <HStack justify="space-between" gap={3} mt={4}>
               <button
                 onClick={onClose}
@@ -326,9 +336,13 @@ export function CreateRoomModal({
                   fontSize: "1rem",
                   fontFamily: "monospace",
                   border: "borders.retrogameThin",
-                  background: submitting || !name.trim() ? "#666" : "var(--colors-richBlack-600)",
+                  background:
+                    submitting || !name.trim()
+                      ? "#666"
+                      : "var(--colors-richBlack-600)",
                   color: "white",
-                  cursor: submitting || !name.trim() ? "not-allowed" : "pointer",
+                  cursor:
+                    submitting || !name.trim() ? "not-allowed" : "pointer",
                   textShadow: "1px 1px 0px #000",
                   transition: "all 0.1s ease",
                   opacity: submitting || !name.trim() ? 0.6 : 1,
@@ -341,7 +355,8 @@ export function CreateRoomModal({
                 }}
                 onMouseLeave={(e) => {
                   if (!submitting && name.trim()) {
-                    e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                    e.currentTarget.style.background =
+                      "var(--colors-richBlack-600)";
                     e.currentTarget.style.color = "white";
                   }
                 }}
