@@ -248,7 +248,6 @@ export default function RoomPage() {
     room?.round,
     room?.status,
     roomId,
-    room,
   ]);
 
   // waitingに戻ったら自分のフィールドを初期化

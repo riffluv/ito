@@ -509,8 +509,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {/* GSAPアニメーション結果オーバーレイ（豪華な演出） */}
       {roomStatus === "finished" && (
         <GameResultOverlay
-          failed={realtimeResult ? !realtimeResult.success : failed}
-          failedAt={realtimeResult?.failedAt ?? failedAt}
+          failed={failed}
+          failedAt={failedAt}
           mode="overlay"
         />
       )}
