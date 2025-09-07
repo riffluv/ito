@@ -4,6 +4,7 @@ import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import DevBoard from "@/components/site/DevBoard";
 import { AppButton } from "@/components/ui/AppButton";
+import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
@@ -200,14 +201,14 @@ export default function MainMenu() {
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
-                  <AppButton
+                  <RPGButton
                     size="lg"
                     visual="outline"
-                    onClick={() => router.push("/rules")}
+                    href="/rules"
                   >
                     <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
-                  </AppButton>
+                  </RPGButton>
                 </HStack>
               </VStack>
             </VStack>
