@@ -9,7 +9,8 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Online ITO",
-  description: "Co-op number ordering party game",
+  description:
+    "連想（ヒント）だけで数字を小さい順に並べるオンライン協力カードゲーム。レトロRPG風UIで友だちとワイワイ。",
   icons: [{ rel: "icon", url: "/images/knight1.png" }],
 };
 
