@@ -1,7 +1,7 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import { useEffect, useRef, useState } from "react";
 
 export interface DragonQuestNotification {
   id: string;
@@ -14,19 +14,22 @@ export interface DragonQuestNotification {
 
 // グローバル通知ストア
 class NotificationStore {
-  private listeners: Set<(notifications: DragonQuestNotification[]) => void> = new Set();
+  private listeners: Set<(notifications: DragonQuestNotification[]) => void> =
+    new Set();
   private notifications: DragonQuestNotification[] = [];
 
   subscribe(listener: (notifications: DragonQuestNotification[]) => void) {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private notify() {
-    this.listeners.forEach(listener => listener([...this.notifications]));
+    this.listeners.forEach((listener) => listener([...this.notifications]));
   }
 
-  add(notification: Omit<DragonQuestNotification, 'id' | 'timestamp'>) {
+  add(notification: Omit<DragonQuestNotification, "id" | "timestamp">) {
     const newNotification: DragonQuestNotification = {
       ...notification,
       id: `dq-notify-${Date.now()}-${Math.random()}`,
@@ -46,7 +49,7 @@ class NotificationStore {
   }
 
   remove(id: string) {
-    this.notifications = this.notifications.filter(n => n.id !== id);
+    this.notifications = this.notifications.filter((n) => n.id !== id);
     this.notify();
   }
 
@@ -74,28 +77,36 @@ export function dragonQuestNotify(options: {
 // 通知アイコンを取得
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case "success": return "✅";
-    case "error": return "❌";
-    case "warning": return "⚠️";
-    default: return "ℹ️";
+    case "success":
+      return "✅";
+    case "error":
+      return "❌";
+    case "warning":
+      return "⚠️";
+    default:
+      return "ℹ️";
   }
 };
 
 // 通知色を取得
 const getNotificationColor = (type: string) => {
   switch (type) {
-    case "success": return "rgba(50,205,50,0.9)";
-    case "error": return "rgba(255,69,0,0.9)";
-    case "warning": return "rgba(255,215,0,0.9)";
-    default: return "rgba(135,206,250,0.9)";
+    case "success":
+      return "rgba(50,205,50,0.9)";
+    case "error":
+      return "rgba(255,69,0,0.9)";
+    case "warning":
+      return "rgba(255,215,0,0.9)";
+    default:
+      return "rgba(135,206,250,0.9)";
   }
 };
 
 // 個別通知コンポーネント
-function NotificationItem({ 
-  notification, 
-  onRemove 
-}: { 
+function NotificationItem({
+  notification,
+  onRemove,
+}: {
   notification: DragonQuestNotification;
   onRemove: (id: string) => void;
 }) {
@@ -114,37 +125,40 @@ function NotificationItem({
       scale: 0.5,
       opacity: 0,
       x: 100,
-      rotationY: 90
+      rotationY: 90,
     });
 
     // 豪華な登場アニメーション
     const tl = gsap.timeline();
-    
+
     tl.to(container, {
       scale: 1.1,
       opacity: 1,
       x: 0,
       rotationY: 0,
       duration: 0.5,
-      ease: "back.out(2)"
+      ease: "back.out(2)",
     })
-    .to(container, {
-      scale: 1,
-      duration: 0.2,
-      ease: "power2.out"
-    })
-    // 内容の弾み
-    .to(content, {
-      y: -5,
-      duration: 0.1,
-      ease: "power2.out"
-    }, "-=0.1")
-    .to(content, {
-      y: 0,
-      duration: 0.2,
-      ease: "bounce.out"
-    });
-
+      .to(container, {
+        scale: 1,
+        duration: 0.2,
+        ease: "power2.out",
+      })
+      // 内容の弾み
+      .to(
+        content,
+        {
+          y: -5,
+          duration: 0.1,
+          ease: "power2.out",
+        },
+        "-=0.1"
+      )
+      .to(content, {
+        y: 0,
+        duration: 0.2,
+        ease: "bounce.out",
+      });
   }, []);
 
   // 退場アニメーション
@@ -158,7 +172,7 @@ function NotificationItem({
       rotationY: -90,
       duration: 0.3,
       ease: "power2.in",
-      onComplete: () => onRemove(notification.id)
+      onComplete: () => onRemove(notification.id),
     });
   };
 
@@ -174,7 +188,7 @@ function NotificationItem({
       ref={containerRef}
       mb={3}
       css={{
-        cursor: "pointer"
+        cursor: "pointer",
       }}
       onClick={handleRemove}
     >
@@ -191,14 +205,15 @@ function NotificationItem({
         minW="280px"
         maxW="360px"
         css={{
-          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow:
+            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
         <Text fontSize="lg" flexShrink={0}>
           {getNotificationIcon(notification.type)}
         </Text>
-        
+
         <Box flex={1} minW={0}>
           <Text
             fontSize="sm"
@@ -212,7 +227,7 @@ function NotificationItem({
           >
             {notification.title}
           </Text>
-          
+
           {notification.description && (
             <Text
               fontSize="xs"
@@ -243,7 +258,9 @@ function NotificationItem({
 
 // メイン通知コンテナ
 export function DragonQuestNotifyContainer() {
-  const [notifications, setNotifications] = useState<DragonQuestNotification[]>([]);
+  const [notifications, setNotifications] = useState<DragonQuestNotification[]>(
+    []
+  );
 
   useEffect(() => {
     const unsubscribe = notificationStore.subscribe(setNotifications);
@@ -266,7 +283,7 @@ export function DragonQuestNotifyContainer() {
         pointerEvents: "auto",
       }}
     >
-      {notifications.map(notification => (
+      {notifications.map((notification) => (
         <NotificationItem
           key={notification.id}
           notification={notification}

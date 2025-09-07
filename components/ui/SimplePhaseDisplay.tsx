@@ -1,16 +1,19 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
-import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useEffect, useRef } from "react";
 
 // ドラクエ風フェーズアナウンス（シンプル版）
 const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
   switch (status) {
     case "waiting":
       return { text: "ゲーム準備中", icon: "⏳" };
-    case "clue": 
+    case "clue":
       if (canStartSorting) {
-        return { text: "みんなで相談してカードを並び替えよう！（ドラッグでできるよ）", icon: "🤝" };
+        return {
+          text: "みんなで相談してカードを並び替えよう！（ドラッグでできるよ）",
+          icon: "🤝",
+        };
       }
       return { text: "連想ワードを考えよう", icon: "💭" };
     case "playing":
@@ -29,10 +32,13 @@ interface SimplePhaseDisplayProps {
   canStartSorting?: boolean;
 }
 
-export function SimplePhaseDisplay({ roomStatus, canStartSorting = false }: SimplePhaseDisplayProps) {
+export function SimplePhaseDisplay({
+  roomStatus,
+  canStartSorting = false,
+}: SimplePhaseDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const iconRef = useRef<HTMLSpanElement>(null);
+  const iconRef: any = useRef(null);
   const previousStatus = useRef<string>(roomStatus);
   const previousCanStart = useRef<boolean>(canStartSorting);
 
@@ -47,84 +53,95 @@ export function SimplePhaseDisplay({ roomStatus, canStartSorting = false }: Simp
     const iconEl = iconRef.current;
 
     // 初回表示の場合 または 状態変更がない場合
-    if (previousStatus.current === roomStatus && previousCanStart.current === canStartSorting) {
-      gsap.set(container, { 
-        scale: 0.8, 
-        opacity: 0, 
-        y: -20
+    if (
+      previousStatus.current === roomStatus &&
+      previousCanStart.current === canStartSorting
+    ) {
+      gsap.set(container, {
+        scale: 0.8,
+        opacity: 0,
+        y: -20,
       });
-      
+
       gsap.to(container, {
         scale: 1,
         opacity: 1,
         y: 0,
         duration: 0.6,
         ease: "back.out(1.7)",
-        delay: 0.2
+        delay: 0.2,
       });
-      
+
       gsap.to(iconEl, {
         rotation: 360,
         duration: 0.8,
         ease: "elastic.out(1, 0.5)",
-        delay: 0.4
+        delay: 0.4,
       });
     } else {
       // フェーズ変更時の美しいトランジション
       const tl = gsap.timeline();
-      
+
       // 現在のコンテンツをフェードアウト
       tl.to(textEl, {
         opacity: 0,
         y: -10,
         scale: 0.9,
         duration: 0.2,
-        ease: "power2.in"
+        ease: "power2.in",
       })
-      .to(iconEl, {
-        opacity: 0,
-        rotation: "-=180",
-        scale: 0.5,
-        duration: 0.2,
-        ease: "power2.in"
-      }, "-=0.2")
-      // ボックス全体を軽くパルス
-      .to(container, {
-        scale: 1.05,
-        duration: 0.1,
-        ease: "power2.out"
-      })
-      .to(container, {
-        scale: 1,
-        duration: 0.1,
-        ease: "power2.out"
-      })
-      // 新しいコンテンツをフェードイン
-      .to(textEl, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "back.out(1.5)"
-      })
-      .to(iconEl, {
-        opacity: 1,
-        rotation: "+=360",
-        scale: 1,
-        duration: 0.4,
-        ease: "elastic.out(1, 0.6)"
-      }, "-=0.2")
-      // 完了時の軽やかなバウンス
-      .to(container, {
-        y: -3,
-        duration: 0.15,
-        ease: "power2.out"
-      })
-      .to(container, {
-        y: 0,
-        duration: 0.2,
-        ease: "bounce.out"
-      });
+        .to(
+          iconEl,
+          {
+            opacity: 0,
+            rotation: "-=180",
+            scale: 0.5,
+            duration: 0.2,
+            ease: "power2.in",
+          },
+          "-=0.2"
+        )
+        // ボックス全体を軽くパルス
+        .to(container, {
+          scale: 1.05,
+          duration: 0.1,
+          ease: "power2.out",
+        })
+        .to(container, {
+          scale: 1,
+          duration: 0.1,
+          ease: "power2.out",
+        })
+        // 新しいコンテンツをフェードイン
+        .to(textEl, {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.3,
+          ease: "back.out(1.5)",
+        })
+        .to(
+          iconEl,
+          {
+            opacity: 1,
+            rotation: "+=360",
+            scale: 1,
+            duration: 0.4,
+            ease: "elastic.out(1, 0.6)",
+          },
+          "-=0.2"
+        )
+        // 完了時の軽やかなバウンス
+        .to(container, {
+          y: -3,
+          duration: 0.15,
+          ease: "power2.out",
+        })
+        .to(container, {
+          y: 0,
+          duration: 0.2,
+          ease: "bounce.out",
+        });
     }
 
     previousStatus.current = roomStatus;
@@ -152,19 +169,15 @@ export function SimplePhaseDisplay({ roomStatus, canStartSorting = false }: Simp
         border="2px solid rgba(255,255,255,0.9)"
         borderRadius={0}
         css={{
-          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow:
+            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
-        <Text
-          as="span"
-          ref={iconRef}
-          fontSize="lg"
-          display="inline-block"
-        >
+        <Text as="span" ref={iconRef} fontSize="lg" display="inline-block">
           {icon}
         </Text>
-        
+
         <Text
           ref={textRef}
           fontSize={{ base: "xs", md: "sm" }}
