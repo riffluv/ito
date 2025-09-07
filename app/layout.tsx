@@ -8,16 +8,14 @@ import Providers from "./providers";
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Online ITO",
+  title: "序の紋章 III — 連想ヒントで 1→100 を昇順に並べる協力カードゲーム",
   description:
     "連想（ヒント）だけで数字を小さい順に並べるオンライン協力カードゲーム。レトロRPG風UIで友だちとワイワイ。",
   icons: [{ rel: "icon", url: "/images/knight1.png" }],
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "all", color: "#1a1a1a" },
-  ],
+  themeColor: [{ media: "all", color: "#1a1a1a" }],
 };
 
 // Client 専用の判定は app/ClientFrame.tsx に分離
