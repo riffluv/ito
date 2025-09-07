@@ -236,7 +236,17 @@ export default function MainMenu() {
                     visual="outline"
                     href="/rules"
                   >
-                    <BookOpen size={20} style={{ marginRight: "8px" }} />
+                    <Image
+                      src="/images/card3.png"
+                      alt="ルールブック"
+                      width={20}
+                      height={20}
+                      style={{ 
+                        marginRight: "8px",
+                        imageRendering: "pixelated",
+                        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))"
+                      }}
+                    />
                     ルールを見る
                   </RPGButton>
                 </HStack>
