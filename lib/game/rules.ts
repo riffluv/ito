@@ -75,7 +75,7 @@ export function evaluateSorted(
     const n = numbers[id];
     if (typeof n !== "number") return { success: false, failedAt: i + 1, last };
     if (last !== null && n <= last)
-      return { success: false, failedAt: i + 1, last: n };
+      return { success: false, failedAt: i + 1, last };
     last = n;
   }
   return { success: true, failedAt: null, last };

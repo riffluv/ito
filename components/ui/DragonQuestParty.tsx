@@ -20,7 +20,10 @@ interface DragonQuestPartyProps {
 }
 
 // ドラクエ風プレイヤー状態表示
-const getPlayerStatus = (player: PlayerDoc & { id: string }, roomStatus: string) => {
+const getPlayerStatus = (
+  player: PlayerDoc & { id: string },
+  roomStatus: string
+) => {
   // clueフェーズでの連想ワード入力状況
   if (roomStatus === "clue") {
     if (player.clue1 && player.clue1.trim() !== "") {
@@ -29,7 +32,7 @@ const getPlayerStatus = (player: PlayerDoc & { id: string }, roomStatus: string)
       return { icon: "◇", color: "#fbbf24", status: "かんがえ中" };
     }
   }
-  
+
   // waitingフェーズでの準備状況
   if (roomStatus === "waiting") {
     if (player.ready) {
@@ -43,7 +46,10 @@ const getPlayerStatus = (player: PlayerDoc & { id: string }, roomStatus: string)
   return { icon: "■", color: "#3b82f6", status: "参加中" };
 };
 
-export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps) {
+export function DragonQuestParty({
+  players,
+  roomStatus,
+}: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousCount = useRef(players.length);
 
@@ -106,12 +112,20 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
         </Text>
 
         {/* メンバーリスト - DPIスケール対応の適切な固定幅 */}
-        <Box display="flex" flexDirection="column" gap={1} w={{ base: "200px", md: "220px" }}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap={1}
+          w={{ base: "200px", md: "220px" }}
+        >
           {players
             .sort((a, b) => a.orderIndex - b.orderIndex) // 順番でソート
             .map((player) => {
-              const { icon, color, status } = getPlayerStatus(player, roomStatus);
-              
+              const { icon, color, status } = getPlayerStatus(
+                player,
+                roomStatus
+              );
+
               return (
                 <Box
                   key={player.id}
@@ -122,11 +136,17 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
                   py={1}
                   w="100%"
                   css={{
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25)",
+                    boxShadow:
+                      "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25)",
                   }}
                 >
                   {/* プレイヤー情報 */}
-                  <HStack gap={2} align="center" justify="space-between" w="100%">
+                  <HStack
+                    gap={2}
+                    align="center"
+                    justify="space-between"
+                    w="100%"
+                  >
                     {/* プレイヤー名 - DPIスケール対応の適切な幅 */}
                     <Text
                       fontSize={{ base: "xs", md: "sm" }}
@@ -136,12 +156,12 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
                       fontFamily="monospace"
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
-                      isTruncated
+                      truncate
                       title={`${player.name} - ${status}`}
                     >
                       {player.name}
                     </Text>
-                    
+
                     {/* 状態アイコン - 適切な固定幅 */}
                     <Text
                       fontSize={{ base: "sm", md: "md" }}
@@ -167,7 +187,8 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
             mt={2}
             fontFamily="monospace"
           >
-            {players.filter(p => p.clue1 && p.clue1.trim() !== "").length}/{players.length} 完了
+            {players.filter((p) => p.clue1 && p.clue1.trim() !== "").length}/
+            {players.length} 完了
           </Text>
         )}
       </Box>
