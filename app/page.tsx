@@ -1,16 +1,27 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
+import DevBoard from "@/components/site/DevBoard";
+import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 import { useRooms } from "@/lib/hooks/useRooms";
-import { Badge, Box, Container, Grid, GridItem, Heading, HStack, Text, VStack, useDisclosure } from "@chakra-ui/react";
-import DevBoard from "@/components/site/DevBoard";
-import { Plus, BookOpen, Users, User, Edit } from "lucide-react";
+import {
+  Badge,
+  Box,
+  Container,
+  Grid,
+  GridItem,
+  Heading,
+  HStack,
+  Text,
+  useDisclosure,
+  VStack,
+} from "@chakra-ui/react";
+import { BookOpen, Plus, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,9 +32,15 @@ export default function MainMenu() {
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
   const [showSkeletons, setShowSkeletons] = useState(false);
-  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">("create");
+  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
+    "create"
+  );
 
-  const { rooms, loading: roomsLoading, error: roomsError } = useRooms(!!(firebaseEnabled && user));
+  const {
+    rooms,
+    loading: roomsLoading,
+    error: roomsError,
+  } = useRooms(!!(firebaseEnabled && user));
 
   useEffect(() => {
     let t: number | undefined;
@@ -36,7 +53,11 @@ export default function MainMenu() {
 
   useEffect(() => {
     if (!roomsError) return;
-    notify({ title: "ルーム取得に失敗しました", description: (roomsError as any)?.message, type: "error" });
+    notify({
+      title: "ルーム取得に失敗しました",
+      description: (roomsError as any)?.message,
+      type: "error",
+    });
   }, [roomsError?.message]);
 
   const roomIds = useMemo(() => (rooms || []).map((r: any) => r.id), [rooms]);
@@ -48,9 +69,15 @@ export default function MainMenu() {
     return (rooms || []).filter((r: any) => {
       const active = lobbyCounts[r.id] ?? 0;
       const tsAny: any = (r as any).lastActiveAt || (r as any).createdAt;
-      const ms = tsAny?.toMillis ? tsAny.toMillis() : tsAny instanceof Date ? tsAny.getTime() : typeof tsAny === 'number' ? tsAny : 0;
-      const recent = ms > 0 && (Date.now() - ms) <= (30 * 60 * 1000);
-      const waiting = !r.status || r.status === 'waiting';
+      const ms = tsAny?.toMillis
+        ? tsAny.toMillis()
+        : tsAny instanceof Date
+          ? tsAny.getTime()
+          : typeof tsAny === "number"
+            ? tsAny
+            : 0;
+      const recent = ms > 0 && Date.now() - ms <= 30 * 60 * 1000;
+      const waiting = !r.status || r.status === "waiting";
       return waiting && (active > 0 || recent);
     });
   }, [rooms, lobbyCounts]);
@@ -73,17 +100,43 @@ export default function MainMenu() {
 
   return (
     <Box bg="canvasBg" minH="100vh">
-      <Box position="relative" overflow="hidden" pt={{ base: 20, md: 24, lg: 32 }} css={{ containerType: "inline-size" }}>
+      <Box
+        position="relative"
+        overflow="hidden"
+        pt={{ base: 20, md: 24, lg: 32 }}
+        css={{ containerType: "inline-size" }}
+      >
         <Container maxW="7xl" position="relative" zIndex={1}>
           <VStack gap={{ base: 16, lg: 20 }} align="center">
             <VStack gap={8} align="center" textAlign="center" maxW="4xl">
               <Box>
-                <Heading fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }} fontWeight={800} lineHeight={0.95} letterSpacing="-0.02em" color="fgEmphasized" mb={6}>
+                <Heading
+                  fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
+                  fontWeight={800}
+                  lineHeight={0.95}
+                  letterSpacing="-0.02em"
+                  color="fgEmphasized"
+                  mb={6}
+                >
                   ITO
                 </Heading>
-                <Text fontSize={{ base: "xl", md: "2xl", lg: "3xl" }} color="fgMuted" fontWeight={500} lineHeight={1.4} letterSpacing="-0.02em" maxW="3xl" mx="auto">
+                <Text
+                  fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}
+                  color="fgMuted"
+                  fontWeight={500}
+                  lineHeight={1.4}
+                  letterSpacing="-0.02em"
+                  maxW="3xl"
+                  mx="auto"
+                >
                   数字カードゲーム
-                  <Box as="span" display={{ base: "block", md: "inline" }} color="text" fontWeight={600} ml={{ md: 3 }}>
+                  <Box
+                    as="span"
+                    display={{ base: "block", md: "inline" }}
+                    color="text"
+                    fontWeight={600}
+                    ml={{ md: 3 }}
+                  >
                     協力して正しい順に並べよう
                   </Box>
                 </Text>
@@ -91,16 +144,24 @@ export default function MainMenu() {
 
               <VStack gap={6} align="center">
                 <HStack gap={4} flexWrap="wrap" justify="center">
-                  <AppButton size="lg" visual="solid" palette="brand" onClick={openCreateFlow}>
+                  <AppButton
+                    size="lg"
+                    visual="solid"
+                    palette="brand"
+                    onClick={openCreateFlow}
+                  >
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
-                  <AppButton size="lg" visual="outline" onClick={() => router.push("/rules")}>
+                  <AppButton
+                    size="lg"
+                    visual="outline"
+                    onClick={() => router.push("/rules")}
+                  >
                     <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
                   </AppButton>
                 </HStack>
-                
               </VStack>
             </VStack>
           </VStack>
@@ -109,56 +170,111 @@ export default function MainMenu() {
 
       {/* ルーム一覧 */}
       <Container maxW="7xl" py={{ base: 12, md: 16 }}>
-        <Grid templateColumns={{ base: "1fr", xl: "1fr 340px" }} gap={{ base: 8, xl: 12 }} alignItems="start">
+        <Grid
+          templateColumns={{ base: "1fr", xl: "1fr 340px" }}
+          gap={{ base: 8, xl: 12 }}
+          alignItems="start"
+        >
           <GridItem>
             <Box mb={8}>
               <HStack justify="space-between" mb={4}>
                 <HStack gap={3}>
-                  <Box w={10} h={10} borderRadius="lg" bg="accentSubtle" display="flex" alignItems="center" justifyContent="center">
+                  <Box
+                    w={10}
+                    h={10}
+                    borderRadius="lg"
+                    bg="accentSubtle"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
                     <Users size={20} />
                   </Box>
                   <VStack align="start" gap={1}>
                     <HStack gap={2} align="center">
-                      <Heading size="xl" fontWeight={700} color="text">アクティブルーム</Heading>
-                      <Badge variant="subtle" colorPalette="green" px={3} py={1} borderRadius="full" fontSize="sm" fontWeight={600}>
+                      <Heading size="xl" fontWeight={700} color="text">
+                        アクティブルーム
+                      </Heading>
+                      <Badge
+                        variant="subtle"
+                        colorPalette="green"
+                        px={3}
+                        py={1}
+                        borderRadius="full"
+                        fontSize="sm"
+                        fontWeight={600}
+                      >
                         {filteredRooms.length}件
                       </Badge>
                     </HStack>
-                    <Text fontSize="md" color="fgMuted">参加可能なルームを一覧表示します</Text>
+                    <Text fontSize="md" color="fgMuted">
+                      参加可能なルームを一覧表示します
+                    </Text>
                   </VStack>
                 </HStack>
-                
+
                 {/* スタイリッシュな名前設定ボタン */}
                 <AppButton
                   size="sm"
                   visual={displayName ? "outline" : "solid"}
-                  palette={displayName ? "neutral" : "brand"}
+                  palette={displayName ? "gray" : "brand"}
                   onClick={openNameChange}
-                  leftIcon={<User size={16} />}
-                  _hover={{ 
-                    shadow: "md", 
+                  _hover={{
+                    shadow: "md",
                     transform: "translateY(-1px)",
-                    transition: "all 0.2s"
+                    transition: "all 0.2s",
                   }}
                 >
+                  <User size={16} style={{ marginRight: 8 }} />
                   {displayName ? "プレイヤー設定" : "名前を設定"}
                 </AppButton>
               </HStack>
             </Box>
 
-            {(!firebaseEnabled) ? (
-              <Box p={12} textAlign="center" borderRadius="xl" border="2px solid" borderColor="dangerBorder" bg="dangerSubtle">
-                <Text fontSize="xl" color="dangerSolid" fontWeight={600} mb={3}>Firebase未設定です</Text>
-                <Text color="fgMuted">.env.local を設定するとルーム一覧が表示されます</Text>
+            {!firebaseEnabled ? (
+              <Box
+                p={12}
+                textAlign="center"
+                borderRadius="xl"
+                border="2px solid"
+                borderColor="dangerBorder"
+                bg="dangerSubtle"
+              >
+                <Text fontSize="xl" color="dangerSolid" fontWeight={600} mb={3}>
+                  Firebase未設定です
+                </Text>
+                <Text color="fgMuted">
+                  .env.local を設定するとルーム一覧が表示されます
+                </Text>
               </Box>
             ) : roomsLoading && showSkeletons ? (
-              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+              <Grid
+                templateColumns={{
+                  base: "1fr",
+                  md: "repeat(2, 1fr)",
+                  lg: "repeat(3, 1fr)",
+                }}
+                gap={6}
+              >
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Box key={i} h="200px" borderRadius="xl" bg="surfaceRaised" opacity={0.6} />
+                  <Box
+                    key={i}
+                    h="200px"
+                    borderRadius="xl"
+                    bg="surfaceRaised"
+                    opacity={0.6}
+                  />
                 ))}
               </Grid>
             ) : filteredRooms.length > 0 ? (
-              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={6}>
+              <Grid
+                templateColumns={{
+                  base: "1fr",
+                  md: "repeat(2, 1fr)",
+                  lg: "repeat(3, 1fr)",
+                }}
+                gap={6}
+              >
                 {filteredRooms.map((room: any) => (
                   <RoomCard
                     key={room.id}
@@ -170,21 +286,37 @@ export default function MainMenu() {
                 ))}
               </Grid>
             ) : (
-              <Box textAlign="center" py={16} px={8} borderRadius="xl" border="2px dashed" borderColor="borderMuted" bg="glassBg03">
-                <Heading size="md" color="text" mb={3} fontWeight={600}>まだアクティブなルームがありません</Heading>
-                <Text color="fgMuted" mb={6} maxW="400px" mx="auto">新しいルームを作成して、友だちを招待しましょう</Text>
-                <AppButton onClick={openCreateFlow} visual="solid" palette="brand">
+              <Box
+                textAlign="center"
+                py={16}
+                px={8}
+                borderRadius="xl"
+                border="2px dashed"
+                borderColor="borderMuted"
+                bg="glassBg03"
+              >
+                <Heading size="md" color="text" mb={3} fontWeight={600}>
+                  まだアクティブなルームがありません
+                </Heading>
+                <Text color="fgMuted" mb={6} maxW="400px" mx="auto">
+                  新しいルームを作成して、友だちを招待しましょう
+                </Text>
+                <AppButton
+                  onClick={openCreateFlow}
+                  visual="solid"
+                  palette="brand"
+                >
                   <Plus size={18} style={{ marginRight: "8px" }} />
                   新しいルームを作成
                 </AppButton>
               </Box>
             )}
           </GridItem>
-        <GridItem display={{ base: "none", xl: "block" }}>
-          <VStack gap={6} align="stretch">
-            <DevBoard />
-          </VStack>
-        </GridItem>
+          <GridItem display={{ base: "none", xl: "block" }}>
+            <VStack gap={6} align="stretch">
+              <DevBoard />
+            </VStack>
+          </GridItem>
         </Grid>
       </Container>
 
@@ -197,7 +329,7 @@ export default function MainMenu() {
           if (!val?.trim()) return;
           setDisplayName(val.trim());
           nameDialog.onClose();
-          
+
           // 名前変更モードの場合はルーム作成ダイアログを開かない
           if (nameDialogMode === "create") {
             createDialog.onOpen();
