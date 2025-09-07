@@ -46,7 +46,7 @@ export default function Header() {
               color="rgba(255,255,255,0.95)" // Hudと同じシンプルな白色
               textShadow="0 2px 4px rgba(0,0,0,0.7)" // Hudと同じテキストシャドウ
             >
-              Online ITO
+              序の紋章III
             </Heading>
           </HStack>
         </Flex>
