@@ -487,13 +487,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           show={roomStatus === "finished"}
           data-finished={roomStatus === "finished"}
         >
-          {roomStatus === "finished" && (
-            <GameResultOverlay
-              failed={realtimeResult ? !realtimeResult.success : failed}
-              failedAt={realtimeResult?.failedAt ?? failedAt}
-              mode="inline"
-            />
-          )}
+          {/* GSAPオーバーレイに置き換えのためインライン表示を削除 */}
         </StatusDock>
       </Box>
       {/* 待機エリア（clue/waiting中・未提出者がいる場合） */}
@@ -506,13 +500,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
       ) : null} */}
 
-      {/* 結果オーバーレイ（モック準拠の演出） */}
-      {roomStatus === "finished" && showResult && (
+      {/* GSAPアニメーション結果オーバーレイ（豪華な演出） */}
+      {roomStatus === "finished" && (
+        <GameResultOverlay
+          failed={realtimeResult ? !realtimeResult.success : failed}
+          failedAt={realtimeResult?.failedAt ?? failedAt}
+          mode="overlay"
+        />
+      )}
+
+      {/* 結果オーバーレイ（モック準拠の演出） - GSAPに置き換えのため無効化 */}
+      {/* {roomStatus === "finished" && showResult && (
         <ArtifactResultOverlay
           success={realtimeResult ? realtimeResult.success : !failed}
           onClose={() => setShowResult(false)}
         />
-      )}
+      )} */}
     </Box>
   );
 };
