@@ -40,11 +40,18 @@ export default function Header() {
             />
             <Heading
               fontSize="xl"
-              fontWeight={700}
+              fontWeight={800}
               lineHeight={1}
-              letterSpacing="-0.02em"
-              color="rgba(255,255,255,0.95)" // Hudと同じシンプルな白色
-              textShadow="0 2px 4px rgba(0,0,0,0.7)" // Hudと同じテキストシャドウ
+              letterSpacing="0.02em"
+              color="rgba(255,255,255,0.95)"
+              textShadow="1px 1px 0 rgba(0,0,0,0.9), 
+                         2px 2px 4px rgba(0,0,0,0.7),
+                         0 0 8px rgba(255,215,0,0.2)"
+              fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
+              css={{
+                WebkitTextStroke: "0.5px rgba(255,255,255,0.1)",
+                filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
+              }}
             >
               序の紋章III
             </Heading>

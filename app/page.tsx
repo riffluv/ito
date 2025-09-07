@@ -35,8 +35,8 @@ function KnightCharacter() {
   useEffect(() => {
     // ランダムに騎士を選択
     const knights = [
-  { src: "/images/knight1.png", alt: "序の紋章III Male Knight" },
-  { src: "/images/knightwomen1.png", alt: "序の紋章III Female Knight" }, // 透過版に更新
+      { src: "/images/knight1.png", alt: "序の紋章III Male Knight" },
+      { src: "/images/knightwomen1.png", alt: "序の紋章III Female Knight" }, // 透過版に更新
     ];
     const randomKnight = knights[Math.floor(Math.random() * knights.length)];
     setKnightImage(randomKnight.src);
@@ -150,10 +150,19 @@ export default function MainMenu() {
                   <KnightCharacter />
                   <Heading
                     fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
-                    fontWeight={800}
-                    lineHeight={0.95}
-                    letterSpacing="-0.02em"
+                    fontWeight={900}
+                    lineHeight={0.9}
+                    letterSpacing="0.05em"
                     color="fgEmphasized"
+                    textShadow="3px 3px 0 rgba(0,0,0,0.8), 
+                               6px 6px 12px rgba(0,0,0,0.5), 
+                               0 0 20px rgba(255,215,0,0.3)"
+                    fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
+                    css={{
+                      WebkitTextStroke: "1px rgba(255,255,255,0.2)",
+                      textTransform: "none",
+                      filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))"
+                    }}
                   >
                     序の紋章III
                   </Heading>

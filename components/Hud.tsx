@@ -1,7 +1,7 @@
 "use client";
+import { AppIconButton } from "@/components/ui/AppIconButton";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
-import { AppIconButton } from "@/components/ui/AppIconButton";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
 export type HudProps = {
@@ -76,7 +76,7 @@ export function Hud({
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
         textShadow="0 2px 4px rgba(0,0,0,0.7)"
       >
-  序の紋章III
+        序の紋章III
       </Box>
 
       {/* Room Info - Dragon Quest Style */}
