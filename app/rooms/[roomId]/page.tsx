@@ -8,12 +8,12 @@
 import CentralCardBoard from "@/components/CentralCardBoard";
 import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
+import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
-import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { sendSystemMessage } from "@/lib/firebase/chat";
@@ -444,7 +444,6 @@ export default function RoomPage() {
       </Box>
       {/* ドット行が親でクリップされないように: visible + minH=0 */}
       <Box overflow="visible" minH={0}>
-        {/** tsserver stale cache workaround: cast to any to accept updated failedAt typing */}
         <CentralCardBoard
           roomId={roomId}
           players={players}
@@ -454,7 +453,6 @@ export default function RoomPage() {
           roomStatus={room.status}
           cluesReady={allCluesReady}
           failed={!!room.order?.failed}
-          failedAt={room.order?.failedAt ?? undefined}
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
           isHost={isHost}
@@ -463,7 +461,6 @@ export default function RoomPage() {
       </Box>
     </Box>
   );
-
 
   const handAreaNode = me ? (
     <MiniHandDock
@@ -509,6 +506,7 @@ export default function RoomPage() {
       <DragonQuestParty
         players={players}
         roomStatus={room?.status || "waiting"}
+        onlineCount={onlinePlayers.length}
       />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}

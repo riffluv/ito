@@ -1,6 +1,5 @@
 "use client";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
-import { useLocalFailureDetection } from "@/components/hooks/useLocalFailureDetection";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { SortableItem } from "@/components/sortable/SortableItem";
 import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
@@ -48,8 +47,6 @@ interface CentralCardBoardProps {
   roomStatus: string; // union simplified
   cluesReady?: boolean;
   failed: boolean;
-  // 1-based failure index; null = no failure yet. Accept explicit null to match Firestore schema.
-  failedAt: number | null | undefined;
   proposal?: string[];
   resolveMode?: string;
   orderNumbers?: Record<string, number | null | undefined>;
@@ -65,7 +62,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomStatus,
   cluesReady,
   failed,
-  failedAt,
   proposal,
   resolveMode = "sort-submit",
   isHost,
@@ -149,11 +145,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     mePlaced,
   });
 
-  const { localFailedAt, boundaryPreviousIndex } = useLocalFailureDetection({
-    currentPlaced,
-    players: players as any,
-    resolveMode,
-  });
 
   // 結果オーバーレイの表示・自動クローズ
   const [showResult, setShowResult] = useState(false);
@@ -197,9 +188,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       revealIndex={revealIndex}
       revealAnimating={revealAnimating}
       failed={failed}
-      failedAt={failedAt}
-      localFailedAt={localFailedAt}
-      boundaryPreviousIndex={boundaryPreviousIndex}
+      boundaryPreviousIndex={realtimeResult?.failedAt && typeof realtimeResult.failedAt === "number" ? realtimeResult.failedAt - 2 : null}
       realtimeResult={realtimeResult} // リアルタイム判定結果を追加
     />
   );
@@ -510,7 +499,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {roomStatus === "finished" && (
         <GameResultOverlay
           failed={failed}
-          failedAt={failedAt}
           mode="overlay"
         />
       )}

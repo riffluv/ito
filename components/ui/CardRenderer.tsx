@@ -14,8 +14,6 @@ interface CardRendererProps {
   revealIndex: number;
   revealAnimating: boolean;
   failed?: boolean;
-  failedAt?: number | null;
-  localFailedAt?: number | null;
   boundaryPreviousIndex?: number | null;
   realtimeResult?: {
     success: boolean;
@@ -38,8 +36,6 @@ export function CardRenderer(props: CardRendererProps) {
     revealIndex: props.revealIndex,
     revealAnimating: props.revealAnimating,
     failed: props.failed,
-    failedAt: props.failedAt ?? null,
-    localFailedAt: props.localFailedAt ?? null,
     boundaryPreviousIndex: props.boundaryPreviousIndex ?? null,
     realtimeResult: props.realtimeResult ?? null,
   });

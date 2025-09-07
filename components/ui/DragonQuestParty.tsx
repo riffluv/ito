@@ -17,6 +17,7 @@ interface PlayerDoc {
 interface DragonQuestPartyProps {
   players: (PlayerDoc & { id: string })[];
   roomStatus: string;
+  onlineCount?: number; // 実際のオンライン参加者数
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -49,9 +50,12 @@ const getPlayerStatus = (
 export function DragonQuestParty({
   players,
   roomStatus,
+  onlineCount,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const previousCount = useRef(players.length);
+  // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
+  const actualCount = onlineCount ?? players.length;
+  const previousCount = useRef(actualCount);
 
   // メンバー数変化時のアニメーション
   useEffect(() => {
@@ -60,7 +64,7 @@ export function DragonQuestParty({
     const container = containerRef.current;
 
     // メンバー数が変わった時
-    if (previousCount.current !== players.length) {
+    if (previousCount.current !== actualCount) {
       gsap.from(container, {
         scale: 0.9,
         opacity: 0.7,
@@ -69,10 +73,10 @@ export function DragonQuestParty({
       });
     }
 
-    previousCount.current = players.length;
-  }, [players.length]);
+    previousCount.current = actualCount;
+  }, [actualCount]);
 
-  if (players.length === 0) return null;
+  if (actualCount === 0) return null;
 
   return (
     <Box
@@ -108,7 +112,7 @@ export function DragonQuestParty({
           mb={2}
           textAlign="center"
         >
-          ▼ なかま ({players.length}人) ▼
+          ▼ なかま ({actualCount}人) ▼
         </Text>
 
         {/* メンバーリスト - DPIスケール対応の適切な固定幅 */}
@@ -188,7 +192,7 @@ export function DragonQuestParty({
             fontFamily="monospace"
           >
             {players.filter((p) => p.clue1 && p.clue1.trim() !== "").length}/
-            {players.length} 完了
+            {actualCount} 完了
           </Text>
         )}
       </Box>

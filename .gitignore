@@ -8,3 +8,5 @@ yarn.lock
 #. Local environment variables (keep out of repo)
 .env.local
 .env
+
+.vercel
