@@ -14,7 +14,7 @@ import HostControlDock from "@/components/ui/HostControlDock";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
-import { PhaseAnnouncement } from "@/components/ui/PhaseAnnouncement";
+import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import PlayerIndicators from "@/components/ui/PlayerIndicators";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
@@ -196,6 +196,8 @@ export default function RoomPage() {
   const allCluesReady =
     onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
 
+  // canStartSorting は eligibleIds 定義後に移動
+
   // playing フェーズ廃止につき canStartPlaying ロジックは削除
 
   // ラウンドが進んだら自分のreadyをリセット
@@ -364,6 +366,25 @@ export default function RoomPage() {
     : players.map((p) => p.id);
   const eligibleIds = baseIds.filter((id) => onlineSet.has(id));
 
+  // 並び替えフェーズの判定（CentralCardBoardと同じロジック）
+  const canStartSorting = useMemo(() => {
+    const resolveMode = room?.options?.resolveMode;
+    const roomStatus = room?.status;
+    
+    if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
+      return false;
+    }
+
+    // waitingPlayersの計算（CentralCardBoardと同じ）
+    const playerMap = new Map(players.map(p => [p.id, p]));
+    const placedIds = new Set(room?.order?.proposal || []);
+    const waitingPlayers = (eligibleIds || [])
+      .map((id) => playerMap.get(id)!)
+      .filter((p) => p && !placedIds.has(p.id));
+
+    return waitingPlayers.length === 0;
+  }, [room?.options?.resolveMode, room?.status, players, eligibleIds, room?.order?.proposal]);
+
   // 残りの対象数（結果画面の続行ボタンの表示制御に使用）
   const remainingCount = useMemo(() => {
     const played = new Set<string>((room as any)?.order?.list || []);
@@ -498,9 +519,11 @@ export default function RoomPage() {
       {/* ミニマルUI（固定配置） */}
       <MinimalChat roomId={roomId} />
       
-      {/* GSAPアニメーション付きフェーズアナウンス（右上固定） */}
-      <PhaseAnnouncement roomStatus={room?.status || "waiting"} />
-      <PlayerIndicators players={players} onlineCount={onlinePlayers.length} />
+      {/* シンプル進行状況表示（左上固定） - 進行状況のみ表示 */}
+      <SimplePhaseDisplay 
+        roomStatus={room?.status || "waiting"} 
+        canStartSorting={canStartSorting}
+      />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
 
