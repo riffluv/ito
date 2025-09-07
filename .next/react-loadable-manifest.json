@@ -17,6 +17,10 @@
     "id": "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms",
     "files": []
   },
+  "lib\\firebase\\rooms.ts -> @/lib/firebase/presence": {
+    "id": "lib\\firebase\\rooms.ts -> @/lib/firebase/presence",
+    "files": []
+  },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
     "id": "lib\\services\\roomService.ts -> @/lib/game/random",
     "files": [

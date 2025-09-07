@@ -24,6 +24,9 @@ export async function ensureMember({
   uid: string;
   displayName: string | null | undefined;
 }): Promise<{ joined: boolean } | { joined: false }> {
+  // まず重複チェック＆クリーンアップを実行（ベストプラクティス）
+  await cleanupDuplicatePlayerDocs(roomId, uid);
+  
   const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
   if (!meSnap.exists()) {

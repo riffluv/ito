@@ -6,6 +6,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -34,6 +35,15 @@ export async function leaveRoom(
   userId: string,
   displayName: string | null | undefined
 ) {
+  // Presence クリーンアップを先に実行（ベストプラクティス）
+  try {
+    if (presenceSupported()) {
+      const { forceDetachAll } = await import("@/lib/firebase/presence");
+      await forceDetachAll(roomId, userId);
+    }
+  } catch {
+    // Presence 削除失敗は無視（他の処理を継続）
+  }
   // ホスト退室時: 次のホストを決定（オンライン優先）
   const playersSnap = await getDocs(
     collection(db!, "rooms", roomId, "players")
@@ -76,6 +86,51 @@ export async function leaveRoom(
     try {
       await deleteDoc(doc(db!, "rooms", roomId, "players", userId));
     } catch {}
+  }
+
+  // ゲーム状態からも除去（カード待機エリア、並び順から削除）
+  try {
+    const roomRef = doc(db!, "rooms", roomId);
+    const roomSnap = await getDoc(roomRef);
+    if (roomSnap.exists()) {
+      const roomData = roomSnap.data() as any;
+      let needsUpdate = false;
+      const updates: any = {};
+
+      // deal.players から削除
+      if (roomData.deal?.players && Array.isArray(roomData.deal.players)) {
+        const filteredPlayers = roomData.deal.players.filter((id: string) => id !== userId);
+        if (filteredPlayers.length !== roomData.deal.players.length) {
+          updates["deal.players"] = filteredPlayers;
+          needsUpdate = true;
+        }
+      }
+
+      // order.list から削除
+      if (roomData.order?.list && Array.isArray(roomData.order.list)) {
+        const filteredList = roomData.order.list.filter((id: string) => id !== userId);
+        if (filteredList.length !== roomData.order.list.length) {
+          updates["order.list"] = filteredList;
+          needsUpdate = true;
+        }
+      }
+
+      // order.proposal から削除
+      if (roomData.order?.proposal && Array.isArray(roomData.order.proposal)) {
+        const filteredProposal = roomData.order.proposal.filter((id: string) => id !== userId);
+        if (filteredProposal.length !== roomData.order.proposal.length) {
+          updates["order.proposal"] = filteredProposal;
+          needsUpdate = true;
+        }
+      }
+
+      // 更新が必要な場合のみ実行
+      if (needsUpdate) {
+        await updateDoc(roomRef, updates);
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to update room state on leave:", error);
   }
 
   // 退出システムメッセージ（UTF-8）

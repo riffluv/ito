@@ -24,8 +24,6 @@ export interface ComputeCardStateParams {
   revealIndex: number; // how many cards have been revealed (exclusive upper bound)
   revealAnimating: boolean;
   failed?: boolean; // server confirmed overall failure
-  failedAt?: number | null; // server confirmed failure index (1-based)
-  localFailedAt?: number | null; // client-only provisional failure index (1-based)
   boundaryPreviousIndex?: number | null; // index (0-based) of card just before failure boundary (for subtle highlight)
   realtimeResult?: {
     success: boolean;
@@ -68,10 +66,10 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     showNumber = typeof number === "number" && isPlaced;
   }
 
-  // 2) Failure / success computation - リアルタイム判定優先
-  // リアルタイム結果がある場合はそれを優先、なければ従来のロジック
-  const effectiveFailedAt = p.realtimeResult?.failedAt ?? p.localFailedAt ?? p.failedAt;
-  const effectiveFailed = p.realtimeResult ? !p.realtimeResult.success : p.failed;
+  // 2) Failure / success computation - リアルタイム判定のみ（事前計算削除）
+  const hasRealtimeResult = p.realtimeResult !== null && p.realtimeResult !== undefined;
+  const realtimeFailed = hasRealtimeResult ? !p.realtimeResult.success : false;
+  const realtimeFailedAt = hasRealtimeResult ? p.realtimeResult.failedAt : null;
   
   const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
   const revealed =
@@ -79,15 +77,6 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     (p.roomStatus === "finished" ||
       (p.roomStatus === "reveal" && idx < p.revealIndex));
 
-  const failureConfirmed = (() => {
-    if (typeof effectiveFailedAt !== "number") return false;
-    if (p.roomStatus === "finished") return !!effectiveFailed;
-    // リアルタイム判定の場合: 該当カードがめくられた時点で失敗確定
-    if (p.realtimeResult && !p.realtimeResult.success) {
-      return p.revealIndex >= effectiveFailedAt;
-    }
-    return p.revealIndex >= effectiveFailedAt;
-  })();
 
   let isFail = false;
   let isSuccess = false;
@@ -120,15 +109,23 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
   
   if (shouldShowResult) {
-    isFail =
-      revealed &&
-      active &&
-      typeof effectiveFailedAt === "number" &&
-      typeof idx === "number" &&
-      idx === effectiveFailedAt - 1;
-    // Only show success (blue) if game succeeded and not failed specifically
-    isSuccess =
-      revealed && active && p.roomStatus === "finished" && !isFail && !effectiveFailed; // リアルタイム結果を考慮
+    // リアルタイム判定統一: 協力ゲーム仕様
+    if (hasRealtimeResult && realtimeFailed) {
+      // リアルタイム失敗判定: 失敗確定時点以降の全カード赤
+      isFail = revealed && active && p.realtimeResult!.currentIndex >= 2;
+    } else if (p.roomStatus === "finished" && p.failed) {
+      // finished時のサーバー確定判定
+      isFail = revealed && active && p.revealIndex >= 2;
+    }
+    
+    // 成功判定: ゲーム成功かつ失敗していない場合のみ
+    isSuccess = 
+      revealed && 
+      active && 
+      p.roomStatus === "finished" && 
+      !isFail && 
+      !p.failed;
+    
     if (isSuccess) successLevel = "final";
   }
 

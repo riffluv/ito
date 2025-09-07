@@ -5,13 +5,11 @@ import { gsap } from "gsap";
 
 interface GameResultOverlayProps {
   failed?: boolean;
-  failedAt?: number | null;
   mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
 }
 
 export function GameResultOverlay({
   failed,
-  failedAt,
   mode = "overlay",
 }: GameResultOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -206,7 +204,7 @@ export function GameResultOverlay({
           border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
           borderRadius={0} // 角ばったデザイン
         >
-          💥 しっぱい{typeof failedAt === "number" ? ` #${failedAt}` : ""}
+          💥 しっぱい
         </Box>
       );
     }
