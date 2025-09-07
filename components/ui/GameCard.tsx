@@ -217,7 +217,7 @@ export function GameCard({
                 wordBreak="break-word"
                 whiteSpace="normal"
                 overflowWrap="anywhere"
-                overflow="hidden"
+                overflow="visible"
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
@@ -366,7 +366,15 @@ export function GameCard({
       gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
       transform={hoverTransform}
-      style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+      style={{ 
+        transformStyle: "preserve-3d", 
+        willChange: "transform",
+        // フォント描画改善: レイヤー促進（判定ボタン押下時と同等の描画品質を常時適用）
+        transform: "translateZ(0)",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+        textRendering: "optimizeLegibility"
+      }}
       transition={`all 0.3s ${HOVER_EASING}`}
       boxShadow={hoverBoxShadow}
       tabIndex={0}
@@ -375,7 +383,7 @@ export function GameCard({
     >
       <Box
         fontSize="2xs"
-        lineHeight={1}
+        lineHeight="1.3"
         fontWeight={700}
         color={dragonQuestStyle.colors.meta}
         display="flex"
@@ -385,7 +393,7 @@ export function GameCard({
           #{typeof index === "number" ? index + 1 : "?"}
         </span>
       </Box>
-      <Box position="relative" overflow="hidden" minHeight="0">
+      <Box position="relative" overflow="visible" minHeight="0">
         <Box
           position="absolute"
           top="50%"
@@ -398,7 +406,7 @@ export function GameCard({
               : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
           }
           color="#ffffff" // 全状態で白色統一
-          lineHeight={typeof number === "number" ? 1.05 : 1.1}
+          lineHeight={typeof number === "number" ? 1.3 : 1.3}
           textShadow={
             waitingInCentral
               ? "none" // Clean white text without shadow for waiting cards
@@ -413,9 +421,9 @@ export function GameCard({
           wordBreak={typeof number === "number" ? "keep-all" : "break-word"}
           whiteSpace={typeof number === "number" ? "nowrap" : "normal"}
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
-          overflow="hidden"
+          overflow="visible"
           display={typeof number === "number" ? "block" : "flex"}
-          maxHeight={typeof number === "number" ? "1.2em" : undefined}
+          maxHeight={typeof number === "number" ? "1.6em" : undefined}
           alignItems={typeof number === "number" ? undefined : "center"}
           justifyContent={typeof number === "number" ? undefined : "center"}
           letterSpacing={
@@ -464,7 +472,7 @@ export function GameCard({
       </Box>
       <Box
         fontSize="2xs"
-        lineHeight={1}
+        lineHeight="1.3"
         fontWeight={700}
         color={dragonQuestStyle.colors.meta}
         display="flex"
