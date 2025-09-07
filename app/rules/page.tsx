@@ -1,4 +1,4 @@
-import { AppButton } from "@/components/ui/AppButton";
+import { RPGButton } from "@/components/ui/RPGButton";
 import {
   Badge,
   Box,
@@ -10,7 +10,6 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { ArrowLeft, BookOpen } from "lucide-react";
-import Link from "next/link";
 
 export default function RulesPage() {
   return (
@@ -23,8 +22,7 @@ export default function RulesPage() {
         {/* Hero Header */}
         <VStack mb={{ base: 8, md: 12 }} align="stretch" gap={6}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
-            <AppButton
-              as={Link}
+            <RPGButton
               href="/"
               variant="subtle"
               size="md"
@@ -36,7 +34,7 @@ export default function RulesPage() {
             >
               <ArrowLeft size={16} style={{ marginRight: "8px" }} />
               トップへ戻る
-            </AppButton>
+            </RPGButton>
             <Badge
               colorScheme="blue"
               borderRadius="lg"

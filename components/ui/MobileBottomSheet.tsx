@@ -4,7 +4,7 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Flex, Text, VisuallyHidden } from "@chakra-ui/react";
 import { AppIconButton } from "@/components/ui/AppIconButton";
 import { AppButton } from "@/components/ui/AppButton";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { gsap } from "gsap";
 import { ChevronUp, ChevronDown, MessageCircle, Users, Menu } from "lucide-react";
 import { ReactNode, useState, useRef, useEffect } from "react";
 
@@ -38,15 +38,14 @@ export function MobileBottomSheet({
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [contentType, setContentType] = useState<ContentType>("chat");
   const [isDragging, setIsDragging] = useState(false);
-  const constraintsRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
   
-  // refのコールバック関数
-  const setRefs = (el: HTMLDivElement | null) => {
-    (constraintsRef as any).current = el;
-    (sheetRef as any).current = el;
-  };
+  // ドラッグ状態
+  const dragStartY = useRef(0);
+  const currentY = useRef(0);
 
   // テーマカラー（Chakra UI v3対応）
   const bgColorVar = "var(--colors-panelBg)";
@@ -108,50 +107,116 @@ export function MobileBottomSheet({
   // シート高さ計算
   const getSheetHeight = () => {
     switch (sheetState) {
-      case "collapsed": return "60px";
-      case "partial": return "40dvh"; // 動的ビューポート対応
-      case "full": return "80dvh";  // モバイルUI安定化
-      default: return "60px";
+      case "collapsed": return 60;
+      case "partial": return window.innerHeight * 0.4; // 40dvh相当
+      case "full": return window.innerHeight * 0.8;  // 80dvh相当
+      default: return 60;
     }
   };
 
-  // ドラッグハンドラー - モバイル最適化
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    setIsDragging(false);
-    const velocityY = info.velocity.y;
-    const velocityX = info.velocity.x;
-    const offsetY = info.offset.y;
-    const offsetX = info.offset.x;
-
-    // 横方向のスワイプ（コンテンツ切り替え）
-    if (Math.abs(velocityX) > 400 || Math.abs(offsetX) > 100) {
-      if (velocityX > 0 || offsetX > 0) {
-        // 右スワイプ - 前のコンテンツ
-        if (contentType === "participants") setContentType("chat");
-        else if (contentType === "sidebar") setContentType("participants");
-      } else {
-        // 左スワイプ - 次のコンテンツ  
-        if (contentType === "chat") setContentType("participants");
-        else if (contentType === "participants") setContentType("sidebar");
+  // GSAPアニメーション - シート位置更新
+  const animateSheet = (targetState: SheetState) => {
+    if (!sheetRef.current) return;
+    
+    const height = (() => {
+      switch (targetState) {
+        case "collapsed": return 60;
+        case "partial": return window.innerHeight * 0.4;
+        case "full": return window.innerHeight * 0.8;
+        default: return 60;
       }
-      return;
-    }
+    })();
 
-    // 縦方向のスワイプ（シート展開/縮小）- より敏感な検出
-    if (velocityY < -300 || offsetY < -50) {
-      // 上方向の素早い動きまたは小さな上方向の移動でも反応
+    gsap.to(sheetRef.current, {
+      y: window.innerHeight - height,
+      duration: 0.4,
+      ease: "back.out(1.2)",
+    });
+  };
+
+  // オーバーレイのフェードイン/アウト
+  const animateOverlay = (show: boolean) => {
+    if (!overlayRef.current) return;
+    
+    if (show) {
+      gsap.set(overlayRef.current, { display: "block" });
+      gsap.to(overlayRef.current, { opacity: 0.5, duration: 0.3 });
+    } else {
+      gsap.to(overlayRef.current, { 
+        opacity: 0, 
+        duration: 0.3,
+        onComplete: () => {
+          if (overlayRef.current) {
+            gsap.set(overlayRef.current, { display: "none" });
+          }
+        }
+      });
+    }
+  };
+
+  // コンテンツフェード
+  const animateContent = () => {
+    if (!contentRef.current) return;
+    
+    gsap.fromTo(contentRef.current, 
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.2 }
+    );
+  };
+
+  // ドラッグハンドラー - ネイティブPointerEvent使用
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!sheetRef.current) return;
+    
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    currentY.current = e.clientY;
+    
+    sheetRef.current.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || !sheetRef.current) return;
+    
+    const deltaY = e.clientY - dragStartY.current;
+    const currentHeight = getSheetHeight();
+    const newY = Math.max(
+      window.innerHeight - window.innerHeight * 0.8,
+      Math.min(window.innerHeight - 60, window.innerHeight - currentHeight + deltaY)
+    );
+    
+    gsap.set(sheetRef.current, { y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    const deltaY = e.clientY - dragStartY.current;
+    const velocity = deltaY / 100; // 簡易速度計算
+    
+    // 垂直方向のジェスチャー判定
+    if (velocity < -0.5 || deltaY < -50) {
+      // 上方向
       if (sheetState === "collapsed") {
         setSheetState("partial");
       } else if (sheetState === "partial") {
         setSheetState("full");
       }
-    } else if (velocityY > 300 || offsetY > 50) {
-      // 下方向の素早い動きまたは小さな下方向の移動でも反応
+    } else if (velocity > 0.5 || deltaY > 50) {
+      // 下方向
       if (sheetState === "full") {
         setSheetState("partial");
       } else if (sheetState === "partial") {
         setSheetState("collapsed");
       }
+    } else {
+      // 元の位置に戻す
+      animateSheet(sheetState);
+    }
+    
+    if (sheetRef.current) {
+      sheetRef.current.releasePointerCapture(e.pointerId);
     }
   };
 
@@ -168,6 +233,30 @@ export function MobileBottomSheet({
         return <Text p={4}>コンテンツがありません</Text>;
     }
   };
+
+  // 状態変更時のアニメーション実行
+  useEffect(() => {
+    animateSheet(sheetState);
+    animateOverlay(sheetState === "full");
+    if (sheetState !== "collapsed") {
+      setTimeout(() => animateContent(), 100);
+    }
+  }, [sheetState]);
+
+  // 初期化時のポジション設定
+  useEffect(() => {
+    if (sheetRef.current) {
+      gsap.set(sheetRef.current, {
+        y: window.innerHeight - 60,
+      });
+    }
+    if (overlayRef.current) {
+      gsap.set(overlayRef.current, {
+        opacity: 0,
+        display: "none",
+      });
+    }
+  }, []);
 
   // アクティブボタンのスタイル
   const getButtonStyle = (type: ContentType) => ({
@@ -188,35 +277,21 @@ export function MobileBottomSheet({
       pointerEvents="none" // 背景部分はクリック不可
     >
       {/* オーバーレイ (フルスクリーン時) */}
-      <AnimatePresence>
-        {sheetState === "full" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: "absolute",
-              inset: 0,
-              height: "100dvh", // 100vh由来のズレを排除
-              backgroundColor: "black",
-              pointerEvents: "auto",
-            }}
-            onClick={() => setSheetState("partial")}
-            aria-label="ボトムシートを閉じる"
-          />
-        )}
-      </AnimatePresence>
+      <Box
+        ref={overlayRef}
+        position="absolute"
+        inset="0"
+        height="100vh"
+        backgroundColor="black"
+        pointerEvents="auto"
+        display="none"
+        onClick={() => setSheetState("partial")}
+        aria-label="ボトムシートを閉じる"
+      />
 
       {/* ボトムシート本体 */}
-      <motion.div
-        ref={setRefs}
-        initial={{ y: "calc(100% - 60px)" }}
-        animate={{ y: `calc(100% - ${getSheetHeight()})` }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
-        }}
+      <Box
+        ref={sheetRef}
         style={{
           backgroundColor: bgColorVar,
           borderTopLeftRadius: "16px",
@@ -228,12 +303,12 @@ export function MobileBottomSheet({
           pointerEvents: "auto",
           minHeight: "60px",
           maxHeight: "80vh",
+          position: "absolute",
+          width: "100%",
         }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.1}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={handleDragEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         // アクセシビリティ属性
         role="dialog"
         aria-modal={sheetState === "full"}
@@ -340,30 +415,24 @@ export function MobileBottomSheet({
         </Flex>
 
         {/* コンテンツエリア */}
-        <AnimatePresence mode="wait">
-          {sheetState !== "collapsed" && (
-            <motion.div
-              key={`${contentType}-${sheetState}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                height: `calc(${getSheetHeight()} - 60px)`,
-                overflow: "hidden",
-              }}
+        {sheetState !== "collapsed" && (
+          <Box
+            ref={contentRef}
+            style={{
+              height: `calc(${getSheetHeight()}px - 60px)`,
+              overflow: "hidden",
+            }}
+          >
+            <Box 
+              h="100%" 
+              overflow="auto"
+              bg="inherit"
             >
-              <Box 
-                h="100%" 
-                overflow="auto"
-                bg="inherit"
-              >
-                {renderContent()}
-              </Box>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+              {renderContent()}
+            </Box>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

@@ -29,7 +29,6 @@
     "firebase": "^10.12.3",
     "firebase-admin": "^11.11.0",
     "firebase-functions": "^4.5.0",
-    "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
     "lucide-react": "latest",
     "next": "14.2.5",

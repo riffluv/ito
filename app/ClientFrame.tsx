@@ -1,5 +1,6 @@
 "use client";
 import Header from "@/components/site/Header";
+import { RPGPageTransition } from "@/components/ui/RPGPageTransition";
 import { usePathname } from "next/navigation";
 import React from "react";
 
@@ -11,7 +12,9 @@ export function ClientFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
       {showHeader && <Header />}
-      <main id="main" role="main">{children}</main>
+      <RPGPageTransition>
+        <main id="main" role="main">{children}</main>
+      </RPGPageTransition>
     </>
   );
 }
