@@ -1,6 +1,6 @@
-// Notification facade wired to Chakra UI v3 toaster
+// Notification facade wired to Dragon Quest GSAP notifications
 // Centralizes notification calls so we can change rendering strategy later easily.
-import { toaster } from "@/components/ui/toaster";
+import { dragonQuestNotify } from "@/components/ui/DragonQuestNotify";
 
 export type NotifyOptions = {
   title?: string;
@@ -13,16 +13,14 @@ export type NotifyOptions = {
 
 export function notify(opts: NotifyOptions | string): void {
   const o = typeof opts === "string" ? { title: opts } : opts;
-  // Defer toast creation to avoid React warnings when called during render/effects
+  // Defer notification creation to avoid React warnings when called during render/effects
   queueMicrotask(() => {
-    const payload: any = {};
-    if (o.id != null) payload.id = o.id as any;
-    if (o.title != null) payload.title = o.title;
-    if (o.description != null) payload.description = o.description;
-    if (o.type != null) payload.type = o.type as any;
-    if (o.duration != null) payload.duration = o.duration;
-    // meta で closable 等を制御可能（必要に応じて）
-    toaster.create(payload);
+    dragonQuestNotify({
+      title: o.title || "通知",
+      description: o.description,
+      type: o.type || "info",
+      duration: o.duration,
+    });
   });
 }
 

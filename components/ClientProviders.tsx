@@ -1,6 +1,6 @@
 "use client";
 import AuthClientWrapper from "@/components/AuthClientWrapper";
-import { Toaster } from "@/components/ui/toaster";
+import { DragonQuestNotifyContainer } from "@/components/ui/DragonQuestNotify";
 import { ThemePresetProvider } from "@/context/ThemePresetContext";
 import system from "@/theme";
 import { Box, ChakraProvider } from "@chakra-ui/react";
@@ -27,7 +27,7 @@ export default function ClientProviders({
         <Box bg="canvasBg" color="fgDefault" h="100dvh">
           <DarkModeOnlyBridge />
           <AuthClientWrapper>{children}</AuthClientWrapper>
-          <Toaster />
+          <DragonQuestNotifyContainer />
         </Box>
       </ThemePresetProvider>
     </ChakraProvider>
