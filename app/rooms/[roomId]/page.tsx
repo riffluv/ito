@@ -14,6 +14,7 @@ import HostControlDock from "@/components/ui/HostControlDock";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
+import { PhaseAnnouncement } from "@/components/ui/PhaseAnnouncement";
 import PlayerIndicators from "@/components/ui/PlayerIndicators";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
@@ -496,6 +497,9 @@ export default function RoomPage() {
 
       {/* ミニマルUI（固定配置） */}
       <MinimalChat roomId={roomId} />
+      
+      {/* GSAPアニメーション付きフェーズアナウンス（右上固定） */}
+      <PhaseAnnouncement roomStatus={room?.status || "waiting"} />
       <PlayerIndicators players={players} onlineCount={onlinePlayers.length} />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
