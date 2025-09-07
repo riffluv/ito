@@ -410,7 +410,7 @@ export default function RoomPage() {
     : null;
   const showHostInHud = false; // Always show host controls in hand area instead of HUD
 
-  if (!firebaseEnabled || loading || !room) {
+  if (!firebaseEnabled) {
     return (
       <Box
         h="100dvh"
@@ -419,13 +419,50 @@ export default function RoomPage() {
         justifyContent="center"
         px={4}
       >
-        {!firebaseEnabled ? (
-          <Text>
-            Firebase設定が見つかりません。`.env.local` を設定してください。
-          </Text>
-        ) : (
-          <Spinner />
-        )}
+        <Text>
+          Firebase設定が見つかりません。`.env.local` を設定してください。
+        </Text>
+      </Box>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+      >
+        <Spinner />
+      </Box>
+    );
+  }
+
+  if (!room) {
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        gap={4}
+      >
+        <Text fontSize="xl" fontWeight="bold" color="white">
+          🏠 部屋が見つかりません
+        </Text>
+        <Text color="gray.400" textAlign="center">
+          この部屋は削除されたか、存在しない可能性があります
+        </Text>
+        <AppButton
+          onClick={() => router.push("/")}
+          colorScheme="blue"
+        >
+          メインメニューに戻る
+        </AppButton>
       </Box>
     );
   }

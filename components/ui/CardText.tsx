@@ -52,7 +52,7 @@ export function CardText({
     fontWeight: 700,
     fontSize: isNumber ? getNumberFontSize(text as number) : getClueFontSize(text as string),
     color,
-    lineHeight: isNumber ? 1.05 : 1.1,
+    lineHeight: isNumber ? 1.2 : 1.3, // ディセンダー対応
     textShadow: waitingInCentral ? "none" : textShadow,
     width: "100%",
     maxWidth: "calc(100% - 8px)",
