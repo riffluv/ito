@@ -13,6 +13,7 @@ import {
   Badge,
   Box,
   Container,
+  Flex,
   Grid,
   GridItem,
   Heading,
@@ -110,16 +111,26 @@ export default function MainMenu() {
           <VStack gap={{ base: 16, lg: 20 }} align="center">
             <VStack gap={8} align="center" textAlign="center" maxW="4xl">
               <Box>
-                <Heading
-                  fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
-                  fontWeight={800}
-                  lineHeight={0.95}
-                  letterSpacing="-0.02em"
-                  color="fgEmphasized"
-                  mb={6}
-                >
-                  ITO
-                </Heading>
+                {/* 騎士とタイトルのメインビジュアル */}
+                <Flex align="center" gap={6} mb={6} flexWrap="wrap" justify="center">
+                  <Box
+                    as="img" 
+                    src="/images/knight1.png"
+                    alt="ITO Knight"
+                    boxSize={{ base: "16", md: "20", lg: "24" }}
+                    objectFit="contain"
+                    filter="drop-shadow(0 4px 12px rgba(0,0,0,0.4))"
+                  />
+                  <Heading
+                    fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
+                    fontWeight={800}
+                    lineHeight={0.95}
+                    letterSpacing="-0.02em"
+                    color="fgEmphasized"
+                  >
+                    ITO
+                  </Heading>
+                </Flex>
                 <Text
                   fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}
                   color="fgMuted"

@@ -68,8 +68,8 @@ export function SettingsModal({
   const modeOptions = [
     {
       value: "sort-submit",
-      title: "一括判定モード",
-      description: "全員カードを並べてから判定",
+      title: "みんなで ならべる",
+      description: "ぜんいん カードを ならべてから はんてい",
     },
   ];
 
@@ -104,45 +104,88 @@ export function SettingsModal({
       />
       <Dialog.Positioner>
         <Dialog.Content
-          maxW="md"
           css={{
-            background: "rgba(8,9,15,0.95)", // ルーム作成と同じリッチブラック
-            border: "3px solid rgba(255,255,255,0.9)", // ドラクエ風統一ボーダー
-            borderRadius: 0, // 角ばった製品レベル
-            boxShadow: "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // 製品レベル立体感
+            background: "rgba(8,9,15,0.95)",
+            border: "3px solid rgba(255,255,255,0.9)",
+            borderRadius: 0,
+            boxShadow: "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)",
+            maxWidth: "480px",
+            width: "90vw",
             padding: 0,
             overflow: "hidden",
+            position: "relative",
           }}
         >
-          <Dialog.Header 
-            px={6} 
-            py={5}
+          {/* Close button - 統一パターン */}
+          <Dialog.CloseTrigger 
             css={{
-              borderBottom: "2px solid rgba(255,255,255,0.3)", // ドラクエ風区切り
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              zIndex: 10,
+              background: 'rgba(8,9,15,0.8)',
+              borderRadius: 0,
+              padding: '0',
+              border: '2px solid rgba(255,255,255,0.9)',
+              color: 'white',
+              cursor: 'pointer',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                background: 'white',
+                color: 'rgba(8,9,15,0.9)'
+              }
             }}
           >
-            <Dialog.Title>
-              <Text 
-                fontSize="xl" 
-                fontWeight="bold" 
-                color="white"
-                css={{
-                  fontFamily: "monospace", // ドラクエフォント
-                  textShadow: "1px 1px 0px #000", // 立体感
-                  textAlign: "center",
-                }}
-              >
-                ゲーム設定
-              </Text>
+            ✕
+          </Dialog.CloseTrigger>
+
+          {/* Header - 統一パターン */}
+          <Box 
+            p={6} 
+            position="relative"
+            zIndex={1}
+            css={{
+              borderBottom: "2px solid rgba(255,255,255,0.3)",
+            }}
+          >
+            <Dialog.Title 
+              css={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: 'white',
+                margin: 0,
+                fontFamily: 'monospace',
+                textShadow: '1px 1px 0px #000',
+                textAlign: 'center',
+              }}
+            >
+              せっていを かえる
             </Dialog.Title>
-          </Dialog.Header>
+            <Text 
+              fontSize="sm" 
+              color="rgba(255,255,255,0.7)" 
+              mt={1}
+              css={{
+                textAlign: 'center',
+              }}
+            >
+              あそびかたを きめてください
+            </Text>
+          </Box>
 
           <Dialog.Body px={6} pb={2}>
             <Stack gap={6}>
               {/* クリア方式セクション */}
               <Box>
                 <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
-                  クリア方式
+                  どうやって あそぶか
                 </Text>
                 <Stack gap={2}>
                   {modeOptions.map((option) => {
@@ -153,38 +196,47 @@ export function SettingsModal({
                         cursor="pointer"
                         onClick={() => setResolveMode(option.value)}
                         p={4}
-                        borderRadius="lg"
-                        border="1px solid"
-                        borderColor={isSelected ? "blue.400" : "gray.700"}
-                        bg={isSelected ? "blue.900" : "gray.800"}
-                        transition="all 0.2s"
+                        borderRadius={0}
+                        border="2px solid"
+                        borderColor={isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
+                        bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
+                        transition="all 0.15s ease"
+                        boxShadow={isSelected ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)" : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"}
                         _hover={{
-                          borderColor: isSelected ? "blue.300" : "gray.600",
-                          bg: isSelected ? "blue.800" : "gray.750",
+                          borderColor: "rgba(255,255,255,0.8)",
+                          bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
                         }}
                       >
                         <HStack justify="space-between" align="start">
                           <VStack align="start" gap={1} flex="1">
-                            <Text fontSize="md" fontWeight="600" color="white">
+                            <Text 
+                              fontSize="md" 
+                              fontWeight="bold" 
+                              color="white"
+                              fontFamily="monospace"
+                              textShadow="1px 1px 0px #000"
+                            >
                               {option.title}
                             </Text>
                             <Text
                               fontSize="sm"
-                              color="gray.400"
+                              color="rgba(255,255,255,0.7)"
                               lineHeight="short"
+                              fontFamily="monospace"
                             >
                               {option.description}
                             </Text>
                           </VStack>
                           <Box
-                            w={4}
-                            h={4}
-                            borderRadius="full"
+                            w={5}
+                            h={5}
+                            borderRadius={0}
                             border="2px solid"
-                            borderColor={isSelected ? "blue.400" : "gray.500"}
-                            bg={isSelected ? "blue.400" : "transparent"}
+                            borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                            bg={isSelected ? "white" : "transparent"}
                             mt={0.5}
                             position="relative"
+                            transition="all 0.15s ease"
                           >
                             {isSelected && (
                               <Box
@@ -192,11 +244,16 @@ export function SettingsModal({
                                 top="50%"
                                 left="50%"
                                 transform="translate(-50%, -50%)"
-                                w="6px"
+                                w="10px"
                                 h="6px"
-                                borderRadius="full"
-                                bg="white"
-                              />
+                                color="black"
+                                fontWeight="900"
+                                fontSize="12px"
+                                fontFamily="monospace"
+                                lineHeight={1}
+                              >
+                                ✓
+                              </Box>
                             )}
                           </Box>
                         </HStack>
@@ -209,7 +266,7 @@ export function SettingsModal({
               {/* お題タイプセクション */}
               <Box>
                 <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
-                  デフォルトお題タイプ
+                  おだいの しゅるい
                 </Text>
                 <Stack gap={2}>
                   {topicTypeOptions.map((option) => {
@@ -220,38 +277,47 @@ export function SettingsModal({
                         cursor="pointer"
                         onClick={() => setDefaultTopicType(option.value)}
                         p={4}
-                        borderRadius="lg"
-                        border="1px solid"
-                        borderColor={isSelected ? "blue.400" : "gray.700"}
-                        bg={isSelected ? "blue.900" : "gray.800"}
-                        transition="all 0.2s"
+                        borderRadius={0}
+                        border="2px solid"
+                        borderColor={isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
+                        bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
+                        transition="all 0.15s ease"
+                        boxShadow={isSelected ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)" : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"}
                         _hover={{
-                          borderColor: isSelected ? "blue.300" : "gray.600",
-                          bg: isSelected ? "blue.800" : "gray.750",
+                          borderColor: "rgba(255,255,255,0.8)",
+                          bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
                         }}
                       >
                         <HStack justify="space-between" align="start">
                           <VStack align="start" gap={1} flex="1">
-                            <Text fontSize="md" fontWeight="600" color="white">
+                            <Text 
+                              fontSize="md" 
+                              fontWeight="bold" 
+                              color="white"
+                              fontFamily="monospace"
+                              textShadow="1px 1px 0px #000"
+                            >
                               {option.title}
                             </Text>
                             <Text
                               fontSize="sm"
-                              color="gray.400"
+                              color="rgba(255,255,255,0.7)"
                               lineHeight="short"
+                              fontFamily="monospace"
                             >
                               {option.description}
                             </Text>
                           </VStack>
                           <Box
-                            w={4}
-                            h={4}
-                            borderRadius="full"
+                            w={5}
+                            h={5}
+                            borderRadius={0}
                             border="2px solid"
-                            borderColor={isSelected ? "blue.400" : "gray.500"}
-                            bg={isSelected ? "blue.400" : "transparent"}
+                            borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                            bg={isSelected ? "white" : "transparent"}
                             mt={0.5}
                             position="relative"
+                            transition="all 0.15s ease"
                           >
                             {isSelected && (
                               <Box
@@ -259,11 +325,16 @@ export function SettingsModal({
                                 top="50%"
                                 left="50%"
                                 transform="translate(-50%, -50%)"
-                                w="6px"
+                                w="10px"
                                 h="6px"
-                                borderRadius="full"
-                                bg="white"
-                              />
+                                color="black"
+                                fontWeight="900"
+                                fontSize="12px"
+                                fontFamily="monospace"
+                                lineHeight={1}
+                              >
+                                ✓
+                              </Box>
                             )}
                           </Box>
                         </HStack>
@@ -283,40 +354,87 @@ export function SettingsModal({
                 >
                   <Text fontSize="sm" color="yellow.300" textAlign="center">
                     {!isHost
-                      ? "設定の変更はホストのみ可能です"
-                      : "設定の変更は待機中のみ可能です"}
+                      ? "せっていは ホストのみ かえられます"
+                      : "せっていは たいきちゅうのみ かえられます"}
                   </Text>
                 </Box>
               )}
             </Stack>
           </Dialog.Body>
 
-          <Dialog.Footer
-            px={6}
-            py={4}
+          {/* Footer - 統一パターン */}
+          <Box 
+            p={6} 
+            pt={4}
             css={{
-              borderTop: "2px solid rgba(255,255,255,0.3)", // ドラクエ風区切り
+              background: 'transparent',
+              borderTop: '2px solid rgba(255,255,255,0.3)',
             }}
           >
-            <HStack w="full" justify="flex-end" gap={3}>
-              <AppButton
-                visual="outline"
-                palette="gray"
+            <HStack justify="space-between" gap={3}>
+              <button
                 onClick={onClose}
+                style={{
+                  minWidth: "120px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "2px solid rgba(255,255,255,0.9)",
+                  background: "transparent",
+                  color: "white",
+                  cursor: "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "white";
+                  e.currentTarget.style.color = "rgba(8,9,15,0.9)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "white";
+                }}
               >
-                キャンセル
-              </AppButton>
-              <AppButton
-                visual="solid"
-                palette="brand"
+                やめる
+              </button>
+
+              <button
                 onClick={handleSave}
-                loading={saving}
-                disabled={!isHost || roomStatus !== "waiting" || saving}
+                disabled={saving || !isHost || roomStatus !== "waiting"}
+                style={{
+                  minWidth: "140px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "2px solid rgba(255,255,255,0.9)",
+                  background: saving || !isHost || roomStatus !== "waiting" ? "#666" : "rgba(8,9,15,0.9)",
+                  color: "white",
+                  cursor: saving || !isHost || roomStatus !== "waiting" ? "not-allowed" : "pointer",
+                  textShadow: "1px 1px 0px #000",
+                  transition: "all 0.1s ease",
+                  opacity: saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!saving && isHost && roomStatus === "waiting") {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "rgba(8,9,15,0.9)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!saving && isHost && roomStatus === "waiting") {
+                    e.currentTarget.style.background = "rgba(8,9,15,0.9)";
+                    e.currentTarget.style.color = "white";
+                  }
+                }}
               >
-                保存
-              </AppButton>
+                {saving ? "きろくちゅう..." : "きろく"}
+              </button>
             </HStack>
-          </Dialog.Footer>
+          </Box>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
