@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 export const metadata: Metadata = {
   title: "Online ITO",
   description: "Co-op number ordering party game",
-  icons: [{ rel: "icon", url: "/icon.svg" }],
+  icons: [{ rel: "icon", url: "/images/knight1.png" }],
 };
 
 export const viewport: Viewport = {
