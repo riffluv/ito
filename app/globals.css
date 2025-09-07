@@ -21,6 +21,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* DPI125%対応 - フォント描画品質向上 */
+    font-feature-settings: "kern" 1;
+    text-size-adjust: 100%;
+    /* ディセンダー対応のデフォルトline-height */
+    line-height: 1.3;
   }
   img, picture, video, canvas, svg {
     display: block;

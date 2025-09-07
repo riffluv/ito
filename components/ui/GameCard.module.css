@@ -6,12 +6,16 @@
     -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui,
     sans-serif;
   font-size: 0.75rem; /* 12px base */
-  line-height: 1;
+  line-height: 1.3; /* ディセンダー対応 */
   font-weight: 700;
   letter-spacing: 0; /* avoid browser default widen after transform */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* DPI125%対応 - フォント描画品質向上 */
+  font-feature-settings: "kern" 1, "liga" 1;
+  /* テキストの境界計算を正確に */
+  text-size-adjust: 100%;
   font-variation-settings: "wght" 700;
   /* Avoid sub‑pixel jitter / thickness shift when parent rotates */
   backface-visibility: hidden;

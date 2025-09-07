@@ -186,7 +186,7 @@ export function GameCard({
           >
             <Box
               fontSize="2xs"
-              lineHeight="1"
+              lineHeight="1.3" // ディセンダー対応
               style={getUnifiedTextStyle()}
               color={dragonQuestStyle.colors.meta}
               display="flex"
@@ -205,7 +205,7 @@ export function GameCard({
                 fontWeight={700}
                 fontSize={getClueFontSize(clue)}
                 color={dragonQuestStyle.colors.clue}
-                lineHeight="1.1"
+                lineHeight="1.3" // ディセンダー対応
                 width="100%"
                 maxWidth="calc(100% - 8px)"
                 textAlign="center"
@@ -232,7 +232,7 @@ export function GameCard({
             </Box>
             <Box
               fontSize="2xs"
-              lineHeight="1"
+              lineHeight="1.3" // ディセンダー対応
               style={getUnifiedTextStyle()}
               color={dragonQuestStyle.colors.meta}
               display="flex"
@@ -267,7 +267,7 @@ export function GameCard({
           >
             <Box
               fontSize="2xs"
-              lineHeight="1"
+              lineHeight="1.3" // ディセンダー対応
               style={getUnifiedTextStyle()}
               color={dragonQuestStyle.colors.meta}
               display="flex"
@@ -286,7 +286,7 @@ export function GameCard({
                 fontWeight={700}
                 fontSize={backNumberFontSize}
                 color="#ffffff" // 全状態で白色統一
-                lineHeight="1"
+                lineHeight="1.3" // ディセンダー対応
                 textShadow={
                   waitingInCentral ? "none" : "0 1px 2px rgba(0,0,0,0.5)"
                 }
@@ -304,7 +304,7 @@ export function GameCard({
             </Box>
             <Box
               fontSize="2xs"
-              lineHeight="1"
+              lineHeight="1.3" // ディセンダー対応
               style={getUnifiedTextStyle()}
               color={dragonQuestStyle.colors.meta}
               display="flex"
