@@ -5,6 +5,8 @@ import {
   Container,
   Flex,
   Heading,
+  HStack,
+  Image,
   List,
   Text,
   VStack,
@@ -64,35 +66,52 @@ export default function RulesPage() {
             >
               ▼ 序の紋章III の きまり ▼
             </Heading>
-            <Box
-              p={6}
-              bg="richBlack.800"
-              border="borders.retrogame"
-              borderRadius={0}
-              mx="auto"
-              maxW="3xl"
-            >
-              <Text
-                fontSize="lg"
-                color="white"
-                fontFamily="monospace"
-                lineHeight="1.8"
-                textAlign="center"
-                textShadow="1px 1px 0px #000"
+            <HStack align="start" gap={8} flexWrap={{ base: "wrap", md: "nowrap" }} justify="center">
+              {/* カード画像 */}
+              <Box flex="0 0 auto" display="flex" justifyContent="center">
+                <Image
+                  src="/images/card2.png"
+                  alt="ゲームカード"
+                  width={{ base: "140px", md: "180px", lg: "220px" }}
+                  height={{ base: "140px", md: "180px", lg: "220px" }}
+                  style={{
+                    imageRendering: "pixelated",
+                    filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.8))"
+                  }}
+                />
+              </Box>
+              
+              {/* テキストボックス */}
+              <Box
+                p={6}
+                bg="richBlack.800"
+                border="borders.retrogame"
+                borderRadius={0}
+                flex={1}
+                minW={{ base: "100%", md: "0" }}
               >
-                きょうりょくがたの パーティーゲーム。
-                <br />
-                かくプレイヤーは 1〜100の かずを もち、
-                <br />
-                じぶんの かずを ちょくせつ いわずに
-                <br />
-                「おだい」に そった ひょうげんで つたえ、
-                <br />
-                ぜんいんで カードを ちいさい じゅんに
-                <br />
-                ならべることを めざします。
-              </Text>
-            </Box>
+                <Text
+                  fontSize={{ base: "md", md: "lg" }}
+                  color="white"
+                  fontFamily="monospace"
+                  lineHeight="1.8"
+                  textAlign={{ base: "center", md: "left" }}
+                  textShadow="1px 1px 0px #000"
+                >
+                  きょうりょくがたの パーティーゲーム。
+                  <br />
+                  かくプレイヤーは 1〜100の かずを もち、
+                  <br />
+                  じぶんの かずを ちょくせつ いわずに
+                  <br />
+                  「おだい」に そった ひょうげんで つたえ、
+                  <br />
+                  ぜんいんで カードを ちいさい じゅんに
+                  <br />
+                  ならべることを めざします。
+                </Text>
+              </Box>
+            </HStack>
           </VStack>
         </VStack>
 
