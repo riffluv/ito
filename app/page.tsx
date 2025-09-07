@@ -26,6 +26,33 @@ import { BookOpen, Plus, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+// ランダムキャラクター選択コンポーネント
+function KnightCharacter() {
+  const [knightImage, setKnightImage] = useState("/images/knight1.png");
+  const [knightAlt, setKnightAlt] = useState("ITO Knight");
+
+  useEffect(() => {
+    // ランダムに騎士を選択
+    const knights = [
+      { src: "/images/knight1.png", alt: "ITO Male Knight" },
+      { src: "/images/knightwomen1.png", alt: "ITO Female Knight" } // 透過版に更新
+    ];
+    const randomKnight = knights[Math.floor(Math.random() * knights.length)];
+    setKnightImage(randomKnight.src);
+    setKnightAlt(randomKnight.alt);
+  }, []);
+
+  return (
+    <Box
+      as="img" 
+      src={knightImage}
+      alt={knightAlt}
+      boxSize={{ base: "16", md: "20", lg: "24" }}
+      objectFit="contain"
+      filter="drop-shadow(0 4px 12px rgba(0,0,0,0.4))"
+    />
+  );
+}
 
 export default function MainMenu() {
   const router = useRouter();
@@ -114,14 +141,7 @@ export default function MainMenu() {
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
                 <Flex align="center" gap={6} mb={6} flexWrap="wrap" justify="center">
-                  <Box
-                    as="img" 
-                    src="/images/knight1.png"
-                    alt="ITO Knight"
-                    boxSize={{ base: "16", md: "20", lg: "24" }}
-                    objectFit="contain"
-                    filter="drop-shadow(0 4px 12px rgba(0,0,0,0.4))"
-                  />
+                  <KnightCharacter />
                   <Heading
                     fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
                     fontWeight={800}

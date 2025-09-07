@@ -19,28 +19,28 @@ interface DragonQuestPartyProps {
   roomStatus: string;
 }
 
-// プレイヤーの状態アイコンを取得
+// ドラクエ風プレイヤー状態表示
 const getPlayerStatus = (player: PlayerDoc & { id: string }, roomStatus: string) => {
   // clueフェーズでの連想ワード入力状況
   if (roomStatus === "clue") {
     if (player.clue1 && player.clue1.trim() !== "") {
-      return { icon: "✅", color: "#4ade80", status: "完了" };
+      return { icon: "◆", color: "#4ade80", status: "じゅんび完了" };
     } else {
-      return { icon: "💭", color: "#fbbf24", status: "考え中" };
+      return { icon: "◇", color: "#fbbf24", status: "かんがえ中" };
     }
   }
   
   // waitingフェーズでの準備状況
   if (roomStatus === "waiting") {
     if (player.ready) {
-      return { icon: "⚔️", color: "#4ade80", status: "準備完了" };
+      return { icon: "●", color: "#4ade80", status: "参戦準備OK" };
     } else {
-      return { icon: "⏳", color: "#94a3b8", status: "準備中" };
+      return { icon: "○", color: "#94a3b8", status: "待機中" };
     }
   }
 
   // その他のフェーズ
-  return { icon: "⚡", color: "#3b82f6", status: "参加中" };
+  return { icon: "■", color: "#3b82f6", status: "参加中" };
 };
 
 export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps) {
@@ -91,7 +91,7 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
-        {/* パーティーヘッダー */}
+        {/* ドラクエ風パーティーヘッダー */}
         <Text
           fontSize={{ base: "xs", md: "sm" }}
           fontWeight={600}
@@ -102,7 +102,7 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
           mb={2}
           textAlign="center"
         >
-          👥 PARTY ({players.length})
+          ▼ なかま ({players.length}人) ▼
         </Text>
 
         {/* メンバーリスト - DPIスケール対応の適切な固定幅 */}
@@ -115,14 +115,14 @@ export function DragonQuestParty({ players, roomStatus }: DragonQuestPartyProps)
               return (
                 <Box
                   key={player.id}
-                  bg="rgba(0,0,0,0.4)"
-                  border="1px solid rgba(255,255,255,0.3)"
+                  bg="rgba(16,20,32,0.8)" // より濃い独自色
+                  border="1px solid rgba(255,255,255,0.6)"
                   borderRadius={0}
                   px={2}
                   py={1}
                   w="100%"
                   css={{
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.2)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25)",
                   }}
                 >
                   {/* プレイヤー情報 */}
