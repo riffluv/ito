@@ -257,19 +257,27 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       numbers[pid] = (pSnap.data() as any)?.number;
     }
     
+    // サーバー側でも判定を行い、結果を保存
+    const judgmentResult = evaluateSorted(list, numbers);
+    
     const order = {
       list,
       numbers, // プレイヤー数字を保存
       decidedAt: serverTimestamp(),
       total: list.length,
-      // リアルタイム判定のため事前計算は行わない
+      failed: !judgmentResult.success,
+      failedAt: judgmentResult.failedAt,
     } as any;
 
     // アニメーションを挟むため status は一旦 "reveal" にする
     tx.update(roomRef, {
       status: "reveal",
       order,
-      // result は初期化しない - リアルタイム判定で設定
+      result: {
+        success: judgmentResult.success,
+        failedAt: judgmentResult.failedAt,
+        revealedAt: serverTimestamp(),
+      },
     });
   });
 }
