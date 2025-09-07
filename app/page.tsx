@@ -155,7 +155,7 @@ export default function MainMenu() {
                     letterSpacing="-0.02em"
                     color="fgEmphasized"
                   >
-                    ITO
+                    序の紋章III
                   </Heading>
                 </Flex>
                 <Text
