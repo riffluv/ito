@@ -253,7 +253,7 @@ export function CreateRoomModal({
                   ▼ ルームの なまえ
                 </Field.Label>
                 <Input
-                  placeholder="れい: ともだちと ITOゲーム"
+                  placeholder="れい: 友達とあそぶ"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   css={{
