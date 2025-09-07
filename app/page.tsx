@@ -163,14 +163,21 @@ export default function MainMenu() {
             <VStack gap={8} align="center" textAlign="center" maxW="4xl">
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
-                <Flex
-                  align="center"
-                  gap={6}
-                  mb={6}
-                  flexWrap="wrap"
-                  justify="center"
-                >
-                  <KnightCharacter />
+                <Box position="relative" textAlign="center" mb={6}>
+                  {/* 左側に騎士を配置 */}
+                  <Box 
+                    position={{ base: "static", md: "absolute" }}
+                    left={{ md: 0 }}
+                    top={{ md: "50%" }}
+                    transform={{ md: "translateY(-50%)" }}
+                    mb={{ base: 4, md: 0 }}
+                    display="flex"
+                    justifyContent={{ base: "center", md: "flex-start" }}
+                  >
+                    <KnightCharacter />
+                  </Box>
+                  
+                  {/* 中央にタイトル */}
                   <Heading
                     ref={titleRef}
                     fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
@@ -190,7 +197,7 @@ export default function MainMenu() {
                   >
                     序の紋章III
                   </Heading>
-                </Flex>
+                </Box>
                 <Text
                   fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}
                   color="fgMuted"
