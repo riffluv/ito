@@ -17,12 +17,19 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 /**
- * 改良されたChatPanel
- *
- * 改善点:
- * - 明確な高さ制御
- * - 予測可能なスクロール動作
- * - 適切なメッセージエリアとフォームの分離
+ * ドラクエ風チャットパネル (改良版)
+ * 
+ * 特徴:
+ * - ドラクエ風デザイン統一 (リッチブラック、白枠、角ばったデザイン)
+ * - CSS ellipsisによる名前の自動省略でコロン位置完全統一
+ * - monospaceフォント + textShadowでレトロゲーム感
+ * - 名前部分は100px固定幅、メッセージは500文字制限
+ * - ホバーでフルネーム表示、8文字でトランケート
+ * 
+ * 改善履歴:
+ * - 2025-09: 吹き出し削除 → シンプル一行形式
+ * - 2025-09: 手動省略 → CSS ellipsis (ベストプラクティス)
+ * - 2025-09: right-align → left-align (コロン位置統一)
  */
 export interface ChatPanelProps {
   roomId: string;
@@ -69,7 +76,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
 
   return (
     <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
-      {/* メッセージエリア: 1fr 行で安定スクロール */}
+      {/* メッセージエリア: 1fr行で安定スクロール、ドラクエ風一行チャット */}
       <Box overflow="hidden">
         <ScrollableArea
           label="チャットメッセージ"
@@ -81,14 +88,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
               const isSystem = m.sender === "system";
               const isMe = m.sender === (displayName || "匿名");
               return (
-                <Box
-                  key={m.id}
-                  display="flex"
-                  justifyContent={
-                    isSystem ? "center" : isMe ? "flex-end" : "flex-start"
-                  }
-                >
-                  <Box maxW="85%">
+                <Box key={m.id}>
                     {isSystem ? (
                       <HStack opacity={0.8} justify="center">
                         <Badge variant="subtle" colorPalette="gray" size="xs">
@@ -99,22 +99,38 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                         </Text>
                       </HStack>
                     ) : (
-                      <Stack gap={1} align={isMe ? "flex-end" : "flex-start"}>
-                        <Text fontSize="xs" color="fgMuted">
-                          {m.sender}
-                        </Text>
-                        <Box
-                          px={3}
-                          py={2}
-                          borderRadius="xl"
-                          bg={isMe ? "accentSubtle" : "panelSubBg"}
-                          boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+                      <HStack gap={3} align="flex-start" flexWrap="nowrap">
+                        <Text 
+                          fontSize="sm" 
+                          color={isMe ? "rgba(255,223,0,0.9)" : "rgba(135,206,250,0.9)"} // 自分=ゴールド、他人=ブルー
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          textShadow="1px 1px 0px #000" // ドラクエ風くっきり文字
+                          minW="100px"
+                          maxW="100px" // 固定幅でコロン位置統一
+                          textAlign="left"
+                          flexShrink={0}
+                          title={m.sender} // ホバーでフルネーム表示
+                          whiteSpace="nowrap"
+                          overflow="hidden"
+                          css={{
+                            textOverflow: "ellipsis" // CSS自動省略 (ベストプラクティス)
+                          }}
                         >
-                          <Text fontSize="sm">{m.text}</Text>
-                        </Box>
-                      </Stack>
+                          ▼ {m.sender}
+                        </Text>
+                        <Text 
+                          fontSize="sm" 
+                          color="white"
+                          fontFamily="monospace"
+                          textShadow="1px 1px 0px #000"
+                          lineHeight={1.4}
+                          flex={1}
+                        >
+                          : {m.text}
+                        </Text>
+                      </HStack>
                     )}
-                  </Box>
                 </Box>
               );
             })}
@@ -123,7 +139,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
         </ScrollableArea>
       </Box>
 
-      {/* 入力フォーム: 固定行 */}
+      {/* 入力フォーム: 固定行、ドラクエ風統一デザイン */}
       <Box p={4} bg="gray.800" borderTop="1px solid" borderColor="gray.700">
         <HStack gap={3}>
           <Input
@@ -137,14 +153,14 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             }}
             disabled={readOnly}
             size="md"
-            bg="rgba(8,9,15,0.85)"
+            bg="rgba(8,9,15,0.85)" // ドラクエ風リッチブラック
             color="white"
-            border="2px solid rgba(255,255,255,0.6)"
-            borderRadius={6}
-            boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)"
+            border="2px solid rgba(255,255,255,0.6)" // 統一された太い白枠
+            borderRadius={6} // 軽く角ばったドラクエ風
+            boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)" // 立体感
             _placeholder={{ color: "rgba(255,255,255,0.5)" }}
             _focus={{
-              borderColor: "#4a9eff",
+              borderColor: "#4a9eff", // ドラクエブルー
               boxShadow: "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
               bg: "rgba(8,9,15,0.9)",
             }}
@@ -160,18 +176,18 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             onClick={send}
             disabled={readOnly || !text.trim()}
             size="md"
-            bg="rgba(8,9,15,0.9)"
+            bg="rgba(8,9,15,0.9)" // ドラクエ風リッチブラック
             color="white"
-            border="2px solid rgba(255,255,255,0.9)"
-            borderRadius={0}
+            border="2px solid rgba(255,255,255,0.9)" // 統一された白枠
+            borderRadius={0} // 完全角ばったドラクエ風
             px={6}
             py={3}
             fontWeight="700"
-            fontFamily="monospace"
-            textShadow="1px 1px 0px #000"
-            boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            fontFamily="monospace" // ドラクエ風フォント統一
+            textShadow="1px 1px 0px #000" // くっきり文字
+            boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)" // 立体感
             _hover={{ 
-              bg: "white", 
+              bg: "white", // ドラクエ王道の白背景反転
               color: "rgba(8,9,15,0.9)",
               textShadow: "none"
             }}
