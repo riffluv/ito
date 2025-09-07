@@ -8,12 +8,12 @@
 import CentralCardBoard from "@/components/CentralCardBoard";
 import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
-import ChatPanelImproved from "@/components/ui/ChatPanelImproved";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
+import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { sendSystemMessage } from "@/lib/firebase/chat";
@@ -464,31 +464,6 @@ export default function RoomPage() {
     </Box>
   );
 
-  const rightPanelNode = (
-    <Box
-      h="100%"
-      display="flex"
-      flexDirection="column"
-      bg="surfaceRaised"
-      borderLeft="1px solid"
-      borderColor="borderSubtle"
-    >
-      <Box
-        px={6}
-        py={4}
-        borderBottom="1px solid"
-        borderColor="borderSubtle"
-        bg="surfaceBase"
-      >
-        <Box fontSize="1.125rem" fontWeight={600} color="fgDefault">
-          チャット
-        </Box>
-      </Box>
-      <Box flex={1} overflow="hidden">
-        <ChatPanelImproved roomId={roomId} />
-      </Box>
-    </Box>
-  );
 
   const handAreaNode = me ? (
     <MiniHandDock
@@ -518,7 +493,6 @@ export default function RoomPage() {
         header={headerNode}
         sidebar={sidebarNode}
         main={mainNode}
-        rightPanel={rightPanelNode}
         handArea={handAreaNode}
       />
 
@@ -529,6 +503,12 @@ export default function RoomPage() {
       <SimplePhaseDisplay
         roomStatus={room?.status || "waiting"}
         canStartSorting={canStartSorting}
+      />
+
+      {/* ドラクエ風パーティーメンバー表示 */}
+      <DragonQuestParty
+        players={players}
+        roomStatus={room?.status || "waiting"}
       />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}

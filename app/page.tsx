@@ -26,6 +26,7 @@ import { BookOpen, Plus, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+
 export default function MainMenu() {
   const router = useRouter();
   const { user, displayName, setDisplayName } = useAuth();
