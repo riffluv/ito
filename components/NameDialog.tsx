@@ -9,12 +9,14 @@ export function NameDialog({
   onCancel,
   onSubmit,
   submitting = false,
+  mode = "create", // "create" | "edit"
 }: {
   isOpen: boolean;
   defaultValue?: string;
   onCancel: () => void;
   onSubmit: (name: string) => void;
   submitting?: boolean;
+  mode?: "create" | "edit";
 }) {
   const [value, setValue] = React.useState(defaultValue);
   React.useEffect(() => setValue(defaultValue), [defaultValue]);
@@ -90,7 +92,7 @@ export function NameDialog({
                     textAlign: 'center',
                   }}
                 >
-                  プレイヤー名を入力
+                  {mode === "edit" ? "なまえを へんこう" : "プレイヤーの なまえ"}
                 </Dialog.Title>
                 <Text 
                   fontSize="sm" 
@@ -222,7 +224,7 @@ export function NameDialog({
                   }
                 }}
               >
-                {submitting ? "設定中..." : "決定"}
+                {submitting ? (mode === "edit" ? "へんこうちゅう..." : "せっていちゅう...") : (mode === "edit" ? "へんこう" : "きめる")}
               </button>
             </HStack>
           </Box>
