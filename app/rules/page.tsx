@@ -303,15 +303,19 @@ export default function RulesPage() {
                   border="1px solid rgba(255,255,255,0.1)"
                   bg="rgba(107,115,255,0.1)"
                 >
-                  <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
-                    <Text as="span" fontWeight="semibold">
-                      テーマ: ラスボスの風格を感じさせる攻撃手段
+                  <VStack align="start" gap={1}>
+                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
+                      <Text as="span" fontWeight="semibold">
+                        テーマ: ラスボスの風格を感じさせる攻撃手段
+                      </Text>
                     </Text>
-                    <br />
-                    カードが20の人: 「さすまた」「ヨーヨー」
-                    <br />
-                    カードが80の人: 「メテオ」「聖なる槍」
-                  </Text>
+                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
+                      カードが20の人: 「さすまた」「ヨーヨー」
+                    </Text>
+                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
+                      カードが80の人: 「メテオ」「聖なる槍」
+                    </Text>
+                  </VStack>
                 </Box>
               </Box>
 
