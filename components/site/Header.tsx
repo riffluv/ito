@@ -1,8 +1,6 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Container, Flex, HStack, Heading } from "@chakra-ui/react";
-import Link from "next/link";
+import { Box, Container, Flex, HStack, Heading, Image } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function Header() {
@@ -33,8 +31,7 @@ export default function Header() {
       <Container maxW="5xl" px={6}>
         <Flex align="center" justify="space-between" h="100%">
           <HStack gap="3">
-            <Box
-              as="img"
+            <Image
               src="/images/knight1.png"
               alt="ITO Knight"
               boxSize="8"

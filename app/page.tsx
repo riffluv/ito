@@ -18,6 +18,7 @@ import {
   GridItem,
   Heading,
   HStack,
+  Image,
   Text,
   useDisclosure,
   VStack,
@@ -35,7 +36,7 @@ function KnightCharacter() {
     // ランダムに騎士を選択
     const knights = [
       { src: "/images/knight1.png", alt: "ITO Male Knight" },
-      { src: "/images/knightwomen1.png", alt: "ITO Female Knight" } // 透過版に更新
+      { src: "/images/knightwomen1.png", alt: "ITO Female Knight" }, // 透過版に更新
     ];
     const randomKnight = knights[Math.floor(Math.random() * knights.length)];
     setKnightImage(randomKnight.src);
@@ -43,8 +44,7 @@ function KnightCharacter() {
   }, []);
 
   return (
-    <Box
-      as="img" 
+    <Image
       src={knightImage}
       alt={knightAlt}
       boxSize={{ base: "16", md: "20", lg: "24" }}
@@ -140,7 +140,13 @@ export default function MainMenu() {
             <VStack gap={8} align="center" textAlign="center" maxW="4xl">
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
-                <Flex align="center" gap={6} mb={6} flexWrap="wrap" justify="center">
+                <Flex
+                  align="center"
+                  gap={6}
+                  mb={6}
+                  flexWrap="wrap"
+                  justify="center"
+                >
                   <KnightCharacter />
                   <Heading
                     fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}

@@ -10,13 +10,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { ArrowLeft, BookOpen } from "lucide-react";
-import type { Metadata } from "next";
 import Link from "next/link";
-
-export const metadata: Metadata = {
-  title: "ITO ルール | Online ITO",
-  description: "協力型パーティゲーム ITO（イト）の簡潔なルール説明",
-};
 
 export default function RulesPage() {
   return (
@@ -214,7 +208,7 @@ export default function RulesPage() {
                 },
                 {
                   title: "一括モード",
-                  desc: "現在のデフォルト動作です。全員が連想ワード（ヒント）だけを出し合い、数字は最後まで伏せたままにします。全員分のカードが揃ったら、ドラッグ＆ドロップで並び順を共同編集し、ホストの判定で結果が公開されます。",
+                  desc: "現在のデフォルト動作です。全員が連想ワード（ヒント）だけを出し合います。全員分のカードが揃ったら、ドラッグ＆ドロップで並び順を共同編集し、ホストの判定で結果が公開されます。",
                 },
                 {
                   title: "共通ルール",
@@ -311,33 +305,17 @@ export default function RulesPage() {
                 >
                   <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
                     <Text as="span" fontWeight="semibold">
-                      テーマ: 好きな食べ物
+                      テーマ: ラスボスの風格を感じさせる攻撃手段
                     </Text>
                     <br />
-                    カードが20の人: 「おにぎり」「ポテトチップス」
+                    カードが20の人: 「さすまた」「ヨーヨー」
                     <br />
-                    カードが80の人: 「誕生日ケーキ」「高級レストランのコース」
+                    カードが80の人: 「メテオ」「聖なる槍」
                   </Text>
                 </Box>
               </Box>
 
-              <Box>
-                <Text fontWeight="semibold" color="white" mb={3}>
-                  早く始めるための簡易ルール
-                </Text>
-                <List.Root as="ul" gap="2">
-                  {[
-                    "プレイ人数が多いときは、カードのレンジ（たとえば1〜50）を狭めても良い。",
-                    "時間制限を設けてテンポを上げる（例: 表現30秒、出す順を決める60秒）。",
-                  ].map((rule, index) => (
-                    <List.Item key={index}>
-                      <Text color="gray.300" fontSize="sm">
-                        {rule}
-                      </Text>
-                    </List.Item>
-                  ))}
-                </List.Root>
-              </Box>
+              {/* 早く始めるための簡易ルール セクションは要望により削除しました */}
             </VStack>
           </Box>
         </VStack>
