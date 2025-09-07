@@ -55,7 +55,7 @@ export function applyPlay({
     lastNumber: myNum,
   };
   const violation =
-    !alreadyFailed && order.lastNumber !== null && myNum < order.lastNumber;
+    !alreadyFailed && order.lastNumber !== null && myNum <= order.lastNumber;
   if (violation) {
     next.failed = true;
     next.failedAt = next.list.length;
@@ -74,7 +74,7 @@ export function evaluateSorted(
     const id = list[i];
     const n = numbers[id];
     if (typeof n !== "number") return { success: false, failedAt: i + 1, last };
-    if (last !== null && n < last)
+    if (last !== null && n <= last)
       return { success: false, failedAt: i + 1, last: n };
     last = n;
   }
