@@ -33,7 +33,7 @@ export default function Header() {
           <HStack gap="3">
             <Image
               src="/images/knight1.png"
-              alt="ITO Knight"
+              alt="序の紋章III Knight"
               boxSize="8"
               objectFit="contain"
               filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"

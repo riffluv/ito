@@ -30,13 +30,13 @@ import { useEffect, useMemo, useState } from "react";
 // ランダムキャラクター選択コンポーネント
 function KnightCharacter() {
   const [knightImage, setKnightImage] = useState("/images/knight1.png");
-  const [knightAlt, setKnightAlt] = useState("ITO Knight");
+  const [knightAlt, setKnightAlt] = useState("序の紋章III Knight");
 
   useEffect(() => {
     // ランダムに騎士を選択
     const knights = [
-      { src: "/images/knight1.png", alt: "ITO Male Knight" },
-      { src: "/images/knightwomen1.png", alt: "ITO Female Knight" }, // 透過版に更新
+  { src: "/images/knight1.png", alt: "序の紋章III Male Knight" },
+  { src: "/images/knightwomen1.png", alt: "序の紋章III Female Knight" }, // 透過版に更新
     ];
     const randomKnight = knights[Math.floor(Math.random() * knights.length)];
     setKnightImage(randomKnight.src);

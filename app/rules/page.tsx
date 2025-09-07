@@ -64,7 +64,7 @@ export default function RulesPage() {
               textAlign="center"
               mb={4}
             >
-              ▼ ITO の きまり ▼
+              ▼ 序の紋章III の きまり ▼
             </Heading>
             <Box
               p={6}

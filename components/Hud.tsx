@@ -76,7 +76,7 @@ export function Hud({
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
         textShadow="0 2px 4px rgba(0,0,0,0.7)"
       >
-        ITO
+  序の紋章III
       </Box>
 
       {/* Room Info - Dragon Quest Style */}
