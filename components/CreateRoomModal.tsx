@@ -20,6 +20,7 @@ import {
   doc,
   serverTimestamp,
   setDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -65,6 +66,8 @@ export function CreateRoomModal({
         resolveMode: "sort-submit", // デフォルト: 一括提出方式
         defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
+      // ルームのデフォルトTTL（12時間）を付与して放置部屋を自動清掃
+      const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
@@ -73,7 +76,7 @@ export function CreateRoomModal({
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,
-        expiresAt: null,
+        expiresAt: Timestamp.fromDate(expires),
         topic: null,
         topicOptions: null,
         topicBox: null,

@@ -6,16 +6,14 @@ import DevBoard from "@/components/site/DevBoard";
 import { AppButton } from "@/components/ui/AppButton";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
-import { gsap } from "gsap";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
-import { useRooms } from "@/lib/hooks/useRooms";
+import { useOptimizedRooms } from "@/lib/hooks/useOptimizedRooms";
 import {
   Badge,
   Box,
   Container,
-  Flex,
   Grid,
   GridItem,
   Heading,
@@ -25,9 +23,10 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react";
-import { BookOpen, Plus, User, Users } from "lucide-react";
+import { gsap } from "gsap";
+import { Plus, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 // ランダムキャラクター選択コンポーネント
 function KnightCharacter() {
@@ -66,15 +65,17 @@ export default function MainMenu() {
   const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
     "create"
   );
-  
+
   // タイトルアニメーション用のref
   const titleRef = useRef<HTMLHeadingElement>(null);
 
+  // 2020年代以降のロビーベストプラクティスに合わせ、
+  // 常時 onSnapshot を避け、周期的な取得に最適化されたフックを使用
   const {
     rooms,
     loading: roomsLoading,
     error: roomsError,
-  } = useRooms(!!(firebaseEnabled && user));
+  } = useOptimizedRooms(!!(firebaseEnabled && user));
 
   useEffect(() => {
     let t: number | undefined;
@@ -88,18 +89,22 @@ export default function MainMenu() {
   // シンプルなタイトルアニメーション
   useEffect(() => {
     if (titleRef.current) {
-      gsap.fromTo(titleRef.current, {
-        opacity: 0,
-        y: 20,
-        scale: 0.95
-      }, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 1.2,
-        ease: "power2.out",
-        delay: 0.3
-      });
+      gsap.fromTo(
+        titleRef.current,
+        {
+          opacity: 0,
+          y: 20,
+          scale: 0.95,
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 1.2,
+          ease: "power2.out",
+          delay: 0.3,
+        }
+      );
     }
   }, []);
 
@@ -113,30 +118,33 @@ export default function MainMenu() {
   }, [roomsError?.message]);
 
   const roomIds = useMemo(() => (rooms || []).map((r: any) => r.id), [rooms]);
-  
-  // 🔧 Firebase読み取り最適化: ロビーカウントを簡略化
-  const [lobbyCounts, setLobbyCounts] = useState<Record<string, number>>({});
-  
-  useEffect(() => {
-    if (!firebaseEnabled || !user || roomIds.length === 0) {
-      setLobbyCounts({});
-      return;
-    }
-    
-    // 🎯 簡易的な参加者数推定（実際のカウントを停止）
-    const estimatedCounts: Record<string, number> = {};
-    roomIds.forEach((id: string) => {
-      // デフォルト値として1-3人の推定値を設定
-      estimatedCounts[id] = Math.floor(Math.random() * 3) + 1;
-    });
-    setLobbyCounts(estimatedCounts);
-  }, [roomIds.join(","), firebaseEnabled, user]);
+
+  // 正確な人数表示は RTDB presence を第一に、
+  // 未対応環境では Firestore の lastSeen をフォールバックで利用
+  const lobbyCounts = useLobbyCounts(
+    roomIds,
+    !!(firebaseEnabled && user && roomIds.length > 0)
+  );
 
   const filteredRooms = useMemo(() => {
     const now = Date.now();
-    const grace = 5 * 60 * 1000;
+    const thirtyMin = 30 * 60 * 1000;
     return (rooms || []).filter((r: any) => {
-      const active = lobbyCounts[r.id] ?? 0;
+      // 1) 期限切れを除外
+      const expires = (r as any).expiresAt;
+      const expMs =
+        typeof expires?.toMillis === "function" ? expires.toMillis() : 0;
+      if (expMs && expMs <= now) return false;
+
+      // 2) 待機中のみ（進行中の部屋はロビー一覧から除外）
+      const waiting = !r.status || r.status === "waiting";
+      if (!waiting) return false;
+
+      // 3) presence ベースで 1人以上がオンラインか、
+      //    直近30分以内に活動（作成/更新）があれば表示
+      const activeCount = lobbyCounts[r.id] ?? 0;
+      if (activeCount > 0) return true;
+
       const tsAny: any = (r as any).lastActiveAt || (r as any).createdAt;
       const ms = tsAny?.toMillis
         ? tsAny.toMillis()
@@ -145,9 +153,7 @@ export default function MainMenu() {
           : typeof tsAny === "number"
             ? tsAny
             : 0;
-      const recent = ms > 0 && Date.now() - ms <= 30 * 60 * 1000;
-      const waiting = !r.status || r.status === "waiting";
-      return waiting && (active > 0 || recent);
+      return ms > 0 && now - ms <= thirtyMin;
     });
   }, [rooms, lobbyCounts]);
 
@@ -182,7 +188,7 @@ export default function MainMenu() {
                 {/* 騎士とタイトルのメインビジュアル */}
                 <Box position="relative" textAlign="center" mb={6}>
                   {/* 左側に騎士を配置 */}
-                  <Box 
+                  <Box
                     position={{ base: "static", md: "absolute" }}
                     left={{ md: 0 }}
                     top={{ md: "50%" }}
@@ -193,7 +199,7 @@ export default function MainMenu() {
                   >
                     <KnightCharacter />
                   </Box>
-                  
+
                   {/* 中央にタイトル */}
                   <Heading
                     ref={titleRef}
@@ -209,7 +215,7 @@ export default function MainMenu() {
                     css={{
                       WebkitTextStroke: "1px rgba(255,255,255,0.2)",
                       textTransform: "none",
-                      filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))"
+                      filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
                     }}
                   >
                     序の紋章III
@@ -248,20 +254,16 @@ export default function MainMenu() {
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
-                  <RPGButton
-                    size="lg"
-                    visual="outline"
-                    href="/rules"
-                  >
+                  <RPGButton size="lg" visual="outline" href="/rules">
                     <Image
                       src="/images/card3.png"
                       alt="ルールブック"
                       width={20}
                       height={20}
-                      style={{ 
+                      style={{
                         marginRight: "8px",
                         imageRendering: "pixelated",
-                        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))"
+                        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
                       }}
                     />
                     ルールを見る
