@@ -260,7 +260,7 @@ export default function MainMenu() {
                       width={20}
                       height={20}
                       style={{
-                        marginRight: "8px",
+                        marginRight: "1px",
                         imageRendering: "pixelated",
                         filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
                       }}
