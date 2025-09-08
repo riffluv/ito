@@ -20,6 +20,54 @@ export function useOptimizedRooms(enabled: boolean) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // fetchActiveRooms を useEffect 外で定義して refresh で使えるように
+  const fetchActiveRooms = async () => {
+    if (!enabled || !db) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 🎯 アクティブなルームのみ取得
+      // - 待機中(waiting) かつ 期限切れでない
+      // - もしくは直近24時間にアクティブ
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
+
+      // Firestoreの複合クエリ制限を避けるため単純な条件で取得し、後でクライアント側で軽くフィルタ
+      const q = query(
+        roomsCol,
+        where("lastActiveAt", ">=", Timestamp.fromDate(yesterday)),
+        orderBy("lastActiveAt", "desc"),
+        limit(30)
+        // 取得上限を設けて、ロビー画面での読み取りを抑制
+        // 将来的には status=="waiting" を含む複合インデックスで更に絞り込み
+      );
+
+      const snapshot = await getDocs(q);
+      // `withConverter(roomConverter)` already includes `id` in `fromFirestore`.
+      // Avoid duplicate `id` property which causes a TypeScript error.
+      const activeRooms = snapshot.docs
+        .map((doc) => doc.data())
+        .filter((r: any) => {
+          const now = Date.now();
+          const exp = (r as any).expiresAt;
+          const expMs =
+            typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
+          if (expMs && expMs <= now) return false; // 期限切れ除外
+          return true;
+        });
+
+      setRooms(activeRooms);
+    } catch (err: any) {
+      console.error("Failed to fetch rooms:", err);
+      setError(err);
+      setRooms([]); // フォールバック
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!enabled || !db) {
       setRooms([]);
@@ -28,64 +76,16 @@ export function useOptimizedRooms(enabled: boolean) {
 
     let mounted = true;
 
-    const fetchActiveRooms = async () => {
+    const wrappedFetch = async () => {
       if (!mounted) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        // 🎯 アクティブなルームのみ取得
-        // - 待機中(waiting) かつ 期限切れでない
-        // - もしくは直近24時間にアクティブ
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
-
-        // Firestoreの複合クエリ制限を避けるため単純な条件で取得し、後でクライアント側で軽くフィルタ
-        const q = query(
-          roomsCol,
-          where("lastActiveAt", ">=", Timestamp.fromDate(yesterday)),
-          orderBy("lastActiveAt", "desc"),
-          limit(30)
-          // 取得上限を設けて、ロビー画面での読み取りを抑制
-          // 将来的には status=="waiting" を含む複合インデックスで更に絞り込み
-        );
-
-        const snapshot = await getDocs(q);
-        // `withConverter(roomConverter)` already includes `id` in `fromFirestore`.
-        // Avoid duplicate `id` property which causes a TypeScript error.
-        const activeRooms = snapshot.docs
-          .map((doc) => doc.data())
-          .filter((r: any) => {
-            const now = Date.now();
-            const exp = (r as any).expiresAt;
-            const expMs =
-              typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
-            if (expMs && expMs <= now) return false; // 期限切れ除外
-            return true;
-          });
-
-        if (mounted) {
-          setRooms(activeRooms);
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch rooms:", err);
-        if (mounted) {
-          setError(err);
-          setRooms([]); // フォールバック
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
+      await fetchActiveRooms();
     };
 
     // 初回取得
-    fetchActiveRooms();
+    wrappedFetch();
 
-    // 🔥 更新頻度を大幅削減: リアルタイム→5分間隔
-    const interval = setInterval(fetchActiveRooms, 5 * 60 * 1000); // 5分
+    // 🔥 更新頻度: Firebase制限を考慮しつつユーザビリティ重視で30秒間隔
+    const interval = setInterval(wrappedFetch, 30 * 1000); // 30秒
 
     return () => {
       mounted = false;
@@ -93,5 +93,9 @@ export function useOptimizedRooms(enabled: boolean) {
     };
   }, [enabled]);
 
-  return { rooms, loading, error };
+  const refresh = () => {
+    fetchActiveRooms();
+  };
+
+  return { rooms, loading, error, refresh };
 }
