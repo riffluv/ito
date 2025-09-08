@@ -1,16 +1,22 @@
 "use client";
 
+import { AppButton } from "@/components/ui/AppButton";
+import { AppIconButton } from "@/components/ui/AppIconButton";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Flex, Text, VisuallyHidden } from "@chakra-ui/react";
-import { AppIconButton } from "@/components/ui/AppIconButton";
-import { AppButton } from "@/components/ui/AppButton";
 import { gsap } from "gsap";
-import { ChevronUp, ChevronDown, MessageCircle, Users, Menu } from "lucide-react";
-import { ReactNode, useState, useRef, useEffect } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Menu,
+  MessageCircle,
+  Users,
+} from "lucide-react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 /**
  * MobileBottomSheet: モバイル用ボトムシート実装
- * 
+ *
  * 機能:
  * - スワイプ操作でチャット/参加者リスト切り替え
  * - ハンバーガーメニューでサイドバーアクセス
@@ -42,7 +48,7 @@ export function MobileBottomSheet({
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   // ドラッグ状態
   const dragStartY = useRef(0);
   const currentY = useRef(0);
@@ -65,7 +71,11 @@ export function MobileBottomSheet({
       }
 
       // Tab + Shift + Enterでシート展開
-      if (event.key === "Enter" && event.shiftKey && sheetState === "collapsed") {
+      if (
+        event.key === "Enter" &&
+        event.shiftKey &&
+        sheetState === "collapsed"
+      ) {
         event.preventDefault();
         setSheetState("partial");
         // 最初のボタンにフォーカス
@@ -107,23 +117,31 @@ export function MobileBottomSheet({
   // シート高さ計算
   const getSheetHeight = () => {
     switch (sheetState) {
-      case "collapsed": return 60;
-      case "partial": return window.innerHeight * 0.4; // 40dvh相当
-      case "full": return window.innerHeight * 0.8;  // 80dvh相当
-      default: return 60;
+      case "collapsed":
+        return 60;
+      case "partial":
+        return window.innerHeight * 0.4; // 40dvh相当
+      case "full":
+        return window.innerHeight * 0.8; // 80dvh相当
+      default:
+        return 60;
     }
   };
 
   // GSAPアニメーション - シート位置更新
   const animateSheet = (targetState: SheetState) => {
     if (!sheetRef.current) return;
-    
+
     const height = (() => {
       switch (targetState) {
-        case "collapsed": return 60;
-        case "partial": return window.innerHeight * 0.4;
-        case "full": return window.innerHeight * 0.8;
-        default: return 60;
+        case "collapsed":
+          return 60;
+        case "partial":
+          return window.innerHeight * 0.4;
+        case "full":
+          return window.innerHeight * 0.8;
+        default:
+          return 60;
       }
     })();
 
@@ -137,19 +155,19 @@ export function MobileBottomSheet({
   // オーバーレイのフェードイン/アウト
   const animateOverlay = (show: boolean) => {
     if (!overlayRef.current) return;
-    
+
     if (show) {
       gsap.set(overlayRef.current, { display: "block" });
       gsap.to(overlayRef.current, { opacity: 0.5, duration: 0.3 });
     } else {
-      gsap.to(overlayRef.current, { 
-        opacity: 0, 
+      gsap.to(overlayRef.current, {
+        opacity: 0,
         duration: 0.3,
         onComplete: () => {
           if (overlayRef.current) {
             gsap.set(overlayRef.current, { display: "none" });
           }
-        }
+        },
       });
     }
   };
@@ -157,8 +175,9 @@ export function MobileBottomSheet({
   // コンテンツフェード
   const animateContent = () => {
     if (!contentRef.current) return;
-    
-    gsap.fromTo(contentRef.current, 
+
+    gsap.fromTo(
+      contentRef.current,
       { opacity: 0, y: 20 },
       { opacity: 1, y: 0, duration: 0.2 }
     );
@@ -167,34 +186,37 @@ export function MobileBottomSheet({
   // ドラッグハンドラー - ネイティブPointerEvent使用
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!sheetRef.current) return;
-    
+
     setIsDragging(true);
     dragStartY.current = e.clientY;
     currentY.current = e.clientY;
-    
+
     sheetRef.current.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging || !sheetRef.current) return;
-    
+
     const deltaY = e.clientY - dragStartY.current;
     const currentHeight = getSheetHeight();
     const newY = Math.max(
       window.innerHeight - window.innerHeight * 0.8,
-      Math.min(window.innerHeight - 60, window.innerHeight - currentHeight + deltaY)
+      Math.min(
+        window.innerHeight - 60,
+        window.innerHeight - currentHeight + deltaY
+      )
     );
-    
+
     gsap.set(sheetRef.current, { y: newY });
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!isDragging) return;
-    
+
     setIsDragging(false);
     const deltaY = e.clientY - dragStartY.current;
     const velocity = deltaY / 100; // 簡易速度計算
-    
+
     // 垂直方向のジェスチャー判定
     if (velocity < -0.5 || deltaY < -50) {
       // 上方向
@@ -214,7 +236,7 @@ export function MobileBottomSheet({
       // 元の位置に戻す
       animateSheet(sheetState);
     }
-    
+
     if (sheetRef.current) {
       sheetRef.current.releasePointerCapture(e.pointerId);
     }
@@ -281,7 +303,7 @@ export function MobileBottomSheet({
         ref={overlayRef}
         position="absolute"
         inset="0"
-        height="100vh"
+        height="100dvh"
         backgroundColor="black"
         pointerEvents="auto"
         display="none"
@@ -302,7 +324,7 @@ export function MobileBottomSheet({
           boxShadow: UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT,
           pointerEvents: "auto",
           minHeight: "60px",
-          maxHeight: "80vh",
+          maxHeight: "80dvh",
           position: "absolute",
           width: "100%",
         }}
@@ -336,7 +358,9 @@ export function MobileBottomSheet({
           align="center"
           justify="space-between"
           px={4}
-          borderBottom={sheetState !== "collapsed" ? `1px solid ${borderColorVar}` : "none"}
+          borderBottom={
+            sheetState !== "collapsed" ? `1px solid ${borderColorVar}` : "none"
+          }
           cursor={isDragging ? "grabbing" : "grab"}
         >
           {/* ドラッグインジケーター */}
@@ -394,8 +418,8 @@ export function MobileBottomSheet({
             size="sm"
             variant="ghost"
             aria-label={
-              sheetState === "collapsed" 
-                ? "ボトムシートを展開" 
+              sheetState === "collapsed"
+                ? "ボトムシートを展開"
                 : "ボトムシートを縮小"
             }
             onClick={() => {
@@ -423,11 +447,7 @@ export function MobileBottomSheet({
               overflow: "hidden",
             }}
           >
-            <Box 
-              h="100%" 
-              overflow="auto"
-              bg="inherit"
-            >
+            <Box h="100%" overflow="auto" bg="inherit">
               {renderContent()}
             </Box>
           </Box>

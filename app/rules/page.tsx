@@ -16,7 +16,7 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 export default function RulesPage() {
   return (
     <Box
-      minH="100vh"
+      minH="100dvh"
       bg="richBlack.900" // ドラクエ風リッチブラック背景
       position="relative"
     >
@@ -66,7 +66,12 @@ export default function RulesPage() {
             >
               ▼ 序の紋章III の きまり ▼
             </Heading>
-            <HStack align="start" gap={8} flexWrap={{ base: "wrap", md: "nowrap" }} justify="center">
+            <HStack
+              align="start"
+              gap={8}
+              flexWrap={{ base: "wrap", md: "nowrap" }}
+              justify="center"
+            >
               {/* カード画像 */}
               <Box flex="0 0 auto" display="flex" justifyContent="center">
                 <Image
@@ -76,11 +81,11 @@ export default function RulesPage() {
                   height={{ base: "140px", md: "180px", lg: "220px" }}
                   style={{
                     imageRendering: "pixelated",
-                    filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.8))"
+                    filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.8))",
                   }}
                 />
               </Box>
-              
+
               {/* テキストボックス */}
               <Box
                 p={6}
