@@ -3,7 +3,7 @@ import { defineRecipe } from "@chakra-ui/react";
 export const buttonRecipe = defineRecipe({
   className: "app-btn",
   base: {
-    // 🎯 CHAKRA OFFICIAL QUALITY TYPOGRAPHY
+    // タイポグラフィ設定
     fontWeight: "600",
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",

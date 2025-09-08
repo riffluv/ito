@@ -1,6 +1,5 @@
-// Centralized pure functions for card presentation & animation state.
-// This allows UI components to stay lean and declarative.
-// Sequential mode has been removed - only sort-submit mode is supported.
+// カード表示とアニメーション状態の管理
+// sort-submitモードのみサポート
 import type { PlayerDoc } from "@/lib/types";
 
 export type ResolveMode = "sort-submit" | string | undefined;
@@ -115,8 +114,8 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     
     if (p.roomStatus === "finished") {
       // ゲーム終了時: サーバー確定結果を使用
-      isFail = revealed && active && p.failed;
-      isSuccess = revealed && active && !p.failed;
+  isFail = revealed && active && Boolean(p.failed);
+  isSuccess = revealed && active && !Boolean(p.failed);
     } else if (p.roomStatus === "reveal" && revealed && active && p.revealIndex >= 2) {
       // めくりアニメーション中: リアルタイム判定または事前判定を使用
       if (hasRealtimeResult) {

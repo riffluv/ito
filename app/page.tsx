@@ -486,6 +486,9 @@ export default function MainMenu() {
                           ・Firebase最適化
                         </Text>
                         <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・ロビーリフレッシュ機能
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
                           ・パフォーマンス向上
                         </Text>
                       </VStack>
