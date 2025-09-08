@@ -136,7 +136,7 @@ export function GameCard({
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
-          // flip variantでも統一サイズを適用（全DPI環境統一）
+          // 基本サイズ
           width: "100px",
           height: "140px",
           minWidth: "100px",
@@ -146,7 +146,20 @@ export function GameCard({
             height: "168px",
             minWidth: "120px",
             minHeight: "168px"
-          }
+          },
+          // DPI 150%対応：カードサイズ統一
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            width: "88px !important",
+            height: "123px !important",
+            minWidth: "88px !important",
+            minHeight: "123px !important",
+          },
+          "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
+            width: "105px !important",
+            height: "147px !important",
+            minWidth: "105px !important",
+            minHeight: "147px !important",
+          },
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
@@ -344,7 +357,7 @@ export function GameCard({
       minW={UNIFIED_LAYOUT.CARD.WIDTH}
       minH={UNIFIED_LAYOUT.CARD.HEIGHT}
       css={{
-        // すべてのDPI環境で統一されたトランプ型サイズを適用
+        // 基本サイズ
         width: "100px",
         height: "140px",
         minWidth: "100px",
@@ -354,7 +367,20 @@ export function GameCard({
           height: "168px",
           minWidth: "120px",
           minHeight: "168px"
-        }
+        },
+        // DPI 150%対応：カードサイズ統一
+        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+          width: "88px !important",
+          height: "123px !important",
+          minWidth: "88px !important",
+          minHeight: "123px !important",
+        },
+        "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
+          width: "105px !important",
+          height: "147px !important",
+          minWidth: "105px !important",
+          minHeight: "147px !important",
+        },
       }}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"

@@ -130,7 +130,7 @@ export function GameLayout({
               [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
                 top: headerDPI125,
               },
-              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
                 top: headerDPI150,
               },
             }}
@@ -144,6 +144,13 @@ export function GameLayout({
               display="flex"
               flexDirection="column"
               gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
+              css={{
+                // DPI 150%対応：更なるコンパクト化
+                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+                  padding: "0.4rem 1.2rem !important", // パディング縮小
+                  gap: "0.6rem !important", // 要素間を更に詰める
+                },
+              }}
               zIndex={10}
               bg="transparent"
             >
@@ -283,8 +290,9 @@ export function GameLayout({
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               height: UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
             },
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-              height: UNIFIED_LAYOUT.DPI_150.HAND_AREA_HEIGHT,
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+              height: "clamp(140px, 12dvh, 180px) !important", // 更にコンパクト
+              padding: "0.6rem 0.8rem !important", // パディング縮小
             },
           }}
         >

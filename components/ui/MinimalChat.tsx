@@ -6,6 +6,7 @@ import {
   CHAT_PANEL_BOTTOM_DESKTOP,
   CHAT_PANEL_BOTTOM_MOBILE,
 } from "@/lib/ui/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, IconButton } from "@chakra-ui/react";
 import React from "react";
 
@@ -55,6 +56,17 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           }}
           width={{ base: "min(92vw, 360px)", md: "420px" }}
           height={{ base: "50vh", md: "480px" }}
+          css={{
+            // DPI 150%対応：チャットパネルのサイズ調整
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+              width: "360px !important", // 少し小さく
+              height: "350px !important", // 高さを更に縮小
+            },
+            "@media (min-resolution: 1.5dppx) and (max-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (max-width: 768px)": {
+              width: "min(88vw, 320px) !important",
+              height: "40vh !important",
+            },
+          }}
           zIndex={21}
           borderRadius="0" // ルーム作成と同じ角ばり
           overflow="hidden"

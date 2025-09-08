@@ -33,14 +33,22 @@ export const UNIFIED_LAYOUT = {
     },
   },
 
-  // 150% DPI特別対応（小型ノートPCでの高さ確保を優先）
+  // 150% DPI特別対応（カード重なり解消＋縦方向最適化）
   DPI_150: {
-    HEADER_HEIGHT: "clamp(56px, 5.5dvh, 88px)",
-    HAND_AREA_HEIGHT: "clamp(150px, 15dvh, 190px)",
-    // 150%DPIでも美しいトランプ型を維持
+    HEADER_HEIGHT: "clamp(48px, 4.5dvh, 72px)", // さらに圧縮
+    HAND_AREA_HEIGHT: "clamp(160px, 14dvh, 200px)", // 少し余裕を持たせる
+    // 150%DPIでカード間隔問題解消のための調整
     CARD: {
-      WIDTH: { base: "100px", md: "120px" },
-      HEIGHT: { base: "140px", md: "168px" },
+      WIDTH: { base: "92px", md: "110px" }, // 少し縮小
+      HEIGHT: { base: "128px", md: "154px" }, // 比例縮小
+    },
+    // 150%DPI専用スペーシング（重なり防止）
+    SPACING: {
+      CARD_GAP: "16px", // 基本の12pxより広く
+      COMPONENT_PADDING: "12px", // コンパクト化
+      SECTION_GAP: "0px",
+      INNER_SPACING: "20px",
+      FORM_GAP: "6px",
     },
   },
 
@@ -132,10 +140,13 @@ export const UNIFIED_LAYOUT = {
     BOARD_AREA: "transparent", // カードボード（背景なし）
   },
 
-  // DPIスケール検出
+  // DPIスケール検出（統一化）
   MEDIA_QUERIES: {
-    DPI_125: "(resolution: 120dpi), (resolution: 1.25dppx)",
-    DPI_150: "(resolution: 144dpi), (resolution: 1.5dppx)",
+    DPI_125: "(min-resolution: 120dpi) and (max-resolution: 143dpi), (min-resolution: 1.25dppx) and (max-resolution: 1.49dppx)",
+    DPI_150: "(min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)",
+    // 旧式（後方互換性用）
+    WINDOWS_125: "screen and (-webkit-device-pixel-ratio: 1.25)",
+    WINDOWS_150: "screen and (-webkit-device-pixel-ratio: 1.5)",
   },
 
   // レスポンシブブレークポイント統一
