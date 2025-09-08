@@ -5,27 +5,16 @@ import NextLink from "next/link";
 export default function LobbyRightRail() {
   return (
     <Box as="aside" position="sticky" top="80px">
-      {/* 🎯 PREMIUM HELP CARD */}
+      {/* はじめての方へ */}
       <Box
         css={{
-          background: "rgba(25,27,33,0.6)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "16px",
-          padding: "20px",
-          backdropFilter: "blur(16px)",
+          background: "rgba(8,9,15,0.9)",
+          border: "3px solid rgba(255,255,255,0.9)",
+          borderRadius: 0,
+          padding: "16px",
           boxShadow:
-            "0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           position: "relative",
-
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            borderRadius: "16px",
-            background:
-              "linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(16,185,129,0.04) 100%)",
-            pointerEvents: "none",
-          },
         }}
       >
         <Stack gap={4} position="relative">
@@ -33,34 +22,37 @@ export default function LobbyRightRail() {
             <Box
               w={8}
               h={8}
-              bg="linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
-              borderRadius="10px"
+              bg="rgba(255,255,255,0.1)"
+              borderRadius={0}
+              border="2px solid rgba(255,255,255,0.3)"
               display="flex"
               alignItems="center"
               justifyContent="center"
-              boxShadow="0 3px 10px rgba(34,197,94,0.3)"
-            >
-              <Box w="40%" h="40%" bg="white" borderRadius="4px" />
-            </Box>
-            <Text
               css={{
-                fontWeight: 700,
-                fontSize: "1rem",
-                color: "rgba(255,255,255,0.95)",
-                letterSpacing: "-0.02em",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
               }}
             >
-              はじめての方へ
+              <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
+                ?
+              </Text>
+            </Box>
+            <Text
+              fontWeight={600}
+              fontSize="sm"
+              color="white"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              letterSpacing="0.5px"
+            >
+              ▼ はじめての方へ ▼
             </Text>
           </HStack>
 
           <Text
-            css={{
-              color: "rgba(255,255,255,0.8)",
-              fontSize: "0.875rem",
-              lineHeight: 1.6,
-              fontWeight: 400,
-            }}
+            color="rgba(255,255,255,0.8)"
+            fontSize="xs"
+            lineHeight={1.6}
+            fontFamily="monospace"
           >
             1. 部屋を作成または参加します
             <br />
@@ -72,16 +64,15 @@ export default function LobbyRightRail() {
           <Link
             as={NextLink}
             href="/rules"
-            css={{
-              color: "#8B92FF",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              textDecoration: "none",
-              transition: "color 0.2s ease",
-              "&:hover": {
-                color: "#A5ABFF",
-                textDecoration: "underline",
-              },
+            color="white"
+            fontSize="xs"
+            fontWeight={600}
+            fontFamily="monospace"
+            textDecoration="none"
+            textShadow="1px 1px 0px #000"
+            _hover={{
+              color: "rgba(255,255,255,0.8)",
+              textDecoration: "underline",
             }}
           >
             ルールを詳しく見る →
@@ -89,28 +80,17 @@ export default function LobbyRightRail() {
         </Stack>
       </Box>
 
-      {/* 🎯 PREMIUM UPDATE CARD */}
+      {/* アップデート情報 */}
       <Box
-        mt={5}
+        mt={4}
         css={{
-          background: "rgba(25,27,33,0.6)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "16px",
-          padding: "20px",
-          backdropFilter: "blur(16px)",
+          background: "rgba(8,9,15,0.9)",
+          border: "3px solid rgba(255,255,255,0.9)",
+          borderRadius: 0,
+          padding: "16px",
           boxShadow:
-            "0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           position: "relative",
-
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            borderRadius: "16px",
-            background:
-              "linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.04) 100%)",
-            pointerEvents: "none",
-          },
         }}
       >
         <Stack gap={4} position="relative">
@@ -118,53 +98,59 @@ export default function LobbyRightRail() {
             <Box
               w={8}
               h={8}
-              bg="linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)"
-              borderRadius="10px"
+              bg="rgba(255,255,255,0.1)"
+              borderRadius={0}
+              border="2px solid rgba(255,255,255,0.3)"
               display="flex"
               alignItems="center"
               justifyContent="center"
-              boxShadow="0 3px 10px rgba(99,102,241,0.3)"
-            >
-              <Box w="40%" h="40%" bg="white" borderRadius="4px" />
-            </Box>
-            <Text
               css={{
-                fontWeight: 700,
-                fontSize: "1rem",
-                color: "rgba(255,255,255,0.95)",
-                letterSpacing: "-0.02em",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
               }}
             >
-              アップデート情報
+              <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
+                !
+              </Text>
+            </Box>
+            <Text
+              fontWeight={600}
+              fontSize="sm"
+              color="white"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              letterSpacing="0.5px"
+            >
+              ▼ アップデート情報 ▼
             </Text>
           </HStack>
 
           <Text
-            css={{
-              color: "rgba(255,255,255,0.8)",
-              fontSize: "0.875rem",
-              lineHeight: 1.6,
-              fontWeight: 400,
-            }}
+            color="rgba(255,255,255,0.8)"
+            fontSize="xs"
+            lineHeight={1.6}
+            fontFamily="monospace"
           >
-            UIを一流デザイナーレベルに完全刷新。
+            AIっぽさを除去してドラクエ風に統一。
             <br />
-            Chakra UI公式サイト品質のプレミアムデザインを実現しました。
+            一流ゲームUI/UXデザイナー品質を実現しました。
           </Text>
 
           <Box
+            p={2}
+            bg="rgba(255,255,255,0.1)"
+            border="2px solid rgba(255,255,255,0.3)"
+            borderRadius={0}
+            fontSize="xs"
+            color="white"
+            fontWeight={600}
+            textAlign="center"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
             css={{
-              padding: "8px 12px",
-              background: "rgba(99,102,241,0.15)",
-              border: "1px solid rgba(99,102,241,0.25)",
-              borderRadius: "8px",
-              fontSize: "0.75rem",
-              color: "#C7CBFF",
-              fontWeight: 500,
-              textAlign: "center",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
             }}
           >
-            v2.0 - Premium Experience ✨
+            v2.0 - ドラクエ風統一完了
           </Box>
         </Stack>
       </Box>

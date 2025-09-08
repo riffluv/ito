@@ -75,7 +75,7 @@ export default function RulesPage() {
               {/* カード画像 */}
               <Box flex="0 0 auto" display="flex" justifyContent="center">
                 <Image
-                  src="/images/card2.png"
+                  src="/images/card3.png"
                   alt="ゲームカード"
                   width={{ base: "140px", md: "180px", lg: "220px" }}
                   height={{ base: "140px", md: "180px", lg: "220px" }}
