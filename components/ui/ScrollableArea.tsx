@@ -31,6 +31,7 @@ export function ScrollableArea({
   return (
     <Box
       h="100%"
+      minH={0}
       overflowY="auto"
       overflowX="hidden"
       aria-label={label}
