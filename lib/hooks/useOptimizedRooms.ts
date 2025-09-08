@@ -3,6 +3,7 @@ import { roomConverter } from "@/lib/firebase/converters";
 import {
   collection,
   getDocs,
+  limit,
   orderBy,
   query,
   Timestamp,
@@ -44,7 +45,10 @@ export function useOptimizedRooms(enabled: boolean) {
         const q = query(
           roomsCol,
           where("lastActiveAt", ">=", Timestamp.fromDate(yesterday)),
-          orderBy("lastActiveAt", "desc")
+          orderBy("lastActiveAt", "desc"),
+          limit(30)
+          // 取得上限を設けて、ロビー画面での読み取りを抑制
+          // 将来的には status=="waiting" を含む複合インデックスで更に絞り込み
         );
 
         const snapshot = await getDocs(q);
