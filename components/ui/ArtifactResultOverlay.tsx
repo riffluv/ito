@@ -66,9 +66,9 @@ export default function ArtifactResultOverlay({
             animation: "titleIn 600ms ease-out 200ms forwards",
           }}
         >
-          <Box>{success ? "✨" : "💥"}</Box>
+          <Text fontFamily="monospace" color="white">◆</Text>
           <Box>{success ? "成功" : "失敗"}</Box>
-          <Box>{success ? "✨" : "💥"}</Box>
+          <Text fontFamily="monospace" color="white">◆</Text>
         </Box>
         <Text
           mt={6}

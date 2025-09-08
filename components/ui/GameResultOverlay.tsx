@@ -204,7 +204,7 @@ export function GameResultOverlay({
           border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
           borderRadius={0} // 角ばったデザイン
         >
-          💥 しっぱい
+          ▲ しっぱい
         </Box>
       );
     }
@@ -227,7 +227,7 @@ export function GameResultOverlay({
         border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
         borderRadius={0} // 角ばったデザイン
       >
-        ✨ クリア!
+        ◆ クリア!
       </Box>
     );
   }
@@ -261,8 +261,8 @@ export function GameResultOverlay({
           backdropFilter: "blur(12px) saturate(1.2)", // メインメニューと同じ
         }}
       >
-        <Box ref={textRef}>
-          {failed ? "💥 しっぱい!" : "✨ クリア! ✨"} {/* ドラクエ風日本語 */}
+        <Box ref={textRef} textAlign="center">
+          {failed ? "▲ しっぱい!" : "◆ クリア! ◆"} {/* ドラクエ風日本語 */}
           <Text
             fontSize={{ base: "md", md: "lg" }}
             mt={2}
