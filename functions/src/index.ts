@@ -16,20 +16,23 @@ export const cleanupExpiredRooms = functions.pubsub
     const snap = await q.get();
     if (snap.empty) return null;
 
-    const batch = db.batch();
-    const deletes: Promise<any>[] = [];
-
+    // players/chat を削除した上で room を削除
     for (const docSnap of snap.docs) {
       const roomRef = docSnap.ref;
-      // delete subcollections players/chat safely
       const playersSnap = await roomRef.collection("players").listDocuments();
-      for (const p of playersSnap) batch.delete(p);
+      if (playersSnap.length) {
+        const b = db.batch();
+        for (const p of playersSnap) b.delete(p);
+        await b.commit();
+      }
       const chatSnap = await roomRef.collection("chat").listDocuments();
-      for (const c of chatSnap) batch.delete(c);
-      batch.delete(roomRef);
+      if (chatSnap.length) {
+        const b = db.batch();
+        for (const c of chatSnap) b.delete(c);
+        await b.commit();
+      }
+      await roomRef.delete();
     }
-
-    await batch.commit();
     return null;
   });
 
@@ -45,7 +48,10 @@ export const pruneOldChat = functions.pubsub
     );
     for (const room of roomsSnap.docs) {
       const chatCol = room.ref.collection("chat");
-      const q = chatCol.where("createdAt", "<", cutoff).orderBy("createdAt", "asc").limit(500);
+      const q = chatCol
+        .where("createdAt", "<", cutoff)
+        .orderBy("createdAt", "asc")
+        .limit(500);
       const snap = await q.get();
       if (snap.empty) continue;
       const batch = db.batch();
@@ -59,25 +65,26 @@ export const pruneOldChat = functions.pubsub
 export const purgeChatOnRoundStart = functions.firestore
   .document("rooms/{roomId}")
   .onUpdate(async (change, ctx) => {
-    const before = change.before.data() as any
-    const after = change.after.data() as any
-    if (!before || !after) return null
-    const beforeRound = typeof before.round === "number" ? before.round : 0
-    const afterRound = typeof after.round === "number" ? after.round : 0
-    const statusChangedToClue = after.status === "clue" && before.status !== "clue"
-    const roundIncreased = afterRound > beforeRound
-    if (!(statusChangedToClue || roundIncreased)) return null
+    const before = change.before.data() as any;
+    const after = change.after.data() as any;
+    if (!before || !after) return null;
+    const beforeRound = typeof before.round === "number" ? before.round : 0;
+    const afterRound = typeof after.round === "number" ? after.round : 0;
+    const statusChangedToClue =
+      after.status === "clue" && before.status !== "clue";
+    const roundIncreased = afterRound > beforeRound;
+    if (!(statusChangedToClue || roundIncreased)) return null;
     try {
-      const dbi = admin.firestore()
-      const roomRef = dbi.collection("rooms").doc(ctx.params.roomId)
-      const chatRefs = await roomRef.collection("chat").listDocuments()
-      if (chatRefs.length === 0) return null
-      const batch = dbi.batch()
-      for (const d of chatRefs) batch.delete(d)
-      await batch.commit()
+      const dbi = admin.firestore();
+      const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
+      const chatRefs = await roomRef.collection("chat").listDocuments();
+      if (chatRefs.length === 0) return null;
+      const batch = dbi.batch();
+      for (const d of chatRefs) batch.delete(d);
+      await batch.commit();
     } catch {}
-    return null
-  })
+    return null;
+  });
 
 // players ドキュメント削除時: lastActiveAt を更新し、最後の1人が抜けた場合はルームを初期化＋クローズ
 export const onPlayerDeleted = functions.firestore
@@ -87,7 +94,9 @@ export const onPlayerDeleted = functions.firestore
     const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
     // lastActiveAt を更新
     try {
-      await roomRef.update({ lastActiveAt: admin.firestore.FieldValue.serverTimestamp() });
+      await roomRef.update({
+        lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     } catch {}
     try {
       const players = await roomRef.collection("players").limit(1).get();
@@ -120,4 +129,26 @@ export const onPlayerDeleted = functions.firestore
       }
     } catch {}
     return null;
-  })
+  });
+
+// 定期実行: オーファン（無人）ルームの削除（最終活動が24h以上前かつplayers=0）
+export const purgeOrphanRooms = functions.pubsub
+  .schedule("every 60 minutes")
+  .onRun(async () => {
+    const dbi = admin.firestore();
+    const cutoff = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - 24 * 60 * 60 * 1000)
+    );
+    const q = dbi
+      .collection("rooms")
+      .where("lastActiveAt", "<", cutoff)
+      .limit(50);
+    const snap = await q.get();
+    for (const docSnap of snap.docs) {
+      const roomRef = docSnap.ref;
+      const players = await roomRef.collection("players").limit(1).get();
+      if (!players.empty) continue; // 誰かいるなら残す
+      await roomRef.delete();
+    }
+    return null;
+  });
