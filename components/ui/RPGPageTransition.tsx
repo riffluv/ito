@@ -107,7 +107,7 @@ export function RPGPageTransition({ children }: RPGPageTransitionProps) {
         left="0"
         right="0"
         bottom="0"
-        zIndex={9999}
+        zIndex="max"
         display="none"
         pointerEvents="none"
       />

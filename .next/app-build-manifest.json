@@ -13,11 +13,24 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/rules/page": [
+    "/rooms/[roomId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/ui.js",
-      "static/chunks/app/rules/page.js"
+      "static/css/app/rooms/[roomId]/page.css",
+      "static/chunks/app/rooms/[roomId]/page.js"
+    ],
+    "/rooms/[roomId]/error": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/ui.js",
+      "static/chunks/app/rooms/[roomId]/error.js"
+    ],
+    "/rooms/[roomId]/loading": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/ui.js",
+      "static/chunks/app/rooms/[roomId]/loading.js"
     ]
   }
 }
