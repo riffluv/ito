@@ -110,24 +110,23 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
 
   if (shouldShowResult) {
-    // リアルタイム判定統一: 協力ゲーム仕様
-    // ITOルール: 最低2枚のカードが必要（1枚では昇順判定不可能）
-    const hasEnoughCardsForJudgment = p.revealIndex >= 2;
+    // シンプルなITOルール: めくり完了時に昇順判定
+    // 1枚では判定不可、2枚以上で判定開始
     
-    if (hasRealtimeResult && realtimeFailed && hasEnoughCardsForJudgment) {
-      // リアルタイム失敗判定: 失敗確定時は表示済み全カードを赤に
-      isFail = revealed && active;
-    } else if (p.roomStatus === "finished" && p.failed && hasEnoughCardsForJudgment) {
-      // finished時のサーバー確定判定: 表示済み全カードを赤に
-      isFail = revealed && active;
-    } else if (p.roomStatus === "reveal" && p.failed && !hasRealtimeResult && hasEnoughCardsForJudgment) {
-      // realtimeResultがない場合のフォールバック: サーバーのfailedフラグを使用
-      isFail = revealed && active;
+    if (p.roomStatus === "finished") {
+      // ゲーム終了時: サーバー確定結果を使用
+      isFail = revealed && active && p.failed;
+      isSuccess = revealed && active && !p.failed;
+    } else if (p.roomStatus === "reveal" && revealed && active && p.revealIndex >= 2) {
+      // めくりアニメーション中: リアルタイム判定または事前判定を使用
+      if (hasRealtimeResult) {
+        // リアルタイム判定結果があればそれを使用
+        isFail = !p.realtimeResult!.success;
+      } else if (p.failed) {
+        // サーバーの事前判定結果を使用
+        isFail = true;
+      }
     }
-
-    // 成功判定: ゲーム成功かつ失敗していない場合のみ
-    isSuccess =
-      revealed && active && p.roomStatus === "finished" && !isFail && !p.failed;
 
     if (isSuccess) successLevel = "final";
   }
