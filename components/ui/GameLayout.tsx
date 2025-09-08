@@ -195,7 +195,7 @@ export function GameLayout({
           "sidebar main-area chat"
           "hand hand hand"
         `}
-        gridTemplateColumns={{ base: "1fr", xl: "280px 1fr 320px" }}
+        gridTemplateColumns={{ base: "1fr", xl: "240px 1fr 280px" }}
         gridTemplateRows={{
           base: "auto minmax(0, 1fr) auto",
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
@@ -250,15 +250,15 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg="surfaceRaised"
-          paddingInline={{ base: 4, md: 6, lg: 8, xl: 8 }}
-          paddingTop={{ base: 4, md: 6, lg: 8, xl: 8 }}
+          paddingInline={{ base: 4, md: 6, lg: 6, xl: 6 }}
+          paddingTop={{ base: 4, md: 6, lg: 6, xl: 6 }}
           paddingBottom={0}
           overflowY="hidden"
           display="flex"
           flexDirection="column"
           position="relative"
           minH={0}
-          gap={{ base: 4, md: 6 }}
+          gap={{ base: 4, md: 5 }}
         >
           {main}
         </Box>
