@@ -110,7 +110,8 @@
       "Read(/C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui/**)",
       "WebSearch",
       "mcp__serena__insert_before_symbol",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []
