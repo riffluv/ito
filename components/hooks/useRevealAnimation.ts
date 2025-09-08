@@ -80,11 +80,15 @@ export function useRevealAnimation({
         
         const result = evaluateSorted(currentList, numbers);
         
-        setRealtimeResult({
-          success: result.success,
-          failedAt: result.failedAt,
-          currentIndex: revealIndex,
-        });
+        // 失敗の場合は即座にrealtimeResultを設定
+        if (!result.success) {
+          setRealtimeResult({
+            success: result.success,
+            failedAt: result.failedAt,
+            currentIndex: revealIndex,
+          });
+        }
+        // 成功の場合はrealtimeResultを設定しない（余韻のため）
 
         // 失敗が検出された場合、最終結果をサーバーに保存（一度だけ）
         if (!result.success && result.failedAt !== null && !realtimeResult) {
@@ -116,35 +120,45 @@ export function useRevealAnimation({
             console.warn("失敗結果保存エラー:", error);
           }
         }
-        // 全カードが成功した場合（一度だけ）
+        // 全カードが成功した場合（一度だけ）- 余韻のため少し遅延
         else if (result.success && revealIndex === orderListLength && !realtimeResult) {
-          try {
-            const { requireDb } = await import("@/lib/firebase/require");
-            const { doc, runTransaction, serverTimestamp } = await import("firebase/firestore");
-            
-            const _db = requireDb();
-            const roomRef = doc(_db, "rooms", roomId);
-            
-            await runTransaction(_db, async (tx) => {
-              const currentSnap = await tx.get(roomRef);
-              if (!currentSnap.exists()) return;
-              const currentRoom = currentSnap.data();
-              
-              // 既に結果が保存されている場合はスキップ
-              if (currentRoom.result) return;
-              
-              tx.update(roomRef, {
-                result: {
-                  success: true,
-                  failedAt: null,
-                  lastNumber: result.last,
-                  revealedAt: serverTimestamp(),
-                },
+          // 成功時も失敗時と同じように余韻を作る（1.5秒遅延）
+          setTimeout(async () => {
+            try {
+              // まずrealtimeResultを設定（成功アニメーション発火）
+              setRealtimeResult({
+                success: true,
+                failedAt: null,
+                currentIndex: revealIndex,
               });
-            });
-          } catch (error) {
-            console.warn("成功結果保存エラー:", error);
-          }
+              
+              const { requireDb } = await import("@/lib/firebase/require");
+              const { doc, runTransaction, serverTimestamp } = await import("firebase/firestore");
+              
+              const _db = requireDb();
+              const roomRef = doc(_db, "rooms", roomId);
+              
+              await runTransaction(_db, async (tx) => {
+                const currentSnap = await tx.get(roomRef);
+                if (!currentSnap.exists()) return;
+                const currentRoom = currentSnap.data();
+                
+                // 既に結果が保存されている場合はスキップ
+                if (currentRoom.result) return;
+                
+                tx.update(roomRef, {
+                  result: {
+                    success: true,
+                    failedAt: null,
+                    lastNumber: result.last,
+                    revealedAt: serverTimestamp(),
+                  },
+                });
+              });
+            } catch (error) {
+              console.warn("成功結果保存エラー:", error);
+            }
+          }, 1500); // 1.5秒の余韻を追加
         }
       } catch (error) {
         console.warn("リアルタイム判定エラー:", error);
