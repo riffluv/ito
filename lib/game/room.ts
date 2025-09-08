@@ -270,14 +270,10 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     } as any;
 
     // アニメーションを挟むため status は一旦 "reveal" にする
+    // result は useRevealAnimation で遅延設定されるため、ここでは設定しない
     tx.update(roomRef, {
-      status: "reveal",
+      status: "reveal", 
       order,
-      result: {
-        success: judgmentResult.success,
-        failedAt: judgmentResult.failedAt,
-        revealedAt: serverTimestamp(),
-      },
     });
   });
 }
