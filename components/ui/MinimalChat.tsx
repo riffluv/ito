@@ -6,7 +6,6 @@ import {
   CHAT_PANEL_BOTTOM_DESKTOP,
   CHAT_PANEL_BOTTOM_MOBILE,
 } from "@/lib/ui/layout";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, IconButton } from "@chakra-ui/react";
 import React from "react";
 
@@ -35,11 +34,13 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           transition="all 0.15s ease"
           _hover={{
             transform: "translateY(-1px)",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
+            boxShadow:
+              "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
           }}
-          _active={{ 
+          _active={{
             transform: "translateY(0)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
           }}
         >
           {open ? "✕" : "💬"}
@@ -58,14 +59,16 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           height={{ base: "50vh", md: "480px" }}
           css={{
             // DPI 150%対応：チャットパネルのサイズ調整
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-              width: "360px !important", // 少し小さく
-              height: "350px !important", // 高さを更に縮小
-            },
-            "@media (min-resolution: 1.5dppx) and (max-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (max-width: 768px)": {
-              width: "min(88vw, 320px) !important",
-              height: "40vh !important",
-            },
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+              {
+                width: "360px !important", // 少し小さく
+                height: "338px !important", // 枠線(上下6px)と内部レイアウトに合わせて厳密化
+              },
+            "@media (min-resolution: 1.5dppx) and (max-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (max-width: 768px)":
+              {
+                width: "min(88vw, 320px) !important",
+                height: "40vh !important",
+              },
           }}
           zIndex={21}
           borderRadius="0" // ルーム作成と同じ角ばり
@@ -76,7 +79,10 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           display="flex"
           flexDirection="column"
         >
-          <Chat roomId={roomId} />
+          {/* 子要素を親の固定高さいっぱいに伸ばすためのラッパー */}
+          <Box flex="1 1 auto" height="100%" minH={0}>
+            <Chat roomId={roomId} />
+          </Box>
         </Box>
       )}
     </>
