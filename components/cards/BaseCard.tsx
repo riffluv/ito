@@ -36,6 +36,19 @@ export const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(
         {...variantStyles}
         {...props}
         css={{
+          // DPI125%対応：GameCardと統一
+          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+            width: sizeConfig.width.dpi125,
+            minWidth: sizeConfig.width.dpi125,
+            height: sizeConfig.height.dpi125,
+            minHeight: sizeConfig.height.dpi125,
+          },
+          "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)": {
+            width: sizeConfig.width.dpi125md,
+            minWidth: sizeConfig.width.dpi125md,
+            height: sizeConfig.height.dpi125md,
+            minHeight: sizeConfig.height.dpi125md,
+          },
           // DPI 150%対応をCSS変数で管理
           "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
             width: sizeConfig.width.dpi150,

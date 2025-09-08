@@ -8,18 +8,18 @@ import type { BoxProps } from "@chakra-ui/react";
 // ✅ レスポンシブカードサイズ定義 (!important除去)
 export const CARD_SIZES = {
   sm: {
-    width: { base: "70px", md: "80px", dpi150: "70px", dpi150md: "75px" },
-    height: { base: "98px", md: "112px", dpi150: "98px", dpi150md: "105px" },
+    width: { base: "70px", md: "80px", dpi125: "67px", dpi125md: "76px", dpi150: "62px", dpi150md: "70px" },
+    height: { base: "98px", md: "112px", dpi125: "93px", dpi125md: "106px", dpi150: "86px", dpi150md: "98px" },
     fontSize: "sm",
   },
   md: {
-    width: { base: "88px", md: "105px", dpi150: "88px", dpi150md: "105px" },
-    height: { base: "123px", md: "147px", dpi150: "123px", dpi150md: "147px" },
+    width: { base: "100px", md: "120px", dpi125: "95px", dpi125md: "114px", dpi150: "88px", dpi150md: "105px" },
+    height: { base: "140px", md: "168px", dpi125: "133px", dpi125md: "160px", dpi150: "123px", dpi150md: "147px" },
     fontSize: "md",
   },
   lg: {
-    width: { base: "105px", md: "120px", dpi150: "105px", dpi150md: "120px" },
-    height: { base: "147px", md: "168px", dpi150: "147px", dpi150md: "168px" },
+    width: { base: "120px", md: "140px", dpi125: "114px", dpi125md: "133px", dpi150: "105px", dpi150md: "123px" },
+    height: { base: "168px", md: "196px", dpi125: "160px", dpi125md: "186px", dpi150: "147px", dpi150md: "172px" },
     fontSize: "lg",
   }
 } as const;
