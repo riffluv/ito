@@ -174,7 +174,7 @@ export default function MainMenu() {
   };
 
   return (
-    <Box bg="canvasBg" minH="100vh">
+    <Box bg="canvasBg" minH="100dvh">
       <Box
         position="relative"
         overflow="hidden"
