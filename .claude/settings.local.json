@@ -111,7 +111,8 @@
       "WebSearch",
       "mcp__serena__insert_before_symbol",
       "Bash(npm uninstall:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

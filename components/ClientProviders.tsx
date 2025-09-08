@@ -1,7 +1,6 @@
 "use client";
 import AuthClientWrapper from "@/components/AuthClientWrapper";
 import { DragonQuestNotifyContainer } from "@/components/ui/DragonQuestNotify";
-import { ThemePresetProvider } from "@/context/ThemePresetContext";
 import system from "@/theme";
 import { Box, ChakraProvider } from "@chakra-ui/react";
 import React, { useEffect } from "react";
@@ -23,13 +22,11 @@ export default function ClientProviders({
 }) {
   return (
     <ChakraProvider value={system}>
-      <ThemePresetProvider>
-        <Box bg="canvasBg" color="fgDefault" h="100dvh">
-          <DarkModeOnlyBridge />
-          <AuthClientWrapper>{children}</AuthClientWrapper>
-          <DragonQuestNotifyContainer />
-        </Box>
-      </ThemePresetProvider>
+      <Box bg="canvasBg" color="fgDefault" h="100dvh">
+        <DarkModeOnlyBridge />
+        <AuthClientWrapper>{children}</AuthClientWrapper>
+        <DragonQuestNotifyContainer />
+      </Box>
     </ChakraProvider>
   );
 }
