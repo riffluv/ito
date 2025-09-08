@@ -23,7 +23,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { gsap } from "gsap";
-import { Plus, User, Users } from "lucide-react";
+import { Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -74,6 +74,7 @@ export default function MainMenu() {
     rooms,
     loading: roomsLoading,
     error: roomsError,
+    refresh: refreshRooms,
   } = useOptimizedRooms(!!(firebaseEnabled && user));
 
   useEffect(() => {
@@ -319,16 +320,30 @@ export default function MainMenu() {
                   </VStack>
                 </HStack>
 
-                {/* スタイリッシュな名前設定ボタン */}
-                <AppButton
-                  size="sm"
-                  visual={displayName ? "outline" : "solid"}
-                  palette={displayName ? "gray" : "brand"}
-                  onClick={openNameChange}
-                >
-                  <User size={16} style={{ marginRight: 8 }} />
-                  {displayName ? "プレイヤー設定" : "名前を設定"}
-                </AppButton>
+                <HStack gap={2}>
+                  {/* リフレッシュボタン */}
+                  <AppButton
+                    size="sm"
+                    visual="outline"
+                    palette="gray"
+                    onClick={refreshRooms}
+                    loading={roomsLoading}
+                    disabled={!firebaseEnabled}
+                  >
+                    <RefreshCw size={16} />
+                  </AppButton>
+                  
+                  {/* スタイリッシュな名前設定ボタン */}
+                  <AppButton
+                    size="sm"
+                    visual={displayName ? "outline" : "solid"}
+                    palette={displayName ? "gray" : "brand"}
+                    onClick={openNameChange}
+                  >
+                    <User size={16} style={{ marginRight: 8 }} />
+                    {displayName ? "プレイヤー設定" : "名前を設定"}
+                  </AppButton>
+                </HStack>
               </HStack>
             </Box>
 
