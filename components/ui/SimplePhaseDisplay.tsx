@@ -7,23 +7,23 @@ import { useEffect, useRef } from "react";
 const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
   switch (status) {
     case "waiting":
-      return { text: "ゲーム準備中", icon: "⏳" };
+      return { text: "ゲーム準備中", icon: "★" };
     case "clue":
       if (canStartSorting) {
         return {
           text: "みんなで相談してカードを並び替えよう！（ドラッグでできるよ）",
-          icon: "🤝",
+          icon: "◇",
         };
       }
-      return { text: "連想ワードを考えよう", icon: "💭" };
+      return { text: "連想ワードを考えよう", icon: "?" };
     case "playing":
-      return { text: "順番に並べよう", icon: "🎯" };
+      return { text: "順番に並べよう", icon: "▲" };
     case "reveal":
-      return { text: "カードをめくっています", icon: "👀" };
+      return { text: "カードをめくっています", icon: "■" };
     case "finished":
-      return { text: "結果発表！", icon: "🎉" };
+      return { text: "結果発表！", icon: "◆" };
     default:
-      return { text: "ゲーム進行中", icon: "⚡" };
+      return { text: "ゲーム進行中", icon: "▼" };
   }
 };
 
