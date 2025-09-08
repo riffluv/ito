@@ -2,7 +2,6 @@
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { SortableItem } from "@/components/sortable/SortableItem";
-import ArtifactResultOverlay from "@/components/ui/ArtifactResultOverlay";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import StatusDock from "@/components/ui/StatusDock";
@@ -30,8 +29,8 @@ import {
 } from "@dnd-kit/sortable";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { EmptyCard } from "@/components/cards";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 // Fallback hard-coded durations (keep in sync with previous logic/motion.ts if exists)
 const REVEAL_FIRST_DELAY = 600;
 const REVEAL_STEP_DELAY = 650;
@@ -117,10 +116,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     roomStatus,
     resolveMode,
     orderListLength: orderList?.length || 0,
-    orderData: orderList && orderNumbers ? {
-      list: orderList,
-      numbers: orderNumbers
-    } : null,
+    orderData:
+      orderList && orderNumbers
+        ? {
+            list: orderList,
+            numbers: orderNumbers,
+          }
+        : null,
   });
 
   // sequential 用の reveal hook は pending 情報も考慮した枚数を渡したいので
@@ -144,7 +146,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     hasNumber,
     mePlaced,
   });
-
 
   // 結果オーバーレイの表示・自動クローズ
   const [showResult, setShowResult] = useState(false);
@@ -188,7 +189,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       revealIndex={revealIndex}
       revealAnimating={revealAnimating}
       failed={failed}
-      boundaryPreviousIndex={realtimeResult?.failedAt && typeof realtimeResult.failedAt === "number" ? realtimeResult.failedAt - 2 : null}
+      boundaryPreviousIndex={
+        realtimeResult?.failedAt && typeof realtimeResult.failedAt === "number"
+          ? realtimeResult.failedAt - 2
+          : null
+      }
       realtimeResult={realtimeResult} // リアルタイム判定結果を追加
     />
   );
@@ -289,8 +294,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             marginBottom: "0.75rem",
           },
         }}
-      >
-      </Box>
+      ></Box>
 
       {/* === 2025年 DPI対応 8人環境最適化 カードボード === */}
       <Box
@@ -333,21 +337,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               },
             },
             // DPI 150%対応：カードボードエリアの最適化
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-              gap: "18px !important", // カード間隔を幅幅拡大
-              padding: "6px 10px !important", // コンパクト化
-              // カードサイズ統一
-              "& > *": {
-                minWidth: "88px !important",
-                maxWidth: "88px !important",
-              },
-              "@media (min-width: 768px)": {
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+              {
+                gap: "12px !important", // 間隔をやや縮小→収まり改善
+                padding: "4px 8px !important", // さらにコンパクト
+                // カードサイズ統一
                 "& > *": {
-                  minWidth: "105px !important",
-                  maxWidth: "105px !important",
+                  minWidth: "88px !important",
+                  maxWidth: "88px !important",
+                },
+                "@media (min-width: 768px)": {
+                  "& > *": {
+                    minWidth: "105px !important",
+                    maxWidth: "105px !important",
+                  },
                 },
               },
-            },
             [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
               gap: "10px",
               padding: "12px",
@@ -457,7 +462,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     roomStatus === "playing" ||
                     roomStatus === "reveal" ||
                     roomStatus === "finished";
-                  
+
                   // カードがある場合はカード表示、ない場合は空きスロット表示
                   return cardId && isGameActive ? (
                     <React.Fragment key={cardId ?? `slot-${idx}`}>
@@ -513,10 +518,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       {/* GSAPアニメーション結果オーバーレイ（豪華な演出） */}
       {roomStatus === "finished" && (
-        <GameResultOverlay
-          failed={failed}
-          mode="overlay"
-        />
+        <GameResultOverlay failed={failed} mode="overlay" />
       )}
 
       {/* 結果オーバーレイ（モック準拠の演出） - GSAPに置き換えのため無効化 */}

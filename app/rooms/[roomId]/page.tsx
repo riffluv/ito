@@ -457,10 +457,7 @@ export default function RoomPage() {
         <Text color="gray.400" textAlign="center">
           この部屋は削除されたか、存在しない可能性があります
         </Text>
-        <AppButton
-          onClick={() => router.push("/")}
-          colorScheme="blue"
-        >
+        <AppButton onClick={() => router.push("/")} colorScheme="blue">
           メインメニューに戻る
         </AppButton>
       </Box>
@@ -475,12 +472,34 @@ export default function RoomPage() {
   const sidebarNode = undefined; // モック仕様: 左の参加者リストは廃止（待機エリアで代替）
 
   const mainNode = (
-    <Box h="100%" display="grid" gridTemplateRows="auto 1fr" gap={3} minH={0}>
+    <Box
+      h="100%"
+      display="grid"
+      gridTemplateRows="auto 1fr"
+      gap={3}
+      minH={0}
+      css={{
+        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+          {
+            gap: "0.5rem",
+            paddingTop: "0.25rem",
+          },
+      }}
+    >
       <Box p={0}>
         <UniversalMonitor room={room} players={players} />
       </Box>
       {/* ドット行が親でクリップされないように: visible + minH=0 */}
-      <Box overflow="visible" minH={0}>
+      <Box
+        overflow="visible"
+        minH={0}
+        css={{
+          "@media (max-height: 700px) and (min-resolution: 1.5dppx), screen and (max-height: 700px) and (-webkit-device-pixel-ratio: 1.5)":
+            {
+              overflowY: "auto",
+            },
+        }}
+      >
         <CentralCardBoard
           roomId={roomId}
           players={players}
