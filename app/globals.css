@@ -132,7 +132,7 @@
     position: absolute;
     left: -9999px;
     top: 8px;
-    z-index: 9999;
+    z-index: 9000;
     background: #11151a;
     color: #e8edf4;
     padding: 8px 12px;

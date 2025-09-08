@@ -103,7 +103,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
       fontSize="xs"
       fontFamily="monospace"
       maxWidth="400px"
-      zIndex={9999}
+      zIndex="max"
       border="1px solid rgba(255, 255, 255, 0.2)"
     >
       <Flex justify="space-between" align="center" mb={2}>

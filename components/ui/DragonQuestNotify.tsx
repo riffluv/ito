@@ -278,7 +278,7 @@ export function DragonQuestNotifyContainer() {
       position="fixed"
       top="24px"
       right="24px"
-      zIndex={200}
+      zIndex="toast"
       css={{
         pointerEvents: "auto",
       }}

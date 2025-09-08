@@ -5,21 +5,21 @@
 
 import type { BoxProps } from "@chakra-ui/react";
 
-// カードの基本サイズ定義
+// ✅ レスポンシブカードサイズ定義 (!important除去)
 export const CARD_SIZES = {
   sm: {
-    width: "80px",
-    height: "112px",
+    width: { base: "70px", md: "80px", dpi150: "70px", dpi150md: "75px" },
+    height: { base: "98px", md: "112px", dpi150: "98px", dpi150md: "105px" },
     fontSize: "sm",
   },
   md: {
-    width: "100px", 
-    height: "140px",
+    width: { base: "88px", md: "105px", dpi150: "88px", dpi150md: "105px" },
+    height: { base: "123px", md: "147px", dpi150: "123px", dpi150md: "147px" },
     fontSize: "md",
   },
   lg: {
-    width: "120px",
-    height: "168px", 
+    width: { base: "105px", md: "120px", dpi150: "105px", dpi150md: "120px" },
+    height: { base: "147px", md: "168px", dpi150: "147px", dpi150md: "168px" },
     fontSize: "lg",
   }
 } as const;
