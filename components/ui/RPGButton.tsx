@@ -25,7 +25,10 @@ export function RPGButton({ href, onClick, children, ...props }: RPGButtonProps)
     <AppButton
       {...props}
       onClick={handleClick}
-      style={{ cursor: "pointer" }}
+      style={{ 
+        cursor: "pointer",
+        transition: "all 0.15s ease-out"
+      }}
     >
       {children}
     </AppButton>

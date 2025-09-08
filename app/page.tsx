@@ -325,11 +325,6 @@ export default function MainMenu() {
                   visual={displayName ? "outline" : "solid"}
                   palette={displayName ? "gray" : "brand"}
                   onClick={openNameChange}
-                  _hover={{
-                    shadow: "md",
-                    transform: "translateY(-1px)",
-                    transition: "all 0.2s",
-                  }}
                 >
                   <User size={16} style={{ marginRight: 8 }} />
                   {displayName ? "プレイヤー設定" : "名前を設定"}
