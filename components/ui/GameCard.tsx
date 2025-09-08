@@ -136,7 +136,7 @@ export function GameCard({
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
-          // 基本サイズ
+          // DPI 100%ベース設計（標準）
           width: "100px",
           height: "140px",
           minWidth: "100px",
@@ -147,18 +147,31 @@ export function GameCard({
             minWidth: "120px",
             minHeight: "168px"
           },
-          // DPI 150%対応：カードサイズ統一
+          // DPI 125%：軽微な縮小でバランス維持
+          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+            width: "95px",
+            height: "133px",
+            minWidth: "95px",
+            minHeight: "133px",
+          },
+          "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)": {
+            width: "114px",
+            height: "160px",
+            minWidth: "114px",
+            minHeight: "160px",
+          },
+          // DPI 150%：適度な縮小でレイアウト収束
           "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            width: "88px !important",
-            height: "123px !important",
-            minWidth: "88px !important",
-            minHeight: "123px !important",
+            width: "88px",
+            height: "123px",
+            minWidth: "88px",
+            minHeight: "123px",
           },
           "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
-            width: "105px !important",
-            height: "147px !important",
-            minWidth: "105px !important",
-            minHeight: "147px !important",
+            width: "105px",
+            height: "147px",
+            minWidth: "105px",
+            minHeight: "147px",
           },
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
@@ -357,7 +370,7 @@ export function GameCard({
       minW={UNIFIED_LAYOUT.CARD.WIDTH}
       minH={UNIFIED_LAYOUT.CARD.HEIGHT}
       css={{
-        // 基本サイズ
+        // DPI 100%ベース設計（標準）
         width: "100px",
         height: "140px",
         minWidth: "100px",
@@ -368,18 +381,31 @@ export function GameCard({
           minWidth: "120px",
           minHeight: "168px"
         },
-        // DPI 150%対応：カードサイズ統一
+        // DPI 125%：軽微な縮小でバランス維持
+        "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+          width: "95px",
+          height: "133px",
+          minWidth: "95px",
+          minHeight: "133px",
+        },
+        "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)": {
+          width: "114px",
+          height: "160px",
+          minWidth: "114px",
+          minHeight: "160px",
+        },
+        // DPI 150%：適度な縮小でレイアウト収束
         "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-          width: "88px !important",
-          height: "123px !important",
-          minWidth: "88px !important",
-          minHeight: "123px !important",
+          width: "88px",
+          height: "123px",
+          minWidth: "88px",
+          minHeight: "123px",
         },
         "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
-          width: "105px !important",
-          height: "147px !important",
-          minWidth: "105px !important",
-          minHeight: "147px !important",
+          width: "105px",
+          height: "147px",
+          minWidth: "105px",
+          minHeight: "147px",
         },
       }}
       p={{ base: 3, md: "13px" }}

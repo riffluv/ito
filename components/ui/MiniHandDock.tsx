@@ -155,9 +155,23 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       rowGap={{ base: 3, md: 0 }}
       w="100%"
       p={4}
-      bg="rgba(10,11,20,0.9)" // ドラクエ風の透明感のある背景
-      borderTop="2px solid rgba(255,255,255,0.3)" // ドラクエ風のボーダー
-      backdropFilter="blur(8px)"
+      // ✅ ドラクエ風デザイン統一（他の要素と同じ太い白枠 - より際立つ）
+      bg="rgba(8,9,15,0.9)" 
+      border="3px solid rgba(255,255,255,0.9)"
+      borderRadius={0}
+      boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)"
+      position="relative"
+      _before={{
+        content: '""',
+        position: "absolute",
+        top: "-3px",
+        left: "-3px", 
+        right: "-3px",
+        bottom: "-3px",
+        border: "1px solid rgba(255,255,255,0.3)",
+        borderRadius: 0,
+        pointerEvents: "none",
+      }}
     >
       {/* 左: 入力・アクション */}
       <HStack gap={3} align="center" minW={0} gridArea="left">

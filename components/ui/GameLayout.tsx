@@ -167,7 +167,7 @@ export function GameLayout({
             right={{ base: 4, md: 8 }}
             bottom={{ base: 4, md: 6 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
-            p={{ base: 2, md: 3 }}
+            p={0}
           >
             {handArea || <Box h="1px" />}
           </Box>
