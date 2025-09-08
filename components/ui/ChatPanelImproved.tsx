@@ -75,7 +75,18 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   };
 
   return (
-    <Box h="100%" display="grid" gridTemplateRows="1fr auto" overflow="hidden">
+    <Box 
+      h="100%" 
+      display="grid" 
+      gridTemplateRows="1fr auto" 
+      overflow="hidden"
+      css={{
+        // DPI 150%対応：チャットエリアの高さ調整
+        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+          maxHeight: "calc(100vh - 280px) !important", // 更に高さを縮小
+        },
+      }}
+    >
       {/* メッセージエリア: 1fr行で安定スクロール、ドラクエ風一行チャット */}
       <Box overflow="hidden">
         <ScrollableArea
@@ -83,7 +94,18 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
           withPadding={true}
           padding={0}
         >
-          <Stack gap={3} px={4} py={3}>
+          <Stack 
+            gap={3} 
+            px={4} 
+            py={3}
+            css={{
+              // DPI 150%対応：コンパクト化
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+                gap: "0.5rem !important", // メッセージ間隔を狭く
+                padding: "0.4rem 0.6rem !important", // パディングを小さく
+              },
+            }}
+          >
             {messages.map((m) => {
               const isSystem = m.sender === "system";
               const isMe = m.sender === (displayName || "匿名");
@@ -145,7 +167,18 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
       </Box>
 
       {/* 入力フォーム: 固定行、ドラクエ風統一デザイン */}
-      <Box p={4} bg="gray.800" borderTop="1px solid" borderColor="gray.700">
+      <Box 
+        p={4} 
+        bg="gray.800" 
+        borderTop="1px solid" 
+        borderColor="gray.700"
+        css={{
+          // DPI 150%対応：入力エリアのコンパクト化
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            padding: "0.6rem !important", // パディングを更に小さく
+          },
+        }}
+      >
         <HStack gap={3}>
           <Input
             placeholder={

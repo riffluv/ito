@@ -332,6 +332,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
               },
             },
+            // DPI 150%対応：カードボードエリアの最適化
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+              gap: "18px !important", // カード間隔を幅幅拡大
+              padding: "6px 10px !important", // コンパクト化
+              // カードサイズ統一
+              "& > *": {
+                minWidth: "88px !important",
+                maxWidth: "88px !important",
+              },
+              "@media (min-width: 768px)": {
+                "& > *": {
+                  minWidth: "105px !important",
+                  maxWidth: "105px !important",
+                },
+              },
+            },
             [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
               gap: "10px",
               padding: "12px",

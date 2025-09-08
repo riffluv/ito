@@ -56,6 +56,10 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             gap: "8px",
           },
+          // DPI 150%対応：待機エリアの最適化
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            gap: "18px !important", // カード間隔を広く
+          },
         }}
       >
         {players.map((p) => (

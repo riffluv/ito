@@ -51,6 +51,12 @@ export function CardBoardContainer({
             gap: "calc(var(--spacing-2) + 2px)",
             padding: "0.6rem 0.9rem",
           },
+          // DPI 150%対応：カード重なり防止
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            gap: "18px !important", // より広い間隔
+            padding: "0.5rem 0.75rem !important", // コンパクト化
+            minHeight: "auto !important",
+          },
         }}
       >
         {children}
