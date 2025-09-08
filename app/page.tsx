@@ -430,25 +430,25 @@ export default function MainMenu() {
                 <VStack gap={4} align="stretch">
                   <HStack gap={3} align="center">
                     <Box
-                      w={8}
-                      h={8}
-                      bg="rgba(255,255,255,0.1)"
-                      borderRadius={0}
-                      border="2px solid rgba(255,255,255,0.3)"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      css={{
-                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
-                      }}
+                      mt="1px"
                     >
-                      <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
-                        ◆
-                      </Text>
+                      <img 
+                        src="/images/hanepen1.png"
+                        alt="羽ペン"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          filter: "brightness(0) invert(1)",
+                          objectFit: "contain"
+                        }}
+                      />
                     </Box>
                     <Text
                       fontWeight={600}
-                      fontSize="sm"
+                      fontSize="lg"
                       color="white"
                       fontFamily="monospace"
                       textShadow="1px 1px 0px #000"
@@ -460,7 +460,7 @@ export default function MainMenu() {
 
                   <VStack gap={3} align="start" pl={2}>
                     <Box>
-                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
                         ★ 技術的更新
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
@@ -477,7 +477,7 @@ export default function MainMenu() {
                     </Box>
 
                     <Box>
-                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
                         ▲ 調整中
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
@@ -491,7 +491,7 @@ export default function MainMenu() {
                     </Box>
 
                     <Box>
-                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
                         ◆ 今後の予定
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
