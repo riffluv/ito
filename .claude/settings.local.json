@@ -112,7 +112,8 @@
       "mcp__serena__insert_before_symbol",
       "Bash(npm uninstall:*)",
       "Bash(taskkill:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
