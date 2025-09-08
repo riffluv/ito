@@ -2,7 +2,6 @@
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
-import DevBoard from "@/components/site/DevBoard";
 import { AppButton } from "@/components/ui/AppButton";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
@@ -421,7 +420,100 @@ export default function MainMenu() {
           </GridItem>
           <GridItem display={{ base: "none", xl: "block" }}>
             <VStack gap={6} align="stretch">
-              <DevBoard />
+              {/* 開発者メモ */}
+              <Box
+                css={{
+                  background: "rgba(8,9,15,0.9)",
+                  border: "3px solid rgba(255,255,255,0.9)",
+                  borderRadius: 0,
+                  padding: "20px",
+                  boxShadow:
+                    "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+                  position: "relative",
+                }}
+              >
+                <VStack gap={4} align="stretch">
+                  <HStack gap={3} align="center">
+                    <Box
+                      w={8}
+                      h={8}
+                      bg="rgba(255,255,255,0.1)"
+                      borderRadius={0}
+                      border="2px solid rgba(255,255,255,0.3)"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      css={{
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
+                      }}
+                    >
+                      <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
+                        ◆
+                      </Text>
+                    </Box>
+                    <Text
+                      fontWeight={600}
+                      fontSize="sm"
+                      color="white"
+                      fontFamily="monospace"
+                      textShadow="1px 1px 0px #000"
+                      letterSpacing="0.5px"
+                    >
+                      開発者メモ
+                    </Text>
+                  </HStack>
+
+                  <VStack gap={3} align="start" pl={2}>
+                    <Box>
+                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                        ★ 技術的更新
+                      </Text>
+                      <VStack gap={1} align="start" pl={4}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・DPIスケール対応
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・Firebase最適化
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・パフォーマンス向上
+                        </Text>
+                      </VStack>
+                    </Box>
+
+                    <Box>
+                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                        ▲ 調整中
+                      </Text>
+                      <VStack gap={1} align="start" pl={4}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・UI細部ブラッシュアップ
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・アニメーション最適化
+                        </Text>
+                      </VStack>
+                    </Box>
+
+                    <Box>
+                      <Text fontSize="xs" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                        ◆ 今後の予定
+                      </Text>
+                      <VStack gap={1} align="start" pl={4}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・新機能検討
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・ユーザビリティ向上
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                          ・コーヒーを辞める
+                        </Text>
+                      </VStack>
+                    </Box>
+                  </VStack>
+                </VStack>
+              </Box>
             </VStack>
           </GridItem>
         </Grid>
