@@ -67,18 +67,19 @@ export default function RulesPage() {
               ▼ 序の紋章III の きまり ▼
             </Heading>
             <HStack
-              align="start"
+              align="center"
               gap={8}
               flexWrap={{ base: "wrap", md: "nowrap" }}
-              justify="center"
+              justify={{ base: "center", md: "center" }}
+              w="100%"
             >
               {/* カード画像 */}
-              <Box flex="0 0 auto" display="flex" justifyContent="center">
+              <Box flex="0 0 auto" display="flex" justifyContent="center" alignItems="center">
                 <Image
                   src="/images/card3.png"
                   alt="ゲームカード"
-                  width={{ base: "140px", md: "180px", lg: "220px" }}
-                  height={{ base: "140px", md: "180px", lg: "220px" }}
+                  width={{ base: "100px", md: "130px", lg: "150px" }}
+                  height={{ base: "100px", md: "130px", lg: "150px" }}
                   style={{
                     imageRendering: "pixelated",
                     filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.8))",
@@ -100,7 +101,7 @@ export default function RulesPage() {
                   color="white"
                   fontFamily="monospace"
                   lineHeight="1.8"
-                  textAlign={{ base: "center", md: "left" }}
+                  textAlign="center"
                   textShadow="1px 1px 0px #000"
                 >
                   きょうりょくがたの パーティーゲーム。
