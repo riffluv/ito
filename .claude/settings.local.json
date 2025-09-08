@@ -113,7 +113,8 @@
       "Bash(npm uninstall:*)",
       "Bash(taskkill:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx next:*)"
     ],
     "deny": [],
     "ask": []
