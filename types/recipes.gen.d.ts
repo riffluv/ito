@@ -21,9 +21,6 @@ export interface ButtonVariant {
   size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | undefined
   /** @default "solid" */
   variant?: "solid" | "subtle" | "surface" | "outline" | "ghost" | "plain" | undefined
-  density?: "compact" | "comfortable" | undefined
-  visual?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link" | undefined
-  palette?: "brand" | "orange" | "gray" | undefined
 }
 
 export type ButtonVariantProps = {
@@ -273,18 +270,61 @@ export type ColorSwatchVariantMap = {
   [K in keyof ColorSwatchVariant]: Array<ColorSwatchVariant[K]>
 }
 
-export interface CardVariant {
-  interactive?: boolean | undefined
+export interface AppButtonVariant {
+  /** @default "md" */
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | undefined
+  /** @default "comfortable" */
   density?: "compact" | "comfortable" | undefined
-  selected?: boolean | undefined
+  /** @default "solid" */
+  visual?: "solid" | "outline" | "ghost" | "subtle" | "surface" | "plain" | undefined
+  /** @default "brand" */
+  palette?: "brand" | "gray" | "danger" | "success" | "teal" | undefined
 }
 
-export type CardVariantProps = {
-  [K in keyof CardVariant]?: ConditionalValue<CardVariant[K]> | undefined
+export type AppButtonVariantProps = {
+  [K in keyof AppButtonVariant]?: ConditionalValue<AppButtonVariant[K]> | undefined
 }
 
-export type CardVariantMap = {
-  [K in keyof CardVariant]: Array<CardVariant[K]>
+export type AppButtonVariantMap = {
+  [K in keyof AppButtonVariant]: Array<AppButtonVariant[K]>
+}
+
+export interface GameCardVariant {
+  size?: "sm" | "md" | "lg" | undefined
+  state?: "default" | "hover" | "active" | "selected" | undefined
+}
+
+export type GameCardVariantProps = {
+  [K in keyof GameCardVariant]?: ConditionalValue<GameCardVariant[K]> | undefined
+}
+
+export type GameCardVariantMap = {
+  [K in keyof GameCardVariant]: Array<GameCardVariant[K]>
+}
+
+export interface GamePanelVariant {
+  variant?: "default" | "elevated" | "glass" | undefined
+}
+
+export type GamePanelVariantProps = {
+  [K in keyof GamePanelVariant]?: ConditionalValue<GamePanelVariant[K]> | undefined
+}
+
+export type GamePanelVariantMap = {
+  [K in keyof GamePanelVariant]: Array<GamePanelVariant[K]>
+}
+
+export interface PrimaryButtonVariant {
+  size?: "sm" | "md" | "lg" | undefined
+  variant?: "solid" | "outline" | "ghost" | undefined
+}
+
+export type PrimaryButtonVariantProps = {
+  [K in keyof PrimaryButtonVariant]?: ConditionalValue<PrimaryButtonVariant[K]> | undefined
+}
+
+export type PrimaryButtonVariantMap = {
+  [K in keyof PrimaryButtonVariant]: Array<PrimaryButtonVariant[K]>
 }
 
 export interface ConfigRecipes {
@@ -307,7 +347,10 @@ export interface ConfigRecipes {
   checkmark: SystemRecipeFn<CheckmarkVariantProps, CheckmarkVariantMap>
   radiomark: SystemRecipeFn<RadiomarkVariantProps, RadiomarkVariantMap>
   colorSwatch: SystemRecipeFn<ColorSwatchVariantProps, ColorSwatchVariantMap>
-  card: SystemRecipeFn<CardVariantProps, CardVariantMap>
+  appButton: SystemRecipeFn<AppButtonVariantProps, AppButtonVariantMap>
+  gameCard: SystemRecipeFn<GameCardVariantProps, GameCardVariantMap>
+  gamePanel: SystemRecipeFn<GamePanelVariantProps, GamePanelVariantMap>
+  primaryButton: SystemRecipeFn<PrimaryButtonVariantProps, PrimaryButtonVariantMap>
 }
 
 // Accordion
@@ -1412,41 +1455,6 @@ export type TreeViewVariantMap = {
   [K in keyof TreeViewVariant]: Array<TreeViewVariant[K]>
 }
 
-// GameCard
-
-export type GameCardSlot = "container" | "inner" | "front" | "back" | "frame"
-
-export interface GameCardVariant {
-  variant?: "flip" | "flat" | undefined
-  state?: "default" | "success" | "fail" | undefined
-}
-
-export type GameCardVariantProps = {
-  [K in keyof GameCardVariant]?: ConditionalValue<GameCardVariant[K]> | undefined
-}
-
-export type GameCardVariantMap = {
-  [K in keyof GameCardVariant]: Array<GameCardVariant[K]>
-}
-
-// Panel
-
-export type PanelSlot = "container" | "header" | "title" | "actions" | "body" | "footer"
-
-export interface PanelVariant {
-  density?: "comfortable" | "compact" | undefined
-  variant?: "surface" | "subtle" | "outlined" | "accent" | undefined
-  elevated?: boolean | undefined
-}
-
-export type PanelVariantProps = {
-  [K in keyof PanelVariant]?: ConditionalValue<PanelVariant[K]> | undefined
-}
-
-export type PanelVariantMap = {
-  [K in keyof PanelVariant]: Array<PanelVariant[K]>
-}
-
 export interface ConfigSlotRecipes {
   accordion: SystemSlotRecipeFn<AccordionSlot, AccordionVariantProps, AccordionVariantMap>
   actionBar: SystemSlotRecipeFn<ActionBarSlot, ActionBarVariantProps, ActionBarVariantMap>
@@ -1497,8 +1505,6 @@ export interface ConfigSlotRecipes {
   colorPicker: SystemSlotRecipeFn<ColorPickerSlot, ColorPickerVariantProps, ColorPickerVariantMap>
   qrCode: SystemSlotRecipeFn<QrCodeSlot, QrCodeVariantProps, QrCodeVariantMap>
   treeView: SystemSlotRecipeFn<TreeViewSlot, TreeViewVariantProps, TreeViewVariantMap>
-  gameCard: SystemSlotRecipeFn<GameCardSlot, GameCardVariantProps, GameCardVariantMap>
-  panel: SystemSlotRecipeFn<PanelSlot, PanelVariantProps, PanelVariantMap>
 }
 
 export interface ConfigRecipeSlots {
@@ -1551,8 +1557,6 @@ export interface ConfigRecipeSlots {
   colorPicker: ColorPickerSlot
   qrCode: QrCodeSlot
   treeView: TreeViewSlot
-  gameCard: GameCardSlot
-  panel: PanelSlot
 }
 
 export type SlotRecipeRecord<T, K> = T extends keyof ConfigRecipeSlots ? Record<ConfigRecipeSlots[T], K> : Record<string, K>
