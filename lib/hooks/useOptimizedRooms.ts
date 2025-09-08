@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs, orderBy, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { roomConverter } from "@/lib/types";
+import { roomConverter } from "@/lib/firebase/converters";
 
 /**
  * 🔧 Firebase読み取り最適化版 - useRooms
@@ -38,10 +38,9 @@ export function useOptimizedRooms(enabled: boolean) {
         );
 
         const snapshot = await getDocs(q);
-        const activeRooms = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+  // `withConverter(roomConverter)` already includes `id` in `fromFirestore`.
+  // Avoid duplicate `id` property which causes a TypeScript error.
+  const activeRooms = snapshot.docs.map(doc => doc.data());
 
         if (mounted) {
           setRooms(activeRooms);
