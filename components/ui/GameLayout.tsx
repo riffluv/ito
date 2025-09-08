@@ -65,7 +65,7 @@ export function GameLayout({
           css={{
             WebkitFontSmoothing: "antialiased",
             // より高い詳細度でChakra UIのデフォルトを上書き
-            '&.game-layout-immersive': {
+            "&.game-layout-immersive": {
               backgroundColor: "#0a0b14",
               backgroundImage: `
                 radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.08) 25%, transparent 60%),
@@ -75,15 +75,16 @@ export function GameLayout({
                 radial-gradient(circle at 16px 4px, rgba(255,255,255,0.02) 0.8px, transparent 0)
               `,
               backgroundSize: "auto, auto, 24px 24px, 32px 32px, 48px 24px",
-            }
+            },
           }}
           _before={{
             content: '""',
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.04) 0%, transparent 50%, rgba(139,92,246,0.025) 100%)',
-            pointerEvents: 'none',
-            zIndex: 0
+            background:
+              "linear-gradient(135deg, rgba(99,102,241,0.04) 0%, transparent 50%, rgba(139,92,246,0.025) 100%)",
+            pointerEvents: "none",
+            zIndex: 0,
           }}
         >
           {header && (
@@ -130,9 +131,10 @@ export function GameLayout({
               [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
                 top: headerDPI125,
               },
-              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-                top: headerDPI150,
-              },
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                {
+                  top: headerDPI150,
+                },
             }}
           >
             <Box
@@ -146,10 +148,11 @@ export function GameLayout({
               gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
               css={{
                 // DPI 150%対応：更なるコンパクト化
-                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-                  padding: "0.4rem 1.2rem !important", // パディング縮小
-                  gap: "0.6rem !important", // 要素間を更に詰める
-                },
+                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                  {
+                    padding: "0.4rem 1.2rem !important", // パディング縮小
+                    gap: "0.6rem !important", // 要素間を更に詰める
+                  },
               }}
               zIndex={10}
               bg="transparent"
@@ -213,7 +216,8 @@ export function GameLayout({
             gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT}`,
           },
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_150.HAND_AREA_HEIGHT}`,
+            // 150%DPI時の縦詰めを強化（ヘッダー0/手札控えめでボード確保）
+            gridTemplateRows: `auto minmax(0, 1fr) clamp(128px, 12dvh, 168px)`,
           },
         }}
       >
@@ -290,10 +294,11 @@ export function GameLayout({
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               height: UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
             },
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-              height: "clamp(140px, 12dvh, 180px) !important", // 更にコンパクト
-              padding: "0.6rem 0.8rem !important", // パディング縮小
-            },
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+              {
+                height: "clamp(140px, 12dvh, 180px) !important", // 更にコンパクト
+                padding: "0.6rem 0.8rem !important", // パディング縮小
+              },
           }}
         >
           {handArea || <Box h="1px" w="100%" />}
