@@ -11,14 +11,27 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
+// 型定義（Room docに直接hostNameが含まれる）
+interface RoomWithHost {
+  id: string;
+  hostId: string;
+  hostName?: string;
+  name: string;
+  status: string;
+  expiresAt?: any;
+  createdAt?: any;
+  lastActiveAt?: any;
+}
+
 /**
  * 🔧 Firebase読み取り最適化版 - useRooms
  * onSnapshotの常時監視を削減し、アクティブルームのみ取得
  */
 export function useOptimizedRooms(enabled: boolean) {
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<RoomWithHost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const lastFetchRef = { current: 0 } as { current: number };
 
   // fetchActiveRooms を useEffect 外で定義して refresh で使えるように
   const fetchActiveRooms = async () => {
@@ -28,37 +41,28 @@ export function useOptimizedRooms(enabled: boolean) {
     setError(null);
 
     try {
-      // 🎯 アクティブなルームのみ取得
-      // - 待機中(waiting) かつ 期限切れでない
-      // - もしくは直近24時間にアクティブ
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      // 読み取り削減: 直近10分のみ対象
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
       const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
-
-      // Firestoreの複合クエリ制限を避けるため単純な条件で取得し、後でクライアント側で軽くフィルタ
       const q = query(
         roomsCol,
-        where("lastActiveAt", ">=", Timestamp.fromDate(yesterday)),
+        where("lastActiveAt", ">=", Timestamp.fromDate(tenMinAgo)),
         orderBy("lastActiveAt", "desc"),
-        limit(30)
-        // 取得上限を設けて、ロビー画面での読み取りを抑制
-        // 将来的には status=="waiting" を含む複合インデックスで更に絞り込み
+        limit(20)
       );
-
-      const snapshot = await getDocs(q);
-      // `withConverter(roomConverter)` already includes `id` in `fromFirestore`.
-      // Avoid duplicate `id` property which causes a TypeScript error.
-      const activeRooms = snapshot.docs
-        .map((doc) => doc.data())
+      const snap = await getDocs(q);
+      const activeRooms = snap.docs
+        .map((d) => d.data() as any)
         .filter((r: any) => {
           const now = Date.now();
           const exp = (r as any).expiresAt;
           const expMs =
             typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
-          if (expMs && expMs <= now) return false; // 期限切れ除外
+          if (expMs && expMs <= now) return false;
           return true;
         });
-
       setRooms(activeRooms);
+      lastFetchRef.current = Date.now();
     } catch (err: any) {
       console.error("Failed to fetch rooms:", err);
       setError(err);
@@ -84,12 +88,21 @@ export function useOptimizedRooms(enabled: boolean) {
     // 初回取得
     wrappedFetch();
 
-    // 🔥 更新頻度: Firebase制限を考慮しつつユーザビリティ重視で30秒間隔
-    const interval = setInterval(wrappedFetch, 30 * 1000); // 30秒
+    // 読み取り削減: タブ非表示時は停止、表示時に単発fetchのみ（ポーリングなし）
+    let interval: any = null;
+    const visibilityHandler = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastFetchRef.current < 60 * 1000) return; // 60秒クールダウン
+      wrappedFetch();
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    visibilityHandler();
 
     return () => {
       mounted = false;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", visibilityHandler);
     };
   }, [enabled]);
 

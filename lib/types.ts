@@ -17,6 +17,7 @@ export type RoomOptions = {
 export type RoomDoc = {
   name: string;
   hostId: string;
+  hostName?: string; // ホスト名（Firestore最適化のため直接埋め込み）
   options: RoomOptions;
   // フェーズは waiting -> clue -> (reveal) -> finished に限定
   status: "waiting" | "clue" | "reveal" | "finished";

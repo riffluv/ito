@@ -111,12 +111,17 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
   if (shouldShowResult) {
     // シンプルなITOルール: めくり完了時に昇順判定
     // 1枚では判定不可、2枚以上で判定開始
-    
+
     if (p.roomStatus === "finished") {
       // ゲーム終了時: サーバー確定結果を使用
-  isFail = revealed && active && Boolean(p.failed);
-  isSuccess = revealed && active && !Boolean(p.failed);
-    } else if (p.roomStatus === "reveal" && revealed && active && p.revealIndex >= 2) {
+      isFail = revealed && active && Boolean(p.failed);
+      isSuccess = revealed && active && !Boolean(p.failed);
+    } else if (
+      p.roomStatus === "reveal" &&
+      revealed &&
+      active &&
+      p.revealIndex >= 2
+    ) {
       // めくりアニメーション中: リアルタイム判定または事前判定を使用
       if (hasRealtimeResult) {
         // リアルタイム判定結果があればそれを使用

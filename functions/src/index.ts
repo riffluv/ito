@@ -6,10 +6,16 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+// 緊急停止フラグ（READ 増加時の一時対策）
+// 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
+// 以降の定期ジョブ/トリガは早期 return して何もしない
+const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
+
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
 export const cleanupExpiredRooms = functions.pubsub
   .schedule("every 10 minutes")
   .onRun(async (context) => {
+    if (EMERGENCY_STOP) return null;
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     const q = db.collection("rooms").where("expiresAt", "<=", now).limit(50);
@@ -20,10 +26,15 @@ export const cleanupExpiredRooms = functions.pubsub
     for (const docSnap of snap.docs) {
       const roomRef = docSnap.ref;
       const playersSnap = await roomRef.collection("players").listDocuments();
-      if (playersSnap.length) {
-        const b = db.batch();
-        for (const p of playersSnap) b.delete(p);
-        await b.commit();
+      // ベストプラクティス: 誰かが居る部屋は削除しない
+      if (playersSnap.length > 0) {
+        // 可能なら期限を延長/クリアして誤削除を避ける（任意）
+        try {
+          await roomRef.update({
+            lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch {}
+        continue;
       }
       const chatSnap = await roomRef.collection("chat").listDocuments();
       if (chatSnap.length) {
@@ -40,6 +51,7 @@ export const cleanupExpiredRooms = functions.pubsub
 export const pruneOldChat = functions.pubsub
   .schedule("every 24 hours")
   .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
     const db = admin.firestore();
     const roomsSnap = await db.collection("rooms").select().get();
     if (roomsSnap.empty) return null;
@@ -65,6 +77,7 @@ export const pruneOldChat = functions.pubsub
 export const purgeChatOnRoundStart = functions.firestore
   .document("rooms/{roomId}")
   .onUpdate(async (change, ctx) => {
+    if (EMERGENCY_STOP) return null;
     const before = change.before.data() as any;
     const after = change.after.data() as any;
     if (!before || !after) return null;
@@ -90,6 +103,7 @@ export const purgeChatOnRoundStart = functions.firestore
 export const onPlayerDeleted = functions.firestore
   .document("rooms/{roomId}/players/{playerId}")
   .onDelete(async (snap, ctx) => {
+    if (EMERGENCY_STOP) return null;
     const dbi = admin.firestore();
     const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
     // lastActiveAt を更新
@@ -102,7 +116,7 @@ export const onPlayerDeleted = functions.firestore
       const players = await roomRef.collection("players").limit(1).get();
       if (players.empty) {
         // 最後の1人が抜けた → ルームを初期化し、クローズ＋有効期限を設定
-        const expires = new Date(Date.now() + 60 * 60 * 1000); // 60分
+        const expires = new Date(Date.now() + 3 * 60 * 1000); // 3分
         await roomRef.update({
           status: "waiting",
           result: null,
@@ -135,6 +149,7 @@ export const onPlayerDeleted = functions.firestore
 export const purgeOrphanRooms = functions.pubsub
   .schedule("every 60 minutes")
   .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
     const dbi = admin.firestore();
     const cutoff = admin.firestore.Timestamp.fromDate(
       new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -150,5 +165,21 @@ export const purgeOrphanRooms = functions.pubsub
       if (!players.empty) continue; // 誰かいるなら残す
       await roomRef.delete();
     }
+    return null;
+  });
+
+// 参加者作成時: ルームをアクティブ扱いに（expiresAt解除 + lastActiveAt更新）
+export const onPlayerCreated = functions.firestore
+  .document("rooms/{roomId}/players/{playerId}")
+  .onCreate(async (_snap, ctx) => {
+    if (EMERGENCY_STOP) return null;
+    try {
+      const dbi = admin.firestore();
+      const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
+      await roomRef.update({
+        expiresAt: null,
+        lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch {}
     return null;
   });

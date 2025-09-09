@@ -121,7 +121,7 @@ export default function MainMenu() {
 
   // 正確な人数表示は RTDB presence を第一に、
   // 未対応環境では Firestore の lastSeen をフォールバックで利用
-  const lobbyCounts = useLobbyCounts(
+  const { counts: lobbyCounts, refresh: refreshLobbyCounts } = useLobbyCounts(
     roomIds,
     !!(firebaseEnabled && user && roomIds.length > 0)
   );
@@ -136,24 +136,44 @@ export default function MainMenu() {
         typeof expires?.toMillis === "function" ? expires.toMillis() : 0;
       if (expMs && expMs <= now) return false;
 
-      // 2) 待機中のみ（進行中の部屋はロビー一覧から除外）
-      const waiting = !r.status || r.status === "waiting";
-      if (!waiting) return false;
+      // 2) 完了済み以外は表示（アクティブな部屋として扱う）
+      if (r.status === "completed") return false;
 
-      // 3) presence ベースで 1人以上がオンラインか、
-      //    直近30分以内に活動（作成/更新）があれば表示
+      // 3) オンライン人数による表示制御
       const activeCount = lobbyCounts[r.id] ?? 0;
-      if (activeCount > 0) return true;
-
-      const tsAny: any = (r as any).lastActiveAt || (r as any).createdAt;
-      const ms = tsAny?.toMillis
-        ? tsAny.toMillis()
-        : tsAny instanceof Date
-          ? tsAny.getTime()
-          : typeof tsAny === "number"
-            ? tsAny
+      
+      // lastActiveAt と createdAt の新しい方を使用
+      const lastActiveAny: any = (r as any).lastActiveAt;
+      const createdAny: any = (r as any).createdAt;
+      
+      const lastActiveMs = lastActiveAny?.toMillis
+        ? lastActiveAny.toMillis()
+        : lastActiveAny instanceof Date
+          ? lastActiveAny.getTime()
+          : typeof lastActiveAny === "number"
+            ? lastActiveAny
             : 0;
-      return ms > 0 && now - ms <= thirtyMin;
+            
+      const createdMs = createdAny?.toMillis
+        ? createdAny.toMillis()
+        : createdAny instanceof Date
+          ? createdAny.getTime()
+          : typeof createdAny === "number"
+            ? createdAny
+            : 0;
+      
+      // より新しいタイムスタンプを使用
+      const newerMs = Math.max(lastActiveMs, createdMs);
+      
+      // オンライン人数に応じて表示制御
+      if (activeCount > 0) {
+        // 誰かがオンライン → 常に表示（時間制限なし）
+        return true;
+      } else {
+        // 0人 → 3分後に非表示（素早くクリーンアップ）
+        const threeMin = 3 * 60 * 1000;
+        return newerMs > 0 && now - newerMs <= threeMin;
+      }
     });
   }, [rooms, lobbyCounts]);
 
@@ -326,7 +346,10 @@ export default function MainMenu() {
                     size="sm"
                     visual="outline"
                     palette="gray"
-                    onClick={refreshRooms}
+                    onClick={() => {
+                      refreshRooms();
+                      refreshLobbyCounts();
+                    }}
                     loading={roomsLoading}
                     disabled={!firebaseEnabled}
                   >
@@ -397,6 +420,7 @@ export default function MainMenu() {
                     name={room.name}
                     status={room.status}
                     count={lobbyCounts[room.id] ?? 0}
+                    hostName={room.hostName || "匿名"}
                     onJoin={() => router.push(`/rooms/${room.id}`)}
                   />
                 ))}

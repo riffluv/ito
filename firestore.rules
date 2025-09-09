@@ -44,6 +44,7 @@ service cloud.firestore {
       // players サブコレクション
       match /players/{playerId} {
         // プレイヤーは自身のドキュメントのみ作成/更新/削除可能
+        // ゲーム開始後の途中参加は不可（waiting時のみ作成許可）
         allow create: if request.auth != null && 
           request.auth.uid == request.resource.data.uid &&
           isWaiting(roomId) &&

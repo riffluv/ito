@@ -68,9 +68,11 @@ export function CreateRoomModal({
       };
       // ルームのデフォルトTTL（12時間）を付与して放置部屋を自動清掃
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
+      console.log(`🏠 Creating room with displayName: "${displayName}"`);
       const room: RoomDoc = {
         name: name.trim(),
         hostId: user.uid,
+        hostName: displayName || "匿名", // ホスト名を直接埋め込み（Firestore最適化）
         options,
         status: "waiting", // 新規作成時は待機
         createdAt: serverTimestamp(),

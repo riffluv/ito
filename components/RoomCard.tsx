@@ -7,11 +7,13 @@ export function RoomCard({
   name,
   status,
   count,
+  hostName,
   onJoin,
 }: {
   name: string;
   status: string;
   count: number;
+  hostName: string;
   onJoin: () => void;
 }) {
   const statusLabel = status === "waiting" ? "待機中" : "進行中";
@@ -21,8 +23,12 @@ export function RoomCard({
     <Box
       role="group"
       position="relative"
-      cursor="pointer"
-      onClick={onJoin}
+      cursor={isWaiting ? "pointer" : "not-allowed"}
+      onClick={() => {
+        if (!isWaiting) return; // 進行中は無効
+        onJoin();
+      }}
+      aria-disabled={!isWaiting}
       _hover={{}}
       css={{
         "&:hover .hover-decoration": {
@@ -68,23 +74,37 @@ export function RoomCard({
         <VStack align="start" gap={4} position="relative" h="100%">
           {/* Header */}
           <Box flex={1} w="100%">
-            <Text
-              fontSize="xl"
-              fontWeight={700}
-              color="text"
-              lineHeight={1.3}
-              mb={3}
-              letterSpacing="-0.01em"
-              css={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-              }}
-            >
-              {name}
-            </Text>
+            <VStack align="start" gap={1} mb={3}>
+              <Text
+                fontSize="xl"
+                fontWeight={700}
+                color="text"
+                lineHeight={1.3}
+                letterSpacing="-0.01em"
+                css={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {name}
+              </Text>
+              <Text
+                fontSize="xs"
+                fontWeight={600}
+                lineHeight={1.2}
+                color="#FFD700"
+                css={{
+                  textShadow:
+                    "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4)",
+                  animation: "hostGlow 2s ease-in-out infinite alternate",
+                }}
+              >
+                👑 ホスト: {hostName}
+              </Text>
+            </VStack>
 
             {/* Room stats */}
             <HStack gap={4} opacity={0.8}>
@@ -95,38 +115,70 @@ export function RoomCard({
                 </Text>
               </HStack>
 
-              {isWaiting && (
-                <HStack gap={1.5}>
-                  <UserCheck size={14} color="var(--colors-success)" />
-                  <Text
-                    fontSize="sm"
-                    color="var(--colors-success)"
-                    fontWeight={500}
-                  >
-                    参加可能
-                  </Text>
-                </HStack>
-              )}
+              <HStack gap={1.5}>
+                <UserCheck
+                  size={14}
+                  color={
+                    isWaiting
+                      ? "var(--colors-success)"
+                      : "var(--colors-textMuted)"
+                  }
+                />
+                <Text
+                  fontSize="sm"
+                  color={
+                    isWaiting
+                      ? "var(--colors-success)"
+                      : "var(--colors-textMuted)"
+                  }
+                  fontWeight={500}
+                >
+                  {isWaiting ? "参加可能" : "参加不可"}
+                </Text>
+              </HStack>
             </HStack>
           </Box>
 
-          {/* Join button */}
-          <AppButton
-            size="sm"
-            visual={isWaiting ? "solid" : "ghost"}
-            palette={isWaiting ? "brand" : "gray"}
-            disabled={!isWaiting}
-            css={{
-              width: "100%",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isWaiting) onJoin();
-            }}
-          >
-            <Play size={16} style={{ marginRight: "8px" }} />
-            {isWaiting ? "参加する" : "ゲーム中"}
-          </AppButton>
+          {/* Join button or status */}
+          {isWaiting ? (
+            <AppButton
+              size="sm"
+              visual="solid"
+              palette="brand"
+              css={{ width: "100%" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onJoin();
+              }}
+            >
+              <Play size={16} style={{ marginRight: "8px" }} />
+              参加する
+            </AppButton>
+          ) : (
+            <Box
+              textAlign="center"
+              py={3}
+              px={4}
+              width="100%"
+              borderRadius="md"
+              bg="rgba(255,255,255,0.02)"
+              border="1px solid rgba(255,255,255,0.1)"
+              css={{ pointerEvents: "none" }}
+            >
+              <Text
+                fontSize="sm"
+                color="fgMuted"
+                fontWeight={500}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                gap={2}
+              >
+                <Play size={14} />
+                ゲーム中
+              </Text>
+            </Box>
+          )}
         </VStack>
 
         {/* Hover decoration */}

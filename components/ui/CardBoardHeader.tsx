@@ -24,7 +24,7 @@ export function CardBoardHeader({ children }: CardBoardHeaderProps) {
         },
       }}
     >
-      {/* 🎯 QUIET LUXURY INSTRUCTION - Sophisticated Guidance */}
+      {/* QUIET LUXURY INSTRUCTION - Guidance */}
       <Box
         css={{
           fontWeight: 500,
