@@ -25,6 +25,9 @@ export function SortableItem({
     transform: CSS.Transform.toString(transform),
     transition,
     cursor: disabled ? "default" : "grab",
+    touchAction: "none", // prevent scroll while dragging per dnd-kit docs
+    userSelect: isDragging ? "none" : undefined,
+    WebkitUserSelect: isDragging ? "none" : undefined,
     ...(isDragging ? { zIndex: 5 } : null),
   };
   return (
