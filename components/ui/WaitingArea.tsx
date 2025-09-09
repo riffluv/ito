@@ -9,12 +9,14 @@ export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
   title?: string;
   isDraggingEnabled?: boolean; // ドラッグ機能有効化フラグ
+  meId?: string; // 自分のID（本人のみドラッグ可能にする）
 }
 
 export default function WaitingArea({ 
   players, 
   title = "",
-  isDraggingEnabled = false 
+  isDraggingEnabled = false,
+  meId,
 }: WaitingAreaProps) {
   return (
     <Box
@@ -67,11 +69,12 @@ export default function WaitingArea({
           },
         }}
       >
-        {players.map((p) => (
+    {players.map((p) => (
           <WaitingAreaCard 
             key={p.id} 
             player={p} 
-            isDraggingEnabled={isDraggingEnabled}
+      isDraggingEnabled={isDraggingEnabled}
+      meId={meId}
           />
         ))}
       </Box>
