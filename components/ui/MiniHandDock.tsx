@@ -278,8 +278,36 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           <AppButton
             size="md"
             visual="solid"
-            palette="brand"
             onClick={quickStart}
+            bg="linear-gradient(135deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))" // ドラクエ風緑グラデーション（冒険の始まり）
+            color="white"
+            border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
+            borderRadius={0}
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            _hover={{
+              bg: "linear-gradient(135deg, rgba(32,148,64,0.98), rgba(16,112,48,1))", // ホバー時より明るい緑
+              color: "rgba(255,255,255,0.95)",
+              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+              borderColor: "rgba(255,255,255,1)",
+              transform: "translateY(-1px)", // 軽いリフトアップ
+            }}
+            _active={{
+              bg: "linear-gradient(135deg, rgba(8,80,32,1), rgba(4,64,24,1))", // クリック時はより暗い緑
+              color: "rgba(255,255,255,0.9)",
+              boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+              transform: "translateY(0)", // 元の位置に戻る
+            }}
+            _disabled={{
+              bg: "rgba(60,60,60,0.9)",
+              color: "rgba(255,255,255,0.4)",
+              borderColor: "rgba(120,120,120,0.5)",
+              cursor: "not-allowed",
+              textShadow: "1px 1px 0px #000",
+            }}
+            transition="all 0.15s ease"
           >
             ゲーム開始
           </AppButton>
@@ -290,24 +318,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             visual="solid"
             onClick={evalSorted}
             disabled={!allSubmitted}
-            bg="rgba(8,9,15,0.9)"
+            bg="linear-gradient(135deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))" // ドラクエ風紫グラデーション
             color="white"
-            border="2px solid rgba(255,223,0,0.9)"
+            border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
             borderRadius={0}
             fontWeight="700"
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
             boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
             _hover={{
-              bg: "rgba(255,223,0,0.95)",
-              color: "rgba(8,9,15,0.9)",
-              textShadow: "none",
-              borderColor: "rgba(255,223,0,1)",
+              bg: "linear-gradient(135deg, rgba(64,32,148,0.98), rgba(48,16,112,1))", // ホバー時より明るい紫
+              color: "rgba(255,255,255,0.95)",
+              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+              borderColor: "rgba(255,255,255,1)",
+              transform: "translateY(-1px)", // 軽いリフトアップ
             }}
             _active={{
-              bg: "rgba(255,215,0,0.85)",
-              color: "rgba(8,9,15,0.9)",
-              boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)",
+              bg: "linear-gradient(135deg, rgba(32,8,80,1), rgba(24,4,64,1))", // クリック時はより暗い紫
+              color: "rgba(255,255,255,0.9)",
+              boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+              transform: "translateY(0)", // 元の位置に戻る
             }}
             _disabled={{
               bg: "rgba(60,60,60,0.9)",
@@ -328,24 +358,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               size="md"
               visual="solid"
               onClick={roomStatus === "finished" ? resetGame : continueRound}
-              bg="rgba(8,9,15,0.9)"
+              bg="linear-gradient(135deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))" // ドラクエ風オレンジ系グラデーション
               color="white"
-              border="2px solid rgba(0,150,255,0.9)"
+              border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
               borderRadius={0}
               fontWeight="700"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
-              boxShadow="inset 0 2px 0 rgba(0,150,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+              boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
               _hover={{
-                bg: "white",
-                color: "rgba(8,9,15,0.9)",
-                textShadow: "none",
-                borderColor: "rgba(0,150,255,1)",
+                bg: "linear-gradient(135deg, rgba(148,64,32,0.98), rgba(112,48,16,1))", // ホバー時より明るいオレンジ
+                color: "rgba(255,255,255,0.95)",
+                textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                borderColor: "rgba(255,255,255,1)",
+                transform: "translateY(-1px)", // 軽いリフトアップ
               }}
               _active={{
-                bg: "rgba(0,130,220,0.85)",
-                color: "white",
-                boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)",
+                bg: "linear-gradient(135deg, rgba(80,32,8,1), rgba(64,24,4,1))", // クリック時はより暗いオレンジ
+                color: "rgba(255,255,255,0.9)",
+                boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+                transform: "translateY(0)", // 元の位置に戻る
               }}
               _disabled={{
                 bg: "rgba(60,60,60,0.9)",
