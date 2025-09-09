@@ -49,21 +49,12 @@ export function SortableItem({
           filter: "brightness(1.1)",
         }),
         
-        // 他のアイテムがホバー中の挿入位置表示
+        // 他のアイテムがホバー中の視覚フィードバック（ベストプラクティス：線なし）
         ...(isOver && !isDragging && {
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            left: "-8px",
-            top: "0",
-            bottom: "0",
-            width: "4px",
-            backgroundColor: "#4a9eff",
-            borderRadius: "2px",
-            boxShadow: "0 0 8px rgba(74,158,255,0.6)",
-            zIndex: 10,
-            animation: "insertIndicator 1s ease-in-out infinite alternate",
-          },
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderColor: "rgba(255,255,255,0.6)",
+          transform: "scale(1.01)",
+          transition: "all 0.2s ease-out",
         }),
         
         // ホバー時の微細なフィードバック
@@ -76,18 +67,6 @@ export function SortableItem({
     >
       {children}
       
-      {/* アニメーション定義 */}
-      <style>{`
-        @keyframes insertIndicator {
-          0% {
-            opacity: 0.8;
-          }
-          100% {
-            opacity: 1;
-            box-shadow: 0 0 12px rgba(74,158,255,0.8);
-          }
-        }
-      `}</style>
     </Box>
   );
 }

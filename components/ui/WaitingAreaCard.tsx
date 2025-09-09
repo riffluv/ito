@@ -38,7 +38,7 @@ export default function WaitingAreaCard({
               : "grab"
             : "default",
         transition: isDragging ? "none" : "transform 0.2s ease",
-        filter: isDragging ? "brightness(1.1) drop-shadow(0 8px 24px rgba(74,158,255,0.4))" : "none",
+        filter: isDragging ? "brightness(1.05) drop-shadow(0 6px 16px rgba(0,0,0,0.25))" : "none",
       }
     : {
         cursor:
