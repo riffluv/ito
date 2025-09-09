@@ -28,8 +28,8 @@ export default function WaitingAreaCard({
 
   const style = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        opacity: isDragging ? 0.9 : 1,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) ${isDragging ? 'scale(1.08)' : 'scale(1)'}`,
+        opacity: isDragging ? 0.8 : 1,
         zIndex: isDragging ? 1000 : "auto",
         cursor:
           isDraggingEnabled && ready && meId === player.id
@@ -38,6 +38,7 @@ export default function WaitingAreaCard({
               : "grab"
             : "default",
         transition: isDragging ? "none" : "transform 0.2s ease",
+        filter: isDragging ? "brightness(1.1) drop-shadow(0 8px 24px rgba(74,158,255,0.4))" : "none",
       }
     : {
         cursor:

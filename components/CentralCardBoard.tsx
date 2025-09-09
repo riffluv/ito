@@ -546,7 +546,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
             <DragOverlay
-              dropAnimation={{ duration: 150 }}
+              dropAnimation={{ duration: 200, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}
               modifiers={[restrictToWindowEdges]}
             >
               {activeId
@@ -554,11 +554,28 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     const idx = (activeProposal as (string | null)[]).indexOf(
                       activeId
                     );
+                    const ghostStyle = {
+                      transform: "rotate(3deg) scale(1.08)",
+                      filter: "brightness(1.15) drop-shadow(0 12px 32px rgba(74,158,255,0.5))",
+                      borderColor: "#4a9eff",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      borderRadius: "12px",
+                    };
+                    
                     if (idx >= 0) {
-                      return renderCard(activeId, idx);
+                      return (
+                        <div style={ghostStyle}>
+                          {renderCard(activeId, idx)}
+                        </div>
+                      );
                     }
                     // 盤上未配置（待機エリア）の場合も見た目を統一
-                    return renderCard(activeId);
+                    return (
+                      <div style={ghostStyle}>
+                        {renderCard(activeId)}
+                      </div>
+                    );
                   })()
                 : null}
             </DragOverlay>
