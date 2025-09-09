@@ -37,6 +37,26 @@ describe("resolveMode utilities", () => {
     ).toBe(false);
   });
 
+  test("computeAllSubmitted false when padded with nulls (fixed-length)", () => {
+    expect(
+      computeAllSubmitted({
+        mode: "sort-submit",
+        eligibleIds: ["a", "b", "c"],
+        proposal: ["a", null, null],
+      })
+    ).toBe(false);
+  });
+
+  test("computeAllSubmitted true when non-null count matches eligibleIds length despite padding", () => {
+    expect(
+      computeAllSubmitted({
+        mode: "sort-submit",
+        eligibleIds: ["a", "b", "c"],
+        proposal: ["a", "b", "c"],
+      })
+    ).toBe(true);
+  });
+
   test("canSubmitCard sort-submit ignores cluesReady", () => {
     expect(
       canSubmitCard({
