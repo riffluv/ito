@@ -18,6 +18,7 @@ interface DragonQuestPartyProps {
   players: (PlayerDoc & { id: string })[];
   roomStatus: string;
   onlineCount?: number; // 実際のオンライン参加者数
+  hostId?: string; // ホストのUID
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -51,6 +52,7 @@ export function DragonQuestParty({
   players,
   roomStatus,
   onlineCount,
+  hostId,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
@@ -129,6 +131,7 @@ export function DragonQuestParty({
                 player,
                 roomStatus
               );
+              const isHost = hostId && player.id === hostId;
 
               return (
                 <Box
@@ -155,15 +158,19 @@ export function DragonQuestParty({
                     <Text
                       fontSize={{ base: "xs", md: "sm" }}
                       fontWeight={500}
-                      color="white"
+                      color={isHost ? "#FFD700" : "white"}
                       textShadow="1px 1px 0px #000"
                       fontFamily="monospace"
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
-                      title={`${player.name} - ${status}`}
+                      title={`${isHost ? "👑 " : ""}${player.name} - ${status}`}
+                      css={isHost ? {
+                        animation: "hostGlow 2s ease-in-out infinite alternate",
+                        textShadow: "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4), 1px 1px 0px #000"
+                      } : undefined}
                     >
-                      {player.name}
+                      {isHost ? "👑 " : ""}{player.name}
                     </Text>
 
                     {/* 状態アイコン - 適切な固定幅 */}

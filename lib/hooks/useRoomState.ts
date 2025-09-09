@@ -66,12 +66,11 @@ export function useRoomState(
     setLoading(partLoading === true);
   }, [fetchedPlayers, partLoading]);
 
-  // auto-join (always allow late join; numbers assigned according to phase)
+  // auto-join (待機中のみ自動参加。ゲーム中の途中参加は禁止)
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
     if (leavingRef.current) return;
-    // 待機中のみ自動参加を作成
     if (room.status === "waiting") {
       joinRoomFully({ roomId, uid, displayName: displayName }).catch(
         () => void 0

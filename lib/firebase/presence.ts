@@ -93,13 +93,20 @@ export async function attachPresence(roomId: string, uid: string) {
 
   // 明示的に解除するための関数を返す
   return async () => {
+    console.log(`🚪 Detaching presence for uid=${uid}, roomId=${roomId}`);
     try {
       off(connectedRef, "value", connectedHandler as any);
     } catch {}
     stopHeartbeat();
     try {
-      if (meConnPath) await remove(ref(db, meConnPath));
-    } catch {}
+      if (meConnPath) {
+        console.log(`🗑️ Removing presence path: ${meConnPath}`);
+        await remove(ref(db, meConnPath));
+        console.log(`✅ Presence removed successfully`);
+      }
+    } catch (err) {
+      console.error(`❌ Failed to remove presence:`, err);
+    }
   };
 }
 

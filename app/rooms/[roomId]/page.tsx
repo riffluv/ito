@@ -139,13 +139,14 @@ export default function RoomPage() {
 
   // ラウンド対象は上部で計算済み（eligibleIds）
 
-  // 入室ガード: 自分がメンバーでないかつ待機中でない場合はロビーへ戻す
+  // 入室ガード: 自分がメンバーでない場合、待機中以外の部屋には入れない
   // ただし、ホストは常にアクセス可能
   const isMember = !!(uid && players.some((p) => p.id === uid));
   const canAccess = isMember || isHost;
   useEffect(() => {
     if (!room || !uid) return;
-    if (!canAccess && room.status !== "waiting" && room.status !== "clue") {
+    // ゲーム進行中（waiting以外）は非メンバー入室不可
+    if (!canAccess && room.status !== "waiting") {
       try {
         notify({
           title: "入室できません",
@@ -563,6 +564,7 @@ export default function RoomPage() {
         players={players}
         roomStatus={room?.status || "waiting"}
         onlineCount={onlinePlayers.length}
+        hostId={room?.hostId}
       />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}

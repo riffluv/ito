@@ -14,6 +14,11 @@ export function sanitizeRoom(input: any): RoomDoc {
   return {
     name: String(input?.name || "Untitled"),
     hostId: String(input?.hostId || ""),
+    // ルームDocに埋め込んだホスト名を通す（未設定時はundefinedのまま）
+    hostName:
+      typeof input?.hostName === "string" && input.hostName.trim()
+        ? String(input.hostName)
+        : undefined,
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
       resolveMode: normalizeResolveMode(options.resolveMode),

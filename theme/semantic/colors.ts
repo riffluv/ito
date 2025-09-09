@@ -1,5 +1,5 @@
 // Semantic color tokens - DARK MODE OPTIMIZED
-// 2025 REFRESH: Rich Black + Sophisticated Indigo Aesthetic (Chakra Official Site inspired)  
+// 2025 REFRESH: Rich Black + Indigo Aesthetic  
 // 目的: プロフェッショナルなダークモード専用システム。WCAG AAA準拠のコントラストとアクセシビリティを重視。
 // 命名方針:
 //  - surface.* : ベースとなる背景階層 (最下層 base → subtle → raised → overlay)
@@ -23,13 +23,13 @@ export const semanticColors = {
   panelSubBg: { value: "#191B21" },
 
   // === FOREGROUND - ENHANCED READABILITY ===
-  // 🎯 WCAG AAA コンプライアント レベル (21:1+ コントラスト比)
+  // WCAG AAA コンプライアント (21:1+ コントラスト比)
   fgDefault: { value: "#FFFFFF" }, // Pure white for maximum contrast
   fgMuted: { value: "rgba(255,255,255,0.80)" }, // Improved from 65% to 80% for better readability
   fgSubtle: { value: "rgba(255,255,255,0.55)" }, // Enhanced from 40% to 55%
   fgEmphasized: { value: "#F8FAFC" }, // Slightly warm white for emphasis
 
-  // === ACCENT (Sophisticated Blue-Gray) ===
+  // === ACCENT (Blue-Gray) ===
   accent: { value: "#6366F1" }, // Indigo-500 - modern and professional
   accentHover: { value: "#8B5CF6" }, // Violet-500 - subtle purple shift on hover
   accentActive: { value: "#4F46E5" }, // Indigo-600 - deeper on active

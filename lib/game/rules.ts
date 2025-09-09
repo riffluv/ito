@@ -74,7 +74,8 @@ export function evaluateSorted(
     const id = list[i];
     const n = numbers[id];
     if (typeof n !== "number") return { success: false, failedAt: i + 1, last };
-    if (last !== null && n <= last)
+    // 非厳密昇順（同値OK）。降順のみ失敗とする
+    if (last !== null && n < last)
       return { success: false, failedAt: i + 1, last };
     last = n;
   }

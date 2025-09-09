@@ -11,7 +11,7 @@ export const buttonRecipe = defineRecipe({
     lineHeight: 1.2,
     textTransform: "none",
 
-    // 🎯 PROFESSIONAL INTERACTION DESIGN
+    // インタラクション設計
     borderRadius: "12px",
     border: "none",
     cursor: "pointer",
@@ -22,11 +22,11 @@ export const buttonRecipe = defineRecipe({
     whiteSpace: "nowrap",
     userSelect: "none",
 
-    // 🎯 SOPHISTICATED ANIMATION SYSTEM
+    // アニメーション
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     willChange: "transform, box-shadow, background",
 
-    // 🎯 ACCESSIBILITY & INTERACTION STATES
+    // アクセシビリティ
     _focusVisible: {
       outline: "2px solid",
       outlineColor: "rgba(99,102,241,0.6)",
@@ -124,7 +124,7 @@ export const buttonRecipe = defineRecipe({
         },
       },
 
-      // 🎯 OUTLINE - Sophisticated border system
+      // OUTLINE - border system
       outline: {
         background: "rgba(255,255,255,0.01)",
         color: "rgba(255,255,255,0.9)",
@@ -246,7 +246,7 @@ export const buttonRecipe = defineRecipe({
         },
       },
 
-      // 🎯 GRAY - Sophisticated neutral system
+      // GRAY - neutral system
       gray: {
         _focusVisible: {
           outlineColor: "rgba(156,163,175,0.6)",
