@@ -20,11 +20,19 @@ import {
   DragOverlay,
   DragStartEvent,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
 } from "@dnd-kit/core";
+import {
+  restrictToFirstScrollableAncestor,
+  restrictToWindowEdges,
+} from "@dnd-kit/modifiers";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
@@ -97,16 +105,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [eligibleIds, playerMap, placedIds]);
 
   // Accessibility sensors for keyboard and pointer interactions
+  // Sensors: mouse uses small distance threshold; touch uses hold delay with tolerance
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px movement before activating drag
+        distance: 4,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Collision detection: prefer pointerWithin for intuitive targeting; fallback to rectIntersection, then closestCenter
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointer = pointerWithin(args);
+    if (pointer.length > 0) return pointer;
+    const rects = rectIntersection(args);
+    if (rects.length > 0) return rects;
+    return closestCenter(args);
+  };
 
   // Optimize mePlaced calculation using Set for O(1) lookup instead of O(n) includes
   const mePlaced = useMemo(() => {
@@ -379,7 +403,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         {/* DndContext scope expanded to include WaitingArea for drag functionality */}
         {resolveMode === "sort-submit" && roomStatus === "clue" ? (
           <DndContext
-            collisionDetection={closestCenter}
+            collisionDetection={collisionDetection}
             onDragStart={onDragStart}
             onDragEnd={(ev) => {
               onDragEnd(ev);
@@ -387,6 +411,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             }}
             onDragCancel={clearActive}
             sensors={sensors}
+            modifiers={[restrictToFirstScrollableAncestor]}
             accessibility={{
               announcements: {
                 onDragStart: ({ active }) => {
@@ -520,7 +545,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             </Box>
 
             {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
-            <DragOverlay dropAnimation={{ duration: 150 }}>
+            <DragOverlay
+              dropAnimation={{ duration: 150 }}
+              modifiers={[restrictToWindowEdges]}
+            >
               {activeId
                 ? (() => {
                     const idx = (activeProposal as (string | null)[]).indexOf(
