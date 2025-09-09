@@ -92,10 +92,10 @@ export function DragonQuestParty({
       }}
     >
       <Box
-        bg="rgba(8,9,15,0.95)"
-        border="2px solid rgba(255,255,255,0.9)"
+        bg="linear-gradient(135deg, rgba(16,64,16,0.95), rgba(8,48,8,0.98))" // ドラクエ風深い森の緑グラデーション
+        border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
         borderRadius={0}
-        px={3}
+        px={4}
         py={2}
         css={{
           boxShadow:

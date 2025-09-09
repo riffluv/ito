@@ -54,7 +54,7 @@ export default function WaitingAreaCard({
       {...(isDraggingEnabled && ready ? attributes : {})}
     >
       <GameCard
-        index={0}
+        index={null}
         name={player.name || ""}
         clue={ready ? player.clue1 || "Ready" : "Waiting"}
         number={null}
