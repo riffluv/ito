@@ -8,9 +8,14 @@ import { Box, Text } from "@chakra-ui/react";
 export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
   title?: string;
+  isDraggingEnabled?: boolean; // ドラッグ機能有効化フラグ
 }
 
-export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
+export default function WaitingArea({ 
+  players, 
+  title = "",
+  isDraggingEnabled = false 
+}: WaitingAreaProps) {
   return (
     <Box
       position="fixed"
@@ -63,7 +68,11 @@ export default function WaitingArea({ players, title = "" }: WaitingAreaProps) {
         }}
       >
         {players.map((p) => (
-          <WaitingAreaCard key={p.id} player={p} />
+          <WaitingAreaCard 
+            key={p.id} 
+            player={p} 
+            isDraggingEnabled={isDraggingEnabled}
+          />
         ))}
       </Box>
 

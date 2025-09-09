@@ -1,5 +1,8 @@
 import { notify } from "@/components/ui/notify";
-import { addCardToProposal } from "@/lib/game/room";
+import {
+  addCardToProposal,
+  addCardToProposalAtPosition,
+} from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -30,7 +33,7 @@ export function useDropHandler({
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
-    
+
     // sort-submitモードのみサポート（連想ワード確定前でもドラッグ可能）
     return true;
   }, [roomStatus, hasNumber]);
@@ -107,11 +110,19 @@ export function useDropHandler({
       return;
     }
 
-    // Only sort-submit mode is supported
+    // 位置指定追加に切り替え
     try {
-      await addCardToProposal(roomId, meId);
-      setPending((p) => (p.includes(pid) ? p : [...p, pid]));
-      notify({ title: "カードを場に置きました", type: "success" });
+      // Optimistic update at target index
+      setPending((prev) => {
+        const next = [...prev];
+        const exist = next.indexOf(pid);
+        if (exist >= 0) next.splice(exist, 1);
+        if (targetIndex >= next.length) next.length = targetIndex + 1;
+        next[targetIndex] = pid;
+        return next;
+      });
+      await addCardToProposalAtPosition(roomId, meId, targetIndex);
+      notify({ title: "カードをその位置に置きました", type: "success" });
     } catch (err: any) {
       notify({
         title: "配置に失敗しました",

@@ -117,7 +117,17 @@ export async function setOrderProposal(roomId: string, proposal: string[]) {
 }
 
 // sort-submit モード: プレイヤーが自分のカードを場(提案配列)に置く
+// 既存の末尾追加機能（「出す」ボタン用）
 export async function addCardToProposal(roomId: string, playerId: string) {
+  return addCardToProposalAtPosition(roomId, playerId, -1); // -1 = 末尾追加
+}
+
+// 新機能：位置指定でカード追加（WaitingCardドラッグ用）
+export async function addCardToProposalAtPosition(
+  roomId: string,
+  playerId: string,
+  targetIndex: number = -1
+) {
   const roomRef = doc(db!, "rooms", roomId);
   const playerRef = doc(db!, "rooms", roomId, "players", playerId);
   await runTransaction(db!, async (tx) => {
@@ -132,7 +142,27 @@ export async function addCardToProposal(roomId: string, playerId: string) {
     if (typeof player.number !== "number") throw new Error("number not set");
     const current: string[] = room?.order?.proposal || [];
     if (current.includes(playerId)) return; // 重複防止
-    const next = [...current, playerId];
+
+    let next: any[];
+    if (targetIndex === -1) {
+      // 末尾追加（既存の「出す」ボタン動作）
+      next = [...current, playerId];
+    } else {
+      // 位置指定追加: 配列長が不足していれば null でパディングし、指定位置にセット
+      next = [...current];
+      if (targetIndex < next.length) {
+        // 既に何かがある位置には置かない（UI側で空きスロットのみ許容している想定）
+        if (typeof next[targetIndex] === "string" && next[targetIndex]) {
+          return;
+        }
+      } else {
+        // 長さを広げ（未定義をnullに正規化する）
+        (next as any).length = targetIndex + 1;
+      }
+      next[targetIndex] = playerId;
+      next = next.map((v) => (v === undefined ? null : v));
+    }
+
     // order オブジェクトが未作成の場合の安全な merge
     tx.update(roomRef, {
       "order.proposal": next,
@@ -249,17 +279,17 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     if (expected >= 2 && list.length !== expected) {
       throw new Error(`提出数が有効人数(${expected})と一致しません`);
     }
-    
+
     // プレイヤーの数字を取得して保存（リアルタイム判定で使用）
     const numbers: Record<string, number | null | undefined> = {};
     for (const pid of list) {
       const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
       numbers[pid] = (pSnap.data() as any)?.number;
     }
-    
+
     // サーバー側でも判定を行い、結果を保存
     const judgmentResult = evaluateSorted(list, numbers);
-    
+
     const order = {
       list,
       numbers, // プレイヤー数字を保存
@@ -272,7 +302,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     // アニメーションを挟むため status は一旦 "reveal" にする
     // result は useRevealAnimation で遅延設定されるため、ここでは設定しない
     tx.update(roomRef, {
-      status: "reveal", 
+      status: "reveal",
       order,
     });
   });
