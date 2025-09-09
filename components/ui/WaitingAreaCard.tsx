@@ -7,11 +7,13 @@ import { useDraggable } from "@dnd-kit/core";
 interface WaitingAreaCardProps {
   player: PlayerDoc & { id: string };
   isDraggingEnabled?: boolean;
+  meId?: string;
 }
 
 export default function WaitingAreaCard({
   player,
   isDraggingEnabled = false,
+  meId,
 }: WaitingAreaCardProps) {
   const ready = !!(player?.clue1 && player.clue1.trim() !== "");
 
@@ -19,7 +21,8 @@ export default function WaitingAreaCard({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: player.id,
-      disabled: !isDraggingEnabled || !ready, // 連想ワード未確定時は無効
+      // 本人のカード以外はドラッグ不可。連想ワード未確定も不可。
+      disabled: !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
     });
 
   const style = transform
@@ -28,7 +31,7 @@ export default function WaitingAreaCard({
         opacity: isDragging ? 0.9 : 1,
         zIndex: isDragging ? 1000 : "auto",
         cursor:
-          isDraggingEnabled && ready
+          isDraggingEnabled && ready && meId === player.id
             ? isDragging
               ? "grabbing"
               : "grab"
@@ -36,7 +39,8 @@ export default function WaitingAreaCard({
         transition: isDragging ? "none" : "transform 0.2s ease",
       }
     : {
-        cursor: isDraggingEnabled && ready ? "grab" : "default",
+        cursor:
+          isDraggingEnabled && ready && meId === player.id ? "grab" : "default",
         transition: "transform 0.2s ease",
       };
 

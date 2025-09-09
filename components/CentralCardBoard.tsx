@@ -537,7 +537,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
             {waitingPlayers.length > 0 && (
-              <WaitingArea players={waitingPlayers} isDraggingEnabled={true} />
+              <WaitingArea
+                players={waitingPlayers}
+                isDraggingEnabled={true}
+                meId={meId}
+              />
             )}
           </DndContext>
         ) : (
@@ -662,6 +666,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 <WaitingArea
                   players={waitingPlayers}
                   isDraggingEnabled={false}
+                  meId={meId}
                 />
               )}
           </>
