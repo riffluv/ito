@@ -123,7 +123,8 @@ export default function MainMenu() {
   // 未対応環境では Firestore の lastSeen をフォールバックで利用
   const { counts: lobbyCounts, refresh: refreshLobbyCounts } = useLobbyCounts(
     roomIds,
-    !!(firebaseEnabled && user && roomIds.length > 0)
+    !!(firebaseEnabled && user && roomIds.length > 0),
+    { excludeUid: user?.uid }
   );
 
   const filteredRooms = useMemo(() => {
@@ -136,16 +137,22 @@ export default function MainMenu() {
         typeof expires?.toMillis === "function" ? expires.toMillis() : 0;
       if (expMs && expMs <= now) return false;
 
-      // 2) 完了済み以外は表示（アクティブな部屋として扱う）
+      // 2) 完了済みは非表示
       if (r.status === "completed") return false;
+
+      // 2.5) ゲーム進行中は常に表示（ベストプラクティス: 観戦/後から参加の導線を確保）
+      // waiting 以外（completed 以外）は進行中として扱う
+      const isInProgress =
+        r.status && r.status !== "waiting" && r.status !== "completed";
+      if (isInProgress) return true;
 
       // 3) オンライン人数による表示制御
       const activeCount = lobbyCounts[r.id] ?? 0;
-      
+
       // lastActiveAt と createdAt の新しい方を使用
       const lastActiveAny: any = (r as any).lastActiveAt;
       const createdAny: any = (r as any).createdAt;
-      
+
       const lastActiveMs = lastActiveAny?.toMillis
         ? lastActiveAny.toMillis()
         : lastActiveAny instanceof Date
@@ -153,7 +160,7 @@ export default function MainMenu() {
           : typeof lastActiveAny === "number"
             ? lastActiveAny
             : 0;
-            
+
       const createdMs = createdAny?.toMillis
         ? createdAny.toMillis()
         : createdAny instanceof Date
@@ -161,19 +168,14 @@ export default function MainMenu() {
           : typeof createdAny === "number"
             ? createdAny
             : 0;
-      
+
       // より新しいタイムスタンプを使用
       const newerMs = Math.max(lastActiveMs, createdMs);
-      
-      // オンライン人数に応じて表示制御
-      if (activeCount > 0) {
-        // 誰かがオンライン → 常に表示（時間制限なし）
-        return true;
-      } else {
-        // 0人 → 3分後に非表示（素早くクリーンアップ）
-        const threeMin = 3 * 60 * 1000;
-        return newerMs > 0 && now - newerMs <= threeMin;
-      }
+
+      // 3.1) 待機中: オンライン1人以上なら常に表示。0人なら3分で非表示。
+      if (activeCount > 0) return true;
+      const threeMin = 3 * 60 * 1000;
+      return newerMs > 0 && now - newerMs <= threeMin;
     });
   }, [rooms, lobbyCounts]);
 
@@ -335,7 +337,7 @@ export default function MainMenu() {
                       </Badge>
                     </HStack>
                     <Text fontSize="md" color="fgMuted">
-                      参加可能なルームを一覧表示します
+                      進行中のルームも表示します（参加は待機中のみ）
                     </Text>
                   </VStack>
                 </HStack>
@@ -355,7 +357,7 @@ export default function MainMenu() {
                   >
                     <RefreshCw size={16} />
                   </AppButton>
-                  
+
                   {/* スタイリッシュな名前設定ボタン */}
                   <AppButton
                     size="sm"
@@ -474,14 +476,14 @@ export default function MainMenu() {
                       justifyContent="center"
                       mt="1px"
                     >
-                      <img 
+                      <img
                         src="/images/hanepen1.png"
                         alt="羽ペン"
                         style={{
                           width: "28px",
                           height: "28px",
                           filter: "brightness(0) invert(1)",
-                          objectFit: "contain"
+                          objectFit: "contain",
                         }}
                       />
                     </Box>
@@ -499,51 +501,105 @@ export default function MainMenu() {
 
                   <VStack gap={3} align="start" pl={2}>
                     <Box>
-                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        fontWeight={600}
+                        mb={1}
+                      >
                         ★ 技術的更新
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・DPIスケール対応
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・Firebase最適化
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・ロビーリフレッシュ機能
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・パフォーマンス向上
                         </Text>
                       </VStack>
                     </Box>
 
                     <Box>
-                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        fontWeight={600}
+                        mb={1}
+                      >
                         ▲ 調整中
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・UI細部ブラッシュアップ
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・アニメーション最適化
                         </Text>
                       </VStack>
                     </Box>
 
                     <Box>
-                      <Text fontSize="sm" color="white" fontFamily="monospace" fontWeight={600} mb={1}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        fontWeight={600}
+                        mb={1}
+                      >
                         ◆ 今後の予定
                       </Text>
                       <VStack gap={1} align="start" pl={4}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・新機能検討
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・ユーザビリティ向上
                         </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.8)" fontFamily="monospace">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
                           ・コーヒーを辞める
                         </Text>
                       </VStack>
