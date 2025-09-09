@@ -117,7 +117,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const evalSorted = async () => {
     if (!allSubmitted) return;
-    await submitSortedOrder(roomId, proposal || []);
+    const list = (proposal || []).filter(
+      (v): v is string => typeof v === "string" && v.length > 0
+    );
+    await submitSortedOrder(roomId, list);
   };
 
   const continueRound = async () => {
@@ -156,7 +159,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       w="100%"
       p={4}
       // ✅ ドラクエ風デザイン統一（他の要素と同じ太い白枠 - より際立つ）
-      bg="rgba(8,9,15,0.9)" 
+      bg="rgba(8,9,15,0.9)"
       border="3px solid rgba(255,255,255,0.9)"
       borderRadius={0}
       boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)"
@@ -165,7 +168,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         content: '""',
         position: "absolute",
         top: "-3px",
-        left: "-3px", 
+        left: "-3px",
         right: "-3px",
         bottom: "-3px",
         border: "1px solid rgba(255,255,255,0.3)",
@@ -192,12 +195,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           _placeholder={{ color: "rgba(255,255,255,0.5)" }}
           _focus={{
             borderColor: "#4a9eff",
-            boxShadow: "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
+            boxShadow:
+              "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
             bg: "rgba(8,9,15,0.9)",
           }}
-          _hover={{ 
+          _hover={{
             borderColor: "rgba(255,255,255,0.8)",
-            bg: "rgba(8,9,15,0.9)" 
+            bg: "rgba(8,9,15,0.9)",
           }}
         />
         <AppButton
@@ -225,7 +229,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         <Box
           w="4ch"
           minW="4ch"
-          h="60px"  // 固定高さで常に同じサイズ
+          h="60px" // 固定高さで常に同じサイズ
           minH="60px"
           textAlign="center"
           display="flex"
@@ -239,8 +243,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           fontWeight={800}
           fontSize={
             typeof me?.number === "number" && String(me.number).length >= 3
-              ? { base: "34px", md: "42px" }  // 3桁数字（100対応）- 視認性向上
-              : { base: "36px", md: "44px" }   // 1-2桁数字
+              ? { base: "34px", md: "42px" } // 3桁数字（100対応）- 視認性向上
+              : { base: "36px", md: "44px" } // 1-2桁数字
           }
           lineHeight={1}
           whiteSpace="nowrap"
@@ -257,7 +261,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               typeof me?.number === "number"
                 ? "linear-gradient(135deg, rgba(74,158,255,0.2), rgba(0,0,0,0.8))"
                 : "rgba(0,0,0,0.8)",
-            letterSpacing: typeof me?.number === "number" && String(me.number).length >= 3 ? "-0.1em" : "normal",
+            letterSpacing:
+              typeof me?.number === "number" && String(me.number).length >= 3
+                ? "-0.1em"
+                : "normal",
           }}
         >
           {typeof me?.number === "number" ? me.number : "??"}

@@ -15,11 +15,13 @@ const getClueFontSize = (clue: string | undefined): string => {
   if (!clue) return "1.22rem";
   
   const length = clue.length;
-  if (length <= 4) return "1.22rem";
-  if (length <= 6) return "1.1rem";
-  if (length <= 8) return "1rem";
-  if (length <= 10) return "0.9rem";
-  return "0.8rem";
+  if (length <= 3) return "1.25rem";   // 3文字以下: 大きめ
+  if (length <= 5) return "1.1rem";    // 4-5文字: 中程度
+  if (length <= 7) return "0.95rem";   // 6-7文字: やや小さめ
+  if (length <= 9) return "0.85rem";   // 8-9文字: 小さめ
+  if (length <= 12) return "0.75rem";  // 10-12文字: かなり小さめ
+  if (length <= 15) return "0.68rem";  // 13-15文字: とても小さめ
+  return "0.62rem";                    // 16文字以上: 最小
 };
 
 const getNumberFontSize = (number: number | null): string => {

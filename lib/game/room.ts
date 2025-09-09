@@ -144,29 +144,124 @@ export async function addCardToProposalAtPosition(
     if (current.includes(playerId)) return; // 重複防止
 
     let next: any[];
+    const maxCount: number = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[]).length
+      : Math.max(1, (room?.order?.total as number) || 0) || 0;
+    // 上限が0になるケースはない想定だが、保険で0を許容
     if (targetIndex === -1) {
       // 末尾追加（既存の「出す」ボタン動作）
-      next = [...current, playerId];
+      next = [...current];
+      // 空き（null）優先で詰める
+      let placed = false;
+      for (let i = 0; i < Math.max(next.length, maxCount); i++) {
+        if (i >= next.length) next.length = i + 1;
+        if (next[i] == null) {
+          next[i] = playerId;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) next.push(playerId);
     } else {
       // 位置指定追加: 配列長が不足していれば null でパディングし、指定位置にセット
       next = [...current];
-      if (targetIndex < next.length) {
+      const clamped = Math.max(
+        0,
+        Math.min(targetIndex, Math.max(0, maxCount - 1))
+      );
+      if (clamped < next.length) {
         // 既に何かがある位置には置かない（UI側で空きスロットのみ許容している想定）
-        if (typeof next[targetIndex] === "string" && next[targetIndex]) {
+        if (typeof next[clamped] === "string" && next[clamped]) {
           return;
         }
       } else {
         // 長さを広げ（未定義をnullに正規化する）
-        (next as any).length = targetIndex + 1;
+        (next as any).length = clamped + 1;
       }
-      next[targetIndex] = playerId;
+      next[clamped] = playerId;
       next = next.map((v) => (v === undefined ? null : v));
+    }
+    // 配列を最大人数に合わせて切り詰め
+    if (maxCount > 0) {
+      if (next.length > maxCount) next.length = maxCount;
+      // 長さ不足はnullでパディング
+      if (next.length < maxCount) {
+        const pad = new Array(maxCount - next.length).fill(null);
+        next = [...next, ...pad];
+      }
     }
 
     // order オブジェクトが未作成の場合の安全な merge
     tx.update(roomRef, {
       "order.proposal": next,
       order: { ...(room.order || {}), proposal: next },
+    });
+  });
+}
+
+// 既にproposalに含まれるカードを、空きスロットに移動（重複防止）。
+export async function moveCardInProposalToPosition(
+  roomId: string,
+  playerId: string,
+  targetIndex: number
+) {
+  const roomRef = doc(db!, "rooms", roomId);
+  await runTransaction(db!, async (tx) => {
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists()) throw new Error("room not found");
+    const room: any = roomSnap.data();
+    if (room.status !== "clue") return;
+    if (room?.options?.resolveMode !== "sort-submit") return;
+    const current: any[] = (room?.order?.proposal || []).slice();
+    const maxCount: number = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[]).length
+      : Math.max(1, (room?.order?.total as number) || 0) || 0;
+
+    const fromIdx = current.findIndex((v) => v === playerId);
+    if (fromIdx < 0) return; // まだ出ていない
+
+    const clamped = Math.max(
+      0,
+      Math.min(targetIndex, Math.max(0, maxCount - 1))
+    );
+
+    // 目標が埋まっていた場合の挙動
+    const isOccupiedByOther = current[clamped] && current[clamped] !== playerId;
+    const isFull =
+      current.length >= maxCount && current.every((v) => v != null);
+    if (isOccupiedByOther) {
+      // 全スロットが埋まっている場合のみ、arrayMove 相当の並べ替えを許可
+      if (isFull) {
+        const moved = current[fromIdx];
+        // remove at fromIdx
+        current.splice(fromIdx, 1);
+        let insertIndex = clamped;
+        if (fromIdx < clamped) insertIndex -= 1; // splice後のインデックス補正
+        current.splice(insertIndex, 0, moved);
+      } else {
+        // 未充足（nullあり）なら占有スロットへの移動は不可（空きスロットにドロップさせる）
+        return;
+      }
+    } else {
+      // いったん元位置を空けて、指定先へ移動（空きスロット、または自身の位置）
+      current[fromIdx] = null;
+      if (clamped >= current.length) (current as any).length = clamped + 1;
+      current[clamped] = playerId;
+    }
+
+    // 長さ調整
+    if (maxCount > 0) {
+      if (current.length > maxCount) current.length = maxCount;
+      if (current.length < maxCount) {
+        const pad = new Array(maxCount - current.length).fill(null);
+        current.push(...pad);
+      }
+    }
+
+    const normalized = current.map((v) => (v === undefined ? null : v));
+    tx.update(roomRef, {
+      "order.proposal": normalized,
+      order: { ...(room.order || {}), proposal: normalized },
     });
   });
 }

@@ -30,13 +30,18 @@ export function isSequential(mode: unknown): mode is "sequential" {
 export function computeAllSubmitted(params: {
   mode: unknown;
   eligibleIds?: string[];
-  proposal?: string[];
+  proposal?: (string | null)[];
 }): boolean {
-  // Always use sort-submit logic since sequential is removed
+  // sort-submit: 提出完了は「非 null の提出数 === 有効プレイヤー数」
   const { eligibleIds, proposal } = params;
   if (!Array.isArray(eligibleIds) || !Array.isArray(proposal)) return false;
   if (eligibleIds.length === 0) return false;
-  const all = eligibleIds.length === proposal.length;
+
+  // 提出済み（非 null）のみをカウント
+  const submittedCount = proposal.filter(
+    (v): v is string => typeof v === "string" && v.length > 0
+  ).length;
+  const all = submittedCount === eligibleIds.length;
   if (all) devMetric("allSubmitted");
   return all;
 }

@@ -9,7 +9,7 @@ import WaitingArea from "@/components/ui/WaitingArea";
 import {
   addCardToProposalAtPosition,
   finalizeReveal,
-  setOrderProposal,
+  moveCardInProposalToPosition,
   submitSortedOrder,
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
@@ -17,6 +17,8 @@ import { Box } from "@chakra-ui/react";
 import {
   DndContext,
   DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -25,7 +27,6 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -175,6 +176,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setPending((cur) => cur.filter((id) => !orderListSet.has(id)));
   }, [orderListSet, setPending]);
 
+  // proposal 反映時に proposal 上に存在するIDの pending ゴーストを掃除
+  useEffect(() => {
+    if (!proposal || proposal.length === 0) return;
+    const present = new Set(
+      (proposal as (string | null)[]).filter(Boolean) as string[]
+    );
+    setPending((cur) => cur.filter((id) => !present.has(id)));
+  }, [proposal?.join(","), setPending]);
+
   const renderCard = (id: string, idx?: number) => (
     <CardRenderer
       key={id}
@@ -215,26 +225,37 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     // Check if this is a WaitingCard being dropped to an empty slot
     const activeId = String(active.id);
     const overId = String(over.id);
+    const alreadyInProposal = (activeProposal as (string | null)[]).includes(
+      activeId
+    );
 
     // Handle WaitingCard -> EmptySlot drops
     if (overId.startsWith("slot-")) {
-      const slotIndex = parseInt(overId.split("-")[1]);
+      let slotIndex = parseInt(overId.split("-")[1]);
       if (!isNaN(slotIndex)) {
-        // Optimistic: place locally at the intended slot immediately
-        setPending((prev) => {
-          const next = [...prev];
-          // remove if already exists elsewhere
-          const exist = next.indexOf(activeId);
-          if (exist >= 0) next.splice(exist, 1);
-          // ensure length
-          if (slotIndex >= next.length) {
-            next.length = slotIndex + 1;
-          }
-          next[slotIndex] = activeId;
-          return next;
-        });
+        const maxSlots = Math.max(0, (eligibleIds?.length || 0) - 1);
+        slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
+        // Optimistic: 待機→新規配置のときのみ pending を更新。既存カードの移動では pending を触らない
+        if (!alreadyInProposal) {
+          setPending((prev) => {
+            const next = [...prev];
+            // remove if already exists elsewhere
+            const exist = next.indexOf(activeId);
+            if (exist >= 0) next.splice(exist, 1);
+            // ensure length
+            if (slotIndex >= next.length) {
+              next.length = slotIndex + 1;
+            }
+            next[slotIndex] = activeId;
+            return next;
+          });
+        }
         try {
-          await addCardToProposalAtPosition(roomId, activeId, slotIndex);
+          if (alreadyInProposal) {
+            await moveCardInProposalToPosition(roomId, activeId, slotIndex);
+          } else {
+            await addCardToProposalAtPosition(roomId, activeId, slotIndex);
+          }
           return;
         } catch (error) {
           console.error("Failed to add card to proposal at position:", error);
@@ -243,20 +264,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     }
 
-    // Handle card reordering within proposal
-    const sortableItems = (activeProposal as (string | null)[]).filter(
-      Boolean
-    ) as string[];
-    const oldIndex = sortableItems.indexOf(activeId);
-    const newIndex = sortableItems.indexOf(overId);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove(sortableItems, oldIndex, newIndex);
-    try {
-      await setOrderProposal(roomId, reordered);
-    } catch {
-      /* ignore */
+    // Handle card-on-card reordering within proposal using fixed-length (null-padded) indices
+    // Only allow if the active card is already on the board. Waiting cards must drop onto empty slots.
+    if (alreadyInProposal) {
+      const targetIndex = (activeProposal as (string | null)[]).indexOf(overId);
+      if (targetIndex < 0) return;
+      try {
+        await moveCardInProposalToPosition(roomId, activeId, targetIndex);
+      } catch {
+        /* ignore */
+      }
     }
   };
+
+  // DragOverlay 用のアクティブID管理
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const onDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  };
+  const clearActive = () => setActiveId(null);
 
   // 安全装置: sort-submit で "reveal" に入ったが何らかの理由でアニメ完了検知が漏れた場合、
   // 理論上の総所要時間後に finalizeReveal を呼ぶ。
@@ -290,17 +316,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   // Sort-submit mode only - no sequential finalize needed
 
   // sort-submit: 全員提出で「確定」可能
+  const proposedCount = Array.isArray(proposal)
+    ? (proposal as (string | null)[]).filter(Boolean).length
+    : 0;
   const canConfirm =
     resolveMode === "sort-submit" &&
     roomStatus === "clue" &&
     Array.isArray(eligibleIds) &&
-    (proposal?.length || 0) === eligibleIds.length &&
+    proposedCount === eligibleIds.length &&
     eligibleIds.length > 0 &&
     !!isHost;
   const onConfirm = async () => {
     if (!canConfirm) return;
     try {
-      await submitSortedOrder(roomId, proposal || []);
+      await submitSortedOrder(
+        roomId,
+        (proposal as (string | null)[]).filter(Boolean) as string[]
+      );
     } catch {}
   };
 
@@ -348,7 +380,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         {resolveMode === "sort-submit" && roomStatus === "clue" ? (
           <DndContext
             collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            onDragEnd={(ev) => {
+              onDragEnd(ev);
+              clearActive();
+            }}
+            onDragCancel={clearActive}
             sensors={sensors}
             accessibility={{
               announcements: {
@@ -446,40 +483,57 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   }
                 >
                   {/* Empty slots for placement - optimized for 8+ players */}
-                  {Array.from({
-                    length: Math.max(
-                      eligibleIds.length,
-                      players.length,
-                      activeProposal.length
-                    ),
-                  }).map((_, idx) => {
-                    // Prefer proposal value, but fall back to locally optimistic
-                    // `pending` so the UI doesn't temporarily show an empty
-                    // slot if `proposal` briefly mutates.
-                    const ap = activeProposal[idx] as any;
-                    const cardId =
-                      (ap ?? null) || (pending && pending[idx]) || null;
-                    if (cardId) {
+                  {Array.from({ length: Math.max(0, eligibleIds.length) }).map(
+                    (_, idx) => {
+                      // Prefer proposal value, but fall back to locally optimistic
+                      // `pending` so the UI doesn't temporarily show an empty
+                      // slot if `proposal` briefly mutates.
+                      const ap = activeProposal[idx] as any;
+                      const cardId =
+                        (ap ?? null) || (pending && pending[idx]) || null;
+                      if (cardId) {
+                        // proposal 由来のみ sortable。pending 由来は一時表示（ドラッグ不可）
+                        return ap ? (
+                          <SortableItem id={cardId} key={cardId}>
+                            {renderCard(cardId, idx)}
+                          </SortableItem>
+                        ) : (
+                          <React.Fragment key={`ghost-${idx}-${cardId}`}>
+                            {renderCard(cardId, idx)}
+                          </React.Fragment>
+                        );
+                      }
+                      // Empty slot placeholder - show during clue phase with droppable ID
                       return (
-                        <SortableItem id={cardId} key={cardId}>
-                          {renderCard(cardId, idx)}
-                        </SortableItem>
+                        <EmptyCard
+                          key={`slot-${idx}`}
+                          slotNumber={idx + 1}
+                          alignSelf="flex-start"
+                          id={`slot-${idx}`}
+                          isDroppable={true}
+                        />
                       );
                     }
-                    // Empty slot placeholder - show during clue phase with droppable ID
-                    return (
-                      <EmptyCard
-                        key={`slot-${idx}`}
-                        slotNumber={idx + 1}
-                        alignSelf="flex-start"
-                        id={`slot-${idx}`}
-                        isDroppable={true}
-                      />
-                    );
-                  })}
+                  )}
                 </SortableContext>
               </Box>
             </Box>
+
+            {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
+            <DragOverlay dropAnimation={{ duration: 150 }}>
+              {activeId
+                ? (() => {
+                    const idx = (activeProposal as (string | null)[]).indexOf(
+                      activeId
+                    );
+                    if (idx >= 0) {
+                      return renderCard(activeId, idx);
+                    }
+                    // 盤上未配置（待機エリア）の場合も見た目を統一
+                    return renderCard(activeId);
+                  })()
+                : null}
+            </DragOverlay>
 
             {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
             {waitingPlayers.length > 0 && (
@@ -548,59 +602,55 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             >
               <Box width="100%" css={{ display: "contents" }}>
                 {/* Static game state: use eligible slots count - optimized */}
-                {Array.from({
-                  length: Math.max(
-                    eligibleIds.length,
-                    players.length,
-                    activeProposal.length
-                  ),
-                }).map((_, idx) => {
-                  // Prefer confirmed orderList entry; fall back to locally pending
-                  // placement so the first card appears immediately in the slot
-                  // even before server-side orderList updates arrive.
-                  const ap = activeProposal[idx] as any;
-                  const cardId =
-                    (ap ?? null) ||
-                    orderList?.[idx] ||
-                    (pending && pending[idx]) ||
-                    null;
-                  const isDroppableSlot = canDropAtPosition(idx);
-                  // ゲーム状態での表示条件確認
-                  const isGameActive =
-                    roomStatus === "clue" ||
-                    roomStatus === "playing" ||
-                    roomStatus === "reveal" ||
-                    roomStatus === "finished";
+                {Array.from({ length: Math.max(0, eligibleIds.length) }).map(
+                  (_, idx) => {
+                    // Prefer confirmed orderList entry; fall back to locally pending
+                    // placement so the first card appears immediately in the slot
+                    // even before server-side orderList updates arrive.
+                    const ap = activeProposal[idx] as any;
+                    const cardId =
+                      (ap ?? null) ||
+                      orderList?.[idx] ||
+                      (pending && pending[idx]) ||
+                      null;
+                    const isDroppableSlot = canDropAtPosition(idx);
+                    // ゲーム状態での表示条件確認
+                    const isGameActive =
+                      roomStatus === "clue" ||
+                      roomStatus === "playing" ||
+                      roomStatus === "reveal" ||
+                      roomStatus === "finished";
 
-                  // カードがある場合はカード表示、ない場合は空きスロット表示
-                  return cardId && isGameActive ? (
-                    <React.Fragment key={cardId ?? `slot-${idx}`}>
-                      {renderCard(cardId, idx)}
-                    </React.Fragment>
-                  ) : (
-                    <EmptyCard
-                      key={`drop-zone-${idx}`}
-                      slotNumber={idx + 1}
-                      isDroppable={isDroppableSlot}
-                      onDragOver={(e) => {
-                        if (isDroppableSlot && !isOver) {
-                          setIsOver(true);
-                        }
-                      }}
-                      onDragLeave={() => {
-                        setIsOver(false);
-                      }}
-                      onDrop={(e) => onDropAtPosition(e, idx)}
-                      alignSelf="flex-start"
-                      _focusVisible={{
-                        outline: "2px solid",
-                        outlineColor: "focusRing",
-                        outlineOffset: 2,
-                      }}
-                      tabIndex={0}
-                    />
-                  );
-                })}
+                    // カードがある場合はカード表示、ない場合は空きスロット表示
+                    return cardId && isGameActive ? (
+                      <React.Fragment key={cardId ?? `slot-${idx}`}>
+                        {renderCard(cardId, idx)}
+                      </React.Fragment>
+                    ) : (
+                      <EmptyCard
+                        key={`drop-zone-${idx}`}
+                        slotNumber={idx + 1}
+                        isDroppable={isDroppableSlot}
+                        onDragOver={(e) => {
+                          if (isDroppableSlot && !isOver) {
+                            setIsOver(true);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          setIsOver(false);
+                        }}
+                        onDrop={(e) => onDropAtPosition(e, idx)}
+                        alignSelf="flex-start"
+                        _focusVisible={{
+                          outline: "2px solid",
+                          outlineColor: "focusRing",
+                          outlineOffset: 2,
+                        }}
+                        tabIndex={0}
+                      />
+                    );
+                  }
+                )}
 
                 {/* No pending cards needed in sort-submit mode */}
               </Box>
