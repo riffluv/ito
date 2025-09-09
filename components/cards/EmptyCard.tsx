@@ -81,37 +81,24 @@ export function EmptyCard({
           transform: "scale(1.02)",
         },
 
-        // @dnd-kitのisOver状態での強化されたドロップフィードバック
+        // @dnd-kitのisOver状態での洗練されたドロップフィードバック（AI感軽減版）
         ...(id && dndDroppable.isOver && {
-          backgroundColor: "rgba(74,158,255,0.15)",
-          borderColor: "#4a9eff",
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderColor: "rgba(255,255,255,0.8)",
           borderStyle: "solid",
-          transform: "scale(1.05)",
-          boxShadow: "0 0 20px rgba(74,158,255,0.4), inset 0 0 20px rgba(74,158,255,0.1)",
-          // ドロップ可能を示すアニメーション効果
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "24px",
-            height: "24px",
-            borderRadius: "50%",
-            backgroundColor: "rgba(74,158,255,0.4)",
-            animation: "dropPulse 1.5s ease-in-out infinite",
-          },
+          transform: "scale(1.02)", // 控えめなスケール
+          // シンプルで上品なシャドウ
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.15)",
+          // 控えめな指示テキスト
           "&::after": {
-            content: '"ここに配置"',
+            content: '"配置"',
             position: "absolute",
-            bottom: "8px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontSize: "10px",
-            color: "#4a9eff",
-            fontWeight: "600",
-            textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-            whiteSpace: "nowrap",
+            bottom: "6px",
+            right: "6px",
+            fontSize: "9px",
+            color: "rgba(255,255,255,0.8)",
+            fontWeight: "500",
+            opacity: 0.8,
           }
         }),
       }}
