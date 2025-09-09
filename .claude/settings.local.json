@@ -114,7 +114,8 @@
       "Bash(taskkill:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

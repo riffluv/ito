@@ -42,13 +42,20 @@ export const topicControls = {
   async resetTopic(roomId: string) {
     try {
       await updateDoc(doc(db!, "rooms", roomId), {
-        topicBox: null,
-        topicOptions: null,
+        status: "waiting", // ★ ロビー状態に戻す
+        result: null,
+        deal: null,
+        order: null,
+        round: 0,
         topic: null,
+        topicOptions: null,
+        topicBox: null,
+        closedAt: null,
+        expiresAt: null,
       });
-      notify({ title: "お題をクリアしました", type: "success" });
+      notify({ title: "ゲームをリセットしました", type: "success" });
     } catch (error: any) {
-      notify({ title: "お題のクリアに失敗", description: error?.message || String(error), type: "error" });
+      notify({ title: "ゲームリセットに失敗", description: error?.message || String(error), type: "error" });
     }
   },
 

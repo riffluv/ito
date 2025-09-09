@@ -7,6 +7,7 @@ import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import StatusDock from "@/components/ui/StatusDock";
 import WaitingArea from "@/components/ui/WaitingArea";
 import {
+  addCardToProposalAtPosition,
   finalizeReveal,
   setOrderProposal,
   submitSortedOrder,
@@ -200,20 +201,56 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   // DnD sorting for sort-submit mode
   const activeProposal = useMemo(() => {
-    // During finished phase, use confirmed orderList instead of proposal
-    if (roomStatus === "finished") {
-      return orderList || [];
-    }
-    return proposal || [];
+    // finished時は確定順のみ
+    if (roomStatus === "finished") return orderList || [];
+    // 提案配列は null を空きとして保持（サーバー側でnullパディングするため）
+    return (proposal ?? []) as (string | null)[];
   }, [proposal?.join(","), orderList?.join(","), roomStatus]);
+
   const onDragEnd = async (e: DragEndEvent) => {
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIndex = activeProposal.indexOf(String(active.id));
-    const newIndex = activeProposal.indexOf(String(over.id));
+
+    // Check if this is a WaitingCard being dropped to an empty slot
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Handle WaitingCard -> EmptySlot drops
+    if (overId.startsWith("slot-")) {
+      const slotIndex = parseInt(overId.split("-")[1]);
+      if (!isNaN(slotIndex)) {
+        // Optimistic: place locally at the intended slot immediately
+        setPending((prev) => {
+          const next = [...prev];
+          // remove if already exists elsewhere
+          const exist = next.indexOf(activeId);
+          if (exist >= 0) next.splice(exist, 1);
+          // ensure length
+          if (slotIndex >= next.length) {
+            next.length = slotIndex + 1;
+          }
+          next[slotIndex] = activeId;
+          return next;
+        });
+        try {
+          await addCardToProposalAtPosition(roomId, activeId, slotIndex);
+          return;
+        } catch (error) {
+          console.error("Failed to add card to proposal at position:", error);
+          return;
+        }
+      }
+    }
+
+    // Handle card reordering within proposal
+    const sortableItems = (activeProposal as (string | null)[]).filter(
+      Boolean
+    ) as string[];
+    const oldIndex = sortableItems.indexOf(activeId);
+    const newIndex = sortableItems.indexOf(overId);
     if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove(activeProposal, oldIndex, newIndex);
+    const reordered = arrayMove(sortableItems, oldIndex, newIndex);
     try {
       await setOrderProposal(roomId, reordered);
     } catch {
@@ -307,125 +344,121 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         position="relative"
         minHeight={0}
       >
-        <Box
-          borderWidth="0"
-          border="borders.retrogameThin"
-          borderColor="#fff"
-          borderRadius={0}
-          padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
-          minHeight="auto"
-          width="100%"
-          maxWidth="var(--board-max-width)"
-          marginInline="auto"
-          display="flex"
-          flexWrap="wrap"
-          justifyContent="center"
-          alignContent="flex-start"
-          alignItems="flex-start"
-          gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
-          transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-          data-drop-target={isOver && canDrop ? "true" : "false"}
-          css={{
-            containerType: "inline-size",
-            // 統一されたレスポンシブスペーシング
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              gap: "8px", // DPI125%用最適化
-              padding: "8px 12px",
-              // カード配置の最適化
-              "& > *": {
-                minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
-              },
-            },
-            // DPI 150%対応：カードボードエリアの最適化
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-              {
-                gap: "12px !important", // 間隔をやや縮小→収まり改善
-                padding: "4px 8px !important", // さらにコンパクト
-                // カードサイズ統一
-                "& > *": {
-                  minWidth: "88px !important",
-                  maxWidth: "88px !important",
+        {/* DndContext scope expanded to include WaitingArea for drag functionality */}
+        {resolveMode === "sort-submit" && roomStatus === "clue" ? (
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+            sensors={sensors}
+            accessibility={{
+              announcements: {
+                onDragStart: ({ active }) => {
+                  const player = playerMap.get(active.id as string);
+                  return `カード「${player?.name || active.id}」のドラッグを開始しました。`;
                 },
-                "@media (min-width: 768px)": {
-                  "& > *": {
-                    minWidth: "105px !important",
-                    maxWidth: "105px !important",
-                  },
+                onDragOver: ({ active, over }) => {
+                  if (over) {
+                    const activePlayer = playerMap.get(active.id as string);
+                    const overIndex = activeProposal.indexOf(over.id as string);
+                    return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に移動中です。`;
+                  }
+                  return `カード「${active.id}」を移動中です。`;
+                },
+                onDragEnd: ({ active, over }) => {
+                  const activePlayer = playerMap.get(active.id as string);
+                  if (over) {
+                    const overIndex = activeProposal.indexOf(over.id as string);
+                    return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に配置しました。`;
+                  }
+                  return `カード「${activePlayer?.name || active.id}」のドラッグを終了しました。`;
+                },
+                onDragCancel: ({ active }) => {
+                  const activePlayer = playerMap.get(active.id as string);
+                  return `カード「${activePlayer?.name || active.id}」のドラッグをキャンセルしました。`;
                 },
               },
-            [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
-              gap: "10px",
-              padding: "12px",
-            },
-            // コンテナクエリベースの最適化
-            "@container (max-width: 600px)": {
-              gap: "6px",
-              padding: "8px",
-            },
-          }}
-        >
-          <Box
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (canDrop) {
-                setIsOver(true);
-              }
             }}
-            onDragLeave={() => setIsOver(false)}
-            onDrop={onDrop}
-            width="100%"
-            css={{ display: "contents" }}
           >
-            {/* Drop Slots and Cards */}
-            {/* DEBUG: resolveMode={resolveMode}, roomStatus={roomStatus} */}
-            {resolveMode === "sort-submit" && roomStatus === "clue" ? (
-              <DndContext
-                collisionDetection={closestCenter}
-                onDragEnd={onDragEnd}
-                sensors={sensors}
-                accessibility={{
-                  announcements: {
-                    onDragStart: ({ active }) => {
-                      const player = playerMap.get(active.id as string);
-                      return `カード「${player?.name || active.id}」のドラッグを開始しました。`;
+            {/* Card Board Area */}
+            <Box
+              borderWidth="0"
+              border="borders.retrogameThin"
+              borderColor="#fff"
+              borderRadius={0}
+              padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
+              minHeight="auto"
+              width="100%"
+              maxWidth="var(--board-max-width)"
+              marginInline="auto"
+              display="flex"
+              flexWrap="wrap"
+              justifyContent="center"
+              alignContent="flex-start"
+              alignItems="flex-start"
+              gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
+              transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+              data-drop-target={isOver && canDrop ? "true" : "false"}
+              css={{
+                containerType: "inline-size",
+                // 統一されたレスポンシブスペーシング
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  gap: "8px", // DPI125%用最適化
+                  padding: "8px 12px",
+                  // カード配置の最適化
+                  "& > *": {
+                    minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
+                  },
+                },
+                // DPI 150%対応：カードボードエリアの最適化
+                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                  {
+                    gap: "12px !important", // 間隔をやや縮小→収まり改善
+                    padding: "4px 8px !important", // さらにコンパクト
+                    // カードサイズ統一
+                    "& > *": {
+                      minWidth: "88px !important",
+                      maxWidth: "88px !important",
                     },
-                    onDragOver: ({ active, over }) => {
-                      if (over) {
-                        const activePlayer = playerMap.get(active.id as string);
-                        const overIndex = activeProposal.indexOf(
-                          over.id as string
-                        );
-                        return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に移動中です。`;
-                      }
-                      return `カード「${active.id}」を移動中です。`;
-                    },
-                    onDragEnd: ({ active, over }) => {
-                      const activePlayer = playerMap.get(active.id as string);
-                      if (over) {
-                        const overIndex = activeProposal.indexOf(
-                          over.id as string
-                        );
-                        return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に配置しました。`;
-                      }
-                      return `カード「${activePlayer?.name || active.id}」のドラッグを終了しました。`;
-                    },
-                    onDragCancel: ({ active }) => {
-                      const activePlayer = playerMap.get(active.id as string);
-                      return `カード「${activePlayer?.name || active.id}」のドラッグをキャンセルしました。`;
+                    "@media (min-width: 768px)": {
+                      "& > *": {
+                        minWidth: "105px !important",
+                        maxWidth: "105px !important",
+                      },
                     },
                   },
-                }}
-              >
-                <SortableContext items={activeProposal}>
+                [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
+                  gap: "10px",
+                  padding: "12px",
+                },
+                // コンテナクエリベースの最適化
+                "@container (max-width: 600px)": {
+                  gap: "6px",
+                  padding: "8px",
+                },
+              }}
+            >
+              <Box width="100%" css={{ display: "contents" }}>
+                <SortableContext
+                  items={
+                    (activeProposal as (string | null)[]).filter(
+                      Boolean
+                    ) as string[]
+                  }
+                >
                   {/* Empty slots for placement - optimized for 8+ players */}
                   {Array.from({
-                    length: Math.max(eligibleIds.length, players.length),
+                    length: Math.max(
+                      eligibleIds.length,
+                      players.length,
+                      activeProposal.length
+                    ),
                   }).map((_, idx) => {
                     // Prefer proposal value, but fall back to locally optimistic
                     // `pending` so the UI doesn't temporarily show an empty
                     // slot if `proposal` briefly mutates.
+                    const ap = activeProposal[idx] as any;
                     const cardId =
-                      activeProposal[idx] ?? (pending && pending[idx]) ?? null;
+                      (ap ?? null) || (pending && pending[idx]) || null;
                     if (cardId) {
                       return (
                         <SortableItem id={cardId} key={cardId}>
@@ -433,28 +466,104 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         </SortableItem>
                       );
                     }
-                    // Empty slot placeholder - show during clue phase
+                    // Empty slot placeholder - show during clue phase with droppable ID
                     return (
                       <EmptyCard
                         key={`slot-${idx}`}
                         slotNumber={idx + 1}
                         alignSelf="flex-start"
+                        id={`slot-${idx}`}
+                        isDroppable={true}
                       />
                     );
                   })}
                 </SortableContext>
-              </DndContext>
-            ) : (
-              <>
+              </Box>
+            </Box>
+
+            {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
+            {waitingPlayers.length > 0 && (
+              <WaitingArea players={waitingPlayers} isDraggingEnabled={true} />
+            )}
+          </DndContext>
+        ) : (
+          <>
+            {/* Static game state without DndContext */}
+            <Box
+              borderWidth="0"
+              border="borders.retrogameThin"
+              borderColor="#fff"
+              borderRadius={0}
+              padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
+              minHeight="auto"
+              width="100%"
+              maxWidth="var(--board-max-width)"
+              marginInline="auto"
+              display="flex"
+              flexWrap="wrap"
+              justifyContent="center"
+              alignContent="flex-start"
+              alignItems="flex-start"
+              gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
+              transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+              data-drop-target={isOver && canDrop ? "true" : "false"}
+              css={{
+                containerType: "inline-size",
+                // 統一されたレスポンシブスペーシング
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  gap: "8px", // DPI125%用最適化
+                  padding: "8px 12px",
+                  // カード配置の最適化
+                  "& > *": {
+                    minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
+                  },
+                },
+                // DPI 150%対応：カードボードエリアの最適化
+                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                  {
+                    gap: "12px !important", // 間隔をやや縮小→収まり改善
+                    padding: "4px 8px !important", // さらにコンパクト
+                    // カードサイズ統一
+                    "& > *": {
+                      minWidth: "88px !important",
+                      maxWidth: "88px !important",
+                    },
+                    "@media (min-width: 768px)": {
+                      "& > *": {
+                        minWidth: "105px !important",
+                        maxWidth: "105px !important",
+                      },
+                    },
+                  },
+                [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
+                  gap: "10px",
+                  padding: "12px",
+                },
+                // コンテナクエリベースの最適化
+                "@container (max-width: 600px)": {
+                  gap: "6px",
+                  padding: "8px",
+                },
+              }}
+            >
+              <Box width="100%" css={{ display: "contents" }}>
                 {/* Static game state: use eligible slots count - optimized */}
                 {Array.from({
-                  length: Math.max(eligibleIds.length, players.length),
+                  length: Math.max(
+                    eligibleIds.length,
+                    players.length,
+                    activeProposal.length
+                  ),
                 }).map((_, idx) => {
                   // Prefer confirmed orderList entry; fall back to locally pending
                   // placement so the first card appears immediately in the slot
                   // even before server-side orderList updates arrive.
+                  const ap = activeProposal[idx] as any;
                   const cardId =
-                    orderList?.[idx] ?? (pending && pending[idx]) ?? null;
+                    (ap ?? null) ||
+                    orderList?.[idx] ||
+                    (pending && pending[idx]) ||
+                    null;
                   const isDroppableSlot = canDropAtPosition(idx);
                   // ゲーム状態での表示条件確認
                   const isGameActive =
@@ -494,10 +603,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 })}
 
                 {/* No pending cards needed in sort-submit mode */}
-              </>
-            )}
-          </Box>
-        </Box>
+              </Box>
+            </Box>
+
+            {/* 待機エリア（clue/waiting中・未提出者がいる場合）- Static mode */}
+            {(roomStatus === "clue" || roomStatus === "waiting") &&
+              waitingPlayers.length > 0 && (
+                <WaitingArea
+                  players={waitingPlayers}
+                  isDraggingEnabled={false}
+                />
+              )}
+          </>
+        )}
 
         <StatusDock
           show={roomStatus === "finished"}
@@ -506,11 +624,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           {/* GSAPオーバーレイに置き換えのためインライン表示を削除 */}
         </StatusDock>
       </Box>
-      {/* 待機エリア（clue/waiting中・未提出者がいる場合） */}
-      {(roomStatus === "clue" || roomStatus === "waiting") &&
-      waitingPlayers.length > 0 ? (
-        <WaitingArea players={waitingPlayers} />
-      ) : null}
+
       {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） - DISABLED: 重複機能のため削除 */}
       {/* {canConfirm && waitingPlayers.length === 0 ? (
         <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
