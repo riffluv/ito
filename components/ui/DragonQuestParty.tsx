@@ -125,7 +125,14 @@ export function DragonQuestParty({
           w={{ base: "200px", md: "220px" }}
         >
           {players
-            .sort((a, b) => a.orderIndex - b.orderIndex) // 順番でソート
+            .sort((a, b) => {
+              // ホストを最上位に固定し、その後はorderIndexで昇順
+              if (hostId) {
+                if (a.id === hostId && b.id !== hostId) return -1;
+                if (b.id === hostId && a.id !== hostId) return 1;
+              }
+              return a.orderIndex - b.orderIndex;
+            })
             .map((player) => {
               const { icon, color, status } = getPlayerStatus(
                 player,
@@ -165,12 +172,19 @@ export function DragonQuestParty({
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
                       title={`${isHost ? "👑 " : ""}${player.name} - ${status}`}
-                      css={isHost ? {
-                        animation: "hostGlow 2s ease-in-out infinite alternate",
-                        textShadow: "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4), 1px 1px 0px #000"
-                      } : undefined}
+                      css={
+                        isHost
+                          ? {
+                              animation:
+                                "hostGlow 2s ease-in-out infinite alternate",
+                              textShadow:
+                                "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4), 1px 1px 0px #000",
+                            }
+                          : undefined
+                      }
                     >
-                      {isHost ? "👑 " : ""}{player.name}
+                      {isHost ? "👑 " : ""}
+                      {player.name}
                     </Text>
 
                     {/* 状態アイコン - 適切な固定幅 */}

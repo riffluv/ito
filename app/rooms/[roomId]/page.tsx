@@ -6,6 +6,7 @@
 // 旧CluePanelは未使用（刷新した中央UIに統合済み）
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
+import NameDialog from "@/components/NameDialog";
 import SettingsModal from "@/components/SettingsModal";
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
@@ -81,6 +82,7 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
         placeholder="連想ワード"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        maxLength={50}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -117,7 +119,7 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params.roomId;
-  const { user, displayName } = useAuth();
+  const { user, displayName, setDisplayName } = useAuth();
   const router = useRouter();
   const uid = user?.uid || null;
   const {
@@ -136,6 +138,11 @@ export default function RoomPage() {
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+  // 名前未設定時はダイアログを表示。auto-joinはuseRoomState側で抑止済み
+  const needName = !displayName || !String(displayName).trim();
+  const handleSubmitName = async (name: string) => {
+    setDisplayName(name);
+  };
 
   // ラウンド対象は上部で計算済み（eligibleIds）
 
@@ -548,6 +555,18 @@ export default function RoomPage() {
         sidebar={sidebarNode}
         main={mainNode}
         handArea={handAreaNode}
+      />
+
+      {/* 名前入力モーダル。キャンセルは不可（閉じても再度開く） */}
+      <NameDialog
+        isOpen={needName}
+        defaultValue=""
+        onCancel={() => {
+          /* keep open until set */
+        }}
+        onSubmit={handleSubmitName}
+        submitting={false}
+        mode="create"
       />
 
       {/* ミニマルUI（固定配置） */}

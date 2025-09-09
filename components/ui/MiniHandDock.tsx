@@ -182,6 +182,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           placeholder="連想ワード"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          maxLength={50}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleDecide();
           }}
