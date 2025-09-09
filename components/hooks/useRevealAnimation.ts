@@ -1,4 +1,5 @@
 import { finalizeReveal } from "@/lib/game/room";
+import { evaluateSorted } from "@/lib/game/rules";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_LINGER,
@@ -56,7 +57,7 @@ export function useRevealAnimation({
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderListLength, revealAnimating, revealIndex]);
 
-  // リアルタイム判定: revealIndexが変わるたびに現在までの結果を計算
+  // リアルタイム判定: revealIndexが変わるたびに現在までの結果を計算（フォールバック兼、成功時処理）
   useEffect(() => {
     const performRealtimeJudgment = async () => {
       // 2枚目以降がめくられた時のみ判定（1枚では判定不可）
@@ -69,8 +70,6 @@ export function useRevealAnimation({
 
 
       try {
-        const { evaluateSorted } = await import("@/lib/game/rules");
-        
         // リアルタイムデータを使用（getDoc削除でデータ不整合を解決）
         if (!orderData?.list || !orderData?.numbers) return;
 
@@ -90,7 +89,7 @@ export function useRevealAnimation({
         }
         // 成功の場合はrealtimeResultを設定しない（余韻のため）
 
-        // 失敗が検出された場合、最終結果をサーバーに保存（一度だけ）
+  // 失敗が検出された場合、最終結果をサーバーに保存（一度だけ）
         if (!result.success && result.failedAt !== null && !realtimeResult) {
           try {
             const { requireDb } = await import("@/lib/firebase/require");
@@ -186,11 +185,53 @@ export function useRevealAnimation({
 
     // First card has shorter delay to avoid "frozen" impression
     const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
-    const timer = setTimeout(() => {
-      setRevealIndex((i) => {
-        if (i >= orderListLength) return i;
-        return i + 1;
-      });
+    const timer = setTimeout(async () => {
+      // 次にめくる枚数（この時点ではまだ state 更新前）
+      const nextIndex = Math.min(revealIndex + 1, orderListLength);
+
+      // 同期的に即時判定: 2枚目以降、かつ orderData が揃っている場合
+      try {
+        if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
+          const currentList = orderData.list.slice(0, nextIndex);
+          const result = evaluateSorted(currentList, orderData.numbers);
+          if (!result.success) {
+            // ここで即座に失敗結果を反映（色タイミングをカードの反転と一致させる）
+            setRealtimeResult({
+              success: false,
+              failedAt: result.failedAt,
+              currentIndex: nextIndex,
+            });
+            // サーバーへも一度だけ保存（冪等ガードはトランザクション内で）
+            try {
+              const { requireDb } = await import("@/lib/firebase/require");
+              const { doc, runTransaction, serverTimestamp } = await import("firebase/firestore");
+              const _db = requireDb();
+              const roomRef = doc(_db, "rooms", roomId);
+              await runTransaction(_db, async (tx) => {
+                const currentSnap = await tx.get(roomRef);
+                if (!currentSnap.exists()) return;
+                const currentRoom = currentSnap.data() as any;
+                if (currentRoom.result) return; // 既に保存済み
+                tx.update(roomRef, {
+                  result: {
+                    success: false,
+                    failedAt: result.failedAt,
+                    lastNumber: result.last,
+                    revealedAt: serverTimestamp(),
+                  },
+                });
+              });
+            } catch (e) {
+              console.warn("即時失敗保存エラー:", e);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("即時判定エラー:", e);
+      }
+
+      // 最後にインデックスを進める（同一レンダーで realtimeResult と revealIndex を反映）
+      setRevealIndex((i) => (i >= orderListLength ? i : i + 1));
     }, delay);
 
     return () => clearTimeout(timer);

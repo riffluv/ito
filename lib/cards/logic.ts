@@ -116,19 +116,24 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       // ゲーム終了時: サーバー確定結果を使用
       isFail = revealed && active && Boolean(p.failed);
       isSuccess = revealed && active && !Boolean(p.failed);
-    } else if (
-      p.roomStatus === "reveal" &&
-      revealed &&
-      active &&
-      p.revealIndex >= 2
-    ) {
-      // めくりアニメーション中: リアルタイム判定または事前判定を使用
-      if (hasRealtimeResult) {
-        // リアルタイム判定結果があればそれを使用
-        isFail = !p.realtimeResult!.success;
-      } else if (p.failed) {
-        // サーバーの事前判定結果を使用
-        isFail = true;
+    } else if (p.roomStatus === "reveal" && revealed && active) {
+      if (p.revealIndex >= 2) {
+        // 2枚目以降がめくられたら、失敗が検出されていない間は
+        // 「これまでの全カード」を成功表示（緑）にする。
+        if (hasRealtimeResult) {
+          // リアルタイム結果が失敗なら全て赤、成功(=完了時)なら緑
+          if (!p.realtimeResult!.success) {
+            isFail = true;
+          } else {
+            isSuccess = true;
+          }
+        } else if (p.failed) {
+          // 事前に失敗が分かっているケース
+          isFail = true;
+        } else {
+          // 失敗未検出（= ここまで昇順OK）
+          isSuccess = true;
+        }
       }
     }
 
