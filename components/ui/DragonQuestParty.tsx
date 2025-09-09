@@ -171,7 +171,7 @@ export function DragonQuestParty({
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
-                      title={`${isHost ? "👑 " : ""}${player.name} - ${status}`}
+                      title={`${isHost ? "👑 " : "⚔️ "}${player.name} - ${status}`}
                       css={
                         isHost
                           ? {
@@ -183,7 +183,7 @@ export function DragonQuestParty({
                           : undefined
                       }
                     >
-                      {isHost ? "👑 " : ""}
+                      {isHost ? "👑 " : "⚔️ "}
                       {player.name}
                     </Text>
 

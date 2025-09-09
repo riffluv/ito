@@ -94,11 +94,17 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             px={4}
             py={3}
             css={{
-              // DPI 150%対応：コンパクト化
+              // DPI 125%対応：コンパクト化
+              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                {
+                  gap: "0.4rem !important", // メッセージ間隔を狭く
+                  padding: "0.5rem 0.8rem !important", // パディングを小さく
+                },
+              // DPI 150%対応：さらにコンパクト化
               "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
                 {
-                  gap: "0.5rem !important", // メッセージ間隔を狭く
-                  padding: "0.4rem 0.6rem !important", // パディングを小さく
+                  gap: "0.3rem !important", // メッセージ間隔をより狭く
+                  padding: "0.3rem 0.5rem !important", // パディングをさらに小さく
                 },
             }}
           >
@@ -120,7 +126,23 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                     <Box
                       w="100%" // 全幅を使用してバランスを取る
                     >
-                      <HStack gap={2} align="flex-start" flexWrap="nowrap">
+                      <HStack 
+                        gap={2} 
+                        align="flex-start" 
+                        flexWrap="nowrap"
+                        css={{
+                          // DPI 125%対応：要素間隔調整
+                          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                            {
+                              gap: "0.3rem !important", // 要素間を狭く
+                            },
+                          // DPI 150%対応：さらに狭く
+                          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                            {
+                              gap: "0.25rem !important", // より狭く
+                            },
+                        }}
+                      >
                         <Text
                           fontSize="sm"
                           color={
@@ -140,6 +162,20 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           overflow="hidden"
                           css={{
                             textOverflow: "ellipsis", // CSS自動省略 (ベストプラクティス)
+                            // DPI 125%対応：テキストサイズ調整
+                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                              {
+                                fontSize: "0.75rem !important", // 少し小さく
+                                minWidth: "80px !important", // 名前幅も縮小
+                                maxWidth: "80px !important",
+                              },
+                            // DPI 150%対応：さらに小さく
+                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                              {
+                                fontSize: "0.65rem !important", // さらに小さく
+                                minWidth: "70px !important", // 名前幅をより縮小
+                                maxWidth: "70px !important",
+                              },
                           }}
                         >
                           ▼ {m.sender}
@@ -152,6 +188,20 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           lineHeight={1.4}
                           flex={1}
                           wordBreak="break-word"
+                          css={{
+                            // DPI 125%対応：メッセージテキストサイズ調整
+                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                              {
+                                fontSize: "0.75rem !important", // 少し小さく
+                                lineHeight: "1.3 !important", // 行間も少し詰める
+                              },
+                            // DPI 150%対応：さらに小さく
+                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                              {
+                                fontSize: "0.65rem !important", // さらに小さく
+                                lineHeight: "1.2 !important", // 行間をより詰める
+                              },
+                          }}
                         >
                           : {m.text}
                         </Text>
@@ -180,7 +230,16 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             },
         }}
       >
-        <HStack gap={3}>
+        <HStack 
+          gap={3}
+          css={{
+            // DPI 125%以上：入力欄をコンパクト化
+            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+              {
+                gap: "0.5rem !important", // ギャップを縮小
+              },
+          }}
+        >
           <Input
             placeholder={
               readOnly ? "観戦中は投稿できません" : "メッセージを入力..."
@@ -212,6 +271,19 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             transition="all 0.15s ease"
             px={4}
             py={3}
+            css={{
+              // DPI 125%以上：入力フィールドのコンパクト化
+              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                {
+                  fontSize: "0.8rem !important", // フォントサイズを小さく
+                  padding: "0.4rem 0.7rem !important", // パディングを小さく
+                },
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                {
+                  fontSize: "0.75rem !important", // さらに小さく
+                  padding: "0.3rem 0.6rem !important", // より小さく
+                },
+            }}
           />
           <AppButton
             onClick={send}
@@ -226,6 +298,19 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             fontWeight="700"
             fontFamily="monospace" // ドラクエ風フォント統一
             textShadow="1px 1px 0px #000" // くっきり文字
+            css={{
+              // DPI 125%以上：送信ボタンのコンパクト化
+              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                {
+                  fontSize: "0.8rem !important", // フォントサイズを小さく
+                  padding: "0.4rem 1rem !important", // パディングを小さく
+                },
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                {
+                  fontSize: "0.75rem !important", // さらに小さく
+                  padding: "0.3rem 0.8rem !important", // より小さく
+                },
+            }}
             boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)" // 立体感
             _hover={{
               bg: "white", // ドラクエ王道の白背景反転
