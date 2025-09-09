@@ -65,12 +65,17 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     showNumber = typeof number === "number" && isPlaced;
   }
 
-  // 2) Failure / success computation - リアルタイム判定のみ（事前計算削除）
+  // 2) Failure / success computation - リアルタイム判定
   const hasRealtimeResult = p.realtimeResult != null;
-  const realtimeFailed = hasRealtimeResult ? !p.realtimeResult!.success : false;
   const realtimeFailedAt = hasRealtimeResult
     ? p.realtimeResult!.failedAt
     : null;
+  const judgedUpTo = hasRealtimeResult
+    ? (p.realtimeResult!.currentIndex ?? 0)
+    : 0;
+  const realtimeSuccess = hasRealtimeResult
+    ? p.realtimeResult!.success === true
+    : false;
 
   const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
   const revealed =
@@ -91,49 +96,39 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
 
   const flipped = (() => {
     if (variant !== "flip") return false;
-
-    // 基本原則：数字を表示すべき状態なら必ずflipする
-    // これによりアニメーション中とデザイン時の一貫性を保つ
-    if (showNumber) return true;
-
-    // finished では全カードが数値面を向く（最終結果表示）
-    if (p.roomStatus === "finished" && isPlaced) {
-      return true;
-    }
-
+    if (showNumber) return true; // 表示すべきときはflip
+    if (p.roomStatus === "finished" && isPlaced) return true; // 終了時は全て数値面
     return false;
   })();
 
-  // ★ 修正：カードがflippedまたはshowNumberの状態の時のみ失敗/成功状態を適用
-  // これにより、カードが裏面の時に境界線の色が変わってネタバレすることを防ぐ
+  // カードが裏面のときは色出しを抑制
   const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
 
-  if (shouldShowResult) {
-    // シンプルなITOルール: めくり完了時に昇順判定
-    // 1枚では判定不可、2枚以上で判定開始
-
-    if (p.roomStatus === "finished") {
-      // ゲーム終了時: サーバー確定結果を使用
-      isFail = revealed && active && Boolean(p.failed);
-      isSuccess = revealed && active && !Boolean(p.failed);
-    } else if (p.roomStatus === "reveal" && revealed && active) {
-      if (p.revealIndex >= 2) {
-        // 2枚目以降がめくられたら、失敗が検出されていない間は
-        // 「これまでの全カード」を成功表示（緑）にする。
-        if (hasRealtimeResult) {
-          // リアルタイム結果が失敗なら全て赤、成功(=完了時)なら緑
-          if (!p.realtimeResult!.success) {
-            isFail = true;
-          } else {
-            isSuccess = true;
-          }
-        } else if (p.failed) {
-          // 事前に失敗が分かっているケース
-          isFail = true;
-        } else {
-          // 失敗未検出（= ここまで昇順OK）
-          isSuccess = true;
+  if (shouldShowResult && revealed && active) {
+    if (p.roomStatus === "reveal") {
+      if (p.revealIndex >= 2 && hasRealtimeResult && typeof idx === "number") {
+        if (typeof realtimeFailedAt === "number") {
+          // 失敗: 現在まで(=judgedUpTo)にめくられたカードは全て赤
+          if (idx + 1 <= judgedUpTo) isFail = true;
+        } else if (realtimeSuccess) {
+          // 成功継続: 現在まで(=judgedUpTo)にめくられたカードは全て緑
+          if (idx + 1 <= judgedUpTo) isSuccess = true;
         }
+      }
+    } else if (p.roomStatus === "finished") {
+      // 終了時: リアルタイム結果またはサーバー確定で最終表示
+      if (hasRealtimeResult && typeof idx === "number") {
+        if (typeof realtimeFailedAt === "number") {
+          // 失敗が確定している場合、全て赤
+          isFail = true;
+        } else if (realtimeSuccess) {
+          isSuccess = true; // 全成功確定
+        } else if (p.failed) {
+          isFail = true;
+        }
+      } else {
+        isFail = Boolean(p.failed);
+        isSuccess = !Boolean(p.failed);
       }
     }
 
@@ -153,7 +148,6 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
 
   // 5) Waiting in central detection - ALWAYS TRUE for Dragon Quest style
-  // 全てのカードでドラゴンクエスト風デザインを適用
   const waitingInCentral = true;
 
   return {

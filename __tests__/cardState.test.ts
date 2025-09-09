@@ -85,4 +85,176 @@ describe("computeCardState", () => {
     expect(s.flipped).toBe(true);
     expect(s.number).toBe(99);
   });
+
+  test("reveal: after 2nd card, if ascending so far, both first and second are green", () => {
+    const players = [
+      {
+        id: "p1",
+        name: "A",
+        avatar: "",
+        number: 10,
+        clue1: "a",
+        ready: true,
+        orderIndex: 0,
+      },
+      {
+        id: "p2",
+        name: "B",
+        avatar: "",
+        number: 20,
+        clue1: "b",
+        ready: true,
+        orderIndex: 1,
+      },
+      {
+        id: "p3",
+        name: "C",
+        avatar: "",
+        number: 5,
+        clue1: "c",
+        ready: true,
+        orderIndex: 2,
+      },
+      {
+        id: "p4",
+        name: "D",
+        avatar: "",
+        number: 30,
+        clue1: "d",
+        ready: true,
+        orderIndex: 3,
+      },
+    ];
+    const orderList = ["p1", "p2", "p3", "p4"]; // 提出順
+
+    // 2枚めくり終わり時点（まだ最終成功は確定していない）
+    const realtimeResult = {
+      success: true,
+      failedAt: null as number | null,
+      currentIndex: 2,
+    };
+
+    const s1 = computeCardState({
+      ...base,
+      player: players[0] as any,
+      id: "p1",
+      idx: 0,
+      orderList,
+      pending: [],
+      proposal: orderList,
+      resolveMode: "sort-submit",
+      roomStatus: "reveal",
+      revealAnimating: true,
+      revealIndex: 2,
+      realtimeResult,
+    });
+    const s2 = computeCardState({
+      ...base,
+      player: players[1] as any,
+      id: "p2",
+      idx: 1,
+      orderList,
+      pending: [],
+      proposal: orderList,
+      resolveMode: "sort-submit",
+      roomStatus: "reveal",
+      revealAnimating: true,
+      revealIndex: 2,
+      realtimeResult,
+    });
+
+    expect(s1.state).toBe("success");
+    expect(s2.state).toBe("success");
+  });
+
+  test("reveal: on failure at 3rd card, first to third are red (cumulative fail)", () => {
+    const players = [
+      {
+        id: "p1",
+        name: "A",
+        avatar: "",
+        number: 10,
+        clue1: "a",
+        ready: true,
+        orderIndex: 0,
+      },
+      {
+        id: "p2",
+        name: "B",
+        avatar: "",
+        number: 20,
+        clue1: "b",
+        ready: true,
+        orderIndex: 1,
+      },
+      {
+        id: "p3",
+        name: "C",
+        avatar: "",
+        number: 5,
+        clue1: "c",
+        ready: true,
+        orderIndex: 2,
+      },
+      {
+        id: "p4",
+        name: "D",
+        avatar: "",
+        number: 30,
+        clue1: "d",
+        ready: true,
+        orderIndex: 3,
+      },
+    ];
+    const orderList = ["p1", "p2", "p3", "p4"]; // 提出順
+
+    const realtimeResult = { success: false, failedAt: 3, currentIndex: 3 };
+
+    const s1 = computeCardState({
+      ...base,
+      player: players[0] as any,
+      id: "p1",
+      idx: 0,
+      orderList,
+      pending: [],
+      proposal: orderList,
+      resolveMode: "sort-submit",
+      roomStatus: "reveal",
+      revealAnimating: true,
+      revealIndex: 3,
+      realtimeResult,
+    });
+    const s2 = computeCardState({
+      ...base,
+      player: players[1] as any,
+      id: "p2",
+      idx: 1,
+      orderList,
+      pending: [],
+      proposal: orderList,
+      resolveMode: "sort-submit",
+      roomStatus: "reveal",
+      revealAnimating: true,
+      revealIndex: 3,
+      realtimeResult,
+    });
+    const s3 = computeCardState({
+      ...base,
+      player: players[2] as any,
+      id: "p3",
+      idx: 2,
+      orderList,
+      pending: [],
+      proposal: orderList,
+      resolveMode: "sort-submit",
+      roomStatus: "reveal",
+      revealAnimating: true,
+      revealIndex: 3,
+      realtimeResult,
+    });
+
+    expect(s1.state).toBe("fail");
+    expect(s2.state).toBe("fail");
+    expect(s3.state).toBe("fail");
+  });
 });
