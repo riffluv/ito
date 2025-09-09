@@ -21,14 +21,13 @@ export default function WaitingArea({
   return (
     <Box
       position="fixed"
-      left={{ base: 3, md: 6 }}
+      left={{ base: "20px", md: "24px" }}
       right={{ base: 3, md: 6 }}
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
       p={{ base: 3, md: 4 }}
       // 上品な控えめスタイル（AIテンプレ脱却）
-      border="borders.retrogame"
-      borderColor="rgba(255, 255, 255, 0.85)"
+      // borderなし - 透明背景でクリーンな表示
       borderRadius="lg"
       css={{
         // 背景なしでクリーンな表示
@@ -63,10 +62,10 @@ export default function WaitingArea({
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             gap: "8px",
           },
-          // DPI 150%対応：待機エリアの最適化
+          // DPI 150%対応：空きスロットと統一
           "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
             {
-              gap: "18px !important", // カード間隔を広く
+              gap: "12px !important", // 空きスロットと同じ間隔
             },
         }}
       >

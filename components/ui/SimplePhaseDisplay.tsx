@@ -165,8 +165,8 @@ export function SimplePhaseDisplay({
         gap={2}
         px={4}
         py={2}
-        bg="rgba(8,9,15,0.95)"
-        border="2px solid rgba(255,255,255,0.9)"
+        bg="linear-gradient(135deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))" // ドラクエ風深い青グラデーション
+        border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
         borderRadius={0}
         css={{
           boxShadow:
