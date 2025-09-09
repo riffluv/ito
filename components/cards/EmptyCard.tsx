@@ -67,16 +67,80 @@ export function EmptyCard({
       onDrop={handleDrop}
       cursor={isDroppable ? "copy" : "not-allowed"}
       css={{
-        // @dnd-kitのisOver状態でのスタイル
-        ...(id && dndDroppable.isOver && {
-          backgroundColor: "rgba(74,158,255,0.1)",
-          borderColor: "rgba(74,158,255,0.6)",
+        // ベース状態：ドラクエ風の点線ボーダーで空きスロットを明確に
+        border: "2px dashed rgba(255,255,255,0.3)",
+        borderRadius: "8px",
+        backgroundColor: "rgba(8,9,15,0.6)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
+        
+        // ホバー状態を見えやすく
+        "&:hover": {
+          borderColor: "rgba(255,255,255,0.5)",
+          backgroundColor: "rgba(8,9,15,0.8)",
           transform: "scale(1.02)",
+        },
+
+        // @dnd-kitのisOver状態での強化されたドロップフィードバック
+        ...(id && dndDroppable.isOver && {
+          backgroundColor: "rgba(74,158,255,0.15)",
+          borderColor: "#4a9eff",
+          borderStyle: "solid",
+          transform: "scale(1.05)",
+          boxShadow: "0 0 20px rgba(74,158,255,0.4), inset 0 0 20px rgba(74,158,255,0.1)",
+          // ドロップ可能を示すアニメーション効果
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "24px",
+            height: "24px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(74,158,255,0.4)",
+            animation: "dropPulse 1.5s ease-in-out infinite",
+          },
+          "&::after": {
+            content: '"ここに配置"',
+            position: "absolute",
+            bottom: "8px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "10px",
+            color: "#4a9eff",
+            fontWeight: "600",
+            textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+            whiteSpace: "nowrap",
+          }
         }),
       }}
       {...props}
     >
-      {children || (slotNumber !== undefined ? slotNumber : "?")}
+      {children || (slotNumber !== undefined ? (
+        <span style={{
+          color: "rgba(255,255,255,0.6)",
+          fontSize: "14px",
+          fontWeight: "500",
+          textShadow: "0 1px 2px rgba(0,0,0,0.5)"
+        }}>
+          {slotNumber}
+        </span>
+      ) : "?")}
+      
+      {/* ドロップパルス アニメーション定義 */}
+      <style>{`
+        @keyframes dropPulse {
+          0%, 100% {
+            opacity: 0.6;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+          }
+        }
+      `}</style>
     </BaseCard>
   );
 }
