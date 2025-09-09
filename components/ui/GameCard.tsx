@@ -240,8 +240,8 @@ export function GameCard({
                 maxWidth="calc(100% - 6px)"
                 textAlign="center"
                 padding="0 0.2rem"
-                wordBreak="break-word"
-                whiteSpace="normal"
+                wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
+                whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
                 overflowWrap="anywhere"
                 overflow="visible"
                 display="flex"
@@ -470,8 +470,10 @@ export function GameCard({
           maxWidth={typeof number === "number" ? "100%" : "calc(100% - 6px)"}
           textAlign="center"
           padding={typeof number === "number" ? "0" : "0 0.2rem"}
-          wordBreak={typeof number === "number" ? "keep-all" : "break-word"}
-          whiteSpace={typeof number === "number" ? "nowrap" : "normal"}
+          wordBreak={typeof number === "number" ? "keep-all" : 
+            (clue === "Waiting" ? "keep-all" : "break-word")}
+          whiteSpace={typeof number === "number" ? "nowrap" : 
+            (clue === "Waiting" ? "nowrap" : "normal")}
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
           overflow="visible"
           display={typeof number === "number" ? "block" : "flex"}
