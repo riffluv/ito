@@ -22,7 +22,8 @@ export default function WaitingAreaCard({
     useDraggable({
       id: player.id,
       // 本人のカード以外はドラッグ不可。連想ワード未確定も不可。
-      disabled: !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
+      disabled:
+        !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
     });
 
   const style = transform

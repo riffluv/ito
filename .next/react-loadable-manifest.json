@@ -3,10 +3,6 @@
     "id": "components\\hooks\\useRevealAnimation.ts -> @/lib/firebase/require",
     "files": []
   },
-  "components\\hooks\\useRevealAnimation.ts -> @/lib/game/rules": {
-    "id": "components\\hooks\\useRevealAnimation.ts -> @/lib/game/rules",
-    "files": []
-  },
   "components\\hooks\\useRevealAnimation.ts -> firebase/firestore": {
     "id": "components\\hooks\\useRevealAnimation.ts -> firebase/firestore",
     "files": [

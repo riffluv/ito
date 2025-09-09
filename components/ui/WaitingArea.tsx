@@ -12,8 +12,8 @@ export interface WaitingAreaProps {
   meId?: string; // 自分のID（本人のみドラッグ可能にする）
 }
 
-export default function WaitingArea({ 
-  players, 
+export default function WaitingArea({
+  players,
   title = "",
   isDraggingEnabled = false,
   meId,
@@ -53,10 +53,10 @@ export default function WaitingArea({
         </Text>
       )}
 
-      <Box 
-        display="flex" 
-        gap={UNIFIED_LAYOUT.SPACING.CARD_GAP} 
-        flexWrap="wrap" 
+      <Box
+        display="flex"
+        gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
+        flexWrap="wrap"
         justifyContent="center"
         css={{
           // DPI125%での最適化
@@ -64,17 +64,18 @@ export default function WaitingArea({
             gap: "8px",
           },
           // DPI 150%対応：待機エリアの最適化
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            gap: "18px !important", // カード間隔を広く
-          },
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+            {
+              gap: "18px !important", // カード間隔を広く
+            },
         }}
       >
-    {players.map((p) => (
-          <WaitingAreaCard 
-            key={p.id} 
-            player={p} 
-      isDraggingEnabled={isDraggingEnabled}
-      meId={meId}
+        {players.map((p) => (
+          <WaitingAreaCard
+            key={p.id}
+            player={p}
+            isDraggingEnabled={isDraggingEnabled}
+            meId={meId}
           />
         ))}
       </Box>
