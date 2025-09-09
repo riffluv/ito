@@ -67,16 +67,19 @@ export function useRoomState(
   }, [fetchedPlayers, partLoading]);
 
   // auto-join (待機中のみ自動参加。ゲーム中の途中参加は禁止)
+  // さらに、displayName未設定時は入室を保留して名前入力ダイアログを促す
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
     if (leavingRef.current) return;
+    // displayName が空文字や未定義の場合はjoinを行わない（匿名作成を防止）
+    if (!displayName || !String(displayName).trim()) return;
     if (room.status === "waiting") {
       joinRoomFully({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
     }
-  }, [roomId, uid || "", room?.status]);
+  }, [roomId, uid || "", room?.status, displayName || ""]);
 
   const onlinePlayers = participants;
 

@@ -46,85 +46,94 @@ export interface ComputedCardState {
 
 // Consolidated logic for sort-submit mode only (sequential mode removed).
 export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
+  // ---------- Helpers (pure, local) ----------
   const idx = p.idx;
   const number = p.player?.number ?? null;
   const clue1 = p.player?.clue1 ?? "";
-  const isPlaced = !!(
-    (p.orderList && p.orderList.includes(p.id)) ||
-    p.pending.includes(p.id) ||
-    (p.proposal && p.proposal.includes(p.id))
-  );
 
-  // 1) Number visibility - sort-submit mode only
-  let showNumber = false;
-  if (p.roomStatus === "reveal" && p.revealAnimating) {
-    if (typeof idx === "number" && idx < p.revealIndex) {
-      showNumber = typeof number === "number" && isPlaced;
-    }
-  } else if (p.roomStatus === "finished") {
-    showNumber = typeof number === "number" && isPlaced;
-  }
+  const isPlaced = (): boolean =>
+    !!(
+      (p.orderList && p.orderList.includes(p.id)) ||
+      p.pending.includes(p.id) ||
+      (p.proposal && p.proposal.includes(p.id))
+    );
 
-  // 2) Failure / success computation - リアルタイム判定
-  const hasRealtimeResult = p.realtimeResult != null;
-  const realtimeFailedAt = hasRealtimeResult
-    ? p.realtimeResult!.failedAt
-    : null;
-  const judgedUpTo = hasRealtimeResult
-    ? (p.realtimeResult!.currentIndex ?? 0)
-    : 0;
-  const realtimeSuccess = hasRealtimeResult
-    ? p.realtimeResult!.success === true
-    : false;
-
-  const flipPhaseReached = typeof idx === "number" && idx < p.revealIndex;
-  const revealed =
+  const isRevealedIdx = (): boolean =>
     typeof idx === "number" &&
     (p.roomStatus === "finished" ||
       (p.roomStatus === "reveal" && idx < p.revealIndex));
 
-  let isFail = false;
-  let isSuccess = false;
-  let successLevel: ComputedCardState["successLevel"] = undefined;
-  let boundary = false;
+  const computeShowNumber = (): boolean => {
+    const placed = isPlaced();
+    if (p.roomStatus === "reveal" && p.revealAnimating) {
+      if (typeof idx === "number" && idx < p.revealIndex) {
+        return typeof number === "number" && placed;
+      }
+      return false;
+    }
+    if (p.roomStatus === "finished") {
+      return typeof number === "number" && placed;
+    }
+    return false;
+  };
 
-  const active = p.roomStatus === "finished" || flipPhaseReached;
-
-  // 3) Variant & flip state - sort-submit mode only
   const variant: ComputedCardState["variant"] =
     p.roomStatus === "reveal" || p.roomStatus === "finished" ? "flip" : "flat";
 
-  const flipped = (() => {
+  const computeFlipped = (showNumber: boolean): boolean => {
     if (variant !== "flip") return false;
-    if (showNumber) return true; // 表示すべきときはflip
-    if (p.roomStatus === "finished" && isPlaced) return true; // 終了時は全て数値面
+    if (showNumber) return true; // 数値を見せるタイミング
+    if (p.roomStatus === "finished" && isPlaced()) return true; // 終了時は数値面
     return false;
-  })();
+  };
 
-  // カードが裏面のときは色出しを抑制
-  const shouldShowResult = flipped || showNumber || p.roomStatus === "finished";
+  const rt = p.realtimeResult ?? null;
+  const hasRT = rt !== null;
+  const rtFailedAt = hasRT ? rt!.failedAt : null;
+  const rtJudgedUpTo = hasRT ? (rt!.currentIndex ?? 0) : 0;
+  const rtSuccess = hasRT ? rt!.success === true : false;
 
-  if (shouldShowResult && revealed && active) {
+  const shouldApplyRevealColor = (): boolean =>
+    p.roomStatus === "reveal" &&
+    p.revealIndex >= 2 &&
+    hasRT &&
+    typeof idx === "number";
+
+  const computeColorState = (
+    showNumber: boolean,
+    flipped: boolean,
+    revealed: boolean
+  ): {
+    isFail: boolean;
+    isSuccess: boolean;
+    successLevel?: ComputedCardState["successLevel"];
+  } => {
+    // 裏面で色を出すのは避ける（従来の抑制）
+    const allow = flipped || showNumber || p.roomStatus === "finished";
+    if (!allow || !revealed) return { isFail: false, isSuccess: false };
+
+    let isFail = false;
+    let isSuccess = false;
+    let successLevel: ComputedCardState["successLevel"] | undefined;
+
     if (p.roomStatus === "reveal") {
-      if (p.revealIndex >= 2 && hasRealtimeResult && typeof idx === "number") {
-        if (typeof realtimeFailedAt === "number") {
-          // 失敗: 現在まで(=judgedUpTo)にめくられたカードは全て赤
-          if (idx + 1 <= judgedUpTo) isFail = true;
-        } else if (realtimeSuccess) {
-          // 成功継続: 現在まで(=judgedUpTo)にめくられたカードは全て緑
-          if (idx + 1 <= judgedUpTo) isSuccess = true;
+      if (shouldApplyRevealColor()) {
+        if (typeof rtFailedAt === "number") {
+          // 失敗: 現在まで(=rtJudgedUpTo)は全て赤
+          if ((idx as number) + 1 <= rtJudgedUpTo) isFail = true;
+        } else if (rtSuccess) {
+          // 成功継続: 現在まで(=rtJudgedUpTo)は全て緑
+          if ((idx as number) + 1 <= rtJudgedUpTo) isSuccess = true;
         }
       }
     } else if (p.roomStatus === "finished") {
-      // 終了時: リアルタイム結果またはサーバー確定で最終表示
-      if (hasRealtimeResult && typeof idx === "number") {
-        if (typeof realtimeFailedAt === "number") {
-          // 失敗が確定している場合、全て赤
-          isFail = true;
-        } else if (realtimeSuccess) {
+      if (hasRT && typeof idx === "number") {
+        if (typeof rtFailedAt === "number") {
+          isFail = true; // 失敗確定は全て赤
+        } else if (rtSuccess) {
           isSuccess = true; // 全成功確定
         } else if (p.failed) {
-          isFail = true;
+          isFail = true; // サーバ確定フォールバック
         }
       } else {
         isFail = Boolean(p.failed);
@@ -133,22 +142,27 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     }
 
     if (isSuccess) successLevel = "final";
-  }
+    return { isFail, isSuccess, successLevel };
+  };
 
-  if (
+  const showNumber = computeShowNumber();
+  const flipped = computeFlipped(showNumber);
+  const revealed = isRevealedIdx();
+  const { isFail, isSuccess, successLevel } = computeColorState(
+    showNumber,
+    flipped,
+    revealed
+  );
+
+  const boundary =
     typeof idx === "number" &&
     typeof p.boundaryPreviousIndex === "number" &&
-    idx === p.boundaryPreviousIndex
-  ) {
-    boundary = true;
-  }
+    idx === p.boundaryPreviousIndex;
 
-  // 4) Clue text
   const clueText =
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
 
-  // 5) Waiting in central detection - ALWAYS TRUE for Dragon Quest style
-  const waitingInCentral = true;
+  const waitingInCentral = true; // Dragon Quest style always-on
 
   return {
     showNumber,

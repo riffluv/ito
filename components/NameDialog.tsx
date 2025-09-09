@@ -125,6 +125,7 @@ export function NameDialog({
                 placeholder="れい: コーヒーやめます"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
+                maxLength={12}
                 autoFocus
                 css={{
                   height: "48px",

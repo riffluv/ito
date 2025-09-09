@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
  * - ドラクエ風デザイン統一 (リッチブラック、白枠、角ばったデザイン)
  * - CSS ellipsisによる名前の自動省略でコロン位置完全統一
  * - monospaceフォント + textShadowでレトロゲーム感
- * - 名前部分は100px固定幅、メッセージは500文字制限
+ * - 名前部分は100px固定幅、メッセージは100文字制限
  * - ホバーでフルネーム表示、8文字でトランケート
  *
  * 改善履歴:
@@ -67,7 +67,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
     const now = Date.now();
     if (now - lastSentAt.current < 600) return; // ローカルクールダウン
     lastSentAt.current = now;
-    const clipped = t.slice(0, 500);
+    const clipped = t.slice(0, 100);
     if (!user?.uid) return;
     await sendMessage(roomId, user.uid, displayName || "匿名", clipped);
     setText("");
@@ -187,6 +187,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             }
             value={text}
             onChange={(e) => setText(e.target.value)}
+            maxLength={100}
             onKeyDown={(e) => {
               if (e.key === "Enter") send();
             }}

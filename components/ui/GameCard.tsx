@@ -237,9 +237,9 @@ export function GameCard({
                 color={dragonQuestStyle.colors.clue}
                 lineHeight="1.3" // ディセンダー対応
                 width="100%"
-                maxWidth="calc(100% - 8px)"
+                maxWidth="calc(100% - 6px)"
                 textAlign="center"
-                padding="0 0.25rem"
+                padding="0 0.2rem"
                 wordBreak="break-word"
                 whiteSpace="normal"
                 overflowWrap="anywhere"
@@ -467,9 +467,9 @@ export function GameCard({
                 : "none"
           }
           width="100%"
-          maxWidth={typeof number === "number" ? "100%" : "calc(100% - 8px)"}
+          maxWidth={typeof number === "number" ? "100%" : "calc(100% - 6px)"}
           textAlign="center"
-          padding={typeof number === "number" ? "0" : "0 0.25rem"}
+          padding={typeof number === "number" ? "0" : "0 0.2rem"}
           wordBreak={typeof number === "number" ? "keep-all" : "break-word"}
           whiteSpace={typeof number === "number" ? "nowrap" : "normal"}
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
