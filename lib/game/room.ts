@@ -225,25 +225,14 @@ export async function moveCardInProposalToPosition(
       Math.min(targetIndex, Math.max(0, maxCount - 1))
     );
 
-    // 目標が埋まっていた場合の挙動
-    const isOccupiedByOther = current[clamped] && current[clamped] !== playerId;
-    const isFull =
-      current.length >= maxCount && current.every((v) => v != null);
-    if (isOccupiedByOther) {
-      // 全スロットが埋まっている場合のみ、arrayMove 相当の並べ替えを許可
-      if (isFull) {
-        const moved = current[fromIdx];
-        // remove at fromIdx
-        current.splice(fromIdx, 1);
-        let insertIndex = clamped;
-        if (fromIdx < clamped) insertIndex -= 1; // splice後のインデックス補正
-        current.splice(insertIndex, 0, moved);
-      } else {
-        // 未充足（nullあり）なら占有スロットへの移動は不可（空きスロットにドロップさせる）
-        return;
-      }
+    // ベストプラクティス: シンプルで信頼性の高い配列移動ロジック
+    if (current[clamped] && current[clamped] !== playerId) {
+      // 目標位置に他のカードがある場合は入れ替え（swap）
+      const targetCard = current[clamped];
+      current[clamped] = playerId;
+      current[fromIdx] = targetCard;
     } else {
-      // いったん元位置を空けて、指定先へ移動（空きスロット、または自身の位置）
+      // 目標位置が空きまたは自分の場合は単純移動
       current[fromIdx] = null;
       if (clamped >= current.length) (current as any).length = clamped + 1;
       current[clamped] = playerId;
