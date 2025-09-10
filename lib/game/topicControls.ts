@@ -41,7 +41,14 @@ export const topicControls = {
   // お題をクリア（カテゴリ/お題の選び直し）
   async resetTopic(roomId: string) {
     try {
-      await updateDoc(doc(db!, "rooms", roomId), {
+      const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+      
+      // バッチ処理で効率的に更新
+      const batch = writeBatch(db!);
+      
+      // 1. roomドキュメントをリセット
+      const roomRef = doc(db!, "rooms", roomId);
+      batch.update(roomRef, {
         status: "waiting", // ★ ロビー状態に戻す
         result: null,
         deal: null,
@@ -53,6 +60,22 @@ export const topicControls = {
         closedAt: null,
         expiresAt: null,
       });
+      
+      // 2. すべてのplayerドキュメントのclue1をクリア
+      const playersRef = collection(db!, "rooms", roomId, "players");
+      const playersSnapshot = await getDocs(playersRef);
+      
+      playersSnapshot.forEach((playerDoc) => {
+        // clue1フィールドのみクリアして状態をリセット
+        batch.update(playerDoc.ref, {
+          clue1: "", // 🚨 連想ワードをクリアして紫マークを消す
+          ready: false // readyフラグもリセット
+        });
+      });
+      
+      // バッチ実行
+      await batch.commit();
+      
       notify({ title: "ゲームをリセットしました", type: "success" });
     } catch (error: any) {
       notify({ title: "ゲームリセットに失敗", description: error?.message || String(error), type: "error" });
