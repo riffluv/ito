@@ -57,9 +57,13 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     bg: baseColors.bg,
     border: borderStyle,
     borderColor:
-      state === "success" || state === "ready"
-        ? "rgba(139, 92, 246, 0.8)" // 成功時・準備完了時は紫ボーダーで演出
-        : stateAccent[state as keyof typeof stateAccent] || stateAccent.default,
+      state === "success"
+        ? "#4a9eff" // 成功時は青
+        : state === "fail"
+          ? "#ff6b6b" // 失敗時は赤
+          : state === "ready"
+            ? "rgba(139, 92, 246, 0.8)" // 連想ワード登録完了時は紫ボーダー
+            : stateAccent.default, // その他はデフォルト（白）
     boxShadow,
     colors: {
       text: baseColors.text,
@@ -103,10 +107,12 @@ export function GameCard({
   const strongGlow = "0 0 0 3px rgba(139,92,246,0.35)";
   const successBorder =
     state === "success"
-      ? "#3b82f6" // Blue for success
+      ? "#4a9eff" // Blue for success  
       : state === "fail"
-        ? "#dc2626" // Red for failure
-        : "#ffffff"; // White for default/pending
+        ? "#ff6b6b" // Red for failure
+        : state === "ready"
+          ? "rgba(139, 92, 246, 0.8)" // Purple for ready (with clue)
+          : "#ffffff"; // White for default/pending
   const successShadow =
     state === "success"
       ? successLevel === "mild"
