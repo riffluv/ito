@@ -8,6 +8,11 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// 緊急停止フラグ（READ 増加時の一時対策）
+// 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
+// 以降の定期ジョブ/トリガは早期 return して何もしない
+const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === '1';
+
 /**
  * Recalculates playersCount and lastActive for a room.
  * Called after onCreate/onDelete/onUpdate of players docs.
@@ -83,18 +88,6 @@ export const onPlayerUpdate = functions.firestore
       console.error('onPlayerUpdate error', err);
     }
   });
-import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
-
-// 初期化: 環境に応じて設定
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-// 緊急停止フラグ（READ 増加時の一時対策）
-// 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
-// 以降の定期ジョブ/トリガは早期 return して何もしない
-const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
 export const cleanupExpiredRooms = functions.pubsub
