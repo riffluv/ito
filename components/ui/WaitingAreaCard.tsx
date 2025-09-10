@@ -58,7 +58,7 @@ export default function WaitingAreaCard({
         name={player.name || ""}
         clue={ready ? player.clue1 || "Ready" : "Waiting"}
         number={null}
-        state={ready ? (isDraggingEnabled ? "success" : "default") : "default"}
+        state={ready ? "ready" : "default"}
         waitingInCentral={true}
       />
     </Box>
