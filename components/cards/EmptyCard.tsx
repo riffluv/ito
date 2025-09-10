@@ -12,6 +12,7 @@ import type { EmptyCardProps } from "./card.types";
 // EmptyCardPropsを拡張してidプロパティを追加
 interface ExtendedEmptyCardProps extends EmptyCardProps {
   id?: string; // @dnd-kit用のID
+  isDragActive?: boolean; // 全体でドラッグが行われているかどうか
 }
 
 export function EmptyCard({
@@ -22,6 +23,7 @@ export function EmptyCard({
   onDrop,
   children,
   id,
+  isDragActive = false,
   ...props
 }: ExtendedEmptyCardProps) {
   // @dnd-kitのuseDroppable（IDがある場合のみ）
@@ -81,24 +83,37 @@ export function EmptyCard({
           transform: "scale(1.02)",
         },
 
+        // ドラッグ中の状態：ドラクエ風の待機中演出
+        ...(isDragActive && isDroppable && {
+          borderColor: "rgba(139, 92, 246, 0.6)", // 紫系でドラクエらしく
+          backgroundColor: "rgba(139, 92, 246, 0.05)",
+          animation: "dragonQuestReady 2s ease-in-out infinite",
+          // ドラクエ風の内部グロー
+          boxShadow: "inset 0 0 8px rgba(139, 92, 246, 0.2), 0 2px 8px rgba(0,0,0,0.1)",
+        }),
+
         // @dnd-kitのisOver状態での洗練されたドロップフィードバック（AI感軽減版）
         ...(id && dndDroppable.isOver && {
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderColor: "rgba(255,255,255,0.8)",
+          backgroundColor: "rgba(139, 92, 246, 0.15)", // 紫ベース
+          borderColor: "rgba(139, 92, 246, 0.9)",
           borderStyle: "solid",
-          transform: "scale(1.02)", // 控えめなスケール
-          // シンプルで上品なシャドウ
-          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.15)",
-          // 控えめな指示テキスト
+          transform: "scale(1.05)", // より明確なスケール
+          animation: "dragonQuestDrop 0.8s ease-in-out infinite",
+          // ドラクエ風の強い光る効果
+          boxShadow: "inset 0 0 12px rgba(139, 92, 246, 0.4), 0 4px 16px rgba(139, 92, 246, 0.3), 0 0 24px rgba(139, 92, 246, 0.2)",
+          // ドラクエ風指示テキスト
           "&::after": {
-            content: '"配置"',
+            content: '"▼ ドロップ ▼"',
             position: "absolute",
-            bottom: "6px",
-            right: "6px",
-            fontSize: "9px",
-            color: "rgba(255,255,255,0.8)",
-            fontWeight: "500",
-            opacity: 0.8,
+            bottom: "4px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "10px",
+            color: "rgba(255,255,255,0.9)",
+            fontWeight: "600",
+            fontFamily: "monospace",
+            textShadow: "1px 1px 0px #000",
+            opacity: 1,
           }
         }),
       }}
@@ -115,8 +130,30 @@ export function EmptyCard({
         </span>
       ) : "?")}
       
-      {/* ドロップパルス アニメーション定義 */}
+      {/* ドラクエ風アニメーション定義 */}
       <style>{`
+        @keyframes dragonQuestReady {
+          0%, 100% {
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: inset 0 0 8px rgba(139, 92, 246, 0.1), 0 2px 8px rgba(0,0,0,0.1);
+          }
+          50% {
+            border-color: rgba(139, 92, 246, 0.8);
+            box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.3), 0 2px 12px rgba(139, 92, 246, 0.15);
+          }
+        }
+        
+        @keyframes dragonQuestDrop {
+          0%, 100% {
+            box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.4), 0 4px 16px rgba(139, 92, 246, 0.3), 0 0 24px rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+          }
+          50% {
+            box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.6), 0 4px 20px rgba(139, 92, 246, 0.4), 0 0 32px rgba(139, 92, 246, 0.3);
+            transform: scale(1.08);
+          }
+        }
+        
         @keyframes dropPulse {
           0%, 100% {
             opacity: 0.6;
