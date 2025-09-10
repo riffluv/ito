@@ -44,6 +44,8 @@ export function SimplePhaseDisplay({
 
   const { text, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
+  const tlRef = useRef<any>(null);
+
   // フェーズ変更時のGSAPアニメーション
   useEffect(() => {
     if (!containerRef.current || !textRef.current || !iconRef.current) return;
@@ -52,35 +54,50 @@ export function SimplePhaseDisplay({
     const textEl = textRef.current;
     const iconEl = iconRef.current;
 
+    // reduced-motion の尊重
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     // 初回表示の場合 または 状態変更がない場合
     if (
       previousStatus.current === roomStatus &&
       previousCanStart.current === canStartSorting
     ) {
-      gsap.set(container, {
-        scale: 0.8,
-        opacity: 0,
-        y: -20,
-      });
+      if (prefersReduced) {
+        gsap.set(container, { scale: 1, opacity: 1, y: 0 });
+        gsap.set(iconEl, { rotation: 0 });
+      } else {
+        gsap.set(container, {
+          scale: 0.8,
+          opacity: 0,
+          y: -20,
+        });
 
-      gsap.to(container, {
-        scale: 1,
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "back.out(1.7)",
-        delay: 0.2,
-      });
+        const tl = gsap.timeline();
+        tlRef.current = tl;
 
-      gsap.to(iconEl, {
-        rotation: 360,
-        duration: 0.8,
-        ease: "elastic.out(1, 0.5)",
-        delay: 0.4,
-      });
+        tl.to(container, {
+          scale: 1,
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "back.out(1.7)",
+          delay: 0.2,
+        });
+
+        tl.to(iconEl, {
+          rotation: 360,
+          duration: 0.8,
+          ease: "elastic.out(1, 0.5)",
+          delay: 0.4,
+        });
+      }
     } else {
       // フェーズ変更時の美しいトランジション
       const tl = gsap.timeline();
+      tlRef.current = tl;
 
       // 現在のコンテンツをフェードアウト
       tl.to(textEl, {
@@ -146,6 +163,31 @@ export function SimplePhaseDisplay({
 
     previousStatus.current = roomStatus;
     previousCanStart.current = canStartSorting;
+
+    return () => {
+      try {
+        if (tlRef.current) {
+          tlRef.current.kill();
+          tlRef.current = null;
+        }
+        if (containerRef.current) {
+          gsap.killTweensOf(containerRef.current);
+          gsap.set(containerRef.current, {
+            clearProps: "transform,opacity,x,y,rotation,scale",
+          });
+        }
+        if (textRef.current) {
+          gsap.killTweensOf(textRef.current);
+          gsap.set(textRef.current, { clearProps: "opacity,y,scale" });
+        }
+        if (iconRef.current) {
+          gsap.killTweensOf(iconRef.current);
+          gsap.set(iconRef.current, { clearProps: "rotation,opacity,scale" });
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
   }, [roomStatus, canStartSorting, text, icon]);
 
   return (
