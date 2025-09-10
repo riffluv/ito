@@ -114,14 +114,79 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
               return (
                 <Box key={m.id}>
                   {isSystem ? (
-                    <HStack opacity={0.8} justify="center">
-                      <Badge variant="subtle" colorPalette="gray" size="xs">
-                        system
-                      </Badge>
-                      <Text fontSize="sm" color="fgMuted">
-                        {m.text}
-                      </Text>
-                    </HStack>
+                    <Box w="100%">
+                      <HStack 
+                        gap={2} 
+                        align="flex-start" 
+                        flexWrap="nowrap"
+                        opacity={0.8}
+                        css={{
+                          // DPI 125%対応：要素間隔調整
+                          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                            {
+                              gap: "0.3rem !important", // 要素間を狭く
+                            },
+                          // DPI 150%対応：さらに狭く
+                          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                            {
+                              gap: "0.25rem !important", // より狭く
+                            },
+                        }}
+                      >
+                        <Badge 
+                          variant="subtle" 
+                          colorPalette="gray" 
+                          size="xs"
+                          minW="100px"
+                          maxW="100px" // ユーザー名と同じ幅で統一
+                          textAlign="center"
+                          flexShrink={0}
+                          css={{
+                            // DPI 125%対応：バッジサイズ調整
+                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                              {
+                                fontSize: "0.65rem !important",
+                                minWidth: "80px !important",
+                                maxWidth: "80px !important",
+                              },
+                            // DPI 150%対応：さらに小さく
+                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                              {
+                                fontSize: "0.6rem !important",
+                                minWidth: "70px !important",
+                                maxWidth: "70px !important",
+                              },
+                          }}
+                        >
+                          system
+                        </Badge>
+                        <Text 
+                          fontSize="sm" 
+                          color="fgMuted"
+                          fontFamily="monospace"
+                          textShadow="1px 1px 0px #000"
+                          lineHeight={1.4}
+                          flex={1}
+                          wordBreak="break-word"
+                          css={{
+                            // DPI 125%対応：メッセージテキストサイズ調整
+                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+                              {
+                                fontSize: "0.75rem !important",
+                                lineHeight: "1.3 !important",
+                              },
+                            // DPI 150%対応：さらに小さく
+                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                              {
+                                fontSize: "0.65rem !important",
+                                lineHeight: "1.2 !important",
+                              },
+                          }}
+                        >
+                          : {m.text}
+                        </Text>
+                      </HStack>
+                    </Box>
                   ) : (
                     <Box
                       w="100%" // 全幅を使用してバランスを取る
