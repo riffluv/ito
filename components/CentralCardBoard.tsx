@@ -124,13 +124,47 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     })
   );
 
-  // Collision detection: prefer pointerWithin for intuitive targeting; fallback to rectIntersection, then closestCenter
+  // Collision detection: stricter distance-based detection to prevent accidental drops
   const collisionDetection: CollisionDetection = (args) => {
-    const pointer = pointerWithin(args);
-    if (pointer.length > 0) return pointer;
-    const rects = rectIntersection(args);
-    if (rects.length > 0) return rects;
-    return closestCenter(args);
+    const { active, collisionRect, droppableRects } = args;
+    
+    if (!active || !collisionRect) return [];
+    
+    // Calculate center of dragging item
+    const dragCenter = {
+      x: collisionRect.left + collisionRect.width / 2,
+      y: collisionRect.top + collisionRect.height / 2,
+    };
+    
+    const candidates = [];
+    
+    for (const [droppableId, rect] of droppableRects.entries()) {
+      // Calculate center of drop zone
+      const dropCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      
+      // Calculate distance between centers
+      const distance = Math.sqrt(
+        Math.pow(dragCenter.x - dropCenter.x, 2) +
+        Math.pow(dragCenter.y - dropCenter.y, 2)
+      );
+      
+      // Only accept drop if drag center is within 60px of drop center
+      // This prevents accidental drops when just slightly moving upward
+      const threshold = 60; // pixels
+      
+      if (distance <= threshold) {
+        candidates.push({
+          id: droppableId,
+          data: { value: distance }
+        });
+      }
+    }
+    
+    // Sort by distance and return closest valid drop zone
+    return candidates.sort((a, b) => (a.data?.value as number) - (b.data?.value as number));
   };
 
   // Optimize mePlaced calculation using Set for O(1) lookup instead of O(n) includes
@@ -537,6 +571,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           alignSelf="flex-start"
                           id={`slot-${idx}`}
                           isDroppable={true}
+                          isDragActive={!!activeId}
                         />
                       );
                     }
