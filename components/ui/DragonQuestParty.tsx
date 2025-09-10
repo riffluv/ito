@@ -18,6 +18,7 @@ interface DragonQuestPartyProps {
   players: (PlayerDoc & { id: string })[];
   roomStatus: string;
   onlineCount?: number; // 実際のオンライン参加者数
+  onlineUids?: string[]; // オンライン参加者の id 列
   hostId?: string; // ホストのUID
 }
 
@@ -52,11 +53,18 @@ export function DragonQuestParty({
   players,
   roomStatus,
   onlineCount,
+  onlineUids,
   hostId,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // 表示するプレイヤーリストを決定 (onlineUids が渡されればそれで絞る)
+  const onlineSet = Array.isArray(onlineUids) ? new Set(onlineUids) : null;
+  const displayedPlayers = onlineSet
+    ? players.filter((p) => onlineSet.has(p.id))
+    : players;
+
   // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
-  const actualCount = onlineCount ?? players.length;
+  const actualCount = onlineSet ? displayedPlayers.length : onlineCount ?? players.length;
   const previousCount = useRef(actualCount);
 
   // メンバー数変化時のアニメーション
@@ -135,16 +143,16 @@ export function DragonQuestParty({
           gap={1}
           w={{ base: "200px", md: "220px" }}
         >
-          {players
-            .sort((a, b) => {
-              // ホストを最上位に固定し、その後はorderIndexで昇順
-              if (hostId) {
-                if (a.id === hostId && b.id !== hostId) return -1;
-                if (b.id === hostId && a.id !== hostId) return 1;
-              }
-              return a.orderIndex - b.orderIndex;
-            })
-            .map((player) => {
+            { [...displayedPlayers]
+              .sort((a, b) => {
+                // ホストを最上位に固定し、その後はorderIndexで昇順
+                if (hostId) {
+                  if (a.id === hostId && b.id !== hostId) return -1;
+                  if (b.id === hostId && a.id !== hostId) return 1;
+                }
+                return a.orderIndex - b.orderIndex;
+              })
+              .map((player) => {
               const { icon, color, status } = getPlayerStatus(
                 player,
                 roomStatus
@@ -223,8 +231,9 @@ export function DragonQuestParty({
             mt={2}
             fontFamily="monospace"
           >
-            {players.filter((p) => p.clue1 && p.clue1.trim() !== "").length}/
-            {actualCount} 完了
+            {displayedPlayers.filter((p) => p.clue1 && p.clue1.trim() !== "").length}/{
+              actualCount
+            } 完了
           </Text>
         )}
       </Box>

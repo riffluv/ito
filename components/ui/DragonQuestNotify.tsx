@@ -112,6 +112,7 @@ function NotificationItem({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const tlRef = useRef<any>(null);
 
   // 登場アニメーション
   useEffect(() => {
@@ -119,6 +120,19 @@ function NotificationItem({
 
     const container = containerRef.current;
     const content = contentRef.current;
+
+    // reduced-motion の尊重
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      // 最小限の状態をセットしてアニメーションをスキップ
+      gsap.set(container, { scale: 1, opacity: 1, x: 0, rotationY: 0 });
+      gsap.set(content, { y: 0 });
+      return;
+    }
 
     // 初期状態
     gsap.set(container, {
@@ -130,6 +144,7 @@ function NotificationItem({
 
     // 豪華な登場アニメーション
     const tl = gsap.timeline();
+    tlRef.current = tl;
 
     tl.to(container, {
       scale: 1.1,
@@ -159,6 +174,24 @@ function NotificationItem({
         duration: 0.2,
         ease: "bounce.out",
       });
+
+    return () => {
+      // クリーンアップ: timeline を停止・開放し、残った inline style をクリア
+      try {
+        if (tlRef.current) {
+          tlRef.current.kill();
+          tlRef.current = null;
+        }
+        gsap.killTweensOf(container);
+        gsap.killTweensOf(content);
+        gsap.set(container, {
+          clearProps: "transform,opacity,x,y,rotationY,scale",
+        });
+        gsap.set(content, { clearProps: "y" });
+      } catch (e) {
+        // ignore
+      }
+    };
   }, []);
 
   // 退場アニメーション

@@ -258,10 +258,31 @@ export function MobileBottomSheet({
 
   // 状態変更時のアニメーション実行
   useEffect(() => {
-    animateSheet(sheetState);
-    animateOverlay(sheetState === "full");
-    if (sheetState !== "collapsed") {
-      setTimeout(() => animateContent(), 100);
+    // reduced-motion を尊重
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      // 最小限の状態にセット
+      if (sheetRef.current)
+        gsap.set(sheetRef.current, {
+          y: window.innerHeight - getSheetHeight(),
+        });
+      if (overlayRef.current)
+        gsap.set(overlayRef.current, {
+          opacity: sheetState === "full" ? 0.5 : 0,
+          display: sheetState === "full" ? "block" : "none",
+        });
+      if (contentRef.current)
+        gsap.set(contentRef.current, { opacity: 1, y: 0 });
+    } else {
+      animateSheet(sheetState);
+      animateOverlay(sheetState === "full");
+      if (sheetState !== "collapsed") {
+        setTimeout(() => animateContent(), 100);
+      }
     }
   }, [sheetState]);
 
@@ -278,6 +299,26 @@ export function MobileBottomSheet({
         display: "none",
       });
     }
+    return () => {
+      try {
+        if (sheetRef.current) {
+          gsap.killTweensOf(sheetRef.current);
+          gsap.set(sheetRef.current, {
+            clearProps: "transform,opacity,x,y,scale",
+          });
+        }
+        if (overlayRef.current) {
+          gsap.killTweensOf(overlayRef.current);
+          gsap.set(overlayRef.current, { clearProps: "opacity,display" });
+        }
+        if (contentRef.current) {
+          gsap.killTweensOf(contentRef.current);
+          gsap.set(contentRef.current, { clearProps: "opacity,y" });
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
   }, []);
 
   // アクティブボタンのスタイル
