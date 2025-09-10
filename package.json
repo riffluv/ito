@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "images:convert": "node scripts/convert-to-webp.js",
+    "images:convert:dry": "node scripts/convert-to-webp.js --dry",
     "dev": "next dev",
     "test": "jest --config jest.config.cjs",
     "build": "next build",
@@ -66,6 +68,8 @@
     "@typescript-eslint/eslint-plugin": "6.9.0",
     "@typescript-eslint/parser": "6.9.0",
     "eslint-plugin-react": "7.33.2",
-    "eslint-plugin-react-hooks": "4.6.0"
+    "eslint-plugin-react-hooks": "4.6.0",
+    "sharp": "^0.32.4",
+    "minimist": "^1.2.8"
   }
 }

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "序の紋章 III — 連想ヒントで 1→100 を昇順に並べる協力カードゲーム",
   description:
     "連想（ヒント）だけで数字を小さい順に並べるオンライン協力カードゲーム。　なかまと一緒に遊ぼう！",
-  icons: [{ rel: "icon", url: "/images/knight1.png" }],
+  icons: [{ rel: "icon", url: "/images/knight1.webp" }],
 };
 
 export const viewport: Viewport = {

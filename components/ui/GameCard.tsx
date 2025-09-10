@@ -205,13 +205,13 @@ export function GameCard({
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
             border={dragonQuestStyle.border}
-            borderColor={dragonQuestStyle.borderColor}
+            borderColor={successBorder}
             bg={dragonQuestStyle.bg}
             color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
             alignItems="stretch"
-            boxShadow={dragonQuestStyle.boxShadow}
+            boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
             transition="all 0.3s ease"
           >
             <Box
@@ -288,9 +288,9 @@ export function GameCard({
             p={{ base: 3, md: "13px" }}
             borderRadius="lg"
             border={dragonQuestStyle.border}
-            borderColor={dragonQuestStyle.borderColor}
+            borderColor={successBorder}
             bg={dragonQuestStyle.bg}
-            boxShadow={dragonQuestStyle.boxShadow}
+            boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
             color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
