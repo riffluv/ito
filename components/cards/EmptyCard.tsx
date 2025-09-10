@@ -83,13 +83,11 @@ export function EmptyCard({
           transform: "scale(1.02)",
         },
 
-        // ドラッグ中の状態：ドラクエ風の待機中演出
-        ...(isDragActive && isDroppable && {
-          borderColor: "rgba(139, 92, 246, 0.6)", // 紫系でドラクエらしく
-          backgroundColor: "rgba(139, 92, 246, 0.05)",
-          animation: "dragonQuestReady 2s ease-in-out infinite",
-          // ドラクエ風の内部グロー
-          boxShadow: "inset 0 0 8px rgba(139, 92, 246, 0.2), 0 2px 8px rgba(0,0,0,0.1)",
+        // ドラッグ中の状態：ドロップ可能なスロットを微かに示唆
+        ...(isDragActive && isDroppable && !dndDroppable.isOver && {
+          borderColor: "rgba(139, 92, 246, 0.3)", // より控えめな色で
+          backgroundColor: "rgba(139, 92, 246, 0.02)", // さらに微かに
+          // アニメーションなしで、静的な状態表示
         }),
 
         // @dnd-kitのisOver状態での洗練されたドロップフィードバック（AI感軽減版）
