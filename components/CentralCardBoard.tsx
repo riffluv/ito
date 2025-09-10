@@ -592,11 +592,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     );
                     const ghostStyle = {
                       transform: "rotate(3deg) scale(1.08)",
-                      filter: "brightness(1.15) drop-shadow(0 12px 32px rgba(74,158,255,0.5))",
-                      borderColor: "#4a9eff",
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      borderRadius: "12px",
+                      filter: "brightness(1.15) drop-shadow(0 8px 20px rgba(139,92,246,0.4))",
+                      opacity: "0.95",
                     };
                     
                     if (idx >= 0) {
