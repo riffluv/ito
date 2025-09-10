@@ -1,4 +1,17 @@
 {
+  "compilerOptions": {
+    "lib": ["es2020"],
+    "module": "commonjs",
+    "target": "es2020",
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "outDir": "lib",
+    "rootDir": "src",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
+{
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "lib",

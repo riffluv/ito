@@ -121,7 +121,8 @@ export function GameCard({
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
     // アニメーション競合を防ぐため、フリップ中はホバー効果を無効化
-    const hoverTransform = (isHovered && !flipped) ? "translateY(-4px)" : "translateY(0)";
+    const hoverTransform =
+      isHovered && !flipped ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
@@ -145,34 +146,38 @@ export function GameCard({
             width: "120px",
             height: "168px",
             minWidth: "120px",
-            minHeight: "168px"
+            minHeight: "168px",
           },
           // DPI 125%：軽微な縮小でバランス維持
-          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
-            width: "95px",
-            height: "133px",
-            minWidth: "95px",
-            minHeight: "133px",
-          },
-          "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)": {
-            width: "114px",
-            height: "160px",
-            minWidth: "114px",
-            minHeight: "160px",
-          },
+          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+            {
+              width: "95px",
+              height: "133px",
+              minWidth: "95px",
+              minHeight: "133px",
+            },
+          "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
+            {
+              width: "114px",
+              height: "160px",
+              minWidth: "114px",
+              minHeight: "160px",
+            },
           // DPI 150%：適度な縮小でレイアウト収束
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            width: "88px",
-            height: "123px",
-            minWidth: "88px",
-            minHeight: "123px",
-          },
-          "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
-            width: "105px",
-            height: "147px",
-            minWidth: "105px",
-            minHeight: "147px",
-          },
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+            {
+              width: "88px",
+              height: "123px",
+              minWidth: "88px",
+              minHeight: "123px",
+            },
+          "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)":
+            {
+              width: "105px",
+              height: "147px",
+              minWidth: "105px",
+              minHeight: "147px",
+            },
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
@@ -211,7 +216,11 @@ export function GameCard({
             display="grid"
             gridTemplateRows="16px 1fr 16px"
             alignItems="stretch"
-            boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+            boxShadow={
+              successShadow
+                ? mergeShadow(dragonQuestStyle.boxShadow)
+                : dragonQuestStyle.boxShadow
+            }
             transition="all 0.3s ease"
           >
             <Box
@@ -290,7 +299,11 @@ export function GameCard({
             border={dragonQuestStyle.border}
             borderColor={successBorder}
             bg={dragonQuestStyle.bg}
-            boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+            boxShadow={
+              successShadow
+                ? mergeShadow(dragonQuestStyle.boxShadow)
+                : dragonQuestStyle.boxShadow
+            }
             color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
@@ -326,7 +339,7 @@ export function GameCard({
                 whiteSpace="nowrap"
                 letterSpacing={
                   typeof number === "number" && String(number).length >= 3
-                    ? "-0.8px"  // flipカードでも同じ適切な文字間隔
+                    ? "-0.8px" // flipカードでも同じ適切な文字間隔
                     : undefined
                 }
               >
@@ -355,13 +368,15 @@ export function GameCard({
   const hoverTransform = isHovered
     ? "translateY(-8px) scale(1.03) rotateY(0deg)"
     : "translateY(0) scale(1) rotateY(0deg)";
-  
-  const hoverBoxShadow = isHovered && dragonQuestStyle.boxShadow
-    ? dragonQuestStyle.boxShadow.replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
-                                    .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
-                                    .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
-                                    .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)")
-    : dragonQuestStyle.boxShadow;
+
+  const hoverBoxShadow =
+    isHovered && dragonQuestStyle.boxShadow
+      ? dragonQuestStyle.boxShadow
+          .replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
+          .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
+          .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
+          .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)")
+      : dragonQuestStyle.boxShadow;
 
   return (
     <Box
@@ -379,34 +394,38 @@ export function GameCard({
           width: "120px",
           height: "168px",
           minWidth: "120px",
-          minHeight: "168px"
+          minHeight: "168px",
         },
         // DPI 125%：軽微な縮小でバランス維持
-        "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
-          width: "95px",
-          height: "133px",
-          minWidth: "95px",
-          minHeight: "133px",
-        },
-        "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)": {
-          width: "114px",
-          height: "160px",
-          minWidth: "114px",
-          minHeight: "160px",
-        },
+        "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+          {
+            width: "95px",
+            height: "133px",
+            minWidth: "95px",
+            minHeight: "133px",
+          },
+        "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
+          {
+            width: "114px",
+            height: "160px",
+            minWidth: "114px",
+            minHeight: "160px",
+          },
         // DPI 150%：適度な縮小でレイアウト収束
-        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-          width: "88px",
-          height: "123px",
-          minWidth: "88px",
-          minHeight: "123px",
-        },
-        "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)": {
-          width: "105px",
-          height: "147px",
-          minWidth: "105px",
-          minHeight: "147px",
-        },
+        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+          {
+            width: "88px",
+            height: "123px",
+            minWidth: "88px",
+            minHeight: "123px",
+          },
+        "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)":
+          {
+            width: "105px",
+            height: "147px",
+            minWidth: "105px",
+            minHeight: "147px",
+          },
       }}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
@@ -418,14 +437,14 @@ export function GameCard({
       gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
       transform={hoverTransform}
-      style={{ 
-        transformStyle: "preserve-3d", 
+      style={{
+        transformStyle: "preserve-3d",
         willChange: "transform",
         // フォント描画改善: レイヤー促進（判定ボタン押下時と同等の描画品質を常時適用）
         transform: "translateZ(0)",
         WebkitFontSmoothing: "antialiased",
         MozOsxFontSmoothing: "grayscale",
-        textRendering: "optimizeLegibility"
+        textRendering: "optimizeLegibility",
       }}
       transition={`all 0.3s ${HOVER_EASING}`}
       boxShadow={hoverBoxShadow}
@@ -470,10 +489,20 @@ export function GameCard({
           maxWidth={typeof number === "number" ? "100%" : "calc(100% - 6px)"}
           textAlign="center"
           padding={typeof number === "number" ? "0" : "0 0.2rem"}
-          wordBreak={typeof number === "number" ? "keep-all" : 
-            (clue === "Waiting" ? "keep-all" : "break-word")}
-          whiteSpace={typeof number === "number" ? "nowrap" : 
-            (clue === "Waiting" ? "nowrap" : "normal")}
+          wordBreak={
+            typeof number === "number"
+              ? "keep-all"
+              : clue === "Waiting"
+                ? "keep-all"
+                : "break-word"
+          }
+          whiteSpace={
+            typeof number === "number"
+              ? "nowrap"
+              : clue === "Waiting"
+                ? "nowrap"
+                : "normal"
+          }
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
           overflow="visible"
           display={typeof number === "number" ? "block" : "flex"}
@@ -482,8 +511,8 @@ export function GameCard({
           justifyContent={typeof number === "number" ? undefined : "center"}
           letterSpacing={
             typeof number === "number"
-              ? String(number).length >= 3 
-                ? "-0.8px"  // 3桁数字の適切な文字間隔
+              ? String(number).length >= 3
+                ? "-0.8px" // 3桁数字の適切な文字間隔
                 : "-0.3px" // 2桁数字の適切な文字間隔
               : undefined
           }
@@ -494,29 +523,35 @@ export function GameCard({
             WebkitFontSmoothing: "antialiased",
             MozOsxFontSmoothing: "grayscale",
           }}
-          css={typeof number === "number" ? {
-            // CSS詳細度を上げて適切に上書き
-            width: "100%",
-            minWidth: "0",
-            maxWidth: "100%",
-            fontVariantNumeric: "normal",
-            fontFamily: "inherit",
-            // ネストした子要素も制御
-            "& > *": {
-              width: "100%",
-              minWidth: "0",
-              fontVariantNumeric: "normal"
-            }
-          } : undefined}
+          css={
+            typeof number === "number"
+              ? {
+                  // CSS詳細度を上げて適切に上書き
+                  width: "100%",
+                  minWidth: "0",
+                  maxWidth: "100%",
+                  fontVariantNumeric: "normal",
+                  fontFamily: "inherit",
+                  // ネストした子要素も制御
+                  "& > *": {
+                    width: "100%",
+                    minWidth: "0",
+                    fontVariantNumeric: "normal",
+                  },
+                }
+              : undefined
+          }
         >
           {typeof number === "number" ? (
-            <span style={{
-              display: "block",
-              width: "100%",
-              textAlign: "center",
-              fontVariantNumeric: "normal",
-              whiteSpace: "nowrap"
-            }}>
+            <span
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "center",
+                fontVariantNumeric: "normal",
+                whiteSpace: "nowrap",
+              }}
+            >
               {number}
             </span>
           ) : (
