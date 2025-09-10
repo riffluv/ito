@@ -35,8 +35,8 @@ function KnightCharacter() {
   useEffect(() => {
     // ランダムに騎士を選択
     const knights = [
-  { src: "/images/knight1.webp", alt: "序の紋章III Male Knight" },
-  { src: "/images/knightwomen1.webp", alt: "序の紋章III Female Knight" }, // 透過版に更新
+      { src: "/images/knight1.webp", alt: "序の紋章III Male Knight" },
+      { src: "/images/knightwomen1.webp", alt: "序の紋章III Female Knight" }, // 透過版に更新
     ];
     const randomKnight = knights[Math.floor(Math.random() * knights.length)];
     setKnightImage(randomKnight.src);
@@ -172,10 +172,18 @@ export default function MainMenu() {
       // より新しいタイムスタンプを使用
       const newerMs = Math.max(lastActiveMs, createdMs);
 
-      // 3.1) 待機中: オンライン1人以上なら常に表示。0人なら3分で非表示。
+      // 表示ウィンドウ（環境変数で上書き可能）
+      // デフォルト: 最近活動5分以内は表示。作成直後のルームは10分まで表示。
+      const NEWER_DISPLAY_MS =
+        Number(process.env.NEXT_PUBLIC_LOBBY_RECENT_MS) || 5 * 60 * 1000; // 5min
+      const CREATED_DISPLAY_MS = 10 * 60 * 1000; // 10min
+
+      // 3.1) 待機中: オンライン1人以上なら常に表示。
+      // それ以外は「最近活動」または「作成直後」を許容して表示する。
       if (activeCount > 0) return true;
-      const threeMin = 3 * 60 * 1000;
-      return newerMs > 0 && now - newerMs <= threeMin;
+      if (newerMs > 0 && now - newerMs <= NEWER_DISPLAY_MS) return true;
+      if (createdMs > 0 && now - createdMs <= CREATED_DISPLAY_MS) return true;
+      return false;
     });
   }, [rooms, lobbyCounts]);
 
