@@ -29,14 +29,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 // ランダムキャラクター選択コンポーネント
 function KnightCharacter() {
-  const [knightImage, setKnightImage] = useState("/images/knight1.png");
+  const [knightImage, setKnightImage] = useState("/images/knight1.webp");
   const [knightAlt, setKnightAlt] = useState("序の紋章III Knight");
 
   useEffect(() => {
     // ランダムに騎士を選択
     const knights = [
-      { src: "/images/knight1.png", alt: "序の紋章III Male Knight" },
-      { src: "/images/knightwomen1.png", alt: "序の紋章III Female Knight" }, // 透過版に更新
+  { src: "/images/knight1.webp", alt: "序の紋章III Male Knight" },
+  { src: "/images/knightwomen1.webp", alt: "序の紋章III Female Knight" }, // 透過版に更新
     ];
     const randomKnight = knights[Math.floor(Math.random() * knights.length)];
     setKnightImage(randomKnight.src);
@@ -278,7 +278,7 @@ export default function MainMenu() {
                   </AppButton>
                   <RPGButton size="lg" visual="outline" href="/rules">
                     <Image
-                      src="/images/card3.png"
+                      src="/images/card3.webp"
                       alt="ルールブック"
                       width={20}
                       height={20}
@@ -477,7 +477,7 @@ export default function MainMenu() {
                       mt="1px"
                     >
                       <img
-                        src="/images/hanepen1.png"
+                        src="/images/hanepen1.webp"
                         alt="羽ペン"
                         style={{
                           width: "28px",

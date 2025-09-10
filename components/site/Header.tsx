@@ -32,7 +32,7 @@ export default function Header() {
         <Flex align="center" justify="space-between" h="100%">
           <HStack gap="3">
             <Image
-              src="/images/knight1.png"
+              src="/images/knight1.webp"
               alt="序の紋章III Knight"
               boxSize="8"
               objectFit="contain"

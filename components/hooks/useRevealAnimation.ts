@@ -64,9 +64,15 @@ export function useRevealAnimation({
 
   // Handle reveal animation progression（最後の1枚後に余韻を入れる）
   useEffect(() => {
-    if (!revealAnimating) return;
+    console.log(`[DEBUG] useEffect発火: revealAnimating=${revealAnimating}, revealIndex=${revealIndex}, orderListLength=${orderListLength}`);
+    
+    if (!revealAnimating) {
+      console.log(`[DEBUG] revealAnimating=false のため処理スキップ`);
+      return;
+    }
 
     if (revealIndex > orderListLength) {
+      console.log(`[DEBUG] 全カード完了(${revealIndex} > ${orderListLength})、REVEAL_LINGER開始`);
       // Keep the animation flag true during the linger period so the UI
       // doesn't revert to the "face-down" state while waiting to finalize.
       const linger = setTimeout(() => {
@@ -80,6 +86,8 @@ export function useRevealAnimation({
 
     // First card has shorter delay to avoid "frozen" impression
     const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
+    console.log(`[DEBUG] カード${revealIndex + 1}のタイマー設定: ${delay}ms`);
+    
     const timer = setTimeout(async () => {
       const startTime = performance.now();
       console.log(`[DEBUG] カード${revealIndex + 1}のめくり処理開始: ${startTime.toFixed(2)}ms`);
