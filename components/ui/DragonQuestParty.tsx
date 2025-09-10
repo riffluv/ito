@@ -67,12 +67,19 @@ export function DragonQuestParty({
 
     // メンバー数が変わった時
     if (previousCount.current !== actualCount) {
-      gsap.from(container, {
-        scale: 0.9,
-        opacity: 0.7,
-        duration: 0.5,
-        ease: "back.out(1.2)",
-      });
+      // from -> to アニメーションを行い、終了時に inline の transform/opacity をクリアして
+      // ブラウザ差でスタイルが残る問題を防ぐ
+      gsap.fromTo(
+        container,
+        { scale: 0.9, opacity: 0.7 },
+        {
+          scale: 1,
+          opacity: 1,
+          duration: 0.5,
+          ease: "back.out(1.2)",
+          clearProps: "transform,opacity",
+        }
+      );
     }
 
     previousCount.current = actualCount;
@@ -89,6 +96,10 @@ export function DragonQuestParty({
       zIndex={49}
       css={{
         pointerEvents: "none",
+        // 明示的に変形/不透明度のデフォルトを指定しておくと
+        // アニメーションの途中状態が残った場合の見栄えを安定させる
+        transform: "none",
+        opacity: 1,
       }}
     >
       <Box
