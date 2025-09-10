@@ -1,3 +1,17 @@
+Functions to maintain rooms.playersCount and playersLastActive.
+
+How it works:
+- Triggers onCreate/onDelete/onUpdate for `rooms/{roomId}/players/{playerId}`.
+- Recalculates playersCount and playersLastActive by scanning players subcollection and updates `rooms/{roomId}` via transaction.
+
+Safety and costs:
+- Scanning the players subcollection is O(players). Keep player count per room modest (<100) for cost control.
+- If you expect large player lists, consider maintaining counters at write time from the app or using a separate lightweight counter document.
+
+Deploy:
+1. cd functions
+2. npm install
+3. npx firebase deploy --only functions
 # Functions for ITO
 
 This folder contains Firebase Cloud Functions used by the ITO project.

@@ -1,3 +1,88 @@
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
+
+// Initialize admin if not already
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+const db = admin.firestore();
+
+/**
+ * Recalculates playersCount and lastActive for a room.
+ * Called after onCreate/onDelete/onUpdate of players docs.
+ */
+async function recalcRoomCounts(roomId: string) {
+  if (!roomId) return;
+  const playersColl = db.collection('rooms').doc(roomId).collection('players');
+
+  // Count active players and compute lastSeen timestamp
+  const snapshot = await playersColl.get();
+  let count = 0;
+  let lastSeen: admin.firestore.Timestamp | null = null;
+  snapshot.forEach((doc) => {
+    count += 1;
+    const data = doc.data() as any;
+    if (data.lastSeen && data.lastSeen.toDate) {
+      const ts = data.lastSeen as admin.firestore.Timestamp;
+      if (!lastSeen || ts.toMillis() > lastSeen.toMillis()) lastSeen = ts;
+    }
+  });
+
+  const roomRef = db.collection('rooms').doc(roomId);
+  const updates: any = { playersCount: count };
+  if (lastSeen) updates.playersLastActive = lastSeen;
+
+  // Use transaction for safety (ensure we don't stomp other concurrent updates)
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(roomRef);
+    if (!snap.exists) return;
+    tx.update(roomRef, updates);
+  });
+}
+
+// Trigger on player created
+export const onPlayerCreate = functions.firestore
+  .document('rooms/{roomId}/players/{playerId}')
+  .onCreate(async (snap, ctx) => {
+    const roomId = ctx.params.roomId as string;
+    try {
+      await recalcRoomCounts(roomId);
+    } catch (err) {
+      console.error('onPlayerCreate error', err);
+    }
+  });
+
+// Trigger on player deleted
+export const onPlayerDelete = functions.firestore
+  .document('rooms/{roomId}/players/{playerId}')
+  .onDelete(async (snap, ctx) => {
+    const roomId = ctx.params.roomId as string;
+    try {
+      await recalcRoomCounts(roomId);
+    } catch (err) {
+      console.error('onPlayerDelete error', err);
+    }
+  });
+
+// Trigger on player update (e.g., lastSeen updates)
+export const onPlayerUpdate = functions.firestore
+  .document('rooms/{roomId}/players/{playerId}')
+  .onUpdate(async (change, ctx) => {
+    const roomId = ctx.params.roomId as string;
+    const before = change.before.data() || {};
+    const after = change.after.data() || {};
+    // Only recalc when relevant fields change to reduce cost
+    if (before.lastSeen?.toMillis?.() === after.lastSeen?.toMillis?.() &&
+        before.lastActive === after.lastActive) {
+      return;
+    }
+    try {
+      await recalcRoomCounts(roomId);
+    } catch (err) {
+      console.error('onPlayerUpdate error', err);
+    }
+  });
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
