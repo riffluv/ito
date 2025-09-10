@@ -62,7 +62,7 @@ export const Participants = memo(function Participants({
           </Box>
           
           {/* Player Status */}
-          <Box w="8px" h="8px" borderRadius="50%" bg={p.ready ? "green.500" : "emerald.500"} mt={1} />
+          <Box w="8px" h="8px" borderRadius="50%" bg={p.ready ? "purple.500" : "purple.400"} mt={1} />
         </Box>
       ))}
     </Box>

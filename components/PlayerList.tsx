@@ -93,7 +93,7 @@ export function PlayerList({
                 {Array.isArray(online) && online.includes(p.id) ? (
                   <Badge colorPalette="green">オンライン</Badge>
                 ) : p.ready ? (
-                  <Badge colorPalette="green">準備OK</Badge>
+                  <Badge colorPalette="purple">準備OK</Badge>
                 ) : p.clue1 ? (
                   <Badge colorPalette="orange">入力中</Badge>
                 ) : (

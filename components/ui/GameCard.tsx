@@ -46,8 +46,8 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
   // メインメニューレベルの豪華なドラクエ風シャドウ
   const boxShadow = waitingInCentral
     ? "0 8px 32px -8px rgba(0,0,0,0.3), 0 4px 16px -4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 2px 0 rgba(255,255,255,0.06)"
-    : state === "success"
-      ? "0 8px 24px -8px rgba(74,158,255,0.4), 0 4px 12px -4px rgba(74,158,255,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(74,158,255,0.2)"
+    : state === "success" || state === "ready"
+      ? "0 8px 24px -8px rgba(139,92,246,0.4), 0 4px 12px -4px rgba(139,92,246,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(139,92,246,0.2)"
       : state === "fail"
         ? "0 8px 24px -8px rgba(255,107,107,0.4), 0 4px 12px -4px rgba(255,107,107,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(255,107,107,0.2)"
         : "0 4px 16px -4px rgba(0,0,0,0.25), 0 2px 8px -2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)";
@@ -56,8 +56,8 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     bg: baseColors.bg,
     border: borderStyle,
     borderColor:
-      state === "success"
-        ? "rgba(34, 197, 94, 0.8)" // 成功時は緑ボーダーで演出
+      state === "success" || state === "ready"
+        ? "rgba(139, 92, 246, 0.8)" // 成功時・準備完了時は紫ボーダーで演出
         : stateAccent[state as keyof typeof stateAccent] || stateAccent.default,
     boxShadow,
     colors: {
@@ -98,9 +98,8 @@ export function GameCard({
   const dragonQuestStyle = getDragonQuestStyle(waitingInCentral, state);
 
   // Shared semantic colors
-  const successStrong = "#22c55e";
-  const mildGlow = "0 0 0 2px rgba(34,197,94,0.18)";
-  const strongGlow = "0 0 0 3px rgba(34,197,94,0.35)";
+  const mildGlow = "0 0 0 2px rgba(139,92,246,0.18)";
+  const strongGlow = "0 0 0 3px rgba(139,92,246,0.35)";
   const successBorder =
     state === "success"
       ? "#3b82f6" // Blue for success
