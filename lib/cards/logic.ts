@@ -35,7 +35,7 @@ export interface ComputedCardState {
   showNumber: boolean; // whether numeric value should be rendered
   variant: "flat" | "flip"; // which card visual to use
   flipped: boolean; // for flip variant: whether backside (number) is shown
-  state: "default" | "success" | "fail"; // coloring state
+  state: "default" | "success" | "fail" | "ready"; // coloring state
   boundary?: boolean; // marks the card right before failure for subtle emphasis
   successLevel?: "mild" | "final"; // refine success into per-card mild vs final celebration
   clueText: string | null; // clue to show (may be placeholder)
@@ -164,12 +164,15 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
 
   const waitingInCentral = true; // Dragon Quest style always-on
+  
+  // 連想ワード確定済みかどうか（空でない文字列があるかチェック）
+  const hasClue = !!(clue1 && clue1.trim() !== "");
 
   return {
     showNumber,
     variant,
     flipped,
-    state: isFail ? "fail" : isSuccess ? "success" : "default",
+    state: isFail ? "fail" : isSuccess ? "success" : hasClue ? "ready" : "default",
     boundary,
     successLevel,
     clueText,

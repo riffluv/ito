@@ -29,7 +29,7 @@ const getPlayerStatus = (
   // clueフェーズでの連想ワード入力状況
   if (roomStatus === "clue") {
     if (player.clue1 && player.clue1.trim() !== "") {
-      return { icon: "◆", color: "#4ade80", status: "じゅんび完了" };
+      return { icon: "◆", color: "#8b5cf6", status: "じゅんび完了" };
     } else {
       return { icon: "◇", color: "#fbbf24", status: "かんがえ中" };
     }
@@ -38,7 +38,7 @@ const getPlayerStatus = (
   // waitingフェーズでの準備状況
   if (roomStatus === "waiting") {
     if (player.ready) {
-      return { icon: "●", color: "#4ade80", status: "参戦準備OK" };
+      return { icon: "●", color: "#8b5cf6", status: "参戦準備OK" };
     } else {
       return { icon: "○", color: "#94a3b8", status: "待機中" };
     }

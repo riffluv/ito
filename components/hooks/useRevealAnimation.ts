@@ -59,20 +59,12 @@ export function useRevealAnimation({
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderListLength, revealAnimating, revealIndex]);
 
-  // リアルタイム判定を削除（重複判定排除のため）
-  // メインの判定は下のuseEffectに統一
-
-  // Handle reveal animation progression（最後の1枚後に余韻を入れる）
+  // Handle reveal animation progression
   useEffect(() => {
-    console.log(`[DEBUG] useEffect発火: revealAnimating=${revealAnimating}, revealIndex=${revealIndex}, orderListLength=${orderListLength}`);
-    
-    if (!revealAnimating) {
-      console.log(`[DEBUG] revealAnimating=false のため処理スキップ`);
-      return;
-    }
+    if (!revealAnimating) return;
 
     if (revealIndex >= orderListLength) {
-      console.log(`[DEBUG] 全カード完了(${revealIndex} > ${orderListLength})、REVEAL_LINGER開始`);
+      console.log(`[DEBUG] 全カード完了(${revealIndex} >= ${orderListLength})、REVEAL_LINGER開始`);
       // Keep the animation flag true during the linger period so the UI
       // doesn't revert to the "face-down" state while waiting to finalize.
       const linger = setTimeout(() => {
@@ -86,35 +78,26 @@ export function useRevealAnimation({
 
     // First card has shorter delay to avoid "frozen" impression
     const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
-    console.log(`[DEBUG] カード${revealIndex + 1}のタイマー設定: ${delay}ms`);
     
     const timer = setTimeout(async () => {
-      const startTime = performance.now();
-      console.log(`[DEBUG] カード${revealIndex + 1}のめくり処理開始: ${startTime.toFixed(2)}ms`);
       
       // 次にめくる枚数（この時点ではまだ state 更新前）
       const nextIndex = Math.min(revealIndex + 1, orderListLength);
 
       // インデックスを進めると同時にリアルタイム判定・色付与（遅延なし）
       setRevealIndex((i) => (i >= orderListLength ? i : i + 1));
-      
-      const indexUpdateTime = performance.now();
-      console.log(`[DEBUG] カード${nextIndex} revealIndex更新完了: ${(indexUpdateTime - startTime).toFixed(2)}ms`);
 
+      
       // めくり完了と同時に色付与（遅延削除）
       try {
         if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
-          const evalStartTime = performance.now();
           const currentList = orderData.list.slice(0, nextIndex);
           const result = evaluateSorted(currentList, orderData.numbers);
-          const evalEndTime = performance.now();
-          console.log(`[DEBUG] カード${nextIndex} evaluateSorted処理: ${(evalEndTime - evalStartTime).toFixed(2)}ms`);
           
           // 失敗 or 成功をめくり完了と同時にUIへ反映
           // 失敗時も currentIndex は毎回更新（カードの色変化のため）
           if (!result.success && result.failedAt !== null) {
             // 失敗状態だが currentIndex は更新（軽量な更新）
-            console.log(`[DEBUG] カード${nextIndex} 失敗状態でcurrentIndex更新`);
             setRealtimeResult({
               success: false,
               failedAt: result.failedAt,
@@ -129,18 +112,15 @@ export function useRevealAnimation({
             });
           }
           
-          const stateUpdateTime = performance.now();
-          console.log(`[DEBUG] カード${nextIndex} realtimeResult更新完了: ${(stateUpdateTime - evalEndTime).toFixed(2)}ms`);
 
           // 【テスト用】サーバー保存を一時的に無効化
           if (!result.success && result.failedAt !== null) {
-            console.log(`[DEBUG] 失敗検出: カード${nextIndex}, failedAt: ${result.failedAt}`);
-            // サーバー保存を完全に無効化してテスト
+            // 失敗検出: サーバー保存を無効化してテスト
           }
           // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
           else if (result.success && nextIndex === orderListLength) {
-            // 即座に非同期で実行（めくりリズムに影響させない）
-            Promise.resolve().then(async () => {
+            // 完全非同期で実行（めくりリズムに影響させない）
+            setTimeout(async () => {
               try {
                 const { requireDb } = await import("@/lib/firebase/require");
                 const { doc, runTransaction, serverTimestamp } = await import(
@@ -165,15 +145,12 @@ export function useRevealAnimation({
               } catch (e) {
                 console.warn("成功保存エラー:", e);
               }
-            });
+            }, 0);
           }
         }
       } catch (e) {
         console.warn("リアルタイム判定エラー:", e);
       }
-      
-      const endTime = performance.now();
-      console.log(`[DEBUG] カード${nextIndex} 処理完了: 合計${(endTime - startTime).toFixed(2)}ms`);
     }, delay);
 
     return () => clearTimeout(timer);
