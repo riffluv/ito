@@ -11,7 +11,8 @@ export type GameCardProps = {
   name?: string;
   clue?: string;
   number?: number | null;
-  state?: "default" | "success" | "fail";
+  // 'ready' is used for cards with a confirmed clue but not yet revealed
+  state?: "default" | "success" | "fail" | "ready";
   successLevel?: "mild" | "final";
   boundary?: boolean;
   variant?: "flat" | "flip";
