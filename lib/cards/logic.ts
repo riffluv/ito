@@ -121,8 +121,8 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
         if (typeof rtFailedAt === "number") {
           // 失敗: 現在まで(=rtJudgedUpTo)は全て赤
           if ((idx as number) + 1 <= rtJudgedUpTo) isFail = true;
-        } else if (rtSuccess) {
-          // 成功継続: 現在まで(=rtJudgedUpTo)は全て緑
+        } else if (rtSuccess && rtFailedAt === null) {
+          // 成功継続: failedAtがnullの場合のみ緑色
           if ((idx as number) + 1 <= rtJudgedUpTo) isSuccess = true;
         }
       }
@@ -130,12 +130,13 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
       if (hasRT && typeof idx === "number") {
         if (typeof rtFailedAt === "number") {
           isFail = true; // 失敗確定は全て赤
-        } else if (rtSuccess) {
-          isSuccess = true; // 全成功確定
+        } else if (rtSuccess && rtFailedAt === null) {
+          isSuccess = true; // 全成功確定（failedAtがnullの場合のみ）
         } else if (p.failed) {
           isFail = true; // サーバ確定フォールバック
         }
       } else {
+        // realtimeResultがない場合のフォールバック（安全側に倒す）
         isFail = Boolean(p.failed);
         isSuccess = !Boolean(p.failed);
       }
