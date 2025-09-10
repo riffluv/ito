@@ -41,11 +41,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
-// Fallback hard-coded durations (keep in sync with previous logic/motion.ts if exists)
-const REVEAL_FIRST_DELAY = 600;
-const REVEAL_STEP_DELAY = 650;
-const REVEAL_LINGER = 900;
-const RESULT_VISIBLE_MS = 3000;
+import {
+  REVEAL_FIRST_DELAY,
+  REVEAL_STEP_DELAY,
+  REVEAL_LINGER,
+  RESULT_VISIBLE_MS,
+} from "@/lib/ui/motion";
 
 interface CentralCardBoardProps {
   roomId: string;
