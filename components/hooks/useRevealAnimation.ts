@@ -71,7 +71,7 @@ export function useRevealAnimation({
       return;
     }
 
-    if (revealIndex > orderListLength) {
+    if (revealIndex >= orderListLength) {
       console.log(`[DEBUG] 全カード完了(${revealIndex} > ${orderListLength})、REVEAL_LINGER開始`);
       // Keep the animation flag true during the linger period so the UI
       // doesn't revert to the "face-down" state while waiting to finalize.
@@ -177,7 +177,7 @@ export function useRevealAnimation({
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [revealAnimating, revealIndex, orderListLength, roomId, orderData]);
+  }, [revealAnimating, revealIndex, orderListLength, roomId]);
 
   // Turn off the local animation flag when the server reports finished.
   useEffect(() => {
