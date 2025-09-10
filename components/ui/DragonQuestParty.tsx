@@ -2,7 +2,7 @@
 
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface PlayerDoc {
   name: string;
@@ -64,8 +64,75 @@ export function DragonQuestParty({
     : players;
 
   // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
-  const actualCount = onlineSet ? displayedPlayers.length : onlineCount ?? players.length;
+  const actualCount = onlineSet
+    ? displayedPlayers.length
+    : (onlineCount ?? players.length);
   const previousCount = useRef(actualCount);
+
+  // renderPlayers: DOM から即時に消えないようにローカルにレンダリング用配列を保持
+  const [renderPlayers, setRenderPlayers] =
+    useState<(PlayerDoc & { id: string })[]>(displayedPlayers);
+
+  // displayedPlayers が更新されたら差分を処理: 退出時はアニメーションしてから消す
+  useEffect(() => {
+    // additions: 追加分を即座に表示に入れる
+    const added = displayedPlayers.filter(
+      (p) => !renderPlayers.some((r) => r.id === p.id)
+    );
+    if (added.length > 0) {
+      setRenderPlayers((prev) => {
+        const merged = [...prev, ...added];
+        // keep same sort order as UI
+        merged.sort((a, b) => {
+          if (hostId) {
+            if (a.id === hostId && b.id !== hostId) return -1;
+            if (b.id === hostId && a.id !== hostId) return 1;
+          }
+          return a.orderIndex - b.orderIndex;
+        });
+        return merged;
+      });
+    }
+
+    // removals: renderPlayers にあって displayedPlayers にない => 退出
+    const removed = renderPlayers.filter(
+      (r) => !displayedPlayers.some((p) => p.id === r.id)
+    );
+    if (removed.length > 0) {
+      const prefersReduced =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      removed.forEach((r) => {
+        // reduced motion なら即時に取り除く
+        if (prefersReduced) {
+          setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
+          return;
+        }
+
+        const el = containerRef.current?.querySelector(
+          `[data-player-id="${r.id}"]`
+        ) as HTMLElement | null;
+        if (el) {
+          // 控えめな退出アニメーション（短め・意味のある動き）
+          gsap.to(el, {
+            x: -20,
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.24,
+            ease: "power2.in",
+            onComplete: () => {
+              setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
+            },
+          });
+        } else {
+          setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedPlayers.map((p) => p.id).join(",")]);
 
   // メンバー数変化時のアニメーション
   useEffect(() => {
@@ -143,16 +210,16 @@ export function DragonQuestParty({
           gap={1}
           w={{ base: "200px", md: "220px" }}
         >
-            { [...displayedPlayers]
-              .sort((a, b) => {
-                // ホストを最上位に固定し、その後はorderIndexで昇順
-                if (hostId) {
-                  if (a.id === hostId && b.id !== hostId) return -1;
-                  if (b.id === hostId && a.id !== hostId) return 1;
-                }
-                return a.orderIndex - b.orderIndex;
-              })
-              .map((player) => {
+          {[...renderPlayers]
+            .sort((a, b) => {
+              // ホストを最上位に固定し、その後はorderIndexで昇順
+              if (hostId) {
+                if (a.id === hostId && b.id !== hostId) return -1;
+                if (b.id === hostId && a.id !== hostId) return 1;
+              }
+              return a.orderIndex - b.orderIndex;
+            })
+            .map((player) => {
               const { icon, color, status } = getPlayerStatus(
                 player,
                 roomStatus
@@ -162,6 +229,7 @@ export function DragonQuestParty({
               return (
                 <Box
                   key={player.id}
+                  data-player-id={player.id}
                   bg="rgba(16,20,32,0.8)" // より濃い独自色
                   border="1px solid rgba(255,255,255,0.6)"
                   borderRadius={0}
@@ -231,9 +299,11 @@ export function DragonQuestParty({
             mt={2}
             fontFamily="monospace"
           >
-            {displayedPlayers.filter((p) => p.clue1 && p.clue1.trim() !== "").length}/{
-              actualCount
-            } 完了
+            {
+              displayedPlayers.filter((p) => p.clue1 && p.clue1.trim() !== "")
+                .length
+            }
+            /{actualCount} 完了
           </Text>
         )}
       </Box>
