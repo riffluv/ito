@@ -581,9 +581,9 @@ export default function RoomPage() {
       {/* ドラクエ風パーティーメンバー表示 */}
       <DragonQuestParty
         players={players}
-  roomStatus={room?.status || "waiting"}
-  onlineCount={onlinePlayers.length}
-  onlineUids={onlineUids}
+        roomStatus={room?.status || "waiting"}
+        onlineCount={onlinePlayers.length}
+        onlineUids={onlineUids}
         hostId={room?.hostId}
       />
 
