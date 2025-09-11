@@ -489,7 +489,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             <Box
               borderWidth="0"
               border="borders.retrogameThin"
-              borderColor="#fff"
+              borderColor={UI_TOKENS.COLORS.whiteAlpha90}
               borderRadius={0}
               padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
               minHeight="auto"
@@ -649,7 +649,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             <Box
               borderWidth="0"
               border="borders.retrogameThin"
-              borderColor="#fff"
+              borderColor={UI_TOKENS.COLORS.whiteAlpha90}
               borderRadius={0}
               padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
               minHeight="auto"

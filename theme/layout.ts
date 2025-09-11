@@ -224,6 +224,9 @@ export const UI_TOKENS = {
     dqBlue: "#4a9eff",
     dqPurple: "#8b5cf6",
     dqRed: "#ff6b6b",
+    // 拡張: 主要アクセント色のアルファ付き
+    dqBlueAlpha30: "rgba(74,158,255,0.3)",
+    dqBlueAlpha20: "rgba(74,158,255,0.2)",
     textBase: "#ffffff",
     textMuted: "rgba(255,255,255,0.7)",
     panelBg: "rgba(8,9,15,0.95)",
@@ -254,6 +257,12 @@ export const UI_TOKENS = {
     purpleAlpha15: "rgba(139, 92, 246, 0.15)",
     purpleAlpha02: "rgba(139, 92, 246, 0.02)",
     amberAlpha65: "rgba(217,119,6,0.65)",
+    // 通知・フェーズ用の強調色
+    accentGold: "rgba(255,215,0,0.9)",
+    skyBlue: "rgba(135,206,250,0.9)",
+    orangeRed: "rgba(255,69,0,0.9)",
+    violet: "rgba(147,112,219,0.9)",
+    limeGreen: "rgba(50,205,50,0.9)",
   },
   EASING: {
     hover: "cubic-bezier(0.4, 0, 0.2, 1)",

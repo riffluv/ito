@@ -7,6 +7,7 @@ import {
   CHAT_PANEL_BOTTOM_MOBILE,
 } from "@/lib/ui/layout";
 import { Box, IconButton } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import React from "react";
 
 export default function MinimalChat({ roomId }: { roomId: string }) {
@@ -25,22 +26,20 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           width="44px"
           height="44px"
           borderRadius="0" // ドラクエ風角ばり
-          bg="rgba(8,9,15,0.9)" // ルーム作成と同じリッチブラック
+          bg={UI_TOKENS.COLORS.panelBg}
           color="white"
-          border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           fontSize="16px"
           fontWeight="bold"
-          boxShadow="inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)" // 立体効果
-          transition="transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease"
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          transition={`transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
           _hover={{
             transform: "translateY(-1px)",
-            boxShadow:
-              "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           }}
           _active={{
             transform: "translateY(0)",
-            boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           }}
         >
           {open ? "✕" : "💬"}
@@ -85,9 +84,9 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           zIndex={21}
           borderRadius="0" // ルーム作成と同じ角ばり
           overflow="hidden"
-          bg="rgba(8,9,15,0.95)" // ルーム作成と同じリッチブラック
-          border="3px solid rgba(255,255,255,0.9)" // ドラクエ風太ボーダー
-          boxShadow="inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)" // 製品レベル立体感
+          bg={UI_TOKENS.COLORS.panelBg}
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
           display="flex"
           flexDirection="column"
         >

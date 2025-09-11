@@ -1,5 +1,6 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 
@@ -208,11 +209,10 @@ export function SimplePhaseDisplay({
         px={4}
         py={2}
         bg="linear-gradient(135deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))" // ドラクエ風深い青グラデーション
-        border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
+        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
         borderRadius={0}
         css={{
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
@@ -225,7 +225,7 @@ export function SimplePhaseDisplay({
           fontSize={{ base: "xs", md: "sm" }}
           fontWeight={600}
           color="white"
-          textShadow="1px 1px 0px #000"
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
           letterSpacing="0.5px"
           fontFamily="monospace"
           whiteSpace="nowrap"

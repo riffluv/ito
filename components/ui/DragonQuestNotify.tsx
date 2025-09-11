@@ -1,5 +1,6 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
 
@@ -92,13 +93,13 @@ const getNotificationIcon = (type: string) => {
 const getNotificationColor = (type: string) => {
   switch (type) {
     case "success":
-      return "rgba(50,205,50,0.9)";
+      return UI_TOKENS.COLORS.limeGreen;
     case "error":
-      return "rgba(255,69,0,0.9)";
+      return UI_TOKENS.COLORS.orangeRed;
     case "warning":
-      return "rgba(255,215,0,0.9)";
+      return UI_TOKENS.COLORS.accentGold;
     default:
-      return "rgba(135,206,250,0.9)";
+      return UI_TOKENS.COLORS.skyBlue;
   }
 };
 
@@ -228,16 +229,15 @@ function NotificationItem({
       <Box
         ref={contentRef}
         position="relative"
-        bg="rgba(8,9,15,0.95)"
-        border="2px solid rgba(255,255,255,0.9)"
+        bg={UI_TOKENS.COLORS.panelBg}
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         minW="280px"
         maxW="360px"
         px={4}
         py={3}
         css={{
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
           // ドラクエ風吹き出し三角
           "&::after": {
@@ -249,7 +249,7 @@ function NotificationItem({
             height: "0",
             borderLeft: "10px solid transparent",
             borderRight: "10px solid transparent", 
-            borderTop: "10px solid rgba(255,255,255,0.9)",
+            borderTop: `10px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             zIndex: 2,
           },
           "&::before": {
@@ -261,7 +261,7 @@ function NotificationItem({
             height: "0", 
             borderLeft: "10px solid transparent",
             borderRight: "10px solid transparent",
-            borderTop: "10px solid rgba(8,9,15,0.95)",
+            borderTop: `10px solid ${UI_TOKENS.COLORS.panelBg}`,
             zIndex: 1,
           },
         }}
@@ -301,7 +301,7 @@ function NotificationItem({
 
           <Text
             fontSize="xs"
-            color="rgba(255,255,255,0.5)"
+            color={UI_TOKENS.COLORS.whiteAlpha50}
             fontFamily="monospace"
             cursor="pointer"
             _hover={{ color: "white" }}
