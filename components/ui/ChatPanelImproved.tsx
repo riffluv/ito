@@ -44,6 +44,8 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
 
+  // 時刻表示は不要のため削除（UI簡素化）
+
   useEffect(() => {
     const q = query(
       collection(db!, "rooms", roomId, "chat"),
@@ -173,90 +175,15 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                 <Box key={m.id}>
                   {isSystem ? (
                     <Box w="100%">
-                      <HStack 
-                        gap={2} 
-                        align="flex-start" 
-                        flexWrap="nowrap"
-                        opacity={0.95}
-                        css={{
-                          "@layer dpi-responsive": {
-                            // DPI 125%対応：統一定数活用
-                            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                              gap: UNIFIED_LAYOUT.DPI_125.SPACING.FORM_GAP,
-                            },
-                            // DPI 150%対応：統一定数活用
-                            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-                              gap: UNIFIED_LAYOUT.DPI_150.SPACING.FORM_GAP,
-                            },
-                          }
-                        }}
+                      <Text
+                        fontSize="xs"
+                        color="rgba(255,255,255,0.75)"
+                        fontFamily="monospace"
+                        textAlign="center"
+                        textShadow="0 1px 1px rgba(0,0,0,0.6)"
                       >
-                        <Box 
-                          minW="100px"
-                          maxW="100px"
-                          textAlign="center"
-                          flexShrink={0}
-                          bg="#1a1d29"
-                          border="1px solid rgba(255,255,255,0.3)"
-                          borderRadius="0"
-                          py={1}
-                          px={2}
-                          css={{
-                            // ドラクエ風角ばったデザイン
-                            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3)",
-                            // DPI 125%対応：サイズ調整
-                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                              {
-                                minWidth: "80px !important",
-                                maxWidth: "80px !important",
-                                fontSize: "0.65rem !important",
-                              },
-                            // DPI 150%対応：さらに小さく
-                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                              {
-                                minWidth: "70px !important",
-                                maxWidth: "70px !important",
-                                fontSize: "0.6rem !important",
-                              },
-                          }}
-                        >
-                          <Text
-                            fontSize="xs"
-                            fontWeight="600"
-                            color="rgba(255,255,255,0.85)"
-                            fontFamily="monospace"
-                            textShadow="0 1px 2px rgba(0,0,0,0.5)"
-                            letterSpacing="0.5px"
-                          >
-                            system
-                          </Text>
-                        </Box>
-                        <Text 
-                          fontSize="sm" 
-                          color="fgMuted"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px #000"
-                          lineHeight={1.4}
-                          flex={1}
-                          wordBreak="break-word"
-                          css={{
-                            // DPI 125%対応：メッセージテキストサイズ調整
-                            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                              {
-                                fontSize: "0.75rem !important",
-                                lineHeight: "1.3 !important",
-                              },
-                            // DPI 150%対応：さらに小さく
-                            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                              {
-                                fontSize: "0.65rem !important",
-                                lineHeight: "1.2 !important",
-                              },
-                          }}
-                        >
-                          : {m.text}
-                        </Text>
-                      </HStack>
+                        {m.text}
+                      </Text>
                     </Box>
                   ) : (
                     <Box
@@ -288,7 +215,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           } // 自分=ゴールド、他人=ブルー
                           fontFamily="monospace"
                           fontWeight="bold"
-                          textShadow="1px 1px 0px #000" // ドラクエ風くっきり文字
+                          textShadow="0 1px 1px rgba(0,0,0,0.6)"
                           minW="100px"
                           maxW="100px" // 固定幅でコロン位置統一
                           textAlign="left"
@@ -314,13 +241,13 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                               },
                           }}
                         >
-                          ▼ {m.sender}
+                          {m.sender}
                         </Text>
                         <Text
                           fontSize="sm"
                           color="white"
                           fontFamily="monospace"
-                          textShadow="1px 1px 0px #000"
+                          textShadow="0 1px 1px rgba(0,0,0,0.6)"
                           lineHeight={1.4}
                           flex={1}
                           wordBreak="break-word"
@@ -339,8 +266,9 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                               },
                           }}
                         >
-                          : {m.text}
+                          {m.text}
                         </Text>
+                        {/* 時刻表示は削除し、余白も残さない */}
                       </HStack>
                     </Box>
                   )}
