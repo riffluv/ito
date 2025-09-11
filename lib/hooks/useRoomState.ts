@@ -3,6 +3,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -35,15 +36,80 @@ export function useRoomState(
   // subscribe room
   useEffect(() => {
     if (!firebaseEnabled) return;
-    const unsubRoom = onSnapshot(doc(db!, "rooms", roomId), (snap) => {
-      if (!snap.exists()) {
-        setRoom(null);
-        return;
-      }
-      setRoom({ id: snap.id, ...sanitizeRoom(snap.data()) });
-    });
+
+    const unsubRef = { current: null as null | (() => void) };
+    const backoffUntilRef = { current: 0 };
+    let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const stop = () => {
+      try {
+        unsubRef.current?.();
+      } catch {}
+      unsubRef.current = null;
+    };
+
+    const maybeStart = () => {
+      if (unsubRef.current) return; // already subscribed
+      const now = Date.now();
+      if (now < backoffUntilRef.current) return; // still backing off
+      unsubRef.current = onSnapshot(
+        doc(db!, "rooms", roomId),
+        (snap) => {
+          if (!snap.exists()) {
+            setRoom(null);
+            return;
+          }
+          setRoom({ id: snap.id, ...sanitizeRoom(snap.data()) });
+        },
+        (err) => {
+          if (isFirebaseQuotaExceeded(err)) {
+            handleFirebaseQuotaError("ルーム購読");
+            backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分バックオフ
+            stop();
+            if (backoffTimer) {
+              try { clearTimeout(backoffTimer); } catch {}
+              backoffTimer = null;
+            }
+            // 可視時にのみ自動再開を試みる
+            const resume = () => {
+              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+              const remain = backoffUntilRef.current - Date.now();
+              if (remain > 0) {
+                backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
+              } else {
+                maybeStart();
+              }
+            };
+            resume();
+          } else {
+            // その他のエラー時は一旦nullに
+            setRoom(null);
+          }
+        }
+      );
+    };
+
+    // 初回: 可視状態のときのみ購読開始
+    if (typeof document === "undefined" || document.visibilityState === "visible") {
+      maybeStart();
+    }
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") maybeStart();
+      else stop();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+
     return () => {
-      unsubRoom();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+      if (backoffTimer) {
+        try { clearTimeout(backoffTimer); } catch {}
+      }
+      stop();
     };
   }, [roomId]);
 

@@ -9,6 +9,7 @@ import { playerConverter } from "@/lib/firebase/converters";
 import type { PlayerDoc } from "@/lib/types";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
@@ -29,29 +30,82 @@ export function useParticipants(
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
 
-  // Firestore: players 購読
+  // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!roomId) return;
     setLoading(true);
     setError(null);
-    const unsub = onSnapshot(
-      query(
-        collection(db!, "rooms", roomId, "players").withConverter(playerConverter),
-        orderBy("uid", "asc")
-      ),
-      (snap) => {
-        const list: (PlayerDoc & { id: string })[] = [];
-        snap.forEach((d) => list.push(d.data() as any));
-        setPlayers(list);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err as any);
-        setLoading(false);
+
+    const unsubRef = { current: null as null | (() => void) };
+    const backoffUntilRef = { current: 0 };
+    let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const stop = () => {
+      try { unsubRef.current?.(); } catch {}
+      unsubRef.current = null;
+    };
+
+    const maybeStart = () => {
+      if (unsubRef.current) return;
+      const now = Date.now();
+      if (now < backoffUntilRef.current) return;
+      unsubRef.current = onSnapshot(
+        query(
+          collection(db!, "rooms", roomId, "players").withConverter(playerConverter),
+          orderBy("uid", "asc")
+        ),
+        (snap) => {
+          const list: (PlayerDoc & { id: string })[] = [];
+          snap.forEach((d) => list.push(d.data() as any));
+          setPlayers(list);
+          setLoading(false);
+        },
+        (err) => {
+          setError(err as any);
+          setLoading(false);
+          if (isFirebaseQuotaExceeded(err)) {
+            handleFirebaseQuotaError("プレイヤー購読");
+            backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分停止
+            stop();
+            if (backoffTimer) {
+              try { clearTimeout(backoffTimer); } catch {}
+              backoffTimer = null;
+            }
+            const resume = () => {
+              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+              const remain = backoffUntilRef.current - Date.now();
+              if (remain > 0) backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
+              else maybeStart();
+            };
+            resume();
+          }
+        }
+      );
+    };
+
+    // 初回は可視時のみ購読開始（無駄な読取回避）
+    if (typeof document === "undefined" || document.visibilityState === "visible") {
+      maybeStart();
+    }
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") maybeStart();
+      else stop();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+
+    return () => {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
       }
-    );
-    return () => unsub();
+      if (backoffTimer) {
+        try { clearTimeout(backoffTimer); } catch {}
+      }
+      stop();
+    };
   }, [roomId]);
 
   // RTDB: presence 購読
