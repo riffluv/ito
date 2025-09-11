@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 const ROOM_TTL_MS = 60 * 60 * 1000; // 60分で自動削除（未使用時のTTL想定）
@@ -153,4 +154,23 @@ export async function resetRoomToWaiting(roomId: string) {
     closedAt: null,
     expiresAt: null,
   });
+
+  // 参加者の一時状態も初期化（ホスト操作時に全員分を安全にクリア）
+  try {
+    const playersRef = collection(db!, "rooms", roomId, "players");
+    const snap = await getDocs(playersRef);
+    const batch = writeBatch(db!);
+    snap.forEach((d) => {
+      batch.update(d.ref, {
+        number: null,
+        clue1: "",
+        ready: false,
+        orderIndex: 0,
+      });
+    });
+    await batch.commit();
+  } catch (e) {
+    // クリア失敗は致命的ではないためログのみに留める
+    console.warn("resetRoomToWaiting: failed to reset players state", e);
+  }
 }

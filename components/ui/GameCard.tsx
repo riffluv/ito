@@ -195,7 +195,6 @@ export function GameCard({
               style={{
                 opacity: flipped ? 0 : 1,
                 transition: "opacity 0.2s ease-in-out",
-                willChange: "opacity",
               }}
               display="grid"
               gridTemplateRows="16px minmax(0,1fr) 16px"
@@ -253,7 +252,6 @@ export function GameCard({
               style={{
                 opacity: flipped ? 1 : 0,
                 transition: "opacity 0.2s ease-in-out",
-                willChange: "opacity",
               }}
               display="grid"
               gridTemplateRows="16px minmax(0,1fr) 16px"
