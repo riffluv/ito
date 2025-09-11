@@ -129,7 +129,7 @@ export function GameCard({
   if (variant === "flip") {
     const { effectiveMode } = useGPUPerformance();
     if (effectiveMode === "simple") {
-      // 低スペック向け: 3D transform を使わず、表示の出し分けのみ
+      // 低スペック向け: クロスフェードで“めくった感”を演出（回転なし）
       const backNumberFontSize = getNumberFontSize(
         typeof number === "number" ? number : null
       );
@@ -183,91 +183,119 @@ export function GameCard({
           borderColor={dragonQuestStyle.borderColor}
           bg={dragonQuestStyle.bg}
           color={dragonQuestStyle.colors.text}
-          display="grid"
-          gridTemplateRows="16px minmax(0, 1fr) 16px"
           boxShadow={dragonQuestStyle.boxShadow}
         >
-          {/* FRONT (clue) */}
-          <Box
-            display={flipped ? "none" : "block"}
-            fontSize="2xs"
-            lineHeight="1.3"
-            color={dragonQuestStyle.colors.meta}
-            style={getUnifiedTextStyle()}
-          >
-            <span className={styles.cardMeta}>
-              #{typeof index === "number" ? index + 1 : "?"}
-            </span>
-          </Box>
-          <Box display={flipped ? "none" : "block"} position="relative" minHeight={0}>
+          <Box position="relative" width="100%" height="100%">
+            {/* FRONT LAYER */}
             <Box
+              aria-hidden={flipped}
               position="absolute"
-              top="50%"
-              left="50%"
-              transform="translate(-50%, -50%)"
-              fontWeight={700}
-              fontSize={getClueFontSize(clue)}
-              color={dragonQuestStyle.colors.clue}
-              lineHeight="1.3"
-              width="100%"
-              maxWidth="calc(100% - 6px)"
-              textAlign="center"
-              padding="0 0.2rem"
-              wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
-              whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
-              overflowWrap="anywhere"
+              inset={0}
+              p={{ base: 0, md: 0 }}
+              style={{
+                opacity: flipped ? 0 : 1,
+                transition: "opacity 0.2s ease-in-out",
+                willChange: "opacity",
+              }}
+              display="grid"
+              gridTemplateRows="16px minmax(0,1fr) 16px"
             >
-              {clue || "(連想なし)"}
+              <Box
+                fontSize="2xs"
+                lineHeight="1.3"
+                color={dragonQuestStyle.colors.meta}
+                style={getUnifiedTextStyle()}
+                display="flex"
+                alignItems="center"
+              >
+                <span className={styles.cardMeta}>
+                  #{typeof index === "number" ? index + 1 : "?"}
+                </span>
+              </Box>
+              <Box position="relative" minHeight={0}>
+                <Box
+                  position="absolute"
+                  top="50%"
+                  left="50%"
+                  transform="translate(-50%, -50%)"
+                  fontWeight={700}
+                  fontSize={getClueFontSize(clue)}
+                  color={dragonQuestStyle.colors.clue}
+                  lineHeight="1.3"
+                  width="100%"
+                  maxWidth="calc(100% - 6px)"
+                  textAlign="center"
+                  padding="0 0.2rem"
+                  wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
+                  whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
+                  overflowWrap="anywhere"
+                >
+                  {clue || "(連想なし)"}
+                </Box>
+              </Box>
+              <Box
+                fontSize="2xs"
+                lineHeight="1.3"
+                color={dragonQuestStyle.colors.meta}
+                textAlign="left"
+                style={getUnifiedTextStyle()}
+              >
+                <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
+              </Box>
             </Box>
-          </Box>
-          <Box
-            display={flipped ? "none" : "block"}
-            fontSize="2xs"
-            lineHeight="1.3"
-            color={dragonQuestStyle.colors.meta}
-            textAlign="left"
-            style={getUnifiedTextStyle()}
-          >
-            <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
-          </Box>
 
-          {/* BACK (number) */}
-          <Box
-            display={flipped ? "block" : "none"}
-            fontSize="2xs"
-            lineHeight="1.3"
-            color={dragonQuestStyle.colors.meta}
-            style={getUnifiedTextStyle()}
-          >
-            <span className={styles.cardMeta}>
-              #{typeof index === "number" ? index + 1 : "?"}
-            </span>
-          </Box>
-          <Box display={flipped ? "block" : "none"} position="relative" minHeight={0}>
+            {/* BACK LAYER */}
             <Box
+              aria-hidden={!flipped}
               position="absolute"
-              top="50%"
-              left="50%"
-              transform="translate(-50%, -50%)"
-              fontWeight={700}
-              fontSize={backNumberFontSize}
-              color={dragonQuestStyle.colors.number}
-              lineHeight={1.3}
-              width="100%"
-              textAlign="center"
+              inset={0}
+              p={{ base: 0, md: 0 }}
+              style={{
+                opacity: flipped ? 1 : 0,
+                transition: "opacity 0.2s ease-in-out",
+                willChange: "opacity",
+              }}
+              display="grid"
+              gridTemplateRows="16px minmax(0,1fr) 16px"
             >
-              {typeof number === "number" ? number : "?"}
+              <Box
+                fontSize="2xs"
+                lineHeight="1.3"
+                color={dragonQuestStyle.colors.meta}
+                style={getUnifiedTextStyle()}
+                display="flex"
+                alignItems="center"
+              >
+                <span className={styles.cardMeta}>
+                  #{typeof index === "number" ? index + 1 : "?"}
+                </span>
+              </Box>
+              <Box position="relative" minHeight={0}>
+                <Box
+                  position="absolute"
+                  top="50%"
+                  left="50%"
+                  transform="translate(-50%, -50%)"
+                  fontWeight={700}
+                  fontSize={backNumberFontSize}
+                  color={dragonQuestStyle.colors.number}
+                  lineHeight={1.3}
+                  width="100%"
+                  textAlign="center"
+                >
+                  {typeof number === "number" ? number : "?"}
+                </Box>
+              </Box>
+              <Box
+                fontSize="2xs"
+                lineHeight="1.3"
+                color={dragonQuestStyle.colors.meta}
+                textAlign="left"
+                style={getUnifiedTextStyle()}
+              >
+                <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
+              </Box>
             </Box>
-          </Box>
-          <Box
-            display={flipped ? "block" : "none"}
-            fontSize="2xs"
-            lineHeight="1.3"
-            color={dragonQuestStyle.colors.meta}
-            textAlign="left"
-            style={getUnifiedTextStyle()}
-          >
-            <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
           </Box>
         </Box>
       );
