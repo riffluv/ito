@@ -180,8 +180,8 @@ export default function RoomPage() {
   useEffect(() => {
     if (!room || !uid) return;
     if (!room.deal || !room.deal.seed) return;
-    // clue/playing の両方に対して安全に割当
-    assignNumberIfNeeded(roomId, uid).catch(() => void 0);
+    // clue/playing の両方に対して安全に割当（既存roomを渡して再読取を回避）
+    assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
   }, [room?.deal?.seed, room?.status, uid]);
 
   // 入室システムメッセージ（1ユーザー1回）

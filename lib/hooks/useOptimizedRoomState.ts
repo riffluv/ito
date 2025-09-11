@@ -5,6 +5,7 @@ import { joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { doc, onSnapshot } from "firebase/firestore";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type OptimizedRoomState = {
@@ -92,36 +93,84 @@ export function useOptimizedRoomState(
     leavingRef.current = false;
   }, [roomId, uid || ""]);
 
-  // Subscribe to room with optimizations
+  // Subscribe to room with visibility gating and 429 backoff
   useEffect(() => {
     if (!firebaseEnabled) return;
-    
+
     let lastRoomData: string | null = null;
-    
-    const unsubRoom = onSnapshot(doc(db!, "rooms", roomId), (snap) => {
-      if (!snap.exists()) {
-        if (lastRoomData !== null) {
-          scheduleDebouncedUpdate({ room: null });
-          lastRoomData = null;
+    const unsubRef = { current: null as null | (() => void) };
+    const backoffUntilRef = { current: 0 };
+    let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const stop = () => {
+      try { unsubRef.current?.(); } catch {}
+      unsubRef.current = null;
+    };
+
+    const maybeStart = () => {
+      if (unsubRef.current) return;
+      const now = Date.now();
+      if (now < backoffUntilRef.current) return;
+      unsubRef.current = onSnapshot(
+        doc(db!, "rooms", roomId),
+        (snap) => {
+          if (!snap.exists()) {
+            if (lastRoomData !== null) {
+              scheduleDebouncedUpdate({ room: null });
+              lastRoomData = null;
+            }
+            return;
+          }
+          const newRoom = { id: snap.id, ...sanitizeRoom(snap.data()) };
+          const newRoomData = JSON.stringify(newRoom);
+          if (newRoomData !== lastRoomData) {
+            scheduleDebouncedUpdate({ room: newRoom });
+            lastRoomData = newRoomData;
+          }
+        },
+        (error) => {
+          if (isFirebaseQuotaExceeded(error)) {
+            handleFirebaseQuotaError("ルーム購読(optimized)");
+            backoffUntilRef.current = Date.now() + 5 * 60 * 1000;
+            stop();
+            if (backoffTimer) {
+              try { clearTimeout(backoffTimer); } catch {}
+              backoffTimer = null;
+            }
+            const resume = () => {
+              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+              const remain = backoffUntilRef.current - Date.now();
+              if (remain > 0) backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
+              else maybeStart();
+            };
+            resume();
+          } else {
+            console.error("Room subscription error:", error);
+            scheduleDebouncedUpdate({ room: null });
+          }
         }
-        return;
-      }
-      
-      const newRoom = { id: snap.id, ...sanitizeRoom(snap.data()) };
-      const newRoomData = JSON.stringify(newRoom);
-      
-      // Only update if room data actually changed
-      if (newRoomData !== lastRoomData) {
-        scheduleDebouncedUpdate({ room: newRoom });
-        lastRoomData = newRoomData;
-      }
-    }, (error) => {
-      console.error("Room subscription error:", error);
-      scheduleDebouncedUpdate({ room: null });
-    });
-    
+      );
+    };
+
+    if (typeof document === "undefined" || document.visibilityState === "visible") {
+      maybeStart();
+    }
+    const onVis = () => {
+      if (document.visibilityState === "visible") maybeStart();
+      else stop();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+
     return () => {
-      unsubRoom();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+      if (backoffTimer) {
+        try { clearTimeout(backoffTimer); } catch {}
+      }
+      stop();
       lastRoomData = null;
     };
   }, [roomId, scheduleDebouncedUpdate]);
