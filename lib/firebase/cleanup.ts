@@ -3,16 +3,18 @@ import {
   collection,
   deleteDoc,
   getDocs,
+  limit,
   query,
   Timestamp,
   where,
 } from "firebase/firestore";
 
 /**
- * 古い部屋を自動削除する関数
- * @param daysOld 何日前の部屋を削除するか（デフォルト: 3日）
+ * 🚨 緊急修正: Firestore読み取り制限対策
+ * ゲーム中でも5分で削除（読み取り量削減優先）
+ * @param minutesOld 何分前の部屋を削除するか（デフォルト: 5分）
  */
-export async function cleanupOldRooms(daysOld: number = 3) {
+export async function cleanupOldRooms(minutesOld: number = 5) {
   if (!db) {
     console.warn("Firebase not initialized");
     return { success: false, error: "Firebase not initialized" };
@@ -20,13 +22,14 @@ export async function cleanupOldRooms(daysOld: number = 3) {
 
   try {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    cutoffDate.setMinutes(cutoffDate.getMinutes() - minutesOld);
     const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    // 古い部屋を検索
+    // 🚨 最近活動がない部屋を検索（読み取り量削減）
     const roomsQuery = query(
       collection(db, "rooms"),
-      where("createdAt", "<", cutoffTimestamp)
+      where("lastActiveAt", "<", cutoffTimestamp),
+      limit(10) // 読み取り量削減のため最大10件に制限
     );
 
     const snapshot = await getDocs(roomsQuery);
@@ -34,25 +37,28 @@ export async function cleanupOldRooms(daysOld: number = 3) {
 
     for (const doc of snapshot.docs) {
       try {
-        // 部屋の状態をチェック（アクティブな部屋は削除しない）
         const roomData = doc.data();
-        if (roomData.status === "playing" || roomData.status === "clue") {
-          console.log(`Skipping active room: ${doc.id}`);
-          continue;
-        }
-
-        // プレイヤー数をチェック（参加者がいる部屋は削除しない）
+        
+        // 🚨 緊急対応: ゲーム中でも5分経過で削除（読み取り制限対策）
+        // 通常時は保護するが、制限対策として一時的に緩和
+        const status = roomData.status as string;
+        
+        // プレイヤー数をチェック（参加者がいる部屋のみ保護）
         const playersSnapshot = await getDocs(collection(doc.ref, "players"));
-        if (playersSnapshot.size > 0) {
-          console.log(`Skipping room with players: ${doc.id}`);
+        if (playersSnapshot.size > 1) { // 2人以上の場合のみ保護
+          if (process.env.NODE_ENV === "development") {
+            console.log(`🎮 Protecting room with ${playersSnapshot.size} players: ${doc.id}`);
+          }
           continue;
         }
 
-        // 部屋を削除
+        // 5分経過した部屋は状態に関係なく削除
         await deleteDoc(doc.ref);
         deletedCount++;
 
-        console.log(`Deleted old room: ${roomData.name || doc.id}`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`🧹 Deleted room (${status}): ${roomData.name || doc.id}`);
+        }
       } catch (error) {
         console.error(`Error deleting room ${doc.id}:`, error);
       }
@@ -70,25 +76,19 @@ export async function cleanupOldRooms(daysOld: number = 3) {
 }
 
 /**
- * ロビー表示時に古い部屋のクリーンアップを実行
- * （管理者権限がある場合のみ）
+ * 🚨 緊急修正: ロビー表示時の読み取り頻度を大幅削減
+ * 制限対策として最小限のクリーンアップのみ実行
  */
 export async function autoCleanupOnLobbyLoad() {
-  // 開発環境でのみ自動クリーンアップを実行
-  if (process.env.NODE_ENV === "development") {
-    try {
-      const result = await cleanupOldRooms(7); // 7日以上前の部屋を削除
-      if (
-        result.success &&
-        typeof result.deletedCount === "number" &&
-        result.deletedCount > 0
-      ) {
-        console.log(
-          `🧹 Auto cleanup: ${result.deletedCount} old rooms removed`
-        );
-      }
-    } catch (error) {
-      console.error("Auto cleanup failed:", error);
+  try {
+    // 🚨 5分以上前の部屋を削除（読み取り制限対策）
+    const result = await cleanupOldRooms(5);
+    if (result.success && result.deletedCount > 0 && process.env.NODE_ENV === "development") {
+      console.log(`🧹 Emergency cleanup: ${result.deletedCount} rooms removed`);
     }
+    return result;
+  } catch (error) {
+    console.error("Emergency cleanup failed:", error);
+    return null;
   }
 }

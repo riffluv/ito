@@ -41,14 +41,14 @@ export function useOptimizedRooms(enabled: boolean) {
     setError(null);
 
     try {
-      // 読み取り削減: 直近10分のみ対象
-      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+      // 🚨 緊急読み取り削減: 直近3分のみに制限
+      const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
       const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
       const q = query(
         roomsCol,
-        where("lastActiveAt", ">=", Timestamp.fromDate(tenMinAgo)),
+        where("lastActiveAt", ">=", Timestamp.fromDate(threeMinAgo)),
         orderBy("lastActiveAt", "desc"),
-        limit(20)
+        limit(5) // 🚨 20 → 5に削減
       );
       const snap = await getDocs(q);
       const activeRooms = snap.docs
@@ -93,7 +93,7 @@ export function useOptimizedRooms(enabled: boolean) {
     const visibilityHandler = () => {
       if (document.visibilityState !== "visible") return;
       const now = Date.now();
-      if (now - lastFetchRef.current < 60 * 1000) return; // 60秒クールダウン
+      if (now - lastFetchRef.current < 120 * 1000) return; // 🚨 60秒 → 120秒に延長
       wrappedFetch();
     };
     document.addEventListener("visibilitychange", visibilityHandler);
