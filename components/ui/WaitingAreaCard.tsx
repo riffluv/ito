@@ -26,21 +26,16 @@ export default function WaitingAreaCard({
         !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
     });
 
-  const style = transform
+  const style: React.CSSProperties = isDragging
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) ${isDragging ? 'scale(1.08)' : 'scale(1)'}`,
-        opacity: isDragging ? 0.8 : 1,
-        zIndex: isDragging ? 1000 : "auto",
-        cursor:
-          isDraggingEnabled && ready && meId === player.id
-            ? isDragging
-              ? "grabbing"
-              : "grab"
-            : "default",
-        transition: isDragging ? "none" : "transform 0.2s ease",
-        filter: isDragging ? "brightness(1.05) drop-shadow(0 6px 16px rgba(0,0,0,0.25))" : "none",
+        // DragOverlay を使うため、元要素は動かさず不可視にする
+        opacity: 0,
+        pointerEvents: "none",
+        cursor: "grabbing",
+        transition: "none",
       }
     : {
+        // 非ドラッグ時は通常の見た目
         cursor:
           isDraggingEnabled && ready && meId === player.id ? "grab" : "default",
         transition: "transform 0.2s ease",
@@ -50,6 +45,7 @@ export default function WaitingAreaCard({
     <Box
       ref={setNodeRef}
       style={style}
+      data-dragging={isDragging ? "true" : undefined}
       {...(isDraggingEnabled && ready ? listeners : {})}
       {...(isDraggingEnabled && ready ? attributes : {})}
     >
