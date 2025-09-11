@@ -3,7 +3,7 @@ import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
-import { useState, memo } from "react";
+import { memo } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 
@@ -98,7 +98,7 @@ export function GameCard({
   flipped = false,
   waitingInCentral = true,
 }: GameCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
+  // hoverはCSS擬似クラスで処理し、再レンダーを避ける
 
   // ドラクエ風統一デザイン取得
   const dragonQuestStyle = getDragonQuestStyle(waitingInCentral, state);
@@ -299,9 +299,6 @@ export function GameCard({
       );
     }
     // 3Dモード（従来）
-    // アニメーション競合を防ぐため、フリップ中はホバー効果を無効化
-    const hoverTransform =
-      isHovered && !flipped ? "translateY(-4px)" : "translateY(0)";
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
@@ -310,6 +307,7 @@ export function GameCard({
 
     return (
       <Box
+        className={styles.root}
         style={{
           perspective: "1000px",
         }}
@@ -355,19 +353,22 @@ export function GameCard({
             minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
             minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
           },
+          // ホバー時は3D要素にわずかなY移動を加える（transformの競合を避けて親から指定）
+          "&:hover .gc3d": {
+            transform: `${flipTransform} translateY(-4px) translateZ(0)`,
+          },
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <div
+          className="gc3d"
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
             transformStyle: "preserve-3d",
-            transform: `${flipTransform} ${hoverTransform} translateZ(0)`,
+            transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
             willChange: "transform",
             transition: `transform 0.6s ${CARD_FLIP_EASING}`,
           }}
@@ -541,22 +542,18 @@ export function GameCard({
     );
   }
 
-  // FLAT VARIANT - 通常のカード表示（メインメニューレベルのホバー効果）
-  const hoverTransform = isHovered
-    ? "translateY(-8px) scale(1.03) rotateY(0deg)"
-    : "translateY(0) scale(1) rotateY(0deg)";
-
-  const hoverBoxShadow =
-    isHovered && dragonQuestStyle.boxShadow
-      ? dragonQuestStyle.boxShadow
-          .replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
-          .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
-          .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
-          .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)")
-      : dragonQuestStyle.boxShadow;
+  // FLAT VARIANT - 通常のカード表示（CSSホバーで再レンダー無し）
+  const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
+  const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
+  const hoveredBoxShadow = dragonQuestStyle.boxShadow
+    .replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
+    .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
+    .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
+    .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)");
 
   return (
     <Box
+      className={styles.root}
       width={UNIFIED_LAYOUT.CARD.WIDTH}
       height={UNIFIED_LAYOUT.CARD.HEIGHT}
       minW={UNIFIED_LAYOUT.CARD.WIDTH}
@@ -611,7 +608,7 @@ export function GameCard({
       display="grid"
       gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
-      transform={hoverTransform}
+      transform={baseTransform}
       style={{
         transformStyle: "preserve-3d",
         willChange: "transform",
@@ -622,10 +619,12 @@ export function GameCard({
         textRendering: "optimizeLegibility",
       }}
       transition={`transform 0.3s ${HOVER_EASING}, box-shadow 0.3s ${HOVER_EASING}`}
-      boxShadow={hoverBoxShadow}
+      boxShadow={dragonQuestStyle.boxShadow}
+      _hover={{
+        transform: hoveredTransform,
+        boxShadow: hoveredBoxShadow,
+      }}
       tabIndex={0}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <Box
         fontSize="2xs"
