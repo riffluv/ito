@@ -3,7 +3,7 @@ import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
-import { useState } from "react";
+import { useState, memo } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 
@@ -398,7 +398,7 @@ export function GameCard({
                 ? mergeShadow(dragonQuestStyle.boxShadow)
                 : dragonQuestStyle.boxShadow
             }
-            transition="all 0.3s ease"
+            transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
           >
             <Box
               fontSize="2xs"
@@ -484,7 +484,7 @@ export function GameCard({
             color={dragonQuestStyle.colors.text}
             display="grid"
             gridTemplateRows="16px 1fr 16px"
-            transition="all 0.3s ease"
+            transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
           >
             <Box
               fontSize="2xs"
@@ -621,7 +621,7 @@ export function GameCard({
         MozOsxFontSmoothing: "grayscale",
         textRendering: "optimizeLegibility",
       }}
-      transition={`all 0.3s ${HOVER_EASING}`}
+      transition={`transform 0.3s ${HOVER_EASING}, box-shadow 0.3s ${HOVER_EASING}`}
       boxShadow={hoverBoxShadow}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
@@ -750,4 +750,4 @@ export function GameCard({
   );
 }
 
-export default GameCard;
+export default memo(GameCard);
