@@ -83,14 +83,22 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
   await updateDoc(roomRef, patch);
 }
 
-export async function assignNumberIfNeeded(roomId: string, uid: string) {
+export async function assignNumberIfNeeded(
+  roomId: string,
+  uid: string,
+  roomFromState?: Partial<RoomDoc> | null
+) {
   const roomRef = doc(db!, "rooms", roomId);
-  const [roomSnap, meSnap] = await Promise.all([
-    getDoc(roomRef),
+  const [roomData, meSnap] = await Promise.all([
+    (async () => {
+      if (roomFromState && (roomFromState as any).deal) return roomFromState as any;
+      const s = await getDoc(roomRef);
+      return s.exists() ? (s.data() as any) : null;
+    })(),
     getDoc(doc(db!, "rooms", roomId, "players", uid)),
   ]);
-  if (!roomSnap.exists() || !meSnap.exists()) return;
-  const room: any = roomSnap.data();
+  if (!roomData || !meSnap.exists()) return;
+  const room: any = roomData;
   const me: any = meSnap.data();
   const deal = room?.deal || null;
   if (!deal) return;

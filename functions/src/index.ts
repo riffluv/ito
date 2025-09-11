@@ -46,29 +46,7 @@ async function recalcRoomCounts(roomId: string) {
   });
 }
 
-// Trigger on player created
-export const onPlayerCreate = functions.firestore
-  .document('rooms/{roomId}/players/{playerId}')
-  .onCreate(async (snap, ctx) => {
-    const roomId = ctx.params.roomId as string;
-    try {
-      await recalcRoomCounts(roomId);
-    } catch (err) {
-      console.error('onPlayerCreate error', err);
-    }
-  });
-
-// Trigger on player deleted
-export const onPlayerDelete = functions.firestore
-  .document('rooms/{roomId}/players/{playerId}')
-  .onDelete(async (snap, ctx) => {
-    const roomId = ctx.params.roomId as string;
-    try {
-      await recalcRoomCounts(roomId);
-    } catch (err) {
-      console.error('onPlayerDelete error', err);
-    }
-  });
+// 旧 onPlayerCreate / onPlayerDelete は onPlayerCreated / onPlayerDeleted に統合
 
 // Trigger on player update (e.g., lastSeen updates)
 export const onPlayerUpdate = functions.firestore
@@ -220,6 +198,11 @@ export const onPlayerDeleted = functions.firestore
         }
       }
     } catch {}
+    try {
+      await recalcRoomCounts(ctx.params.roomId as string);
+    } catch (err) {
+      console.error('onPlayerDeleted recalc error', err);
+    }
     return null;
   });
 
@@ -258,6 +241,7 @@ export const onPlayerCreated = functions.firestore
         expiresAt: null,
         lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      await recalcRoomCounts(ctx.params.roomId as string);
     } catch {}
     return null;
   });
