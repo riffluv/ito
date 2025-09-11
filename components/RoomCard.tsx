@@ -55,6 +55,21 @@ export function RoomCard({
           borderColor: "primary",
           bg: "accentSubtle",
         }}
+        css={{
+          // DPI scaling card optimization
+          "@container (max-width: 600px)": {
+            padding: "1.25rem", // 20px for mobile - better tap targets
+            minHeight: "10rem", // 160px for mobile
+          },
+          "@container (min-width: 600px) and (max-width: 900px)": {
+            padding: "1.375rem", // 22px for tablet
+            minHeight: "11rem", // 176px for tablet
+          },
+          "@container (min-width: 900px)": {
+            padding: "1.5rem", // 24px for desktop
+            minHeight: "12rem", // 192px for desktop
+          }
+        }}
       >
         {/* Status indicator */}
         <Box position="absolute" top={4} right={4} zIndex={2}>

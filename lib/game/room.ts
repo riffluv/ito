@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
 import {
@@ -336,7 +337,11 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids)) activeCount = uids.length;
     }
-  } catch {
+  } catch (err) {
+    if (isFirebaseQuotaExceeded(err)) {
+      handleFirebaseQuotaError("ゲーム進行");
+      throw new Error("Firebase読み取り制限のため、現在ゲームをプレイできません。24時間後に再度お試しください。");
+    }
     activeCount = null;
   }
 

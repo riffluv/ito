@@ -47,7 +47,7 @@ export function getFirebaseErrorMessage(error: unknown): string {
     case "already-exists":
       return "既に存在しています。";
     case "resource-exhausted":
-      return "一時的にサービスが利用できません。しばらく待ってからお試しください。";
+      return "🚨 Firebase読み取り制限に達しました。24時間後に制限がリセットされます。";
     case "unauthenticated":
       return "認証が必要です。ログインしてください。";
     case "unavailable":
@@ -154,4 +154,27 @@ export function createNetworkError(originalError: unknown): AppError {
     userMessage: "ネットワークエラーが発生しました。接続を確認してください。",
     technicalDetails: { originalError },
   });
+}
+
+/**
+ * Firebase制限エラー検知関数
+ */
+export function isFirebaseQuotaExceeded(error: unknown): boolean {
+  const firebaseError = error as { code?: string; message?: string };
+  return firebaseError?.code === "resource-exhausted" || 
+         firebaseError?.message?.includes("429") ||
+         firebaseError?.message?.includes("quota");
+}
+
+/**
+ * Firebase制限エラー専用処理
+ */
+export function handleFirebaseQuotaError(context: string = ""): void {
+  notify({
+    title: "🚨 Firebase読み取り制限",
+    description: "読み取り制限に達しました。日本時間4時頃にリセットされます。",
+    type: "error",
+  });
+  
+  console.error(`[Firebase Quota] ${context}: Read quota exceeded`);
 }

@@ -1,6 +1,7 @@
 "use client";
 import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { dealNumbers } from "@/lib/game/room";
 import {
   fetchTopicSections,
@@ -30,11 +31,20 @@ export const topicControls = {
         type: "success",
       });
     } catch (error: any) {
-      notify({
-        title: "カテゴリ選択に失敗",
-        description: error?.message || String(error),
-        type: "error",
-      });
+      if (isFirebaseQuotaExceeded(error)) {
+        handleFirebaseQuotaError("お題選択");
+        notify({
+          title: "🚨 Firebase読み取り制限",
+          description: "現在お題を選択できません。24時間後に再度お試しください。",
+          type: "error",
+        });
+      } else {
+        notify({
+          title: "カテゴリ選択に失敗",
+          description: error?.message || String(error),
+          type: "error",
+        });
+      }
     }
   },
 
@@ -78,7 +88,16 @@ export const topicControls = {
       
       notify({ title: "ゲームをリセットしました", type: "success" });
     } catch (error: any) {
-      notify({ title: "ゲームリセットに失敗", description: error?.message || String(error), type: "error" });
+      if (isFirebaseQuotaExceeded(error)) {
+        handleFirebaseQuotaError("ゲームリセット");
+        notify({
+          title: "🚨 Firebase読み取り制限",
+          description: "現在ゲームをリセットできません。24時間後に再度お試しください。",
+          type: "error",
+        });
+      } else {
+        notify({ title: "ゲームリセットに失敗", description: error?.message || String(error), type: "error" });
+      }
     }
   },
 

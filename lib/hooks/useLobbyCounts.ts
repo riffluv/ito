@@ -1,5 +1,6 @@
 "use client";
 import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import {
   MAX_CLOCK_SKEW_MS,
   PRESENCE_HEARTBEAT_MS,
@@ -284,7 +285,10 @@ export function useLobbyCounts(
               // count は number | Long 相当だが、Web SDK は number を返す
               const n = (snap.data() as any)?.count ?? 0;
               return [id, Number(n) || 0] as const;
-            } catch {
+            } catch (err) {
+              if (isFirebaseQuotaExceeded(err)) {
+                handleFirebaseQuotaError("ルーム人数カウント");
+              }
               return [id, 0] as const;
             }
           })
@@ -304,7 +308,10 @@ export function useLobbyCounts(
           }
         }
         if (!cancelled) setCounts((prev) => ({ ...prev, ...next }));
-      } catch {
+      } catch (err) {
+        if (isFirebaseQuotaExceeded(err)) {
+          handleFirebaseQuotaError("ルームカウント更新");
+        }
         // noop
       }
     };
