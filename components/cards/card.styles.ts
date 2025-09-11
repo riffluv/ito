@@ -4,6 +4,7 @@
  */
 
 import type { BoxProps } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 
 // ✅ レスポンシブカードサイズ定義 (!important除去)
 export const CARD_SIZES = {
@@ -39,7 +40,7 @@ export const CARD_STYLES = {
     fontSize: "lg",
     fontWeight: "600",
     letterSpacing: "-0.01em",
-    transition: "all 0.2s ease",
+    transition: `background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
     cursor: "pointer",
     position: "relative" as const,
     overflow: "hidden" as const,
@@ -71,7 +72,7 @@ export const CARD_STYLES = {
     alignItems: "center" as const,
     justifyContent: "center" as const,
     aspectRatio: "5/7",
-    transition: "all 0.3s ease",
+    transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.3s ${UI_TOKENS.EASING.standard}`,
     userSelect: "none" as const,
     cursor: "pointer",
     _hover: {
@@ -92,7 +93,7 @@ export const CARD_STYLES = {
     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
     userSelect: "none" as const,
     cursor: "grab",
-    transition: "all 0.2s ease",
+    transition: `background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
     _active: {
       cursor: "grabbing",
     },

@@ -227,6 +227,33 @@ export const UI_TOKENS = {
     textBase: "#ffffff",
     textMuted: "rgba(255,255,255,0.7)",
     panelBg: "rgba(8,9,15,0.95)",
+    // 便利なアルファ付きカラー（段階的移行用）
+    whiteAlpha95: "rgba(255,255,255,0.95)",
+    whiteAlpha90: "rgba(255,255,255,0.9)",
+    whiteAlpha80: "rgba(255,255,255,0.8)",
+    whiteAlpha60: "rgba(255,255,255,0.6)",
+    whiteAlpha50: "rgba(255,255,255,0.5)",
+    whiteAlpha40: "rgba(255,255,255,0.4)",
+    whiteAlpha30: "rgba(255,255,255,0.3)",
+    whiteAlpha20: "rgba(255,255,255,0.2)",
+    whiteAlpha15: "rgba(255,255,255,0.15)",
+    whiteAlpha10: "rgba(255,255,255,0.1)",
+    whiteAlpha05: "rgba(255,255,255,0.05)",
+    whiteAlpha02: "rgba(255,255,255,0.02)",
+    blackAlpha70: "rgba(0,0,0,0.7)",
+    blackAlpha60: "rgba(0,0,0,0.6)",
+    blackAlpha50: "rgba(0,0,0,0.5)",
+    blackAlpha40: "rgba(0,0,0,0.4)",
+    blackAlpha30: "rgba(0,0,0,0.3)",
+    blackAlpha20: "rgba(0,0,0,0.2)",
+    purpleAlpha80: "rgba(139, 92, 246, 0.8)",
+    purpleAlpha60: "rgba(139, 92, 246, 0.6)",
+    purpleAlpha40: "rgba(139, 92, 246, 0.4)",
+    purpleAlpha30: "rgba(139, 92, 246, 0.3)",
+    purpleAlpha25: "rgba(139, 92, 246, 0.25)",
+    purpleAlpha15: "rgba(139, 92, 246, 0.15)",
+    purpleAlpha02: "rgba(139, 92, 246, 0.02)",
+    amberAlpha65: "rgba(217,119,6,0.65)",
   },
   EASING: {
     hover: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -241,6 +268,20 @@ export const UI_TOKENS = {
     panelDistinct:
       "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.3)",
     activeArea: "inset 0 0 12px rgba(139, 92, 246, 0.25)",
+    // ホバー/リング表現（カード/状態用）
+    cardHover:
+      "0 12px 28px -8px rgba(0,0,0,0.45), 0 6px 14px -4px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10)",
+    ringPurpleMild: "0 0 0 2px rgba(139,92,246,0.18)",
+    ringPurpleStrong: "0 0 0 3px rgba(139,92,246,0.35)",
+    ringAmber: "0 0 0 1px rgba(217,119,6,0.65)",
+  },
+  TEXT_SHADOWS: {
+    soft: "0 1px 2px rgba(0,0,0,0.5)",
+    none: "none",
+  },
+  FILTERS: {
+    dropShadowSoft: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+    dropShadowStrong: "drop-shadow(0 8px 20px rgba(0,0,0,0.35))",
   },
 } as const;
 

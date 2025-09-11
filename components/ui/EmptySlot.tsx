@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 
 /**
  * 空のカードスロットコンポーネント
@@ -32,7 +32,7 @@ export function EmptySlot({ index }: EmptySlotProps) {
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
         color: "rgba(255,255,255,0.4)",
         letterSpacing: "-0.01em",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
         cursor: "pointer",
         position: "relative",
         overflow: "hidden",

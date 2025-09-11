@@ -5,6 +5,7 @@
 
 "use client";
 import React from "react";
+import { UI_TOKENS } from "@/theme/layout";
 import { useDroppable } from "@dnd-kit/core";
 import { BaseCard } from "./BaseCard";
 import type { EmptyCardProps } from "./card.types";
@@ -70,7 +71,7 @@ export function EmptyCard({
       cursor={isDroppable ? "copy" : "not-allowed"}
       css={{
         // ベース状態：ドラクエ風の点線ボーダーで空きスロットを明確に
-        border: "2px dashed rgba(255,255,255,0.3)",
+        border: `2px dashed ${UI_TOKENS.COLORS.whiteAlpha30}`,
         borderRadius: "8px",
         backgroundColor: "rgba(8,9,15,0.6)",
         transition:
@@ -79,37 +80,37 @@ export function EmptyCard({
         
         // ホバー状態を見えやすく
         "&:hover": {
-          borderColor: "rgba(255,255,255,0.5)",
+          borderColor: UI_TOKENS.COLORS.whiteAlpha50,
           backgroundColor: "rgba(8,9,15,0.8)",
           transform: "scale(1.02)",
         },
 
         // ドラッグ中の状態：ドロップ可能なスロットを微かに示唆
         ...(isDragActive && isDroppable && !dndDroppable.isOver && {
-          borderColor: "rgba(139, 92, 246, 0.3)", // より控えめな色で
-          backgroundColor: "rgba(139, 92, 246, 0.02)", // さらに微かに
+          borderColor: "rgba(139, 92, 246, 0.3)", // より控えめな色で（必要ならトークン化候補）
+          backgroundColor: "rgba(139, 92, 246, 0.02)", // さらに微かに（必要ならトークン化候補）
           // アニメーションなしで、静的な状態表示
         }),
 
         // @dnd-kitのisOver状態での洗練されたドロップフィードバック（テキストや矢印は表示しない）
         ...(id && dndDroppable.isOver && {
-          backgroundColor: "rgba(139, 92, 246, 0.15)", // 紫ベース
-          borderColor: "rgba(139, 92, 246, 0.9)",
+          backgroundColor: "rgba(139, 92, 246, 0.15)", // 紫ベース（候補: TOKENSに追加可）
+          borderColor: UI_TOKENS.COLORS.purpleAlpha80,
           borderStyle: "solid",
           transform: "scale(1.05)", // より明確なスケール
           animation: "dragonQuestDrop 0.8s ease-in-out infinite",
           // ドラクエ風の強い光る効果（テキスト装飾は削除）
-          boxShadow: "inset 0 0 12px rgba(139, 92, 246, 0.4), 0 4px 16px rgba(139, 92, 246, 0.3), 0 0 24px rgba(139, 92, 246, 0.2)",
+          boxShadow: UI_TOKENS.SHADOWS.activeArea,
         }),
       }}
       {...props}
     >
       {children || (slotNumber !== undefined ? (
         <span style={{
-          color: "rgba(255,255,255,0.6)",
+          color: UI_TOKENS.COLORS.whiteAlpha60,
           fontSize: "14px",
           fontWeight: "500",
-          textShadow: "0 1px 2px rgba(0,0,0,0.5)"
+          textShadow: UI_TOKENS.TEXT_SHADOWS.soft
         }}>
           {slotNumber}
         </span>

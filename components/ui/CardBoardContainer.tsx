@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 
 /**
  * カードボードの共通コンテナコンポーネント
@@ -41,9 +41,9 @@ export function CardBoardContainer({
         alignContent="flex-start"
         alignItems="flex-start"
         gap={4}
-        bg="transparent"
+        bg={UNIFIED_LAYOUT.SURFACE.BOARD_AREA}
         boxShadow="none"
-        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+        transition={`background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}`}
         data-drop-target={isOver && canDrop ? "true" : "false"}
         css={{
           containerType: "inline-size",

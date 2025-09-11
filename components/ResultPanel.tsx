@@ -2,6 +2,7 @@
 import { Panel } from "@/components/ui/Panel";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, Stack, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 
 export function ResultPanel({
   players,
@@ -20,7 +21,7 @@ export function ResultPanel({
     <Panel title={title}>
       <Stack>
         {played.length === 0 ? (
-          <Text color="rgba(255,255,255,0.6)">データがありません</Text>
+          <Text color={UI_TOKENS.COLORS.whiteAlpha60}>データがありません</Text>
         ) : (
           <Stack>
             {played.map((p, idx) => (
@@ -28,9 +29,9 @@ export function ResultPanel({
                 key={p.id}
                 p={3}
                 borderRadius="8px"
-                bg="rgba(15,15,35,0.8)"
-                border="1px solid rgba(255,255,255,0.3)"
-                boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.3)"
+                bg={UI_TOKENS.COLORS.panelBg}
+                border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+                boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
                 display="grid"
                 gridTemplateColumns={{
                   base: "1fr 1fr auto",
@@ -43,9 +44,9 @@ export function ResultPanel({
                   whiteSpace="nowrap"
                   overflow="hidden"
                   textOverflow="ellipsis"
-                  color="rgba(255,255,255,0.95)"
+                  color={UI_TOKENS.COLORS.textBase}
                   fontWeight={600}
-                  textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                  textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                 >
                   #{idx + 1} {p.name}
                 </Text>
@@ -55,7 +56,7 @@ export function ResultPanel({
                   whiteSpace="nowrap"
                   overflow="hidden"
                   textOverflow="ellipsis"
-                  textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                  textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                 >
                   連想: {p.clue1 || "（未設定）"}
                 </Text>
@@ -63,7 +64,7 @@ export function ResultPanel({
                   fontWeight="bold"
                   color="#FFD700"
                   textAlign="right"
-                  textShadow="0 1px 2px rgba(0,0,0,0.7)"
+                  textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                   fontSize="lg"
                 >
                   {p.number ?? "?"}

@@ -24,6 +24,7 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { UI_TOKENS } from "@/theme/layout";
 
 export function CreateRoomModal({
   isOpen,
@@ -129,11 +130,10 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "rgba(8,9,15,0.95)", // NameDialogと同じリッチブラック
-            border: "3px solid rgba(255,255,255,0.9)", // NameDialogと同じボーダー
+            background: UI_TOKENS.COLORS.panelBg, // NameDialogと同じリッチブラック
+            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             borderRadius: 0, // 角ばった統一
-            boxShadow:
-              "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // NameDialogと同じ立体感
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -152,10 +152,10 @@ export function CreateRoomModal({
               top: "12px",
               right: "12px",
               zIndex: 10,
-              background: "rgba(8,9,15,0.8)", // NameDialogと同じ
+              background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0, // NameDialogと同じ角ばり
               padding: "0",
-              border: "2px solid rgba(255,255,255,0.9)", // NameDialogと同じ
+              border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
               color: "white",
               cursor: "pointer",
               width: "32px",
@@ -165,10 +165,10 @@ export function CreateRoomModal({
               justifyContent: "center",
               fontSize: "16px",
               fontWeight: "bold",
-              transition: "all 0.15s ease",
+              transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
               "&:hover": {
                 background: "white",
-                color: "rgba(8,9,15,0.9)",
+                color: UI_TOKENS.COLORS.panelBg,
               },
             }}
           >
@@ -181,7 +181,7 @@ export function CreateRoomModal({
             position="relative"
             zIndex={1}
             css={{
-              borderBottom: "2px solid rgba(255,255,255,0.3)", // NameDialogと同じ区切り
+              borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <VStack gap={2} align="center">
@@ -203,7 +203,7 @@ export function CreateRoomModal({
                 fontWeight="normal"
                 textAlign="center"
                 fontFamily="monospace"
-                textShadow="1px 1px 0px #000"
+                textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
               >
                 あたらしい ぼうけんの はじまり
               </Text>
@@ -299,7 +299,7 @@ export function CreateRoomModal({
             position="relative"
             zIndex={1}
             css={{
-              borderTop: "2px solid rgba(255,255,255,0.3)", // NameDialogと同じ区切り
+              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <HStack justify="space-between" gap={3} mt={4}>
@@ -316,8 +316,8 @@ export function CreateRoomModal({
                   background: "transparent",
                   color: "white",
                   cursor: "pointer",
-                  textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "white";
@@ -349,8 +349,8 @@ export function CreateRoomModal({
                   color: "white",
                   cursor:
                     submitting || !name.trim() ? "not-allowed" : "pointer",
-                  textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                   opacity: submitting || !name.trim() ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {

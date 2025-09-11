@@ -2,6 +2,7 @@
 import { AppButton } from "./AppButton";
 import { rpgNavigate } from "./RPGPageTransition";
 import { ComponentProps } from "react";
+import { UI_TOKENS } from "@/theme/layout";
 
 interface RPGButtonProps extends Omit<ComponentProps<typeof AppButton>, "onClick" | "as" | "href"> {
   href: string;
@@ -27,7 +28,7 @@ export function RPGButton({ href, onClick, children, ...props }: RPGButtonProps)
       onClick={handleClick}
       style={{ 
         cursor: "pointer",
-        transition: "all 0.15s ease-out"
+        transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`
       }}
     >
       {children}

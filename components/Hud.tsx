@@ -1,6 +1,6 @@
 "use client";
 import { AppIconButton } from "@/components/ui/AppIconButton";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
@@ -54,8 +54,8 @@ export function Hud({
       justifyContent="space-between"
       alignItems="center"
       px={6}
-      bg="rgba(10,11,20,0.95)" // ドラクエ風の深い背景
-      borderBottom="2px solid rgba(255,255,255,0.3)"
+      bg={UI_TOKENS.COLORS.panelBg}
+      borderBottom={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
       backdropFilter="blur(8px)"
       css={{
         // 125% DPI最適化
@@ -72,9 +72,9 @@ export function Hud({
       <Box
         fontSize="1.5rem"
         fontWeight={700}
-        color="rgba(255,255,255,0.95)"
+        color={UI_TOKENS.COLORS.textBase}
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
-        textShadow="0 2px 4px rgba(0,0,0,0.7)"
+        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
       >
         序の紋章III
       </Box>
@@ -82,28 +82,28 @@ export function Hud({
       {/* Room Info - Dragon Quest Style */}
       <Box display="flex" alignItems="center" gap={4}>
         <Box
-          bg="rgba(15,15,35,0.8)"
+          bg={UI_TOKENS.COLORS.panelBg}
           padding="0.5rem 0.75rem"
           borderRadius="6px"
           fontFamily="'Monaco', monospace"
           fontSize="0.875rem"
-          color="rgba(255,255,255,0.9)"
-          border="1px solid rgba(255,255,255,0.4)"
-          boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.3)"
-          textShadow="0 1px 2px rgba(0,0,0,0.5)"
+          color={UI_TOKENS.COLORS.whiteAlpha90}
+          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         >
           {roomName}
         </Box>
         <Box
           bg="rgba(74,158,255,0.3)"
-          color="rgba(255,255,255,0.95)"
+          color={UI_TOKENS.COLORS.textBase}
           padding="0.5rem 0.75rem"
           borderRadius="6px"
           fontSize="0.875rem"
           fontWeight={600}
-          border="1px solid rgba(74,158,255,0.5)"
-          boxShadow="inset 0 1px 2px rgba(74,158,255,0.2), 0 2px 4px rgba(0,0,0,0.3)"
-          textShadow="0 1px 2px rgba(0,0,0,0.7)"
+          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         >
           {phaseLabel}フェーズ
         </Box>

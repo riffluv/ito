@@ -2,6 +2,7 @@
 import { Box } from "@chakra-ui/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { UI_TOKENS } from "@/theme/layout";
 import type { ReactNode } from "react";
 
 export function SortableItem({
@@ -53,7 +54,7 @@ export function SortableItem({
           backgroundColor: "rgba(255,255,255,0.08)",
           borderColor: "rgba(255,255,255,0.6)",
           transform: "scale(1.01)",
-          transition: "all 0.2s ease-out",
+          transition: `transform 0.2s ${UI_TOKENS.EASING.standard}, background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}`,
         }),
         
         // ホバー時の微細なフィードバック

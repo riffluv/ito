@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { UI_TOKENS } from "@/theme/layout";
 import { Dialog, Field, Input, Stack, Box, Text, HStack } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 
@@ -32,10 +33,10 @@ export function NameDialog({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: 'rgba(8,9,15,0.95)', // ルーム作成と同じリッチブラック
-            border: '3px solid rgba(255,255,255,0.9)', // ドラクエ風統一ボーダー
+            background: UI_TOKENS.COLORS.panelBg,
+            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             borderRadius: 0, // 製品レベルの角ばり
-            boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)', // 製品レベル立体感
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
             maxWidth: '420px',
             width: '90vw',
             padding: 0,
@@ -48,10 +49,10 @@ export function NameDialog({
               top: '12px',
               right: '12px',
               zIndex: 10,
-              background: 'rgba(8,9,15,0.8)', // 背景を見えるように
+              background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0, // ドラクエ風角ばり
               padding: '0',
-              border: '2px solid rgba(255,255,255,0.9)',
+              border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
               color: 'white',
               cursor: 'pointer',
               width: '32px',
@@ -61,10 +62,10 @@ export function NameDialog({
               justifyContent: 'center',
               fontSize: '16px',
               fontWeight: 'bold',
-              transition: 'all 0.15s ease',
+              transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
               '&:hover': {
                 background: 'white',
-                color: 'rgba(8,9,15,0.9)'
+                color: UI_TOKENS.COLORS.panelBg
               }
             }}
           >
@@ -76,8 +77,8 @@ export function NameDialog({
             p={6} 
             pb={4}
             css={{
-              background: 'transparent', // 背景をクリアに
-              borderBottom: '2px solid rgba(255,255,255,0.3)', // ドラクエ風区切り
+              background: 'transparent',
+              borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <Box width="100%">
@@ -96,7 +97,7 @@ export function NameDialog({
                 </Dialog.Title>
                 <Text 
                   fontSize="sm" 
-                  color="rgba(255,255,255,0.7)" 
+                  color={UI_TOKENS.COLORS.textMuted}
                   mt={1}
                   css={{
                     textAlign: 'center',
@@ -161,8 +162,8 @@ export function NameDialog({
             p={6} 
             pt={4}
             css={{
-              background: 'transparent', // 背景をクリアに
-              borderTop: '2px solid rgba(255,255,255,0.3)', // ドラクエ風区切り
+              background: 'transparent',
+              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <HStack justify="space-between" gap={3}>
@@ -180,7 +181,7 @@ export function NameDialog({
                   color: "white",
                   cursor: "pointer",
                   textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "white";
@@ -209,7 +210,7 @@ export function NameDialog({
                   color: "white",
                   cursor: submitting || !value.trim() ? "not-allowed" : "pointer",
                   textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                   opacity: submitting || !value.trim() ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {

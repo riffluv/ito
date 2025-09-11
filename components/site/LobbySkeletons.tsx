@@ -1,11 +1,12 @@
 "use client";
 import { Box, Grid } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 
 function RoomCardSkeleton() {
   return (
     <Box
       borderRadius="xl"
-      border="1px solid rgba(255,255,255,0.1)"
+      border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
       bg="rgba(255,255,255,0.03)"
       backdropFilter="blur(20px)"
       p={6}

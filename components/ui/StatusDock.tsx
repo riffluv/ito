@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box, BoxProps } from "@chakra-ui/react";
 
 export interface StatusDockProps extends Omit<BoxProps, "children"> {
@@ -24,17 +24,16 @@ export default function StatusDock({
       mt={UNIFIED_LAYOUT.SPACING.COMPONENT_PADDING}
       // メインメニューと同じドラクエ風ボーダー
       border={show ? "borders.retrogame" : "none"}
-      borderColor="rgba(255, 255, 255, 0.9)"
+      borderColor={UI_TOKENS.COLORS.whiteAlpha90}
       borderRadius="lg"
       bg={show ? "transparent" : "transparent"}
       css={show ? {
         // 情報密度重視のクリーンな背景
-        background: "rgba(8, 9, 12, 0.75)",
+        background: UI_TOKENS.COLORS.panelBg,
         // テクスチャなしでクリーンに
         backdropFilter: "blur(4px)",
         // 控えめな影で浮き上がり感のみ
-        boxShadow: 
-          "0 2px 8px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1)",
+        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
       } : {}}
       {...rest}
     >

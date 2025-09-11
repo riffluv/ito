@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 
 /**
  * カードボードの共通ヘッダーコンポーネント
@@ -33,21 +33,21 @@ export function CardBoardHeader({ children }: CardBoardHeaderProps) {
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
           letterSpacing: "-0.01em",
-          color: "rgba(255,255,255,0.8)",
+          color: UI_TOKENS.COLORS.textMuted,
           padding: "8px 16px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.05)",
+          background: UI_TOKENS.COLORS.whiteAlpha05,
+          border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha05}`,
           borderRadius: "12px",
           backdropFilter: "blur(4px)",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          transition: "all 0.2s ease",
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          transition: `transform 0.2s ${UI_TOKENS.EASING.standard}, background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}`,
           display: "inline-block",
 
           "&:hover": {
-            background: "rgba(255,255,255,0.05)",
-            borderColor: "rgba(255,255,255,0.08)",
+            background: UI_TOKENS.COLORS.whiteAlpha10,
+            borderColor: UI_TOKENS.COLORS.whiteAlpha10,
             transform: "translateY(-1px)",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           },
         }}
       >

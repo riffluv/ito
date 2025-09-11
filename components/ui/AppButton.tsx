@@ -1,6 +1,7 @@
 "use client";
 import { Button as CButton } from "@chakra-ui/react";
 import { buttonRecipe } from "../../theme/recipes/button.recipe";
+import { UI_TOKENS } from "@/theme/layout";
 
 type ButtonVariants = {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -89,7 +90,7 @@ export function AppButton({
     ...dqOutline,
     ...dqGhost,
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
-    transition: "all 0.15s ease-out",
+    transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}`,
     ...((css as any) || {}),
   };
 
@@ -112,4 +113,3 @@ export function AppButton({
 }
 
 export default AppButton;
-
