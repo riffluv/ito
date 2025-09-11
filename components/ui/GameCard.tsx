@@ -2,6 +2,7 @@
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
+import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
 import { useState } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
@@ -126,6 +127,152 @@ export function GameCard({
     boundaryRing ? `${boundaryRing}, ${core}` : core;
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
+    const { effectiveMode } = useGPUPerformance();
+    if (effectiveMode === "simple") {
+      // 低スペック向け: 3D transform を使わず、表示の出し分けのみ
+      const backNumberFontSize = getNumberFontSize(
+        typeof number === "number" ? number : null
+      );
+      return (
+        <Box
+          width={UNIFIED_LAYOUT.CARD.WIDTH}
+          height={UNIFIED_LAYOUT.CARD.HEIGHT}
+          minW={UNIFIED_LAYOUT.CARD.WIDTH}
+          minH={UNIFIED_LAYOUT.CARD.HEIGHT}
+          css={{
+            width: "100px",
+            height: "140px",
+            minWidth: "100px",
+            minHeight: "140px",
+            "@media (min-width: 768px)": {
+              width: "120px",
+              height: "168px",
+              minWidth: "120px",
+              minHeight: "168px",
+            },
+            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
+              {
+                width: "95px",
+                height: "133px",
+                minWidth: "95px",
+                minHeight: "133px",
+              },
+            "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
+              {
+                width: "114px",
+                height: "160px",
+                minWidth: "114px",
+                minHeight: "160px",
+              },
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+              height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+              minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+              minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+            },
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
+              width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+              height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+              minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+              minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+            },
+          }}
+          p={{ base: 3, md: "13px" }}
+          borderRadius="lg"
+          border={dragonQuestStyle.border}
+          borderColor={dragonQuestStyle.borderColor}
+          bg={dragonQuestStyle.bg}
+          color={dragonQuestStyle.colors.text}
+          display="grid"
+          gridTemplateRows="16px minmax(0, 1fr) 16px"
+          boxShadow={dragonQuestStyle.boxShadow}
+        >
+          {/* FRONT (clue) */}
+          <Box
+            display={flipped ? "none" : "block"}
+            fontSize="2xs"
+            lineHeight="1.3"
+            color={dragonQuestStyle.colors.meta}
+            style={getUnifiedTextStyle()}
+          >
+            <span className={styles.cardMeta}>
+              #{typeof index === "number" ? index + 1 : "?"}
+            </span>
+          </Box>
+          <Box display={flipped ? "none" : "block"} position="relative" minHeight={0}>
+            <Box
+              position="absolute"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              fontWeight={700}
+              fontSize={getClueFontSize(clue)}
+              color={dragonQuestStyle.colors.clue}
+              lineHeight="1.3"
+              width="100%"
+              maxWidth="calc(100% - 6px)"
+              textAlign="center"
+              padding="0 0.2rem"
+              wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
+              whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
+              overflowWrap="anywhere"
+            >
+              {clue || "(連想なし)"}
+            </Box>
+          </Box>
+          <Box
+            display={flipped ? "none" : "block"}
+            fontSize="2xs"
+            lineHeight="1.3"
+            color={dragonQuestStyle.colors.meta}
+            textAlign="left"
+            style={getUnifiedTextStyle()}
+          >
+            <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
+          </Box>
+
+          {/* BACK (number) */}
+          <Box
+            display={flipped ? "block" : "none"}
+            fontSize="2xs"
+            lineHeight="1.3"
+            color={dragonQuestStyle.colors.meta}
+            style={getUnifiedTextStyle()}
+          >
+            <span className={styles.cardMeta}>
+              #{typeof index === "number" ? index + 1 : "?"}
+            </span>
+          </Box>
+          <Box display={flipped ? "block" : "none"} position="relative" minHeight={0}>
+            <Box
+              position="absolute"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              fontWeight={700}
+              fontSize={backNumberFontSize}
+              color={dragonQuestStyle.colors.number}
+              lineHeight={1.3}
+              width="100%"
+              textAlign="center"
+            >
+              {typeof number === "number" ? number : "?"}
+            </Box>
+          </Box>
+          <Box
+            display={flipped ? "block" : "none"}
+            fontSize="2xs"
+            lineHeight="1.3"
+            color={dragonQuestStyle.colors.meta}
+            textAlign="left"
+            style={getUnifiedTextStyle()}
+          >
+            <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
+          </Box>
+        </Box>
+      );
+    }
+    // 3Dモード（従来）
     // アニメーション競合を防ぐため、フリップ中はホバー効果を無効化
     const hoverTransform =
       isHovered && !flipped ? "translateY(-4px)" : "translateY(0)";
