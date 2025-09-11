@@ -180,7 +180,7 @@ export function DragonQuestParty({
     >
       <Box
         bg={UI_TOKENS.GRADIENTS.forestGreen}
-        border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
+        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`} // 太いドラクエ風ボーダー
         borderRadius={0}
         px={4}
         py={2}
@@ -257,7 +257,7 @@ export function DragonQuestParty({
                       fontSize={{ base: "xs", md: "sm" }}
                       fontWeight={500}
                       color={isHost ? UI_TOKENS.COLORS.accentGold : "white"}
-                      textShadow="1px 1px 0px #000"
+                      textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                       fontFamily="monospace"
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
@@ -281,7 +281,7 @@ export function DragonQuestParty({
                     <Text
                       fontSize={{ base: "sm", md: "md" }}
                       style={{ color }}
-                      filter="drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
+                      filter={UI_TOKENS.FILTERS.dropShadowSoft}
                       w="24px"
                       textAlign="center"
                       lineHeight="1"
@@ -302,7 +302,7 @@ export function DragonQuestParty({
         {roomStatus === "clue" && (
           <Text
             fontSize="xs"
-            color="rgba(255,255,255,0.7)"
+            color={UI_TOKENS.COLORS.textMuted}
             textAlign="center"
             mt={2}
             fontFamily="monospace"

@@ -31,7 +31,7 @@ export default function ArtifactResultOverlay({
         // メインメニューと調和した高級感ある背景
         background: UI_TOKENS.GRADIENTS.dqPanel,
         // 控えめなテクスチャで品格演出
-        backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)",
+        backgroundImage: `radial-gradient(circle at 1px 1px, ${UI_TOKENS.COLORS.whiteAlpha015} 1px, transparent 0)`,
         backgroundSize: "32px 32px",
         backdropFilter: "blur(8px)", // カード視認性を保つため軽減
         animation: "fadeIn 300ms ease-out",

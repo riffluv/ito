@@ -73,7 +73,7 @@ export function EmptyCard({
         // ベース状態：ドラクエ風の点線ボーダーで空きスロットを明確に
         border: `2px dashed ${UI_TOKENS.COLORS.whiteAlpha30}`,
         borderRadius: "8px",
-        backgroundColor: "rgba(8,9,15,0.6)",
+        backgroundColor: UI_TOKENS.COLORS.panelBg60,
         transition:
           "background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
@@ -81,7 +81,7 @@ export function EmptyCard({
         // ホバー状態を見えやすく
         "&:hover": {
           borderColor: UI_TOKENS.COLORS.whiteAlpha50,
-          backgroundColor: "rgba(8,9,15,0.8)",
+          backgroundColor: UI_TOKENS.COLORS.panelBg80,
           transform: "scale(1.02)",
         },
 

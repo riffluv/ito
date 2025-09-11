@@ -71,7 +71,7 @@ export default function LobbyRightRail() {
             textDecoration="none"
             textShadow="1px 1px 0px #000"
             _hover={{
-              color: "rgba(255,255,255,0.8)",
+              color: UI_TOKENS.COLORS.whiteAlpha80,
               textDecoration: "underline",
             }}
           >

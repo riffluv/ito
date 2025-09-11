@@ -6,7 +6,8 @@ import {
   CHAT_PANEL_BOTTOM_DESKTOP,
   CHAT_PANEL_BOTTOM_MOBILE,
 } from "@/lib/ui/layout";
-import { Box, IconButton } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
+import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { UI_TOKENS } from "@/theme/layout";
 import React from "react";
 
@@ -20,30 +21,24 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
         bottom={{ base: CHAT_FAB_OFFSET_MOBILE, md: CHAT_FAB_OFFSET_DESKTOP }}
         zIndex={20}
       >
-        <IconButton
+        <IconButtonDQ
           aria-label={open ? "チャットを閉じる" : "チャットを開く"}
           onClick={() => setOpen((v) => !v)}
           width="44px"
           height="44px"
           borderRadius="0" // ドラクエ風角ばり
-          bg={UI_TOKENS.COLORS.panelBg}
-          color="white"
-          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           fontSize="16px"
           fontWeight="bold"
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          transition={`transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+          transition={`transform 0.15s ${UI_TOKENS.EASING.standard}`}
           _hover={{
             transform: "translateY(-1px)",
-            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           }}
           _active={{
             transform: "translateY(0)",
-            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           }}
         >
           {open ? "✕" : "💬"}
-        </IconButton>
+        </IconButtonDQ>
       </Box>
 
       {open && (

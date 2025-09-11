@@ -4,16 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { randomAvatar } from "@/lib/utils";
-import {
-  Box,
-  Dialog,
-  Field,
-  HStack,
-  IconButton,
-  Input,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import {
   addDoc,
   collection,
@@ -142,21 +134,17 @@ export function CreateRoomModal({
           }}
         >
           {/* Close button - ドラクエ風 */}
-          <IconButton
+          <IconButtonDQ
             aria-label="閉じる"
             onClick={onClose}
             size="sm"
-            variant="ghost"
             css={{
               position: "absolute",
               top: "12px",
               right: "12px",
               zIndex: 10,
-              background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0, // NameDialogと同じ角ばり
               padding: "0",
-              border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-              color: "white",
               cursor: "pointer",
               width: "32px",
               height: "32px",
@@ -165,7 +153,6 @@ export function CreateRoomModal({
               justifyContent: "center",
               fontSize: "16px",
               fontWeight: "bold",
-              transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
               "&:hover": {
                 background: "white",
                 color: UI_TOKENS.COLORS.panelBg,
@@ -173,7 +160,7 @@ export function CreateRoomModal({
             }}
           >
             ✕
-          </IconButton>
+          </IconButtonDQ>
 
           {/* Header - ドラクエ風 */}
           <Box

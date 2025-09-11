@@ -201,9 +201,9 @@ export function GameLayout({
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
         }}
         gap={0}
-        bg="canvasBg"
+        bg={UI_TOKENS.COLORS.panelBg}
         fontFamily="Inter, 'Noto Sans JP', ui-sans-serif, system-ui, -apple-system, sans-serif"
-        color="fgDefault"
+        color={UI_TOKENS.COLORS.textBase}
         lineHeight={1.5}
         css={{
           WebkitFontSmoothing: "antialiased",
@@ -223,9 +223,9 @@ export function GameLayout({
       >
         <Box
           gridArea="header"
-          bg="surfaceSubtle"
+          bg={UI_TOKENS.COLORS.panelBg}
           borderBottomWidth="1px"
-          borderColor="borderDefault"
+          borderColor={UI_TOKENS.COLORS.whiteAlpha30}
           display="flex"
           alignItems="center"
           px={{ base: 4, md: 8 }}
@@ -237,9 +237,9 @@ export function GameLayout({
         {sidebar && (
           <Box
             gridArea="sidebar"
-            bg="surfaceRaised"
+            bg={UI_TOKENS.COLORS.panelBg}
             borderRightWidth="1px"
-            borderColor="borderDefault"
+            borderColor={UI_TOKENS.COLORS.whiteAlpha30}
             overflowY="auto"
             display={{ base: "none", xl: "block" }}
           >
@@ -249,7 +249,7 @@ export function GameLayout({
 
         <Box
           gridArea="main-area"
-          bg="surfaceRaised"
+          bg={UI_TOKENS.COLORS.panelBg}
           paddingInline={{ base: 4, md: 6, lg: 8, xl: 8 }}
           paddingTop={{ base: 4, md: 6, lg: 8, xl: 8 }}
           paddingBottom={0}
@@ -266,9 +266,9 @@ export function GameLayout({
         {rightPanel && (
           <Box
             gridArea="chat"
-            bg="surfaceRaised"
+            bg={UI_TOKENS.COLORS.panelBg}
             borderLeftWidth="1px"
-            borderColor="borderDefault"
+            borderColor={UI_TOKENS.COLORS.whiteAlpha30}
             display={{ base: "none", xl: "flex" }}
             flexDirection="column"
           >
