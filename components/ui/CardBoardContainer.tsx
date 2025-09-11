@@ -51,11 +51,13 @@ export function CardBoardContainer({
             gap: "calc(var(--spacing-2) + 2px)",
             padding: "0.6rem 0.9rem",
           },
-          // DPI 150%対応：カード重なり防止
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            gap: "18px !important", // より広い間隔
+          // DPI 150%対応：カード重なり防止（垂直方向強化）
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+            gap: UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP, // 統一定数活用（16px）
+            rowGap: UNIFIED_LAYOUT.DPI_150.SPACING.INNER_SPACING, // 垂直間隔：20px（定数活用）
             padding: "0.5rem 0.75rem !important", // コンパクト化
             minHeight: "auto !important",
+            alignContent: "flex-start !important", // 上詰めで安定配置
           },
         }}
       >

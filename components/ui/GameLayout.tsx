@@ -216,8 +216,8 @@ export function GameLayout({
             gridTemplateRows: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT}`,
           },
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            // 150%DPI時の縦詰めを強化（ヘッダー0/手札控えめでボード確保）
-            gridTemplateRows: `auto minmax(0, 1fr) clamp(128px, 12dvh, 168px)`,
+            // 150%DPI時の縦詰めを強化（手札エリア圧縮でカード重なり防止）
+            gridTemplateRows: `auto minmax(0, 1fr) clamp(120px, 10dvh, 160px)`,
           },
         }}
       >
