@@ -48,7 +48,7 @@ export function RoomCard({
         minH="180px"
         position="relative"
         overflow="hidden"
-      boxShadow="inset 0 2px 0 rgba(255,255,255,0.06), inset 0 -2px 0 rgba(0,0,0,0.30), 0 2px 0 rgba(0,0,0,0.15)"
+        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
         transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
         willChange="transform"
         _hover={{
@@ -113,8 +113,7 @@ export function RoomCard({
                 lineHeight={1.2}
                 color="#FFD700"
                 css={{
-                  textShadow:
-                    "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4)",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
                   animation: "hostGlow 2s ease-in-out infinite alternate",
                 }}
               >

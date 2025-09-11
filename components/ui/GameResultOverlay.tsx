@@ -1,4 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 
@@ -263,9 +264,9 @@ export function GameResultOverlay({
           aria-live="polite"
           role="status"
           fontFamily="monospace" // ドラクエ風フォント
-          textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
-          bg="rgba(8,9,15,0.8)" // ドラクエ風リッチブラック背景
-          border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+          bg={UI_TOKENS.COLORS.panelBg80}
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           borderRadius={0} // 角ばったデザイン
         >
           ▲ しっぱい
@@ -286,9 +287,9 @@ export function GameResultOverlay({
         aria-live="polite"
         role="status"
         fontFamily="monospace" // ドラクエ風フォント
-        textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
-        bg="rgba(8,9,15,0.8)" // ドラクエ風リッチブラック背景
-        border="2px solid rgba(255,255,255,0.9)" // ドラクエ風ボーダー
+        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+        bg={UI_TOKENS.COLORS.panelBg80}
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0} // 角ばったデザイン
       >
         ◆ クリア!
@@ -315,14 +316,13 @@ export function GameResultOverlay({
         letterSpacing={1} // やや控えめに
         // ドラクエ風ボーダー統一
         border="3px solid"
-        borderColor="rgba(255,255,255,0.9)" // メインメニューと同じ白ボーダー
+        borderColor={UI_TOKENS.COLORS.whiteAlpha90}
         borderRadius={0} // ドラクエ風角ばった
         css={{
           // ドラクエ風統一リッチブラック背景
-          background: "rgba(8,9,15,0.95)", // メインメニューと同じ
+          background: UI_TOKENS.COLORS.panelBg,
           // ドラクエ風統一シャドウ
-          boxShadow:
-            "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)", // メインメニューと同じ立体感
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(12px) saturate(1.2)", // メインメニューと同じ
         }}
       >

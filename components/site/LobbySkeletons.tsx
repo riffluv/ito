@@ -7,7 +7,7 @@ function RoomCardSkeleton() {
     <Box
       borderRadius="xl"
       border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
-      bg="rgba(255,255,255,0.03)"
+      bg={UI_TOKENS.COLORS.whiteAlpha05}
       backdropFilter="blur(20px)"
       p={6}
       minH="180px"

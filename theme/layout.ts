@@ -230,6 +230,8 @@ export const UI_TOKENS = {
     textBase: "#ffffff",
     textMuted: "rgba(255,255,255,0.7)",
     panelBg: "rgba(8,9,15,0.95)",
+    panelBg80: "rgba(8,9,15,0.80)",
+    panelBg60: "rgba(8,9,15,0.60)",
     // 便利なアルファ付きカラー（段階的移行用）
     whiteAlpha95: "rgba(255,255,255,0.95)",
     whiteAlpha90: "rgba(255,255,255,0.9)",
@@ -243,7 +245,9 @@ export const UI_TOKENS = {
     whiteAlpha10: "rgba(255,255,255,0.1)",
     whiteAlpha05: "rgba(255,255,255,0.05)",
     whiteAlpha02: "rgba(255,255,255,0.02)",
+    whiteAlpha015: "rgba(255,255,255,0.015)",
     blackAlpha70: "rgba(0,0,0,0.7)",
+    blackAlpha80: "rgba(0,0,0,0.8)",
     blackAlpha60: "rgba(0,0,0,0.6)",
     blackAlpha50: "rgba(0,0,0,0.5)",
     blackAlpha40: "rgba(0,0,0,0.4)",
