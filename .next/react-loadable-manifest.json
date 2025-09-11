@@ -1,38 +1,38 @@
 {
   "components\\hooks\\useRevealAnimation.ts -> @/lib/firebase/require": {
-    "id": "components\\hooks\\useRevealAnimation.ts -> @/lib/firebase/require",
+    "id": 3541,
     "files": []
   },
   "components\\hooks\\useRevealAnimation.ts -> firebase/firestore": {
-    "id": "components\\hooks\\useRevealAnimation.ts -> firebase/firestore",
+    "id": 9842,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
+      "static/chunks/842.b57b5b20d4fde34e.js"
     ]
   },
   "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms": {
-    "id": "components\\ui\\MiniHandDock.tsx -> @/lib/firebase/rooms",
+    "id": 9159,
     "files": []
   },
   "lib\\firebase\\rooms.ts -> @/lib/firebase/presence": {
-    "id": "lib\\firebase\\rooms.ts -> @/lib/firebase/presence",
+    "id": 209,
     "files": []
   },
   "lib\\game\\topicControls.ts -> firebase/firestore": {
-    "id": "lib\\game\\topicControls.ts -> firebase/firestore",
+    "id": 9842,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
+      "static/chunks/842.b57b5b20d4fde34e.js"
     ]
   },
   "lib\\services\\roomService.ts -> @/lib/game/random": {
-    "id": "lib\\services\\roomService.ts -> @/lib/game/random",
+    "id": 6415,
     "files": [
-      "static/chunks/_app-pages-browser_lib_game_random_ts.js"
+      "static/chunks/166.c9c150790d14d796.js"
     ]
   },
   "lib\\services\\roomService.ts -> firebase/firestore": {
-    "id": "lib\\services\\roomService.ts -> firebase/firestore",
+    "id": 9842,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_firebase_firestore_dist_esm_index_esm_js.js"
+      "static/chunks/842.b57b5b20d4fde34e.js"
     ]
   }
 }
