@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box, Container, Flex, HStack, Heading, Image } from "@chakra-ui/react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -14,8 +14,8 @@ export default function Header() {
       top={0}
       zIndex="overlay"
       borderBottomWidth="1px"
-      borderColor="rgba(255,255,255,0.3)" // Hudと同じボーダー強度で統一
-      bg="rgba(10,11,20,0.95)" // Hudと同じダークベースで統一
+      borderColor={UI_TOKENS.COLORS.whiteAlpha30}
+      bg={UI_TOKENS.COLORS.panelBg}
       backdropFilter="blur(8px)" // Hudと同じブラーレベル
       h="64px"
       display="flex"
@@ -29,28 +29,26 @@ export default function Header() {
       }}
     >
       <Container maxW="5xl" px={6}>
-        <Flex align="center" justify="space-between" h="100%">
-          <HStack gap="3">
+        <Flex align="center" justify="flex-start" h="100%">
+          <HStack gap="2">
             <Image
               src="/images/knight1.webp"
               alt="序の紋章III Knight"
               boxSize="8"
               objectFit="contain"
-              filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+              filter={UI_TOKENS.FILTERS.dropShadowSoft}
             />
             <Heading
               fontSize="xl"
               fontWeight={800}
               lineHeight={1}
               letterSpacing="0.02em"
-              color="rgba(255,255,255,0.95)"
-              textShadow="1px 1px 0 rgba(0,0,0,0.9), 
-                         2px 2px 4px rgba(0,0,0,0.7),
-                         0 0 8px rgba(255,215,0,0.2)"
+              color={UI_TOKENS.COLORS.textBase}
+              textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
               fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
               css={{
-                WebkitTextStroke: "0.5px rgba(255,255,255,0.1)",
-                filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
+                WebkitTextStroke: `0.5px ${UI_TOKENS.COLORS.whiteAlpha30}`,
+                filter: UI_TOKENS.FILTERS.dropShadowSoft
               }}
             >
               序の紋章III

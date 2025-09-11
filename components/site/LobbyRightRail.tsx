@@ -1,5 +1,6 @@
 "use client";
 import { Box, HStack, Link, Stack, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import NextLink from "next/link";
 
 export default function LobbyRightRail() {
@@ -8,12 +9,11 @@ export default function LobbyRightRail() {
       {/* はじめての方へ */}
       <Box
         css={{
-          background: "rgba(8,9,15,0.9)",
-          border: "3px solid rgba(255,255,255,0.9)",
+          background: UI_TOKENS.COLORS.panelBg,
+          border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
           borderRadius: 0,
           padding: "16px",
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           position: "relative",
         }}
       >
@@ -24,12 +24,12 @@ export default function LobbyRightRail() {
               h={8}
               bg="rgba(255,255,255,0.1)"
               borderRadius={0}
-              border="2px solid rgba(255,255,255,0.3)"
+              border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
               display="flex"
               alignItems="center"
               justifyContent="center"
               css={{
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
+                boxShadow: UI_TOKENS.SHADOWS.panelSubtle
               }}
             >
               <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
@@ -84,12 +84,11 @@ export default function LobbyRightRail() {
       <Box
         mt={4}
         css={{
-          background: "rgba(8,9,15,0.9)",
-          border: "3px solid rgba(255,255,255,0.9)",
+          background: UI_TOKENS.COLORS.panelBg,
+          border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
           borderRadius: 0,
           padding: "16px",
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           position: "relative",
         }}
       >
@@ -100,12 +99,12 @@ export default function LobbyRightRail() {
               h={8}
               bg="rgba(255,255,255,0.1)"
               borderRadius={0}
-              border="2px solid rgba(255,255,255,0.3)"
+              border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
               display="flex"
               alignItems="center"
               justifyContent="center"
               css={{
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
+                boxShadow: UI_TOKENS.SHADOWS.panelSubtle
               }}
             >
               <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
@@ -138,7 +137,7 @@ export default function LobbyRightRail() {
           <Box
             p={2}
             bg="rgba(255,255,255,0.1)"
-            border="2px solid rgba(255,255,255,0.3)"
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
             borderRadius={0}
             fontSize="xs"
             color="white"
@@ -147,7 +146,7 @@ export default function LobbyRightRail() {
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
             css={{
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)"
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle
             }}
           >
             v2.0 - ドラクエ風統一完了

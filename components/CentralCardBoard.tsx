@@ -40,7 +40,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
@@ -593,7 +593,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
             <DragOverlay
-              dropAnimation={{ duration: 200, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }}
+              dropAnimation={{ duration: 200, easing: UI_TOKENS.EASING.standard }}
               modifiers={[restrictToWindowEdges]}
             >
               {activeId
@@ -603,7 +603,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   );
                     const ghostStyle = {
                       transform: "scale(1.05)",
-                      filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.35))",
+                      filter: UI_TOKENS.FILTERS.dropShadowStrong,
                       opacity: 0.98,
                     } as React.CSSProperties;
                     

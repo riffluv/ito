@@ -2,7 +2,7 @@
 import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
 import type { PlayerDoc } from "@/lib/types";
 import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface WaitingAreaProps {
@@ -46,11 +46,11 @@ export default function WaitingArea({
           fontWeight={600}
           fontSize={{ base: "13px", md: "14px" }}
           letterSpacing="0.5px"
-          color="rgba(255,255,255,0.92)"
+          color={UI_TOKENS.COLORS.whiteAlpha95}
           mb={3}
           // メインメニューと同じ上品なフォント
           fontFamily='-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
-          textShadow="0 1px 3px rgba(0,0,0,0.3)"
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         >
           {title}
         </Text>

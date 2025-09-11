@@ -7,6 +7,7 @@ import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
+import { UI_TOKENS } from "@/theme/layout";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -110,10 +111,10 @@ export function SettingsModal({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "rgba(8,9,15,0.95)",
-            border: "3px solid rgba(255,255,255,0.9)",
+            background: UI_TOKENS.COLORS.panelBg,
+            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             borderRadius: 0,
-            boxShadow: "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)",
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -128,10 +129,10 @@ export function SettingsModal({
               top: '12px',
               right: '12px',
               zIndex: 10,
-              background: 'rgba(8,9,15,0.8)',
+              background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0,
               padding: '0',
-              border: '2px solid rgba(255,255,255,0.9)',
+              border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
               color: 'white',
               cursor: 'pointer',
               width: '32px',
@@ -141,10 +142,10 @@ export function SettingsModal({
               justifyContent: 'center',
               fontSize: '16px',
               fontWeight: 'bold',
-              transition: 'all 0.15s ease',
+              transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
               '&:hover': {
                 background: 'white',
-                color: 'rgba(8,9,15,0.9)'
+                color: UI_TOKENS.COLORS.panelBg
               }
             }}
           >
@@ -157,7 +158,7 @@ export function SettingsModal({
             position="relative"
             zIndex={1}
             css={{
-              borderBottom: "2px solid rgba(255,255,255,0.3)",
+              borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <Dialog.Title 
@@ -167,7 +168,7 @@ export function SettingsModal({
                 color: 'white',
                 margin: 0,
                 fontFamily: 'monospace',
-                textShadow: '1px 1px 0px #000',
+                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 textAlign: 'center',
               }}
             >
@@ -175,7 +176,7 @@ export function SettingsModal({
             </Dialog.Title>
             <Text 
               fontSize="sm" 
-              color="rgba(255,255,255,0.7)" 
+              color={UI_TOKENS.COLORS.textMuted}
               mt={1}
               css={{
                 textAlign: 'center',
@@ -202,12 +203,12 @@ export function SettingsModal({
                     py={2}
                     borderRadius={0}
                     border="2px solid"
-                    borderColor={isActive ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
-                    bg={isActive ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
+                    borderColor={isActive ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                    bg={isActive ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
                     color="white"
                     fontFamily="monospace"
                     fontWeight="bold"
-                    transition="all 0.12s ease"
+                    transition={`background-color 0.12s ${UI_TOKENS.EASING.standard}, color 0.12s ${UI_TOKENS.EASING.standard}, border-color 0.12s ${UI_TOKENS.EASING.standard}`}
                   >
                     {t.label}
                   </Box>
@@ -233,13 +234,13 @@ export function SettingsModal({
                         p={4}
                         borderRadius={0}
                         border="2px solid"
-                        borderColor={isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
-                        bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
-                        transition="all 0.15s ease"
-                        boxShadow={isSelected ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)" : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"}
+                        borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                        bg={isSelected ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
+                        transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                        boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
                         _hover={{
-                          borderColor: "rgba(255,255,255,0.8)",
-                          bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
+                          borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                          bg: isSelected ? "rgba(255,255,255,0.15)" : UI_TOKENS.COLORS.panelBg,
                         }}
                       >
                         <HStack justify="space-between" align="start">
@@ -255,7 +256,7 @@ export function SettingsModal({
                             </Text>
                             <Text
                               fontSize="sm"
-                              color="rgba(255,255,255,0.7)"
+                              color={UI_TOKENS.COLORS.textMuted}
                               lineHeight="short"
                               fontFamily="monospace"
                             >
@@ -267,11 +268,11 @@ export function SettingsModal({
                             h={5}
                             borderRadius={0}
                             border="2px solid"
-                            borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                            borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
                             bg={isSelected ? "white" : "transparent"}
                             mt={0.5}
                             position="relative"
-                            transition="all 0.15s ease"
+                            transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
                           >
                             {isSelected && (
                               <Box
@@ -314,13 +315,13 @@ export function SettingsModal({
                         p={4}
                         borderRadius={0}
                         border="2px solid"
-                        borderColor={isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
-                        bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
-                        transition="all 0.15s ease"
-                        boxShadow={isSelected ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)" : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"}
+                        borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                        bg={isSelected ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
+                        transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                        boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
                         _hover={{
-                          borderColor: "rgba(255,255,255,0.8)",
-                          bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
+                          borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                          bg: isSelected ? "rgba(255,255,255,0.15)" : UI_TOKENS.COLORS.panelBg,
                         }}
                       >
                         <HStack justify="space-between" align="start">
@@ -336,7 +337,7 @@ export function SettingsModal({
                             </Text>
                             <Text
                               fontSize="sm"
-                              color="rgba(255,255,255,0.7)"
+                              color={UI_TOKENS.COLORS.textMuted}
                               lineHeight="short"
                               fontFamily="monospace"
                             >
@@ -348,11 +349,11 @@ export function SettingsModal({
                             h={5}
                             borderRadius={0}
                             border="2px solid"
-                            borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                            borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
                             bg={isSelected ? "white" : "transparent"}
                             mt={0.5}
                             position="relative"
-                            transition="all 0.15s ease"
+                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
                           >
                             {isSelected && (
                               <Box
@@ -438,7 +439,7 @@ export function SettingsModal({
                             isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
                           }
                           bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
-                          transition="all 0.15s ease"
+                          transition="background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease"
                           boxShadow={
                             isSelected
                               ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)"
@@ -478,7 +479,7 @@ export function SettingsModal({
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
-                              transition="all 0.15s ease"
+                              transition="background-color 0.15s ease, border-color 0.15s ease"
                             >
                               {isSelected && (
                                 <Box
@@ -514,7 +515,7 @@ export function SettingsModal({
             pt={4}
             css={{
               background: 'transparent',
-              borderTop: '2px solid rgba(255,255,255,0.3)',
+              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
             <HStack justify="space-between" gap={3}>
@@ -527,16 +528,16 @@ export function SettingsModal({
                   fontWeight: "bold",
                   fontSize: "1rem",
                   fontFamily: "monospace",
-                  border: "2px solid rgba(255,255,255,0.9)",
+                  border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
                   background: "transparent",
                   color: "white",
                   cursor: "pointer",
-                  textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "white";
-                  e.currentTarget.style.color = "rgba(8,9,15,0.9)";
+                  e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";
@@ -556,23 +557,23 @@ export function SettingsModal({
                   fontWeight: "bold",
                   fontSize: "1rem",
                   fontFamily: "monospace",
-                  border: "2px solid rgba(255,255,255,0.9)",
-                  background: saving || !isHost || roomStatus !== "waiting" ? "#666" : "rgba(8,9,15,0.9)",
+                  border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+                  background: saving || !isHost || roomStatus !== "waiting" ? "#666" : UI_TOKENS.COLORS.panelBg,
                   color: "white",
                   cursor: saving || !isHost || roomStatus !== "waiting" ? "not-allowed" : "pointer",
-                  textShadow: "1px 1px 0px #000",
-                  transition: "all 0.1s ease",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                   opacity: saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
                   if (!saving && isHost && roomStatus === "waiting") {
                     e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "rgba(8,9,15,0.9)";
+                    e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!saving && isHost && roomStatus === "waiting") {
-                    e.currentTarget.style.background = "rgba(8,9,15,0.9)";
+                    e.currentTarget.style.background = UI_TOKENS.COLORS.panelBg;
                     e.currentTarget.style.color = "white";
                   }
                 }}

@@ -1,5 +1,6 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
+import { UI_TOKENS } from "@/theme/layout";
 import { Box, Text, VStack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 
@@ -10,13 +11,13 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
       py={16}
       px={8}
       borderRadius={0}
-      border="3px solid rgba(255,255,255,0.2)"
-      bg="rgba(8,9,15,0.85)"
+      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha20}`}
+      bg={UI_TOKENS.COLORS.panelBg}
       css={{
-        transition: "border-color 0.2s ease",
-        boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4)",
+        transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}`,
+        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
         _hover: {
-          borderColor: "rgba(255,255,255,0.4)",
+          borderColor: UI_TOKENS.COLORS.whiteAlpha40,
         },
       }}
     >
@@ -26,13 +27,13 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
           h={12}
           mx="auto"
           borderRadius={0}
-          bg="rgba(255,255,255,0.1)"
-          border="2px solid rgba(255,255,255,0.3)"
+          bg={UI_TOKENS.COLORS.whiteAlpha10}
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
           display="flex"
           alignItems="center"
           justifyContent="center"
           css={{
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           }}
         >
           <Text fontSize="2xl" color="white" fontFamily="monospace" fontWeight={700}>
@@ -68,7 +69,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
           palette="brand"
           css={{
             borderRadius: 0,
-            bg: "rgba(255,255,255,0.9)",
+            bg: UI_TOKENS.COLORS.whiteAlpha90,
             color: "#000",
             border: "3px solid #fff",
             fontWeight: 700,
@@ -78,16 +79,16 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
             minW: "180px",
             fontFamily: "monospace",
             letterSpacing: "0.5px",
-            textShadow: "none",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.3)",
-            transition: "all 0.15s ease",
+            textShadow: UI_TOKENS.TEXT_SHADOWS.none,
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+            transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`,
             _hover: {
               transform: "translateY(1px)",
-              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3)",
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
             },
             _active: {
               transform: "translateY(2px)",
-              boxShadow: "inset 0 2px 0 rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1)",
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
             },
           }}
         >

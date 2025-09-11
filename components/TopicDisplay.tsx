@@ -2,6 +2,7 @@
 import { Panel } from "@/components/ui/Panel";
 import type { RoomDoc } from "@/lib/types";
 import { Box, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 
 export function TopicDisplay({
   room,
@@ -28,16 +29,16 @@ export function TopicDisplay({
             <Text
               fontWeight="bold"
               fontSize={{ base: "md", md: "lg" }}
-              color="rgba(255,255,255,0.95)"
-              textShadow="0 1px 2px rgba(0,0,0,0.5)"
+              color={UI_TOKENS.COLORS.textBase}
+              textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
             >
               {room.topic}
             </Text>
           </>
         ) : (
           <Text
-            color="rgba(255,255,255,0.6)"
-            textShadow="0 1px 2px rgba(0,0,0,0.5)"
+            color={UI_TOKENS.COLORS.textMuted}
+            textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
           >
             お題が設定されていません
           </Text>

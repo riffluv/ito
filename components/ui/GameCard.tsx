@@ -28,10 +28,10 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
   const baseColors = {
     bg: waitingInCentral ? "#1a1d23" : "#0f0f23", // 深い青黒
     border: waitingInCentral
-      ? "rgba(255,255,255,0.8)"
-      : "rgba(255,255,255,0.6)",
+      ? UI_TOKENS.COLORS.whiteAlpha80
+      : UI_TOKENS.COLORS.whiteAlpha60,
     text: UI_TOKENS.COLORS.textBase,
-    meta: waitingInCentral ? "rgba(255,255,255,0.9)" : UI_TOKENS.COLORS.textMuted,
+    meta: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.textMuted,
   };
 
   // 状態別アクセント
@@ -46,14 +46,12 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     ? "2px solid" // 中央では少し太め
     : "1px solid"; // 通常時は細め
 
-  // メインメニューレベルの豪華なドラクエ風シャドウ
+  // メインメニューレベルの豪華なドラクエ風シャドウ（トークン化）
   const boxShadow = waitingInCentral
-    ? "0 8px 32px -8px rgba(0,0,0,0.3), 0 4px 16px -4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 2px 0 rgba(255,255,255,0.06)"
+    ? UI_TOKENS.SHADOWS.panelDistinct
     : state === "success" || state === "ready"
-      ? "0 8px 24px -8px rgba(139,92,246,0.4), 0 4px 12px -4px rgba(139,92,246,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(139,92,246,0.2)"
-      : state === "fail"
-        ? "0 8px 24px -8px rgba(255,107,107,0.4), 0 4px 12px -4px rgba(255,107,107,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(255,107,107,0.2)"
-        : "0 4px 16px -4px rgba(0,0,0,0.25), 0 2px 8px -2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)";
+    ? UI_TOKENS.SHADOWS.cardFloating
+    : UI_TOKENS.SHADOWS.cardRaised;
 
   return {
     bg: baseColors.bg,
@@ -64,7 +62,7 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
         : state === "fail"
           ? UI_TOKENS.COLORS.dqRed // 失敗時は赤
           : state === "ready"
-            ? "rgba(139, 92, 246, 0.8)" // 連想ワード登録完了時は紫ボーダー
+            ? UI_TOKENS.COLORS.purpleAlpha80 // 連想ワード登録完了時は紫ボーダー
             : stateAccent.default, // その他はデフォルト（白）
     boxShadow,
     colors: {
@@ -105,8 +103,8 @@ export function GameCard({
   const dragonQuestStyle = getDragonQuestStyle(waitingInCentral, state);
 
   // Shared semantic colors
-  const mildGlow = "0 0 0 2px rgba(139,92,246,0.18)";
-  const strongGlow = "0 0 0 3px rgba(139,92,246,0.35)";
+  const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
+  const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
   const successBorder =
     state === "success"
       ? UI_TOKENS.COLORS.dqBlue // Blue for success  
@@ -122,7 +120,7 @@ export function GameCard({
         : strongGlow
       : undefined;
   const boundaryRing =
-    boundary && state !== "fail" ? "0 0 0 1px rgba(217,119,6,0.65)" : ""; // amber accent
+    boundary && state !== "fail" ? UI_TOKENS.SHADOWS.ringAmber : ""; // amber accent
 
   const mergeShadow = (core: string) =>
     boundaryRing ? `${boundaryRing}, ${core}` : core;
@@ -195,7 +193,7 @@ export function GameCard({
               p={{ base: 0, md: 0 }}
               style={{
                 opacity: flipped ? 0 : 1,
-                transition: "opacity 0.2s ease-in-out",
+                transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}`,
               }}
               display="grid"
               gridTemplateRows="16px minmax(0,1fr) 16px"
@@ -252,7 +250,7 @@ export function GameCard({
               p={{ base: 0, md: 0 }}
               style={{
                 opacity: flipped ? 1 : 0,
-                transition: "opacity 0.2s ease-in-out",
+                transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}`,
               }}
               display="grid"
               gridTemplateRows="16px minmax(0,1fr) 16px"
@@ -437,8 +435,8 @@ export function GameCard({
                 justifyContent="center"
                 style={{
                   textShadow: waitingInCentral
-                    ? "none"
-                    : "0 1px 2px rgba(0,0,0,0.5)",
+                    ? UI_TOKENS.TEXT_SHADOWS.none
+                    : UI_TOKENS.TEXT_SHADOWS.soft,
                   wordWrap: "break-word",
                   hyphens: "auto",
                   WebkitFontSmoothing: "antialiased",
@@ -511,7 +509,7 @@ export function GameCard({
                 color={UI_TOKENS.COLORS.textBase} // 全状態で白色統一
                 lineHeight="1.3" // ディセンダー対応
                 textShadow={
-                  waitingInCentral ? "none" : "0 1px 2px rgba(0,0,0,0.5)"
+                  waitingInCentral ? UI_TOKENS.TEXT_SHADOWS.none : UI_TOKENS.TEXT_SHADOWS.soft
                 }
                 width="100%"
                 textAlign="center"
@@ -546,11 +544,7 @@ export function GameCard({
   // FLAT VARIANT - 通常のカード表示（CSSホバーで再レンダー無し）
   const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
   const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
-  const hoveredBoxShadow = dragonQuestStyle.boxShadow
-    .replace(/rgba\(0,0,0,0\.25\)/g, "rgba(0,0,0,0.4)")
-    .replace(/rgba\(0,0,0,0\.15\)/g, "rgba(0,0,0,0.25)")
-    .replace(/rgba\(74,158,255,0\.4\)/g, "rgba(74,158,255,0.6)")
-    .replace(/rgba\(255,107,107,0\.4\)/g, "rgba(255,107,107,0.6)");
+  const hoveredBoxShadow = UI_TOKENS.SHADOWS.cardHover;
 
   return (
     <Box
@@ -655,10 +649,10 @@ export function GameCard({
           lineHeight={typeof number === "number" ? 1.3 : 1.3}
           textShadow={
             waitingInCentral
-              ? "none" // Clean white text without shadow for waiting cards
+              ? UI_TOKENS.TEXT_SHADOWS.none // Clean white text without shadow for waiting cards
               : typeof number === "number"
-                ? "0 1px 2px rgba(0,0,0,0.5)"
-                : "none"
+                ? UI_TOKENS.TEXT_SHADOWS.soft
+                : UI_TOKENS.TEXT_SHADOWS.none
           }
           width="100%"
           maxWidth={typeof number === "number" ? "100%" : "calc(100% - 6px)"}
