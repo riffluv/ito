@@ -30,7 +30,8 @@ export function SortableItem({
     touchAction: "none", // prevent scroll while dragging per dnd-kit docs
     userSelect: isDragging ? "none" : undefined,
     WebkitUserSelect: isDragging ? "none" : undefined,
-    ...(isDragging ? { zIndex: 5 } : null),
+    // オリジナル要素はドラッグ中は透明にしてレイアウトだけ保持（DragOverlayと二重に見えないように）
+    ...(isDragging ? { opacity: 0, zIndex: 5 } : null),
   };
   
   return (
@@ -42,11 +43,9 @@ export function SortableItem({
       position="relative"
       css={{
         // ドラッグ中の視覚効果
+        // ドラッグ中のオリジナル要素は不可視（透明）に留める
         ...(isDragging && {
-          opacity: 0.6,
-          transform: `${style.transform} scale(1.05)`,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-          filter: "brightness(1.1)",
+          pointerEvents: "none",
         }),
         
         // 他のアイテムがホバー中の視覚フィードバック（ベストプラクティス：線なし）

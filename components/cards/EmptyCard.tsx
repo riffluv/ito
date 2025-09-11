@@ -90,29 +90,15 @@ export function EmptyCard({
           // アニメーションなしで、静的な状態表示
         }),
 
-        // @dnd-kitのisOver状態での洗練されたドロップフィードバック（AI感軽減版）
+        // @dnd-kitのisOver状態での洗練されたドロップフィードバック（テキストや矢印は表示しない）
         ...(id && dndDroppable.isOver && {
           backgroundColor: "rgba(139, 92, 246, 0.15)", // 紫ベース
           borderColor: "rgba(139, 92, 246, 0.9)",
           borderStyle: "solid",
           transform: "scale(1.05)", // より明確なスケール
           animation: "dragonQuestDrop 0.8s ease-in-out infinite",
-          // ドラクエ風の強い光る効果
+          // ドラクエ風の強い光る効果（テキスト装飾は削除）
           boxShadow: "inset 0 0 12px rgba(139, 92, 246, 0.4), 0 4px 16px rgba(139, 92, 246, 0.3), 0 0 24px rgba(139, 92, 246, 0.2)",
-          // ドラクエ風指示テキスト
-          "&::after": {
-            content: '"▼ ドロップ ▼"',
-            position: "absolute",
-            bottom: "4px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontSize: "10px",
-            color: "rgba(255,255,255,0.9)",
-            fontWeight: "600",
-            fontFamily: "monospace",
-            textShadow: "1px 1px 0px #000",
-            opacity: 1,
-          }
         }),
       }}
       {...props}

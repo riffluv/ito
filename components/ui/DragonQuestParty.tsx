@@ -240,6 +240,10 @@ export function DragonQuestParty({
                   css={{
                     boxShadow:
                       "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25)",
+                    // 行の縦幅を一定にする（アイコン差で高さが変わらないよう固定）
+                    minHeight: "28px",
+                    display: "flex",
+                    alignItems: "center",
                   }}
                 >
                   {/* プレイヤー情報 */}
@@ -282,6 +286,11 @@ export function DragonQuestParty({
                       filter="drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
                       w="24px"
                       textAlign="center"
+                      lineHeight="1"
+                      h="18px"
+                      display="inline-flex"
+                      alignItems="center"
+                      justifyContent="center"
                     >
                       {icon}
                     </Text>
