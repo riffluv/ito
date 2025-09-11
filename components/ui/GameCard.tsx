@@ -169,21 +169,19 @@ export function GameCard({
               minWidth: "114px",
               minHeight: "160px",
             },
-          // DPI 150%：適度な縮小でレイアウト収束
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-            {
-              width: "88px",
-              height: "123px",
-              minWidth: "88px",
-              minHeight: "123px",
-            },
-          "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)":
-            {
-              width: "105px",
-              height: "147px",
-              minWidth: "105px",
-              minHeight: "147px",
-            },
+          // DPI 150%：統一定数活用でレイアウト収束
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+            width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+            height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+            minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+            minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+          },
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
+            width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+            height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+            minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+            minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+          },
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
@@ -417,21 +415,19 @@ export function GameCard({
             minWidth: "114px",
             minHeight: "160px",
           },
-        // DPI 150%：適度な縮小でレイアウト収束
-        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-          {
-            width: "88px",
-            height: "123px",
-            minWidth: "88px",
-            minHeight: "123px",
-          },
-        "@media (min-resolution: 1.5dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (min-width: 768px)":
-          {
-            width: "105px",
-            height: "147px",
-            minWidth: "105px",
-            minHeight: "147px",
-          },
+        // DPI 150%：統一定数活用でレイアウト収束
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+          width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+          height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+          minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+          minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
+        },
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
+          width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+          height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+          minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+          minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
+        },
       }}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
