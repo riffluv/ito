@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { updateClue1 } from "@/lib/firebase/players";
 import {
   canSubmitCard,
@@ -78,20 +79,31 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const handleDecide = async () => {
     if (!canDecide || !me?.id) return;
+    
     try {
       await updateClue1(roomId, me.id, text.trim());
       notify({ title: "連想ワードを記録しました", type: "success" });
     } catch (e: any) {
-      notify({
-        title: "記録に失敗しました",
-        description: e?.message,
-        type: "error",
-      });
+      if (isFirebaseQuotaExceeded(e)) {
+        handleFirebaseQuotaError("連想ワード記録");
+        notify({
+          title: "🚨 Firebase読み取り制限",
+          description: "現在連想ワードを記録できません。24時間後に再度お試しください。",
+          type: "error",
+        });
+      } else {
+        notify({
+          title: "記録に失敗しました",
+          description: e?.message,
+          type: "error",
+        });
+      }
     }
   };
 
   const handleSubmit = async () => {
     if (!canSubmit || !me?.id) return;
+    
     try {
       if (isSortSubmit(actualResolveMode)) {
         if (!placed) await addCardToProposal(roomId, me.id);
@@ -101,11 +113,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       }
       notify({ title: "提出しました", type: "success" });
     } catch (e: any) {
-      notify({
-        title: "提出に失敗しました",
-        description: e?.message,
-        type: "error",
-      });
+      if (isFirebaseQuotaExceeded(e)) {
+        handleFirebaseQuotaError("カード提出");
+        notify({
+          title: "🚨 Firebase読み取り制限",
+          description: "現在カードを提出できません。24時間後に再度お試しください。",
+          type: "error",
+        });
+      } else {
+        notify({
+          title: "提出に失敗しました", 
+          description: e?.message,
+          type: "error",
+        });
+      }
     }
   };
 

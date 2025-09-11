@@ -6,6 +6,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
+import { handleFirebaseQuotaError } from "@/lib/utils/errorHandling";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
 import { useOptimizedRooms } from "@/lib/hooks/useOptimizedRooms";
@@ -27,21 +28,10 @@ import { Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-// ランダムキャラクター選択コンポーネント
+// 固定男性ナイトコンポーネント
 function KnightCharacter() {
-  const [knightImage, setKnightImage] = useState("/images/knight1.webp");
-  const [knightAlt, setKnightAlt] = useState("序の紋章III Knight");
-
-  useEffect(() => {
-    // ランダムに騎士を選択
-    const knights = [
-      { src: "/images/knight1.webp", alt: "序の紋章III Male Knight" },
-      { src: "/images/knightwomen1.webp", alt: "序の紋章III Female Knight" }, // 透過版に更新
-    ];
-    const randomKnight = knights[Math.floor(Math.random() * knights.length)];
-    setKnightImage(randomKnight.src);
-    setKnightAlt(randomKnight.alt);
-  }, []);
+  const knightImage = "/images/knight1.webp";
+  const knightAlt = "序の紋章III Male Knight";
 
   return (
     <Image
@@ -50,6 +40,21 @@ function KnightCharacter() {
       boxSize={{ base: "16", md: "20", lg: "24" }}
       objectFit="contain"
       filter="drop-shadow(0 4px 12px rgba(0,0,0,0.4))"
+      css={{
+        // DPI scaling knight size optimization
+        "@container (max-width: 600px)": {
+          width: "3rem", // 48px for mobile
+          height: "3rem",
+        },
+        "@container (min-width: 600px) and (max-width: 900px)": {
+          width: "4rem", // 64px for tablet
+          height: "4rem",
+        },
+        "@container (min-width: 900px)": {
+          width: "5rem", // 80px for desktop
+          height: "5rem",
+        }
+      }}
     />
   );
 }
@@ -209,7 +214,19 @@ export default function MainMenu() {
         position="relative"
         overflow="hidden"
         pt={{ base: 20, md: 24, lg: 32 }}
-        css={{ containerType: "inline-size" }}
+        css={{ 
+          containerType: "inline-size",
+          // DPI scaling optimization
+          "@container (max-width: 600px)": {
+            paddingTop: "5rem", // 80px at 100% = 100px at 125%
+          },
+          "@container (min-width: 600px) and (max-width: 900px)": {
+            paddingTop: "6rem", // 96px at 100% = 120px at 125%
+          },
+          "@container (min-width: 900px)": {
+            paddingTop: "8rem", // 128px at 100% = 160px at 125%
+          }
+        }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
           <VStack gap={{ base: 16, lg: 20 }} align="center">
@@ -220,7 +237,7 @@ export default function MainMenu() {
                   {/* 左側に騎士を配置 */}
                   <Box
                     position={{ base: "static", md: "absolute" }}
-                    left={{ md: 0 }}
+                    left={{ md: "-60px", lg: "-70px", xl: "-80px" }}
                     top={{ md: "50%" }}
                     transform={{ md: "translateY(-50%)" }}
                     mb={{ base: 4, md: 0 }}
@@ -246,6 +263,16 @@ export default function MainMenu() {
                       WebkitTextStroke: "1px rgba(255,255,255,0.2)",
                       textTransform: "none",
                       filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
+                      // DPI scaling font optimization
+                      "@container (max-width: 600px)": {
+                        fontSize: "2.5rem", // 40px base, scales to 50px at 125%
+                      },
+                      "@container (min-width: 600px) and (max-width: 900px)": {
+                        fontSize: "4rem", // 64px base, scales to 80px at 125%
+                      },
+                      "@container (min-width: 900px)": {
+                        fontSize: "5rem", // 80px base, scales to 100px at 125%
+                      }
                     }}
                   >
                     序の紋章III
@@ -259,6 +286,21 @@ export default function MainMenu() {
                   letterSpacing="-0.02em"
                   maxW="3xl"
                   mx="auto"
+                  css={{
+                    // DPI scaling subtitle optimization
+                    "@container (max-width: 600px)": {
+                      fontSize: "1.125rem", // 18px base for mobile readability
+                      lineHeight: "1.5",
+                    },
+                    "@container (min-width: 600px) and (max-width: 900px)": {
+                      fontSize: "1.375rem", // 22px base for tablet
+                      lineHeight: "1.45",
+                    },
+                    "@container (min-width: 900px)": {
+                      fontSize: "1.75rem", // 28px base for desktop
+                      lineHeight: "1.4",
+                    }
+                  }}
                 >
                   数字カードゲーム
                   <Box
@@ -273,8 +315,35 @@ export default function MainMenu() {
                 </Text>
               </Box>
 
-              <VStack gap={6} align="center">
-                <HStack gap={4} flexWrap="wrap" justify="center">
+              <VStack 
+                gap={6} 
+                align="center"
+                css={{
+                  // DPI scaling button group optimization
+                  "@container (max-width: 600px)": {
+                    gap: "1rem", // 16px gap for mobile
+                  },
+                  "@container (min-width: 600px)": {
+                    gap: "1.5rem", // 24px gap for larger screens
+                  }
+                }}
+              >
+                <HStack 
+                  gap={4} 
+                  flexWrap="wrap" 
+                  justify="center"
+                  css={{
+                    // Ensure minimum touch target size (44px)
+                    "& button": {
+                      minHeight: "2.75rem", // 44px minimum for touch accessibility
+                      minWidth: "2.75rem",
+                      "@container (max-width: 600px)": {
+                        minHeight: "3rem", // 48px for better mobile UX
+                        fontSize: "0.9rem", // Slightly smaller text on mobile
+                      }
+                    }
+                  }}
+                >
                   <AppButton
                     size="lg"
                     visual="solid"
@@ -306,11 +375,38 @@ export default function MainMenu() {
       </Box>
 
       {/* ルーム一覧 */}
-      <Container maxW="7xl" py={{ base: 12, md: 16 }}>
+      <Container 
+        maxW="7xl" 
+        py={{ base: 12, md: 16 }}
+        css={{
+          // DPI scaling container optimization
+          "@container (max-width: 600px)": {
+            paddingTop: "2.5rem", // 40px base for mobile
+            paddingBottom: "2.5rem",
+          },
+          "@container (min-width: 600px) and (max-width: 900px)": {
+            paddingTop: "3rem", // 48px base for tablet
+            paddingBottom: "3rem",
+          },
+          "@container (min-width: 900px)": {
+            paddingTop: "4rem", // 64px base for desktop
+            paddingBottom: "4rem",
+          }
+        }}
+      >
         <Grid
           templateColumns={{ base: "1fr", xl: "1fr 340px" }}
           gap={{ base: 8, xl: 12 }}
           alignItems="start"
+          css={{
+            // DPI scaling grid optimization
+            "@container (max-width: 600px)": {
+              gap: "1.5rem", // 24px gap for mobile
+            },
+            "@container (min-width: 600px)": {
+              gap: "2rem", // 32px gap for larger screens
+            }
+          }}
         >
           <GridItem>
             <Box mb={8}>
@@ -609,6 +705,13 @@ export default function MainMenu() {
                           fontFamily="monospace"
                         >
                           ・コーヒーを辞める
+                        </Text>
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.8)"
+                          fontFamily="monospace"
+                        >
+                          ・制限エラー通知システム
                         </Text>
                       </VStack>
                     </Box>
