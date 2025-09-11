@@ -6,6 +6,7 @@ import type { RoomDoc } from "@/lib/types";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
+import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -24,6 +25,9 @@ export function SettingsModal({
   isHost,
   roomStatus,
 }: SettingsModalProps) {
+  const { animationMode, setAnimationMode, effectiveMode, gpuCapability } =
+    useGPUPerformance();
+
   const [resolveMode, setResolveMode] = useState<string>(
     currentOptions?.resolveMode || "sort-submit"
   );
@@ -31,6 +35,7 @@ export function SettingsModal({
     currentOptions?.defaultTopicType || "通常版"
   );
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
 
   const handleSave = async () => {
     if (!isHost) {
@@ -181,7 +186,37 @@ export function SettingsModal({
           </Box>
 
           <Dialog.Body px={6} pb={2}>
-            <Stack gap={6}>
+            {/* タブ切り替え */}
+            <HStack gap={3} mb={4} justify="center">
+              {[
+                { key: "game", label: "Game Settings" },
+                { key: "graphics", label: "Graphics Settings" },
+              ].map((t) => {
+                const isActive = activeTab === (t.key as any);
+                return (
+                  <Box
+                    key={t.key}
+                    as="button"
+                    onClick={() => setActiveTab(t.key as any)}
+                    px={4}
+                    py={2}
+                    borderRadius={0}
+                    border="2px solid"
+                    borderColor={isActive ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"}
+                    bg={isActive ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
+                    color="white"
+                    fontFamily="monospace"
+                    fontWeight="bold"
+                    transition="all 0.12s ease"
+                  >
+                    {t.label}
+                  </Box>
+                );
+              })}
+            </HStack>
+
+            {activeTab === "game" && (
+              <Stack gap={6}>
               {/* クリア方式セクション */}
               <Box>
                 <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
@@ -359,7 +394,118 @@ export function SettingsModal({
                   </Text>
                 </Box>
               )}
-            </Stack>
+              </Stack>
+            )}
+
+            {activeTab === "graphics" && (
+              <Stack gap={6}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
+                    アニメーション モード
+                  </Text>
+                  <Text fontSize="xs" color="rgba(255,255,255,0.7)" mb={3}>
+                    げんざい: {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}
+                    （自動判定: {gpuCapability === "high" ? "高" : "低"}）
+                  </Text>
+                  <Stack gap={2}>
+                    {[
+                      {
+                        value: "auto",
+                        title: "自動おすすめ設定",
+                        description: "PCの せいのうに あわせて さいてき",
+                      },
+                      {
+                        value: "3d",
+                        title: "高品質 3D",
+                        description: "3D回転アニメーション",
+                      },
+                      {
+                        value: "simple",
+                        title: "シンプル",
+                        description: "軽量表示切り替え",
+                      },
+                    ].map((opt) => {
+                      const isSelected = animationMode === (opt.value as any);
+                      return (
+                        <Box
+                          key={opt.value}
+                          cursor="pointer"
+                          onClick={() => setAnimationMode(opt.value as any)}
+                          p={4}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={
+                            isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
+                          }
+                          bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
+                          transition="all 0.15s ease"
+                          boxShadow={
+                            isSelected
+                              ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)"
+                              : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"
+                          }
+                          _hover={{
+                            borderColor: "rgba(255,255,255,0.8)",
+                            bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
+                          }}
+                        >
+                          <HStack justify="space-between" align="start">
+                            <VStack align="start" gap={1} flex="1">
+                              <Text
+                                fontSize="md"
+                                fontWeight="bold"
+                                color="white"
+                                fontFamily="monospace"
+                                textShadow="1px 1px 0px #000"
+                              >
+                                {opt.title}
+                              </Text>
+                              <Text
+                                fontSize="sm"
+                                color="rgba(255,255,255,0.7)"
+                                lineHeight="short"
+                                fontFamily="monospace"
+                              >
+                                {opt.description}
+                              </Text>
+                            </VStack>
+                            <Box
+                              w={5}
+                              h={5}
+                              borderRadius={0}
+                              border="2px solid"
+                              borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                              bg={isSelected ? "white" : "transparent"}
+                              mt={0.5}
+                              position="relative"
+                              transition="all 0.15s ease"
+                            >
+                              {isSelected && (
+                                <Box
+                                  position="absolute"
+                                  top="50%"
+                                  left="50%"
+                                  transform="translate(-50%, -50%)"
+                                  w="10px"
+                                  h="6px"
+                                  color="black"
+                                  fontWeight="900"
+                                  fontSize="12px"
+                                  fontFamily="monospace"
+                                  lineHeight={1}
+                                >
+                                  ✓
+                                </Box>
+                              )}
+                            </Box>
+                          </HStack>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              </Stack>
+            )}
           </Dialog.Body>
 
           {/* Footer - 統一パターン */}
