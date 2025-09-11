@@ -1,5 +1,6 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 
@@ -7,32 +8,32 @@ import { useEffect, useRef } from "react";
 const getPhaseInfo = (status: string) => {
   switch (status) {
     case "waiting":
-      return { text: "ゲーム準備中", icon: "⏳", color: "rgba(255,215,0,0.9)" }; // ゴールド
+      return { text: "ゲーム準備中", icon: "⏳", color: UI_TOKENS.COLORS.accentGold };
     case "clue":
       return {
         text: "連想ワードを考えよう",
         icon: "💭",
-        color: "rgba(135,206,250,0.9)",
+        color: UI_TOKENS.COLORS.skyBlue,
       }; // スカイブルー
     case "playing":
       return {
         text: "順番に並べよう",
         icon: "🎯",
-        color: "rgba(255,69,0,0.9)",
+        color: UI_TOKENS.COLORS.orangeRed,
       }; // 赤オレンジ
     case "reveal":
       return {
         text: "カードをめくっています",
         icon: "👀",
-        color: "rgba(147,112,219,0.9)",
+        color: UI_TOKENS.COLORS.violet,
       }; // パープル
     case "finished":
-      return { text: "結果発表！", icon: "🎉", color: "rgba(50,205,50,0.9)" }; // ライムグリーン
+      return { text: "結果発表！", icon: "🎉", color: UI_TOKENS.COLORS.limeGreen };
     default:
       return {
         text: "ゲーム進行中",
         icon: "⚡",
-        color: "rgba(255,255,255,0.9)",
+        color: UI_TOKENS.COLORS.whiteAlpha90,
       }; // ホワイト
   }
 };
@@ -191,12 +192,11 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
       <Box
         minW="280px"
         maxW="400px"
-        bg="rgba(8,9,15,0.95)"
-        border="3px solid rgba(255,255,255,0.9)"
+        bg={UI_TOKENS.COLORS.panelBg}
+        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         css={{
-          boxShadow:
-            "inset 0 3px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.5)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(12px) saturate(1.2)",
         }}
       >

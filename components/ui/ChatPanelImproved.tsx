@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
 import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import ChatMessageRow from "@/components/ui/ChatMessageRow";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import {
   collection,
   limitToLast,
@@ -178,10 +178,10 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                     <Box w="100%">
                       <Text
                         fontSize="xs"
-                        color="rgba(255,255,255,0.75)"
+                        color={UI_TOKENS.COLORS.whiteAlpha80}
                         fontFamily="monospace"
                         textAlign="center"
-                        textShadow="0 1px 1px rgba(0,0,0,0.6)"
+                        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                       >
                         {m.text}
                       </Text>
@@ -233,23 +233,22 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             }}
             disabled={readOnly}
             size="md"
-            bg="rgba(8,9,15,0.85)" // ドラクエ風リッチブラック
+            bg={UI_TOKENS.COLORS.panelBg}
             color="white"
-            border="2px solid rgba(255,255,255,0.6)" // 統一された太い白枠
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
             borderRadius={6} // 軽く角ばったドラクエ風
-            boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)" // 立体感
-            _placeholder={{ color: "rgba(255,255,255,0.5)" }}
+            boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+            _placeholder={{ color: UI_TOKENS.COLORS.whiteAlpha50 }}
             _focus={{
-              borderColor: "#4a9eff", // ドラクエブルー
-              boxShadow:
-                "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
-              bg: "rgba(8,9,15,0.9)",
+              borderColor: UI_TOKENS.COLORS.dqBlue,
+              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+              bg: UI_TOKENS.COLORS.panelBg,
             }}
             _hover={{
-              borderColor: "rgba(255,255,255,0.8)",
-              bg: "rgba(8,9,15,0.9)",
+              borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+              bg: UI_TOKENS.COLORS.panelBg,
             }}
-            transition="border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease"
+            transition={`border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}`}
             px={4}
             py={3}
             css={{
@@ -270,15 +269,15 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             onClick={send}
             disabled={readOnly || !text.trim()}
             size="md"
-            bg="rgba(8,9,15,0.9)" // ドラクエ風リッチブラック
+            bg={UI_TOKENS.COLORS.panelBg}
             color="white"
-            border="2px solid rgba(255,255,255,0.9)" // 統一された白枠
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
             borderRadius={0} // 完全角ばったドラクエ風
             px={6}
             py={3}
             fontWeight="700"
             fontFamily="monospace" // ドラクエ風フォント統一
-            textShadow="1px 1px 0px #000" // くっきり文字
+            textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
             css={{
               // DPI 125%以上：送信ボタンのコンパクト化
               "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
@@ -292,24 +291,24 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                   padding: "0.3rem 0.8rem !important", // より小さく
                 },
             }}
-            boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)" // 立体感
+            boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
             _hover={{
               bg: "white", // ドラクエ王道の白背景反転
-              color: "rgba(8,9,15,0.9)",
+              color: UI_TOKENS.COLORS.panelBg,
               textShadow: "none",
             }}
             _active={{
-              bg: "rgba(220,220,220,0.9)",
-              color: "rgba(8,9,15,0.9)",
-              boxShadow: "inset 0 3px 0 rgba(0,0,0,0.2)",
+              bg: UI_TOKENS.COLORS.whiteAlpha90,
+              color: UI_TOKENS.COLORS.panelBg,
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
             }}
             _disabled={{
-              bg: "rgba(60,60,60,0.9)",
-              color: "rgba(255,255,255,0.4)",
+              bg: UI_TOKENS.COLORS.blackAlpha60,
+              color: UI_TOKENS.COLORS.whiteAlpha40,
               cursor: "not-allowed",
-              textShadow: "1px 1px 0px #000",
+              textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
             }}
-            transition="background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease"
+            transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
           >
             送信
           </AppButton>
