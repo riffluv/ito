@@ -117,7 +117,8 @@
       "Bash(npx next:*)",
       "Bash(git checkout:*)",
       "Bash(dir)",
-      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\utils\\quotaState.ts\")"
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\utils\\quotaState.ts\")",
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\GameCard.modern.module.css\")"
     ],
     "deny": [],
     "ask": []

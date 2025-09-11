@@ -6,6 +6,7 @@ import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
 import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import {
   collection,
   limitToLast,
@@ -94,18 +95,18 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             px={4}
             py={3}
             css={{
-              // DPI 125%対応：コンパクト化
-              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                {
-                  gap: "0.4rem !important", // メッセージ間隔を狭く
-                  padding: "0.5rem 0.8rem !important", // パディングを小さく
+              "@layer dpi-responsive": {
+                // DPI 125%対応：統一定数活用
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  gap: UNIFIED_LAYOUT.DPI_125.SPACING?.FORM_GAP || "0.4rem",
+                  padding: UNIFIED_LAYOUT.DPI_125.SPACING?.COMPONENT_PADDING || "0.5rem 0.8rem",
                 },
-              // DPI 150%対応：さらにコンパクト化
-              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                {
-                  gap: "0.3rem !important", // メッセージ間隔をより狭く
-                  padding: "0.3rem 0.5rem !important", // パディングをさらに小さく
+                // DPI 150%対応：統一定数活用
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                  gap: UNIFIED_LAYOUT.DPI_150.SPACING.FORM_GAP,
+                  padding: UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING,
                 },
+              }
             }}
           >
             {messages.map((m) => {
@@ -121,16 +122,16 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                         flexWrap="nowrap"
                         opacity={0.8}
                         css={{
-                          // DPI 125%対応：要素間隔調整
-                          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                            {
-                              gap: "0.3rem !important", // 要素間を狭く
+                          "@layer dpi-responsive": {
+                            // DPI 125%対応：統一定数活用
+                            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                              gap: UNIFIED_LAYOUT.DPI_125.SPACING.FORM_GAP,
                             },
-                          // DPI 150%対応：さらに狭く
-                          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                            {
-                              gap: "0.25rem !important", // より狭く
+                            // DPI 150%対応：統一定数活用
+                            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                              gap: UNIFIED_LAYOUT.DPI_150.SPACING.FORM_GAP,
                             },
+                          }
                         }}
                       >
                         <Badge 

@@ -31,6 +31,14 @@ export const UNIFIED_LAYOUT = {
       WIDTH: { base: "100px", md: "120px" },
       HEIGHT: { base: "140px", md: "168px" },
     },
+    // 125%DPI専用スペーシング
+    SPACING: {
+      CARD_GAP: "14px", // 基本の12pxより少し広く
+      COMPONENT_PADDING: "0.5rem 0.8rem", // コンパクト化
+      SECTION_GAP: "0px",
+      INNER_SPACING: "18px",
+      FORM_GAP: "0.4rem",
+    },
   },
 
   // 150% DPI特別対応（カード重なり解消＋縦方向最適化）
@@ -39,15 +47,16 @@ export const UNIFIED_LAYOUT = {
     HAND_AREA_HEIGHT: "clamp(160px, 14dvh, 200px)", // 少し余裕を持たせる
     // 150%DPIでカード間隔問題解消のための調整
     CARD: {
-      WIDTH: { base: "92px", md: "110px" }, // 少し縮小
-      HEIGHT: { base: "128px", md: "154px" }, // 比例縮小
+      WIDTH: { base: "88px", md: "105px" }, // 実装済み値に統一
+      HEIGHT: { base: "123px", md: "147px" }, // 実装済み値に統一
     },
-    // 150%DPI専用スペーシング（重なり防止）
+    // 150%DPI専用スペーシング（重なり防止強化）
     SPACING: {
-      CARD_GAP: "16px", // 基本の12pxより広く
-      COMPONENT_PADDING: "12px", // コンパクト化
+      CARD_GAP: "18px", // 16px → 18px（水平間隔拡大）
+      ROW_GAP: "28px", // 新規：縦間隔専用（重なり完全防止）
+      COMPONENT_PADDING: "10px", // さらにコンパクト化
       SECTION_GAP: "0px",
-      INNER_SPACING: "20px",
+      INNER_SPACING: "24px", // 20px → 24px（大きな要素間隔拡大）
       FORM_GAP: "6px",
     },
   },

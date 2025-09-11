@@ -220,8 +220,9 @@ export function DragonQuestParty({
               return a.orderIndex - b.orderIndex;
             })
             .map((player) => {
+              const fresh = displayedPlayers.find((p) => p.id === player.id) || player;
               const { icon, color, status } = getPlayerStatus(
-                player,
+                fresh,
                 roomStatus
               );
               const isHost = hostId && player.id === hostId;
@@ -258,7 +259,7 @@ export function DragonQuestParty({
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
-                      title={`${isHost ? "👑 " : "⚔️ "}${player.name} - ${status}`}
+                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}`}
                       css={
                         isHost
                           ? {
@@ -271,7 +272,7 @@ export function DragonQuestParty({
                       }
                     >
                       {isHost ? "👑 " : "⚔️ "}
-                      {player.name}
+                      {fresh.name}
                     </Text>
 
                     {/* 状態アイコン - 適切な固定幅 */}

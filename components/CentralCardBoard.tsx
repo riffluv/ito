@@ -506,23 +506,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
                   },
                 },
-                // DPI 150%対応：カードボードエリアの最適化
-                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                  {
-                    gap: "12px !important", // 間隔をやや縮小→収まり改善
-                    padding: "4px 8px !important", // さらにコンパクト
-                    // カードサイズ統一
+                // DPI 150%対応：カードボードエリアの最適化（@layer除去でCSS適用を確実に）
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
+                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // 垂直間隔：28px（重なり防止）
+                  padding: `${UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING} !important`, // 10px
+                  minHeight: "auto !important",
+                  alignContent: "flex-start !important", // 上詰めで安定配置
+                  // カードサイズ統一
+                  "& > *": {
+                    minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+                    maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+                  },
+                  [`@media (min-width: 768px)`]: {
                     "& > *": {
-                      minWidth: "88px !important",
-                      maxWidth: "88px !important",
-                    },
-                    "@media (min-width: 768px)": {
-                      "& > *": {
-                        minWidth: "105px !important",
-                        maxWidth: "105px !important",
-                      },
+                      minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+                      maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
                     },
                   },
+                },
                 [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
                   gap: "10px",
                   padding: "12px",
@@ -654,23 +656,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
                   },
                 },
-                // DPI 150%対応：カードボードエリアの最適化
-                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                  {
-                    gap: "12px !important", // 間隔をやや縮小→収まり改善
-                    padding: "4px 8px !important", // さらにコンパクト
-                    // カードサイズ統一
+                // DPI 150%対応：カードボードエリアの最適化（@layer除去でCSS適用を確実に）
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
+                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // 垂直間隔：28px（重なり防止）
+                  padding: `${UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING} !important`, // 10px
+                  minHeight: "auto !important",
+                  alignContent: "flex-start !important", // 上詰めで安定配置
+                  // カードサイズ統一
+                  "& > *": {
+                    minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+                    maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
+                  },
+                  [`@media (min-width: 768px)`]: {
                     "& > *": {
-                      minWidth: "88px !important",
-                      maxWidth: "88px !important",
-                    },
-                    "@media (min-width: 768px)": {
-                      "& > *": {
-                        minWidth: "105px !important",
-                        maxWidth: "105px !important",
-                      },
+                      minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
+                      maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
                     },
                   },
+                },
                 [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
                   gap: "10px",
                   padding: "12px",

@@ -1,0 +1,112 @@
+/**
+ * CSS Cascade Layers - 2025年ベストプラクティス
+ * 
+ * 設計原則:
+ * 1. レイヤー優先順位の明確化（低→高）
+ * 2. !important撲滅による保守性向上
+ * 3. DPIスケール対応の体系的管理
+ * 4. コンポーネント間競合の回避
+ */
+
+/* === CASCADE LAYERS DEFINITION === */
+@layer reset, base, components, dpi-responsive, utilities;
+
+/* === RESET LAYER === */
+@layer reset {
+  /* 基本リセット（最低優先度） */
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* === BASE LAYER === */
+@layer base {
+  /* 基本スタイル（変数定義） */
+  :root {
+    --dq-bg-rich-black: rgba(8, 9, 15, 0.9);
+    --dq-border-white: rgba(255, 255, 255, 0.9);
+    --dq-shadow-inset: inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    --dq-shadow-raised: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* ドラゴンクエスト風基本スタイル */
+  .dragon-quest-style {
+    background: var(--dq-bg-rich-black);
+    border: 3px solid var(--dq-border-white);
+    border-radius: 0;
+    font-family: "Courier New", monospace;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+    box-shadow: var(--dq-shadow-raised);
+  }
+}
+
+/* === COMPONENTS LAYER === */
+@layer components {
+  /* コンポーネント固有スタイル */
+  .game-card {
+    /* GameCardの基本スタイルをここに統合可能 */
+  }
+  
+  .chat-panel {
+    /* ChatPanelの基本スタイルをここに統合可能 */
+  }
+  
+  .card-board {
+    /* CardBoardの基本スタイルをここに統合可能 */
+  }
+}
+
+/* === DPI-RESPONSIVE LAYER === */
+@layer dpi-responsive {
+  /* DPIスケール対応の体系的管理 */
+  
+  /* 125% DPI */
+  @media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25) {
+    .game-card {
+      width: 95px;
+      height: 133px;
+    }
+    
+    .card-board {
+      gap: 14px;
+      padding: 0.5rem 0.8rem;
+    }
+    
+    .chat-panel {
+      gap: 0.4rem;
+      padding: 0.5rem 0.8rem;
+    }
+  }
+  
+  /* 150% DPI */
+  @media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5) {
+    .game-card {
+      width: 88px;
+      height: 123px;
+    }
+    
+    .card-board {
+      gap: 16px;
+      row-gap: 20px;
+      padding: 12px;
+    }
+    
+    .chat-panel {
+      gap: 0.3rem;
+      padding: 12px;
+    }
+  }
+}
+
+/* === UTILITIES LAYER === */
+@layer utilities {
+  /* ユーティリティクラス（最高優先度） */
+  .dq-compact { padding: 8px; }
+  .dq-spacing-tight { gap: 8px; }
+  .dq-spacing-normal { gap: 12px; }
+  .dq-spacing-loose { gap: 16px; }
+  
+  /* デバッグ用 */
+  .debug-border { border: 2px solid red; }
+  .debug-bg { background: rgba(255, 0, 0, 0.1); }
+}
