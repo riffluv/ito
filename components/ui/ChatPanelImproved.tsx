@@ -177,7 +177,7 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                         gap={2} 
                         align="flex-start" 
                         flexWrap="nowrap"
-                        opacity={0.8}
+                        opacity={0.95}
                         css={{
                           "@layer dpi-responsive": {
                             // DPI 125%対応：統一定数活用
@@ -191,33 +191,46 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
                           }
                         }}
                       >
-                        <Badge 
-                          variant="subtle" 
-                          colorPalette="gray" 
-                          size="xs"
+                        <Box 
                           minW="100px"
-                          maxW="100px" // ユーザー名と同じ幅で統一
+                          maxW="100px"
                           textAlign="center"
                           flexShrink={0}
+                          bg="#1a1d29"
+                          border="1px solid rgba(255,255,255,0.3)"
+                          borderRadius="0"
+                          py={1}
+                          px={2}
                           css={{
-                            // DPI 125%対応：バッジサイズ調整
+                            // ドラクエ風角ばったデザイン
+                            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3)",
+                            // DPI 125%対応：サイズ調整
                             "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
                               {
-                                fontSize: "0.65rem !important",
                                 minWidth: "80px !important",
                                 maxWidth: "80px !important",
+                                fontSize: "0.65rem !important",
                               },
                             // DPI 150%対応：さらに小さく
                             "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
                               {
-                                fontSize: "0.6rem !important",
                                 minWidth: "70px !important",
                                 maxWidth: "70px !important",
+                                fontSize: "0.6rem !important",
                               },
                           }}
                         >
-                          system
-                        </Badge>
+                          <Text
+                            fontSize="xs"
+                            fontWeight="600"
+                            color="rgba(255,255,255,0.85)"
+                            fontFamily="monospace"
+                            textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                            letterSpacing="0.5px"
+                          >
+                            system
+                          </Text>
+                        </Box>
                         <Text 
                           fontSize="sm" 
                           color="fgMuted"

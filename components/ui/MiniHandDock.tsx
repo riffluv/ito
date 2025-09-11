@@ -87,7 +87,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (isFirebaseQuotaExceeded(e)) {
         handleFirebaseQuotaError("連想ワード記録");
         notify({
-          title: "🚨 Firebase読み取り制限",
+          title: "接続制限のため記録不可",
           description: "現在連想ワードを記録できません。24時間後に再度お試しください。",
           type: "error",
         });
