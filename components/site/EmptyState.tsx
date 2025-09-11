@@ -53,7 +53,7 @@ export default function EmptyState({ onCreate }: { onCreate: () => void }) {
             ▼ まだアクティブなルームがありません ▼
           </Text>
           <Text 
-            color="rgba(255,255,255,0.7)" 
+            color={UI_TOKENS.COLORS.textMuted} 
             maxW="400px" 
             lineHeight={1.6}
             fontSize="sm"

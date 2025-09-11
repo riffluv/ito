@@ -1,7 +1,7 @@
 "use client";
 import { TopicDisplay } from "@/components/TopicDisplay";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 // ドラクエ風フェーズアナウンス
@@ -44,10 +44,10 @@ export default function UniversalMonitor({
         display="inline-block"
         px={6}
         py={4}
-        bg="rgba(15,15,35,0.95)"
-        border="2px solid rgba(255,255,255,0.8)"
+        bg={UI_TOKENS.COLORS.panelBg}
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
         borderRadius="8px"
-        boxShadow="inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.3)"
+        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
         backdropFilter="blur(8px)"
       >
         <Box
@@ -55,8 +55,8 @@ export default function UniversalMonitor({
           fontSize="sm"
           fontWeight={700}
           lineHeight={1}
-          color="rgba(255,255,255,0.95)"
-          textShadow="0 1px 2px rgba(0,0,0,0.5)"
+          color={UI_TOKENS.COLORS.whiteAlpha95}
+          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         >
           <TopicDisplay room={room} inline />
           {/* フェーズアナウンスは別コンポーネント（GSAPアニメーション版）に移行 */}

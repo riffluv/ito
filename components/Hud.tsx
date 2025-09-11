@@ -95,7 +95,7 @@ export function Hud({
           {roomName}
         </Box>
         <Box
-          bg="rgba(74,158,255,0.3)"
+          bg={UI_TOKENS.COLORS.dqBlueAlpha30}
           color={UI_TOKENS.COLORS.textBase}
           padding="0.5rem 0.75rem"
           borderRadius="6px"

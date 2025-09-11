@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface ArtifactResultProps {
@@ -29,7 +29,7 @@ export default function ArtifactResultOverlay({
       justifyContent="center"
       css={{
         // メインメニューと調和した高級感ある背景
-        background: "linear-gradient(135deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)", // 透明度軽減でカード視認性向上
+        background: UI_TOKENS.GRADIENTS.dqPanel,
         // 控えめなテクスチャで品格演出
         backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)",
         backgroundSize: "32px 32px",
@@ -61,8 +61,8 @@ export default function ArtifactResultOverlay({
           justifyContent="center"
           gap={3}
           css={{
-            color: success ? "rgba(255,255,255,0.95)" : "rgba(239,68,68,1)",
-            textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            color: success ? UI_TOKENS.COLORS.whiteAlpha95 : UI_TOKENS.COLORS.orangeRed,
+            textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
             animation: "titleIn 600ms ease-out 200ms forwards",
           }}
         >
@@ -75,7 +75,7 @@ export default function ArtifactResultOverlay({
           fontSize={{ base: "16px", md: "18px" }}
           letterSpacing="-0.01em"
           fontWeight={500}
-          color="rgba(255,255,255,0.8)"
+          color={UI_TOKENS.COLORS.textMuted}
           opacity={0}
           css={{
             animation: "subIn 500ms ease-out 600ms forwards",

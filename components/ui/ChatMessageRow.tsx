@@ -14,10 +14,10 @@ function ChatMessageRowBase({ sender, text, isMe }: ChatMessageRowProps) {
     <HStack gap={2} align="flex-start" flexWrap="nowrap">
       <Text
         fontSize="sm"
-        color={isMe ? "rgba(255,223,0,0.9)" : "rgba(135,206,250,0.9)"}
+        color={isMe ? UI_TOKENS.COLORS.accentGold : UI_TOKENS.COLORS.skyBlue}
         fontFamily="monospace"
         fontWeight="bold"
-        textShadow="0 1px 1px rgba(0,0,0,0.6)"
+        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         minW="100px"
         maxW="100px"
         textAlign="left"
@@ -33,7 +33,7 @@ function ChatMessageRowBase({ sender, text, isMe }: ChatMessageRowProps) {
         fontSize="sm"
         color={UI_TOKENS.COLORS.textBase}
         fontFamily="monospace"
-        textShadow="0 1px 1px rgba(0,0,0,0.6)"
+        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         lineHeight={1.4}
         flex={1}
         wordBreak="break-word"

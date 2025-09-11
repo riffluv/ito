@@ -68,7 +68,7 @@ export function AppButton({
     color: "white",
     border: "2px solid",
     borderColor: p.borderColor,
-    boxShadow: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
+    boxShadow: UI_TOKENS.BUTTON_SHADOWS.flat,
     // transform/hoverアニメーションはJSイベントで統一管理
   } : {};
 
@@ -92,6 +92,13 @@ export function AppButton({
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
     transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}`,
     ...((css as any) || {}),
+    // CSS擬似で影段階を統一（JSイベントはtransformのみ担当）
+    ...(visual === "solid"
+      ? {
+          "&:hover": { boxShadow: UI_TOKENS.BUTTON_SHADOWS.hover },
+          "&:active": { boxShadow: UI_TOKENS.BUTTON_SHADOWS.active },
+        }
+      : {}),
   };
 
   return (

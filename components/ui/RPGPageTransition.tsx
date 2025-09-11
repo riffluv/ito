@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Box } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 
 interface RPGPageTransitionProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export function RPGPageTransition({ children }: RPGPageTransitionProps) {
     // 1. シンプルなフェードアウト
     gsap.set(overlay, {
       opacity: 0,
-      backgroundColor: "rgba(8,9,15,0.95)",
+      backgroundColor: UI_TOKENS.COLORS.panelBg,
       display: "block",
     });
 

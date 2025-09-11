@@ -279,7 +279,7 @@ export function CreateRoomModal({
                     },
                     _focus: {
                       borderColor: "black",
-                      boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.2)",
+                      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                       background: "#f8f8f8",
                       outline: "none",
                     },

@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, HStack, Text } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
 
@@ -178,14 +179,13 @@ export function DragonQuestParty({
       }}
     >
       <Box
-        bg="linear-gradient(135deg, rgba(16,64,16,0.95), rgba(8,48,8,0.98))" // ドラクエ風深い森の緑グラデーション
+        bg={UI_TOKENS.GRADIENTS.forestGreen}
         border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
         borderRadius={0}
         px={4}
         py={2}
         css={{
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.3)",
+          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
@@ -231,15 +231,14 @@ export function DragonQuestParty({
                 <Box
                   key={player.id}
                   data-player-id={player.id}
-                  bg="rgba(16,20,32,0.8)" // より濃い独自色
-                  border="1px solid rgba(255,255,255,0.6)"
+                  bg={UI_TOKENS.COLORS.panelBg}
+                  border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
                   borderRadius={0}
                   px={2}
                   py={1}
                   w="100%"
                   css={{
-                    boxShadow:
-                      "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25)",
+                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                     // 行の縦幅を一定にする（アイコン差で高さが変わらないよう固定）
                     minHeight: "28px",
                     display: "flex",
@@ -257,7 +256,7 @@ export function DragonQuestParty({
                     <Text
                       fontSize={{ base: "xs", md: "sm" }}
                       fontWeight={500}
-                      color={isHost ? "#FFD700" : "white"}
+                      color={isHost ? UI_TOKENS.COLORS.accentGold : "white"}
                       textShadow="1px 1px 0px #000"
                       fontFamily="monospace"
                       letterSpacing="0.3px"
@@ -269,8 +268,7 @@ export function DragonQuestParty({
                           ? {
                               animation:
                                 "hostGlow 2s ease-in-out infinite alternate",
-                              textShadow:
-                                "0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4), 1px 1px 0px #000",
+                              textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
                             }
                           : undefined
                       }

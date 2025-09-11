@@ -255,8 +255,17 @@ export const UI_TOKENS = {
     purpleAlpha30: "rgba(139, 92, 246, 0.3)",
     purpleAlpha25: "rgba(139, 92, 246, 0.25)",
     purpleAlpha15: "rgba(139, 92, 246, 0.15)",
+    purpleAlpha04: "rgba(139, 92, 246, 0.04)",
+    purpleAlpha025: "rgba(139, 92, 246, 0.025)",
     purpleAlpha02: "rgba(139, 92, 246, 0.02)",
     amberAlpha65: "rgba(217,119,6,0.65)",
+    tealAlpha40: "rgba(20,184,166,0.4)",
+    indigoAlpha10: "rgba(99,102,241,0.1)",
+    indigoAlpha15: "rgba(99,102,241,0.15)",
+    indigoAlpha08: "rgba(99,102,241,0.08)",
+    indigoAlpha04: "rgba(99,102,241,0.04)",
+    indigoAlpha20: "rgba(99,102,241,0.2)",
+    indigoAlpha40: "rgba(99,102,241,0.4)",
     // 通知・フェーズ用の強調色
     accentGold: "rgba(255,215,0,0.9)",
     skyBlue: "rgba(135,206,250,0.9)",
@@ -287,6 +296,32 @@ export const UI_TOKENS = {
   TEXT_SHADOWS: {
     soft: "0 1px 2px rgba(0,0,0,0.5)",
     none: "none",
+    heroGold:
+      "0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(255,215,0,0.4), 1px 1px 0 rgba(0,0,0,0.8)",
+  },
+  GRADIENTS: {
+    deepBlue: "linear-gradient(135deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))",
+    deepBlueHover: "linear-gradient(135deg, rgba(0,60,140,0.98), rgba(0,40,100,1))",
+    deepBlueActive: "linear-gradient(135deg, rgba(0,36,84,0.95), rgba(0,24,60,0.98))",
+    forestGreen: "linear-gradient(135deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))",
+    forestGreenHover: "linear-gradient(135deg, rgba(32,148,64,0.98), rgba(16,112,48,1))",
+    forestGreenActive: "linear-gradient(135deg, rgba(8,80,32,1), rgba(4,64,24,1))",
+    royalPurple: "linear-gradient(135deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))",
+    royalPurpleHover: "linear-gradient(135deg, rgba(64,32,148,0.98), rgba(48,16,112,1))",
+    royalPurpleActive: "linear-gradient(135deg, rgba(32,8,80,1), rgba(24,4,64,1))",
+    orangeSunset: "linear-gradient(135deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))",
+    orangeSunsetHover: "linear-gradient(135deg, rgba(148,64,32,0.98), rgba(112,48,16,1))",
+    orangeSunsetActive: "linear-gradient(135deg, rgba(80,32,8,1), rgba(64,24,4,1))",
+    dqPanel:
+      "linear-gradient(135deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)",
+  },
+  // ボタン影の段階表現
+  BUTTON_SHADOWS: {
+    flat: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
+    raised: "0 4px 10px rgba(0,0,0,0.25)",
+    hover: "0 6px 12px rgba(0,0,0,0.3)",
+    active: "inset 0 3px 0 rgba(0,0,0,0.2)",
+    subtle: "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
   },
   FILTERS: {
     dropShadowSoft: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",

@@ -22,7 +22,7 @@ export default function LobbyRightRail() {
             <Box
               w={8}
               h={8}
-              bg="rgba(255,255,255,0.1)"
+              bg={UI_TOKENS.COLORS.whiteAlpha10}
               borderRadius={0}
               border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
               display="flex"
@@ -49,7 +49,7 @@ export default function LobbyRightRail() {
           </HStack>
 
           <Text
-            color="rgba(255,255,255,0.8)"
+            color={UI_TOKENS.COLORS.textMuted}
             fontSize="xs"
             lineHeight={1.6}
             fontFamily="monospace"
@@ -97,7 +97,7 @@ export default function LobbyRightRail() {
             <Box
               w={8}
               h={8}
-              bg="rgba(255,255,255,0.1)"
+              bg={UI_TOKENS.COLORS.whiteAlpha10}
               borderRadius={0}
               border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
               display="flex"
@@ -124,7 +124,7 @@ export default function LobbyRightRail() {
           </HStack>
 
           <Text
-            color="rgba(255,255,255,0.8)"
+            color={UI_TOKENS.COLORS.textMuted}
             fontSize="xs"
             lineHeight={1.6}
             fontFamily="monospace"
@@ -136,7 +136,7 @@ export default function LobbyRightRail() {
 
           <Box
             p={2}
-            bg="rgba(255,255,255,0.1)"
+            bg={UI_TOKENS.COLORS.whiteAlpha10}
             border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
             borderRadius={0}
             fontSize="xs"

@@ -87,14 +87,14 @@ export function EmptyCard({
 
         // ドラッグ中の状態：ドロップ可能なスロットを微かに示唆
         ...(isDragActive && isDroppable && !dndDroppable.isOver && {
-          borderColor: "rgba(139, 92, 246, 0.3)", // より控えめな色で（必要ならトークン化候補）
-          backgroundColor: "rgba(139, 92, 246, 0.02)", // さらに微かに（必要ならトークン化候補）
+          borderColor: UI_TOKENS.COLORS.purpleAlpha30,
+          backgroundColor: UI_TOKENS.COLORS.purpleAlpha02,
           // アニメーションなしで、静的な状態表示
         }),
 
         // @dnd-kitのisOver状態での洗練されたドロップフィードバック（テキストや矢印は表示しない）
         ...(id && dndDroppable.isOver && {
-          backgroundColor: "rgba(139, 92, 246, 0.15)", // 紫ベース（候補: TOKENSに追加可）
+          backgroundColor: UI_TOKENS.COLORS.purpleAlpha15,
           borderColor: UI_TOKENS.COLORS.purpleAlpha80,
           borderStyle: "solid",
           transform: "scale(1.05)", // より明確なスケール
@@ -120,22 +120,22 @@ export function EmptyCard({
       <style>{`
         @keyframes dragonQuestReady {
           0%, 100% {
-            border-color: rgba(139, 92, 246, 0.4);
-            box-shadow: inset 0 0 8px rgba(139, 92, 246, 0.1), 0 2px 8px rgba(0,0,0,0.1);
+            border-color: ${UI_TOKENS.COLORS.purpleAlpha40};
+            box-shadow: inset 0 0 8px ${UI_TOKENS.COLORS.purpleAlpha15}, 0 2px 8px ${UI_TOKENS.COLORS.blackAlpha20};
           }
           50% {
-            border-color: rgba(139, 92, 246, 0.8);
-            box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.3), 0 2px 12px rgba(139, 92, 246, 0.15);
+            border-color: ${UI_TOKENS.COLORS.purpleAlpha80};
+            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 2px 12px ${UI_TOKENS.COLORS.purpleAlpha15};
           }
         }
         
         @keyframes dragonQuestDrop {
           0%, 100% {
-            box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.4), 0 4px 16px rgba(139, 92, 246, 0.3), 0 0 24px rgba(139, 92, 246, 0.2);
+            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 4px 16px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 0 24px ${UI_TOKENS.COLORS.purpleAlpha15};
             transform: scale(1.05);
           }
           50% {
-            box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.6), 0 4px 20px rgba(139, 92, 246, 0.4), 0 0 32px rgba(139, 92, 246, 0.3);
+            box-shadow: inset 0 0 20px ${UI_TOKENS.COLORS.purpleAlpha60}, 0 4px 20px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 0 32px ${UI_TOKENS.COLORS.purpleAlpha30};
             transform: scale(1.08);
           }
         }

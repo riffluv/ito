@@ -204,7 +204,7 @@ export function SettingsModal({
                     borderRadius={0}
                     border="2px solid"
                     borderColor={isActive ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                    bg={isActive ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
+                    bg={isActive ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
                     color="white"
                     fontFamily="monospace"
                     fontWeight="bold"
@@ -235,12 +235,12 @@ export function SettingsModal({
                         borderRadius={0}
                         border="2px solid"
                         borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                        bg={isSelected ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
+                        bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
                         transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
                         boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
                         _hover={{
                           borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                          bg: isSelected ? "rgba(255,255,255,0.15)" : UI_TOKENS.COLORS.panelBg,
+                          bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
                         }}
                       >
                         <HStack justify="space-between" align="start">
@@ -316,12 +316,12 @@ export function SettingsModal({
                         borderRadius={0}
                         border="2px solid"
                         borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                        bg={isSelected ? "rgba(255,255,255,0.1)" : UI_TOKENS.COLORS.panelBg}
+                        bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
                         transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
                         boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
                         _hover={{
                           borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                          bg: isSelected ? "rgba(255,255,255,0.15)" : UI_TOKENS.COLORS.panelBg,
+                          bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
                         }}
                       >
                         <HStack justify="space-between" align="start">
@@ -404,7 +404,7 @@ export function SettingsModal({
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     アニメーション モード
                   </Text>
-                  <Text fontSize="xs" color="rgba(255,255,255,0.7)" mb={3}>
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
                     げんざい: {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}
                     （自動判定: {gpuCapability === "high" ? "高" : "低"}）
                   </Text>
@@ -435,19 +435,13 @@ export function SettingsModal({
                           p={4}
                           borderRadius={0}
                           border="2px solid"
-                          borderColor={
-                            isSelected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
-                          }
-                          bg={isSelected ? "rgba(255,255,255,0.1)" : "rgba(8,9,15,0.7)"}
-                          transition="background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease"
-                          boxShadow={
-                            isSelected
-                              ? "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)"
-                              : "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.2)"
-                          }
+                          borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                          bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
                           _hover={{
-                            borderColor: "rgba(255,255,255,0.8)",
-                            bg: isSelected ? "rgba(255,255,255,0.15)" : "rgba(8,9,15,0.8)",
+                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                            bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
                           }}
                         >
                           <HStack justify="space-between" align="start">
@@ -463,7 +457,7 @@ export function SettingsModal({
                               </Text>
                               <Text
                                 fontSize="sm"
-                                color="rgba(255,255,255,0.7)"
+                                color={UI_TOKENS.COLORS.textMuted}
                                 lineHeight="short"
                                 fontFamily="monospace"
                               >
@@ -475,7 +469,7 @@ export function SettingsModal({
                               h={5}
                               borderRadius={0}
                               border="2px solid"
-                              borderColor={isSelected ? "white" : "rgba(255,255,255,0.5)"}
+                              borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
