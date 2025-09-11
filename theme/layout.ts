@@ -213,3 +213,35 @@ export function getDynamicBorder(
     ? UNIFIED_LAYOUT.BORDER.WIDTH.MEDIUM
     : UNIFIED_LAYOUT.BORDER.WIDTH.THIN;
 }
+
+// ==========================
+// 🎨 UI TOKENS (Colors/Shadows/Easing)
+// 2025 ベストプラクティス: 文字列の直書きを減らし可読性/一貫性を向上
+// ==========================
+export const UI_TOKENS = {
+  COLORS: {
+    // ドラクエ風の基調色
+    dqBlue: "#4a9eff",
+    dqPurple: "#8b5cf6",
+    dqRed: "#ff6b6b",
+    textBase: "#ffffff",
+    textMuted: "rgba(255,255,255,0.7)",
+    panelBg: "rgba(8,9,15,0.95)",
+  },
+  EASING: {
+    hover: "cubic-bezier(0.4, 0, 0.2, 1)",
+    standard: "cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  SHADOWS: {
+    cardRaised:
+      "0 4px 16px -4px rgba(0,0,0,0.25), 0 2px 8px -2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+    cardFloating:
+      "0 8px 24px -8px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
+    panelSubtle: "0 2px 8px rgba(0,0,0,0.25)",
+    panelDistinct:
+      "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.3)",
+    activeArea: "inset 0 0 12px rgba(139, 92, 246, 0.25)",
+  },
+} as const;
+
+export type UITokens = typeof UI_TOKENS;

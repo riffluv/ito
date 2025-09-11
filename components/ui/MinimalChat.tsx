@@ -31,7 +31,7 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
           fontSize="16px"
           fontWeight="bold"
           boxShadow="inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)" // 立体効果
-          transition="all 0.15s ease"
+          transition="transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease"
           _hover={{
             transform: "translateY(-1px)",
             boxShadow:

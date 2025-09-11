@@ -154,15 +154,30 @@ export default function RoomPage() {
     if (!room || !uid) return;
     // ゲーム進行中（waiting以外）は非メンバー入室不可
     if (!canAccess && room.status !== "waiting") {
-      try {
-        notify({
-          title: "入室できません",
-          description:
-            "ゲーム進行中です。ホストがリセットすると入室可能になります。",
-          type: "info",
-        });
-      } catch {}
-      router.replace("/");
+      (async () => {
+        try {
+          // 二重呼び出し防止
+          if (!leavingRef.current) leavingRef.current = true;
+          try {
+            notify({
+              title: "入室できません",
+              description:
+                "ゲーム進行中です。ホストがリセットすると入室可能になります。",
+              type: "info",
+            });
+          } catch {}
+          // 可能な限りクリーンアップ（presence と players 残骸防止）
+          try {
+            await detachNow();
+            await forceDetachAll(roomId, uid);
+          } catch {}
+          try {
+            await leaveRoomAction(roomId, uid, displayName);
+          } catch {}
+        } finally {
+          router.replace("/");
+        }
+      })();
     }
   }, [room?.status, uid, canAccess]);
 

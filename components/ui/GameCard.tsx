@@ -2,7 +2,8 @@
 import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
-import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
+import { UI_TOKENS } from "@/theme/layout";
+import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { memo } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
@@ -29,14 +30,14 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     border: waitingInCentral
       ? "rgba(255,255,255,0.8)"
       : "rgba(255,255,255,0.6)",
-    text: "#ffffff",
-    meta: waitingInCentral ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.7)",
+    text: UI_TOKENS.COLORS.textBase,
+    meta: waitingInCentral ? "rgba(255,255,255,0.9)" : UI_TOKENS.COLORS.textMuted,
   };
 
   // 状態別アクセント
   const stateAccent = {
-    success: "#4a9eff", // ドラクエ風の青
-    fail: "#ff6b6b", // 控えめな赤
+    success: UI_TOKENS.COLORS.dqBlue, // ドラクエ風の青
+    fail: UI_TOKENS.COLORS.dqRed, // 控えめな赤
     default: baseColors.border,
   };
 
@@ -59,9 +60,9 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     border: borderStyle,
     borderColor:
       state === "success"
-        ? "#4a9eff" // 成功時は青
+        ? UI_TOKENS.COLORS.dqBlue // 成功時は青
         : state === "fail"
-          ? "#ff6b6b" // 失敗時は赤
+          ? UI_TOKENS.COLORS.dqRed // 失敗時は赤
           : state === "ready"
             ? "rgba(139, 92, 246, 0.8)" // 連想ワード登録完了時は紫ボーダー
             : stateAccent.default, // その他はデフォルト（白）
@@ -69,8 +70,8 @@ const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
     colors: {
       text: baseColors.text,
       meta: baseColors.meta,
-      clue: waitingInCentral ? "#ffffff" : "#e2e8f0",
-      number: "#ffffff", // 全状態で白色統一 - 視認性最優先
+      clue: waitingInCentral ? UI_TOKENS.COLORS.textBase : "#e2e8f0",
+      number: UI_TOKENS.COLORS.textBase, // 全状態で白色統一 - 視認性最優先
     },
   };
 };
@@ -108,12 +109,12 @@ export function GameCard({
   const strongGlow = "0 0 0 3px rgba(139,92,246,0.35)";
   const successBorder =
     state === "success"
-      ? "#4a9eff" // Blue for success  
+      ? UI_TOKENS.COLORS.dqBlue // Blue for success  
       : state === "fail"
-        ? "#ff6b6b" // Red for failure
+        ? UI_TOKENS.COLORS.dqRed // Red for failure
         : state === "ready"
           ? "rgba(139, 92, 246, 0.8)" // Purple for ready (with clue)
-          : "#ffffff"; // White for default/pending
+          : UI_TOKENS.COLORS.textBase; // White for default/pending
   const successShadow =
     state === "success"
       ? successLevel === "mild"
@@ -127,7 +128,7 @@ export function GameCard({
     boundaryRing ? `${boundaryRing}, ${core}` : core;
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
-    const { effectiveMode } = useGPUPerformance();
+    const { effectiveMode } = useAnimationSettings();
     if (effectiveMode === "simple") {
       // 低スペック向け: クロスフェードで“めくった感”を演出（回転なし）
       const backNumberFontSize = getNumberFontSize(
@@ -507,7 +508,7 @@ export function GameCard({
                 transform="translate(-50%, -50%)"
                 fontWeight={700}
                 fontSize={backNumberFontSize}
-                color="#ffffff" // 全状態で白色統一
+                color={UI_TOKENS.COLORS.textBase} // 全状態で白色統一
                 lineHeight="1.3" // ディセンダー対応
                 textShadow={
                   waitingInCentral ? "none" : "0 1px 2px rgba(0,0,0,0.5)"
@@ -650,7 +651,7 @@ export function GameCard({
               ? getNumberFontSize(number)
               : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
           }
-          color="#ffffff" // 全状態で白色統一
+          color={UI_TOKENS.COLORS.textBase} // 全状態で白色統一
           lineHeight={typeof number === "number" ? 1.3 : 1.3}
           textShadow={
             waitingInCentral

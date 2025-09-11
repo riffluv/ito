@@ -73,7 +73,8 @@ export function EmptyCard({
         border: "2px dashed rgba(255,255,255,0.3)",
         borderRadius: "8px",
         backgroundColor: "rgba(8,9,15,0.6)",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition:
+          "background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
         
         // ホバー状態を見えやすく
