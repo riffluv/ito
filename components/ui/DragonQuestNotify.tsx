@@ -78,13 +78,13 @@ export function dragonQuestNotify(options: {
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case "success":
-      return "✅";
+      return "✓";
     case "error":
-      return "❌";
+      return "✕";
     case "warning":
-      return "⚠️";
+      return "⚠";
     default:
-      return "ℹ️";
+      return "○";
   }
 };
 
@@ -227,63 +227,88 @@ function NotificationItem({
     >
       <Box
         ref={contentRef}
-        display="flex"
-        alignItems="flex-start"
-        gap={3}
-        px={4}
-        py={3}
+        position="relative"
         bg="rgba(8,9,15,0.95)"
         border="2px solid rgba(255,255,255,0.9)"
         borderRadius={0}
         minW="280px"
         maxW="360px"
+        px={4}
+        py={3}
         css={{
           boxShadow:
             "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           backdropFilter: "blur(8px) saturate(1.2)",
+          // ドラクエ風吹き出し三角
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            bottom: "-10px",
+            left: "20px",
+            width: "0",
+            height: "0",
+            borderLeft: "10px solid transparent",
+            borderRight: "10px solid transparent", 
+            borderTop: "10px solid rgba(255,255,255,0.9)",
+            zIndex: 2,
+          },
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            bottom: "-12px",
+            left: "20px",
+            width: "0",
+            height: "0", 
+            borderLeft: "10px solid transparent",
+            borderRight: "10px solid transparent",
+            borderTop: "10px solid rgba(8,9,15,0.95)",
+            zIndex: 1,
+          },
         }}
       >
-        <Text fontSize="lg" flexShrink={0}>
-          {getNotificationIcon(notification.type)}
-        </Text>
-
-        <Box flex={1} minW={0}>
-          <Text
-            fontSize="sm"
-            fontWeight={700}
-            color={getNotificationColor(notification.type)}
-            textShadow="1px 1px 0px #000"
-            letterSpacing="0.5px"
-            fontFamily="monospace"
-            lineHeight={1.3}
-            mb={notification.description ? 1 : 0}
-          >
-            {notification.title}
+        <Box display="flex" alignItems="flex-start" gap={3}>
+          <Text fontSize="lg" flexShrink={0}>
+            {getNotificationIcon(notification.type)}
           </Text>
 
-          {notification.description && (
+          <Box flex={1} minW={0}>
             <Text
-              fontSize="xs"
-              color="white"
+              fontSize="sm"
+              fontWeight={700}
+              color={getNotificationColor(notification.type)}
               textShadow="1px 1px 0px #000"
+              letterSpacing="0.5px"
               fontFamily="monospace"
-              lineHeight={1.4}
-              opacity={0.9}
+              lineHeight={1.3}
+              mb={notification.description ? 1 : 0}
             >
-              {notification.description}
+              {notification.title}
             </Text>
-          )}
-        </Box>
 
-        <Text
-          fontSize="xs"
-          color="rgba(255,255,255,0.5)"
-          fontFamily="monospace"
-          cursor="pointer"
-          _hover={{ color: "white" }}
-        >
-          ✕
-        </Text>
+            {notification.description && (
+              <Text
+                fontSize="xs"
+                color="white"
+                textShadow="1px 1px 0px #000"
+                fontFamily="monospace"
+                lineHeight={1.4}
+                opacity={0.9}
+              >
+                {notification.description}
+              </Text>
+            )}
+          </Box>
+
+          <Text
+            fontSize="xs"
+            color="rgba(255,255,255,0.5)"
+            fontFamily="monospace"
+            cursor="pointer"
+            _hover={{ color: "white" }}
+          >
+            ✕
+          </Text>
+        </Box>
       </Box>
     </Box>
   );
