@@ -20,11 +20,10 @@ export default function WaitingArea({
 }: WaitingAreaProps) {
   return (
     <Box
-      position="fixed"
-      left={{ base: "20px", md: "24px" }}
-      right={{ base: 3, md: 6 }}
-      bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
-      zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
+      width="100%"
+      maxWidth="600px"
+      mx="auto"
+      mt={{ base: 4, md: 6 }}
       p={{ base: 3, md: 4 }}
       // 上品な控えめスタイル（AIテンプレ脱却）
       // borderなし - 透明背景でクリーンな表示
@@ -34,6 +33,11 @@ export default function WaitingArea({
         background: "transparent",
         // シャドウも最小限に（ボーダーが主役）
         boxShadow: "none",
+        // 150DPI専用: WaitingArea自体を圧縮
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+          marginTop: "0.5rem !important",
+          padding: "0.5rem !important",
+        },
       }}
     >
       {title && (

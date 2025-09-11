@@ -412,14 +412,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {/* コンパクトヘッダー - DPI125%対応 */}
       <Box
         textAlign="center"
-        marginBottom={{ base: "1rem", md: "1.25rem" }}
+        marginBottom={{ base: "0.5rem", md: "0.75rem" }}
         flex="0 0 auto"
         width="100%"
         maxWidth="var(--board-max-width)"
         marginInline="auto"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            marginBottom: "0.75rem",
+            marginBottom: "0.5rem",
           },
         }}
       ></Box>
@@ -434,6 +434,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         overflow="visible"
         position="relative"
         minHeight={0}
+        pt={{ base: 2, md: 3 }}
+        pb={{ base: 4, md: 6 }}
+        css={{
+          // 150DPI専用最適化: 縦方向圧縮
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+            paddingTop: "0.25rem !important",
+            paddingBottom: "1rem !important",
+          },
+        }}
       >
         {/* DndContext scope expanded to include WaitingArea for drag functionality */}
         {resolveMode === "sort-submit" && roomStatus === "clue" ? (
@@ -482,7 +491,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               border="borders.retrogameThin"
               borderColor="#fff"
               borderRadius={0}
-              padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
+              padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
               minHeight="auto"
               width="100%"
               maxWidth="var(--board-max-width)"
@@ -617,11 +626,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
             {waitingPlayers.length > 0 && (
-              <WaitingArea
-                players={waitingPlayers}
-                isDraggingEnabled={true}
-                meId={meId}
-              />
+              <Box 
+                mt={{ base: 6, md: 8 }}
+                css={{
+                  // 150DPI専用: カード間隔を大幅圧縮
+                  [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                    marginTop: "1rem !important",
+                  },
+                }}
+              >
+                <WaitingArea
+                  players={waitingPlayers}
+                  isDraggingEnabled={true}
+                  meId={meId}
+                />
+              </Box>
             )}
           </DndContext>
         ) : (
@@ -632,7 +651,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               border="borders.retrogameThin"
               borderColor="#fff"
               borderRadius={0}
-              padding={{ base: 4, md: 6 }} // DPI100%基準でパディング縮小
+              padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
               minHeight="auto"
               width="100%"
               maxWidth="var(--board-max-width)"
@@ -745,11 +764,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             {/* 待機エリア（clue/waiting中・未提出者がいる場合）- Static mode */}
             {(roomStatus === "clue" || roomStatus === "waiting") &&
               waitingPlayers.length > 0 && (
-                <WaitingArea
-                  players={waitingPlayers}
-                  isDraggingEnabled={false}
-                  meId={meId}
-                />
+                <Box 
+                  mt={{ base: 6, md: 8 }}
+                  css={{
+                    // 150DPI専用: カード間隔を大幅圧縮
+                    [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                      marginTop: "1rem !important",
+                    },
+                  }}
+                >
+                  <WaitingArea
+                    players={waitingPlayers}
+                    isDraggingEnabled={false}
+                    meId={meId}
+                  />
+                </Box>
               )}
           </>
         )}
