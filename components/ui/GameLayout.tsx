@@ -1,5 +1,5 @@
 "use client";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import React, { ReactNode } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
@@ -68,11 +68,11 @@ export function GameLayout({
             "&.game-layout-immersive": {
               backgroundColor: "#0a0b14",
               backgroundImage: `
-                radial-gradient(ellipse 120% 80% at 50% 0%, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.08) 25%, transparent 60%),
-                linear-gradient(135deg, rgba(99,102,241,0.03) 0%, transparent 40%, rgba(139,92,246,0.02) 100%),
-                radial-gradient(circle at 1px 1px, rgba(99,102,241,0.08) 1px, transparent 0),
-                radial-gradient(circle at 8px 8px, rgba(139,92,246,0.04) 0.5px, transparent 0),
-                radial-gradient(circle at 16px 4px, rgba(255,255,255,0.02) 0.8px, transparent 0)
+                radial-gradient(ellipse 120% 80% at 50% 0%, ${UI_TOKENS.COLORS.indigoAlpha15} 0%, ${UI_TOKENS.COLORS.indigoAlpha08} 25%, transparent 60%),
+                linear-gradient(135deg, ${UI_TOKENS.COLORS.indigoAlpha04} 0%, transparent 40%, ${UI_TOKENS.COLORS.purpleAlpha02} 100%),
+                radial-gradient(circle at 1px 1px, ${UI_TOKENS.COLORS.indigoAlpha08} 1px, transparent 0),
+                radial-gradient(circle at 8px 8px, ${UI_TOKENS.COLORS.purpleAlpha04} 0.5px, transparent 0),
+                radial-gradient(circle at 16px 4px, ${UI_TOKENS.COLORS.whiteAlpha02} 0.8px, transparent 0)
               `,
               backgroundSize: "auto, auto, 24px 24px, 32px 32px, 48px 24px",
             },
@@ -82,7 +82,7 @@ export function GameLayout({
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(135deg, rgba(99,102,241,0.04) 0%, transparent 50%, rgba(139,92,246,0.025) 100%)",
+              `linear-gradient(135deg, ${UI_TOKENS.COLORS.indigoAlpha04} 0%, transparent 50%, ${UI_TOKENS.COLORS.purpleAlpha025} 100%)`,
             pointerEvents: "none",
             zIndex: 0,
           }}
@@ -229,7 +229,7 @@ export function GameLayout({
           display="flex"
           alignItems="center"
           px={{ base: 4, md: 8 }}
-          boxShadow="0 1px 0 rgba(255,255,255,0.05)"
+          boxShadow={`0 1px 0 ${UI_TOKENS.COLORS.whiteAlpha05}`}
         >
           {header}
         </Box>

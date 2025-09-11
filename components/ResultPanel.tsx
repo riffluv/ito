@@ -51,12 +51,12 @@ export function ResultPanel({
                   #{idx + 1} {p.name}
                 </Text>
                 <Text
-                  color="rgba(255,255,255,0.7)"
                   textAlign="center"
                   whiteSpace="nowrap"
                   overflow="hidden"
                   textOverflow="ellipsis"
                   textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+                  color={UI_TOKENS.COLORS.textMuted}
                 >
                   連想: {p.clue1 || "（未設定）"}
                 </Text>

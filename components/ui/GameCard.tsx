@@ -111,7 +111,7 @@ export function GameCard({
       : state === "fail"
         ? UI_TOKENS.COLORS.dqRed // Red for failure
         : state === "ready"
-          ? "rgba(139, 92, 246, 0.8)" // Purple for ready (with clue)
+          ? UI_TOKENS.COLORS.purpleAlpha80 // Purple for ready (with clue)
           : UI_TOKENS.COLORS.textBase; // White for default/pending
   const successShadow =
     state === "success"

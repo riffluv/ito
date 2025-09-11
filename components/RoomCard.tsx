@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
 import { Play, UserCheck, Users } from "lucide-react";
 
 export function RoomCard({
@@ -176,8 +177,8 @@ export function RoomCard({
               px={4}
               width="100%"
               borderRadius="md"
-              bg="rgba(255,255,255,0.02)"
-              border="1px solid rgba(255,255,255,0.1)"
+              bg={UI_TOKENS.COLORS.whiteAlpha02}
+              border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha10}`}
               css={{ pointerEvents: "none" }}
             >
               <Text

@@ -148,13 +148,13 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case "success":
-        return "rgba(50,205,50,0.9)";
+        return UI_TOKENS.COLORS.limeGreen;
       case "error":
-        return "rgba(255,69,0,0.9)";
+        return UI_TOKENS.COLORS.orangeRed;
       case "warning":
-        return "rgba(255,215,0,0.9)";
+        return UI_TOKENS.COLORS.accentGold;
       default:
-        return "rgba(135,206,250,0.9)";
+        return UI_TOKENS.COLORS.skyBlue;
     }
   };
 
@@ -244,8 +244,8 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
               <Text
                 fontSize={{ base: "sm", md: "md" }}
                 fontWeight={700}
-                color="rgba(135,206,250,0.9)"
-                textShadow="1px 1px 0px #000"
+                color={UI_TOKENS.COLORS.skyBlue}
+                textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
                 letterSpacing="0.5px"
                 fontFamily="monospace"
                 lineHeight={1.2}
@@ -255,7 +255,7 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
                   <Text
                     as="span"
                     fontSize="xs"
-                    color="rgba(255,255,255,0.7)"
+                    color={UI_TOKENS.COLORS.textMuted}
                     ml={2}
                   >
                     (オンライン: {onlineCount})

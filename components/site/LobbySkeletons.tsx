@@ -29,7 +29,7 @@ function RoomCardSkeleton() {
         w="60px"
         h="24px"
         borderRadius="full"
-        bg="rgba(255,255,255,0.1)"
+        bg={UI_TOKENS.COLORS.whiteAlpha10}
       />
 
       {/* Title skeleton */}
@@ -37,7 +37,7 @@ function RoomCardSkeleton() {
         w="70%"
         h="20px"
         borderRadius="8px"
-        bg="rgba(255,255,255,0.15)"
+        bg={UI_TOKENS.COLORS.whiteAlpha15}
         mb={4}
       />
 
@@ -46,7 +46,7 @@ function RoomCardSkeleton() {
         w="40%"
         h="14px"
         borderRadius="6px"
-        bg="rgba(255,255,255,0.1)"
+        bg={UI_TOKENS.COLORS.whiteAlpha10}
         mb={6}
       />
 
@@ -58,7 +58,7 @@ function RoomCardSkeleton() {
         right={6}
         h="40px"
         borderRadius="lg"
-        bg="rgba(107,115,255,0.2)"
+        bg={UI_TOKENS.COLORS.indigoAlpha20}
       />
     </Box>
   );

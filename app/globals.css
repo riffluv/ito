@@ -36,6 +36,22 @@
   }
   :root {
     color-scheme: dark;
+    /* Gradients for CSS usage (optional) */
+    --grad-deep-blue: linear-gradient(135deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98));
+    --grad-forest-green: linear-gradient(135deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98));
+    --grad-royal-purple: linear-gradient(135deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98));
+    --grad-orange-sunset: linear-gradient(135deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98));
+    --grad-dq-panel: linear-gradient(135deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%);
+
+    /* Hero text glow */
+    --text-hero-gold: 0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(255,215,0,0.4), 1px 1px 0 rgba(0,0,0,0.8);
+    --text-hero-gold-weak: 0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4);
+    --text-hero-gold-strong: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 24px rgba(255, 215, 0, 0.6);
+
+    /* Star particles (background dots) */
+    --stars-strong: rgba(255, 255, 255, 0.08);
+    --stars-mid: rgba(255, 255, 255, 0.06);
+    --stars-light: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -72,6 +88,18 @@
 
     /* スケール（ブラウザズーム/DPIに応じた微調整） */
     --adaptive-scale: clamp(0.95, 1vw + 0.25rem, 1.1);
+
+    /* Colors (sync with UI_TOKENS for CSS usage) */
+    --white-a95: rgba(255,255,255,0.95);
+    --white-a90: rgba(255,255,255,0.9);
+    --white-a80: rgba(255,255,255,0.8);
+    --white-a60: rgba(255,255,255,0.6);
+    --white-a50: rgba(255,255,255,0.5);
+    --white-a40: rgba(255,255,255,0.4);
+    --white-a30: rgba(255,255,255,0.3);
+    --black-a30: rgba(0,0,0,0.3);
+    --black-a20: rgba(0,0,0,0.2);
+    --panel-bg: rgba(8,9,15,0.95);
   }
 
   /* 125% DPI 以上（Windows/Chrome 環境の実運用を想定） */
@@ -138,7 +166,7 @@
     padding: 8px 12px;
     border-radius: 6px;
     text-decoration: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 6px var(--black-a20);
   }
   .skip-link:focus,
   .skip-link:focus-visible {
@@ -225,7 +253,7 @@
   .scrollable-content {
     overflow: hidden auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    scrollbar-color: var(--black-a20) transparent;
   }
   .scrollable-content::-webkit-scrollbar {
     width: 6px;
@@ -235,11 +263,11 @@
     background: transparent;
   }
   .scrollable-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--black-a20);
     border-radius: 3px;
   }
   .scrollable-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--black-a30);
   }
 
   .crisp-edges {
@@ -263,9 +291,9 @@
     position: absolute;
     inset: 0;
     background-image:
-      radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.08), transparent 60%),
-      radial-gradient(1.5px 1.5px at 70% 60%, rgba(255, 255, 255, 0.06), transparent 60%),
-      radial-gradient(1.8px 1.8px at 40% 80%, rgba(255, 255, 255, 0.06), transparent 60%);
+      radial-gradient(2px 2px at 20% 30%, var(--stars-strong), transparent 60%),
+      radial-gradient(1.5px 1.5px at 70% 60%, var(--stars-mid), transparent 60%),
+      radial-gradient(1.8px 1.8px at 40% 80%, var(--stars-light), transparent 60%);
     background-repeat: no-repeat;
     transform: translateZ(0);
   }
@@ -279,12 +307,8 @@
     .animate-pulse { animation: pulse 1.5s ease-in-out infinite; }
 
     @keyframes hostGlow { 
-      from { 
-        text-shadow: 0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 215, 0, 0.4);
-      } 
-      to { 
-        text-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 24px rgba(255, 215, 0, 0.6);
-      }
+      from { text-shadow: var(--text-hero-gold-weak); } 
+      to { text-shadow: var(--text-hero-gold-strong); }
     }
   }
 

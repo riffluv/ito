@@ -20,17 +20,16 @@ export function EmptySlot({ index }: EmptySlotProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(255,255,255,0.02)",
-        border: "1.5px dashed rgba(255,255,255,0.15)",
+        background: UI_TOKENS.COLORS.whiteAlpha02,
+        border: `1.5px dashed ${UI_TOKENS.COLORS.whiteAlpha15}`,
         borderRadius: "16px",
-        boxShadow:
-          "0 1px 3px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.03)",
+        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
         backdropFilter: "blur(4px)",
         fontSize: "1.125rem",
         fontWeight: 500,
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-        color: "rgba(255,255,255,0.4)",
+        color: UI_TOKENS.COLORS.whiteAlpha40,
         letterSpacing: "-0.01em",
         transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
         cursor: "pointer",
@@ -38,12 +37,11 @@ export function EmptySlot({ index }: EmptySlotProps) {
         overflow: "hidden",
         
         "&:hover": {
-          background: "rgba(255,255,255,0.06)",
-          borderColor: "rgba(255,255,255,0.25)",
-          color: "rgba(255,255,255,0.7)",
+          background: UI_TOKENS.COLORS.whiteAlpha10,
+          borderColor: UI_TOKENS.COLORS.whiteAlpha30,
+          color: UI_TOKENS.COLORS.textMuted,
           transform: "translateY(-2px)",
-          boxShadow:
-            "0 4px 12px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)",
+          boxShadow: UI_TOKENS.SHADOWS.cardHover,
         },
       }}
     >

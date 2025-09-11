@@ -51,8 +51,8 @@ export function SortableItem({
         
         // 他のアイテムがホバー中の視覚フィードバック（ベストプラクティス：線なし）
         ...(isOver && !isDragging && {
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderColor: "rgba(255,255,255,0.6)",
+          backgroundColor: UI_TOKENS.COLORS.whiteAlpha10,
+          borderColor: UI_TOKENS.COLORS.whiteAlpha60,
           transform: "scale(1.01)",
           transition: `transform 0.2s ${UI_TOKENS.EASING.standard}, background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}`,
         }),

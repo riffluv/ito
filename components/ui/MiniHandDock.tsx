@@ -21,6 +21,7 @@ import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
 import React from "react";
+import { UI_TOKENS } from "@/theme/layout";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
@@ -180,10 +181,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       w="100%"
       p={4}
       // ✅ ドラクエ風デザイン統一（他の要素と同じ太い白枠 - より際立つ）
-      bg="rgba(8,9,15,0.9)"
-      border="3px solid rgba(255,255,255,0.9)"
+      bg={UI_TOKENS.COLORS.panelBg}
+      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
       borderRadius={0}
-      boxShadow="inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)"
+      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
       position="relative"
       _before={{
         content: '""',
@@ -192,7 +193,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         left: "-3px",
         right: "-3px",
         bottom: "-3px",
-        border: "1px solid rgba(255,255,255,0.3)",
+        border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
         borderRadius: 0,
         pointerEvents: "none",
       }}
@@ -209,21 +210,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }}
           size="sm"
           maxW={{ base: "100%", md: "520px" }}
-          bg="rgba(8,9,15,0.85)"
+          bg={UI_TOKENS.COLORS.panelBg}
           color="white"
-          border="2px solid rgba(255,255,255,0.6)"
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
           borderRadius={6}
-          boxShadow="inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(255,255,255,0.1), 0 2px 0 rgba(0,0,0,0.2)"
-          _placeholder={{ color: "rgba(255,255,255,0.5)" }}
+          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+          _placeholder={{ color: UI_TOKENS.COLORS.whiteAlpha50 }}
           _focus={{
-            borderColor: "#4a9eff",
-            boxShadow:
-              "inset 0 2px 0 rgba(0,0,0,0.4), inset 0 -2px 0 rgba(74,158,255,0.2), 0 0 0 2px rgba(74,158,255,0.3)",
-            bg: "rgba(8,9,15,0.9)",
+            borderColor: UI_TOKENS.COLORS.dqBlue,
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+            bg: UI_TOKENS.COLORS.panelBg,
           }}
           _hover={{
-            borderColor: "rgba(255,255,255,0.8)",
-            bg: "rgba(8,9,15,0.9)",
+            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+            bg: UI_TOKENS.COLORS.panelBg,
           }}
         />
         <AppButton
@@ -258,9 +258,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           alignItems="center"
           justifyContent="center"
           px={3}
-          bg="rgba(8,9,15,0.9)"
+          bg={UI_TOKENS.COLORS.panelBg}
           color="white"
-          border="3px solid rgba(255,255,255,0.9)"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           borderRadius={8}
           fontWeight={800}
           fontSize={
@@ -270,7 +270,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }
           lineHeight={1}
           whiteSpace="nowrap"
-          boxShadow="inset 0 3px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.4), 0 4px 0 rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)"
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
           css={{
             fontVariantNumeric: "tabular-nums",
             fontFamily:
@@ -281,7 +281,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             backdropFilter: "blur(4px)",
             background:
               typeof me?.number === "number"
-                ? "linear-gradient(135deg, rgba(74,158,255,0.2), rgba(0,0,0,0.8))"
+                ? `linear-gradient(135deg, ${UI_TOKENS.COLORS.dqBlueAlpha20}, rgba(0,0,0,0.8))`
                 : "rgba(0,0,0,0.8)",
             letterSpacing:
               typeof me?.number === "number" && String(me.number).length >= 3
@@ -300,25 +300,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             size="md"
             visual="solid"
             onClick={quickStart}
-            bg="linear-gradient(135deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))" // ドラクエ風緑グラデーション（冒険の始まり）
+            bg={UI_TOKENS.GRADIENTS.forestGreen}
             color="white"
             border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
             borderRadius={0}
             fontWeight="700"
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
-            boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
             _hover={{
-              bg: "linear-gradient(135deg, rgba(32,148,64,0.98), rgba(16,112,48,1))", // ホバー時より明るい緑
+              bg: UI_TOKENS.GRADIENTS.forestGreenHover,
               color: "rgba(255,255,255,0.95)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
               borderColor: "rgba(255,255,255,1)",
               transform: "translateY(-1px)", // 軽いリフトアップ
             }}
             _active={{
-              bg: "linear-gradient(135deg, rgba(8,80,32,1), rgba(4,64,24,1))", // クリック時はより暗い緑
+              bg: UI_TOKENS.GRADIENTS.forestGreenActive,
               color: "rgba(255,255,255,0.9)",
-              boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
               transform: "translateY(0)", // 元の位置に戻る
             }}
             _disabled={{
@@ -339,25 +339,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             visual="solid"
             onClick={evalSorted}
             disabled={!allSubmitted}
-            bg="linear-gradient(135deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))" // ドラクエ風紫グラデーション
+            bg={UI_TOKENS.GRADIENTS.royalPurple}
             color="white"
             border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
             borderRadius={0}
             fontWeight="700"
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
-            boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
             _hover={{
-              bg: "linear-gradient(135deg, rgba(64,32,148,0.98), rgba(48,16,112,1))", // ホバー時より明るい紫
+              bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
               color: "rgba(255,255,255,0.95)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
               borderColor: "rgba(255,255,255,1)",
               transform: "translateY(-1px)", // 軽いリフトアップ
             }}
             _active={{
-              bg: "linear-gradient(135deg, rgba(32,8,80,1), rgba(24,4,64,1))", // クリック時はより暗い紫
+              bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
               color: "rgba(255,255,255,0.9)",
-              boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
               transform: "translateY(0)", // 元の位置に戻る
             }}
             _disabled={{
@@ -379,25 +379,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               size="md"
               visual="solid"
               onClick={roomStatus === "finished" ? resetGame : continueRound}
-              bg="linear-gradient(135deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))" // ドラクエ風オレンジ系グラデーション
+              bg={UI_TOKENS.GRADIENTS.orangeSunset}
               color="white"
               border="3px solid rgba(255,255,255,0.95)" // 太いドラクエ風ボーダー
               borderRadius={0}
               fontWeight="700"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
-              boxShadow="inset 0 2px 0 rgba(255,223,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.4)"
+              boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
               _hover={{
-                bg: "linear-gradient(135deg, rgba(148,64,32,0.98), rgba(112,48,16,1))", // ホバー時より明るいオレンジ
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
                 color: "rgba(255,255,255,0.95)",
-                textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "rgba(255,255,255,1)",
                 transform: "translateY(-1px)", // 軽いリフトアップ
               }}
               _active={{
-                bg: "linear-gradient(135deg, rgba(80,32,8,1), rgba(64,24,4,1))", // クリック時はより暗いオレンジ
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
                 color: "rgba(255,255,255,0.9)",
-                boxShadow: "inset 0 4px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)",
+                boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
                 transform: "translateY(0)", // 元の位置に戻る
               }}
               _disabled={{
