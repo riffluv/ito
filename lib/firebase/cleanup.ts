@@ -38,16 +38,19 @@ export async function cleanupOldRooms(minutesOld: number = 5) {
     for (const doc of snapshot.docs) {
       try {
         const roomData = doc.data();
-        
+
         // 🚨 緊急対応: ゲーム中でも5分経過で削除（読み取り制限対策）
         // 通常時は保護するが、制限対策として一時的に緩和
         const status = roomData.status as string;
-        
+
         // プレイヤー数をチェック（参加者がいる部屋のみ保護）
         const playersSnapshot = await getDocs(collection(doc.ref, "players"));
-        if (playersSnapshot.size > 1) { // 2人以上の場合のみ保護
+        if (playersSnapshot.size > 1) {
+          // 2人以上の場合のみ保護
           if (process.env.NODE_ENV === "development") {
-            console.log(`🎮 Protecting room with ${playersSnapshot.size} players: ${doc.id}`);
+            console.log(
+              `🎮 Protecting room with ${playersSnapshot.size} players: ${doc.id}`
+            );
           }
           continue;
         }
@@ -57,7 +60,9 @@ export async function cleanupOldRooms(minutesOld: number = 5) {
         deletedCount++;
 
         if (process.env.NODE_ENV === "development") {
-          console.log(`🧹 Deleted room (${status}): ${roomData.name || doc.id}`);
+          console.log(
+            `🧹 Deleted room (${status}): ${roomData.name || doc.id}`
+          );
         }
       } catch (error) {
         console.error(`Error deleting room ${doc.id}:`, error);
@@ -83,8 +88,14 @@ export async function autoCleanupOnLobbyLoad() {
   try {
     // 🚨 5分以上前の部屋を削除（読み取り制限対策）
     const result = await cleanupOldRooms(5);
-    if (result.success && result.deletedCount > 0 && process.env.NODE_ENV === "development") {
-      console.log(`🧹 Emergency cleanup: ${result.deletedCount} rooms removed`);
+    const deletedCount =
+      typeof result?.deletedCount === "number" ? result.deletedCount : 0;
+    if (
+      result.success &&
+      deletedCount > 0 &&
+      process.env.NODE_ENV === "development"
+    ) {
+      console.log(`🧹 Emergency cleanup: ${deletedCount} rooms removed`);
     }
     return result;
   } catch (error) {

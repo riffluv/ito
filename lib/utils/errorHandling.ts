@@ -38,7 +38,7 @@ export class AppError extends Error {
 export function getFirebaseErrorMessage(error: unknown): string {
   const firebaseError = error as { code?: string; message?: string };
   const code = firebaseError?.code;
-  
+
   switch (code) {
     case "permission-denied":
       return "権限がありません。再度ログインしてお試しください。";
@@ -161,9 +161,11 @@ export function createNetworkError(originalError: unknown): AppError {
  */
 export function isFirebaseQuotaExceeded(error: unknown): boolean {
   const firebaseError = error as { code?: string; message?: string };
-  return firebaseError?.code === "resource-exhausted" || 
-         firebaseError?.message?.includes("429") ||
-         firebaseError?.message?.includes("quota");
+  return Boolean(
+    firebaseError?.code === "resource-exhausted" ||
+      firebaseError?.message?.includes("429") ||
+      firebaseError?.message?.includes("quota")
+  );
 }
 
 /**
@@ -175,6 +177,6 @@ export function handleFirebaseQuotaError(context: string = ""): void {
     description: "読み取り制限に達しました。日本時間4時頃にリセットされます。",
     type: "error",
   });
-  
+
   console.error(`[Firebase Quota] ${context}: Read quota exceeded`);
 }
