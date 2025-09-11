@@ -6,7 +6,7 @@ import type { RoomDoc } from "@/lib/types";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
-import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
+import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export function SettingsModal({
   roomStatus,
 }: SettingsModalProps) {
   const { animationMode, setAnimationMode, effectiveMode, gpuCapability } =
-    useGPUPerformance();
+    useAnimationSettings();
 
   const [resolveMode, setResolveMode] = useState<string>(
     currentOptions?.resolveMode || "sort-submit"

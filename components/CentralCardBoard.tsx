@@ -593,19 +593,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
             <DragOverlay
-              dropAnimation={{ duration: 200, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}
+              dropAnimation={{ duration: 200, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }}
               modifiers={[restrictToWindowEdges]}
             >
               {activeId
                 ? (() => {
-                    const idx = (activeProposal as (string | null)[]).indexOf(
-                      activeId
-                    );
+                  const idx = (activeProposal as (string | null)[]).indexOf(
+                    activeId
+                  );
                     const ghostStyle = {
-                      transform: "rotate(3deg) scale(1.08)",
-                      filter: "brightness(1.15) drop-shadow(0 8px 20px rgba(139,92,246,0.4))",
-                      opacity: "0.95",
-                    };
+                      transform: "scale(1.05)",
+                      filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.35))",
+                      opacity: 0.98,
+                    } as React.CSSProperties;
                     
                     if (idx >= 0) {
                       return (
