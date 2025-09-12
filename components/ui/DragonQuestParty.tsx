@@ -31,23 +31,29 @@ const getPlayerStatus = (
   // clueフェーズでの連想ワード入力状況
   if (roomStatus === "clue") {
     if (player.clue1 && player.clue1.trim() !== "") {
-      return { icon: "◆", color: "#8b5cf6", status: "じゅんび完了" };
+      return { icon: "✅", color: "#22c55e", status: "連想完了" };
     } else {
-      return { icon: "◇", color: "#fbbf24", status: "かんがえ中" };
+      return { icon: "📝", color: "#fbbf24", status: "考え中" };
     }
   }
 
   // waitingフェーズでの準備状況
   if (roomStatus === "waiting") {
-    if (player.ready) {
-      return { icon: "●", color: "#8b5cf6", status: "参戦準備OK" };
-    } else {
-      return { icon: "○", color: "#94a3b8", status: "待機中" };
-    }
+    return { icon: "🛡️", color: "#94a3b8", status: "待機中" };
   }
 
-  // その他のフェーズ
-  return { icon: "■", color: "#3b82f6", status: "参加中" };
+  // revealフェーズ（カードめくり中）
+  if (roomStatus === "reveal") {
+    return { icon: "🎲", color: "#3b82f6", status: "判定中" };
+  }
+
+  // finishedフェーズ（結果発表）
+  if (roomStatus === "finished") {
+    return { icon: "🏆", color: "#f59e0b", status: "結果発表" };
+  }
+
+  // フォールバック（通常は到達しない）
+  return { icon: "🎲", color: "#3b82f6", status: "参加中" };
 };
 
 export function DragonQuestParty({
