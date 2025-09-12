@@ -61,19 +61,25 @@ export default function WaitingArea({
 
       <Box
         display="flex"
-        gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
-        flexWrap="wrap"
         justifyContent="center"
+        gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
         css={{
-          // DPI125%での最適化
+          // 上のカードエリアと全く同じスタイル
+          // DPI125%用最適化
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            gap: "8px",
+            gap: "8px", // DPI125%用最適化
           },
           // DPI 150%対応：空きスロットと統一
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-            {
-              gap: "12px !important", // 空きスロットと同じ間隔
-            },
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
+          },
+          // モバイル対応
+          "@media (max-width: 480px)": {
+            gap: "10px",
+          },
+          "@media (max-width: 360px)": {
+            gap: "6px",
+          },
         }}
       >
         {/* エキスパートモード: 自分のカードのみ表示 */}
