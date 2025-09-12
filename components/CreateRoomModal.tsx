@@ -65,7 +65,7 @@ export function CreateRoomModal({
       // ルームのデフォルトTTL（12時間）を付与して放置部屋を自動清掃
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const room: RoomDoc = {
-        name: displayMode === "minimal" ? `${name.trim()} [エキスパート]` : name.trim(),
+        name: displayMode === "minimal" ? `${name.trim()} [自分の手札]` : name.trim(),
         hostId: user.uid,
         hostName: displayName || "匿名", // ホスト名を直接埋め込み（Firestore最適化）
         options,
@@ -311,7 +311,7 @@ export function CreateRoomModal({
                       transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     }}
                   >
-                    🤝 協力モード
+                    🤝 みんなの手札
                   </button>
                   <button
                     type="button" 
@@ -331,7 +331,7 @@ export function CreateRoomModal({
                       transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     }}
                   >
-                    ⚡ エキスパート
+                    👤 自分の手札
                   </button>
                 </HStack>
                 <Text
@@ -342,7 +342,7 @@ export function CreateRoomModal({
                   opacity={0.7}
                   textShadow="1px 1px 0px #000"
                 >
-                  協力: 全員のカード表示 / エキスパート: 自分のみ表示
+                  みんなの手札: 全員のカード表示 / 自分の手札: 自分のみ表示
                 </Text>
               </Field.Root>
             </VStack>

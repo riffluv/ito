@@ -463,8 +463,8 @@ export default function RoomPage() {
     );
   }
 
-  // 表示用部屋名（[エキスパート]を除去）
-  const displayRoomName = room?.name?.replace(/\s*\[エキスパート\]$/, "") || "";
+  // 表示用部屋名（[自分の手札]を除去）
+  const displayRoomName = room?.name?.replace(/\s*\[自分の手札\]$/, "") || "";
 
   if (!room) {
     return (
@@ -539,7 +539,7 @@ export default function RoomPage() {
           resolveMode={room.options?.resolveMode}
           displayMode={
             room.options?.displayMode ||
-            (room.name?.includes("[エキスパート]") ? "minimal" : "full")
+            (room.name?.includes("[自分の手札]") ? "minimal" : "full")
           }
           isHost={isHost}
           orderNumbers={(room.order as any)?.numbers || {}}

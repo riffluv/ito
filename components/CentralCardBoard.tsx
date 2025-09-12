@@ -380,12 +380,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const proposedCount = Array.isArray(proposal)
     ? (proposal as (string | null)[]).filter(Boolean).length
     : 0;
+  const proposalLength = Array.isArray(activeProposal)
+    ? (activeProposal as (string | null)[]).length
+    : 0;
   const canConfirm =
     resolveMode === "sort-submit" &&
     roomStatus === "clue" &&
-    Array.isArray(eligibleIds) &&
-    proposedCount === eligibleIds.length &&
-    eligibleIds.length > 0 &&
+    proposedCount === proposalLength &&
+    proposalLength > 0 &&
     !!isHost;
   const onConfirm = async () => {
     if (!canConfirm) return;
@@ -555,8 +557,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     ) as string[]
                   }
                 >
-                  {/* Empty slots for placement - optimized for 8+ players */}
-                  {Array.from({ length: Math.max(0, eligibleIds.length) }).map(
+                  {/* Empty slots for placement - use server-padded length, fallback to eligibleIds */}
+                  {Array.from({
+                    length: Math.max(
+                      0,
+                      Math.max(
+                        (activeProposal as (string | null)[]).length,
+                        Array.isArray(eligibleIds) ? eligibleIds.length : 0
+                      )
+                    ),
+                  }).map(
                     (_, idx) => {
                       // Prefer proposal value, but fall back to locally optimistic
                       // `pending` so the UI doesn't temporarily show an empty
@@ -709,8 +719,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               }}
             >
               <Box width="100%" css={{ display: "contents" }}>
-                {/* Static game state: use eligible slots count - optimized */}
-                {Array.from({ length: Math.max(0, eligibleIds.length) }).map(
+                {/* Static game state: use order length during reveal/finished; fallback to eligibleIds */}
+                {Array.from({
+                  length: (() => {
+                    if (roomStatus === "reveal" || roomStatus === "finished") {
+                      return Math.max(0, (orderList || []).length);
+                    }
+                    const apLen = (activeProposal as (string | null)[]).length;
+                    const elig = Array.isArray(eligibleIds) ? eligibleIds.length : 0;
+                    return Math.max(0, Math.max(apLen, elig));
+                  })(),
+                }).map(
                   (_, idx) => {
                     // Prefer confirmed orderList entry; fall back to locally pending
                     // placement so the first card appears immediately in the slot
