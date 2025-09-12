@@ -56,10 +56,10 @@ export function useOptimizedRooms(enabled: boolean) {
       );
       const inprogLimit = Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0 ? INPROGRESS_LIMIT : 3;
       // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
+      // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
       const qInprog = query(
         roomsCol,
         where("status", "in", ["clue", "reveal"] as any),
-        orderBy("lastActiveAt", "desc"),
         limit(inprogLimit)
       );
 
@@ -74,7 +74,13 @@ export function useOptimizedRooms(enabled: boolean) {
       };
 
       const recentRooms = snapRecent.docs.map((d) => d.data() as any).filter(filterValid);
-      const inprogRooms = snapInprog.docs.map((d) => d.data() as any).filter(filterValid);
+      const inprogRooms = snapInprog.docs.map((d) => d.data() as any).filter(filterValid)
+        .sort((a: any, b: any) => {
+          // クライアント側でlastActiveAtソート
+          const aTime = a.lastActiveAt?.toMillis?.() || 0;
+          const bTime = b.lastActiveAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
 
       // 結合（重複排除: 同じidがあればinprog優先）
       const map = new Map<string, any>();
