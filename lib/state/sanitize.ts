@@ -1,4 +1,5 @@
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
+import { getDisplayMode, hasMinimalTag } from "@/lib/game/displayMode";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 export function sanitizeRoom(input: any): RoomDoc {
@@ -22,6 +23,13 @@ export function sanitizeRoom(input: any): RoomDoc {
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
       resolveMode: normalizeResolveMode(options.resolveMode),
+      // displayMode は保存されていれば通し、なければ name のサフィックスから派生
+      displayMode:
+        options?.displayMode === "minimal" || options?.displayMode === "full"
+          ? options.displayMode
+          : hasMinimalTag(input?.name)
+            ? "minimal"
+            : undefined,
       defaultTopicType: validTopic(options?.defaultTopicType)
         ? options.defaultTopicType
         : undefined,
