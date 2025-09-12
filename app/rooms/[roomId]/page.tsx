@@ -218,9 +218,15 @@ export default function RoomPage() {
     } catch {}
   }, [uid, displayName, roomId, room?.id]);
 
-  // 準備完了（ready）はオンライン参加者のみを対象に判定
-  const allCluesReady =
-    onlinePlayers.length > 0 && onlinePlayers.every((p) => p.ready === true);
+  // 準備完了（ready）はラウンド参加者（deal.players）を対象に判定
+  const allCluesReady = useMemo(() => {
+    const ids = Array.isArray((room as any)?.deal?.players)
+      ? (room as any).deal.players as string[]
+      : players.map((p) => p.id);
+    const idSet = new Set(ids);
+    const targets = players.filter((p) => idSet.has(p.id));
+    return targets.length > 0 && targets.every((p) => p.ready === true);
+  }, [players, Array.isArray((room as any)?.deal?.players) ? (room as any).deal.players.join(',') : '_']);
 
   // canStartSorting は eligibleIds 定義後に移動
 
