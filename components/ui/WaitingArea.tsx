@@ -3,13 +3,14 @@ import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
 import type { PlayerDoc } from "@/lib/types";
 import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Text, VStack } from "@chakra-ui/react";
 
 export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
   title?: string;
   isDraggingEnabled?: boolean; // ドラッグ機能有効化フラグ
   meId?: string; // 自分のID（本人のみドラッグ可能にする）
+  displayMode?: "full" | "minimal"; // カード表示モード
 }
 
 export default function WaitingArea({
@@ -17,14 +18,16 @@ export default function WaitingArea({
   title = "",
   isDraggingEnabled = false,
   meId,
+  displayMode = "full",
 }: WaitingAreaProps) {
   return (
-    <Box
+    <VStack
       width="100%"
       maxWidth="600px"
       mx="auto"
       mt={{ base: 4, md: 6 }}
       p={{ base: 3, md: 4 }}
+      gap={4}
       // 上品な控えめスタイル（AIテンプレ脱却）
       // borderなし - 透明背景でクリーンな表示
       borderRadius="lg"
@@ -73,17 +76,29 @@ export default function WaitingArea({
             },
         }}
       >
-        {players.map((p) => (
-          <WaitingAreaCard
-            key={p.id}
-            player={p}
-            isDraggingEnabled={isDraggingEnabled}
-            meId={meId}
-          />
-        ))}
+        {/* エキスパートモード: 自分のカードのみ表示 */}
+        {displayMode === "minimal" 
+          ? players.filter(p => p.id === meId).map((p) => (
+              <WaitingAreaCard
+                key={p.id}
+                player={p}
+                isDraggingEnabled={isDraggingEnabled}
+                meId={meId}
+              />
+            ))
+          : players.map((p) => (
+              <WaitingAreaCard
+                key={p.id}
+                player={p}
+                isDraggingEnabled={isDraggingEnabled}
+                meId={meId}
+              />
+            ))
+        }
       </Box>
 
+
       <Box as="style">{`@keyframes pulseW{0%{opacity:.85}100%{opacity:1}}`}</Box>
-    </Box>
+    </VStack>
   );
 }
