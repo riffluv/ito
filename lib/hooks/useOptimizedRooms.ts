@@ -45,24 +45,42 @@ export function useOptimizedRooms(enabled: boolean) {
       // 🚨 緊急読み取り削減: 直近3分のみに制限
       const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
       const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
-      const q = query(
+      const qRecent = query(
         roomsCol,
         where("lastActiveAt", ">=", Timestamp.fromDate(threeMinAgo)),
         orderBy("lastActiveAt", "desc"),
         limit(5) // 🚨 20 → 5に削減
       );
-      const snap = await getDocs(q);
-      const activeRooms = snap.docs
-        .map((d) => d.data() as any)
-        .filter((r: any) => {
-          const now = Date.now();
-          const exp = (r as any).expiresAt;
-          const expMs =
-            typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
-          if (expMs && expMs <= now) return false;
-          return true;
-        });
-      setRooms(activeRooms);
+      const INPROGRESS_LIMIT = Number(
+        (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
+      );
+      const inprogLimit = Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0 ? INPROGRESS_LIMIT : 3;
+      // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
+      const qInprog = query(
+        roomsCol,
+        where("status", "in", ["clue", "reveal"] as any),
+        orderBy("lastActiveAt", "desc"),
+        limit(inprogLimit)
+      );
+
+      const [snapRecent, snapInprog] = await Promise.all([getDocs(qRecent), getDocs(qInprog)]);
+
+      const now = Date.now();
+      const filterValid = (r: any) => {
+        const exp = (r as any).expiresAt;
+        const expMs = typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
+        if (expMs && expMs <= now) return false;
+        return true;
+      };
+
+      const recentRooms = snapRecent.docs.map((d) => d.data() as any).filter(filterValid);
+      const inprogRooms = snapInprog.docs.map((d) => d.data() as any).filter(filterValid);
+
+      // 結合（重複排除: 同じidがあればinprog優先）
+      const map = new Map<string, any>();
+      for (const r of recentRooms) map.set(r.id, r);
+      for (const r of inprogRooms) map.set(r.id, r);
+      setRooms(Array.from(map.values()));
       lastFetchRef.current = Date.now();
     } catch (err: any) {
       // Firebase制限エラー専用処理
