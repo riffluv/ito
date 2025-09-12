@@ -17,6 +17,7 @@ import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
+import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -464,7 +465,7 @@ export default function RoomPage() {
   }
 
   // 表示用部屋名（[自分の手札]を除去）
-  const displayRoomName = room?.name?.replace(/\s*\[自分の手札\]$/, "") || "";
+  const displayRoomName = stripMinimalTag(room?.name) || "";
 
   if (!room) {
     return (
@@ -537,12 +538,21 @@ export default function RoomPage() {
           failed={!!room.order?.failed}
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
-          displayMode={
-            room.options?.displayMode ||
-            (room.name?.includes("[自分の手札]") ? "minimal" : "full")
-          }
+          displayMode={getDisplayMode(room)}
           isHost={isHost}
           orderNumbers={(room.order as any)?.numbers || {}}
+          slotCount={(() => {
+            if (room.status === "reveal" || room.status === "finished") {
+              return (room.order?.list || []).length;
+            }
+            const dealLen = Array.isArray(room?.deal?.players)
+              ? (room.deal!.players as string[]).length
+              : 0;
+            const propLen = Array.isArray(room?.order?.proposal)
+              ? (room.order!.proposal as (string | null)[]).length
+              : 0;
+            return Math.max(dealLen, propLen, eligibleIds.length);
+          })()}
         />
       </Box>
     </Box>

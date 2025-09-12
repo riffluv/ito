@@ -12,8 +12,10 @@ import {
   moveCardInProposalToPosition,
   submitSortedOrder,
 } from "@/lib/game/room";
-import type { PlayerDoc } from "@/lib/types";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import type { ResolveMode } from "@/lib/game/resolveMode";
 import { Box } from "@chakra-ui/react";
+import Tooltip from "@/components/ui/Tooltip";
 import {
   DndContext,
   DragEndEvent,
@@ -50,18 +52,20 @@ import {
 
 interface CentralCardBoardProps {
   roomId: string;
-  players: any[]; // loosen typing (original PlayerDoc may lack id field)
+  players: (PlayerDoc & { id: string })[];
   orderList: string[];
   meId: string;
   eligibleIds: string[];
-  roomStatus: string; // union simplified
+  roomStatus: RoomDoc["status"];
   cluesReady?: boolean;
   failed: boolean;
   proposal?: string[];
-  resolveMode?: string;
+  resolveMode?: ResolveMode | null;
   orderNumbers?: Record<string, number | null | undefined>;
   isHost?: boolean;
   displayMode?: "full" | "minimal"; // カード表示モード
+  // 親からスロット数を明示指定する場合に使用（サーバ/親と厳密一致）
+  slotCount?: number;
 }
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
@@ -78,14 +82,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   isHost,
   orderNumbers = {},
   displayMode = "full",
+  slotCount,
 }) => {
   // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
     const m = new Map<string, PlayerDoc & { id: string }>();
-    players.forEach((p: any) => {
-      if (p && (p.id || p.uid)) {
-        m.set(p.id || p.uid, { ...(p as any), id: p.id || p.uid });
-      }
+    players.forEach((p) => {
+      if (p && p.id) m.set(p.id, p);
     });
     return m;
   }, [players]);
@@ -177,7 +180,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
     roomStatus,
-    resolveMode,
+    resolveMode: (resolveMode || undefined) as any,
     orderListLength: orderList?.length || 0,
     orderData:
       orderList && orderNumbers
@@ -246,6 +249,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setPending((cur) => cur.filter((id) => !present.has(id)));
   }, [proposal?.join(","), setPending]);
 
+  // 背景タブ/非表示化時はローカルの pending をクリアしてチラつきを抑止
+  useEffect(() => {
+    const onVis = () => {
+      try {
+        if (document.visibilityState === "hidden") {
+          setPending([]);
+        }
+      } catch {}
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+    };
+  }, [setPending]);
+
   const renderCard = (id: string, idx?: number) => (
     <CardRenderer
       key={id}
@@ -255,7 +277,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       orderList={orderList}
       pending={pending}
       proposal={proposal}
-      resolveMode={resolveMode}
+      resolveMode={(resolveMode || undefined) as any}
       roomStatus={roomStatus}
       // sort-submit ではサーバ駆動の revealIndex、順次ではローカル progressive index
       revealIndex={revealIndex}
@@ -277,6 +299,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     // 提案配列は null を空きとして保持（サーバー側でnullパディングするため）
     return (proposal ?? []) as (string | null)[];
   }, [proposal?.join(","), orderList?.join(","), roomStatus]);
+
+  // 親から明示されたスロット数（優先）にフォールバック（dragging/static共通）
+  const slotCountDragging = useMemo(() => {
+    if (typeof slotCount === "number" && slotCount > 0) return slotCount;
+    return Math.max(
+      (activeProposal as (string | null)[]).length || 0,
+      Array.isArray(eligibleIds) ? eligibleIds.length : 0
+    );
+  }, [slotCount, (activeProposal as (string | null)[]).length, eligibleIds.length]);
+  const slotCountStatic = useMemo(() => {
+    if (typeof slotCount === "number" && slotCount > 0) return slotCount;
+    if (roomStatus === "reveal" || roomStatus === "finished")
+      return (orderList || []).length || 0;
+    return Math.max(
+      (activeProposal as (string | null)[]).length || 0,
+      Array.isArray(eligibleIds) ? eligibleIds.length : 0
+    );
+  }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, eligibleIds.length]);
 
   const onDragEnd = async (e: DragEndEvent) => {
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
@@ -380,9 +420,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const proposedCount = Array.isArray(proposal)
     ? (proposal as (string | null)[]).filter(Boolean).length
     : 0;
-  const proposalLength = Array.isArray(activeProposal)
-    ? (activeProposal as (string | null)[]).length
-    : 0;
+  const proposalLength = slotCountDragging;
   const canConfirm =
     resolveMode === "sort-submit" &&
     roomStatus === "clue" &&
@@ -557,16 +595,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     ) as string[]
                   }
                 >
-                  {/* Empty slots for placement - use server-padded length, fallback to eligibleIds */}
-                  {Array.from({
-                    length: Math.max(
-                      0,
-                      Math.max(
-                        (activeProposal as (string | null)[]).length,
-                        Array.isArray(eligibleIds) ? eligibleIds.length : 0
-                      )
-                    ),
-                  }).map(
+                  {/* Empty slots for placement */}
+                  {Array.from({ length: Math.max(0, slotCountDragging) }).map(
                     (_, idx) => {
                       // Prefer proposal value, but fall back to locally optimistic
                       // `pending` so the UI doesn't temporarily show an empty
@@ -574,7 +604,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       const ap = activeProposal[idx] as any;
                       const cardId =
                         (ap ?? null) || (pending && pending[idx]) || null;
-                      if (cardId) {
+                      const ready = cardId
+                        ? !!(
+                            playerMap.get(cardId)?.clue1 &&
+                            playerMap.get(cardId)!.clue1.trim() !== ""
+                          )
+                        : false;
+                      if (cardId && ready) {
                         // proposal 由来のみ sortable。pending 由来は一時表示（ドラッグ不可）
                         return ap ? (
                           <SortableItem id={cardId} key={cardId}>
@@ -719,17 +755,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               }}
             >
               <Box width="100%" css={{ display: "contents" }}>
-                {/* Static game state: use order length during reveal/finished; fallback to eligibleIds */}
-                {Array.from({
-                  length: (() => {
-                    if (roomStatus === "reveal" || roomStatus === "finished") {
-                      return Math.max(0, (orderList || []).length);
-                    }
-                    const apLen = (activeProposal as (string | null)[]).length;
-                    const elig = Array.isArray(eligibleIds) ? eligibleIds.length : 0;
-                    return Math.max(0, Math.max(apLen, elig));
-                  })(),
-                }).map(
+                {/* Static game state */}
+                {Array.from({ length: Math.max(0, slotCountStatic) }).map(
                   (_, idx) => {
                     // Prefer confirmed orderList entry; fall back to locally pending
                     // placement so the first card appears immediately in the slot
@@ -744,16 +771,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     // ゲーム状態での表示条件確認
                     const isGameActive =
                       roomStatus === "clue" ||
-                      roomStatus === "playing" ||
                       roomStatus === "reveal" ||
                       roomStatus === "finished";
 
                     // カードがある場合はカード表示、ない場合は空きスロット表示
-                    return cardId && isGameActive ? (
+                    const ready = cardId
+                      ? !!(
+                          playerMap.get(cardId)?.clue1 &&
+                          playerMap.get(cardId)!.clue1.trim() !== ""
+                        )
+                      : false;
+                    return cardId && ready && isGameActive ? (
                       <React.Fragment key={cardId ?? `slot-${idx}`}>
                         {renderCard(cardId, idx)}
                       </React.Fragment>
-                    ) : (
+                    ) : isDroppableSlot ? (
                       <EmptyCard
                         key={`drop-zone-${idx}`}
                         slotNumber={idx + 1}
@@ -775,6 +807,30 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         }}
                         tabIndex={0}
                       />
+                    ) : (
+                      <Tooltip
+                        key={`drop-zone-${idx}`}
+                        content="配札後に有効/この位置には置けません"
+                        openDelay={300}
+                        showArrow
+                      >
+                        <Box display="inline-flex">
+                          <EmptyCard
+                            slotNumber={idx + 1}
+                            isDroppable={false}
+                            onDragOver={() => {}}
+                            onDragLeave={() => setIsOver(false)}
+                            onDrop={() => {}}
+                            alignSelf="flex-start"
+                            _focusVisible={{
+                              outline: "2px solid",
+                              outlineColor: "focusRing",
+                              outlineOffset: 2,
+                            }}
+                            tabIndex={0}
+                          />
+                        </Box>
+                      </Tooltip>
                     );
                   }
                 )}

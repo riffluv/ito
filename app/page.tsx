@@ -27,6 +27,7 @@ import { gsap } from "gsap";
 import { Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { stripMinimalTag } from "@/lib/game/displayMode";
 
 // 固定男性ナイトコンポーネント
 function KnightCharacter() {
@@ -516,7 +517,7 @@ export default function MainMenu() {
                 {filteredRooms.map((room: any) => (
                   <RoomCard
                     key={room.id}
-                    name={room.name?.replace(/\s*\[自分の手札\]$/, "") || ""}
+                    name={stripMinimalTag(room.name) || ""}
                     status={room.status}
                     count={lobbyCounts[room.id] ?? 0}
                     hostName={room.hostName || "匿名"}

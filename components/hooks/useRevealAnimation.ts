@@ -1,5 +1,7 @@
 import { finalizeReveal } from "@/lib/game/room";
 import { evaluateSorted } from "@/lib/game/rules";
+import type { ResolveMode } from "@/lib/game/resolveMode";
+import { logDebug } from "@/lib/utils/log";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_LINGER,
@@ -16,7 +18,7 @@ interface RealtimeResult {
 interface UseRevealAnimationProps {
   roomId: string;
   roomStatus?: string;
-  resolveMode?: string;
+  resolveMode?: ResolveMode | undefined;
   orderListLength: number;
   orderData?: {
     list: string[];
@@ -64,7 +66,7 @@ export function useRevealAnimation({
     if (!revealAnimating) return;
 
     if (revealIndex >= orderListLength) {
-      console.log(`[DEBUG] 全カード完了(${revealIndex} >= ${orderListLength})、REVEAL_LINGER開始`);
+      logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
       // Keep the animation flag true during the linger period so the UI
       // doesn't revert to the "face-down" state while waiting to finalize.
       const linger = setTimeout(() => {
@@ -149,7 +151,7 @@ export function useRevealAnimation({
           }
         }
       } catch (e) {
-        console.warn("リアルタイム判定エラー:", e);
+        logDebug("reveal", "realtime-eval-error", e);
       }
     }, delay);
 

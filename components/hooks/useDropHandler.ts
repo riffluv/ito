@@ -33,10 +33,11 @@ export function useDropHandler({
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
-
-    // sort-submitモードのみサポート（連想ワード確定前でもドラッグ可能）
+    const ready = !!(me && typeof me.clue1 === "string" && me.clue1.trim());
+    // 連想ワード未確定時は中央ボードへの提出を無効化（視覚的チラつき防止）
+    if (!ready) return false;
     return true;
-  }, [roomStatus, hasNumber]);
+  }, [roomStatus, hasNumber, me?.clue1]);
 
   // Sort-submit mode only: position dropping always allowed
   const canDropAtPosition = useMemo(() => {

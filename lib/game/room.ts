@@ -138,10 +138,15 @@ export async function addCardToProposalAtPosition(
     const room: any = roomSnap.data();
     if (room.status !== "clue") return; // clue 中のみ
     if (room?.options?.resolveMode !== "sort-submit") return; // モード確認
+    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
+      : null;
+    if (!roundPlayers || roundPlayers.length === 0) return; // 未配札
     const pSnap = await tx.get(playerRef);
     if (!pSnap.exists()) throw new Error("player not found");
     const player: any = pSnap.data();
     if (typeof player.number !== "number") throw new Error("number not set");
+    if (!roundPlayers.includes(playerId)) return; // このラウンドの対象外
     const current: string[] = room?.order?.proposal || [];
     if (current.includes(playerId)) return; // 重複防止
 
@@ -215,6 +220,11 @@ export async function moveCardInProposalToPosition(
     const room: any = roomSnap.data();
     if (room.status !== "clue") return;
     if (room?.options?.resolveMode !== "sort-submit") return;
+    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
+      : null;
+    if (!roundPlayers || roundPlayers.length === 0) return;
+    if (!roundPlayers.includes(playerId)) return;
     const current: any[] = (room?.order?.proposal || []).slice();
     const maxCount: number = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[]).length
@@ -281,9 +291,10 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
     const myNum: number | null = me?.number ?? null;
     if (typeof myNum !== "number") throw new Error("number not set");
 
-    const roundTotal: number | null = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[]).length
+    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
       : null;
+    const roundTotal: number | null = roundPlayers ? roundPlayers.length : null;
     const currentOrder = {
       list: room?.order?.list || [],
       lastNumber: room?.order?.lastNumber ?? null,
@@ -294,6 +305,7 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
     };
 
     if (currentOrder.list.includes(playerId)) return; // 二重出し防止
+    if (roundPlayers && !roundPlayers.includes(playerId)) return; // ラウンド対象外
 
     const { next } = applyPlay({
       order: currentOrder as any,
@@ -342,11 +354,16 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     // 提出リストの妥当性チェック（重複/人数）
     const uniqueOk = new Set(list).size === list.length;
     if (!uniqueOk) throw new Error("提出リストに重複があります");
-    const expected = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[]).length
-      : list.length;
+    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
+      : null;
+    const expected = roundPlayers ? roundPlayers.length : list.length;
     if (expected >= 2 && list.length !== expected) {
       throw new Error(`提出数が有効人数(${expected})と一致しません`);
+    }
+    if (roundPlayers) {
+      const allMember = list.every((pid) => roundPlayers.includes(pid));
+      if (!allMember) throw new Error("提出リストに対象外のプレイヤーが含まれています");
     }
 
     // プレイヤーの数字を取得して保存（リアルタイム判定で使用）
