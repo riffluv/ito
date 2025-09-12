@@ -153,6 +153,8 @@ export default function RoomPage() {
   const canAccess = isMember || isHost;
   useEffect(() => {
     if (!room || !uid) return;
+    // プレイヤー購読が未完了の間は判定しない（ハードリフレッシュ時の誤リダイレクト防止）
+    if (loading) return;
     // ゲーム進行中（waiting以外）は非メンバー入室不可
     if (!canAccess && room.status !== "waiting") {
       (async () => {
@@ -180,7 +182,7 @@ export default function RoomPage() {
         }
       })();
     }
-  }, [room?.status, uid, canAccess]);
+  }, [room?.status, uid, canAccess, loading]);
 
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {
