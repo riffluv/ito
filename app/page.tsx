@@ -203,6 +203,28 @@ export default function MainMenu() {
     });
   }, [rooms, lobbyCounts]);
 
+  // 直感的な並び順: 
+  // 1) オンライン人数が多い順（>0 を優先）
+  // 2) createdAt の新しい順（新規作成を優先表示）
+  // 3) lastActiveAt の新しい順（最終アクティブ）
+  const sortedRooms = useMemo(() => {
+    const getMs = (v: any) =>
+      v?.toMillis ? v.toMillis() : v instanceof Date ? v.getTime() : typeof v === 'number' ? v : 0;
+    const list = [...filteredRooms];
+    list.sort((a: any, b: any) => {
+      const ca = lobbyCounts[a.id] ?? 0;
+      const cb = lobbyCounts[b.id] ?? 0;
+      if ((cb > 0 ? 1 : 0) !== (ca > 0 ? 1 : 0)) return (cb > 0 ? 1 : 0) - (ca > 0 ? 1 : 0);
+      const aCreated = getMs(a.createdAt);
+      const bCreated = getMs(b.createdAt);
+      if (aCreated !== bCreated) return bCreated - aCreated;
+      const aActive = getMs(a.lastActiveAt);
+      const bActive = getMs(b.lastActiveAt);
+      return bActive - aActive;
+    });
+    return list;
+  }, [filteredRooms, lobbyCounts]);
+
   const openCreateFlow = () => {
     if (!displayName) {
       setTempName("");
@@ -534,7 +556,7 @@ export default function MainMenu() {
                 }}
                 gap={6}
               >
-                {filteredRooms.map((room: any) => (
+                {sortedRooms.map((room: any) => (
                   <RoomCard
                     key={room.id}
                     name={stripMinimalTag(room.name) || ""}

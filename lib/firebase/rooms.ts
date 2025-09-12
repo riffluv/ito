@@ -112,7 +112,7 @@ export async function leaveRoom(
         }
       }
 
-      const updates: any = { lastActiveAt: serverTimestamp() };
+      const updates: any = {};
       if (origPlayers.length !== filteredPlayers.length) {
         updates["deal.players"] = filteredPlayers;
         updates["order.total"] = filteredPlayers.length;
@@ -139,6 +139,29 @@ export async function leaveRoom(
   if (transferredTo) {
     try {
       await sendSystemMessage(roomId, `👑 ホストが ${transferredTo} さんに委譲されました`);
+    } catch {}
+  } else {
+    // トランザクション内で委譲できなかった場合のフォールバック:
+    // players コレクションから残存メンバーを確認して委譲する
+    try {
+      const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
+      const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+      if (others.length > 0) {
+        let nextHost = others[0];
+        try {
+          if (presenceSupported()) {
+            const uids = await fetchPresenceUids(roomId);
+            const online = others.find((id) => uids.includes(id));
+            if (online) nextHost = online;
+          }
+        } catch {}
+        await updateDoc(doc(db!, "rooms", roomId), {
+          hostId: nextHost,
+        });
+        try {
+          await sendSystemMessage(roomId, `👑 ホストが ${nextHost} さんに委譲されました`);
+        } catch {}
+      }
     } catch {}
   }
 }
