@@ -1,14 +1,14 @@
-# 🎯 Expert Mode Feature Review Request
+# 🎯 Hand Display Mode Feature Review Request
 
 ## 📋 Review Objective
 
-Please conduct a comprehensive technical review of the newly implemented **Expert Mode** feature for the Online ITO card game. This feature allows players to choose between two display modes when creating rooms:
-- **協力モード (Cooperation Mode)**: Shows all players' cards (default)  
-- **エキスパートモード (Expert Mode)**: Shows only the player's own card
+Please conduct a comprehensive technical review of the newly implemented **Hand Display Mode** feature for the Online ITO card game. This feature allows players to choose between two display modes when creating rooms:
+- **🤝 みんなの手札 (Everyone's Hand)**: Shows all players' cards (default)  
+- **👤 自分の手札 (My Own Hand)**: Shows only the player's own card
 
 ## 🎮 Feature Overview
 
-**Business Logic**: Expert mode provides a more authentic "hand of cards" feeling for experienced players by hiding other players' cards in the waiting area, while maintaining full game functionality.
+**Business Logic**: The "My Own Hand" mode provides a more authentic "hand of cards" feeling by hiding other players' cards in the waiting area, while maintaining full game functionality.
 
 **Implementation Date**: 2025-09-12  
 **Status**: ✅ Complete and deployed
@@ -72,13 +72,13 @@ components/ui/PlayersStatus.tsx         # (Deleted - was redundant counter)
 
 ### **Core Logic Flow**
 1. **Room Creation**: User selects display mode via toggle buttons
-2. **Data Persistence**: Mode stored as room name suffix `[エキスパート]` (Firestore workaround)
+2. **Data Persistence**: Mode stored as room name suffix `[自分の手札]` (Firestore workaround)
 3. **Display Logic**: Conditional rendering based on displayMode prop
-4. **UI Polish**: Room names shown without `[エキスパート]` suffix in user-facing displays
+4. **UI Polish**: Room names shown without `[自分の手札]` suffix in user-facing displays
 
 ### **Key Technical Decisions**
 - **Firestore Workaround**: Used room name tagging due to security rule limitations with `displayMode` field
-- **Fallback Strategy**: `room.options?.displayMode || (room.name?.includes("[エキスパート]") ? "minimal" : "full")`
+- **Fallback Strategy**: `room.options?.displayMode || (room.name?.includes("[自分の手札]") ? "minimal" : "full")`
 - **Component Cleanup**: Removed redundant PlayersStatus component for cleaner UX
 
 ## ✅ Expected Behaviors to Validate
@@ -87,21 +87,21 @@ components/ui/PlayersStatus.tsx         # (Deleted - was redundant counter)
 - [ ] Mode selection buttons work correctly
 - [ ] Visual feedback shows selected mode
 - [ ] Room creation succeeds for both modes
-- [ ] Room names display cleanly (no visible `[エキスパート]` tags)
+- [ ] Room names display cleanly (no visible `[自分の手札]` tags)
 
-### **Expert Mode Functionality**
+### **My Own Hand Mode Functionality**
 - [ ] Only player's own card displayed in waiting area
 - [ ] Other players' cards hidden from view
 - [ ] Game progression works normally
 - [ ] Real-time updates function correctly
 
-### **Cooperation Mode (Default)**
+### **Everyone's Hand Mode (Default)**
 - [ ] All players' cards visible
 - [ ] Backward compatibility maintained
 - [ ] No regression in existing functionality
 
 ### **Edge Cases**
-- [ ] Multiple players joining expert mode rooms
+- [ ] Multiple players joining "My Own Hand" mode rooms
 - [ ] Network disconnection/reconnection
 - [ ] Room persistence across browser refreshes
 - [ ] Cross-device synchronization
@@ -148,7 +148,7 @@ Please provide:
 
 ## 📝 Review Notes
 
-**Context**: This feature was implemented to address user feedback requesting a more authentic "hand of cards" experience for advanced players, while maintaining the cooperative default for beginners.
+**Context**: This feature was implemented to address user feedback requesting a more authentic "hand of cards" experience. The naming evolved from "Expert Mode" to "My Own Hand" to better reflect the feature's purpose and avoid intimidating beginners.
 
 **Technical Constraints**: Had to work around Firestore security rule limitations that prevented direct `displayMode` field persistence.
 

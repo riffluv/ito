@@ -70,6 +70,7 @@ export async function dealNumbers(roomId: string) {
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
   await updateDoc(doc(db!, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
+    "order.total": ordered.length,
   });
 }
 
@@ -147,7 +148,8 @@ export async function addCardToProposalAtPosition(
     let next: any[];
     const maxCount: number = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[]).length
-      : Math.max(1, (room?.order?.total as number) || 0) || 0;
+      : 0;
+    if (maxCount <= 0) return; // 未配札時は受け付けない
     // 上限が0になるケースはない想定だが、保険で0を許容
     if (targetIndex === -1) {
       // 末尾追加（既存の「出す」ボタン動作）
@@ -216,7 +218,8 @@ export async function moveCardInProposalToPosition(
     const current: any[] = (room?.order?.proposal || []).slice();
     const maxCount: number = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[]).length
-      : Math.max(1, (room?.order?.total as number) || 0) || 0;
+      : 0;
+    if (maxCount <= 0) return;
 
     const fromIdx = current.findIndex((v) => v === playerId);
     if (fromIdx < 0) return; // まだ出ていない
@@ -261,16 +264,8 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
   const meRef = doc(db!, "rooms", roomId, "players", playerId);
 
-  // presence count取得（可能なら）を先に行い、トランザクション内で参照する
+  // 終了判定は配札済みの参加者数（deal.players）に基づくため、presenceは参照しない
   let presenceCount: number | null = null;
-  try {
-    if (presenceSupported()) {
-      const uids = await fetchPresenceUids(roomId);
-      if (Array.isArray(uids)) presenceCount = uids.length;
-    }
-  } catch {
-    presenceCount = null;
-  }
 
   await runTransaction(db!, async (tx) => {
     const roomSnap = await tx.get(roomRef);
@@ -286,13 +281,16 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
     const myNum: number | null = me?.number ?? null;
     if (typeof myNum !== "number") throw new Error("number not set");
 
+    const roundTotal: number | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[]).length
+      : null;
     const currentOrder = {
       list: room?.order?.list || [],
       lastNumber: room?.order?.lastNumber ?? null,
       failed: !!room?.order?.failed,
       failedAt: room?.order?.failedAt ?? null,
       decidedAt: room?.order?.decidedAt || serverTimestamp(),
-      total: room?.order?.total ?? null,
+      total: roundTotal ?? room?.order?.total ?? null,
     };
 
     if (currentOrder.list.includes(playerId)) return; // 二重出し防止
@@ -306,8 +304,8 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 
     const shouldFinish = shouldFinishAfterPlay({
       nextListLength: next.list.length,
-      total: next.total ?? room?.order?.total ?? null,
-      presenceCount,
+      total: roundTotal ?? next.total ?? room?.order?.total ?? null,
+      presenceCount: null,
       nextFailed: !!next.failed,
       allowContinue,
     });
@@ -330,21 +328,6 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 
 // 並び替えで一括判定モード: 提出された順序で昇順チェックし、結果を確定
 export async function submitSortedOrder(roomId: string, list: string[]) {
-  // サーバー側バリデーション: 実アクティブ人数を取得（可能ならpresence、不可なら後でdeal.playersで代替）
-  let activeCount: number | null = null;
-  try {
-    if (presenceSupported()) {
-      const uids = await fetchPresenceUids(roomId);
-      if (Array.isArray(uids)) activeCount = uids.length;
-    }
-  } catch (err) {
-    if (isFirebaseQuotaExceeded(err)) {
-      handleFirebaseQuotaError("ゲーム進行");
-      throw new Error("Firebase読み取り制限のため、現在ゲームをプレイできません。24時間後に再度お試しください。");
-    }
-    activeCount = null;
-  }
-
   const _db = requireDb();
   await runTransaction(_db, async (tx) => {
     const roomRef = doc(_db, "rooms", roomId);
@@ -359,12 +342,9 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     // 提出リストの妥当性チェック（重複/人数）
     const uniqueOk = new Set(list).size === list.length;
     if (!uniqueOk) throw new Error("提出リストに重複があります");
-    const expected =
-      typeof activeCount === "number"
-        ? activeCount
-        : Array.isArray(room?.deal?.players)
-          ? (room.deal.players as string[]).length
-          : list.length;
+    const expected = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[]).length
+      : list.length;
     if (expected >= 2 && list.length !== expected) {
       throw new Error(`提出数が有効人数(${expected})と一致しません`);
     }
@@ -383,7 +363,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       list,
       numbers, // プレイヤー数字を保存
       decidedAt: serverTimestamp(),
-      total: list.length,
+      total: expected,
       failed: !judgmentResult.success,
       failedAt: judgmentResult.failedAt,
     } as any;
