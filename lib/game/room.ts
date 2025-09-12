@@ -71,6 +71,7 @@ export async function dealNumbers(roomId: string) {
   await updateDoc(doc(db!, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
     "order.total": ordered.length,
+    lastActiveAt: serverTimestamp(),
   });
 }
 
@@ -203,6 +204,7 @@ export async function addCardToProposalAtPosition(
     tx.update(roomRef, {
       "order.proposal": next,
       order: { ...(room.order || {}), proposal: next },
+      lastActiveAt: serverTimestamp(),
     });
   });
 }
@@ -265,6 +267,7 @@ export async function moveCardInProposalToPosition(
     tx.update(roomRef, {
       "order.proposal": normalized,
       order: { ...(room.order || {}), proposal: normalized },
+      lastActiveAt: serverTimestamp(),
     });
   });
 }
@@ -329,12 +332,13 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
         status: "reveal",
         order: next,
         result: { success, revealedAt: serverTimestamp() },
+        lastActiveAt: serverTimestamp(),
       });
       return;
     }
 
     // clue フェーズのまま order を更新して、全員に反映させる
-    tx.update(roomRef, { order: next });
+    tx.update(roomRef, { order: next, lastActiveAt: serverTimestamp() });
   });
 }
 
@@ -390,6 +394,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     tx.update(roomRef, {
       status: "reveal",
       order,
+      lastActiveAt: serverTimestamp(),
     });
   });
 }

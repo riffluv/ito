@@ -70,6 +70,7 @@ export default function MainMenu() {
   const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
     "create"
   );
+  const [lastRoom, setLastRoom] = useState<string | null>(null);
 
   // タイトルアニメーション用のref
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -112,6 +113,15 @@ export default function MainMenu() {
         }
       );
     }
+  }, []);
+
+  // 前回の部屋への導線（任意復帰）
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const lr = window.localStorage.getItem("lastRoom");
+      setLastRoom(lr && lr.trim() ? lr : null);
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -347,6 +357,16 @@ export default function MainMenu() {
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
+                  {lastRoom ? (
+                    <AppButton
+                      size="lg"
+                      visual="outline"
+                      palette="gray"
+                      onClick={() => router.push(`/rooms/${lastRoom}`)}
+                    >
+                      戻る: 前回のルーム
+                    </AppButton>
+                  ) : null}
                   <RPGButton size="lg" visual="outline" href="/rules">
                     <Image
                       src="/images/card3.webp"

@@ -9,6 +9,7 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -45,28 +46,6 @@ export async function leaveRoom(
   } catch {
     // Presence 削除失敗は無視（他の処理を継続）
   }
-  // ホスト退室時: 次のホストを決定（オンライン優先）
-  const playersSnap = await getDocs(
-    collection(db!, "rooms", roomId, "players")
-  );
-  const all = playersSnap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as any),
-  })) as (PlayerDoc & { id: string })[];
-  const others = all.filter((p) => p.id !== userId);
-
-  if (others.length > 0) {
-    let nextHost = others[0].id;
-    try {
-      if (presenceSupported()) {
-        const uids = await fetchPresenceUids(roomId);
-        const online = others.find((p) => uids.includes(p.id));
-        if (online) nextHost = online.id;
-      }
-    } catch {}
-    await transferHost(roomId, nextHost);
-  }
-
   // プレイヤーDoc重複安全削除
   try {
     const dupQ = query(
@@ -89,47 +68,63 @@ export async function leaveRoom(
     } catch {}
   }
 
-  // ゲーム状態からも除去（カード待機エリア、並び順から削除）
+  // ゲーム状態からも除去（カード待機エリア、並び順から削除）およびホスト委譲をトランザクションで原子的に実施
+  let transferredTo: string | null = null;
   try {
     const roomRef = doc(db!, "rooms", roomId);
-    const roomSnap = await getDoc(roomRef);
-    if (roomSnap.exists()) {
-      const roomData = roomSnap.data() as any;
-      let needsUpdate = false;
-      const updates: any = {};
+    await runTransaction(db!, async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists()) return;
+      const roomData = snap.data() as any;
 
-      // deal.players から削除
-      if (roomData.deal?.players && Array.isArray(roomData.deal.players)) {
-        const filteredPlayers = roomData.deal.players.filter((id: string) => id !== userId);
-        if (filteredPlayers.length !== roomData.deal.players.length) {
-          updates["deal.players"] = filteredPlayers;
-          needsUpdate = true;
+      // deal.players フィルタ
+      const origPlayers: string[] = Array.isArray(roomData?.deal?.players)
+        ? (roomData.deal.players as string[])
+        : [];
+      const filteredPlayers = origPlayers.filter((id) => id !== userId);
+
+      // order.* フィルタ
+      const origList: string[] = Array.isArray(roomData?.order?.list)
+        ? (roomData.order.list as string[])
+        : [];
+      const origProposal: (string | null)[] = Array.isArray(roomData?.order?.proposal)
+        ? (roomData.order.proposal as (string | null)[])
+        : [];
+      const filteredList = origList.filter((id) => id !== userId);
+      const filteredProposal = origProposal.filter((id) => id !== userId);
+
+      // ホスト委譲（他に誰かいれば）
+      if (roomData.hostId === userId) {
+        let nextHost: string | null = null;
+        if (filteredPlayers.length > 0) {
+          nextHost = filteredPlayers[0];
+          try {
+            if (presenceSupported()) {
+              const uids = await fetchPresenceUids(roomId);
+              const online = filteredPlayers.find((id) => uids.includes(id));
+              if (online) nextHost = online;
+            }
+          } catch {}
+        }
+        if (nextHost) {
+          tx.update(roomRef, { hostId: nextHost });
+          transferredTo = nextHost;
         }
       }
 
-      // order.list から削除
-      if (roomData.order?.list && Array.isArray(roomData.order.list)) {
-        const filteredList = roomData.order.list.filter((id: string) => id !== userId);
-        if (filteredList.length !== roomData.order.list.length) {
-          updates["order.list"] = filteredList;
-          needsUpdate = true;
-        }
+      const updates: any = { lastActiveAt: serverTimestamp() };
+      if (origPlayers.length !== filteredPlayers.length) {
+        updates["deal.players"] = filteredPlayers;
+        updates["order.total"] = filteredPlayers.length;
       }
-
-      // order.proposal から削除
-      if (roomData.order?.proposal && Array.isArray(roomData.order.proposal)) {
-        const filteredProposal = roomData.order.proposal.filter((id: string) => id !== userId);
-        if (filteredProposal.length !== roomData.order.proposal.length) {
-          updates["order.proposal"] = filteredProposal;
-          needsUpdate = true;
-        }
+      if (origList.length !== filteredList.length) {
+        updates["order.list"] = filteredList;
       }
-
-      // 更新が必要な場合のみ実行
-      if (needsUpdate) {
-        await updateDoc(roomRef, updates);
+      if (origProposal.length !== filteredProposal.length) {
+        updates["order.proposal"] = filteredProposal;
       }
-    }
+      if (Object.keys(updates).length > 0) tx.update(roomRef, updates);
+    });
   } catch (error) {
     console.warn("Failed to update room state on leave:", error);
   }
@@ -139,6 +134,13 @@ export async function leaveRoom(
     roomId,
     `${displayName || "匿名"} さんが退出しました`
   );
+
+  // ホスト委譲が発生した場合は告知
+  if (transferredTo) {
+    try {
+      await sendSystemMessage(roomId, `👑 ホストが ${transferredTo} さんに委譲されました`);
+    } catch {}
+  }
 }
 
 export async function resetRoomToWaiting(roomId: string) {
