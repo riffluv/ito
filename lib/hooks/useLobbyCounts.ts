@@ -75,6 +75,13 @@ export function useLobbyCounts(
           (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "")
             .toString()
             .toLowerCase() === "true");
+      const VERIFY_MULTI =
+        typeof process !== "undefined" &&
+        ((process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "").toString() ===
+          "1" ||
+          (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "")
+            .toString()
+            .toLowerCase() === "true");
       const excludeSet = new Set(
         Array.isArray(options?.excludeUid)
           ? options!.excludeUid
@@ -117,6 +124,8 @@ export function useLobbyCounts(
       // n===1 のときだけ行う軽量検証のスロットル管理
       const singleCheckInflight: Record<string, boolean> = {};
       const singleCheckCooldown: Record<string, number> = {};
+      const multiCheckInflight: Record<string, boolean> = {};
+      const multiCheckCooldown: Record<string, number> = {};
       // players=0 と検証された単独UIDを一時的に無視するクオランティン
       const quarantine: Record<string, Record<string, number>> = {};
 
@@ -217,6 +226,40 @@ export function useLobbyCounts(
                 } catch {
                 } finally {
                   singleCheckInflight[id] = false;
+                }
+              })();
+            }
+          }
+          // 任意対策: n>0 の場合でも必要に応じて検証（presenceゴースト抑止）。
+          if (VERIFY_MULTI && n > 0) {
+            const cd2 = multiCheckCooldown[id] || 0;
+            if (!multiCheckInflight[id] && now >= cd2) {
+              multiCheckInflight[id] = true;
+              (async () => {
+                try {
+                  const coll = collection(db!, "rooms", id, "players");
+                  const since = Timestamp.fromMillis(
+                    Date.now() - ACTIVE_WINDOW_MS
+                  );
+                  const q = query(coll, where("lastSeen", ">=", since));
+                  const snap = await getCountFromServer(q);
+                  const verified = Number((snap.data() as any)?.count ?? 0) || 0;
+                  const now2 = Date.now();
+                  multiCheckCooldown[id] = now2 + 10_000; // 10s cooldown
+                  if (verified === 0) {
+                    // 一時的なpresence残骸と判断し、即0に矯正 + 現在のUID群をクオランティン
+                    setCounts((prev) => ({ ...prev, [id]: 0 }));
+                    const present = presentUids || [];
+                    if (present.length) {
+                      if (!quarantine[id]) quarantine[id] = {};
+                      for (const u of present) {
+                        quarantine[id][u] = now2 + ZERO_FREEZE_MS_DEFAULT;
+                      }
+                    }
+                  }
+                } catch {}
+                finally {
+                  multiCheckInflight[id] = false;
                 }
               })();
             }
