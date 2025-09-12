@@ -68,20 +68,19 @@ export function useLobbyCounts(
           (process.env.NEXT_PUBLIC_LOBBY_DEBUG_UIDS || "")
             .toString()
             .toLowerCase() === "true");
-      const VERIFY_SINGLE =
-        typeof process !== "undefined" &&
-        ((process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "").toString() ===
-          "1" ||
-          (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "")
-            .toString()
-            .toLowerCase() === "true");
-      const VERIFY_MULTI =
-        typeof process !== "undefined" &&
-        ((process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "").toString() ===
-          "1" ||
-          (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "")
-            .toString()
-            .toLowerCase() === "true");
+      // 既定値は OFF（読み取り節約）。必要時のみ .env で有効化
+      const VERIFY_SINGLE = (() => {
+        if (typeof process === "undefined") return false;
+        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "").toString().toLowerCase();
+        if (!raw) return false; // default OFF
+        return raw === "1" || raw === "true";
+      })();
+      const VERIFY_MULTI = (() => {
+        if (typeof process === "undefined") return false;
+        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "").toString().toLowerCase();
+        if (!raw) return false; // default OFF
+        return raw === "1" || raw === "true";
+      })();
       const excludeSet = new Set(
         Array.isArray(options?.excludeUid)
           ? options!.excludeUid
@@ -264,14 +263,60 @@ export function useLobbyCounts(
               })();
             }
           }
-          // 0→N と跳ね返る現象の緩和：0になった直後は一定時間0のまま据え置く
+          // 0→N 反跳ねの緩和：0になった直後は一定時間0に固定（ただし本当に復帰した場合のみ解除）
           const freezeUntil = zeroFreeze[id] || 0;
           if (n === 0) {
             zeroFreeze[id] = now + ZERO_FREEZE_MS_DEFAULT; // 0表示を据え置き
             setCounts((prev) => ({ ...prev, [id]: 0 }));
-          } else if (now < freezeUntil && !hasFresh) {
-            // クールダウン中は0のまま（ただし“新鮮”なJOINがあれば即解除）
-            setCounts((prev) => ({ ...prev, [id]: 0 }));
+          } else if (now < freezeUntil) {
+            if (!hasFresh) {
+              // 新鮮なJOIN兆候がなければ0固定
+              setCounts((prev) => ({ ...prev, [id]: 0 }));
+            } else if (VERIFY_MULTI) {
+              // 新鮮なJOIN兆候があっても、検証で players>0 が確認できるまでは0固定（読み取りはCD内で抑制）
+              const cd2 = multiCheckCooldown[id] || 0;
+              if (!multiCheckInflight[id] && now >= cd2) {
+                multiCheckInflight[id] = true;
+                (async () => {
+                  try {
+                    const coll = collection(db!, "rooms", id, "players");
+                    const since = Timestamp.fromMillis(Date.now() - ACTIVE_WINDOW_MS);
+                    const q = query(coll, where("lastSeen", ">=", since));
+                    const snap = await getCountFromServer(q);
+                    const verified = Number((snap.data() as any)?.count ?? 0) || 0;
+                    const now2 = Date.now();
+                    multiCheckCooldown[id] = now2 + 10_000; // 10s cooldown
+                    if (verified > 0) {
+                      // 本当の復帰。0固定を解除し、即時反映
+                      zeroFreeze[id] = 0;
+                      setCounts((prev) => ({ ...prev, [id]: n }));
+                    } else {
+                      // 残骸。0固定継続
+                      setCounts((prev) => ({ ...prev, [id]: 0 }));
+                      // 現在のUID群をクオランティン
+                      const present = presentUids || [];
+                      if (present.length) {
+                        if (!quarantine[id]) quarantine[id] = {};
+                        for (const u of present) {
+                          quarantine[id][u] = now2 + ZERO_FREEZE_MS_DEFAULT;
+                        }
+                      }
+                    }
+                  } catch {
+                    // 検証失敗時は0固定継続
+                    setCounts((prev) => ({ ...prev, [id]: 0 }));
+                  } finally {
+                    multiCheckInflight[id] = false;
+                  }
+                })();
+              } else {
+                // クールダウン中は0固定
+                setCounts((prev) => ({ ...prev, [id]: 0 }));
+              }
+            } else {
+              // VERIFY_MULTIを使わない場合は、freeze期間中は常に0固定（読み取り節約・揺れ抑止）
+              setCounts((prev) => ({ ...prev, [id]: 0 }));
+            }
           } else {
             setCounts((prev) => ({ ...prev, [id]: n }));
           }
