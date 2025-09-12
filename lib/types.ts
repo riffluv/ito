@@ -8,6 +8,12 @@ export type RoomOptions = {
    */
   resolveMode: "sort-submit";
   /**
+   * カード表示モード
+   * - "full": 全員のカード+連想ワードが見える（協力モード）
+   * - "minimal": 自分のカードのみ表示（エキスパートモード）
+   */
+  displayMode?: "full" | "minimal";
+  /**
    * デフォルトお題タイプ
    * ワンクリック開始時に使用されるお題の山札タイプ
    */

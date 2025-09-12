@@ -10,6 +10,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -30,6 +31,7 @@ export function CreateRoomModal({
   const { user, displayName } = useAuth() as any;
   const router = useRouter();
   const [name, setName] = useState("");
+  const [displayMode, setDisplayMode] = useState<"full" | "minimal">("full");
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
@@ -57,13 +59,13 @@ export function CreateRoomModal({
       const options: RoomOptions = {
         allowContinueAfterFail: true, // デフォルト: 最後まで並べる
         resolveMode: "sort-submit", // デフォルト: 一括提出方式
+        displayMode, // 選択されたカード表示モード
         defaultTopicType: "通常版", // ワンクリック開始のデフォルト
       };
       // ルームのデフォルトTTL（12時間）を付与して放置部屋を自動清掃
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      console.log(`🏠 Creating room with displayName: "${displayName}"`);
       const room: RoomDoc = {
-        name: name.trim(),
+        name: displayMode === "minimal" ? `${name.trim()} [エキスパート]` : name.trim(),
         hostId: user.uid,
         hostName: displayName || "匿名", // ホスト名を直接埋め込み（Firestore最適化）
         options,
@@ -275,6 +277,73 @@ export function CreateRoomModal({
                     },
                   }}
                 />
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label
+                  css={{
+                    fontSize: "1rem",
+                    fontWeight: "bold",
+                    color: "white",
+                    marginBottom: "8px",
+                    fontFamily: "monospace",
+                    textShadow: "1px 1px 0px #000",
+                  }}
+                >
+                  ▼ カード表示モード
+                </Field.Label>
+                <HStack gap={3}>
+                  <button
+                    type="button"
+                    onClick={() => setDisplayMode("full")}
+                    style={{
+                      flex: 1,
+                      height: "48px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "0.9rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: displayMode === "full" ? "white" : "transparent",
+                      color: displayMode === "full" ? "black" : "white",
+                      cursor: "pointer",
+                      textShadow: displayMode === "full" ? "none" : UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    }}
+                  >
+                    🤝 協力モード
+                  </button>
+                  <button
+                    type="button" 
+                    onClick={() => setDisplayMode("minimal")}
+                    style={{
+                      flex: 1,
+                      height: "48px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "0.9rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: displayMode === "minimal" ? "white" : "transparent",
+                      color: displayMode === "minimal" ? "black" : "white",
+                      cursor: "pointer",
+                      textShadow: displayMode === "minimal" ? "none" : UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    }}
+                  >
+                    ⚡ エキスパート
+                  </button>
+                </HStack>
+                <Text
+                  fontSize="xs"
+                  color="white"
+                  mt={2}
+                  fontFamily="monospace"
+                  opacity={0.7}
+                  textShadow="1px 1px 0px #000"
+                >
+                  協力: 全員のカード表示 / エキスパート: 自分のみ表示
+                </Text>
               </Field.Root>
             </VStack>
           </Box>

@@ -463,6 +463,9 @@ export default function RoomPage() {
     );
   }
 
+  // 表示用部屋名（[エキスパート]を除去）
+  const displayRoomName = room?.name?.replace(/\s*\[エキスパート\]$/, "") || "";
+
   if (!room) {
     return (
       <Box
@@ -534,6 +537,10 @@ export default function RoomPage() {
           failed={!!room.order?.failed}
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
+          displayMode={
+            room.options?.displayMode ||
+            (room.name?.includes("[エキスパート]") ? "minimal" : "full")
+          }
           isHost={isHost}
           orderNumbers={(room.order as any)?.numbers || {}}
         />
@@ -554,7 +561,7 @@ export default function RoomPage() {
       defaultTopicType={room.options?.defaultTopicType || "通常版"}
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
       // ヘッダー機能統合
-      roomName={room.name}
+      roomName={displayRoomName}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
     />

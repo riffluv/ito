@@ -61,6 +61,7 @@ interface CentralCardBoardProps {
   resolveMode?: string;
   orderNumbers?: Record<string, number | null | undefined>;
   isHost?: boolean;
+  displayMode?: "full" | "minimal"; // カード表示モード
 }
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
@@ -76,6 +77,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   resolveMode = "sort-submit",
   isHost,
   orderNumbers = {},
+  displayMode = "full",
 }) => {
   // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
@@ -639,6 +641,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   players={waitingPlayers}
                   isDraggingEnabled={true}
                   meId={meId}
+                  displayMode={displayMode}
                 />
               </Box>
             )}
@@ -777,6 +780,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     players={waitingPlayers}
                     isDraggingEnabled={false}
                     meId={meId}
+                    displayMode={displayMode}
                   />
                 </Box>
               )}

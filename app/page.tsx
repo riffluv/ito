@@ -516,7 +516,7 @@ export default function MainMenu() {
                 {filteredRooms.map((room: any) => (
                   <RoomCard
                     key={room.id}
-                    name={room.name}
+                    name={room.name?.replace(/\s*\[エキスパート\]$/, "") || ""}
                     status={room.status}
                     count={lobbyCounts[room.id] ?? 0}
                     hostName={room.hostName || "匿名"}
