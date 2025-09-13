@@ -24,7 +24,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { gsap } from "gsap";
-import { Plus, RefreshCw, User, Users } from "lucide-react";
+import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { stripMinimalTag } from "@/lib/game/displayMode";
@@ -158,9 +158,35 @@ export default function MainMenu() {
 
       // 2.5) ゲーム進行中は常に表示（ベストプラクティス: 観戦/後から参加の導線を確保）
       // waiting 以外（completed 以外）は進行中として扱う
+      // 先に必要な値を計算（この後の分岐で使用）
+      const activeCount0 = lobbyCounts[r.id] ?? 0;
+      const lastActiveAny0: any = (r as any).lastActiveAt;
+      const createdAny0: any = (r as any).createdAt;
+      const lastActiveMs0 = lastActiveAny0?.toMillis
+        ? lastActiveAny0.toMillis()
+        : lastActiveAny0 instanceof Date
+          ? lastActiveAny0.getTime()
+          : typeof lastActiveAny0 === "number"
+            ? lastActiveAny0
+            : 0;
+      const createdMs0 = createdAny0?.toMillis
+        ? createdAny0.toMillis()
+        : createdAny0 instanceof Date
+          ? createdAny0.getTime()
+          : typeof createdAny0 === "number"
+            ? createdAny0
+            : 0;
+      const newerMs0 = Math.max(lastActiveMs0, createdMs0);
+
       const isInProgress =
         r.status && r.status !== "waiting" && r.status !== "completed";
-      if (isInProgress) return true;
+      if (isInProgress) {
+        // 進行中の部屋でも、誰もオンラインでなく、長時間更新が無ければ非表示
+        const INPROG_DISPLAY_MS = 15 * 60 * 1000; // 15min
+        if (activeCount0 > 0) return true;
+        if (newerMs0 > 0 && now - newerMs0 <= INPROG_DISPLAY_MS) return true;
+        return false;
+      }
 
       // 3) オンライン人数による表示制御
       const activeCount = lobbyCounts[r.id] ?? 0;
@@ -390,17 +416,7 @@ export default function MainMenu() {
                     </AppButton>
                   ) : null}
                   <RPGButton size="lg" visual="outline" href="/rules">
-                    <Image
-                      src="/images/card3.webp"
-                      alt="ルールブック"
-                      width={20}
-                      height={20}
-                      style={{
-                        marginRight: "1px",
-                        imageRendering: "pixelated",
-                        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
-                      }}
-                    />
+                    <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
                   </RPGButton>
                 </HStack>
