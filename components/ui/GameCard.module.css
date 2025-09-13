@@ -30,14 +30,5 @@
 /* Optional: dedicated class alias if future distinction needed */
 /* (Alias classes removed to satisfy linter; .cardMeta is the unified selector) */
 
-/* Root wrapper for a single GameCard (used to target during drag/hover) */
-.root {}
-
-/* 3D flip inner wrapper (the element that rotates) */
-.flip3d {}
-
-/* During drag operations, disable transitions under the dragging container */
-:global([data-dragging='true']) .root,
-:global([data-dragging='true']) .root * {
-  transition: none !important;
-}
+/* 以前の .root / .flip3d 空ブロックと :global の抑止は削除。
+   ドラッグ中のトランジション停止は各コンポーネント側で制御する方針に統一。 */

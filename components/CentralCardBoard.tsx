@@ -861,26 +861,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           </>
         )}
 
-        {/* 結果表示はGSAPオーバーレイに統一するため、完成時の空のStatusDockは表示しない */}
       </Box>
-
-      {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） - DISABLED: 重複機能のため削除 */}
-      {/* {canConfirm && waitingPlayers.length === 0 ? (
-        <ConfirmDock onConfirm={onConfirm} label="並びを確定" />
-      ) : null} */}
 
       {/* GSAPアニメーション結果オーバーレイ（豪華な演出） */}
       {roomStatus === "finished" && (
         <GameResultOverlay failed={failed} mode="overlay" />
       )}
-
-      {/* 結果オーバーレイ（モック準拠の演出） - GSAPに置き換えのため無効化 */}
-      {/* {roomStatus === "finished" && showResult && (
-        <ArtifactResultOverlay
-          success={realtimeResult ? realtimeResult.success : !failed}
-          onClose={() => setShowResult(false)}
-        />
-      )} */}
     </Box>
   );
 };
