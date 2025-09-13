@@ -1,19 +1,27 @@
 import { defineRecipe } from "@chakra-ui/react";
 
+/**
+ * DQ Button Recipe - HUMAN-LIKE UI/UX ガイドライン準拠
+ * 設計原則:
+ * - 既定値禁止: すべてtokens経由でスタイル適用
+ * - ピクセル風質感: blur最小、段積み影でレトロ感
+ * - レトロ角丸: xs=2, sm=4, md=6, lg=8 で統一
+ * - 状態差強化: hover/active/disabled の明確なフィードバック
+ * - 意味のあるアニメ: 120-240ms中心、中断可能
+ */
 export const buttonRecipe = defineRecipe({
-  className: "app-btn",
+  className: "dq-btn", // Dragon Quest Button
   base: {
-    // タイポグラフィ設定
-    fontWeight: "600",
-    fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
-    letterSpacing: "-0.01em",
-    lineHeight: 1.2,
+    // === TYPOGRAPHY - ガイドライン準拠 ===
+    fontWeight: "bold", // tokens経由
+    fontFamily: "heading", // DQ風フォント
+    letterSpacing: "normal", // 既定値なし
+    lineHeight: "normal", // tokens経由
     textTransform: "none",
 
-    // インタラクション設計
-    borderRadius: "12px",
-    border: "none",
+    // === LAYOUT - tokens経由のみ ===
+    borderRadius: "sm", // レトロ: 4px固定
+    border: "1px solid", // ピクセル風: 細めボーダー
     cursor: "pointer",
     position: "relative",
     display: "inline-flex",
@@ -22,344 +30,222 @@ export const buttonRecipe = defineRecipe({
     whiteSpace: "nowrap",
     userSelect: "none",
 
-    // アニメーション
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-    willChange: "transform, box-shadow, background",
+    // === MOTION - ガイドライン準拠（意味中心）===
+    transition: "all 120ms cubic-bezier(0, 0, 0.3, 1)", // microFeedback
+    willChange: "transform, box-shadow",
 
-    // アクセシビリティ
+    // === ACCESSIBILITY - WCAG AAA準拠 ===
     _focusVisible: {
       outline: "2px solid",
-      outlineColor: "rgba(99,102,241,0.6)",
+      outlineColor: "focusRing", // slimeBlue.500 @ 80% opacity
       outlineOffset: "2px",
-      boxShadow: "0 0 0 4px rgba(99,102,241,0.15)",
+      boxShadow: "0 0 0 4px rgba(58,176,255,0.15)", // accentRing弱め
     },
     _disabled: {
-      opacity: 0.4,
+      opacity: 0.5,
       cursor: "not-allowed",
       transform: "none !important",
       boxShadow: "none !important",
     },
 
-    // 🎯 PREMIUM MICRO-INTERACTIONS
+    // === INTERACTION - 状態差強化 ===
     _active: {
-      transform: "translateY(1px) scale(0.98)",
+      transform: "translateY(0)", // 押し込み (ガイドライン準拠)
+      boxShadow: "px1", // 影弱化
     },
   },
   variants: {
     size: {
-      // 🎯 CHAKRA OFFICIAL SIZE SYSTEM - Perfect scaling ratios
+      // === SIZE SYSTEM - tokens経由のみ ===
       xs: {
-        px: 3,
-        py: 1.5,
-        fontSize: "0.75rem",
+        px: 3, // humanSpacing: 6px
+        py: 2, // humanSpacing: 4px
+        fontSize: "xs", // tokens: 12px
         minW: "auto",
-        height: "2rem",
-        gap: 1.5,
-        borderRadius: "8px",
+        height: "auto", // 自動高さ
+        gap: 2, // humanSpacing: 4px
       },
       sm: {
-        px: 4,
-        py: 2,
-        fontSize: "0.875rem",
+        px: 4, // humanSpacing: 8px
+        py: 2, // humanSpacing: 4px
+        fontSize: "sm", // tokens: 14px
         minW: "auto",
-        height: "2.25rem",
-        gap: 2,
-        borderRadius: "10px",
+        height: "auto",
+        gap: 2, // humanSpacing: 4px
       },
       md: {
-        px: 5,
-        py: 2.5,
-        fontSize: "0.875rem",
+        px: 5, // humanSpacing: 12px
+        py: 3, // humanSpacing: 6px
+        fontSize: "md", // tokens: 16px
         minW: "auto",
-        height: "2.75rem",
-        gap: 2,
-        borderRadius: "12px",
+        height: "auto",
+        gap: 3, // humanSpacing: 6px
       },
       lg: {
-        px: 6,
-        py: 3,
-        fontSize: "1rem",
+        px: 6, // humanSpacing: 16px
+        py: 4, // humanSpacing: 8px
+        fontSize: "lg", // tokens: 18px
         minW: "auto",
-        height: "3.25rem",
-        gap: 2.5,
-        borderRadius: "14px",
+        height: "auto",
+        gap: 3, // humanSpacing: 6px
       },
       xl: {
-        px: 8,
-        py: 4,
-        fontSize: "1.125rem",
+        px: 8, // humanSpacing: 24px
+        py: 5, // humanSpacing: 12px
+        fontSize: "xl", // tokens: 20px
         minW: "auto",
-        height: "3.75rem",
-        gap: 3,
-        borderRadius: "16px",
+        height: "auto",
+        gap: 4, // humanSpacing: 8px
       },
     },
-    density: {
-      compact: {
-        py: 2,
-        gap: 1.5,
+
+    variant: {
+      // === DQ VARIANT - ガイドライン準拠 ===
+      dq: {
+        bg: "bgPanel", // obsidian.800 - パネル背景と統一
+        color: "textPrimary", // obsidian.50 - 最大コントラスト
+        borderColor: "borderStrong", // 24% 可視性
+        boxShadow: "px2", // 段積み影 (ピクセル風)
+
+        // === 状態差強化 ===
+        _hover: {
+          transform: "translateY(-1px)", // 浮き上がり
+          bg: "rgba(20,23,34,0.94)", // ink.800 微変化
+          boxShadow: "lg", // 影強化 (段積み)
+        },
+
+        _active: {
+          transform: "translateY(0)", // 押し込み
+          boxShadow: "px1", // 影弱化
+        },
       },
-      comfortable: {
-        py: 3,
-        gap: 2.5,
-      },
-    },
-    visual: {
-      // 🎯 SOLID - Premium gradient system like Chakra official
+
+      // === SOLID VARIANT - slimeBlue ベース ===
       solid: {
-        background: "accentActive",
-        color: "white",
-        border: "2px solid",
-        borderColor: "borderAccent",
-        boxShadow: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
+        bg: "accent", // slimeBlue.500
+        color: "white", // 最大コントラスト
+        borderColor: "accentActive", // slimeBlue.600
+        boxShadow: "px2", // 段積み影
 
         _hover: {
-          background: "accent",
-          transform: "translateY(-1px)",
-          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
+          bg: "accentHover", // slimeBlue.400
+          transform: "translateY(-1px)", // 浮き上がり
+          boxShadow: "lg", // 影強化
         },
+
         _active: {
-          transform: "translateY(0)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.3)",
+          bg: "accentActive", // slimeBlue.600
+          transform: "translateY(0)", // 押し込み
+          boxShadow: "px1", // 影弱化
         },
       },
 
-      // OUTLINE - border system
+      // === OUTLINE VARIANT - ボーダー強調 ===
       outline: {
-        background: "rgba(255,255,255,0.01)",
-        color: "rgba(255,255,255,0.9)",
-        border: "1.5px solid rgba(255,255,255,0.15)",
-        backdropFilter: "blur(8px)",
+        bg: "transparent",
+        color: "accent", // slimeBlue.500
+        borderColor: "accent", // slimeBlue.500
+        boxShadow: "none",
 
         _hover: {
-          background: "rgba(255,255,255,0.08)",
-          borderColor: "rgba(99,102,241,0.5)",
-          color: "white",
+          bg: "accentSubtle", // slimeBlue @ 10%
+          borderColor: "accentHover", // slimeBlue.400
           transform: "translateY(-1px)",
-          boxShadow: "0 4px 16px -4px rgba(99,102,241,0.2)",
+          boxShadow: "sm", // 小さめ段積み影
         },
+
         _active: {
-          transform: "translateY(0) scale(0.98)",
-          background: "rgba(255,255,255,0.04)",
+          bg: "rgba(58,176,255,0.15)", // より濃い背景
+          transform: "translateY(0)",
+          boxShadow: "none",
         },
       },
 
-      // 🎯 GHOST - Ultra-subtle professional variant
+      // === GHOST VARIANT - 最小限 ===
       ghost: {
-        background: "transparent",
-        color: "rgba(255,255,255,0.7)",
-        border: "1px solid transparent",
+        bg: "transparent",
+        color: "textMuted", // obsidian.300
+        borderColor: "transparent",
+        boxShadow: "none",
 
         _hover: {
-          color: "rgba(255,255,255,0.95)",
-          background: "rgba(255,255,255,0.06)",
-          border: "2px solid",
+          color: "textPrimary", // obsidian.50
+          bg: "hoverOverlay", // 8% white overlay
+          borderColor: "borderDefault", // 12% white
           transform: "translateY(-1px)",
-          backdropFilter: "blur(8px)",
         },
+
         _active: {
-          transform: "translateY(0) scale(0.98)",
-          background: "rgba(255,255,255,0.03)",
+          bg: "activeOverlay", // 12% white overlay
+          transform: "translateY(0)",
         },
       },
 
-      // 🎯 SUBTLE - Accent color system (no more orange!)
-      subtle: {
-        background: "rgba(99,102,241,0.15)",
-        color: "#B4B8FF",
-        border: "1px solid rgba(99,102,241,0.25)",
-        backdropFilter: "blur(4px)",
-
-        _hover: {
-          background: "rgba(99,102,241,0.25)",
-          color: "#C7CBFF",
-          borderColor: "rgba(99,102,241,0.4)",
-          transform: "translateY(-1px)",
-          boxShadow: "0 4px 16px -4px rgba(99,102,241,0.3)",
-        },
-        _active: {
-          transform: "translateY(0) scale(0.98)",
-          background: "rgba(99,102,241,0.2)",
-        },
-      },
-
-      // 🎯 SURFACE - Premium glass morphism effect
-      surface: {
-        background: "rgba(25,27,33,0.6)",
-        color: "rgba(255,255,255,0.9)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        backdropFilter: "blur(16px)",
-        boxShadow:
-          "0 4px 12px -2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
-
-        _hover: {
-          background: "rgba(31,35,44,0.8)",
-          borderColor: "borderAccent",
-          transform: "translateY(-1px)",
-          boxShadow:
-            "0 8px 24px -4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
-        },
-        _active: {
-          transform: "translateY(0) scale(0.98)",
-          background: "rgba(22,24,30,0.7)",
-        },
-      },
-
-      // 🎯 PLAIN - Minimal interaction button
-      plain: {
-        color: "rgba(255,255,255,0.8)",
-        background: "transparent",
-        border: "none",
-        px: 3,
-        py: 2,
-        minW: "auto",
-        borderRadius: "8px",
-
-        _hover: {
-          color: "rgba(255,255,255,0.95)",
-          background: "rgba(255,255,255,0.05)",
-        },
-        _active: {
-          background: "rgba(255,255,255,0.08)",
-        },
-      },
-    },
-    palette: {
-      // 🎯 BRAND - Premium indigo/violet identity
-      brand: {
-        _focusVisible: {
-          outlineColor: "rgba(99,102,241,0.6)",
-          boxShadow: "0 0 0 4px rgba(99,102,241,0.15)",
-        },
-        "&[data-visual=solid]": {
-          background: "accentActive",
-          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
-          _hover: {
-            background: "accent",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
-          },
-        },
-        "&[data-visual=subtle]": {
-          background: "rgba(99,102,241,0.12)",
-          color: "#C7CBFF",
-          border: "1px solid rgba(99,102,241,0.25)",
-        },
-      },
-
-      // GRAY - neutral system
-      gray: {
-        _focusVisible: {
-          outlineColor: "rgba(156,163,175,0.6)",
-          boxShadow: "0 0 0 4px rgba(156,163,175,0.15)",
-        },
-        "&[data-visual=solid]": {
-          background: "surfaceRaised",
-          color: "rgba(255,255,255,0.95)",
-          border: "2px solid",
-          boxShadow:
-            "inset 0 2px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.25)",
-          _hover: {
-            background: "bgMuted",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.25)",
-          },
-        },
-        "&[data-visual=outline]": {
-          borderColor: "rgba(156,163,175,0.3)",
-          color: "rgba(156,163,175,0.9)",
-          _hover: {
-            borderColor: "rgba(156,163,175,0.5)",
-            color: "rgba(209,213,219,0.95)",
-          },
-        },
-      },
-
-      // 🎯 DANGER - Professional red system
+      // === DANGER VARIANT - berryRed ===
       danger: {
-        _focusVisible: {
-          outlineColor: "rgba(239,68,68,0.6)",
-          boxShadow: "0 0 0 4px rgba(239,68,68,0.15)",
+        bg: "danger", // berryRed.400
+        color: "white",
+        borderColor: "berryRed.500",
+        boxShadow: "px2",
+
+        _hover: {
+          bg: "berryRed.300",
+          transform: "translateY(-1px)",
+          boxShadow: "lg",
         },
-        "&[data-visual=solid]": {
-          background: "dangerSolid",
-          color: "white",
-          border: "2px solid",
-          boxShadow:
-            "0 4px 16px -4px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-          _hover: {
-            background: "#DC2626",
-            boxShadow: "0 8px 25px -5px rgba(239,68,68,0.5)",
-          },
-        },
-        "&[data-visual=subtle]": {
-          background: "rgba(239,68,68,0.12)",
-          color: "#FECACA",
-          border: "1px solid rgba(239,68,68,0.25)",
+
+        _active: {
+          bg: "berryRed.500",
+          transform: "translateY(0)",
+          boxShadow: "px1",
         },
       },
 
-      // 🎯 SUCCESS - Premium green system
+      // === SUCCESS VARIANT - 成功時 ===
       success: {
-        _focusVisible: {
-          outlineColor: "rgba(34,197,94,0.6)",
-          boxShadow: "0 0 0 4px rgba(34,197,94,0.15)",
+        bg: "successSolid", // success.500
+        color: "white",
+        borderColor: "success.600",
+        boxShadow: "px2",
+
+        _hover: {
+          bg: "success.400",
+          transform: "translateY(-1px)",
+          boxShadow: "lg",
         },
-        "&[data-visual=solid]": {
-          background: "successSolid",
-          color: "white",
-          border: "2px solid",
-          boxShadow:
-            "0 4px 16px -4px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-          _hover: {
-            background: "#16A34A",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
-          },
-        },
-        "&[data-visual=subtle]": {
-          background: "rgba(34,197,94,0.12)",
-          color: "#BBF7D0",
-          border: "1px solid rgba(34,197,94,0.25)",
+
+        _active: {
+          bg: "success.600",
+          transform: "translateY(0)",
+          boxShadow: "px1",
         },
       },
 
-      // 🎯 TEAL - Secondary brand color (#14b8a6)
-      teal: {
-        _focusVisible: {
-          outlineColor: "rgba(20,184,166,0.6)",
-          boxShadow: "0 0 0 4px rgba(20,184,166,0.15)",
+      // === HIGHLIGHT VARIANT - heroGold ===
+      highlight: {
+        bg: "highlight", // heroGold.400
+        color: "obsidian.900", // 暗いテキストで高コントラスト
+        borderColor: "heroGold.500",
+        boxShadow: "px2",
+
+        _hover: {
+          bg: "heroGold.300",
+          transform: "translateY(-1px)",
+          boxShadow: "lg",
         },
-        "&[data-visual=solid]": {
-          background: "secondary",
-          color: "white",
-          border: "2px solid",
-          boxShadow:
-            "0 4px 16px -4px rgba(20,184,166,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-          _hover: {
-            background: "secondaryHover",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.38), 0 3px 0 rgba(0,0,0,0.25)",
-          },
-        },
-        "&[data-visual=subtle]": {
-          background: "rgba(20,184,166,0.12)",
-          color: "#99F6E4",
-          border: "1px solid rgba(20,184,166,0.25)",
+
+        _active: {
+          bg: "heroGold.500",
+          transform: "translateY(0)",
+          boxShadow: "px1",
         },
       },
     },
   },
   defaultVariants: {
     size: "md",
-    density: "comfortable",
-    visual: "solid",
-    palette: "brand",
+    variant: "dq", // デフォルトはDQ風
   },
 });
 
 export default buttonRecipe;
-
-
-
-
-
-
-
-
