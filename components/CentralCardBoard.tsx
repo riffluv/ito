@@ -4,7 +4,6 @@ import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { SortableItem } from "@/components/sortable/SortableItem";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
-import StatusDock from "@/components/ui/StatusDock";
 import WaitingArea from "@/components/ui/WaitingArea";
 import {
   addCardToProposalAtPosition,
@@ -862,12 +861,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           </>
         )}
 
-        <StatusDock
-          show={roomStatus === "finished"}
-          data-finished={roomStatus === "finished"}
-        >
-          {/* GSAPオーバーレイに置き換えのためインライン表示を削除 */}
-        </StatusDock>
+        {/* 結果表示はGSAPオーバーレイに統一するため、完成時の空のStatusDockは表示しない */}
       </Box>
 
       {/* 確定ドック（未提出者がいなくなったら、同じ場所に出す） - DISABLED: 重複機能のため削除 */}
