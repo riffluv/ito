@@ -195,7 +195,7 @@ export function GameLayout({
           "sidebar main-area chat"
           "hand hand hand"
         `}
-        gridTemplateColumns={{ base: "1fr", xl: "220px 1fr 260px" }}
+        gridTemplateColumns={{ base: "1fr", xl: "240px 1fr 280px" }} // ガイドライン: 軽い非対称 (240px != 280px)
         gridTemplateRows={{
           base: "auto minmax(0, 1fr) auto",
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
@@ -250,15 +250,15 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg={UI_TOKENS.COLORS.panelBg}
-          paddingInline={{ base: 4, md: 6, lg: 8, xl: 8 }}
-          paddingTop={{ base: 4, md: 6, lg: 8, xl: 8 }}
+          paddingInline={{ base: 4, md: 6, lg: 8, xl: 7 }} // ガイドライン: 左右非対称 (7 != 8)
+          paddingTop={{ base: 4, md: 6, lg: 8, xl: 7 }}
           paddingBottom={0}
           overflowY="hidden"
           display="flex"
           flexDirection="column"
           position="relative"
           minH={0}
-          gap={{ base: 4, md: 6 }}
+          gap={{ base: 4, md: 5 }} // ガイドライン: リズム感 (5 != 6)
         >
           {main}
         </Box>

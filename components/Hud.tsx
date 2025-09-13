@@ -79,31 +79,38 @@ export function Hud({
         序の紋章III
       </Box>
 
-      {/* Room Info - Dragon Quest Style */}
-      <Box display="flex" alignItems="center" gap={4}>
+      {/* Room Info - DQ Style ガイドライン準拠 */}
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={{ base: 3, md: 5 }} // ガイドライン: リズム感 (3 != 5)
+        transform="translateX(4px)" // ガイドライン: 軽い右シフトで非対称
+      >
         <Box
-          bg={UI_TOKENS.COLORS.panelBg}
-          padding="0.5rem 0.75rem"
-          borderRadius="6px"
-          fontFamily="'Monaco', monospace"
-          fontSize="0.875rem"
-          color={UI_TOKENS.COLORS.whiteAlpha90}
-          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
-          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+          bg="bgPanel" // obsidian.800 - ガイドライン準拠
+          px={3} py={2} // tokens経由: 6px, 4px
+          borderRadius="sm" // レトロ: 4px
+          fontFamily="mono" // DQ風等幅フォント
+          fontSize="sm" // tokens: 14px
+          color="textPrimary" // obsidian.50
+          border="1px solid"
+          borderColor="borderDefault" // 12% 可視性
+          boxShadow="px1" // ピクセル風影
+          textShadow="1px 1px 0 rgba(0,0,0,0.7)" // ピクセル風縁取り
         >
           {roomName}
         </Box>
         <Box
-          bg={UI_TOKENS.COLORS.dqBlueAlpha30}
-          color={UI_TOKENS.COLORS.textBase}
-          padding="0.5rem 0.75rem"
-          borderRadius="6px"
-          fontSize="0.875rem"
-          fontWeight={600}
-          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
-          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+          bg="accentSubtle" // slimeBlue @ 10%
+          color="textPrimary" // obsidian.50
+          px={3} py={2} // tokens経由: 6px, 4px
+          borderRadius="sm" // レトロ: 4px
+          fontSize="sm" // tokens: 14px
+          fontWeight="semibold" // tokens経由
+          border="1px solid"
+          borderColor="accent" // slimeBlue.500
+          boxShadow="px2" // ピクセル風段積み影
+          textShadow="1px 1px 0 rgba(0,0,0,0.7)" // ピクセル風縁取り
         >
           {phaseLabel}フェーズ
         </Box>

@@ -7,14 +7,12 @@ type Palette = "brand" | "orange" | "gray";
 
 export type AppIconButtonProps = React.ComponentProps<typeof CIconButton> & {
   size?: "xs" | "sm" | "md" | "lg";
-  density?: "compact" | "comfortable";
   visual?: Visual;
   palette?: Palette;
 };
 
 export function AppIconButton({
   size = "sm",
-  density = "comfortable",
   visual,
   palette,
   variant,
@@ -24,9 +22,7 @@ export function AppIconButton({
   const recipe = useRecipe({ recipe: buttonRecipe });
   const styles = recipe({
     size,
-    density,
-    visual: (visual as any) ?? undefined,
-    palette: (palette as any) ?? undefined,
+    variant: visual as any,
   });
 
   const computedVariant = variant ?? visual ?? "ghost";

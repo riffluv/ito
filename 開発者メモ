@@ -1,0 +1,44 @@
+わかる、いきなり全部は多すぎます。段階分割で「最小8音 → 余力で12音 → 仕上げ25音」にしましょう。まずはMVPだけ作れば十分“気持ちよく”なります。
+
+MVP（まずは8音）
+
+ui_click: ボタン共通の短いクリック
+card_flip: カードめくり
+drag_pickup: 掴む
+drop_success: 有効ドロップ
+drop_invalid: 無効ドロップ（小ブリップ）
+notify_success: 成功トースト
+notify_error: 失敗/エラー通知
+result_victory: クリアの短ジングル（0.7s前後）
+これで操作感と達成感は一気に上がります。敗北ジングルは後回しでもOK（当面はnotify_errorで代替）。
+
+次の層（余力で+4音 = 合計12音）
+
+result_failure: 失敗ステインガー（0.5s）
+notify_warning: 警告（軽トリル）
+round_start: ゲーム開始ミニファンファーレ
+order_confirm: 並び確定の決定音
+増やさず“バリエーション感”を出す工夫（実装側で対応）
+
+再生時の playbackRate を 0.95–1.05 ランダムにして耳疲れ防止（1ファイルでOK）
+gain を±1～2dBランダムに（細い変化で新鮮味）
+flip や drop は開始位相を数msずらすと印象が変わる
+制作ガイド（MVP 8音の目安）
+
+フォーマット: 44.1kHz/16bit .wav（超短SFX向け）。ジングルは .ogg 160kbpsでも可
+長さ:
+click/drag/drop/flip/notify: 60–150ms
+victory/failure: 0.5–0.8s（短くキレよく）
+レベル: ピーク -3dBFS、終端 3–5ms フェード、過度な低域はカット（HPF 120–180Hz）
+キャラクター: 成功＝上行/ベル系、失敗＝短下降/ノイズ、UIは温かい木琴・ベル系でDQ風に寄せる
+命名と配置（MVP）
+
+public/sfx/ui/ui_click.wav
+public/sfx/card/card_flip.wav
+public/sfx/dnd/drag_pickup.wav
+public/sfx/dnd/drop_success.wav
+public/sfx/dnd/drop_invalid.wav
+public/sfx/notify/notify_success.wav
+public/sfx/notify/notify_error.wav
+public/sfx/result/result_victory.ogg
+まずはこの8音だけ作ればOK。できたら教えてください。実装側は再生レイヤーで変調を入れて“少数精鋭”に仕上げます。
