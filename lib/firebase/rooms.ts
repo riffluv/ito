@@ -138,7 +138,14 @@ export async function leaveRoom(
   // ホスト委譲が発生した場合は告知
   if (transferredTo) {
     try {
-      await sendSystemMessage(roomId, `👑 ホストが ${transferredTo} さんに委譲されました`);
+      // UIDではなく表示名を取得して告知
+      let nextHostName = transferredTo;
+      try {
+        const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
+        const nm = (pSnap.data() as any)?.name;
+        if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+      } catch {}
+      await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
     } catch {}
   } else {
     // トランザクション内で委譲できなかった場合のフォールバック:
@@ -159,7 +166,14 @@ export async function leaveRoom(
           hostId: nextHost,
         });
         try {
-          await sendSystemMessage(roomId, `👑 ホストが ${nextHost} さんに委譲されました`);
+          // UIDではなく表示名を取得して告知
+          let nextHostName = nextHost;
+          try {
+            const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", nextHost));
+            const nm = (pSnap.data() as any)?.name;
+            if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+          } catch {}
+          await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
         } catch {}
       }
     } catch {}
