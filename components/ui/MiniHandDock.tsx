@@ -17,6 +17,7 @@ import {
   startGame as startGameAction,
   submitSortedOrder,
 } from "@/lib/game/room";
+import { resetRoomWithPrune } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
@@ -41,6 +42,9 @@ interface MiniHandDockProps {
   onOpenSettings?: () => void;
   onLeaveRoom?: () => void | Promise<void>;
   pop?: boolean;
+  // 在席者のみでリセットするための補助情報
+  onlineUids?: string[];
+  roundIds?: string[];
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -58,6 +62,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     onOpenSettings,
     onLeaveRoom,
     pop = false,
+    onlineUids,
+    roundIds,
   } = props;
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
@@ -154,9 +160,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const resetGame = async () => {
     try {
-      const { resetRoomToWaiting } = await import("@/lib/firebase/rooms");
-      const inProgress = roomStatus === "clue" || roomStatus === "reveal";
-      await resetRoomToWaiting(roomId, inProgress ? { force: true } : undefined);
+      // 在席者だけでやり直す（presenceのオンラインUIDを利用、追加読取なし）
+      const keep = Array.isArray(roundIds) && Array.isArray(onlineUids)
+        ? roundIds.filter((id) => onlineUids.includes(id))
+        : (onlineUids || []);
+      await resetRoomWithPrune(roomId, keep, { notifyChat: true });
       notify({ title: "ゲームをリセット！", type: "success" });
     } catch (e: any) {
       const msg = String(e?.message || e || "");
