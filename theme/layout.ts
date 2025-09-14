@@ -98,7 +98,7 @@ export const UNIFIED_LAYOUT = {
     COMPONENT_PADDING: "16px", // 統一パディング（Chakraの4に相当）
     SECTION_GAP: "0px", // セクション間のギャップ（外側制御のため0）
     INNER_SPACING: "24px", // 内部要素の間隔（Chakraの6に相当）
-    CARD_GAP: "12px", // カード間のギャップ（Chakraの3に相当）
+    CARD_GAP: "16px", // カード間のギャップ（Vercel版準拠でより美観に）
     FORM_GAP: "8px", // フォーム要素間のギャップ（Chakraの2に相当）
   },
 
