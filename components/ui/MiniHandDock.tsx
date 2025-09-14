@@ -175,12 +175,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       px={6}
       py={4}
       gap={{ base: 3, md: 5 }}
-      bg="rgba(0, 0, 0, 0.75)"
-      backdropFilter="blur(8px)"
-      borderRadius={8}
-      boxShadow="0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(255, 255, 255, 0.05) inset"
-      border="1px solid rgba(255, 255, 255, 0.1)"
+      bg={UI_TOKENS.COLORS.panelBg}
+      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+      borderRadius={0}
+      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
       position="relative"
+      _before={{
+        content: '""',
+        position: "absolute",
+        top: "-3px",
+        left: "-3px",
+        right: "-3px",
+        bottom: "-3px",
+        border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+        borderRadius: 0,
+        pointerEvents: "none",
+      }}
     >
       <DiamondNumberCard
         number={me?.number || null}
@@ -220,19 +230,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         disabled={!canDecide}
         px={4}
         py={2}
-        borderRadius={6}
-        bg="linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)"
-        border="1px solid rgba(59, 130, 246, 0.3)"
-        boxShadow="0 4px 12px rgba(37, 99, 235, 0.4), 0 1px 3px rgba(255, 255, 255, 0.1) inset"
+        bg={UI_TOKENS.COLORS.dqBlue}
+        color="white"
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+        borderRadius={0}
+        fontWeight="600"
+        boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
         _hover={{
+          bg: UI_TOKENS.COLORS.dqBlueHover,
+          borderColor: "white",
           transform: "translateY(-1px)",
-          boxShadow: "0 6px 16px rgba(37, 99, 235, 0.5), 0 1px 3px rgba(255, 255, 255, 0.15) inset",
         }}
         _active={{
           transform: "translateY(0)",
-          boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3), 0 1px 2px rgba(255, 255, 255, 0.1) inset",
+          boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
         }}
-        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+        transition="all 0.15s ease"
       >
         決定
       </AppButton>
@@ -244,19 +257,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         disabled={!canSubmit}
         px={4}
         py={2}
-        borderRadius={6}
-        bg="linear-gradient(135deg, #059669 0%, #047857 100%)"
-        border="1px solid rgba(16, 185, 129, 0.3)"
-        boxShadow="0 4px 12px rgba(5, 150, 105, 0.4), 0 1px 3px rgba(255, 255, 255, 0.1) inset"
+        bg={UI_TOKENS.COLORS.dqGreen}
+        color="white"
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+        borderRadius={0}
+        fontWeight="600"
+        boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
         _hover={{
+          bg: UI_TOKENS.COLORS.dqGreenHover,
+          borderColor: "white",
           transform: "translateY(-1px)",
-          boxShadow: "0 6px 16px rgba(5, 150, 105, 0.5), 0 1px 3px rgba(255, 255, 255, 0.15) inset",
         }}
         _active={{
           transform: "translateY(0)",
-          boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3), 0 1px 2px rgba(255, 255, 255, 0.1) inset",
+          boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
         }}
-        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+        transition="all 0.15s ease"
       >
         出す
       </AppButton>
@@ -268,25 +284,30 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             visual="solid"
             onClick={quickStart}
             minW="110px"
-            px={6}
-            py={3}
-            borderRadius={8}
-            bg="linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)"
+            px={4}
+            py={2}
+            bg={UI_TOKENS.GRADIENTS.forestGreen}
             color="white"
-            border="1px solid rgba(239, 68, 68, 0.4)"
-            fontWeight="600"
-            fontSize="14px"
-            boxShadow="0 6px 20px rgba(220, 38, 38, 0.4), 0 2px 4px rgba(255, 255, 255, 0.1) inset"
+            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+            borderRadius={0}
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
             _hover={{
-              bg: "linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)",
-              transform: "translateY(-1.5px)",
-              boxShadow: "0 8px 25px rgba(220, 38, 38, 0.5), 0 2px 6px rgba(255, 255, 255, 0.15) inset",
+              bg: UI_TOKENS.GRADIENTS.forestGreenHover,
+              color: UI_TOKENS.COLORS.whiteAlpha95,
+              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+              borderColor: "white",
+              transform: "translateY(-1px)",
             }}
             _active={{
+              bg: UI_TOKENS.GRADIENTS.forestGreenActive,
+              color: UI_TOKENS.COLORS.whiteAlpha90,
+              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
               transform: "translateY(0)",
-              boxShadow: "0 3px 12px rgba(220, 38, 38, 0.3), 0 1px 3px rgba(255, 255, 255, 0.1) inset",
             }}
-            transition="all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+            transition="all 0.15s ease"
           >
             ゲーム開始
           </AppButton>
@@ -298,32 +319,37 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             onClick={evalSorted}
             disabled={!allSubmitted}
             minW="110px"
-            px={6}
-            py={3}
-            borderRadius={8}
-            bg="linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)"
+            px={4}
+            py={2}
+            bg={UI_TOKENS.GRADIENTS.royalPurple}
             color="white"
-            border="1px solid rgba(139, 92, 246, 0.4)"
-            fontWeight="600"
-            fontSize="14px"
-            boxShadow="0 6px 20px rgba(124, 58, 237, 0.4), 0 2px 4px rgba(255, 255, 255, 0.1) inset"
+            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+            borderRadius={0}
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
             _hover={{
-              bg: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)",
-              transform: "translateY(-1.5px)",
-              boxShadow: "0 8px 25px rgba(124, 58, 237, 0.5), 0 2px 6px rgba(255, 255, 255, 0.15) inset",
+              bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
+              color: UI_TOKENS.COLORS.whiteAlpha95,
+              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+              borderColor: "white",
+              transform: "translateY(-1px)",
             }}
             _active={{
+              bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
+              color: UI_TOKENS.COLORS.whiteAlpha90,
+              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
               transform: "translateY(0)",
-              boxShadow: "0 3px 12px rgba(124, 58, 237, 0.3), 0 1px 3px rgba(255, 255, 255, 0.1) inset",
             }}
             _disabled={{
-              bg: "rgba(55, 65, 81, 0.5)",
-              color: "rgba(156, 163, 175, 0.5)",
+              bg: UI_TOKENS.COLORS.blackAlpha60,
+              color: UI_TOKENS.COLORS.whiteAlpha40,
+              borderColor: UI_TOKENS.COLORS.whiteAlpha50,
               cursor: "not-allowed",
-              transform: "none",
-              boxShadow: "none",
+              textShadow: "1px 1px 0px #000",
             }}
-            transition="all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+            transition="all 0.15s ease"
           >
             せーの！
           </AppButton>
@@ -336,25 +362,30 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               onClick={roomStatus === "finished" ? resetGame : continueRound}
               minW="110px"
-              px={6}
-              py={3}
-              borderRadius={8}
-              bg="linear-gradient(135deg, #ea580c 0%, #dc2626 50%, #c2410c 100%)"
+              px={4}
+              py={2}
+              bg={UI_TOKENS.GRADIENTS.orangeSunset}
               color="white"
-              border="1px solid rgba(251, 146, 60, 0.4)"
-              fontWeight="600"
-              fontSize="14px"
-              boxShadow="0 6px 20px rgba(234, 88, 12, 0.4), 0 2px 4px rgba(255, 255, 255, 0.1) inset"
+              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+              borderRadius={0}
+              fontWeight="700"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
               _hover={{
-                bg: "linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #dc2626 100%)",
-                transform: "translateY(-1.5px)",
-                boxShadow: "0 8px 25px rgba(234, 88, 12, 0.5), 0 2px 6px rgba(255, 255, 255, 0.15) inset",
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
+                color: UI_TOKENS.COLORS.whiteAlpha95,
+                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+                borderColor: "white",
+                transform: "translateY(-1px)",
               }}
               _active={{
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
+                color: UI_TOKENS.COLORS.whiteAlpha90,
+                boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
                 transform: "translateY(0)",
-                boxShadow: "0 3px 12px rgba(234, 88, 12, 0.3), 0 1px 3px rgba(255, 255, 255, 0.1) inset",
               }}
-              transition="all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+              transition="all 0.15s ease"
             >
               もう一度
             </AppButton>
@@ -371,21 +402,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 size="sm"
                 w="36px"
                 h="36px"
-                bg="rgba(55, 65, 81, 0.8)"
-                color="rgba(209, 213, 219, 0.9)"
-                border="1px solid rgba(75, 85, 99, 0.5)"
-                borderRadius={6}
+                bg={UI_TOKENS.COLORS.panelBg}
+                color="white"
+                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                borderRadius={0}
+                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
                 _hover={{
-                  bg: "rgba(75, 85, 99, 0.9)",
-                  color: "white",
+                  bg: UI_TOKENS.COLORS.dqBlue,
+                  borderColor: "white",
                   transform: "translateY(-1px)",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  bg: "rgba(55, 65, 81, 0.9)",
+                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
                 }}
-                transition="all 0.2s ease"
+                transition="all 0.15s ease"
               >
                 <FaRegCreditCard />
               </IconButton>
@@ -395,21 +426,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 size="sm"
                 w="36px"
                 h="36px"
-                bg="rgba(55, 65, 81, 0.8)"
-                color="rgba(209, 213, 219, 0.9)"
-                border="1px solid rgba(75, 85, 99, 0.5)"
-                borderRadius={6}
+                bg={UI_TOKENS.COLORS.panelBg}
+                color="white"
+                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                borderRadius={0}
+                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
                 _hover={{
-                  bg: "rgba(75, 85, 99, 0.9)",
-                  color: "white",
+                  bg: UI_TOKENS.COLORS.dqGreen,
+                  borderColor: "white",
                   transform: "translateY(-1px)",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  bg: "rgba(55, 65, 81, 0.9)",
+                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
                 }}
-                transition="all 0.2s ease"
+                transition="all 0.15s ease"
               >
                 <FaDice />
               </IconButton>
@@ -419,21 +450,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 size="sm"
                 w="36px"
                 h="36px"
-                bg="rgba(55, 65, 81, 0.8)"
-                color="rgba(209, 213, 219, 0.9)"
-                border="1px solid rgba(75, 85, 99, 0.5)"
-                borderRadius={6}
+                bg={UI_TOKENS.COLORS.panelBg}
+                color="white"
+                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                borderRadius={0}
+                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
                 _hover={{
-                  bg: "rgba(75, 85, 99, 0.9)",
-                  color: "white",
+                  bg: UI_TOKENS.COLORS.dqRed,
+                  borderColor: "white",
                   transform: "translateY(-1px)",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  bg: "rgba(55, 65, 81, 0.9)",
+                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
                 }}
-                transition="all 0.2s ease"
+                transition="all 0.15s ease"
               >
                 <FaRedo />
               </IconButton>
