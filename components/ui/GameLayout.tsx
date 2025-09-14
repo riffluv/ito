@@ -165,10 +165,11 @@ export function GameLayout({
           {sidebar && (
             <Box
               position="fixed"
-              top={{ base: `calc(${headerHeight} + 8px)`, md: `calc(${headerHeight} + 12px)` }}
+              top={{ base: "80px", md: "100px" }}
               // フッター（手札エリア）と重ならないように一定の下マージンを確保
               bottom={`calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 16px)`}
-              left={{ base: "max(12px, calc((100vw - 1440px)/2 + 12px))", md: "max(16px, calc((100vw - 1440px)/2 + 16px))" }}
+              // チャットと同じように左端に寄せて衝突を完全回避
+              left={{ base: "12px", md: "16px" }}
               width={{ base: "220px", md: "240px" }}
               zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
               css={{ pointerEvents: "none" }}
