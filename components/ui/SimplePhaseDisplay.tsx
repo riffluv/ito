@@ -196,17 +196,24 @@ export function SimplePhaseDisplay({
       ref={containerRef}
       position="fixed"
       top={{ base: "20px", md: "24px" }}
-      left={{ base: "20px", md: "24px" }}
+      left="50%"
+      transform="translateX(-50%)"
       zIndex={50}
       css={{
         pointerEvents: "none",
+        // 1440pxの可視主幅を超えないように中央に寄せる（セーフゾーン対応）
+        maxWidth: "min(92vw, 1440px)",
+        // DPI150ではアナウンス自体の高さを抑える
+        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+          top: "16px",
+        },
       }}
     >
       <Box
         display="inline-flex"
         alignItems="center"
         gap={2}
-        px={4}
+        px={3}
         py={2}
         bg={UI_TOKENS.GRADIENTS.deepBlue}
         border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
@@ -214,6 +221,10 @@ export function SimplePhaseDisplay({
         css={{
           boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
+          // DPI150向けコンパクト化
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            padding: "4px 10px",
+          },
         }}
       >
         <Text as="span" ref={iconRef} fontSize="lg" display="inline-block">
@@ -229,6 +240,11 @@ export function SimplePhaseDisplay({
           letterSpacing="0.5px"
           fontFamily="monospace"
           whiteSpace="nowrap"
+          css={{
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+              fontSize: "0.78rem",
+            },
+          }}
         >
           ▼ {text} ▼
         </Text>

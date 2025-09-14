@@ -51,13 +51,21 @@ export const topicControls = {
   // お題をクリア（カテゴリ/お題の選び直し）
   async resetTopic(roomId: string) {
     try {
-      const { collection, getDocs, writeBatch } = await import("firebase/firestore");
-      
+      const { collection, getDocs, writeBatch, doc, getDoc } = await import("firebase/firestore");
+      // 進行中にはリセット禁止（誤操作防止）
+      const roomRef = doc(db!, "rooms", roomId);
+      const snap = await getDoc(roomRef);
+      if (snap.exists()) {
+        const status = (snap.data() as any)?.status;
+        if (status === "clue" || status === "reveal") {
+          throw new Error("進行中はリセットできません");
+        }
+      }
+
       // バッチ処理で効率的に更新
       const batch = writeBatch(db!);
       
       // 1. roomドキュメントをリセット
-      const roomRef = doc(db!, "rooms", roomId);
       batch.update(roomRef, {
         status: "waiting", // ★ ロビー状態に戻す
         result: null,

@@ -285,52 +285,66 @@ export function CreateRoomModal({
                 >
                   ▼ カード表示モード
                 </Field.Label>
-                <HStack gap={3} role="radiogroup" aria-label="カード表示モード">
+                <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
                   <button
                     type="button"
                     onClick={() => setDisplayMode("full")}
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       height: "48px",
                       borderRadius: 0,
                       fontWeight: "bold",
                       fontSize: "0.9rem",
                       fontFamily: "monospace",
-                      border: "borders.retrogameThin",
+                      border: "2px solid white",
                       background: displayMode === "full" ? "white" : "transparent",
                       color: displayMode === "full" ? "black" : "white",
                       cursor: "pointer",
-                      textShadow: displayMode === "full" ? "none" : UI_TOKENS.TEXT_SHADOWS.soft as any,
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                      textShadow: displayMode === "full" ? "none" : "1px 1px 0px #000",
+                      transition: "all 0.1s ease",
+                      whiteSpace: "nowrap",
+                      overflow: "visible",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 8px",
                     }}
                     role="radio"
                     aria-checked={displayMode === "full"}
                     tabIndex={displayMode === "full" ? 0 : -1}
                   >
-                    🤝 みんなの手札
+                    🤝 みんな
                   </button>
                   <button
-                    type="button" 
+                    type="button"
                     onClick={() => setDisplayMode("minimal")}
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       height: "48px",
                       borderRadius: 0,
                       fontWeight: "bold",
                       fontSize: "0.9rem",
                       fontFamily: "monospace",
-                      border: "borders.retrogameThin",
+                      border: "2px solid white",
                       background: displayMode === "minimal" ? "white" : "transparent",
                       color: displayMode === "minimal" ? "black" : "white",
                       cursor: "pointer",
-                      textShadow: displayMode === "minimal" ? "none" : UI_TOKENS.TEXT_SHADOWS.soft as any,
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                      textShadow: displayMode === "minimal" ? "none" : "1px 1px 0px #000",
+                      transition: "all 0.1s ease",
+                      whiteSpace: "nowrap",
+                      overflow: "visible",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 8px",
                     }}
                     role="radio"
                     aria-checked={displayMode === "minimal"}
                     tabIndex={displayMode === "minimal" ? 0 : -1}
                   >
-                    👤 自分の手札
+                    👤 自分
                   </button>
                 </HStack>
                 <Text
@@ -341,7 +355,7 @@ export function CreateRoomModal({
                   opacity={0.7}
                   textShadow="1px 1px 0px #000"
                 >
-                  みんなの手札: 全員のカード表示 / 自分の手札: 自分のみ表示
+                  みんな: 全員のカード表示 / 自分: 自分のみ表示
                 </Text>
               </Field.Root>
             </VStack>

@@ -25,12 +25,13 @@ export async function startGame(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
   const curr: any = snap.data();
-  const next = nextStatusForEvent(curr?.status || "waiting", {
-    type: "START_GAME",
-  });
-  if (!next) throw new Error("invalid transition: START_GAME");
+  const currentStatus = curr?.status || "waiting";
+  // 進行中や終了直後からの誤開始を防止（必ずwaitingからのみ開始）
+  if (currentStatus !== "waiting") {
+    throw new Error("開始できるのは待機中のみです");
+  }
   // 新ラウンド開始時は前ラウンドの order/result/deal をクリア
-  await updateDoc(ref, { status: next, result: null, deal: null, order: null });
+  await updateDoc(ref, { status: "clue", result: null, deal: null, order: null });
 }
 
 // ホストがトピック選択後に配札（重複なし）
@@ -94,6 +95,12 @@ export async function finishRoom(roomId: string, success: boolean) {
 export async function continueAfterFail(roomId: string) {
   // 次ラウンドへ進む前に waiting に戻す（お題/配札はホストの開始操作で行う）
   const ref = doc(db!, "rooms", roomId);
+  const snap = await getDoc(ref);
+  const curr: any = snap.data();
+  // 誤操作防止: reveal/finished 以外では実行不可
+  if (curr?.status !== "reveal" && curr?.status !== "finished") {
+    throw new Error("進行中は継続できません");
+  }
   await updateDoc(ref, {
     status: "waiting",
     result: null,

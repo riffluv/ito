@@ -138,7 +138,14 @@ export async function leaveRoom(
   // ホスト委譲が発生した場合は告知
   if (transferredTo) {
     try {
-      await sendSystemMessage(roomId, `👑 ホストが ${transferredTo} さんに委譲されました`);
+      // UIDではなく表示名を取得して告知
+      let nextHostName = transferredTo;
+      try {
+        const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
+        const nm = (pSnap.data() as any)?.name;
+        if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+      } catch {}
+      await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
     } catch {}
   } else {
     // トランザクション内で委譲できなかった場合のフォールバック:
@@ -159,16 +166,32 @@ export async function leaveRoom(
           hostId: nextHost,
         });
         try {
-          await sendSystemMessage(roomId, `👑 ホストが ${nextHost} さんに委譲されました`);
+          // UIDではなく表示名を取得して告知
+          let nextHostName = nextHost;
+          try {
+            const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", nextHost));
+            const nm = (pSnap.data() as any)?.name;
+            if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+          } catch {}
+          await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
         } catch {}
       }
     } catch {}
   }
 }
 
-export async function resetRoomToWaiting(roomId: string) {
-  await updateDoc(doc(db!, "rooms", roomId), {
-    status: "waiting", // ラウンド終了後はロビー状態に戻す
+export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolean }) {
+  const roomRef = doc(db!, "rooms", roomId);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) return;
+  const room: any = snap.data();
+  const status = room?.status;
+  // 進行中は原則禁止（誤タップや遅延UIからの誤操作防止）
+  if (!opts?.force && (status === "clue" || status === "reveal")) {
+    throw new Error("進行中はリセットできません");
+  }
+  await updateDoc(roomRef, {
+    status: "waiting",
     result: null,
     deal: null,
     order: null,

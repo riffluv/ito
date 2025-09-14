@@ -32,8 +32,8 @@ export default function Header() {
         <Flex align="center" justify="flex-start" h="100%">
           <HStack gap="2">
             <Image
-              src="/images/knight1.webp"
-              alt="序の紋章III Knight"
+              src="/images/card3.webp"
+              alt="序の紋章III Card"
               boxSize="8"
               objectFit="contain"
               filter={UI_TOKENS.FILTERS.dropShadowSoft}

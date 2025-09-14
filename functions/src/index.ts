@@ -7,6 +7,7 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const rtdb = admin.database ? admin.database() : (null as any);
 
 // 緊急停止フラグ（READ 増加時の一時対策）
 // 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
@@ -125,6 +126,127 @@ export const pruneOldChat = functions.pubsub
       const batch = db.batch();
       for (const d of snap.docs) batch.delete(d.ref);
       await batch.commit();
+    }
+    return null;
+  });
+
+/**
+ * Scheduled cleanup for "ghost rooms":
+ * - No active RTDB presence AND
+ * - No players with recent `lastSeen` AND
+ * - Not in-progress (or in-progress but stale for long time)
+ * Then delete players/chat and the room itself.
+ */
+export const cleanupGhostRooms = functions.pubsub
+  .schedule("every 15 minutes")
+  .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
+    const dbi = admin.firestore();
+    const rtdb = admin.database();
+
+    // Tunables
+    const NOW = Date.now();
+    const STALE_LASTSEEN_MS = Number(process.env.GHOST_STALE_LASTSEEN_MS) || 10 * 60 * 1000; // 10min
+    const ROOM_MIN_AGE_MS = Number(process.env.GHOST_ROOM_MIN_AGE_MS) || 30 * 60 * 1000; // 30min
+    const PRESENCE_STALE_MS = Number(process.env.PRESENCE_STALE_MS) || 90_000; // 90s
+
+    // Process in small chunks to limit costs
+    const roomsSnap = await dbi.collection("rooms").select().limit(100).get();
+    if (roomsSnap.empty) return null;
+
+    for (const roomDoc of roomsSnap.docs) {
+      try {
+        const roomId = roomDoc.id;
+        const room = roomDoc.data() as any;
+
+        // Quick age gate: only consider sufficiently old rooms
+        const lastActive = room?.lastActiveAt;
+        const createdAt = room?.createdAt;
+        const toMillis = (v: any) =>
+          v && typeof v.toMillis === 'function'
+            ? v.toMillis()
+            : v instanceof Date
+              ? v.getTime()
+              : typeof v === 'number'
+                ? v
+                : 0;
+        const newerMs = Math.max(toMillis(lastActive), toMillis(createdAt));
+        const ageMs = newerMs ? NOW - newerMs : Number.POSITIVE_INFINITY;
+        if (ageMs < ROOM_MIN_AGE_MS) continue;
+
+        // Skip actively playing rooms (clue/reveal), unless clearly stale
+        const isInProgress = room?.status && room.status !== 'waiting' && room.status !== 'completed';
+
+        // Presence count from RTDB
+        let presenceCount = 0;
+        try {
+          const presSnap = await rtdb.ref(`presence/${roomId}`).get();
+          if (presSnap.exists()) {
+            const val = presSnap.val() as Record<string, any>;
+            const nowLocal = Date.now();
+            for (const uid of Object.keys(val)) {
+              const conns = val[uid] || {};
+              const online = Object.values(conns).some((c: any) => {
+                const ts = typeof c?.ts === 'number' ? c.ts : 0;
+                if (!ts) return false;
+                if (ts - nowLocal > PRESENCE_STALE_MS) return false;
+                return nowLocal - ts <= PRESENCE_STALE_MS;
+              });
+              if (online) presenceCount++;
+            }
+          }
+        } catch {}
+
+        if (presenceCount > 0) continue; // someone is online; skip
+
+        // Count "recent" players by lastSeen
+        const playersCol = roomDoc.ref.collection('players');
+        const playersSnap = await playersCol.get();
+        const nowTs = Date.now();
+        let recentPlayers = 0;
+        for (const d of playersSnap.docs) {
+          const ls = (d.data() as any)?.lastSeen;
+          const ms = toMillis(ls);
+          if (ms && nowTs - ms <= STALE_LASTSEEN_MS) recentPlayers++;
+        }
+
+        // If any recent players exist, keep the room
+        if (recentPlayers > 0) continue;
+
+        // At this point, no presence and players are stale. If still marked in-progress, relax to waiting.
+        if (isInProgress) {
+          try {
+            await roomDoc.ref.update({ status: 'waiting' });
+          } catch {}
+        }
+
+        // Delete chat docs first (best effort)
+        try {
+          const chatRefs = await roomDoc.ref.collection('chat').listDocuments();
+          if (chatRefs.length) {
+            const batch = dbi.batch();
+            for (const c of chatRefs) batch.delete(c);
+            await batch.commit();
+          }
+        } catch {}
+
+        // Delete all players (best effort)
+        try {
+          const playerRefs = await roomDoc.ref.collection('players').listDocuments();
+          if (playerRefs.length) {
+            const batch = dbi.batch();
+            for (const p of playerRefs) batch.delete(p);
+            await batch.commit();
+          }
+        } catch {}
+
+        // Finally, delete the room itself
+        try {
+          await roomDoc.ref.delete();
+        } catch {}
+      } catch (err) {
+        console.error('cleanupGhostRooms error', err);
+      }
     }
     return null;
   });

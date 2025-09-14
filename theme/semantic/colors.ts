@@ -1,67 +1,65 @@
-// Semantic color tokens - DARK MODE OPTIMIZED
-// 2025 REFRESH: Rich Black + Indigo Aesthetic  
-// 目的: プロフェッショナルなダークモード専用システム。WCAG AAA準拠のコントラストとアクセシビリティを重視。
-// 命名方針:
-//  - surface.* : ベースとなる背景階層 (最下層 base → subtle → raised → overlay)
-//  - panel*    : 既存コンポーネント互換用 (panelBg/panelSubBg) → surface.* へ内部移行予定
-//  - fg*       : 前景テキスト/アイコン
-//  - border*   : ボーダー階層 (default → strong → focus)
-//  - accent*   : アクセント (Indigo/Violet) の段階 (solid/subtle/fg)
-//  - success/danger/etc : 状態フィードバック系 (WCAG準拠強化)
+/**
+ * Dragon Quest Game Theme - HUMAN-LIKE UI/UX ガイドライン準拠
+ * obsidian.900 + slimeBlue.500 + heroGold.400 + ピクセル風質感
+ *
+ * 設計原則:
+ * - AIっぽさ完全排除: 既定値依存禁止、意図的なピクセル単位調整
+ * - レトロ×現代: ドット質感 + WCAG AAA準拠
+ * - ピクセル風影: blur最小、1-2px段積みで輪郭を立てる
+ * - リズム感余白: 2,4,6,8,12,16,20,24 の人間的配列
+ * - 意味のあるモーション: 120-240ms中心、中断可能
+ */
 
 export const semanticColors = {
-  // === SURFACES ===
-  // マットな多層リッチブラック。 subtle は base より +2% 明度, raised は +4〜5%, overlay はガラス感。
-  surfaceBase: { value: "#0C0D10" }, // ほぼ純黒より僅かに持ち上げたベース (WCAG コントラスト最適化)
-  surfaceSubtle: { value: "#121317" },
-  surfaceRaised: { value: "#191B21" },
-  surfaceOverlay: { value: "rgba(28,30,36,0.72)" }, // ガラス的オーバーレイ
+  // === ベース背景層 - obsidian系 ===
+  bgCanvas: { value: "#0E0F13" }, // obsidian.900 - メインキャンバス
+  bgPanel: { value: "#141722" }, // obsidian.800 - パネル背景
+  bgSubtle: { value: "#32384C" }, // obsidian.700 - 微elevation
+  surfaceSubtle: { value: "rgba(20,23,34,0.8)" }, // ガラス効果用
 
-  // 既存キー互換 (内部では surface* を参照) — 漸進的移行のため残す
-  canvasBg: { value: "#0C0D10" },
-  panelBg: { value: "#121317" },
-  panelSubBg: { value: "#191B21" },
+  // === テキスト - obsidian階層 ===
+  textPrimary: { value: "#F2F5FB" }, // obsidian.50 - 最高コントラスト
+  textSecondary: { value: "#D1D6E3" }, // obsidian.200 - セカンダリ
+  textMuted: { value: "#AAB0C0" }, // obsidian.300 - 低優先度
+  fgDefault: { value: "#F2F5FB" }, // Chakra互換
 
-  // === FOREGROUND - ENHANCED READABILITY ===
-  // WCAG AAA コンプライアント (21:1+ コントラスト比)
-  fgDefault: { value: "#FFFFFF" }, // Pure white for maximum contrast
-  fgMuted: { value: "rgba(255,255,255,0.80)" }, // Improved from 65% to 80% for better readability
-  fgSubtle: { value: "rgba(255,255,255,0.55)" }, // Enhanced from 40% to 55%
-  fgEmphasized: { value: "#F8FAFC" }, // Slightly warm white for emphasis
+  // === アクセント - slimeBlue系 ===
+  accent: { value: "#3AB0FF" }, // slimeBlue.500 - メインアクセント
+  accentHover: { value: "#60A5FA" }, // slimeBlue.400 - ホバー
+  accentActive: { value: "#2563EB" }, // slimeBlue.600 - アクティブ
+  accentSubtle: { value: "rgba(58,176,255,0.10)" }, // slimeBlue @ 10%
 
-  // === ACCENT (Blue-Gray) ===
-  accent: { value: "#6366F1" }, // Indigo-500 - modern and professional
-  accentHover: { value: "#8B5CF6" }, // Violet-500 - subtle purple shift on hover
-  accentActive: { value: "#4F46E5" }, // Indigo-600 - deeper on active
-  accentSubtle: { value: "rgba(99,102,241,0.10)" }, // Subtle indigo background
-  accentRing: { value: "rgba(99,102,241,0.4)" }, // Focus ring
+  // === ボーダー - 可視性重視 ===
+  borderDefault: { value: "rgba(255,255,255,0.12)" }, // 12% 基本可視性
+  borderStrong: { value: "rgba(255,255,255,0.24)" }, // 24% 強調
+  borderSubtle: { value: "rgba(255,255,255,0.06)" }, // 6% 極薄
 
-  // === BORDERS - ENHANCED VISIBILITY ===
-  borderDefault: { value: "rgba(255,255,255,0.12)" }, // Improved from 8% to 12% for better visibility
-  borderStrong: { value: "rgba(255,255,255,0.24)" }, // Enhanced from 16% to 24%  
-  borderAccent: { value: "rgba(99,102,241,0.6)" }, // Increased from 40% to 60% for better focus visibility
-  borderSubtle: { value: "rgba(255,255,255,0.06)" }, // New ultra-subtle variant
+  // === カード専用 ===
+  cardBg: { value: "rgba(20,23,34,0.9)" }, // ink.800 + alpha
+  cardBorder: { value: "rgba(58,176,255,0.6)" }, // slimeBlue @ 60%
 
-  // === STATE / FEEDBACK - ENHANCED CONTRAST ===
-  successSolid: { value: "#22C55E" }, // Green-500 with better contrast
-  dangerSolid: { value: "#EF4444" }, // Red-500 with better contrast
-  successSubtle: { value: "rgba(34,197,94,0.18)" }, // Enhanced from 15% to 18%
-  dangerSubtle: { value: "rgba(239,68,68,0.18)" }, // Enhanced from 15% to 18%
-  successBorder: { value: "rgba(34,197,94,0.7)" }, // Stronger visibility
+  // === 状態色 - ゲーム用強化 ===
+  success: { value: "#10B981" }, // emerald.500 - 成功
+  successSolid: { value: "#10B981" },
+  successSubtle: { value: "rgba(16,185,129,0.15)" },
+  danger: { value: "#DC2626" }, // berryRed相当
+  dangerSolid: { value: "#DC2626" },
+  dangerSubtle: { value: "rgba(220,38,38,0.15)" },
+
+  // === 特殊効果 ===
+  highlight: { value: "#FBBF24" }, // heroGold.400 - ハイライト
+  focusRing: { value: "rgba(58,176,255,0.8)" }, // slimeBlue @ 80%
+  hoverOverlay: { value: "rgba(255,255,255,0.08)" }, // 8% white overlay
+  activeOverlay: { value: "rgba(255,255,255,0.12)" }, // 12% white overlay
   dangerBorder: { value: "rgba(239,68,68,0.7)" }, // Stronger visibility
   // Text colors for state feedback
   successText: { value: "#BBF7D0" }, // Light green for text on dark backgrounds
   dangerText: { value: "#FECACA" }, // Light red for text on dark backgrounds
 
   // === INTERACTION - ENHANCED ACCESSIBILITY ===
-  focusRing: { value: "rgba(99,102,241,0.8)" }, // More visible focus ring
   link: { value: "#8B92FF" }, // Lighter indigo for better link visibility
   linkHover: { value: "#A5ABFF" }, // Even lighter on hover
   cardHoverBg: { value: "#1F222A" }, // Enhanced hover background
-  
-  // Interactive state enhancements
-  hoverOverlay: { value: "rgba(255,255,255,0.08)" }, // General hover state
-  activeOverlay: { value: "rgba(255,255,255,0.12)" }, // Active/pressed state
 
   // === SPECIAL LEGACY ===
   panelBannerFg: { value: "#10141A" },

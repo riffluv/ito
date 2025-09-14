@@ -44,7 +44,7 @@ export const UNIFIED_LAYOUT = {
   // 150% DPI特別対応（カード重なり解消＋縦方向最適化）
   DPI_150: {
     HEADER_HEIGHT: "clamp(48px, 4.5dvh, 72px)", // さらに圧縮
-    HAND_AREA_HEIGHT: "clamp(160px, 14dvh, 200px)", // 少し余裕を持たせる
+    HAND_AREA_HEIGHT: "clamp(140px, 12dvh, 180px)", // 盤面確保のため更に圧縮
     // 150%DPIでカード間隔問題解消のための調整
     CARD: {
       WIDTH: { base: "88px", md: "105px" }, // 実装済み値に統一
@@ -98,7 +98,7 @@ export const UNIFIED_LAYOUT = {
     COMPONENT_PADDING: "16px", // 統一パディング（Chakraの4に相当）
     SECTION_GAP: "0px", // セクション間のギャップ（外側制御のため0）
     INNER_SPACING: "24px", // 内部要素の間隔（Chakraの6に相当）
-    CARD_GAP: "12px", // カード間のギャップ（Chakraの3に相当）
+    CARD_GAP: "16px", // カード間のギャップ（Vercel版準拠でより美観に）
     FORM_GAP: "8px", // フォーム要素間のギャップ（Chakraの2に相当）
   },
 
