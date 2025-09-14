@@ -148,7 +148,7 @@ export function DragonQuestParty({
       }}
     >
       <Box
-        bg={UI_TOKENS.GRADIENTS.forestGreen}
+        bg={UI_TOKENS.COLORS.panelBg}
         border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`} // 太いドラクエ風ボーダー
         borderRadius={0}
         px={4}
