@@ -4,6 +4,9 @@ import { Box, HStack, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
+import { notify } from "@/components/ui/notify";
+import { transferHost } from "@/lib/firebase/rooms";
+import { sendSystemMessage } from "@/lib/firebase/chat";
 
 interface PlayerDoc {
   name: string;
@@ -22,6 +25,8 @@ interface DragonQuestPartyProps {
   onlineUids?: string[]; // オンライン参加者の id 列
   hostId?: string; // ホストのUID
   variant?: "fixed" | "panel"; // panel: サイドレール内に収めて使う
+  roomId?: string; // 手動委譲用
+  isHostUser?: boolean; // 自分がホストか
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -64,6 +69,8 @@ export function DragonQuestParty({
   onlineUids,
   hostId,
   variant = "fixed",
+  roomId,
+  isHostUser,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 表示するプレイヤーリストを決定 (onlineUids が渡されればそれで絞る)
@@ -193,6 +200,7 @@ export function DragonQuestParty({
         css={{
           boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
+          pointerEvents: "auto",
         }}
       >
         {/* ドラクエ風パーティーヘッダー */}
@@ -215,6 +223,7 @@ export function DragonQuestParty({
           flexDirection="column"
           gap={1}
           w={{ base: "200px", md: "220px" }}
+          css={{ pointerEvents: "auto" }}
         >
           {[...renderPlayers]
             .sort((a, b) => {
@@ -232,6 +241,19 @@ export function DragonQuestParty({
                 roomStatus
               );
               const isHost = hostId && player.id === hostId;
+              const canTransfer = !!(isHostUser && roomId && player.id !== hostId);
+              const onTransfer = async () => {
+                if (!canTransfer) return;
+                try {
+                  await transferHost(roomId!, player.id);
+                  notify({ title: `ホストを ${fresh.name} に委譲`, type: "success" });
+                  try {
+                    await sendSystemMessage(roomId!, `👑 ホストが ${fresh.name} さんに委譲されました`);
+                  } catch {}
+                } catch (e: any) {
+                  notify({ title: "委譲に失敗しました", description: String(e?.message || e), type: "error" });
+                }
+              };
 
               return (
                 <Box
@@ -249,7 +271,9 @@ export function DragonQuestParty({
                     minHeight: "28px",
                     display: "flex",
                     alignItems: "center",
+                    cursor: canTransfer ? "pointer" : "default",
                   }}
+                  onDoubleClick={onTransfer}
                 >
                   {/* プレイヤー情報 */}
                   <HStack
@@ -268,7 +292,7 @@ export function DragonQuestParty({
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
-                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}`}
+                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
                       css={
                         isHost
                           ? {
