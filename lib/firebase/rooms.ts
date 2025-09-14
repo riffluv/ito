@@ -139,7 +139,7 @@ export async function leaveRoom(
   if (transferredTo) {
     try {
       // UIDではなく表示名を取得して告知
-      let nextHostName = transferredTo;
+      let nextHostName: string = transferredTo || "";
       try {
         const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
         const nm = (pSnap.data() as any)?.name;
@@ -167,7 +167,7 @@ export async function leaveRoom(
         });
         try {
           // UIDではなく表示名を取得して告知
-          let nextHostName = nextHost;
+          let nextHostName: string = nextHost || "";
           try {
             const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", nextHost));
             const nm = (pSnap.data() as any)?.name;
