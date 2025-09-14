@@ -222,3 +222,65 @@ export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolea
     console.warn("resetRoomToWaiting: failed to reset players state", e);
   }
 }
+
+// リセット＋在席者のみでやり直し（チャット告知オプション）
+export async function resetRoomWithPrune(
+  roomId: string,
+  keepIds: string[] | null | undefined,
+  opts?: { notifyChat?: boolean }
+) {
+  const roomRef = doc(db!, "rooms", roomId);
+  let removedCount: number | null = null;
+  let keptCount: number | null = null;
+  let prevTotal: number | null = null;
+  await runTransaction(db!, async (tx) => {
+    const snap = await tx.get(roomRef);
+    if (!snap.exists()) return;
+    const room: any = snap.data();
+    const prevRound: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
+      : null;
+    const keepArr = Array.isArray(keepIds) ? keepIds : [];
+    if (prevRound && prevRound.length > 0) {
+      prevTotal = prevRound.length;
+      const keep = new Set(keepArr);
+      keptCount = prevRound.filter((id) => keep.has(id)).length;
+      removedCount = prevTotal - keptCount;
+    } else {
+      // 前ラウンドが存在しない（waiting中など）の場合は、在席数のみを表示用に保持
+      prevTotal = null;
+      keptCount = keepArr.length;
+      removedCount = null;
+    }
+    // リセット本体
+    tx.update(roomRef, {
+      status: "waiting",
+      result: null,
+      deal: null,
+      order: null,
+      round: 0,
+      topic: null,
+      topicOptions: null,
+      topicBox: null,
+      closedAt: null,
+      expiresAt: null,
+    });
+  });
+
+  // 任意のチャット告知（軽量）
+  if (opts?.notifyChat) {
+    try {
+      if (keptCount != null && prevTotal != null) {
+        const removedText = removedCount && removedCount > 0 ? `、除外 ${removedCount} 名` : "";
+        await sendSystemMessage(
+          roomId,
+          `🔄 在席者でやり直し（前ラウンド ${prevTotal} 名 → 在席 ${keptCount} 名${removedText}）`
+        );
+      } else if (keptCount != null) {
+        await sendSystemMessage(roomId, `🔄 在席者でやり直し（在席 ${keptCount} 名）`);
+      } else {
+        await sendSystemMessage(roomId, "🔄 在席者でやり直し");
+      }
+    } catch {}
+  }
+}

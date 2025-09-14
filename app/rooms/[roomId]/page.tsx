@@ -395,10 +395,9 @@ export default function RoomPage() {
 
   // isMember は上で算出済み
 
-  // ラウンド対象（オンラインの参加者のみ）
-  const onlineSet = new Set(
-    Array.isArray(onlineUids) ? onlineUids : onlinePlayers.map((p) => p.id)
-  );
+  // ラウンド対象（表示の安定性重視）
+  // presenceの一時的な揺れでスロット/待機カード数が減らないよう、
+  // 基本はラウンドメンバー（deal.players ∪ players）をそのまま採用する。
   const baseIds = Array.isArray((room as any)?.deal?.players)
     ? Array.from(
         new Set<string>([
@@ -407,7 +406,7 @@ export default function RoomPage() {
         ])
       )
     : players.map((p) => p.id);
-  const eligibleIds = baseIds.filter((id) => onlineSet.has(id));
+  const eligibleIds = baseIds;
 
   // 並び替えフェーズの判定（CentralCardBoardと同じロジック）
   const canStartSorting = useMemo(() => {
@@ -615,6 +614,8 @@ export default function RoomPage() {
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
       // ヘッダー機能統合
       roomName={displayRoomName}
+      onlineUids={onlineUids}
+      roundIds={baseIds}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
       pop={pop}
