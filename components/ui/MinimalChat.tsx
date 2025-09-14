@@ -17,6 +17,7 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
     <>
       <Box
         position="fixed"
+        // さらに外側（画面の右端に寄せる）
         right={{ base: 3, md: 5 }}
         bottom={{ base: CHAT_FAB_OFFSET_MOBILE, md: CHAT_FAB_OFFSET_DESKTOP }}
         zIndex={20}
@@ -49,31 +50,31 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
             base: CHAT_PANEL_BOTTOM_MOBILE,
             md: CHAT_PANEL_BOTTOM_DESKTOP,
           }}
-          width={{ base: "min(88vw, 320px)", md: "340px" }} // 基本サイズを大幅縮小
-          height={{ base: "45vh", md: "400px" }}
+          width={{ base: "min(88vw, 320px)", md: "340px" }}
+          height={{ base: "36vh", md: "300px" }}
           css={{
-            // DPI 125%対応：8人カード対応でより小さく
+            // DPI 125%: さらに低めに（カード・お題との衝突回避）
             "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
               {
-                width: "280px !important", // さらに大幅縮小
-                height: "350px !important",
+                width: "280px !important",
+                height: "300px !important",
               },
             "@media (min-resolution: 1.25dppx) and (max-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (max-width: 768px)":
               {
                 width: "min(85vw, 260px) !important",
-                height: "40vh !important",
+                height: "34vh !important",
               },
-            
-            // DPI 150%対応：8人カード対応で最小サイズ
+
+            // DPI 150%: さらに小さめ
             "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
               {
-                width: "240px !important", // 最小限サイズ
-                height: "280px !important", // 高さも最小限
+                width: "240px !important",
+                height: "240px !important",
               },
             "@media (min-resolution: 1.5dppx) and (max-width: 768px), screen and (-webkit-device-pixel-ratio: 1.5) and (max-width: 768px)":
               {
                 width: "min(80vw, 220px) !important",
-                height: "32vh !important",
+                height: "28vh !important",
               },
           }}
           zIndex={21}
