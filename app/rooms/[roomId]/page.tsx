@@ -18,6 +18,7 @@ import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
+import { UI_TOKENS } from "@/theme/layout";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -504,7 +505,17 @@ export default function RoomPage() {
   // Layout nodes split to avoid JSX nesting pitfalls
   const headerNode = undefined; // ヘッダー削除: MiniHandDockに機能統合済み
 
-  const sidebarNode = undefined; // モック仕様: 左の参加者リストは廃止（待機エリアで代替）
+  // 左レール：なかま（オンライン表示）
+  const sidebarNode = (
+    <DragonQuestParty
+      players={players}
+      roomStatus={room?.status || "waiting"}
+      onlineCount={onlinePlayers.length}
+      onlineUids={onlineUids}
+      hostId={room?.hostId}
+      variant="panel"
+    />
+  );
 
   const mainNode = (
     <Box
@@ -521,7 +532,7 @@ export default function RoomPage() {
           },
       }}
     >
-      <Box p={0}>
+      <Box p={0} pt={{ base: "64px", md: "72px" }}>
         <UniversalMonitor room={room} players={players} />
       </Box>
       {/* ドット行が親でクリップされないように: visible + minH=0 */}
@@ -609,23 +620,14 @@ export default function RoomPage() {
         mode="create"
       />
 
-      {/* ミニマルUI（固定配置） */}
-      <MinimalChat roomId={roomId} />
-
-      {/* シンプル進行状況表示（左上固定） - 進行状況のみ表示 */}
+      {/* シンプル進行状況表示（中央上） */}
       <SimplePhaseDisplay
         roomStatus={room?.status || "waiting"}
         canStartSorting={canStartSorting}
       />
 
-      {/* ドラクエ風パーティーメンバー表示 */}
-      <DragonQuestParty
-        players={players}
-        roomStatus={room?.status || "waiting"}
-        onlineCount={onlinePlayers.length}
-        onlineUids={onlineUids}
-        hostId={room?.hostId}
-      />
+      {/* チャットはトグル式（FABで開閉） */}
+      <MinimalChat roomId={roomId} />
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
 

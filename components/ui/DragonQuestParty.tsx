@@ -21,6 +21,7 @@ interface DragonQuestPartyProps {
   onlineCount?: number; // 実際のオンライン参加者数
   onlineUids?: string[]; // オンライン参加者の id 列
   hostId?: string; // ホストのUID
+  variant?: "fixed" | "panel"; // panel: サイドレール内に収めて使う
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -62,6 +63,7 @@ export function DragonQuestParty({
   onlineCount,
   onlineUids,
   hostId,
+  variant = "fixed",
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 表示するプレイヤーリストを決定 (onlineUids が渡されればそれで絞る)
@@ -169,17 +171,11 @@ export function DragonQuestParty({
 
   if (actualCount === 0) return null;
 
-  return (
+  const panel = (
     <Box
       ref={containerRef}
-      position="fixed"
-      top={{ base: "80px", md: "88px" }} // SimplePhaseDisplayの下
-      left={{ base: "20px", md: "24px" }}
-      zIndex={49}
       css={{
-        pointerEvents: "none",
-        // 明示的に変形/不透明度のデフォルトを指定しておくと
-        // アニメーションの途中状態が残った場合の見栄えを安定させる
+        pointerEvents: variant === "fixed" ? "none" : "auto",
         transform: "none",
         opacity: 1,
       }}
@@ -321,6 +317,24 @@ export function DragonQuestParty({
           </Text>
         )}
       </Box>
+    </Box>
+  );
+
+  if (variant === "panel") {
+    // サイドレール用: 位置決めなしでパネルのみ返す
+    return panel;
+  }
+
+  // 互換: 既存の固定配置（使わない方針だが保持）
+  return (
+    <Box
+      position="fixed"
+      top={{ base: "84px", md: "92px" }}
+      left={{ base: "max(16px, calc((100vw - 1440px)/2 + 16px))", md: "max(24px, calc((100vw - 1440px)/2 + 24px))" }}
+      zIndex={49}
+      css={{ pointerEvents: "none" }}
+    >
+      {panel}
     </Box>
   );
 }

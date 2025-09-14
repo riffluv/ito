@@ -196,10 +196,13 @@ export function SimplePhaseDisplay({
       ref={containerRef}
       position="fixed"
       top={{ base: "20px", md: "24px" }}
-      left={{ base: "20px", md: "24px" }}
+      left="50%"
+      transform="translateX(-50%)"
       zIndex={50}
       css={{
         pointerEvents: "none",
+        // 1440pxの可視主幅を超えないように中央に寄せる（セーフゾーン対応）
+        maxWidth: "min(92vw, 1440px)",
       }}
     >
       <Box
