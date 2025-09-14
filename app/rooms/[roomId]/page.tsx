@@ -514,6 +514,8 @@ export default function RoomPage() {
       onlineCount={onlinePlayers.length}
       onlineUids={onlineUids}
       hostId={room?.hostId}
+      roomId={roomId}
+      isHostUser={isHost}
       variant="panel"
     />
   );
