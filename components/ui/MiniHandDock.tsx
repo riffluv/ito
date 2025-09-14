@@ -164,11 +164,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   };
 
+  // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ
+  const hasHostButtons = isHost && (
+    (roomStatus === "waiting") ||
+    (isSortSubmit(actualResolveMode) && roomStatus === "clue") ||
+    ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished")
+  );
+
   return (
     <Box
       display="flex"
       alignItems="center"
-      justifyContent="center"
+      justifyContent={hasHostButtons ? "flex-start" : "center"}
       w="100%"
       maxW="900px"
       mx="auto"

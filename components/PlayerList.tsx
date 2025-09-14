@@ -1,6 +1,7 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { UI_TOKENS } from "@/theme/layout";
 import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { useMemo } from "react";
 
@@ -48,16 +49,22 @@ export function PlayerList({
         position="sticky"
         top={0}
         zIndex={1}
-        bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
-        py={1}
-        mb={1}
+        bg={UI_TOKENS.COLORS.panelBg}
+        py={2}
+        mb={2}
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+        borderRadius={0}
+        boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
       >
         <Text
           fontSize="xs"
-          color="fgMuted"
-          px={1}
+          color="white"
+          px={2}
           letterSpacing="0.08em"
           textTransform="uppercase"
+          fontWeight="600"
+          fontFamily="monospace"
+          textShadow="1px 1px 0px #000"
         >
           {title}
         </Text>
@@ -68,51 +75,110 @@ export function PlayerList({
           <Box
             key={p.id}
             p={3}
-            borderRadius="xl"
-            bg={isMe ? "accentSubtle" : "panelSubBg"}
-            boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
-            _hover={{ boxShadow: UNIFIED_LAYOUT.ELEVATION.CARD.FLOATING }}
+            borderRadius={0}
+            bg={isMe ? UI_TOKENS.COLORS.dqBlue : UI_TOKENS.COLORS.panelBg}
+            color="white"
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha70}`}
+            boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+            _hover={{
+              borderColor: UI_TOKENS.COLORS.whiteAlpha90,
+              transform: "translateY(-1px)",
+              boxShadow: UI_TOKENS.SHADOWS.panelDistinct
+            }}
+            transition="all 0.15s ease"
           >
             <HStack gap={3} minH="48px" align="center">
               <Avatar.Root size="sm">
                 <Avatar.Fallback name={p.name} />
               </Avatar.Root>
               <HStack gap={2} flex={1} minW={0} align="center">
-                <Text fontWeight="semibold" lineClamp={1} minW={0}>
+                <Text fontWeight="semibold" lineClamp={1} minW={0} color="white">
                   {p.name}
                 </Text>
                 {isMe && typeof p.number === "number" && (
-                  <Badge colorPalette="green" title="あなたの数字">
-                    <Text as="span" textStyle="numeric">
+                  <Box
+                    px={2}
+                    py={1}
+                    bg={UI_TOKENS.COLORS.dqGold}
+                    color="black"
+                    border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                    borderRadius={0}
+                    boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                    title="あなたの数字"
+                  >
+                    <Text as="span" fontSize="xs" fontWeight="600" fontFamily="monospace">
                       #{p.number}
                     </Text>
-                  </Badge>
+                  </Box>
                 )}
               </HStack>
               <HStack>
                 {Array.isArray(online) && online.includes(p.id) ? (
-                  <Badge colorPalette="green">オンライン</Badge>
+                  <Box
+                    px={2}
+                    py={1}
+                    bg={UI_TOKENS.COLORS.dqGreen}
+                    color="white"
+                    border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                    borderRadius={0}
+                    boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                  >
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">オンライン</Text>
+                  </Box>
                 ) : p.ready ? (
-                  <Badge colorPalette="purple">準備OK</Badge>
+                  <Box
+                    px={2}
+                    py={1}
+                    bg={UI_TOKENS.COLORS.dqBlue}
+                    color="white"
+                    border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                    borderRadius={0}
+                    boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                  >
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">準備OK</Text>
+                  </Box>
                 ) : p.clue1 ? (
-                  <Badge colorPalette="orange">入力中</Badge>
+                  <Box
+                    px={2}
+                    py={1}
+                    bg={UI_TOKENS.COLORS.dqGold}
+                    color="black"
+                    border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                    borderRadius={0}
+                    boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                  >
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">入力中</Text>
+                  </Box>
                 ) : (
-                  <Badge colorPalette="gray">未入力</Badge>
+                  <Box
+                    px={2}
+                    py={1}
+                    bg={UI_TOKENS.COLORS.blackAlpha60}
+                    color={UI_TOKENS.COLORS.whiteAlpha70}
+                    border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha50}`}
+                    borderRadius={0}
+                    boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                  >
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">未入力</Text>
+                  </Box>
                 )}
               </HStack>
             </HStack>
             <Box
               mt={2}
               pt={2}
-              bg={UNIFIED_LAYOUT.SURFACE.PANEL_SUBTLE}
-              borderRadius="md"
+              bg={UI_TOKENS.COLORS.blackAlpha40}
+              border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+              borderRadius={0}
+              boxShadow="inset 1px 1px 2px rgba(0,0,0,0.4)"
             >
               <Text
                 fontSize="sm"
-                color="fgMuted"
+                color={UI_TOKENS.COLORS.whiteAlpha80}
                 lineClamp={3}
                 overflowWrap="anywhere"
                 title={p.clue1 || "（未設定）"}
+                fontFamily="monospace"
               >
                 連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
               </Text>
