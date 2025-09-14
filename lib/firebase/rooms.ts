@@ -166,9 +166,18 @@ export async function leaveRoom(
   }
 }
 
-export async function resetRoomToWaiting(roomId: string) {
-  await updateDoc(doc(db!, "rooms", roomId), {
-    status: "waiting", // ラウンド終了後はロビー状態に戻す
+export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolean }) {
+  const roomRef = doc(db!, "rooms", roomId);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) return;
+  const room: any = snap.data();
+  const status = room?.status;
+  // 進行中は原則禁止（誤タップや遅延UIからの誤操作防止）
+  if (!opts?.force && (status === "clue" || status === "reveal")) {
+    throw new Error("進行中はリセットできません");
+  }
+  await updateDoc(roomRef, {
+    status: "waiting",
     result: null,
     deal: null,
     order: null,

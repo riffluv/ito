@@ -1,7 +1,7 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
-import { joinRoomFully } from "@/lib/services/roomService";
+import { joinRoomFully, ensureMember } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -142,6 +142,12 @@ export function useRoomState(
     if (!displayName || !String(displayName).trim()) return;
     if (room.status === "waiting") {
       joinRoomFully({ roomId, uid, displayName: displayName }).catch(
+        () => void 0
+      );
+    } else {
+      // 進行中に入室した場合でも、参加者一覧の不一致を防ぐため
+      // players コレクションに自分のDocだけは必ず存在させる
+      ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
     }
