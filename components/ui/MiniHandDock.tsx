@@ -150,8 +150,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const resetGame = async () => {
-    const { resetRoomToWaiting } = await import("@/lib/firebase/rooms");
-    await resetRoomToWaiting(roomId);
+    try {
+      const { resetRoomToWaiting } = await import("@/lib/firebase/rooms");
+      const inProgress = roomStatus === "clue" || roomStatus === "reveal";
+      await resetRoomToWaiting(roomId, inProgress ? { force: true } : undefined);
+      notify({ title: "ゲームをリセット！", type: "success" });
+    } catch (e: any) {
+      const msg = String(e?.message || e || "");
+      notify({ title: "リセットに失敗しました", description: msg, type: "error" });
+    }
   };
 
   // 配布演出: 数字が来た瞬間に軽くポップ（レイアウト不変）

@@ -10,6 +10,7 @@ import type { PlayerDoc } from "@/lib/types";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
+import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
@@ -153,10 +154,17 @@ export function useParticipants(
   }, []);
 
   const participants = useMemo(() => {
-    if (!Array.isArray(onlineUids)) return players; // フォールバック: 全員表示（サイド効果なし）
+    // presence 未対応/利用不可時: lastSeen を用いた近似で“実活動中”のみ表示
+    if (!Array.isArray(onlineUids)) {
+      const now = Date.now();
+      return players.filter((p) => isActive((p as any).lastSeen, now, ACTIVE_WINDOW_MS));
+    }
     const set = new Set(onlineUids);
     return players.filter((p) => set.has(p.id));
-  }, [players, Array.isArray(onlineUids) ? onlineUids.join(",") : "_"]);
+  }, [
+    players,
+    Array.isArray(onlineUids) ? onlineUids.join(",") : "_",
+  ]);
 
   const detach = async () => {
     try {

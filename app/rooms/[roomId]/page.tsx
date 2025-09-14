@@ -303,10 +303,11 @@ export default function RoomPage() {
         notify({ title: "プレイヤーは2人以上必要です", type: "info" });
         return;
       }
+      // 先に開始アクションを実行し、成功後にroundを進める（失敗時の不整合防止）
+      await startGameAction(roomId);
       await updateDoc(doc(db!, "rooms", roomId), {
         round: (room.round || 0) + 1,
       });
-      await startGameAction(roomId);
       notify({ title: "ゲーム開始", type: "success" });
     } catch (e: any) {
       console.error(e);

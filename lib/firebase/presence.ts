@@ -28,10 +28,25 @@ export function presenceSupported(): boolean {
 }
 
 // presence の心拍とオフライン判定
-export const PRESENCE_HEARTBEAT_MS = 30_000; // 30s ごとに ts を更新
-export const PRESENCE_STALE_MS = 90_000; // 90s 以上更新が無ければオフライン扱い
-// クライアント時計ずれが大きい端末の未来時刻を無視するための上限
-export const MAX_CLOCK_SKEW_MS = 60_000; // ts が now より 60s 以上未来なら無効扱い
+// ENVで上書き可能（NEXT_PUBLIC_*）にしつつ、デフォルトは厳しめの値に最適化
+const ENV_HEARTBEAT = Number(
+  (process.env.NEXT_PUBLIC_PRESENCE_HEARTBEAT_MS || "").toString()
+);
+export const PRESENCE_HEARTBEAT_MS =
+  Number.isFinite(ENV_HEARTBEAT) && ENV_HEARTBEAT > 0 ? ENV_HEARTBEAT : 20_000; // 20s
+
+const ENV_STALE = Number(
+  (process.env.NEXT_PUBLIC_PRESENCE_STALE_MS || "").toString()
+);
+export const PRESENCE_STALE_MS =
+  Number.isFinite(ENV_STALE) && ENV_STALE > 0 ? ENV_STALE : 45_000; // 45s
+
+// クライアント時計ずれが大きい端末の未来時刻を無視するための上限（ENV上書き可）
+const ENV_SKEW = Number(
+  (process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS || "").toString()
+);
+export const MAX_CLOCK_SKEW_MS =
+  Number.isFinite(ENV_SKEW) && ENV_SKEW > 0 ? ENV_SKEW : 30_000; // 30s
 
 export async function attachPresence(roomId: string, uid: string) {
   if (!presenceSupported()) return () => {};
