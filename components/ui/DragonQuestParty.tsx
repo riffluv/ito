@@ -171,11 +171,15 @@ export function DragonQuestParty({
 
   if (actualCount === 0) return null;
 
-  const panel = (
+  return (
     <Box
       ref={containerRef}
+      position="fixed"
+      top={{ base: "80px", md: "88px" }}
+      left={{ base: "20px", md: "24px" }}
+      zIndex={49}
       css={{
-        pointerEvents: variant === "fixed" ? "none" : "auto",
+        pointerEvents: "none",
         transform: "none",
         opacity: 1,
       }}
@@ -317,24 +321,6 @@ export function DragonQuestParty({
           </Text>
         )}
       </Box>
-    </Box>
-  );
-
-  if (variant === "panel") {
-    // サイドレール用: 位置決めなしでパネルのみ返す
-    return panel;
-  }
-
-  // 互換: 既存の固定配置（使わない方針だが保持）
-  return (
-    <Box
-      position="fixed"
-      top={{ base: "84px", md: "92px" }}
-      left={{ base: "max(16px, calc((100vw - 1440px)/2 + 16px))", md: "max(24px, calc((100vw - 1440px)/2 + 24px))" }}
-      zIndex={49}
-      css={{ pointerEvents: "none" }}
-    >
-      {panel}
     </Box>
   );
 }
