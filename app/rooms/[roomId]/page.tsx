@@ -532,7 +532,16 @@ export default function RoomPage() {
           },
       }}
     >
-      <Box p={0} pt={{ base: "64px", md: "72px" }}>
+      <Box
+        p={0}
+        pt={{ base: "56px", md: "64px" }}
+        css={{
+          // DPI150ではアナウンス帯の高さをさらに抑える（重なり回避＋盤面確保）
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            paddingTop: "40px !important",
+          },
+        }}
+      >
         <UniversalMonitor room={room} players={players} />
       </Box>
       {/* ドット行が親でクリップされないように: visible + minH=0 */}

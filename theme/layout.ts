@@ -44,7 +44,7 @@ export const UNIFIED_LAYOUT = {
   // 150% DPI特別対応（カード重なり解消＋縦方向最適化）
   DPI_150: {
     HEADER_HEIGHT: "clamp(48px, 4.5dvh, 72px)", // さらに圧縮
-    HAND_AREA_HEIGHT: "clamp(160px, 14dvh, 200px)", // 少し余裕を持たせる
+    HAND_AREA_HEIGHT: "clamp(140px, 12dvh, 180px)", // 盤面確保のため更に圧縮
     // 150%DPIでカード間隔問題解消のための調整
     CARD: {
       WIDTH: { base: "88px", md: "105px" }, // 実装済み値に統一
