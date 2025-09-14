@@ -140,6 +140,16 @@ export default function RoomPage() {
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+
+  // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
+  const [pop, setPop] = useState(false);
+  useEffect(() => {
+    if (typeof me?.number === "number") {
+      setPop(true);
+      const id = setTimeout(() => setPop(false), 180);
+      return () => clearTimeout(id);
+    }
+  }, [me?.number]);
   // 名前未設定時はダイアログを表示。auto-joinはuseRoomState側で抑止済み
   const needName = !displayName || !String(displayName).trim();
   const handleSubmitName = async (name: string) => {
@@ -286,9 +296,9 @@ export default function RoomPage() {
   // waitingに戻ったら自分のフィールドを初期化
   useEffect(() => {
     if (!room || room.status !== "waiting" || !uid) return;
-    const me = players.find((p) => p.id === uid);
-    if (!me) return;
-    if (me.number !== null || me.clue1 || me.ready || me.orderIndex !== 0) {
+    const myPlayer = players.find((p) => p.id === uid);
+    if (!myPlayer) return;
+    if (myPlayer.number !== null || myPlayer.clue1 || myPlayer.ready || myPlayer.orderIndex !== 0) {
       resetPlayerState(roomId, uid).catch(() => void 0);
     }
   }, [room?.status, uid]);
@@ -607,6 +617,7 @@ export default function RoomPage() {
       roomName={displayRoomName}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
+      pop={pop}
     />
   ) : (
     <Box h="1px" />
@@ -621,6 +632,7 @@ export default function RoomPage() {
         main={mainNode}
         handArea={handAreaNode}
       />
+
 
       {/* 名前入力モーダル。キャンセルは不可（閉じても再度開く） */}
       <NameDialog
