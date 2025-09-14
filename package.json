@@ -17,7 +17,8 @@
     "audit:performance": "npm run build:analyze",
     "prepare": "npm run chakra:typegen",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "admin:cleanup-ghost": "node scripts/admin-cleanup-ghost-rooms.js"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.25.0",

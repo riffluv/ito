@@ -136,40 +136,95 @@ export function GameLayout({
                   top: headerDPI150,
                 },
             }}
-          >
-            <Box
-              w="100%"
-              h="100%"
-              px={{ base: 4, md: 8 }}
-              py={{ base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
-              position="relative"
-              display="flex"
-              flexDirection="column"
-              gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
-              css={{
-                // DPI 150%対応：更なるコンパクト化
-                "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                  {
-                    padding: "0.4rem 1.2rem !important", // パディング縮小
-                    gap: "0.6rem !important", // 要素間を更に詰める
-                  },
-              }}
-              zIndex={10}
-              bg="transparent"
             >
-              {main}
-            </Box>
+              <Box
+                w="100%"
+                h="100%"
+                px={{ base: 4, md: 8 }}
+                py={{ base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
+                position="relative"
+                display="flex"
+                flexDirection="column"
+                gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
+                css={{
+                  // DPI 150%対応：更なるコンパクト化
+                  "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
+                    {
+                      padding: "0.4rem 1.2rem !important", // パディング縮小
+                      gap: "0.6rem !important", // 要素間を更に詰める
+                    },
+                }}
+                zIndex={10}
+                bg="transparent"
+              >
+                {main}
+              </Box>
           </Box>
+
+          {/* 左レール（なかま） */}
+          {sidebar && (
+            <Box
+              position="fixed"
+              top={{ base: "80px", md: "100px" }}
+              // フッター（手札エリア）と重ならないように一定の下マージンを確保
+              bottom={`calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 16px)`}
+              // チャットと同じように左端に寄せて衝突を完全回避
+              left={{ base: "12px", md: "16px" }}
+              width={{ base: "220px", md: "240px" }}
+              zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
+              css={{ pointerEvents: "none" }}
+            >
+              <Box h="100%" pointerEvents="auto" overflowY="auto">
+                {sidebar}
+              </Box>
+            </Box>
+          )}
+
+          {/* 右レール（チャット） */}
+          {rightPanel && (
+            <Box
+              position="fixed"
+              top={{ base: `calc(${headerHeight} + 8px)`, md: `calc(${headerHeight} + 12px)` }}
+              // 高さを抑える：フッターよりかなり上で止める（DPIでも衝突回避）
+              bottom={{ base: "clamp(220px, 28dvh, 360px)", md: "clamp(240px, 26dvh, 380px)" }}
+              // さらに画面の外側（右端）へ寄せる
+              right={{ base: "12px", md: "16px" }}
+              width={{ base: "min(88vw, 320px)", md: "300px" }}
+              zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
+              css={{
+                pointerEvents: "none",
+                // 追加の安全装置: 最大高さをさらに制限
+                maxHeight: "min(70dvh, 720px)",
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  bottom: "clamp(260px, 30dvh, 420px)",
+                  maxHeight: "min(64dvh, 640px)",
+                },
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+                  bottom: "clamp(300px, 34dvh, 480px)",
+                  maxHeight: "min(60dvh, 580px)",
+                },
+              }}
+            >
+              <Box h="100%" pointerEvents="auto" overflow="hidden">
+                {rightPanel}
+              </Box>
+            </Box>
+          )}
 
           <Box
             position="fixed"
-            left={{ base: 4, md: 8 }}
-            right={{ base: 4, md: 8 }}
+            left={0}
+            right={0}
             bottom={{ base: 4, md: 6 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
             p={0}
+            display="flex"
+            justifyContent="center"
+            px={{ base: 4, md: 8 }}
           >
-            {handArea || <Box h="1px" />}
+            <Box w="100%" maxW="1440px">
+              {handArea || <Box h="1px" />}
+            </Box>
           </Box>
         </Box>
 
@@ -195,7 +250,7 @@ export function GameLayout({
           "sidebar main-area chat"
           "hand hand hand"
         `}
-        gridTemplateColumns={{ base: "1fr", xl: "220px 1fr 260px" }}
+        gridTemplateColumns={{ base: "1fr", xl: "240px 1fr 280px" }} // ガイドライン: 軽い非対称 (240px != 280px)
         gridTemplateRows={{
           base: "auto minmax(0, 1fr) auto",
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
@@ -250,15 +305,15 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg={UI_TOKENS.COLORS.panelBg}
-          paddingInline={{ base: 4, md: 6, lg: 8, xl: 8 }}
-          paddingTop={{ base: 4, md: 6, lg: 8, xl: 8 }}
+          paddingInline={{ base: 4, md: 6, lg: 8, xl: 7 }} // ガイドライン: 左右非対称 (7 != 8)
+          paddingTop={{ base: 4, md: 6, lg: 8, xl: 7 }}
           paddingBottom={0}
           overflowY="hidden"
           display="flex"
           flexDirection="column"
           position="relative"
           minH={0}
-          gap={{ base: 4, md: 6 }}
+          gap={{ base: 4, md: 5 }} // ガイドライン: リズム感 (5 != 6)
         >
           {main}
         </Box>

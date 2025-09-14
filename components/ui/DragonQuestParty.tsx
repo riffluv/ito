@@ -4,6 +4,9 @@ import { Box, HStack, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
+import { notify } from "@/components/ui/notify";
+import { transferHost } from "@/lib/firebase/rooms";
+import { sendSystemMessage } from "@/lib/firebase/chat";
 
 interface PlayerDoc {
   name: string;
@@ -21,6 +24,11 @@ interface DragonQuestPartyProps {
   onlineCount?: number; // 実際のオンライン参加者数
   onlineUids?: string[]; // オンライン参加者の id 列
   hostId?: string; // ホストのUID
+  variant?: "fixed" | "panel"; // panel: サイドレール内に収めて使う
+  roomId?: string; // 手動委譲用
+  isHostUser?: boolean; // 自分がホストか
+  eligibleIds?: string[]; // ラウンド対象（オンライン）
+  roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -62,84 +70,41 @@ export function DragonQuestParty({
   onlineCount,
   onlineUids,
   hostId,
+  variant = "fixed",
+  roomId,
+  isHostUser,
+  eligibleIds,
+  roundIds,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // 表示するプレイヤーリストを決定 (onlineUids が渡されればそれで絞る)
-  const onlineSet = Array.isArray(onlineUids) ? new Set(onlineUids) : null;
-  const displayedPlayers = onlineSet
-    ? players.filter((p) => onlineSet.has(p.id))
-    : players;
+  // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
+  // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
+  // - 2) eligibleIds（オンラインのラウンド対象）
+  // - 3) onlineUids
+  // - 4) players
+  // - hostId は常に含める
+  const byId = new Map(players.map((p) => [p.id, p] as const));
+  let displayedIds: string[];
+  if (Array.isArray(roundIds) && roundIds.length > 0) {
+    displayedIds = Array.from(new Set(roundIds));
+  } else if (Array.isArray(eligibleIds) && eligibleIds.length > 0) {
+    displayedIds = Array.from(new Set(eligibleIds));
+  } else if (Array.isArray(onlineUids) && onlineUids.length > 0) {
+    displayedIds = Array.from(new Set(onlineUids));
+  } else {
+    displayedIds = players.map((p) => p.id);
+  }
+  if (hostId && !displayedIds.includes(hostId)) {
+    displayedIds = [hostId, ...displayedIds];
+  }
+  const displayedPlayers = displayedIds.map((id) =>
+    byId.get(id) ||
+    ({ id, name: "プレイヤー", avatar: "", number: null, clue1: "", ready: false, orderIndex: 0 } as any)
+  );
 
-  // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
-  const actualCount = onlineSet
-    ? displayedPlayers.length
-    : (onlineCount ?? players.length);
+  // 実際の参加者数は表示対象の長さと一致させる（UIの一貫性を担保）
+  const actualCount = displayedPlayers.length;
   const previousCount = useRef(actualCount);
-
-  // renderPlayers: DOM から即時に消えないようにローカルにレンダリング用配列を保持
-  const [renderPlayers, setRenderPlayers] =
-    useState<(PlayerDoc & { id: string })[]>(displayedPlayers);
-
-  // displayedPlayers が更新されたら差分を処理: 退出時はアニメーションしてから消す
-  useEffect(() => {
-    // additions: 追加分を即座に表示に入れる
-    const added = displayedPlayers.filter(
-      (p) => !renderPlayers.some((r) => r.id === p.id)
-    );
-    if (added.length > 0) {
-      setRenderPlayers((prev) => {
-        const merged = [...prev, ...added];
-        // keep same sort order as UI
-        merged.sort((a, b) => {
-          if (hostId) {
-            if (a.id === hostId && b.id !== hostId) return -1;
-            if (b.id === hostId && a.id !== hostId) return 1;
-          }
-          return a.orderIndex - b.orderIndex;
-        });
-        return merged;
-      });
-    }
-
-    // removals: renderPlayers にあって displayedPlayers にない => 退出
-    const removed = renderPlayers.filter(
-      (r) => !displayedPlayers.some((p) => p.id === r.id)
-    );
-    if (removed.length > 0) {
-      const prefersReduced =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      removed.forEach((r) => {
-        // reduced motion なら即時に取り除く
-        if (prefersReduced) {
-          setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
-          return;
-        }
-
-        const el = containerRef.current?.querySelector(
-          `[data-player-id="${r.id}"]`
-        ) as HTMLElement | null;
-        if (el) {
-          // 控えめな退出アニメーション（短め・意味のある動き）
-          gsap.to(el, {
-            x: -20,
-            scale: 0.9,
-            opacity: 0,
-            duration: 0.24,
-            ease: "power2.in",
-            onComplete: () => {
-              setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
-            },
-          });
-        } else {
-          setRenderPlayers((prev) => prev.filter((p) => p.id !== r.id));
-        }
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedPlayers.map((p) => p.id).join(",")]);
 
   // メンバー数変化時のアニメーション
   useEffect(() => {
@@ -173,13 +138,11 @@ export function DragonQuestParty({
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "80px", md: "88px" }} // SimplePhaseDisplayの下
+      top={{ base: "80px", md: "88px" }}
       left={{ base: "20px", md: "24px" }}
       zIndex={49}
       css={{
         pointerEvents: "none",
-        // 明示的に変形/不透明度のデフォルトを指定しておくと
-        // アニメーションの途中状態が残った場合の見栄えを安定させる
         transform: "none",
         opacity: 1,
       }}
@@ -193,6 +156,7 @@ export function DragonQuestParty({
         css={{
           boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
           backdropFilter: "blur(8px) saturate(1.2)",
+          pointerEvents: "auto",
         }}
       >
         {/* ドラクエ風パーティーヘッダー */}
@@ -215,8 +179,9 @@ export function DragonQuestParty({
           flexDirection="column"
           gap={1}
           w={{ base: "200px", md: "220px" }}
+          css={{ pointerEvents: "auto" }}
         >
-          {[...renderPlayers]
+          {[...displayedPlayers]
             .sort((a, b) => {
               // ホストを最上位に固定し、その後はorderIndexで昇順
               if (hostId) {
@@ -232,6 +197,19 @@ export function DragonQuestParty({
                 roomStatus
               );
               const isHost = hostId && player.id === hostId;
+              const canTransfer = !!(isHostUser && roomId && player.id !== hostId);
+              const onTransfer = async () => {
+                if (!canTransfer) return;
+                try {
+                  await transferHost(roomId!, player.id);
+                  notify({ title: `ホストを ${fresh.name} に委譲`, type: "success" });
+                  try {
+                    await sendSystemMessage(roomId!, `👑 ホストが ${fresh.name} さんに委譲されました`);
+                  } catch {}
+                } catch (e: any) {
+                  notify({ title: "委譲に失敗しました", description: String(e?.message || e), type: "error" });
+                }
+              };
 
               return (
                 <Box
@@ -249,7 +227,9 @@ export function DragonQuestParty({
                     minHeight: "28px",
                     display: "flex",
                     alignItems: "center",
+                    cursor: canTransfer ? "pointer" : "default",
                   }}
+                  onDoubleClick={onTransfer}
                 >
                   {/* プレイヤー情報 */}
                   <HStack
@@ -268,7 +248,7 @@ export function DragonQuestParty({
                       letterSpacing="0.3px"
                       w={{ base: "160px", md: "170px" }} // レスポンシブ幅
                       truncate
-                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}`}
+                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
                       css={
                         isHost
                           ? {
