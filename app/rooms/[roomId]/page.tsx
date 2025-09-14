@@ -516,6 +516,7 @@ export default function RoomPage() {
       hostId={room?.hostId}
       roomId={roomId}
       isHostUser={isHost}
+      eligibleIds={eligibleIds}
       variant="panel"
     />
   );

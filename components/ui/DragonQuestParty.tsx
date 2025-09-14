@@ -27,6 +27,7 @@ interface DragonQuestPartyProps {
   variant?: "fixed" | "panel"; // panel: サイドレール内に収めて使う
   roomId?: string; // 手動委譲用
   isHostUser?: boolean; // 自分がホストか
+  eligibleIds?: string[]; // ラウンド対象（waitingカードと揃える）
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -71,16 +72,33 @@ export function DragonQuestParty({
   variant = "fixed",
   roomId,
   isHostUser,
+  eligibleIds,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // 表示するプレイヤーリストを決定 (onlineUids が渡されればそれで絞る)
-  const onlineSet = Array.isArray(onlineUids) ? new Set(onlineUids) : null;
-  const displayedPlayers = onlineSet
-    ? players.filter((p) => onlineSet.has(p.id))
-    : players;
+  // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
+  // - 1) eligibleIds （deal.players ∪ players のオンライン）
+  // - 2) onlineUids
+  // - 3) players
+  // - hostId は常に含める
+  const byId = new Map(players.map((p) => [p.id, p] as const));
+  let displayedIds: string[];
+  if (Array.isArray(eligibleIds) && eligibleIds.length > 0) {
+    displayedIds = Array.from(new Set(eligibleIds));
+  } else if (Array.isArray(onlineUids) && onlineUids.length > 0) {
+    displayedIds = Array.from(new Set(onlineUids));
+  } else {
+    displayedIds = players.map((p) => p.id);
+  }
+  if (hostId && !displayedIds.includes(hostId)) {
+    displayedIds = [hostId, ...displayedIds];
+  }
+  const displayedPlayers = displayedIds.map((id) =>
+    byId.get(id) ||
+    ({ id, name: "プレイヤー", avatar: "", number: null, clue1: "", ready: false, orderIndex: 0 } as any)
+  );
 
   // 実際の参加者数（オンライン優先、フォールバックは全プレイヤー数）
-  const actualCount = onlineSet
+  const actualCount = Array.isArray(onlineUids)
     ? displayedPlayers.length
     : (onlineCount ?? players.length);
   const previousCount = useRef(actualCount);
