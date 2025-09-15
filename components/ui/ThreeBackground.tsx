@@ -2,11 +2,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
-interface HD2DBackgroundProps {
+interface ThreeBackgroundProps {
   className?: string;
 }
 
-export function HD2DBackground({ className }: HD2DBackgroundProps) {
+export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -49,13 +49,13 @@ export function HD2DBackground({ className }: HD2DBackgroundProps) {
     }
     if (!mountRef.current) return;
 
-    console.log("HD2DBackground: Starting initialization...");
+    console.log("ThreeBackground: Starting initialization...");
 
     try {
       // シーン初期化
       const scene = new THREE.Scene();
       sceneRef.current = scene;
-      console.log("HD2DBackground: Scene created");
+      console.log("ThreeBackground: Scene created");
 
       // カメラ設定（HD-2D風の視点）
       const camera = new THREE.PerspectiveCamera(
@@ -67,7 +67,7 @@ export function HD2DBackground({ className }: HD2DBackgroundProps) {
       camera.position.set(0, 2, 10); // より近い位置から開始
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
-      console.log("HD2DBackground: Camera positioned at", camera.position);
+      console.log("ThreeBackground: Camera positioned at", camera.position);
 
       // レンダラー設定
       const renderer = new THREE.WebGLRenderer({
@@ -79,11 +79,11 @@ export function HD2DBackground({ className }: HD2DBackgroundProps) {
       renderer.setClearColor(0x0f0a1a, 1); // 深い紫の夜空
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      console.log("HD2DBackground: HD-2D renderer configured");
+      console.log("ThreeBackground: Three.js renderer configured");
 
       rendererRef.current = renderer;
       mountRef.current.appendChild(renderer.domElement);
-      console.log("HD2DBackground: Canvas mounted to DOM");
+      console.log("ThreeBackground: Canvas mounted to DOM");
 
       // ===== 上品な動的背景システム =====
 
@@ -192,12 +192,12 @@ export function HD2DBackground({ className }: HD2DBackgroundProps) {
       const subtleParticles = createSubtleParticles();
       setupSubtleLighting();
 
-      console.log("HD2DBackground: HD-2D magical world created");
+      console.log("ThreeBackground: Three.js background created");
 
       // 最初に一度レンダリングしてシーンが見えるかテスト
-      console.log("HD2DBackground: Performing initial render");
+      console.log("ThreeBackground: Performing initial render");
       renderer.render(scene, camera);
-      console.log("HD2DBackground: Initial render completed");
+      console.log("ThreeBackground: Initial render completed");
 
       // 上品でスムーズなアニメーションループ
       const animate = () => {
@@ -243,10 +243,10 @@ export function HD2DBackground({ className }: HD2DBackgroundProps) {
         renderer.render(scene, camera);
       };
 
-      console.log("HD2DBackground: Starting HD-2D magical animation");
+      console.log("ThreeBackground: Starting Three.js animation");
       animate();
     } catch (error) {
-      console.error("HD2DBackground: Error during initialization:", error);
+      console.error("ThreeBackground: Error during initialization:", error);
     }
 
     // ウィンドウリサイズ対応
