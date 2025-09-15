@@ -295,14 +295,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         disabled={!canDecide}
         px={4}
         py={2}
-        bg={UI_TOKENS.COLORS.dqBlue}
+        bg="rgba(71, 85, 105, 0.9)"
         color="white"
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         fontWeight="600"
         boxShadow={UI_TOKENS.SHADOWS.cardRaised}
         _hover={{
-          bg: UI_TOKENS.COLORS.dqBlue,
+          bg: "rgba(100, 116, 139, 0.9)",
           borderColor: "white",
           transform: "translateY(-1px)",
         }}
@@ -322,14 +322,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         disabled={!canSubmit}
         px={4}
         py={2}
-        bg={UI_TOKENS.COLORS.limeGreen}
+        bg="rgba(75, 85, 99, 0.9)"
         color="white"
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         fontWeight="600"
         boxShadow={UI_TOKENS.SHADOWS.cardRaised}
         _hover={{
-          bg: UI_TOKENS.COLORS.limeGreen,
+          bg: "rgba(107, 114, 128, 0.9)",
           borderColor: "white",
           transform: "translateY(-1px)",
         }}
