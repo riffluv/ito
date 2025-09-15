@@ -52,30 +52,75 @@ export function AppButton({
   // レシピclass名 + 呼び出し側のclassNameを合成（テスト: buttonRecipeを無効化）
   const combinedClassName = `${className ?? ''}`.trim();
 
-  // DQ風（中）: フラット塗り＋2px枠＋上下ベベル（JS適用）
+  // ドラクエ風重厚ボタン: ピクセル風の段積みシャドウ + エンボス
   const palettes = {
-    brand: { baseBg: "accentActive", hoverBg: "accent", borderColor: "borderAccent" },
-    gray: { baseBg: "surfaceRaised", hoverBg: "bgMuted", borderColor: "border" },
-    danger: { baseBg: "dangerSolid", hoverBg: "#DC2626", borderColor: "dangerBorder" },
-    success: { baseBg: "successSolid", hoverBg: "#16A34A", borderColor: "successBorder" },
-    teal: { baseBg: "secondary", hoverBg: "secondaryHover", borderColor: "secondaryActive" },
+    brand: {
+      baseBg: "rgba(20, 23, 34, 0.95)",
+      hoverBg: "rgba(25, 28, 39, 0.98)",
+      borderColor: "rgba(255,255,255,0.9)",
+      textColor: "white"
+    },
+    gray: {
+      baseBg: "rgba(71, 85, 105, 0.9)",
+      hoverBg: "rgba(75, 85, 99, 0.95)",
+      borderColor: "rgba(255,255,255,0.7)",
+      textColor: "white"
+    },
+    danger: {
+      baseBg: "rgba(185, 28, 28, 0.9)",
+      hoverBg: "rgba(220, 38, 38, 0.95)",
+      borderColor: "rgba(255,255,255,0.8)",
+      textColor: "white"
+    },
+    success: {
+      baseBg: "rgba(22, 163, 74, 0.9)",
+      hoverBg: "rgba(34, 197, 94, 0.95)",
+      borderColor: "rgba(255,255,255,0.8)",
+      textColor: "white"
+    },
+    teal: {
+      baseBg: "rgba(20, 184, 166, 0.9)",
+      hoverBg: "rgba(45, 212, 191, 0.95)",
+      borderColor: "rgba(255,255,255,0.8)",
+      textColor: "white"
+    },
   } as const;
   const p = palettes[finalPalette] ?? palettes.brand;
 
-  // ✅ 最適化: JS統一アプローチ (CSS競合回避)
+  // ✅ ドラクエ風重厚ボタン: ピクセル段積みシャドウ + エンボス効果
   const dqSolid = visual === "solid" ? {
     background: p.baseBg,
-    color: "white",
-    border: "2px solid",
+    color: p.textColor,
+    border: "3px solid",
     borderColor: p.borderColor,
-    boxShadow: UI_TOKENS.BUTTON_SHADOWS.flat,
+    borderRadius: 0,
+    fontFamily: "monospace",
+    fontWeight: 700,
+    letterSpacing: "0.5px",
+    textShadow: "1px 1px 0px rgba(0,0,0,0.8)",
+    boxShadow: `
+      inset 0 2px 0 rgba(255,255,255,0.1),
+      inset 0 -2px 0 rgba(0,0,0,0.4),
+      0 4px 8px rgba(0,0,0,0.3),
+      1px 1px 0 rgba(0,0,0,0.7),
+      0 2px 0 rgba(0,0,0,0.5)
+    `,
     // transform/hoverアニメーションはJSイベントで統一管理
   } : {};
 
   const dqOutline = visual === "outline" ? {
-    background: "glassBg05",
+    background: "rgba(0,0,0,0.3)",
     border: "2px solid",
-    borderColor: "border",
+    borderColor: "rgba(255,255,255,0.6)",
+    borderRadius: 0,
+    fontFamily: "monospace",
+    fontWeight: 600,
+    letterSpacing: "0.3px",
+    textShadow: "1px 1px 0px rgba(0,0,0,0.6)",
+    boxShadow: `
+      inset 0 1px 0 rgba(255,255,255,0.1),
+      0 2px 4px rgba(0,0,0,0.2)
+    `,
     // hover/activeはJSイベントで管理
   } : {};
 
@@ -92,11 +137,37 @@ export function AppButton({
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
     transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}`,
     ...((css as any) || {}),
-    // CSS擬似で影段階を統一（JSイベントはtransformのみ担当）
+    // ドラクエ風ホバー・アクティブ効果
     ...(visual === "solid"
       ? {
-          "&:hover": { boxShadow: UI_TOKENS.BUTTON_SHADOWS.hover },
-          "&:active": { boxShadow: UI_TOKENS.BUTTON_SHADOWS.active },
+          "&:hover": {
+            backgroundColor: p.hoverBg,
+            boxShadow: `
+              inset 0 2px 0 rgba(255,255,255,0.15),
+              inset 0 -2px 0 rgba(0,0,0,0.5),
+              0 6px 12px rgba(0,0,0,0.4),
+              1px 1px 0 rgba(0,0,0,0.8),
+              0 3px 0 rgba(0,0,0,0.6)
+            `,
+          },
+          "&:active": {
+            boxShadow: `
+              inset 0 1px 0 rgba(255,255,255,0.05),
+              inset 0 -1px 0 rgba(0,0,0,0.3),
+              0 2px 4px rgba(0,0,0,0.2)
+            `,
+          },
+        }
+      : {}),
+    ...(visual === "outline"
+      ? {
+          "&:hover": {
+            backgroundColor: "rgba(255,255,255,0.1)",
+            borderColor: "rgba(255,255,255,0.8)",
+          },
+          "&:active": {
+            backgroundColor: "rgba(0,0,0,0.2)",
+          },
         }
       : {}),
   };
