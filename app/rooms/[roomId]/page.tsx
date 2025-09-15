@@ -23,7 +23,7 @@ import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
-  setPlayerNameAvatar,
+  setPlayerName,
   updateClue1,
   updateLastSeen,
 } from "@/lib/firebase/players";
@@ -39,7 +39,6 @@ import {
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
-import { randomAvatar } from "@/lib/utils";
 import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
@@ -349,11 +348,10 @@ export default function RoomPage() {
   useEffect(() => {
     if (!uid) return;
     if (displayName) {
-      setPlayerNameAvatar(
+      setPlayerName(
         roomId,
         uid,
-        displayName,
-        randomAvatar(displayName)
+        displayName
       ).catch(() => void 0);
     }
   }, [displayName, uid, roomId]);

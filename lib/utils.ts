@@ -1,17 +1,25 @@
+// アバター配列（参加順で配布）
+export const AVATAR_LIST = [
+  "/avatars/knight1.webp",
+  "/avatars/knightwomen1.webp",
+  "/avatars/kenja.webp",
+  "/avatars/kenshi.webp",
+  "/avatars/mahou.webp",
+  "/avatars/siifu.webp",
+  "/avatars/arrow.webp",
+  "/avatars/arrow2.webp",
+  "/avatars/guitar.webp"
+];
+
+// 参加順でアバターを取得（重複なし）
+export function getAvatarByOrder(playerCount: number): string {
+  return AVATAR_LIST[playerCount % AVATAR_LIST.length];
+}
+
+// 既存の名前ベースアバター（後方互換性のため残す）
 export function randomAvatar(name: string): string {
-  const avatars = [
-    "/avatars/knight1.webp",
-    "/avatars/knightwomen1.webp",
-    "/avatars/kenja.webp",
-    "/avatars/kenshi.webp",
-    "/avatars/mahou.webp",
-    "/avatars/siifu.webp",
-    "/avatars/arrow.webp",
-    "/avatars/arrow2.webp",
-    "/avatars/guitar.webp"
-  ];
-  const idx = Math.abs(hashCode(name)) % avatars.length;
-  return avatars[idx];
+  const idx = Math.abs(hashCode(name)) % AVATAR_LIST.length;
+  return AVATAR_LIST[idx];
 }
 
 export function hashCode(s: string): number {

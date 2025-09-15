@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
-import { randomAvatar } from "@/lib/utils";
+import { getAvatarByOrder } from "@/lib/utils";
 import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
@@ -75,7 +75,7 @@ export function CreateRoomModal({
       const roomRef = await addDoc(collection(db!, "rooms"), room);
       const pdoc: PlayerDoc = {
         name: displayName, // displayNameの存在は上でチェック済み
-        avatar: randomAvatar(displayName),
+        avatar: getAvatarByOrder(0), // ホストは常に最初のアバター
         number: null,
         clue1: "",
         ready: false,
