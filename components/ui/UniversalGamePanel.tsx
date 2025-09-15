@@ -182,22 +182,22 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "20px", md: "24px" }}
-      left={{ base: "20px", md: "24px" }}
-      zIndex={100}
+      top={{ base: "12px", md: "16px" }}
+      left={{ base: "16px", md: "20px" }}
+      zIndex={70}
       css={{
         pointerEvents: "none",
       }}
     >
       <Box
         minW="280px"
-        maxW="400px"
-        bg={UI_TOKENS.COLORS.panelBg}
-        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+        maxW="420px"
+        bg="rgba(20,23,34,0.88)"
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
         borderRadius={0}
         css={{
-          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-          backdropFilter: "blur(12px) saturate(1.2)",
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          backdropFilter: "blur(6px) saturate(1.05)",
         }}
       >
         {/* フェーズ表示 */}

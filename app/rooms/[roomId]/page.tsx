@@ -649,9 +649,10 @@ export default function RoomPage() {
       />
 
       {/* シンプル進行状況表示（中央上） */}
-      <SimplePhaseDisplay
+  <SimplePhaseDisplay
         roomStatus={room?.status || "waiting"}
         canStartSorting={canStartSorting}
+        topicText={room?.topic || null}
       />
 
       {/* チャットはトグル式（FABで開閉） */}

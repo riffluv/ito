@@ -138,9 +138,10 @@ export function DragonQuestParty({
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "80px", md: "88px" }}
+      // 左上アナウンス帯の高さに合わせて、十分なクリアランスを確保
+      top={{ base: "112px", md: "128px" }}
       left={{ base: "20px", md: "24px" }}
-      zIndex={49}
+      zIndex={60}
       css={{
         pointerEvents: "none",
         transform: "none",
@@ -149,13 +150,13 @@ export function DragonQuestParty({
     >
       <Box
         bg={UI_TOKENS.COLORS.panelBg}
-        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`} // 太いドラクエ風ボーダー
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
         borderRadius={0}
         px={4}
         py={2}
         css={{
-          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-          backdropFilter: "blur(8px) saturate(1.2)",
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          backdropFilter: "blur(8px) saturate(1.1)",
           pointerEvents: "auto",
         }}
       >
