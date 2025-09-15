@@ -3,6 +3,7 @@ import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { dealNumbers } from "@/lib/game/room";
+import { sendSystemMessage } from "@/lib/firebase/chat";
 import {
   fetchTopicSections,
   getTopicsByType,

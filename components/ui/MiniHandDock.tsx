@@ -229,26 +229,24 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       alignItems="center"
       justifyContent={hasHostButtons ? "flex-start" : "center"}
       w="100%"
-      maxW="900px"
+      maxW="1280px"
       mx="auto"
-      px={6}
-      py={4}
+      px={{ base: 4, md: 6 }}
+      py={{ base: 3, md: 4 }}
       gap={{ base: 3, md: 5 }}
-      bg={UI_TOKENS.COLORS.panelBg}
-      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+      bg="rgba(20,23,34,0.90)" // パネル色を少し透過して背景となじませる
+      border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
       borderRadius={0}
-      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+      boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
       position="relative"
       _before={{
         content: '""',
         position: "absolute",
-        top: "-3px",
-        left: "-3px",
-        right: "-3px",
-        bottom: "-3px",
-        border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-        borderRadius: 0,
-        pointerEvents: "none",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "2px",
+        background: UI_TOKENS.COLORS.whiteAlpha20, // 上フチだけを薄く出して“固定感”を演出
       }}
     >
       <DiamondNumberCard
@@ -294,15 +292,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         fontWeight="600"
-        boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+        boxShadow={UI_TOKENS.SHADOWS.cardRaised}
         _hover={{
-          bg: UI_TOKENS.COLORS.dqBlueHover,
+          bg: UI_TOKENS.COLORS.dqBlue,
           borderColor: "white",
           transform: "translateY(-1px)",
         }}
         _active={{
           transform: "translateY(0)",
-          boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
         }}
         transition="all 0.15s ease"
       >
@@ -316,20 +314,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         disabled={!canSubmit}
         px={4}
         py={2}
-        bg={UI_TOKENS.COLORS.dqGreen}
+        bg={UI_TOKENS.COLORS.limeGreen}
         color="white"
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
         fontWeight="600"
-        boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+        boxShadow={UI_TOKENS.SHADOWS.cardRaised}
         _hover={{
-          bg: UI_TOKENS.COLORS.dqGreenHover,
+          bg: UI_TOKENS.COLORS.limeGreen,
           borderColor: "white",
           transform: "translateY(-1px)",
         }}
         _active={{
           transform: "translateY(0)",
-          boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
         }}
         transition="all 0.15s ease"
       >
@@ -352,7 +350,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             fontWeight="700"
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
-            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
+            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
             _hover={{
               bg: UI_TOKENS.GRADIENTS.forestGreenHover,
               color: UI_TOKENS.COLORS.whiteAlpha95,
@@ -363,7 +361,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             _active={{
               bg: UI_TOKENS.GRADIENTS.forestGreenActive,
               color: UI_TOKENS.COLORS.whiteAlpha90,
-              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
               transform: "translateY(0)",
             }}
             transition="all 0.15s ease"
@@ -387,7 +385,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             fontWeight="700"
             fontFamily="monospace"
             textShadow="1px 1px 0px #000"
-            boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
+            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
             _hover={{
               bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
               color: UI_TOKENS.COLORS.whiteAlpha95,
@@ -398,7 +396,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             _active={{
               bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
               color: UI_TOKENS.COLORS.whiteAlpha90,
-              boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
+              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
               transform: "translateY(0)",
             }}
             _disabled={{
@@ -430,7 +428,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               fontWeight="700"
               fontFamily="monospace"
               textShadow="1px 1px 0px #000"
-              boxShadow={UI_TOKENS.BUTTON_SHADOWS.raised}
+              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
               _hover={{
                 bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
                 color: UI_TOKENS.COLORS.whiteAlpha95,
@@ -441,7 +439,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               _active={{
                 bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: UI_TOKENS.BUTTON_SHADOWS.active,
+                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 transform: "translateY(0)",
               }}
               transition="all 0.15s ease"
@@ -471,7 +469,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 color="white"
                 border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
                 borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
                 _hover={{
                   bg: UI_TOKENS.COLORS.dqBlue,
                   borderColor: "white",
@@ -479,7 +477,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
+                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 }}
                 transition="all 0.15s ease"
               >
@@ -495,15 +493,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 color="white"
                 border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
                 borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
                 _hover={{
-                  bg: UI_TOKENS.COLORS.dqGreen,
+                  bg: UI_TOKENS.COLORS.limeGreen,
                   borderColor: "white",
                   transform: "translateY(-1px)",
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
+                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 }}
                 transition="all 0.15s ease"
               >
@@ -519,7 +517,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 color="white"
                 border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
                 borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
                 _hover={{
                   bg: UI_TOKENS.COLORS.dqRed,
                   borderColor: "white",
@@ -527,7 +525,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 }}
                 _active={{
                   transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.buttonPressed,
+                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 }}
                 transition="all 0.15s ease"
               >

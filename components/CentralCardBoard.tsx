@@ -475,12 +475,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         overflow="visible"
         position="relative"
         minHeight={0}
-        pt={{ base: 2, md: 3 }}
+        // 盤面上部に十分な呼吸域を確保（中央お題パネルを廃止したため調整）
+        // モダンカードゲームの視線設計: 盤面の重心は画面中央やや下（40–45%）。
+        // vh基準にして解像度/DPIに依存しない位置を維持。
+        pt={{ base: "12vh", md: "14vh" }}
         pb={{ base: 4, md: 6 }}
         css={{
           // 150DPI専用最適化: 縦方向圧縮
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            paddingTop: "0.25rem !important",
+            paddingTop: "14vh !important",
             paddingBottom: "1rem !important",
           },
         }}

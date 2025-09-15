@@ -87,7 +87,9 @@ export function useHostActions({
       if (room.status === "waiting") {
         await startGameAction(roomId); // sets status: clue
       }
-      await topicControls.selectCategory(roomId, defaultType);
+      // "カスタム"はカテゴリ型に含まれないため、既定の通常版にフォールバック
+      const selectType = defaultType === "カスタム" ? "通常版" : defaultType;
+      await topicControls.selectCategory(roomId, selectType as any);
       await topicControls.dealNumbers(roomId);
       notify({ title: "🚀 クイック開始しました", type: "success" });
     } catch (error) {

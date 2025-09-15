@@ -27,41 +27,6 @@ export default function UniversalMonitor({
   room: RoomDoc | null;
   players: (PlayerDoc & { id: string })[];
 }) {
-  if (!room) return null;
-
-  return (
-    <Box
-      textAlign="center"
-      marginBottom={{ base: "0.75rem", md: "1rem" }} // DPI100%基準で縮小
-      css={{
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          marginBottom: "0.5rem", // DPI125%はさらに縮小
-        },
-      }}
-    >
-      {/* ドラクエ風：深い背景＋白フチの情報窓 */}
-      <Box
-        display="inline-block"
-        px={6}
-        py={4}
-        bg={UI_TOKENS.COLORS.panelBg}
-        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
-        borderRadius="8px"
-        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-        backdropFilter="blur(8px)"
-      >
-        <Box
-          as="div"
-          fontSize="sm"
-          fontWeight={700}
-          lineHeight={1}
-          color={UI_TOKENS.COLORS.whiteAlpha95}
-          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-        >
-          <TopicDisplay room={room} inline />
-          {/* フェーズアナウンスは別コンポーネント（GSAPアニメーション版）に移行 */}
-        </Box>
-      </Box>
-    </Box>
-  );
+  // アナウンスとお題は SimplePhaseDisplay 側の左上帯に統合
+  return null;
 }

@@ -78,8 +78,8 @@ export function PlayerList({
             borderRadius={0}
             bg={isMe ? UI_TOKENS.COLORS.dqBlue : UI_TOKENS.COLORS.panelBg}
             color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha70}`}
-            boxShadow={UI_TOKENS.SHADOWS.buttonRaised}
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
             _hover={{
               borderColor: UI_TOKENS.COLORS.whiteAlpha90,
               transform: "translateY(-1px)",
@@ -99,7 +99,7 @@ export function PlayerList({
                   <Box
                     px={2}
                     py={1}
-                    bg={UI_TOKENS.COLORS.dqGold}
+                    bg={UI_TOKENS.COLORS.accentGold}
                     color="black"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
@@ -117,7 +117,7 @@ export function PlayerList({
                   <Box
                     px={2}
                     py={1}
-                    bg={UI_TOKENS.COLORS.dqGreen}
+                    bg={UI_TOKENS.COLORS.limeGreen}
                     color="white"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
@@ -141,7 +141,7 @@ export function PlayerList({
                   <Box
                     px={2}
                     py={1}
-                    bg={UI_TOKENS.COLORS.dqGold}
+                    bg={UI_TOKENS.COLORS.accentGold}
                     color="black"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
@@ -154,7 +154,7 @@ export function PlayerList({
                     px={2}
                     py={1}
                     bg={UI_TOKENS.COLORS.blackAlpha60}
-                    color={UI_TOKENS.COLORS.whiteAlpha70}
+                    color={UI_TOKENS.COLORS.whiteAlpha80}
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha50}`}
                     borderRadius={0}
                     boxShadow="1px 1px 0px rgba(0,0,0,0.6)"

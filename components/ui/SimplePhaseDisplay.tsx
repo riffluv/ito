@@ -3,6 +3,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
+import Tooltip from "@/components/ui/Tooltip";
 
 // ドラクエ風フェーズアナウンス（シンプル版）
 const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
@@ -31,11 +32,13 @@ const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
 interface SimplePhaseDisplayProps {
   roomStatus: string;
   canStartSorting?: boolean;
+  topicText?: string | null;
 }
 
 export function SimplePhaseDisplay({
   roomStatus,
   canStartSorting = false,
+  topicText = null,
 }: SimplePhaseDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -195,59 +198,77 @@ export function SimplePhaseDisplay({
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "20px", md: "24px" }}
-      left="50%"
-      transform="translateX(-50%)"
-      zIndex={50}
+      top={{ base: "12px", md: "16px" }}
+      left={{ base: "16px", md: "20px" }}
+      zIndex={70}
       css={{
         pointerEvents: "none",
-        // 1440pxの可視主幅を超えないように中央に寄せる（セーフゾーン対応）
-        maxWidth: "min(92vw, 1440px)",
-        // DPI150ではアナウンス自体の高さを抑える
-        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-          top: "16px",
-        },
       }}
     >
       <Box
-        display="inline-flex"
-        alignItems="center"
-        gap={2}
-        px={3}
-        py={2}
-        bg={UI_TOKENS.GRADIENTS.deepBlue}
-        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+        display="flex"
+        alignItems="flex-start"
+        gap={{ base: 2, md: 3 }}
+        px={{ base: 3, md: 4 }}
+        py={{ base: 2, md: 3 }}
+        bg="rgba(20,23,34,0.9)"
+        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
         borderRadius={0}
         css={{
-          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-          backdropFilter: "blur(8px) saturate(1.2)",
-          // DPI150向けコンパクト化
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            padding: "4px 10px",
+          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          backdropFilter: "blur(8px) saturate(1.1)",
+          maxWidth: "min(92vw, 520px)",
+          ["@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)" as any]: {
+            maxWidth: "min(92vw, 560px)",
           },
         }}
       >
         <Text as="span" ref={iconRef} fontSize="lg" display="inline-block">
           {icon}
         </Text>
-
-        <Text
-          ref={textRef}
-          fontSize={{ base: "xs", md: "sm" }}
-          fontWeight={600}
-          color="white"
-          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-          letterSpacing="0.5px"
-          fontFamily="monospace"
-          whiteSpace="nowrap"
-          css={{
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-              fontSize: "0.78rem",
-            },
-          }}
-        >
-          ▼ {text} ▼
-        </Text>
+        <Box display="flex" flexDirection="column" gap={{ base: 0.5, md: 1 }}>
+          <Text
+            ref={textRef}
+            fontSize={{ base: "sm", md: "md" }}
+            fontWeight={800}
+            color={UI_TOKENS.COLORS.whiteAlpha95}
+            textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+            letterSpacing="0.5px"
+            fontFamily="monospace"
+            css={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              wordBreak: "break-word",
+              maxWidth: "min(88vw, 520px)",
+            }}
+          >
+            ▼ {text} ▼
+          </Text>
+          {topicText ? (
+            <Tooltip content={topicText} openDelay={200} showArrow>
+              <Text
+                fontSize={{ base: "xs", md: "sm" }}
+                color={UI_TOKENS.COLORS.textMuted}
+                letterSpacing="0.2px"
+                fontFamily="monospace"
+                css={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  maxWidth: "min(82vw, 480px)",
+                }}
+              >
+                <Text as="span" fontWeight={700} color={UI_TOKENS.COLORS.whiteAlpha90} mr={1}>
+                  お題:
+                </Text>
+                {topicText}
+              </Text>
+            </Tooltip>
+          ) : null}
+        </Box>
       </Box>
     </Box>
   );

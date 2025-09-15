@@ -46,7 +46,7 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      if (saved && ["css", "light3d", "rich3d"].includes(saved)) {
+      if (saved && ["css", "three3d", "pixijs"].includes(saved)) {
         setBackgroundType(saved as any);
       }
     } catch {
@@ -55,7 +55,7 @@ export function SettingsModal({
   }, []);
 
   // 背景設定のリアルタイム更新
-  const handleBackgroundChange = (newType: "css" | "light3d" | "rich3d") => {
+  const handleBackgroundChange = (newType: "css" | "three3d" | "pixijs") => {
     setBackgroundType(newType);
     try {
       localStorage.setItem("backgroundType", newType);
@@ -452,7 +452,7 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "light3d" ? "軽量 3D" : "リッチ 3D"}
+                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "軽量 3D" : "リッチ 3D"}
                   </Text>
                   <Stack gap={2}>
                     {[
