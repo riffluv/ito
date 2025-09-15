@@ -19,6 +19,8 @@ import {
 } from "@/lib/game/room";
 import { resetRoomWithPrune } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
+import { db } from "@/lib/firebase/client";
+import { doc, getDoc } from "firebase/firestore";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, HStack, IconButton, Input, Dialog, Text, VStack } from "@chakra-ui/react";
 import React from "react";
@@ -162,12 +164,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const quickStart = async () => {
-    // 直近に保存された選択（SettingsModalから）をローカルに保持し、反映遅延を吸収
+    // サーバのオプションだけを使用（最新値を明示取得して反映遅延を吸収）
     let effectiveType = defaultTopicType as string;
     try {
-      if (typeof window !== "undefined") {
-        const ls = window.localStorage.getItem("defaultTopicType");
-        if (ls && ls.trim()) effectiveType = ls;
+      if (db) {
+        const snap = await getDoc(doc(db, "rooms", roomId));
+        const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
+        if (latest && typeof latest === "string") effectiveType = latest;
       }
     } catch {}
 
@@ -453,19 +456,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               <IconButton
                 aria-label="お題シャッフル"
                 onClick={() => {
-                  let effectiveType = defaultTopicType as string;
-                  try {
-                    if (typeof window !== "undefined") {
-                      const ls = window.localStorage.getItem("defaultTopicType");
-                      if (ls && ls.trim()) effectiveType = ls;
-                    }
-                  } catch {}
-                  if (effectiveType === "カスタム") {
+                  if (defaultTopicType === "カスタム") {
                     if (!isHost) return;
                     setCustomText(currentTopic || "");
                     setCustomOpen(true);
                   } else {
-                    topicControls.shuffleTopic(roomId, effectiveType as any);
+                    topicControls.shuffleTopic(roomId, defaultTopicType as any);
                   }
                 }}
                 size="sm"
