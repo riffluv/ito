@@ -29,6 +29,7 @@ import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { postRoundReset } from "@/lib/utils/broadcast";
+import Tooltip from "@/components/ui/Tooltip";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -287,60 +288,64 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         w={{ base: "48vw", md: "420px" }}
         maxW="560px"
       />
-      <AppButton
-        size="sm"
-        visual="solid"
-        palette="brand"
-        onClick={handleDecide}
-        disabled={!canDecide}
-        px={4}
-        py={2}
-        bg="rgba(71, 85, 105, 0.9)"
-        color="white"
-        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-        borderRadius={0}
-        fontWeight="600"
-        boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-        _hover={{
-          bg: "rgba(100, 116, 139, 0.9)",
-          borderColor: "white",
-          transform: "translateY(-1px)",
-        }}
-        _active={{
-          transform: "translateY(0)",
-          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-        }}
-        transition="all 0.15s ease"
-      >
-        決定
-      </AppButton>
-      <AppButton
-        size="sm"
-        visual="solid"
-        palette="brand"
-        onClick={handleSubmit}
-        disabled={!canSubmit}
-        px={4}
-        py={2}
-        bg="rgba(75, 85, 99, 0.9)"
-        color="white"
-        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-        borderRadius={0}
-        fontWeight="600"
-        boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-        _hover={{
-          bg: "rgba(107, 114, 128, 0.9)",
-          borderColor: "white",
-          transform: "translateY(-1px)",
-        }}
-        _active={{
-          transform: "translateY(0)",
-          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-        }}
-        transition="all 0.15s ease"
-      >
-        出す
-      </AppButton>
+      <Tooltip content="連想ワードを決定" showArrow openDelay={300}>
+        <AppButton
+          size="sm"
+          visual="solid"
+          palette="brand"
+          onClick={handleDecide}
+          disabled={!canDecide}
+          px={4}
+          py={2}
+          bg="rgba(71, 85, 105, 0.9)"
+          color="white"
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          fontWeight="600"
+          boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+          _hover={{
+            bg: "rgba(100, 116, 139, 0.9)",
+            borderColor: "white",
+            transform: "translateY(-1px)",
+          }}
+          _active={{
+            transform: "translateY(0)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          }}
+          transition="all 0.15s ease"
+        >
+          決定
+        </AppButton>
+      </Tooltip>
+      <Tooltip content="カードを場に出す" showArrow openDelay={300}>
+        <AppButton
+          size="sm"
+          visual="solid"
+          palette="brand"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          px={4}
+          py={2}
+          bg="rgba(75, 85, 99, 0.9)"
+          color="white"
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          fontWeight="600"
+          boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+          _hover={{
+            bg: "rgba(107, 114, 128, 0.9)",
+            borderColor: "white",
+            transform: "translateY(-1px)",
+          }}
+          _active={{
+            transform: "translateY(0)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          }}
+          transition="all 0.15s ease"
+        >
+          出す
+        </AppButton>
+      </Tooltip>
       </HStack>
 
       {/* Spacer */}
@@ -349,92 +354,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* Right cluster */}
       <HStack gap={3} align="center">
         {isHost && roomStatus === "waiting" && (
-          <AppButton
-            size="md"
-            visual="solid"
-            onClick={quickStart}
-            minW="110px"
-            px={4}
-            py={2}
-            bg={UI_TOKENS.GRADIENTS.forestGreen}
-            color="white"
-            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-            borderRadius={0}
-            fontWeight="700"
-            fontFamily="monospace"
-            textShadow="1px 1px 0px #000"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-            _hover={{
-              bg: UI_TOKENS.GRADIENTS.forestGreenHover,
-              color: UI_TOKENS.COLORS.whiteAlpha95,
-              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-              borderColor: "white",
-              transform: "translateY(-1px)",
-            }}
-            _active={{
-              bg: UI_TOKENS.GRADIENTS.forestGreenActive,
-              color: UI_TOKENS.COLORS.whiteAlpha90,
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-              transform: "translateY(0)",
-            }}
-            transition="all 0.15s ease"
-          >
-            ゲーム開始
-          </AppButton>
-        )}
-        {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
-          <AppButton
-            size="md"
-            visual="solid"
-            onClick={evalSorted}
-            disabled={!allSubmitted}
-            minW="110px"
-            px={4}
-            py={2}
-            bg={UI_TOKENS.GRADIENTS.royalPurple}
-            color="white"
-            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-            borderRadius={0}
-            fontWeight="700"
-            fontFamily="monospace"
-            textShadow="1px 1px 0px #000"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-            _hover={{
-              bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
-              color: UI_TOKENS.COLORS.whiteAlpha95,
-              textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-              borderColor: "white",
-              transform: "translateY(-1px)",
-            }}
-            _active={{
-              bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
-              color: UI_TOKENS.COLORS.whiteAlpha90,
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-              transform: "translateY(0)",
-            }}
-            _disabled={{
-              bg: UI_TOKENS.COLORS.blackAlpha60,
-              color: UI_TOKENS.COLORS.whiteAlpha40,
-              borderColor: UI_TOKENS.COLORS.whiteAlpha50,
-              cursor: "not-allowed",
-              textShadow: "1px 1px 0px #000",
-            }}
-            transition="all 0.15s ease"
-          >
-            せーの！
-          </AppButton>
-        )}
-        {isHost &&
-          ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
-            roomStatus === "finished") && (
+          <Tooltip content="ゲームを開始する" showArrow openDelay={300}>
             <AppButton
               size="md"
               visual="solid"
-              onClick={roomStatus === "finished" ? resetGame : continueRound}
+              onClick={quickStart}
               minW="110px"
               px={4}
               py={2}
-              bg={UI_TOKENS.GRADIENTS.orangeSunset}
+              bg={UI_TOKENS.GRADIENTS.forestGreen}
               color="white"
               border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
               borderRadius={0}
@@ -443,133 +371,225 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               textShadow="1px 1px 0px #000"
               boxShadow={UI_TOKENS.SHADOWS.cardRaised}
               _hover={{
-                bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
+                bg: UI_TOKENS.GRADIENTS.forestGreenHover,
                 color: UI_TOKENS.COLORS.whiteAlpha95,
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "white",
                 transform: "translateY(-1px)",
               }}
               _active={{
-                bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
+                bg: UI_TOKENS.GRADIENTS.forestGreenActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
                 boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 transform: "translateY(0)",
               }}
               transition="all 0.15s ease"
             >
-              もう一度
+              ゲーム開始
             </AppButton>
+          </Tooltip>
+        )}
+        {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
+          <Tooltip content="みんなで一齐に提出" showArrow openDelay={300}>
+            <AppButton
+              size="md"
+              visual="solid"
+              onClick={evalSorted}
+              disabled={!allSubmitted}
+              minW="110px"
+              px={4}
+              py={2}
+              bg={UI_TOKENS.GRADIENTS.royalPurple}
+              color="white"
+              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+              borderRadius={0}
+              fontWeight="700"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+              _hover={{
+                bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
+                color: UI_TOKENS.COLORS.whiteAlpha95,
+                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+                borderColor: "white",
+                transform: "translateY(-1px)",
+              }}
+              _active={{
+                bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
+                color: UI_TOKENS.COLORS.whiteAlpha90,
+                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                transform: "translateY(0)",
+              }}
+              _disabled={{
+                bg: UI_TOKENS.COLORS.blackAlpha60,
+                color: UI_TOKENS.COLORS.whiteAlpha40,
+                borderColor: UI_TOKENS.COLORS.whiteAlpha50,
+                cursor: "not-allowed",
+                textShadow: "1px 1px 0px #000",
+              }}
+              transition="all 0.15s ease"
+            >
+              せーの！
+            </AppButton>
+          </Tooltip>
+        )}
+        {isHost &&
+          ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
+            roomStatus === "finished") && (
+            <Tooltip content="失敗後も続ける" showArrow openDelay={300}>
+              <AppButton
+                size="md"
+                visual="solid"
+                onClick={roomStatus === "finished" ? resetGame : continueRound}
+                minW="110px"
+                px={4}
+                py={2}
+                bg={UI_TOKENS.GRADIENTS.orangeSunset}
+                color="white"
+                border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+                borderRadius={0}
+                fontWeight="700"
+                fontFamily="monospace"
+                textShadow="1px 1px 0px #000"
+                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                _hover={{
+                  bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
+                  color: UI_TOKENS.COLORS.whiteAlpha95,
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+                  borderColor: "white",
+                  transform: "translateY(-1px)",
+                }}
+                _active={{
+                  bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
+                  color: UI_TOKENS.COLORS.whiteAlpha90,
+                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                  transform: "translateY(0)",
+                }}
+                transition="all 0.15s ease"
+              >
+                もう一度
+              </AppButton>
+            </Tooltip>
           )}
 
         <HStack gap={2}>
           {isHost && (
             <>
-              <IconButton
-                aria-label="お題シャッフル"
-                onClick={() => {
-                  if (defaultTopicType === "カスタム") {
-                    if (!isHost) return;
-                    setCustomText(currentTopic || "");
-                    setCustomOpen(true);
-                  } else {
-                    topicControls.shuffleTopic(roomId, defaultTopicType as any);
-                  }
-                }}
-                size="sm"
-                w="36px"
-                h="36px"
-                bg={UI_TOKENS.COLORS.panelBg}
-                color="white"
-                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
-                borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-                _hover={{
-                  bg: UI_TOKENS.COLORS.dqBlue,
-                  borderColor: "white",
-                  transform: "translateY(-1px)",
-                }}
-                _active={{
-                  transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                }}
-                transition="all 0.15s ease"
-              >
-                <FaRegCreditCard />
-              </IconButton>
-              <IconButton
-                aria-label="数字配布"
-                onClick={() => topicControls.dealNumbers(roomId)}
-                size="sm"
-                w="36px"
-                h="36px"
-                bg={UI_TOKENS.COLORS.panelBg}
-                color="white"
-                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
-                borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-                _hover={{
-                  bg: UI_TOKENS.COLORS.limeGreen,
-                  borderColor: "white",
-                  transform: "translateY(-1px)",
-                }}
-                _active={{
-                  transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                }}
-                transition="all 0.15s ease"
-              >
-                <FaDice />
-              </IconButton>
-              <IconButton
-                aria-label="リセット"
-                onClick={resetGame}
-                size="sm"
-                w="36px"
-                h="36px"
-                bg={UI_TOKENS.COLORS.panelBg}
-                color="white"
-                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
-                borderRadius={0}
-                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-                _hover={{
-                  bg: UI_TOKENS.COLORS.dqRed,
-                  borderColor: "white",
-                  transform: "translateY(-1px)",
-                }}
-                _active={{
-                  transform: "translateY(0)",
-                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                }}
-                transition="all 0.15s ease"
-              >
-                <FaRedo />
-              </IconButton>
+              <Tooltip content="お題をシャッフルする" showArrow openDelay={300}>
+                <IconButton
+                  aria-label="お題シャッフル"
+                  onClick={() => {
+                    if (defaultTopicType === "カスタム") {
+                      if (!isHost) return;
+                      setCustomText(currentTopic || "");
+                      setCustomOpen(true);
+                    } else {
+                      topicControls.shuffleTopic(roomId, defaultTopicType as any);
+                    }
+                  }}
+                  size="sm"
+                  w="36px"
+                  h="36px"
+                  bg={UI_TOKENS.COLORS.panelBg}
+                  color="white"
+                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  borderRadius={0}
+                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  _hover={{
+                    bg: UI_TOKENS.COLORS.dqBlue,
+                    borderColor: "white",
+                    transform: "translateY(-1px)",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                  }}
+                  transition="all 0.15s ease"
+                >
+                  <FaRegCreditCard />
+                </IconButton>
+              </Tooltip>
+              <Tooltip content="数字を配り直す" showArrow openDelay={300}>
+                <IconButton
+                  aria-label="数字配布"
+                  onClick={() => topicControls.dealNumbers(roomId)}
+                  size="sm"
+                  w="36px"
+                  h="36px"
+                  bg={UI_TOKENS.COLORS.panelBg}
+                  color="white"
+                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  borderRadius={0}
+                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  _hover={{
+                    bg: UI_TOKENS.COLORS.limeGreen,
+                    borderColor: "white",
+                    transform: "translateY(-1px)",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                  }}
+                  transition="all 0.15s ease"
+                >
+                  <FaDice />
+                </IconButton>
+              </Tooltip>
+              <Tooltip content="ゲームをリセット" showArrow openDelay={300}>
+                <IconButton
+                  aria-label="リセット"
+                  onClick={resetGame}
+                  size="sm"
+                  w="36px"
+                  h="36px"
+                  bg={UI_TOKENS.COLORS.panelBg}
+                  color="white"
+                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  borderRadius={0}
+                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  _hover={{
+                    bg: UI_TOKENS.COLORS.dqRed,
+                    borderColor: "white",
+                    transform: "translateY(-1px)",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                  }}
+                  transition="all 0.15s ease"
+                >
+                  <FaRedo />
+                </IconButton>
+              </Tooltip>
             </>
           )}
           {onOpenSettings && (
-            <IconButton
-              aria-label="設定"
-              onClick={onOpenSettings}
-              size="xs"
-              bg="transparent"
-              color="gray.400"
-              borderWidth={0}
-            >
-              <FiSettings />
-            </IconButton>
+            <Tooltip content="設定を開く" showArrow openDelay={300}>
+              <IconButton
+                aria-label="設定"
+                onClick={onOpenSettings}
+                size="xs"
+                bg="transparent"
+                color="gray.400"
+                borderWidth={0}
+              >
+                <FiSettings />
+              </IconButton>
+            </Tooltip>
           )}
           {onLeaveRoom && (
-            <IconButton
-              aria-label="退出"
-              onClick={onLeaveRoom}
-              size="xs"
-              bg="transparent"
-              color="gray.400"
-              borderWidth={0}
-              title="ロビーに戻る"
-            >
-              <FiLogOut />
-            </IconButton>
+            <Tooltip content="ロビーに戻る" showArrow openDelay={300}>
+              <IconButton
+                aria-label="退出"
+                onClick={onLeaveRoom}
+                size="xs"
+                bg="transparent"
+                color="gray.400"
+                borderWidth={0}
+              >
+                <FiLogOut />
+              </IconButton>
+            </Tooltip>
           )}
       </HStack>
       {/* カスタムお題入力モーダル（簡易版） */}
