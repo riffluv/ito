@@ -250,19 +250,19 @@ export function DragonQuestParty({
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      bg="rgba(0,0,0,0.3)"
-                      border="1px solid rgba(255,255,255,0.2)"
-                      borderRadius="4px"
                       fontSize="lg"
-                      overflow="hidden"
                     >
                       {fresh.avatar?.startsWith('/avatars/') ? (
                         <img
                           src={fresh.avatar}
                           alt="avatar"
-                          width="28"
-                          height="28"
-                          style={{ objectFit: 'cover', borderRadius: '2px' }}
+                          width="32"
+                          height="32"
+                          style={{
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                          }}
                         />
                       ) : (
                         fresh.avatar || "⚔️"
