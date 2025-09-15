@@ -8,6 +8,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { UI_TOKENS } from "@/theme/layout";
+import { useEffect, useState as useLocalState } from "react";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -38,6 +39,35 @@ export function SettingsModal({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
 
+  // 背景設定のstate（localStorageから読み込み）
+  const [backgroundType, setBackgroundType] = useLocalState<"css" | "light3d" | "rich3d">("css");
+
+  // localStorageから背景設定を読み込み
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("backgroundType");
+      if (saved && ["css", "light3d", "rich3d"].includes(saved)) {
+        setBackgroundType(saved as any);
+      }
+    } catch {
+      // localStorage読み込みエラーは無視
+    }
+  }, []);
+
+  // 背景設定のリアルタイム更新
+  const handleBackgroundChange = (newType: "css" | "light3d" | "rich3d") => {
+    setBackgroundType(newType);
+    try {
+      localStorage.setItem("backgroundType", newType);
+      // カスタムイベントで他のコンポーネントに通知
+      window.dispatchEvent(new CustomEvent("backgroundTypeChanged", {
+        detail: { backgroundType: newType }
+      }));
+    } catch {
+      // エラーは無視
+    }
+  };
+
   const handleSave = async () => {
     if (!isHost) {
       notify({ title: "ホストのみ設定を変更できます", type: "warning" });
@@ -61,6 +91,7 @@ export function SettingsModal({
       try {
         if (typeof window !== "undefined") {
           window.localStorage.setItem("defaultTopicType", defaultTopicType);
+          window.localStorage.setItem("backgroundType", backgroundType);
         }
       } catch {}
       notify({ title: "設定を保存しました", type: "success" });
@@ -410,6 +441,111 @@ export function SettingsModal({
 
             {activeTab === "graphics" && (
               <Stack gap={6}>
+                {/* グラフィック設定の説明 */}
+                <Text fontSize="sm" color="white" textAlign="center" fontFamily="monospace">
+                  ※ クリックすると きりかわるよ
+                </Text>
+
+                {/* 背景設定セクション */}
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
+                    はいけい モード
+                  </Text>
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
+                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "light3d" ? "軽量 3D" : "リッチ 3D"}
+                  </Text>
+                  <Stack gap={2}>
+                    {[
+                      {
+                        value: "css",
+                        title: "シンプル はいけい",
+                        description: "けいりょう CSS はいけい（すべての PC で あんてい）",
+                      },
+                      {
+                        value: "light3d",
+                        title: "けいりょう 3D はいけい",
+                        description: "かるい Three.js エフェクト（30 パーティクル）",
+                      },
+                      {
+                        value: "rich3d",
+                        title: "リッチ 3D はいけい",
+                        description: "うつくしい Three.js エフェクト（60 パーティクル）",
+                      },
+                    ].map((opt) => {
+                      const isSelected = backgroundType === (opt.value as any);
+                      return (
+                        <Box
+                          key={opt.value}
+                          cursor="pointer"
+                          onClick={() => handleBackgroundChange(opt.value as any)}
+                          p={4}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                          bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
+                          _hover={{
+                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                            bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
+                          }}
+                        >
+                          <HStack justify="space-between" align="start">
+                            <VStack align="start" gap={1} flex="1">
+                              <Text
+                                fontSize="md"
+                                fontWeight="bold"
+                                color="white"
+                                fontFamily="monospace"
+                                textShadow="1px 1px 0px #000"
+                              >
+                                {opt.title}
+                              </Text>
+                              <Text
+                                fontSize="sm"
+                                color={UI_TOKENS.COLORS.textMuted}
+                                lineHeight="short"
+                                fontFamily="monospace"
+                              >
+                                {opt.description}
+                              </Text>
+                            </VStack>
+                            <Box
+                              w={5}
+                              h={5}
+                              borderRadius={0}
+                              border="2px solid"
+                              borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
+                              bg={isSelected ? "white" : "transparent"}
+                              mt={0.5}
+                              position="relative"
+                              transition="background-color 0.15s ease, border-color 0.15s ease"
+                            >
+                              {isSelected && (
+                                <Box
+                                  position="absolute"
+                                  top="50%"
+                                  left="50%"
+                                  transform="translate(-50%, -50%)"
+                                  w="10px"
+                                  h="6px"
+                                  color="black"
+                                  fontWeight="900"
+                                  fontSize="12px"
+                                  fontFamily="monospace"
+                                  lineHeight={1}
+                                >
+                                  ✓
+                                </Box>
+                              )}
+                            </Box>
+                          </HStack>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+
                 <Box>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     アニメーション モード
