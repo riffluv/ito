@@ -23,7 +23,6 @@ export interface ComputeCardStateParams {
   revealIndex: number; // how many cards have been revealed (exclusive upper bound)
   revealAnimating: boolean;
   failed?: boolean; // server confirmed overall failure
-  boundaryPreviousIndex?: number | null; // index (0-based) of card just before failure boundary (for subtle highlight)
   realtimeResult?: {
     success: boolean;
     failedAt: number | null;
@@ -159,10 +158,15 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     revealed
   );
 
-  const boundary =
-    typeof idx === "number" &&
-    typeof p.boundaryPreviousIndex === "number" &&
-    idx === p.boundaryPreviousIndex;
+  // 失敗境界の一元化: realtimeResult.failedAt(1-based) がある場合は
+  // その直前カード(idx === failedAt-2)を subtle 強調。
+  const boundary = (() => {
+    if (typeof idx !== "number") return false;
+    if (hasRT && typeof rtFailedAt === "number") {
+      return idx === rtFailedAt - 2;
+    }
+    return false;
+  })();
 
   const clueText =
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
