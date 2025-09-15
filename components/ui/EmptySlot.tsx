@@ -20,16 +20,20 @@ export function EmptySlot({ index }: EmptySlotProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: UI_TOKENS.COLORS.whiteAlpha02,
-        border: `1.5px dashed ${UI_TOKENS.COLORS.whiteAlpha15}`,
+        background: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
+        border: `2px dashed rgba(167, 139, 250, 0.4)`,
+        boxShadow: `
+          inset 0 0 12px rgba(139, 69, 197, 0.15),
+          0 0 8px rgba(167, 139, 250, 0.2),
+          ${UI_TOKENS.SHADOWS.panelSubtle}
+        `,
         borderRadius: "16px",
-        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
         backdropFilter: "blur(4px)",
         fontSize: "1.125rem",
         fontWeight: 500,
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-        color: UI_TOKENS.COLORS.whiteAlpha40,
+        color: "rgba(196, 181, 253, 0.7)",
         letterSpacing: "-0.01em",
         transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
         cursor: "pointer",
@@ -37,11 +41,15 @@ export function EmptySlot({ index }: EmptySlotProps) {
         overflow: "hidden",
         
         "&:hover": {
-          background: UI_TOKENS.COLORS.whiteAlpha10,
-          borderColor: UI_TOKENS.COLORS.whiteAlpha30,
-          color: UI_TOKENS.COLORS.textMuted,
+          background: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
+          borderColor: "rgba(167, 139, 250, 0.7)",
+          color: "rgba(196, 181, 253, 0.9)",
           transform: "translateY(-2px)",
-          boxShadow: UI_TOKENS.SHADOWS.cardHover,
+          boxShadow: `
+            inset 0 0 20px rgba(139, 69, 197, 0.25),
+            0 0 16px rgba(167, 139, 250, 0.4),
+            0 4px 20px rgba(0, 0, 0, 0.3)
+          `,
         },
       }}
     >
