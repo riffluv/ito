@@ -92,11 +92,14 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       // ===== ChatGPT高品質魔法陣システム =====
 
       // 共通: ソフト円テクスチャ
-      const makeCircleTexture = (size = 64) => {
+      const makeCircleTexture = (size = 64): THREE.CanvasTexture => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return canvas; // null チェック追加
+        if (!ctx) {
+          // コンテキストが取得できない場合は空のテクスチャを返す
+          return new THREE.CanvasTexture(canvas);
+        }
         const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
         g.addColorStop(0, 'rgba(255,255,255,1)');
         g.addColorStop(0.35, 'rgba(255,255,255,0.8)');
@@ -352,8 +355,14 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         });
 
         // オービター
-        const orbiters = [];
-        const addOrbiter = (radius, speed, size) => {
+        interface Orbiter {
+          s: THREE.Sprite;
+          r: number;
+          a: number;
+          v: number;
+        }
+        const orbiters: Orbiter[] = [];
+        const addOrbiter = (radius: number, speed: number, size: number) => {
           const s = new THREE.Sprite(nodeMat.clone());
           s.scale.setScalar(size);
           s.position.z = 0.02;
@@ -400,8 +409,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         magicCircle.layerFore.rotation.z = time * 0.010;
 
         // ダッシュラインの流れアニメーション
-        magicCircle.dash1.material.dashOffset = (time * 0.03) % 1;
-        magicCircle.dash2.material.dashOffset = (-time * 0.02) % 1;
+        (magicCircle.dash1.material as any).dashOffset = (time * 0.03) % 1;
+        (magicCircle.dash2.material as any).dashOffset = (-time * 0.02) % 1;
 
         // オービターの周回動作
         for (const orbiter of magicCircle.orbiters) {
@@ -425,28 +434,27 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
       console.log("ThreeBackground: Starting Advanced Magic Circle animation");
       animate();
+
+      // ウィンドウリサイズ対応
+      const handleResize = () => {
+        if (cameraRef.current && rendererRef.current) {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          cameraRef.current.aspect = w / h;
+          cameraRef.current.updateProjectionMatrix();
+          rendererRef.current.setSize(w, h, false);
+          // ネビュラの解像度更新
+          nebulaUniforms.u_resolution.value.set(w, h);
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
     } catch (error) {
       console.error("ThreeBackground: Error during initialization:", error);
     }
 
-    // ウィンドウリサイズ対応
-    const handleResize = () => {
-      if (cameraRef.current && rendererRef.current) {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        cameraRef.current.aspect = w / h;
-        cameraRef.current.updateProjectionMatrix();
-        rendererRef.current.setSize(w, h, false);
-        // ネビュラの解像度更新
-        nebulaUniforms.u_resolution.value.set(w, h);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
     // クリーンアップ
     return () => {
-      window.removeEventListener('resize', handleResize);
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
       }
@@ -582,7 +590,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           lastTime = currentTime;
 
           // アプリケーションが破棄されていたら停止
-          if (!app || app.destroyed) {
+          if (!app || !app.stage) {
             return;
           }
 
@@ -611,7 +619,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       } catch (error) {
         console.error("PixiJS: Initialization error:", error);
         // 初期化失敗時は app を null に設定
-        if (app && !app.destroyed) {
+        if (app && app.stage) {
           try {
             app.destroy();
           } catch (e) {
@@ -632,7 +640,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     // リサイズ対応 - PixiJS v8対応
     const handleResize = () => {
       try {
-        if (app && !app.destroyed && app.renderer) {
+        if (app && app.stage && app.renderer) {
           app.renderer.resize(window.innerWidth, window.innerHeight);
         }
       } catch (error) {
@@ -648,13 +656,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       if (frameId) {
         cancelAnimationFrame(frameId);
       }
-      if (app && !app.destroyed) {
+      if (app && app.stage) {
         try {
-          app.destroy(true, {
-            children: true,
-            texture: true,
-            baseTexture: true
-          });
+          app.destroy();
         } catch (e) {
           console.warn("PixiJS: Destroy error (safe to ignore):", e);
         }
