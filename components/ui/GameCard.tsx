@@ -4,7 +4,7 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { memo } from "react";
+import { memo, useRef } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 
@@ -127,7 +127,10 @@ export function GameCard({
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
     const { effectiveMode } = useAnimationSettings();
-    if (effectiveMode === "simple") {
+    // 初回レンダー時のモードを固定し、途中切替（auto判定の反映）によるDOM差し替えを防ぐ
+    const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
+    const stableMode = stableModeRef.current;
+    if (stableMode === "simple") {
       // 低スペック向け: クロスフェードで“めくった感”を演出（回転なし）
       const backNumberFontSize = getNumberFontSize(
         typeof number === "number" ? number : null
