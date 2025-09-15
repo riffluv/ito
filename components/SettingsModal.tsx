@@ -452,7 +452,7 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "軽量 3D" : "リッチ 3D"}
+                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "リッチ 3D" : "軽量 3D"}
                   </Text>
                   <Stack gap={2}>
                     {[
