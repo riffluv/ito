@@ -77,7 +77,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
-      renderer.setClearColor(0x04020a, 1); // より深い宇宙の闇
+      renderer.setClearColor(0x04020a, 1); // より深い宇宙の闇（3D魔法陣用）
       // 色空間・トーンマッピング設定
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -469,22 +469,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         height: '100%',
         zIndex: 0, // BASEレベル（UI要素の直下）
         pointerEvents: 'none', // マウスイベントを通す
-        // CSS背景（cssモード時）- リッチブラック
-        background: backgroundType === "css" ? `
-          linear-gradient(135deg, rgba(139, 69, 19, 0.12) 0%, rgba(101, 67, 33, 0.06) 35%, transparent 70%),
-          linear-gradient(45deg, rgba(47, 27, 12, 0.08) 0%, transparent 50%, rgba(160, 82, 45, 0.04) 100%),
-          radial-gradient(ellipse 70% 50% at 30% 70%, rgba(139, 69, 19, 0.08) 0%, transparent 50%),
-          radial-gradient(ellipse 50% 30% at 70% 30%, rgba(218, 165, 32, 0.06) 0%, transparent 40%),
-          radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
-          radial-gradient(circle at 10px 6px, rgba(139, 69, 19, 0.03) 0.8px, transparent 0),
-          #1a1b2e
-        ` : backgroundType === "pixijs" ? `
-          /* PixiJS用一時的背景 */
-          linear-gradient(180deg, #2a1b3d 0%, #1e1b2e 30%, #0f0e1a 100%),
-          radial-gradient(ellipse 60% 40% at 50% 20%, rgba(120, 70, 180, 0.1) 0%, transparent 60%),
-          radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
-          #1a1b2e
-        ` : 'transparent',
+        // CSS背景（cssモード時）- テーマトークン統一
+        background: backgroundType === "css" ? 'var(--chakra-colors-bg-canvas)' : backgroundType === "pixijs" ? 'var(--chakra-colors-bg-canvas)' : 'transparent',
       }}
     >
       {backgroundType === "pixijs" && (

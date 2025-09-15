@@ -135,7 +135,7 @@
     font-feature-settings: "kern" 1;
   }
   body {
-    background: #0C0D10;
+    background: var(--chakra-colors-bg-canvas);
     color: #F5F7FA;
     scrollbar-gutter: stable both-edges;
   }

@@ -32,6 +32,9 @@ export function RPGPageTransition({ children }: RPGPageTransitionProps) {
     const container = containerRef.current;
     const overlay = overlayRef.current;
 
+    // プリフェッチで高速化（Next.js 14対応）
+    router.prefetch(targetPath);
+
     setTransitionState({ isTransitioning: true, direction: "out", targetPath });
 
     // 1. シンプルなフェードアウト
@@ -65,8 +68,8 @@ export function RPGPageTransition({ children }: RPGPageTransitionProps) {
       const container = containerRef.current;
       const overlay = overlayRef.current;
 
-      // 短い待機でページロードを確実にする
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // 短い待機でページロードを確実にする（最適化: 100ms → 50ms）
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // 2. シンプルなフェードイン
       gsap.set(container, { opacity: 0 });
