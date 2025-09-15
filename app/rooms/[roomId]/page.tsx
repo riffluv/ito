@@ -616,7 +616,7 @@ export default function RoomPage() {
       roomName={displayRoomName}
       currentTopic={room.topic || null}
       onlineUids={onlineUids}
-      roundIds={baseIds}
+      roundIds={players.map((p) => p.id)}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
       pop={pop}
