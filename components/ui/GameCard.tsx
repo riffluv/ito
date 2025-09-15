@@ -7,6 +7,9 @@ import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { memo, useRef } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
+import { CardFaceFront, CardFaceBack } from "./CardFaces";
+import { cardSizeCss } from "./cardSize";
+import { WAITING_LABEL } from "@/lib/ui/constants";
 
 export type GameCardProps = {
   index?: number | null;
@@ -141,44 +144,7 @@ export function GameCard({
           height={UNIFIED_LAYOUT.CARD.HEIGHT}
           minW={UNIFIED_LAYOUT.CARD.WIDTH}
           minH={UNIFIED_LAYOUT.CARD.HEIGHT}
-          css={{
-            width: "100px",
-            height: "140px",
-            minWidth: "100px",
-            minHeight: "140px",
-            "@media (min-width: 768px)": {
-              width: "120px",
-              height: "168px",
-              minWidth: "120px",
-              minHeight: "168px",
-            },
-            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-              {
-                width: "95px",
-                height: "133px",
-                minWidth: "95px",
-                minHeight: "133px",
-              },
-            "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
-              {
-                width: "114px",
-                height: "160px",
-                minWidth: "114px",
-                minHeight: "160px",
-              },
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-              width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-              height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-              minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-              minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-            },
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
-              width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-              height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-              minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-              minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-            },
-          }}
+          css={cardSizeCss()}
           p={{ base: 3, md: "13px" }}
           borderRadius="lg"
           border={dragonQuestStyle.border}
@@ -189,112 +155,37 @@ export function GameCard({
         >
           <Box position="relative" width="100%" height="100%">
             {/* FRONT LAYER */}
-            <Box
-              aria-hidden={flipped}
-              position="absolute"
-              inset={0}
-              p={{ base: 0, md: 0 }}
-              style={{
-                opacity: flipped ? 0 : 1,
-                transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}`,
-              }}
-              display="grid"
-              gridTemplateRows="16px minmax(0,1fr) 16px"
-            >
-              <Box
-                fontSize="2xs"
-                lineHeight="1.3"
-                color={dragonQuestStyle.colors.meta}
-                style={getUnifiedTextStyle()}
-                display="flex"
-                alignItems="center"
-              >
-                <span className={styles.cardMeta}>
-                  #{typeof index === "number" ? index + 1 : "?"}
-                </span>
-              </Box>
-              <Box position="relative" minHeight={0}>
-                <Box
-                  position="absolute"
-                  top="50%"
-                  left="50%"
-                  transform="translate(-50%, -50%)"
-                  fontWeight={700}
-                  fontSize={getClueFontSize(clue)}
-                  color={dragonQuestStyle.colors.clue}
-                  lineHeight="1.3"
-                  width="100%"
-                  maxWidth="calc(100% - 6px)"
-                  textAlign="center"
-                  padding="0 0.2rem"
-                  wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
-                  whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
-                  overflowWrap="anywhere"
-                >
-                  {clue || "(連想なし)"}
-                </Box>
-              </Box>
-              <Box
-                fontSize="2xs"
-                lineHeight="1.3"
-                color={dragonQuestStyle.colors.meta}
-                textAlign="left"
-                style={getUnifiedTextStyle()}
-              >
-                <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
-              </Box>
+            <Box aria-hidden={flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
+              style={{ opacity: flipped ? 0 : 1, transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}` }}>
+              <CardFaceFront
+                index={typeof index === "number" ? index : null}
+                name={name}
+                clue={clue}
+                metaColor={dragonQuestStyle.colors.meta}
+                clueColor={dragonQuestStyle.colors.clue}
+                bg={dragonQuestStyle.bg}
+                border={dragonQuestStyle.border}
+                borderColor={successBorder}
+                boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+                waitingInCentral={waitingInCentral}
+              />
             </Box>
 
             {/* BACK LAYER */}
-            <Box
-              aria-hidden={!flipped}
-              position="absolute"
-              inset={0}
-              p={{ base: 0, md: 0 }}
-              style={{
-                opacity: flipped ? 1 : 0,
-                transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}`,
-              }}
-              display="grid"
-              gridTemplateRows="16px minmax(0,1fr) 16px"
-            >
-              <Box
-                fontSize="2xs"
-                lineHeight="1.3"
-                color={dragonQuestStyle.colors.meta}
-                style={getUnifiedTextStyle()}
-                display="flex"
-                alignItems="center"
-              >
-                <span className={styles.cardMeta}>
-                  #{typeof index === "number" ? index + 1 : "?"}
-                </span>
-              </Box>
-              <Box position="relative" minHeight={0}>
-                <Box
-                  position="absolute"
-                  top="50%"
-                  left="50%"
-                  transform="translate(-50%, -50%)"
-                  fontWeight={700}
-                  fontSize={backNumberFontSize}
-                  color={dragonQuestStyle.colors.number}
-                  lineHeight={1.3}
-                  width="100%"
-                  textAlign="center"
-                >
-                  {typeof number === "number" ? number : "?"}
-                </Box>
-              </Box>
-              <Box
-                fontSize="2xs"
-                lineHeight="1.3"
-                color={dragonQuestStyle.colors.meta}
-                textAlign="left"
-                style={getUnifiedTextStyle()}
-              >
-                <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
-              </Box>
+            <Box aria-hidden={!flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
+              style={{ opacity: flipped ? 1 : 0, transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}` }}>
+              <CardFaceBack
+                index={typeof index === "number" ? index : null}
+                name={name}
+                number={typeof number === "number" ? number : null}
+                metaColor={dragonQuestStyle.colors.meta}
+                numberColor={dragonQuestStyle.colors.number}
+                bg={dragonQuestStyle.bg}
+                border={dragonQuestStyle.border}
+                borderColor={successBorder}
+                boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+                waitingInCentral={waitingInCentral}
+              />
             </Box>
           </Box>
         </Box>
@@ -316,45 +207,7 @@ export function GameCard({
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
-          // DPI 100%ベース設計（標準）
-          width: "100px",
-          height: "140px",
-          minWidth: "100px",
-          minHeight: "140px",
-          "@media (min-width: 768px)": {
-            width: "120px",
-            height: "168px",
-            minWidth: "120px",
-            minHeight: "168px",
-          },
-          // DPI 125%：軽微な縮小でバランス維持
-          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-            {
-              width: "95px",
-              height: "133px",
-              minWidth: "95px",
-              minHeight: "133px",
-            },
-          "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
-            {
-              width: "114px",
-              height: "160px",
-              minWidth: "114px",
-              minHeight: "160px",
-            },
-          // DPI 150%：統一定数活用でレイアウト収束
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-            height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-            minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-            minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-          },
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
-            width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-            height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-            minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-            minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-          },
+          ...cardSizeCss(),
           // ホバー時は3D要素にわずかなY移動を加える（transformの競合を避けて親から指定）
           "&:hover .gc3d": {
             transform: `${flipTransform} translateY(-4px) translateZ(0)`,
@@ -376,168 +229,35 @@ export function GameCard({
           }}
         >
           {/* FRONT SIDE - 連想ワード面 */}
-          <Box
-            position="absolute"
-            width="100%"
-            height="100%"
-            style={{
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              // フォント描画改善: レイヤー促進
-              transform: "translateZ(0)",
-              willChange: "auto",
-            }}
-            p={{ base: 3, md: "13px" }}
-            borderRadius="lg"
-            border={dragonQuestStyle.border}
-            borderColor={successBorder}
-            bg={dragonQuestStyle.bg}
-            color={dragonQuestStyle.colors.text}
-            display="grid"
-            gridTemplateRows="16px 1fr 16px"
-            alignItems="stretch"
-            boxShadow={
-              successShadow
-                ? mergeShadow(dragonQuestStyle.boxShadow)
-                : dragonQuestStyle.boxShadow
-            }
-            transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
-          >
-            <Box
-              fontSize="2xs"
-              lineHeight="1.3" // ディセンダー対応
-              style={getUnifiedTextStyle()}
-              color={dragonQuestStyle.colors.meta}
-              display="flex"
-              alignItems="center"
-            >
-              <span className={styles.cardMeta}>
-                #{typeof index === "number" ? index + 1 : "?"}
-              </span>
-            </Box>
-            <Box position="relative">
-              <Box
-                position="absolute"
-                top="50%"
-                left="50%"
-                transform="translate(-50%, -50%)"
-                fontWeight={700}
-                fontSize={getClueFontSize(clue)}
-                color={dragonQuestStyle.colors.clue}
-                lineHeight="1.3" // ディセンダー対応
-                width="100%"
-                maxWidth="calc(100% - 6px)"
-                textAlign="center"
-                padding="0 0.2rem"
-                wordBreak={clue === "Waiting" ? "keep-all" : "break-word"}
-                whiteSpace={clue === "Waiting" ? "nowrap" : "normal"}
-                overflowWrap="anywhere"
-                overflow="visible"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                style={{
-                  textShadow: waitingInCentral
-                    ? UI_TOKENS.TEXT_SHADOWS.none
-                    : UI_TOKENS.TEXT_SHADOWS.soft,
-                  wordWrap: "break-word",
-                  hyphens: "auto",
-                  WebkitFontSmoothing: "antialiased",
-                  MozOsxFontSmoothing: "grayscale",
-                }}
-              >
-                {clue || "(連想なし)"}
-              </Box>
-            </Box>
-            <Box
-              fontSize="2xs"
-              lineHeight="1.3" // ディセンダー対応
-              style={getUnifiedTextStyle()}
-              color={dragonQuestStyle.colors.meta}
-              display="flex"
-              alignItems="center"
-              justifyContent="flex-start"
-              textAlign="left"
-            >
-              <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
-            </Box>
+          <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(0)", willChange: "auto" }}>
+            <CardFaceFront
+              index={typeof index === "number" ? index : null}
+              name={name}
+              clue={clue}
+              metaColor={dragonQuestStyle.colors.meta}
+              clueColor={dragonQuestStyle.colors.clue}
+              bg={dragonQuestStyle.bg}
+              border={dragonQuestStyle.border}
+              borderColor={successBorder}
+              boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+              waitingInCentral={waitingInCentral}
+            />
           </Box>
 
           {/* BACK SIDE - 数字面 */}
-          <Box
-            position="absolute"
-            width="100%"
-            height="100%"
-            style={{
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg) translateZ(0)",
-              willChange: "auto",
-            }}
-            p={{ base: 3, md: "13px" }}
-            borderRadius="lg"
-            border={dragonQuestStyle.border}
-            borderColor={successBorder}
-            bg={dragonQuestStyle.bg}
-            boxShadow={
-              successShadow
-                ? mergeShadow(dragonQuestStyle.boxShadow)
-                : dragonQuestStyle.boxShadow
-            }
-            color={dragonQuestStyle.colors.text}
-            display="grid"
-            gridTemplateRows="16px 1fr 16px"
-            transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
-          >
-            <Box
-              fontSize="2xs"
-              lineHeight="1.3" // ディセンダー対応
-              style={getUnifiedTextStyle()}
-              color={dragonQuestStyle.colors.meta}
-              display="flex"
-              alignItems="center"
-            >
-              <span className={styles.cardMeta}>
-                #{typeof index === "number" ? index + 1 : "?"}
-              </span>
-            </Box>
-            <Box position="relative">
-              <Box
-                position="absolute"
-                top="50%"
-                left="50%"
-                transform="translate(-50%, -50%)"
-                fontWeight={700}
-                fontSize={backNumberFontSize}
-                color={UI_TOKENS.COLORS.textBase} // 全状態で白色統一
-                lineHeight="1.3" // ディセンダー対応
-                textShadow={
-                  waitingInCentral ? UI_TOKENS.TEXT_SHADOWS.none : UI_TOKENS.TEXT_SHADOWS.soft
-                }
-                width="100%"
-                textAlign="center"
-                whiteSpace="nowrap"
-                letterSpacing={
-                  typeof number === "number" && String(number).length >= 3
-                    ? "-0.8px" // flipカードでも同じ適切な文字間隔
-                    : undefined
-                }
-              >
-                {typeof number === "number" ? number : ""}
-              </Box>
-            </Box>
-            <Box
-              fontSize="2xs"
-              lineHeight="1.3" // ディセンダー対応
-              style={getUnifiedTextStyle()}
-              color={dragonQuestStyle.colors.meta}
-              display="flex"
-              alignItems="center"
-              justifyContent="flex-start"
-              textAlign="left"
-            >
-              <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
-            </Box>
+          <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(0)", willChange: "auto" }}>
+            <CardFaceBack
+              index={typeof index === "number" ? index : null}
+              name={name}
+              number={typeof number === "number" ? number : null}
+              metaColor={dragonQuestStyle.colors.meta}
+              numberColor={UI_TOKENS.COLORS.textBase}
+              bg={dragonQuestStyle.bg}
+              border={dragonQuestStyle.border}
+              borderColor={successBorder}
+              boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+              waitingInCentral={waitingInCentral}
+            />
           </Box>
         </div>
       </Box>
@@ -556,47 +276,7 @@ export function GameCard({
       height={UNIFIED_LAYOUT.CARD.HEIGHT}
       minW={UNIFIED_LAYOUT.CARD.WIDTH}
       minH={UNIFIED_LAYOUT.CARD.HEIGHT}
-      css={{
-        // DPI 100%ベース設計（標準）
-        width: "100px",
-        height: "140px",
-        minWidth: "100px",
-        minHeight: "140px",
-        "@media (min-width: 768px)": {
-          width: "120px",
-          height: "168px",
-          minWidth: "120px",
-          minHeight: "168px",
-        },
-        // DPI 125%：軽微な縮小でバランス維持
-        "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-          {
-            width: "95px",
-            height: "133px",
-            minWidth: "95px",
-            minHeight: "133px",
-          },
-        "@media (min-resolution: 1.25dppx) and (min-width: 768px), screen and (-webkit-device-pixel-ratio: 1.25) and (min-width: 768px)":
-          {
-            width: "114px",
-            height: "160px",
-            minWidth: "114px",
-            minHeight: "160px",
-          },
-        // DPI 150%：統一定数活用でレイアウト収束
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-          width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-          height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-          minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
-          minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.base,
-        },
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150} and (min-width: 768px)`]: {
-          width: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-          height: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-          minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
-          minHeight: UNIFIED_LAYOUT.DPI_150.CARD.HEIGHT.md,
-        },
-      }}
+      css={cardSizeCss()}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
       border={dragonQuestStyle.border}
@@ -662,18 +342,10 @@ export function GameCard({
           textAlign="center"
           padding={typeof number === "number" ? "0" : "0 0.2rem"}
           wordBreak={
-            typeof number === "number"
-              ? "keep-all"
-              : clue === "Waiting"
-                ? "keep-all"
-                : "break-word"
+            typeof number === "number" ? "keep-all" : clue === WAITING_LABEL ? "keep-all" : "break-word"
           }
           whiteSpace={
-            typeof number === "number"
-              ? "nowrap"
-              : clue === "Waiting"
-                ? "nowrap"
-                : "normal"
+            typeof number === "number" ? "nowrap" : clue === WAITING_LABEL ? "nowrap" : "normal"
           }
           overflowWrap={typeof number === "number" ? "normal" : "anywhere"}
           overflow="visible"

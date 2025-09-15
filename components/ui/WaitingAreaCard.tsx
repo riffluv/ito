@@ -3,6 +3,7 @@ import { GameCard } from "@/components/ui/GameCard";
 import type { PlayerDoc } from "@/lib/types";
 import { Box } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
+import { WAITING_LABEL, READY_LABEL } from "@/lib/ui/constants";
 
 interface WaitingAreaCardProps {
   player: PlayerDoc & { id: string };
@@ -54,7 +55,7 @@ export default function WaitingAreaCard({
       <GameCard
         index={null}
         name={player.name || ""}
-        clue={ready ? player.clue1 || "Ready" : "Waiting"}
+        clue={ready ? player.clue1 || READY_LABEL : WAITING_LABEL}
         number={null}
         state={ready ? "ready" : "default"}
         waitingInCentral={true}
