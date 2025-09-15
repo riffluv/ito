@@ -28,6 +28,7 @@ import { UI_TOKENS } from "@/theme/layout";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
+import { postRoundReset } from "@/lib/utils/broadcast";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -185,12 +186,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         return;
       }
       await topicControls.dealNumbers(roomId);
+      try { postRoundReset(roomId); } catch {}
       return;
     }
     await startGameAction(roomId);
     try { delete (window as any).__ITO_LAST_RESET; } catch {}
     await topicControls.selectCategory(roomId, effectiveType as any);
     await topicControls.dealNumbers(roomId);
+    try { postRoundReset(roomId); } catch {}
   };
 
   const evalSorted = async () => {
@@ -203,6 +206,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const continueRound = async () => {
     await continueAfterFailAction(roomId);
+    try { postRoundReset(roomId); } catch {}
   };
 
   const resetGame = async () => {
@@ -213,6 +217,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         : (onlineUids || []);
       await resetRoomWithPrune(roomId, keep, { notifyChat: true });
       notify({ title: "ゲームをリセット！", type: "success" });
+      try { postRoundReset(roomId); } catch {}
     } catch (e: any) {
       const msg = String(e?.message || e || "");
       notify({ title: "リセットに失敗しました", description: msg, type: "error" });
