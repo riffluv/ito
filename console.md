@@ -1,46 +1,24 @@
-hot-reloader-client.js:99 コンソールを消去しました
-hydration-error-info.js:63 ./components/ui/DragonQuestParty.tsx
-Error: 
-  × Unexpected token `Box`. Expected jsx identifier
-     ╭─[C:\Users\hr-hm\Desktop\codex\components\ui\DragonQuestParty.tsx:135:1]
- 135 │   if (actualCount === 0) return null;
- 136 │ 
- 137 │   return (
- 138 │     <Box
-     ·      ───
- 139 │       ref={containerRef}
- 140 │       position="fixed"
- 141 │       // 左側配置（チャット被り回避）
-     ╰────
-
-Caused by:
-    Syntax Error
-console.error @ hydration-error-info.js:63
-use-on-click-outside.js:30 [Violation] Added non-passive event listener to a scroll-blocking 'touchstart' event. Consider marking event handler as 'passive' to make the page more responsive. See https://www.chromestatus.com/feature/5745543795965952
-eval @ use-on-click-outside.js:30
-commitHookEffectListMount @ react-dom.development.js:23145
-commitPassiveMountOnFiber @ react-dom.development.js:24921
-commitPassiveMountEffects_complete @ react-dom.development.js:24886
-commitPassiveMountEffects_begin @ react-dom.development.js:24873
-commitPassiveMountEffects @ react-dom.development.js:24861
-flushPassiveEffectsImpl @ react-dom.development.js:27034
-flushPassiveEffects @ react-dom.development.js:26979
-commitRootImpl @ react-dom.development.js:26930
-commitRoot @ react-dom.development.js:26677
-performSyncWorkOnRoot @ react-dom.development.js:26112
-flushSyncCallbacks @ react-dom.development.js:12042
-eval @ react-dom.development.js:25646
-use-on-click-outside.js:30 [Violation] Added non-passive event listener to a scroll-blocking 'touchstart' event. Consider marking event handler as 'passive' to make the page more responsive. See https://www.chromestatus.com/feature/5745543795965952
-eval @ use-on-click-outside.js:30
-commitHookEffectListMount @ react-dom.development.js:23145
-commitPassiveMountOnFiber @ react-dom.development.js:24921
-commitPassiveMountEffects_complete @ react-dom.development.js:24886
-commitPassiveMountEffects_begin @ react-dom.development.js:24873
-commitPassiveMountEffects @ react-dom.development.js:24861
-flushPassiveEffectsImpl @ react-dom.development.js:27034
-flushPassiveEffects @ react-dom.development.js:26979
-commitRootImpl @ react-dom.development.js:26930
-commitRoot @ react-dom.development.js:26677
-performSyncWorkOnRoot @ react-dom.development.js:26112
-flushSyncCallbacks @ react-dom.development.js:12042
-eval @ react-dom.development.js:25646
+react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+content.js:85 [VSC] Content script initialized
+ThreeBackground.tsx:53 ThreeBackground: Starting initialization...
+ThreeBackground.tsx:59 ThreeBackground: Scene created
+ThreeBackground.tsx:71 ThreeBackground: Camera positioned at Vector3
+ThreeBackground.tsx:86 ThreeBackground: Three.js renderer configured
+ThreeBackground.tsx:90 ThreeBackground: Canvas mounted to DOM
+ThreeBackground.tsx:376 ThreeBackground: Advanced Magic Circle created
+ThreeBackground.tsx:379 ThreeBackground: Performing initial render
+ThreeBackground.tsx:381 ThreeBackground: Initial render completed
+ThreeBackground.tsx:425 ThreeBackground: Starting Advanced Magic Circle animation
+ThreeBackground.tsx:468 PixiJS: ころころかえます背景 starting...
+ThreeBackground.tsx:488 PixiJS: Canvas mounted
+app-index.js:33 PixiJS: Initialization error: Error: Unable to convert color 16790939
+    at _Color._normalize (Color.mjs:697:13)
+    at set value (Color.mjs:162:12)
+    at _Color.setValue (Color.mjs:113:16)
+    at handleFillObject (convertFillInputToFillStyle.mjs:57:76)
+    at toFillStyle (convertFillInputToFillStyle.mjs:81:10)
+    at _GraphicsContext.fill (GraphicsContext.mjs:156:108)
+    at Graphics._callContextMethod (Graphics.mjs:159:25)
+    at Graphics.fill (Graphics.mjs:267:17)
+    at initPixi (ThreeBackground.tsx:532:20)
+window.console.error @ app-index.js:33

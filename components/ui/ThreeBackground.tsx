@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import * as PIXI from "pixi.js";
 
 interface ThreeBackgroundProps {
   className?: string;
@@ -457,6 +458,216 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     };
   }, [backgroundType]); // backgroundTypeが変わったら再初期化
 
+  // PixiJS初期化用Effect - Octopath Traveler風HD-2D背景
+  useEffect(() => {
+    if (backgroundType !== "pixijs") {
+      return;
+    }
+    if (!mountRef.current) return;
+
+    console.log("PixiJS: ころころかえます背景 starting...");
+
+    let app: PIXI.Application | null = null;
+    let frameId: number | undefined;
+
+    const initPixi = async () => {
+      try {
+        // PixiJS v8対応: 正しいinit()方法
+        app = new PIXI.Application();
+        await app.init({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          backgroundColor: 0x0E0F13, // テーマ統一（16進数で指定）
+          antialias: true,
+          resolution: Math.min(2, window.devicePixelRatio || 1),
+          autoDensity: true,
+        });
+
+        if (mountRef.current && app.canvas) {
+          mountRef.current.appendChild(app.canvas);
+          console.log("PixiJS: Canvas mounted");
+        } else {
+          console.error("PixiJS: Mount ref or app.canvas not available");
+          return;
+        }
+
+        // === Octopath Traveler風HD-2D要素 ===
+
+        // 1. 奥行きのある背景グラデーション（大地のイメージ）
+        const bgGradient = new PIXI.Graphics();
+        bgGradient.rect(0, 0, app.screen.width, app.screen.height);
+        bgGradient.fill({
+          color: 0x1a1b2e,
+          alpha: 1,
+        });
+        app.stage.addChild(bgGradient);
+
+        // 2. 遠景の山々（シルエット）
+        const mountains = new PIXI.Graphics();
+        mountains.moveTo(0, app.screen.height * 0.7);
+        for (let i = 0; i <= app.screen.width; i += 100) {
+          const height = app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
+          mountains.lineTo(i, height);
+        }
+        mountains.lineTo(app.screen.width, app.screen.height);
+        mountains.lineTo(0, app.screen.height);
+        mountains.fill({
+          color: 0x2d1b4e,
+          alpha: 0.8,
+        });
+        app.stage.addChild(mountains);
+
+        // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
+        interface ParticleData {
+          particle: PIXI.Graphics;
+          vx: number;
+          vy: number;
+          life: number;
+        }
+
+        // 安全な色の配列（ドラクエ風の金色系）
+        const safeColors = [
+          0xffd700, // 金色
+          0xffdc00, // 明るい金色
+          0xffc700, // 濃い金色
+          0xffed4a, // 黄金色
+          0xfff176, // ライトゴールド
+          0xffb300, // オレンジゴールド
+        ];
+
+        const particles: ParticleData[] = [];
+        for (let i = 0; i < 30; i++) {
+          const particle = new PIXI.Graphics();
+          particle.circle(0, 0, Math.random() * 2 + 1);
+          particle.fill({
+            color: safeColors[Math.floor(Math.random() * safeColors.length)], // 安全な色から選択
+            alpha: Math.random() * 0.6 + 0.2,
+          });
+
+          particle.x = Math.random() * app.screen.width;
+          particle.y = Math.random() * app.screen.height;
+
+          const particleData: ParticleData = {
+            particle,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.3,
+            life: Math.random() * 2 + 1,
+          };
+
+          particles.push(particleData);
+          app.stage.addChild(particle);
+        }
+
+        // 4. 前景の草原（ドット風テクスチャ）
+        const foreground = new PIXI.Graphics();
+        foreground.rect(0, app.screen.height * 0.85, app.screen.width, app.screen.height * 0.15);
+        foreground.fill({
+          color: 0x1e4d2b,
+          alpha: 0.7,
+        });
+        app.stage.addChild(foreground);
+
+        // 5. アニメーションループ - パフォーマンス最適化版
+        let lastTime = 0;
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
+
+        const animate = (currentTime: number) => {
+          // フレームレート調整
+          if (currentTime - lastTime < frameInterval) {
+            frameId = requestAnimationFrame(animate);
+            return;
+          }
+          lastTime = currentTime;
+
+          // アプリケーションが破棄されていたら停止
+          if (!app || app.destroyed) {
+            return;
+          }
+
+          // 光の粒子アニメーション
+          particles.forEach(data => {
+            const { particle, vx, vy, life } = data;
+            particle.x += vx;
+            particle.y += vy;
+
+            // 画面外に出たら反対側から再出現
+            if (particle.x > app!.screen.width) particle.x = -10;
+            if (particle.x < -10) particle.x = app!.screen.width;
+            if (particle.y > app!.screen.height) particle.y = -10;
+            if (particle.y < -10) particle.y = app!.screen.height;
+
+            // 明滅効果（最適化済み）
+            particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
+          });
+
+          frameId = requestAnimationFrame(animate);
+        };
+
+        animate(performance.now());
+        console.log("PixiJS: ころころかえます animation started ｗｗ");
+
+      } catch (error) {
+        console.error("PixiJS: Initialization error:", error);
+        // 初期化失敗時は app を null に設定
+        if (app && !app.destroyed) {
+          try {
+            app.destroy();
+          } catch (e) {
+            // 破棄エラーは無視
+          }
+        }
+        app = null;
+
+        // エラー時はフォールバック背景を表示（テキストなし）
+        if (mountRef.current) {
+          mountRef.current.style.backgroundColor = '#0E0F13';
+        }
+      }
+    };
+
+    initPixi();
+
+    // リサイズ対応 - PixiJS v8対応
+    const handleResize = () => {
+      try {
+        if (app && !app.destroyed && app.renderer) {
+          app.renderer.resize(window.innerWidth, window.innerHeight);
+        }
+      } catch (error) {
+        console.warn("PixiJS: Resize error:", error);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // クリーンアップ - ベストプラクティス準拠
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+      if (app && !app.destroyed) {
+        try {
+          app.destroy(true, {
+            children: true,
+            texture: true,
+            baseTexture: true
+          });
+        } catch (e) {
+          console.warn("PixiJS: Destroy error (safe to ignore):", e);
+        }
+      }
+      // DOMのクリーンアップ
+      // mountRef.currentの完全クリア
+      if (mountRef.current) {
+        mountRef.current.innerHTML = '';
+        mountRef.current.style.backgroundColor = '';
+      }
+      console.log("PixiJS: ころころかえます cleaned up ｗｗ");
+    };
+  }, [backgroundType]);
+
   return (
     <div
       ref={mountRef}
@@ -473,24 +684,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         background: backgroundType === "css" ? 'var(--chakra-colors-bg-canvas)' : backgroundType === "pixijs" ? 'var(--chakra-colors-bg-canvas)' : 'transparent',
       }}
     >
-      {backgroundType === "pixijs" && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: '#8855cc',
-          fontFamily: 'monospace',
-          fontSize: '14px',
-          textAlign: 'center',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-          pointerEvents: 'none',
-          zIndex: 1
-        }}>
-          PixiJS ドラクエふう はいけい<br/>
-          （開発中...）
-        </div>
-      )}
+      {/* PixiJS キャンバスはuseEffect内で動的に追加されます */}
     </div>
   );
 }
