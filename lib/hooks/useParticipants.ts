@@ -85,23 +85,10 @@ export function useParticipants(
       );
     };
 
-    // 初回は可視時のみ購読開始（無駄な読取回避）
-    if (typeof document === "undefined" || document.visibilityState === "visible") {
-      maybeStart();
-    }
-
-    const onVis = () => {
-      if (document.visibilityState === "visible") maybeStart();
-      else stop();
-    };
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVis);
-    }
+    // 常時購読（非アクティブでも即時同期）
+    maybeStart();
 
     return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVis);
-      }
       if (backoffTimer) {
         try { clearTimeout(backoffTimer); } catch {}
       }
