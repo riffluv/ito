@@ -614,6 +614,7 @@ export default function RoomPage() {
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
       // ヘッダー機能統合
       roomName={displayRoomName}
+      currentTopic={room.topic || null}
       onlineUids={onlineUids}
       roundIds={baseIds}
       onOpenSettings={() => setIsSettingsOpen(true)}

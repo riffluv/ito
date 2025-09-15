@@ -17,7 +17,7 @@ export type RoomOptions = {
    * デフォルトお題タイプ
    * ワンクリック開始時に使用されるお題の山札タイプ
    */
-  defaultTopicType?: "通常版" | "レインボー版" | "クラシック版";
+  defaultTopicType?: "通常版" | "レインボー版" | "クラシック版" | "カスタム";
 };
 
 export type RoomDoc = {

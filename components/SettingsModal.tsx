@@ -58,6 +58,11 @@ export function SettingsModal({
         "options.resolveMode": resolveMode,
         "options.defaultTopicType": defaultTopicType,
       });
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("defaultTopicType", defaultTopicType);
+        }
+      } catch {}
       notify({ title: "設定を保存しました", type: "success" });
       onClose();
     } catch (err: any) {
@@ -94,6 +99,11 @@ export function SettingsModal({
       value: "クラシック版",
       title: "クラシック版",
       description: "シンプルで分かりやすいお題",
+    },
+    {
+      value: "カスタム",
+      title: "カスタム",
+      description: "じぶんたちで お題を入力して あそぶ",
     },
   ];
 
