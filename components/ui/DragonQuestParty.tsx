@@ -138,7 +138,7 @@ export function DragonQuestParty({
     <Box
       ref={containerRef}
       position="fixed"
-      // 左上アナウンス帯の高さに合わせて、十分なクリアランスを確保
+      // 左側配置（チャット被り回避）
       top={{ base: "112px", md: "128px" }}
       left={{ base: "20px", md: "24px" }}
       zIndex={60}
@@ -150,36 +150,47 @@ export function DragonQuestParty({
     >
       <Box
         bg={UI_TOKENS.COLORS.panelBg}
-        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+        border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
         borderRadius={0}
         px={4}
         py={2}
         css={{
-          boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           backdropFilter: "blur(8px) saturate(1.1)",
           pointerEvents: "auto",
         }}
       >
-        {/* ドラクエ風パーティーヘッダー */}
-        <Text
-          fontSize={{ base: "xs", md: "sm" }}
-          fontWeight={600}
-          color="white"
-          textShadow="1px 1px 0px #000"
-          letterSpacing="0.5px"
-          fontFamily="monospace"
-          mb={2}
-          textAlign="center"
+        {/* オクトパス風パーティーヘッダー */}
+        <Box
+          bg="rgba(0, 0, 0, 0.6)"
+          border={`1px solid rgba(255,255,255,0.2)`}
+          px={3}
+          py={2}
+          mb={3}
+          css={{
+            borderRadius: 0,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}
         >
-          ▼ なかま ({actualCount}人) ▼
-        </Text>
+          <Text
+            fontSize={{ base: "sm", md: "md" }}
+            fontWeight={700}
+            color="rgba(255, 215, 0, 0.9)"
+            textShadow="1px 1px 0px #000, 0 0 4px rgba(255, 215, 0, 0.3)"
+            letterSpacing="0.5px"
+            fontFamily="monospace"
+            textAlign="center"
+          >
+            ⚔️ PARTY ({actualCount}) ⚔️
+          </Text>
+        </Box>
 
-        {/* メンバーリスト - DPIスケール対応の適切な固定幅 */}
+        {/* 極限コンパクト メンバーリスト */}
         <Box
           display="flex"
           flexDirection="column"
           gap={1}
-          w={{ base: "200px", md: "220px" }}
+          w={{ base: "240px", md: "280px" }}
           css={{ pointerEvents: "auto" }}
         >
           {[...displayedPlayers]
@@ -216,70 +227,115 @@ export function DragonQuestParty({
                 <Box
                   key={player.id}
                   data-player-id={player.id}
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
+                  bg="rgba(20, 23, 34, 0.9)"
+                  border={`1px solid rgba(255,255,255,0.25)`}
                   borderRadius={0}
                   px={2}
                   py={1}
                   w="100%"
+                  position="relative"
                   css={{
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                    // 行の縦幅を一定にする（アイコン差で高さが変わらないよう固定）
-                    minHeight: "28px",
-                    display: "flex",
-                    alignItems: "center",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
                     cursor: canTransfer ? "pointer" : "default",
                   }}
                   onDoubleClick={onTransfer}
                 >
-                  {/* プレイヤー情報 */}
-                  <HStack
-                    gap={2}
-                    align="center"
-                    justify="space-between"
-                    w="100%"
-                  >
-                    {/* プレイヤー名 - DPIスケール対応の適切な幅 */}
-                    <Text
-                      fontSize={{ base: "xs", md: "sm" }}
-                      fontWeight={500}
-                      color={isHost ? UI_TOKENS.COLORS.accentGold : "white"}
-                      textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-                      fontFamily="monospace"
-                      letterSpacing="0.3px"
-                      w={{ base: "160px", md: "170px" }} // レスポンシブ幅
-                      truncate
-                      title={`${isHost ? "👑 " : "⚔️ "}${fresh.name} - ${status}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
-                      css={
-                        isHost
-                          ? {
-                              animation:
-                                "hostGlow 2s ease-in-out infinite alternate",
-                              textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
-                            }
-                          : undefined
-                      }
-                    >
-                      {isHost ? "👑 " : "⚔️ "}
-                      {fresh.name}
-                    </Text>
-
-                    {/* 状態アイコン - 適切な固定幅 */}
-                    <Text
-                      fontSize={{ base: "sm", md: "md" }}
-                      style={{ color }}
-                      filter={UI_TOKENS.FILTERS.dropShadowSoft}
-                      w="24px"
-                      textAlign="center"
-                      lineHeight="1"
-                      h="18px"
-                      display="inline-flex"
+                  {/* アバター + 情報レイアウト */}
+                  <Box display="flex" alignItems="center" gap={2}>
+                    {/* アバター表示エリア */}
+                    <Box
+                      flexShrink={0}
+                      width="32px"
+                      height="32px"
+                      display="flex"
                       alignItems="center"
                       justifyContent="center"
+                      bg="rgba(0,0,0,0.3)"
+                      border="1px solid rgba(255,255,255,0.2)"
+                      borderRadius="4px"
+                      fontSize="lg"
+                      overflow="hidden"
+                    >
+                      {fresh.avatar?.startsWith('/avatars/') ? (
+                        <img
+                          src={fresh.avatar}
+                          alt="avatar"
+                          width="28"
+                          height="28"
+                          style={{ objectFit: 'cover', borderRadius: '2px' }}
+                        />
+                      ) : (
+                        fresh.avatar || "⚔️"
+                      )}
+                    </Box>
+
+                    {/* プレイヤー情報 */}
+                    <Box display="flex" flexDirection="column" gap={0.5} flex={1} minW={0}>
+                      {/* プレイヤー名 */}
+                      <Text
+                        fontSize={{ base: "sm", md: "md" }}
+                        fontWeight={700}
+                        color={isHost ? UI_TOKENS.COLORS.accentGold : "white"}
+                        textShadow="1px 1px 0px rgba(0,0,0,0.8)"
+                        fontFamily="monospace"
+                        letterSpacing="0.3px"
+                        truncate
+                        title={`${isHost ? "👑 " : ""}${fresh.name}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
+                        css={
+                          isHost
+                            ? {
+                                animation: "hostGlow 2s ease-in-out infinite alternate",
+                                textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
+                              }
+                            : undefined
+                        }
+                      >
+                        {isHost ? "👑 " : ""}
+                        {fresh.name}
+                      </Text>
+
+                      {/* 連想ワード（メイン情報） */}
+                      <HStack justify="space-between" align="center">
+                        <Text
+                          fontSize={{ base: "xs", md: "sm" }}
+                          color="rgba(255, 139, 139, 0.9)"
+                          fontFamily="monospace"
+                          fontWeight={600}
+                        >
+                          💭 WORD
+                        </Text>
+                        <Text
+                          fontSize={{ base: "xs", md: "sm" }}
+                          fontWeight={600}
+                          color={fresh.clue1?.trim() ? "white" : "rgba(255,255,255,0.4)"}
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                          fontFamily="monospace"
+                          textAlign="right"
+                          maxW="140px"
+                          truncate
+                          title={fresh.clue1?.trim() || "未入力"}
+                        >
+                          {fresh.clue1?.trim() || "---"}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  </Box>
+
+                  {/* 状態アイコン（右上に小さく） */}
+                  <Box
+                    position="absolute"
+                    top="6px"
+                    right="6px"
+                    fontSize={{ base: "sm", md: "md" }}
+                    title={status}
+                  >
+                    <Text
+                      style={{ color }}
+                      filter={UI_TOKENS.FILTERS.dropShadowSoft}
                     >
                       {icon}
                     </Text>
-                  </HStack>
+                  </Box>
                 </Box>
               );
             })}

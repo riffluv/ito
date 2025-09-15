@@ -1,10 +1,17 @@
 export function randomAvatar(name: string): string {
-  const emojis = [
-    "🦊","🐼","🐸","🐧","🦄","🐨","🐯","🐱","🐶","🐹",
-    "🐵","🐰","🐮","🐷","🐔","🦁","🐻","🐙","🐢","🐳"
+  const avatars = [
+    "/avatars/knight1.webp",
+    "/avatars/knightwomen1.webp",
+    "/avatars/kenja.webp",
+    "/avatars/kenshi.webp",
+    "/avatars/mahou.webp",
+    "/avatars/siifu.webp",
+    "/avatars/arrow.webp",
+    "/avatars/arrow2.webp",
+    "/avatars/guitar.webp"
   ];
-  const idx = Math.abs(hashCode(name)) % emojis.length;
-  return emojis[idx];
+  const idx = Math.abs(hashCode(name)) % avatars.length;
+  return avatars[idx];
 }
 
 export function hashCode(s: string): number {
