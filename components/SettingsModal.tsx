@@ -40,7 +40,7 @@ export function SettingsModal({
   const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
 
   // 背景設定のstate（localStorageから読み込み）
-  const [backgroundType, setBackgroundType] = useLocalState<"css" | "light3d" | "rich3d">("css");
+  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "pixijs">("css");
 
   // localStorageから背景設定を読み込み
   useEffect(() => {
@@ -462,14 +462,14 @@ export function SettingsModal({
                         description: "けいりょう CSS はいけい（すべての PC で あんてい）",
                       },
                       {
-                        value: "light3d",
-                        title: "けいりょう 3D はいけい",
-                        description: "かるい Three.js エフェクト（30 パーティクル）",
+                        value: "three3d",
+                        title: "Three.js はいけい",
+                        description: "うちゅうてき Three.js エフェクト（30fps）",
                       },
                       {
-                        value: "rich3d",
-                        title: "リッチ 3D はいけい",
-                        description: "うつくしい Three.js エフェクト（60 パーティクル）",
+                        value: "pixijs",
+                        title: "ドラクエふう はいけい",
+                        description: "PixiJS ドット絵エフェクト（開発中）",
                       },
                     ].map((opt) => {
                       const isSelected = backgroundType === (opt.value as any);

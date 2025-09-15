@@ -12,7 +12,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const frameRef = useRef<number>();
-  const [backgroundType, setBackgroundType] = useState<"css" | "light3d" | "rich3d">("css");
+  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "pixijs">("css");
 
   // LocalStorageから設定読み込み & イベントリスナー設定
   useEffect(() => {
@@ -20,7 +20,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     const loadBackgroundType = () => {
       try {
         const saved = localStorage.getItem("backgroundType");
-        if (saved && ["css", "light3d", "rich3d"].includes(saved)) {
+        if (saved && ["css", "three3d", "pixijs"].includes(saved)) {
           setBackgroundType(saved as any);
         }
       } catch {
@@ -43,8 +43,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
   // Three.js初期化用Effect
   useEffect(() => {
-    // CSS背景の場合はThree.jsを初期化しない
-    if (backgroundType === "css") {
+    // CSS背景またはPixiJS背景の場合はThree.jsを初期化しない
+    if (backgroundType === "css" || backgroundType === "pixijs") {
       return;
     }
     if (!mountRef.current) return;
@@ -138,7 +138,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       // 2. 控えめなパーティクル（少数精鋭）
       const createSubtleParticles = () => {
         // 背景タイプに応じてパーティクル数を調整
-        const particleCount = backgroundType === "light3d" ? 30 : 60;
+        const particleCount = 30; // three3d固定で30パーティクル
         const particles = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const colors = new Float32Array(particleCount * 3);
@@ -296,8 +296,33 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
           radial-gradient(circle at 10px 6px, rgba(139, 69, 19, 0.03) 0.8px, transparent 0),
           #1a1b2e
+        ` : backgroundType === "pixijs" ? `
+          /* PixiJS用一時的背景 */
+          linear-gradient(180deg, #2a1b3d 0%, #1e1b2e 30%, #0f0e1a 100%),
+          radial-gradient(ellipse 60% 40% at 50% 20%, rgba(120, 70, 180, 0.1) 0%, transparent 60%),
+          radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
+          #1a1b2e
         ` : 'transparent',
       }}
-    />
+    >
+      {backgroundType === "pixijs" && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#8855cc',
+          fontFamily: 'monospace',
+          fontSize: '14px',
+          textAlign: 'center',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}>
+          PixiJS ドラクエふう はいけい<br/>
+          （開発中...）
+        </div>
+      )}
+    </div>
   );
 }
