@@ -13,7 +13,8 @@ const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
     case "clue":
       if (canStartSorting) {
         return {
-          text: "みんなで相談してカードを並び替えよう！（ドラッグでできるよ）",
+          text: "みんなで相談してカードを並び替えよう！",
+          subText: "（ドラッグでできるよ）",
           icon: "◇",
         };
       }
@@ -48,7 +49,7 @@ export function SimplePhaseDisplay({
   const previousCanStart = useRef<boolean>(canStartSorting);
   const previousTopicText = useRef<string | null>(topicText);
 
-  const { text, icon } = getPhaseInfo(roomStatus, canStartSorting);
+  const { text, subText, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
   const tlRef = useRef<any>(null);
 
@@ -265,10 +266,10 @@ export function SimplePhaseDisplay({
         css={{
           boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           backdropFilter: "blur(8px) saturate(1.1)",
-          maxWidth: "min(92vw, 520px)",
+          maxWidth: "min(92vw, 380px)", // 幅を少し狭めて余裕を持たせる
           transition: "width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)", // スムーズな幅変更
           ["@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)" as any]: {
-            maxWidth: "min(92vw, 560px)",
+            maxWidth: "min(92vw, 420px)", // 高解像度でも適度な幅
           },
         }}
       >
@@ -291,11 +292,24 @@ export function SimplePhaseDisplay({
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              maxWidth: "min(88vw, 520px)",
+              maxWidth: "min(88vw, 350px)", // メインテキストも幅調整
             }}
           >
-{text}
+            {text}
           </Text>
+          {subText && (
+            <Text
+              fontSize={{ base: "xs", md: "sm" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+              letterSpacing="0.3px"
+              fontFamily="monospace"
+              fontWeight={600}
+              mt={{ base: 0.5, md: 1 }}
+            >
+              {subText}
+            </Text>
+          )}
           {topicText ? (
             <Tooltip content={topicText} openDelay={200} showArrow>
               <Text
