@@ -70,19 +70,29 @@ export function EmptyCard({
       onDrop={handleDrop}
       cursor={isDroppable ? "copy" : "not-allowed"}
       css={{
-        // ベース状態：ドラクエ風の点線ボーダーで空きスロットを明確に
-        border: `2px dashed ${UI_TOKENS.COLORS.whiteAlpha30}`,
+        // ベース状態：魔法陣に合わせた紫系の点線ボーダー
+        border: `2px dashed rgba(167, 139, 250, 0.4)`,
         borderRadius: "8px",
-        backgroundColor: UI_TOKENS.COLORS.panelBg60,
+        backgroundColor: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
+        boxShadow: `
+          inset 0 0 12px rgba(139, 69, 197, 0.15),
+          0 0 8px rgba(167, 139, 250, 0.2),
+          0 2px 8px rgba(0, 0, 0, 0.1)
+        `,
         transition:
           "background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
         
-        // ホバー状態を見えやすく
+        // ホバー状態：魔法陣風のグロー効果
         "&:hover": {
-          borderColor: UI_TOKENS.COLORS.whiteAlpha50,
-          backgroundColor: UI_TOKENS.COLORS.panelBg80,
+          borderColor: "rgba(167, 139, 250, 0.7)",
+          backgroundColor: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
           transform: "scale(1.02)",
+          boxShadow: `
+            inset 0 0 20px rgba(139, 69, 197, 0.25),
+            0 0 16px rgba(167, 139, 250, 0.4),
+            0 4px 20px rgba(0, 0, 0, 0.2)
+          `,
         },
 
         // ドラッグ中の状態：ドロップ可能なスロットを微かに示唆
@@ -107,10 +117,10 @@ export function EmptyCard({
     >
       {children || (slotNumber !== undefined ? (
         <span style={{
-          color: UI_TOKENS.COLORS.whiteAlpha60,
+          color: "rgba(196, 181, 253, 0.8)",
           fontSize: "14px",
           fontWeight: "500",
-          textShadow: UI_TOKENS.TEXT_SHADOWS.soft
+          textShadow: "0 0 8px rgba(139, 69, 197, 0.6)"
         }}>
           {slotNumber}
         </span>

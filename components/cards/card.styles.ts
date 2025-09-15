@@ -27,15 +27,19 @@ export const CARD_SIZES = {
 
 // 統一カードスタイル定義
 export const CARD_STYLES = {
-  // 空きスロット用スタイル（統一済み）
+  // 空きスロット用スタイル（魔法陣に合わせて統一済み）
   empty: {
-    bg: "#191B21",
-    borderWidth: "1.5px",
-    borderColor: UI_TOKENS.COLORS.tealAlpha40,
+    bg: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
+    borderWidth: "2px",
+    borderColor: "rgba(167, 139, 250, 0.4)",
     borderStyle: "dashed" as const,
     borderRadius: "16px",
-    color: UI_TOKENS.COLORS.whiteAlpha80,
-    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+    color: "rgba(196, 181, 253, 0.8)",
+    boxShadow: `
+      inset 0 0 12px rgba(139, 69, 197, 0.15),
+      0 0 8px rgba(167, 139, 250, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.1)
+    `,
     backdropFilter: "blur(4px)",
     fontSize: "lg",
     fontWeight: "600",
@@ -48,13 +52,17 @@ export const CARD_STYLES = {
     alignItems: "center" as const,
     justifyContent: "center" as const,
     aspectRatio: "5/7",
-    // ホバー効果
+    // ホバー効果：魔法陣風のグロー
     _hover: {
-      bg: UI_TOKENS.COLORS.indigoAlpha10,
-      borderColor: UI_TOKENS.COLORS.indigoAlpha40,
-      color: UI_TOKENS.COLORS.whiteAlpha80,
-      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-      transform: "translateY(-1px)",
+      bg: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
+      borderColor: "rgba(167, 139, 250, 0.7)",
+      color: "rgba(196, 181, 253, 0.9)",
+      boxShadow: `
+        inset 0 0 20px rgba(139, 69, 197, 0.25),
+        0 0 16px rgba(167, 139, 250, 0.4),
+        0 4px 20px rgba(0, 0, 0, 0.2)
+      `,
+      transform: "translateY(-2px) scale(1.02)",
     },
   },
   
