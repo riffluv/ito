@@ -3,6 +3,7 @@ import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import React, { ReactNode } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
+import { HD2DBackground } from "./HD2DBackground";
 
 /**
  * GameLayout: 予測可能で安定したゲーム画面レイアウト
@@ -56,6 +57,9 @@ export function GameLayout({
 
     return (
       <>
+        {/* HD-2D 3D背景 */}
+        <HD2DBackground />
+
         <Box
           h="100dvh"
           position="relative"
@@ -64,29 +68,10 @@ export function GameLayout({
           className="game-layout-immersive"
           css={{
             WebkitFontSmoothing: "antialiased",
-            // より高い詳細度でChakra UIのデフォルトを上書き
+            // 背景を透明にしてHD-2D背景を表示
             "&.game-layout-immersive": {
-              backgroundColor: "#1a1b2e",
-              backgroundImage: `
-                linear-gradient(135deg, rgba(139, 69, 19, 0.15) 0%, rgba(101, 67, 33, 0.08) 35%, transparent 70%),
-                linear-gradient(45deg, rgba(47, 27, 12, 0.12) 0%, transparent 50%, rgba(160, 82, 45, 0.06) 100%),
-                radial-gradient(ellipse 80% 60% at 20% 80%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
-                radial-gradient(ellipse 60% 40% at 80% 20%, rgba(218, 165, 32, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.03) 1px, transparent 0),
-                radial-gradient(circle at 12px 8px, rgba(139, 69, 19, 0.04) 0.8px, transparent 0),
-                radial-gradient(circle at 6px 14px, rgba(218, 165, 32, 0.02) 0.6px, transparent 0)
-              `,
-              backgroundSize: "auto, auto, auto, auto, 16px 16px, 32px 24px, 24px 32px",
+              backgroundColor: "transparent",
             },
-          }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            background:
-              `linear-gradient(135deg, ${UI_TOKENS.COLORS.indigoAlpha04} 0%, transparent 50%, ${UI_TOKENS.COLORS.purpleAlpha025} 100%)`,
-            pointerEvents: "none",
-            zIndex: 0,
           }}
         >
           {header && (
