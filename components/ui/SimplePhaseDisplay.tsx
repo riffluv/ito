@@ -43,8 +43,10 @@ export function SimplePhaseDisplay({
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const iconRef: any = useRef(null);
+  const topicRef = useRef<HTMLDivElement>(null);
   const previousStatus = useRef<string>(roomStatus);
   const previousCanStart = useRef<boolean>(canStartSorting);
+  const previousTopicText = useRef<string | null>(topicText);
 
   const { text, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
@@ -188,11 +190,57 @@ export function SimplePhaseDisplay({
           gsap.killTweensOf(iconRef.current);
           gsap.set(iconRef.current, { clearProps: "rotation,opacity,scale" });
         }
+        if (topicRef.current) {
+          gsap.killTweensOf(topicRef.current);
+          gsap.set(topicRef.current, { clearProps: "scale,y" });
+        }
       } catch (e) {
         // ignore
       }
     };
   }, [roomStatus, canStartSorting, text, icon]);
+
+  // お題テキスト変更時のぴょーん！アニメーション
+  useEffect(() => {
+    if (!topicRef.current || !topicText) return;
+
+    // お題テキストが変更された場合のみアニメーション
+    if (previousTopicText.current !== null && previousTopicText.current !== topicText) {
+      const topicEl = topicRef.current;
+
+      // reduced-motion の尊重
+      const prefersReduced =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (!prefersReduced) {
+        // ぴょーん！バウンスアニメーション
+        const tl = gsap.timeline();
+
+        tl.to(topicEl, {
+          scale: 0.85,
+          y: 2,
+          duration: 0.1,
+          ease: "power2.in",
+        })
+        .to(topicEl, {
+          scale: 1.15,
+          y: -6,
+          duration: 0.3,
+          ease: "back.out(1.8)",
+        })
+        .to(topicEl, {
+          scale: 1,
+          y: 0,
+          duration: 0.4,
+          ease: "elastic.out(1, 0.5)",
+        });
+      }
+    }
+
+    previousTopicText.current = topicText;
+  }, [topicText]);
 
   return (
     <Box
@@ -218,6 +266,7 @@ export function SimplePhaseDisplay({
           boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           backdropFilter: "blur(8px) saturate(1.1)",
           maxWidth: "min(92vw, 520px)",
+          transition: "width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)", // スムーズな幅変更
           ["@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)" as any]: {
             maxWidth: "min(92vw, 560px)",
           },
@@ -244,15 +293,18 @@ export function SimplePhaseDisplay({
               maxWidth: "min(88vw, 520px)",
             }}
           >
-            ▼ {text} ▼
+{text}
           </Text>
           {topicText ? (
             <Tooltip content={topicText} openDelay={200} showArrow>
               <Text
+                ref={topicRef}
                 fontSize={{ base: "xs", md: "sm" }}
-                color={UI_TOKENS.COLORS.textMuted}
-                letterSpacing="0.2px"
+                color="#FFD700" // ゴールド色で目立たせる
+                letterSpacing="0.3px"
                 fontFamily="monospace"
+                fontWeight={700} // 太字で強調
+                textShadow="1px 1px 2px rgba(0,0,0,0.8)" // 輪郭を強く
                 css={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -261,8 +313,8 @@ export function SimplePhaseDisplay({
                   maxWidth: "min(82vw, 480px)",
                 }}
               >
-                <Text as="span" fontWeight={700} color={UI_TOKENS.COLORS.whiteAlpha90} mr={1}>
-                  お題:
+                <Text as="span" fontWeight={800} color="white" mr={2}>
+                  【お題】
                 </Text>
                 {topicText}
               </Text>
