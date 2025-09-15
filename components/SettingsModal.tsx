@@ -468,8 +468,8 @@ export function SettingsModal({
                       },
                       {
                         value: "pixijs",
-                        title: "ドラクエふう はいけい",
-                        description: "PixiJS ドット絵エフェクト（開発中）",
+                        title: "ピクシー はいけい",
+                        description: "ころころかえます PixiJS エフェクト",
                       },
                     ].map((opt) => {
                       const isSelected = backgroundType === (opt.value as any);
