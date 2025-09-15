@@ -176,6 +176,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
     if (effectiveType === "カスタム") {
       await startGameAction(roomId);
+      // 画面側の楽観フラグは撤去（サーバ確定クリアに任せる）
+      try { delete (window as any).__ITO_LAST_RESET; } catch {}
       if (!currentTopic || !String(currentTopic).trim()) {
         setCustomStartPending(true);
         setCustomText("");
@@ -186,6 +188,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       return;
     }
     await startGameAction(roomId);
+    try { delete (window as any).__ITO_LAST_RESET; } catch {}
     await topicControls.selectCategory(roomId, effectiveType as any);
     await topicControls.dealNumbers(roomId);
   };

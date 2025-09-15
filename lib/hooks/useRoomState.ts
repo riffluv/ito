@@ -89,23 +89,10 @@ export function useRoomState(
       );
     };
 
-    // 初回: 可視状態のときのみ購読開始
-    if (typeof document === "undefined" || document.visibilityState === "visible") {
-      maybeStart();
-    }
-
-    const onVis = () => {
-      if (document.visibilityState === "visible") maybeStart();
-      else stop();
-    };
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVis);
-    }
+    // 常に購読を開始（非アクティブでも即時同期させる）
+    maybeStart();
 
     return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVis);
-      }
       if (backoffTimer) {
         try { clearTimeout(backoffTimer); } catch {}
       }

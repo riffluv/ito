@@ -31,7 +31,24 @@ export async function startGame(roomId: string) {
     throw new Error("開始できるのは待機中のみです");
   }
   // 新ラウンド開始時は前ラウンドの order/result/deal をクリア
-  await updateDoc(ref, { status: "clue", result: null, deal: null, order: null });
+  await updateDoc(ref, {
+    status: "clue",
+    result: null,
+    deal: null,
+    order: null,
+    lastActiveAt: serverTimestamp(),
+  });
+  // プレイヤーの一時状態も同時に初期化（古い連想が残るのを防止）
+  try {
+    const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+    const playersRef = collection(db!, "rooms", roomId, "players");
+    const ps = await getDocs(playersRef);
+    const batch = writeBatch(db!);
+    ps.forEach((d) => {
+      batch.update(d.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+    });
+    await batch.commit();
+  } catch {}
 }
 
 // ホストがトピック選択後に配札（重複なし）
@@ -106,7 +123,19 @@ export async function continueAfterFail(roomId: string) {
     result: null,
     order: null,
     deal: null,
+    lastActiveAt: serverTimestamp(),
   });
+  // waiting に戻るタイミングでプレイヤーの連想/readyも即時クリア
+  try {
+    const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+    const playersRef = collection(db!, "rooms", roomId, "players");
+    const ps = await getDocs(playersRef);
+    const batch = writeBatch(db!);
+    ps.forEach((d) => {
+      batch.update(d.ref, { clue1: "", ready: false, number: null, orderIndex: 0 });
+    });
+    await batch.commit();
+  } catch {}
 }
 
 export async function resetRoom(roomId: string) {
@@ -115,7 +144,17 @@ export async function resetRoom(roomId: string) {
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
   if (!next) throw new Error("invalid transition: RESET");
-  await updateDoc(ref, { status: next, result: null, deal: null, order: null });
+  await updateDoc(ref, { status: next, result: null, deal: null, order: null, lastActiveAt: serverTimestamp() });
+  try {
+    const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+    const playersRef = collection(db!, "rooms", roomId, "players");
+    const ps = await getDocs(playersRef);
+    const batch = writeBatch(db!);
+    ps.forEach((d) => {
+      batch.update(d.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+    });
+    await batch.commit();
+  } catch {}
 }
 
 // chooseAfterFail は不要（失敗後は自動継続または即終了）
