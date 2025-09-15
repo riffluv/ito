@@ -341,22 +341,6 @@ export function DragonQuestParty({
             })}
         </Box>
 
-        {/* 進行状況サマリー */}
-        {roomStatus === "clue" && (
-          <Text
-            fontSize="xs"
-            color={UI_TOKENS.COLORS.textMuted}
-            textAlign="center"
-            mt={2}
-            fontFamily="monospace"
-          >
-            {
-              displayedPlayers.filter((p) => p.clue1 && p.clue1.trim() !== "")
-                .length
-            }
-            /{actualCount} 完了
-          </Text>
-        )}
       </Box>
     </Box>
   );

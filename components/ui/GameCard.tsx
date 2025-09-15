@@ -163,10 +163,10 @@ export function GameCard({
                 clue={clue}
                 metaColor={dragonQuestStyle.colors.meta}
                 clueColor={dragonQuestStyle.colors.clue}
-                bg={dragonQuestStyle.bg}
-                border={dragonQuestStyle.border}
-                borderColor={successBorder}
-                boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+                bg="transparent"
+                border="none"
+                borderColor="transparent"
+                boxShadow="none"
                 waitingInCentral={waitingInCentral}
               />
             </Box>
@@ -180,10 +180,10 @@ export function GameCard({
                 number={typeof number === "number" ? number : null}
                 metaColor={dragonQuestStyle.colors.meta}
                 numberColor={dragonQuestStyle.colors.number}
-                bg={dragonQuestStyle.bg}
-                border={dragonQuestStyle.border}
-                borderColor={successBorder}
-                boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+                bg="transparent"
+                border="none"
+                borderColor="transparent"
+                boxShadow="none"
                 waitingInCentral={waitingInCentral}
               />
             </Box>
