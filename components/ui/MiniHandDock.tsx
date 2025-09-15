@@ -20,7 +20,7 @@ import {
 import { resetRoomWithPrune } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc } from "@/lib/types";
-import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Input, Dialog, Text, VStack } from "@chakra-ui/react";
 import React from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
@@ -45,6 +45,8 @@ interface MiniHandDockProps {
   // 在席者のみでリセットするための補助情報
   onlineUids?: string[];
   roundIds?: string[];
+  // カスタムお題（現在値）
+  currentTopic?: string | null;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -64,6 +66,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     pop = false,
     onlineUids,
     roundIds,
+    currentTopic,
   } = props;
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
@@ -140,9 +143,47 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   };
 
+  // カスタムお題モーダル制御
+  const [customOpen, setCustomOpen] = React.useState(false);
+  const [customStartPending, setCustomStartPending] = React.useState(false);
+  const [customText, setCustomText] = React.useState<string>("");
+  const handleSubmitCustom = async (val: string) => {
+    const v = (val || "").trim();
+    if (!v) return;
+    await topicControls.setCustomTopic(roomId, v);
+    setCustomOpen(false);
+    if (customStartPending) {
+      try {
+        await topicControls.dealNumbers(roomId);
+      } finally {
+        setCustomStartPending(false);
+      }
+    }
+  };
+
   const quickStart = async () => {
+    // 直近に保存された選択（SettingsModalから）をローカルに保持し、反映遅延を吸収
+    let effectiveType = defaultTopicType as string;
+    try {
+      if (typeof window !== "undefined") {
+        const ls = window.localStorage.getItem("defaultTopicType");
+        if (ls && ls.trim()) effectiveType = ls;
+      }
+    } catch {}
+
+    if (effectiveType === "カスタム") {
+      await startGameAction(roomId);
+      if (!currentTopic || !String(currentTopic).trim()) {
+        setCustomStartPending(true);
+        setCustomText("");
+        setCustomOpen(true);
+        return;
+      }
+      await topicControls.dealNumbers(roomId);
+      return;
+    }
     await startGameAction(roomId);
-    await topicControls.selectCategory(roomId, defaultTopicType as any);
+    await topicControls.selectCategory(roomId, effectiveType as any);
     await topicControls.dealNumbers(roomId);
   };
 
@@ -411,9 +452,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <>
               <IconButton
                 aria-label="お題シャッフル"
-                onClick={() =>
-                  topicControls.shuffleTopic(roomId, defaultTopicType as any)
-                }
+                onClick={() => {
+                  let effectiveType = defaultTopicType as string;
+                  try {
+                    if (typeof window !== "undefined") {
+                      const ls = window.localStorage.getItem("defaultTopicType");
+                      if (ls && ls.trim()) effectiveType = ls;
+                    }
+                  } catch {}
+                  if (effectiveType === "カスタム") {
+                    if (!isHost) return;
+                    setCustomText(currentTopic || "");
+                    setCustomOpen(true);
+                  } else {
+                    topicControls.shuffleTopic(roomId, effectiveType as any);
+                  }
+                }}
                 size="sm"
                 w="36px"
                 h="36px"
@@ -510,8 +564,135 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               <FiLogOut />
             </IconButton>
           )}
-        </HStack>
       </HStack>
+      {/* カスタムお題入力モーダル（簡易版） */}
+      {/* このモーダルは外側クリック/ESCで閉じない（初心者が迷わないように明示ボタンのみ）*/}
+      <Dialog.Root open={customOpen} onOpenChange={() => { /* no-op */ }}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content
+            css={{
+              background: UI_TOKENS.COLORS.panelBg,
+              border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+              borderRadius: 0,
+              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+              maxWidth: "480px",
+              width: "90vw",
+            }}
+          >
+            <Box p={5} css={{ borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}` }}>
+              <Dialog.Title>
+                <Text fontSize="lg" fontWeight="bold" color="white" fontFamily="monospace">
+                  お題を入力
+                </Text>
+              </Dialog.Title>
+            </Box>
+            <Dialog.Body p={6}>
+              <VStack align="stretch" gap={4}>
+                <Input
+                  placeholder="れい：この夏さいだいのなぞ"
+                  value={customText}
+                  onChange={(e: any) => setCustomText(e.target.value)}
+                  onKeyDown={(e: any) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (customText.trim()) handleSubmitCustom(customText);
+                    }
+                  }}
+                  css={{
+                    height: "48px",
+                    background: "white",
+                    border: "borders.retrogameInput",
+                    borderRadius: 0,
+                    fontSize: "1rem",
+                    padding: "0 16px",
+                    color: "black",
+                    fontWeight: "normal",
+                    fontFamily: "monospace",
+                    transition: "none",
+                    _placeholder: {
+                      color: "#666",
+                      fontFamily: "monospace",
+                    },
+                    _focus: {
+                      borderColor: "black",
+                      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                      background: "#f8f8f8",
+                      outline: "none",
+                    },
+                    _hover: {
+                      background: "#f8f8f8",
+                    },
+                  }}
+                />
+                <HStack justify="space-between" gap={3}>
+                  <button
+                    onClick={() => setCustomOpen(false)}
+                    style={{
+                      minWidth: "120px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: "transparent",
+                      color: "white",
+                      cursor: "pointer",
+                      textShadow: "1px 1px 0px #000",
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "white";
+                    }}
+                  >
+                    やめる
+                  </button>
+                  <button
+                    onClick={() => customText.trim() && handleSubmitCustom(customText)}
+                    disabled={!customText.trim()}
+                    style={{
+                      minWidth: "140px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: !customText.trim() ? "#666" : "var(--colors-richBlack-600)",
+                      color: "white",
+                      cursor: !customText.trim() ? "not-allowed" : "pointer",
+                      textShadow: "1px 1px 0px #000",
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                      opacity: !customText.trim() ? 0.6 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (customText.trim()) {
+                        e.currentTarget.style.background = "white";
+                        e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (customText.trim()) {
+                        e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                        e.currentTarget.style.color = "white";
+                      }
+                    }}
+                  >
+                    きめる
+                  </button>
+                </HStack>
+              </VStack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    </HStack>
     </Box>
   );
 }

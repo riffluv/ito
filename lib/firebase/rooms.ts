@@ -268,19 +268,15 @@ export async function resetRoomWithPrune(
   });
 
   // 任意のチャット告知（軽量）
-  if (opts?.notifyChat) {
+  // チャット告知は「だれかを除外した」ときのみ（連投で会話を圧迫しないため）
+  if (opts?.notifyChat && removedCount != null && removedCount > 0) {
     try {
-      if (keptCount != null && prevTotal != null) {
-        const removedText = removedCount && removedCount > 0 ? `、除外 ${removedCount} 名` : "";
-        await sendSystemMessage(
-          roomId,
-          `🔄 在席者でやり直し（前ラウンド ${prevTotal} 名 → 在席 ${keptCount} 名${removedText}）`
-        );
-      } else if (keptCount != null) {
-        await sendSystemMessage(roomId, `🔄 在席者でやり直し（在席 ${keptCount} 名）`);
-      } else {
-        await sendSystemMessage(roomId, "🔄 在席者でやり直し");
-      }
+      const kept = keptCount ?? 0;
+      const prev = prevTotal ?? kept + removedCount;
+      await sendSystemMessage(
+        roomId,
+        `🔄 在席者でやり直し（前ラウンド ${prev} 名 → 在席 ${kept} 名、除外 ${removedCount} 名）`
+      );
     } catch {}
   }
 }

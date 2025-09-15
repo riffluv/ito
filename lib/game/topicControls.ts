@@ -48,6 +48,34 @@ export const topicControls = {
     }
   },
 
+  // カスタムお題を設定
+  async setCustomTopic(roomId: string, text: string) {
+    const value = (text || "").trim();
+    if (!value) throw new Error("お題を入力してください");
+    try {
+      await updateDoc(doc(db!, "rooms", roomId), {
+        topic: value,
+        topicBox: "カスタム",
+        topicOptions: null,
+      });
+      notify({ title: "お題を更新しました", type: "success" });
+      try {
+        await sendSystemMessage(roomId, `📝 お題を変更: ${value}`);
+      } catch {}
+    } catch (error: any) {
+      if (isFirebaseQuotaExceeded(error)) {
+        handleFirebaseQuotaError("カスタムお題設定");
+        notify({
+          title: "🚨 Firebase読み取り制限",
+          description: "現在お題を設定できません。しばらくしてから再度お試しください。",
+          type: "error",
+        });
+      } else {
+        notify({ title: "お題設定に失敗", description: error?.message || String(error), type: "error" });
+      }
+    }
+  },
+
   // お題をクリア（カテゴリ/お題の選び直し）
   async resetTopic(roomId: string) {
     try {
