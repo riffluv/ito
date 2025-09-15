@@ -286,10 +286,11 @@ export function SimplePhaseDisplay({
             fontFamily="monospace"
             css={{
               display: "-webkit-box",
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 1,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
-              wordBreak: "break-word",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
               maxWidth: "min(88vw, 520px)",
             }}
           >

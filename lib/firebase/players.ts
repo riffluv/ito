@@ -33,3 +33,7 @@ export async function resetPlayerState(roomId: string, playerId: string) {
 export async function setPlayerNameAvatar(roomId: string, playerId: string, name: string, avatar: string) {
   await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name, avatar });
 }
+
+export async function setPlayerName(roomId: string, playerId: string, name: string) {
+  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name });
+}

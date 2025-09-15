@@ -1,7 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { hashString } from "@/lib/game/random";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { randomAvatar } from "@/lib/utils";
+import { getAvatarByOrder } from "@/lib/utils";
 import {
   collection,
   deleteDoc,
@@ -30,9 +30,14 @@ export async function ensureMember({
   const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
   if (!meSnap.exists()) {
+    // 既存プレイヤー数を取得して参加順でアバター決定
+    const playersCollectionRef = collection(db!, "rooms", roomId, "players");
+    const playersSnap = await getDocs(playersCollectionRef);
+    const currentPlayerCount = playersSnap.size;
+
     const p: PlayerDoc = {
       name: displayName || "匿名",
-      avatar: randomAvatar(displayName || uid.slice(0, 6)),
+      avatar: getAvatarByOrder(currentPlayerCount),
       number: null,
       clue1: "",
       ready: false,
