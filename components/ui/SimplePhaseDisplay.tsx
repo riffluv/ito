@@ -199,7 +199,7 @@ export function SimplePhaseDisplay({
       ref={containerRef}
       position="fixed"
       top={{ base: "12px", md: "16px" }}
-      left={{ base: "16px", md: "20px" }}
+      left={{ base: "20px", md: "24px" }}
       zIndex={70}
       css={{
         pointerEvents: "none",
