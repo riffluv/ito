@@ -8,14 +8,16 @@ interface WaitingAreaCardProps {
   player: PlayerDoc & { id: string };
   isDraggingEnabled?: boolean;
   meId?: string;
+  optimisticReset?: boolean;
 }
 
 export default function WaitingAreaCard({
   player,
   isDraggingEnabled = false,
   meId,
+  optimisticReset = false,
 }: WaitingAreaCardProps) {
-  const ready = !!(player?.clue1 && player.clue1.trim() !== "");
+  const ready = !optimisticReset && !!(player?.clue1 && player.clue1.trim() !== "");
 
   // ドラッグ機能（連想ワード確定後のみ有効）
   const { attributes, listeners, setNodeRef, transform, isDragging } =

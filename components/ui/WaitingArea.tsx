@@ -11,6 +11,7 @@ export interface WaitingAreaProps {
   isDraggingEnabled?: boolean; // ドラッグ機能有効化フラグ
   meId?: string; // 自分のID（本人のみドラッグ可能にする）
   displayMode?: "full" | "minimal"; // カード表示モード
+  roomId?: string; // Broadcast 受信のため
 }
 
 export default function WaitingArea({
@@ -19,7 +20,9 @@ export default function WaitingArea({
   isDraggingEnabled = false,
   meId,
   displayMode = "full",
+  roomId,
 }: WaitingAreaProps) {
+  // Broadcast 同期は一時停止（警告回避）。サーバ確定＋常時購読で十分速い同期を実現済み。
   return (
     <VStack
       width="100%"
@@ -90,6 +93,7 @@ export default function WaitingArea({
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
+                
               />
             ))
           : players.map((p) => (
@@ -98,6 +102,7 @@ export default function WaitingArea({
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
+                
               />
             ))
         }
