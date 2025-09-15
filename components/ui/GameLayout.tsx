@@ -3,7 +3,7 @@ import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import React, { ReactNode } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
-import { HD2DBackground } from "./HD2DBackground";
+import { ThreeBackground } from "./ThreeBackground";
 
 /**
  * GameLayout: 予測可能で安定したゲーム画面レイアウト
@@ -57,8 +57,8 @@ export function GameLayout({
 
     return (
       <>
-        {/* HD-2D 3D背景 */}
-        <HD2DBackground />
+        {/* Three.js 3D背景 */}
+        <ThreeBackground />
 
         <Box
           h="100dvh"
