@@ -57,6 +57,7 @@ export function useRevealAnimation({
       setRevealAnimating(true);
       setRevealIndex(0);
       setRealtimeResult(null); // リセット
+      logDebug("reveal", "start", { orderListLength });
     }
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderListLength, revealAnimating, revealIndex]);
@@ -82,7 +83,7 @@ export function useRevealAnimation({
     const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
     
     const timer = setTimeout(async () => {
-      
+
       // 次にめくる枚数（この時点ではまだ state 更新前）
       const nextIndex = Math.min(revealIndex + 1, orderListLength);
 
@@ -95,6 +96,7 @@ export function useRevealAnimation({
         if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
           const currentList = orderData.list.slice(0, nextIndex);
           const result = evaluateSorted(currentList, orderData.numbers);
+          logDebug("reveal", "step", { nextIndex, result });
           
           // 失敗 or 成功をめくり完了と同時にUIへ反映
           // 失敗時も currentIndex は毎回更新（カードの色変化のため）

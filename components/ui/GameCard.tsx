@@ -129,7 +129,7 @@ export function GameCard({
     boundaryRing ? `${boundaryRing}, ${core}` : core;
   // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
   if (variant === "flip") {
-    const { effectiveMode } = useAnimationSettings();
+    const { effectiveMode, reducedMotion } = useAnimationSettings();
     // 初回レンダー時のモードを固定し、途中切替（auto判定の反映）によるDOM差し替えを防ぐ
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
     const stableMode = stableModeRef.current;
@@ -156,7 +156,7 @@ export function GameCard({
           <Box position="relative" width="100%" height="100%">
             {/* FRONT LAYER */}
             <Box aria-hidden={flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 0 : 1, transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}` }}>
+              style={{ opacity: flipped ? 0 : 1, transition: `opacity ${reducedMotion ? 10 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
               <CardFaceFront
                 index={typeof index === "number" ? index : null}
                 name={name}
@@ -173,7 +173,7 @@ export function GameCard({
 
             {/* BACK LAYER */}
             <Box aria-hidden={!flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 1 : 0, transition: `opacity 0.2s ${UI_TOKENS.EASING.standard}` }}>
+              style={{ opacity: flipped ? 1 : 0, transition: `opacity ${reducedMotion ? 10 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
               <CardFaceBack
                 index={typeof index === "number" ? index : null}
                 name={name}
@@ -225,7 +225,7 @@ export function GameCard({
             transformStyle: "preserve-3d",
             transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
             willChange: "transform",
-            transition: `transform 0.6s ${CARD_FLIP_EASING}`,
+            transition: `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
           }}
         >
           {/* FRONT SIDE - 連想ワード面 */}

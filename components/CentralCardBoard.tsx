@@ -13,7 +13,7 @@ import {
 } from "@/lib/game/room";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import { Box } from "@chakra-ui/react";
+import { Box, VisuallyHidden } from "@chakra-ui/react";
 import Tooltip from "@/components/ui/Tooltip";
 import {
   DndContext,
@@ -282,11 +282,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       revealIndex={revealIndex}
       revealAnimating={revealAnimating}
       failed={failed}
-      boundaryPreviousIndex={
-        realtimeResult?.failedAt && typeof realtimeResult.failedAt === "number"
-          ? realtimeResult.failedAt - 2
-          : null
-      }
       realtimeResult={realtimeResult} // リアルタイム判定結果を追加
     />
   );
@@ -450,6 +445,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         position: "relative",
       }}
     >
+      {/* A11y: reveal進行のライブアナウンス */}
+      <VisuallyHidden aria-live="polite">
+        {roomStatus === "reveal"
+          ? `めくり ${revealIndex} / ${(orderList || []).length}`
+          : roomStatus === "finished"
+          ? realtimeResult?.failedAt
+            ? `結果: 失敗（${realtimeResult.failedAt}枚目で降順）`
+            : `結果: 成功`
+          : ""}
+      </VisuallyHidden>
       {/* コンパクトヘッダー - DPI125%対応 */}
       <Box
         textAlign="center"
