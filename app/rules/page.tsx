@@ -347,7 +347,7 @@ export default function RulesPage() {
           </Box>
         </VStack>
 
-        <Box mt={{ base: 10, md: 12 }} textAlign="center">
+        <VStack gap={6} mt={{ base: 10, md: 12 }}>
           <Box
             p={4}
             bg="richBlack.700"
@@ -355,6 +355,7 @@ export default function RulesPage() {
             borderRadius={0}
             mx="auto"
             maxW="2xl"
+            textAlign="center"
           >
             <Text
               fontSize="sm"
@@ -367,7 +368,18 @@ export default function RulesPage() {
               まずはプレイしてみよう！
             </Text>
           </Box>
-        </Box>
+
+          {/* 戻るボタン */}
+          <RPGButton
+            href="/"
+            visual="solid"
+            palette="brand"
+            size="lg"
+          >
+            <ArrowLeft size={20} style={{ marginRight: "8px" }} />
+            メインメニューに戻る
+          </RPGButton>
+        </VStack>
       </Container>
     </Box>
   );

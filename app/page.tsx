@@ -415,7 +415,12 @@ export default function MainMenu() {
                       戻る: 前回のルーム
                     </AppButton>
                   ) : null}
-                  <RPGButton size="lg" visual="outline" href="/rules">
+                  <RPGButton
+                    size="lg"
+                    visual="outline"
+                    href="/rules"
+                    onMouseEnter={() => router.prefetch("/rules")}
+                  >
                     <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
                   </RPGButton>

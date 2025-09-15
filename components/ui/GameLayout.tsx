@@ -248,16 +248,7 @@ export function GameLayout({
         lineHeight={1.5}
         css={{
           WebkitFontSmoothing: "antialiased",
-          backgroundColor: "#1a1b2e",
-          backgroundImage: `
-            linear-gradient(135deg, rgba(139, 69, 19, 0.12) 0%, rgba(101, 67, 33, 0.06) 35%, transparent 70%),
-            linear-gradient(45deg, rgba(47, 27, 12, 0.08) 0%, transparent 50%, rgba(160, 82, 45, 0.04) 100%),
-            radial-gradient(ellipse 70% 50% at 30% 70%, rgba(139, 69, 19, 0.08) 0%, transparent 50%),
-            radial-gradient(ellipse 50% 30% at 70% 30%, rgba(218, 165, 32, 0.06) 0%, transparent 40%),
-            radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
-            radial-gradient(circle at 10px 6px, rgba(139, 69, 19, 0.03) 0.8px, transparent 0)
-          `,
-          backgroundSize: "auto, auto, auto, auto, 20px 20px, 40px 30px",
+          backgroundColor: "var(--chakra-colors-bg-canvas)",
           [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.LG_DOWN}`]: {
             gridTemplateAreas: `"header" "main-area" "hand"`,
             gridTemplateColumns: "1fr",
