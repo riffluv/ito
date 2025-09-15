@@ -252,11 +252,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         background: UI_TOKENS.COLORS.whiteAlpha20, // 上フチだけを薄く出して“固定感”を演出
       }}
     >
-      <DiamondNumberCard
-        number={me?.number || null}
-        isAnimating={pop}
-      />
-      <Input
+      {/* Left cluster */}
+      <HStack gap={{ base: 3, md: 4 }} align="center">
+        <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
+        <Input
         placeholder="連想ワード"
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -280,7 +279,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           borderColor: UI_TOKENS.COLORS.whiteAlpha80,
           bg: UI_TOKENS.COLORS.panelBg,
         }}
-        maxW="300px"
+        w={{ base: "48vw", md: "420px" }}
+        maxW="560px"
       />
       <AppButton
         size="sm"
@@ -336,7 +336,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       >
         出す
       </AppButton>
+      </HStack>
 
+      {/* Spacer */}
+      <Box flex="1" />
+
+      {/* Right cluster */}
       <HStack gap={3} align="center">
         {isHost && roomStatus === "waiting" && (
           <AppButton
