@@ -96,6 +96,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
         const ctx = canvas.getContext('2d');
+        if (!ctx) return canvas; // null チェック追加
         const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
         g.addColorStop(0, 'rgba(255,255,255,1)');
         g.addColorStop(0.35, 'rgba(255,255,255,0.8)');
