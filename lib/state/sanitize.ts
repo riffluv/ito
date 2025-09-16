@@ -11,7 +11,7 @@ export function sanitizeRoom(input: any): RoomDoc {
   })();
   const options = input?.options || { allowContinueAfterFail: true };
   const validTopic = (t: any) =>
-    t === "通常版" || t === "レインボー版" || t === "クラシック版";
+    t === "通常版" || t === "レインボー版" || t === "クラシック版" || t === "カスタム";
   return {
     name: String(input?.name || "Untitled"),
     hostId: String(input?.hostId || ""),

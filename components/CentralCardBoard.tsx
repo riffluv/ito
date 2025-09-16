@@ -42,6 +42,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { notify } from "@/components/ui/notify";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
@@ -228,6 +229,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
     setShowResult(false);
   }, [roomStatus]);
+
+  // 軽いトースト: リビール完了時に一度だけ表示（成功/失敗）
+  const finishedToastRef = useRef(false);
+  useEffect(() => {
+    if (roomStatus === "finished") {
+      if (!finishedToastRef.current) {
+        finishedToastRef.current = true;
+        const failedAt = realtimeResult?.failedAt ?? null;
+        if (typeof failedAt === "number") {
+          notify({ title: "しっぱい…", description: `${failedAt}枚目で降順`, type: "warning", duration: 1800 });
+        } else {
+          notify({ title: "せいこう！", type: "success", duration: 1800 });
+        }
+      }
+    } else {
+      finishedToastRef.current = false;
+    }
+  }, [roomStatus, realtimeResult?.failedAt]);
 
   // Clear pending when orderList updates - optimized Set lookup for 8+ players
   const orderListSet = useMemo(

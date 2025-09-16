@@ -178,12 +178,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     if (!v) return;
     await topicControls.setCustomTopic(roomId, v);
     setCustomOpen(false);
-    if (customStartPending) {
-      try {
+    try {
+      // カスタムお題確定後、まだゲームが始まっていなければ開始→配布まで自動進行
+      if ((roomStatus === "waiting" || customStartPending) && isSortSubmit(actualResolveMode)) {
+        await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
-      } finally {
-        setCustomStartPending(false);
+        notify({ title: "カスタムお題で開始", type: "success", duration: 1500 });
       }
+    } finally {
+      setCustomStartPending(false);
     }
   };
 
@@ -199,16 +202,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } catch {}
 
     if (effectiveType === "カスタム") {
-      await startGameAction(roomId);
-      // 画面側の楽観フラグは撤去（サーバ確定クリアに任せる）
-      try { delete (window as any).__ITO_LAST_RESET; } catch {}
+      // お題未設定なら、まだ開始せずにモーダルへ誘導
       if (!currentTopic || !String(currentTopic).trim()) {
         setCustomStartPending(true);
         setCustomText("");
         setCustomOpen(true);
         return;
       }
+      // すでにお題があるなら開始→配布
+      await startGameAction(roomId);
       await topicControls.dealNumbers(roomId);
+      notify({ title: "カスタムお題で開始", type: "success", duration: 1500 });
       try { postRoundReset(roomId); } catch {}
       return;
     }
