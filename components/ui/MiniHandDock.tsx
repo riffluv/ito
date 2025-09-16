@@ -462,40 +462,38 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         {isHost &&
           ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
             roomStatus === "finished") && (
-            <Tooltip content="失敗後も続ける" showArrow openDelay={300}>
-              <AppButton
-                size="md"
-                visual="solid"
-                onClick={roomStatus === "finished" ? resetGame : continueRound}
-                minW="110px"
-                px={4}
-                py={2}
-                bg={UI_TOKENS.GRADIENTS.orangeSunset}
-                color="white"
-                border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-                borderRadius={0}
-                fontWeight="700"
-                fontFamily="monospace"
-                textShadow="1px 1px 0px #000"
-                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-                _hover={{
-                  bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
-                  color: UI_TOKENS.COLORS.whiteAlpha95,
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                  borderColor: "white",
-                  transform: "translateY(-1px)",
-                }}
-                _active={{
-                  bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
-                  color: UI_TOKENS.COLORS.whiteAlpha90,
-                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                  transform: "translateY(0)",
-                }}
-                transition="all 0.15s ease"
-              >
-                もう一度
-              </AppButton>
-            </Tooltip>
+            <AppButton
+              size="md"
+              visual="solid"
+              onClick={roomStatus === "finished" ? resetGame : continueRound}
+              minW="110px"
+              px={4}
+              py={2}
+              bg={UI_TOKENS.GRADIENTS.orangeSunset}
+              color="white"
+              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+              borderRadius={0}
+              fontWeight="700"
+              fontFamily="monospace"
+              textShadow="1px 1px 0px #000"
+              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+              _hover={{
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
+                color: UI_TOKENS.COLORS.whiteAlpha95,
+                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
+                borderColor: "white",
+                transform: "translateY(-1px)",
+              }}
+              _active={{
+                bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
+                color: UI_TOKENS.COLORS.whiteAlpha90,
+                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                transform: "translateY(0)",
+              }}
+              transition="all 0.15s ease"
+            >
+              もう一度
+            </AppButton>
           )}
 
         <HStack gap={2}>
