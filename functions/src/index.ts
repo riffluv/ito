@@ -367,3 +367,37 @@ export const onPlayerCreated = functions.firestore
     } catch {}
     return null;
   });
+
+// 定期実行: 古い events の削除（右上トースト用イベントの整理）
+// 既定で 7 日より古いものを削除（環境変数 EVENT_RETENTION_DAYS で日数変更可能）
+export const pruneOldEvents = functions.pubsub
+  .schedule("every 24 hours")
+  .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
+    const dbi = admin.firestore();
+    const days = Number(process.env.EVENT_RETENTION_DAYS || 7);
+    const cutoff = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    );
+    // ルームを分割して処理（コスト抑制のため上限あり）
+    const roomsSnap = await dbi.collection("rooms").select().limit(100).get();
+    if (roomsSnap.empty) return null;
+    for (const room of roomsSnap.docs) {
+      try {
+        const eventsCol = room.ref.collection("events");
+        // 期間外を削除
+        const snap = await eventsCol
+          .where("createdAt", "<", cutoff)
+          .orderBy("createdAt", "asc")
+          .limit(500)
+          .get();
+        if (snap.empty) continue;
+        const batch = dbi.batch();
+        for (const d of snap.docs) batch.delete(d.ref);
+        await batch.commit();
+      } catch (err) {
+        console.error("pruneOldEvents error", room.id, err);
+      }
+    }
+    return null;
+  });

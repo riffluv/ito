@@ -179,6 +179,18 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if false;
       }
+
+      // 通知イベント（右上トースト用）
+      match /events/{eventId} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAuthenticated()
+          && (isHost(roomId) || isAdmin())
+          && isValidEventDoc(request.resource.data);
+
+        allow update: if false;
+        allow delete: if false;
+      }
     }
 
     function isWaiting(roomId) {
@@ -195,6 +207,15 @@ service cloud.firestore {
     }
     function isValidPlayerList(roomId, playerList) {
       return playerList.size() == 0 || playerList.size() <= 10;
+    }
+    function isValidEventDoc(data) {
+      return data is map
+        && data.keys().hasOnly(['kind','type','title','description','createdAt'])
+        && data.kind == 'notify'
+        && data.type is string && data.type in ['info','warning','success','error']
+        && safeText(data.title, 1, 80)
+        && (!('description' in data) || data.description == null || safeTextAllowEmpty(data.description, 200))
+        && isTimestampValue(data.createdAt);
     }
     function isRateLimited() {
       return request.time < resource.data.lastUpdate + duration.value(1, 's');

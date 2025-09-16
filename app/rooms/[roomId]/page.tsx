@@ -13,6 +13,7 @@ import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
+import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { notify } from "@/components/ui/notify";
 import { logError } from "@/lib/utils/log";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
@@ -639,6 +640,8 @@ export default function RoomPage() {
 
   return (
     <>
+      {/* 右上トースト通知の購読（チャットと独立） */}
+      <RoomNotifyBridge roomId={roomId} />
       <GameLayout
         variant="immersive"
         header={headerNode}
