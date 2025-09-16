@@ -129,47 +129,43 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     })
   );
 
-  // Collision detection: stricter distance-based detection to prevent accidental drops
+  // Collision detection: pointerWithin → distance fallback → rectIntersection
+  // ポインタが空隙にある時でも隣接スロットへ入りやすいように動的しきい値を採用
   const collisionDetection: CollisionDetection = (args) => {
-    const { active, collisionRect, droppableRects } = args;
-    
-    if (!active || !collisionRect) return [];
-    
-    // Calculate center of dragging item
+    // 1) まずはデフォルトの pointerWithin を最優先
+    const within = pointerWithin(args);
+    if (within.length) return within;
+
+    const { collisionRect, droppableRects } = args;
+    if (!collisionRect) return [];
+
+    // 2) ドラッグ要素中心と各ドロップ領域中心の距離で評価（動的しきい値）
     const dragCenter = {
       x: collisionRect.left + collisionRect.width / 2,
       y: collisionRect.top + collisionRect.height / 2,
     };
-    
-    const candidates = [];
-    
-    for (const [droppableId, rect] of droppableRects.entries()) {
-      // Calculate center of drop zone
-      const dropCenter = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      };
-      
-      // Calculate distance between centers
-      const distance = Math.sqrt(
-        Math.pow(dragCenter.x - dropCenter.x, 2) +
-        Math.pow(dragCenter.y - dropCenter.y, 2)
-      );
-      
-      // Only accept drop if drag center is within 60px of drop center
-      // This prevents accidental drops when just slightly moving upward
-      const threshold = 60; // pixels
-      
-      if (distance <= threshold) {
-        candidates.push({
-          id: droppableId,
-          data: { value: distance }
-        });
+    const distances: { id: any; value: number }[] = [];
+    droppableRects.forEach((rect, id: any) => {
+      const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const dx = dragCenter.x - dropCenter.x;
+      const dy = dragCenter.y - dropCenter.y;
+      const distance = Math.hypot(dx, dy);
+      distances.push({ id, value: distance });
+    });
+    distances.sort((a, b) => a.value - b.value);
+
+    // 動的しきい値: スロット幅の60%（最小60px / 最大140px）
+    const best = distances[0];
+    if (best) {
+      const rect = droppableRects.get(best.id as any)!;
+      const dynamicThreshold = Math.max(60, Math.min(140, rect.width * 0.6));
+      if (best.value <= dynamicThreshold) {
+        return [{ id: best.id, data: { value: best.value } } as any];
       }
     }
-    
-    // Sort by distance and return closest valid drop zone
-    return candidates.sort((a, b) => (a.data?.value as number) - (b.data?.value as number));
+
+    // 3) それでも入らない場合は rectIntersection で最も交差している領域へフォールバック
+    return rectIntersection(args);
   };
 
   // Optimize mePlaced calculation using Set for O(1) lookup instead of O(n) includes
