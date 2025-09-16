@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as PIXI from "pixi.js";
+import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
 
 interface ThreeBackgroundProps {
   className?: string;
@@ -13,7 +14,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const frameRef = useRef<number>();
-  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "pixijs">("css");
+  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs">("css");
 
   // LocalStorageから設定読み込み & イベントリスナー設定
   useEffect(() => {
@@ -21,7 +22,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     const loadBackgroundType = () => {
       try {
         const saved = localStorage.getItem("backgroundType");
-        if (saved && ["css", "three3d", "pixijs"].includes(saved)) {
+        if (saved && ["css", "three3d", "three3d_advanced", "pixijs"].includes(saved)) {
           setBackgroundType(saved as any);
         }
       } catch {
@@ -672,6 +673,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       console.log("PixiJS: ころころかえます cleaned up ｗｗ");
     };
   }, [backgroundType]);
+
+  // 豪華版が選択された場合は専用コンポーネントを使用
+  if (backgroundType === "three3d_advanced") {
+    return <ThreeBackgroundAdvanced className={className} />;
+  }
 
   return (
     <div

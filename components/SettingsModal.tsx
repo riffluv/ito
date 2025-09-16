@@ -40,7 +40,7 @@ export function SettingsModal({
   const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
 
   // 背景設定のstate（localStorageから読み込み）
-  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "pixijs">("css");
+  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "three3d_advanced" | "pixijs">("css");
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -88,7 +88,7 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      if (saved && ["css", "three3d", "pixijs"].includes(saved)) {
+      if (saved && ["css", "three3d", "three3d_advanced", "pixijs"].includes(saved)) {
         setBackgroundType(saved as any);
       }
     } catch {
@@ -546,7 +546,7 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "リッチ 3D" : "軽量 3D"}
+                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "Three.js" : backgroundType === "three3d_advanced" ? "豪華版" : "軽量 3D"}
                   </Text>
                   <Stack gap={2}>
                     {[
@@ -558,7 +558,12 @@ export function SettingsModal({
                       {
                         value: "three3d",
                         title: "Three.js はいけい",
-                        description: "うちゅうてき Three.js エフェクト（30fps）",
+                        description: "うちゅうてき Three.js エフェクト（シンプル版）",
+                      },
+                      {
+                        value: "three3d_advanced",
+                        title: "Three.js はいけい 豪華版",
+                        description: "ポストエフェクト付き高品質3D（豪華版）",
                       },
                       {
                         value: "pixijs",
