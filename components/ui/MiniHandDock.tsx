@@ -26,7 +26,7 @@ import { Box, HStack, IconButton, Input, Dialog, Text, VStack } from "@chakra-ui
 import React from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
-import { FiLogOut, FiSettings } from "react-icons/fi";
+import { FiLogOut, FiSettings, FiEdit2 } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import Tooltip from "@/components/ui/Tooltip";
@@ -72,6 +72,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     roundIds,
     currentTopic,
   } = props;
+
+  // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
+  const [effectiveDefaultTopicType, setEffectiveDefaultTopicType] = React.useState<string>(defaultTopicType);
+  React.useEffect(() => setEffectiveDefaultTopicType(defaultTopicType), [defaultTopicType]);
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      const v = e?.detail?.defaultTopicType;
+      if (typeof v === "string") setEffectiveDefaultTopicType(v);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("defaultTopicTypeChanged", handler as any);
+      try {
+        const v = window.localStorage.getItem("defaultTopicType");
+        if (v) setEffectiveDefaultTopicType(v);
+      } catch {}
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("defaultTopicTypeChanged", handler as any);
+      }
+    };
+  }, []);
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
   React.useEffect(() => setText(me?.clue1 || ""), [me?.clue1]);
@@ -475,16 +497,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         <HStack gap={2}>
           {isHost && (
             <>
-              <Tooltip content="お題をシャッフルする" showArrow openDelay={300}>
+              <Tooltip content={effectiveDefaultTopicType === "カスタム" ? "カスタムお題を設定" : "お題をシャッフルする"} showArrow openDelay={300}>
                 <IconButton
                   aria-label="お題シャッフル"
-                  onClick={() => {
-                    if (defaultTopicType === "カスタム") {
+                  onClick={async () => {
+                    // 最新のオプションを取得して判定の不整合を防ぐ
+                    let mode = effectiveDefaultTopicType;
+                    try {
+                      if (db) {
+                        const snap = await getDoc(doc(db, "rooms", roomId));
+                        const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
+                        if (latest) mode = latest;
+                      }
+                    } catch {}
+                    if (mode === "カスタム") {
                       if (!isHost) return;
                       setCustomText(currentTopic || "");
                       setCustomOpen(true);
                     } else {
-                      topicControls.shuffleTopic(roomId, defaultTopicType as any);
+                      await topicControls.shuffleTopic(roomId, mode as any);
                     }
                   }}
                   size="sm"
@@ -496,7 +527,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   borderRadius={0}
                   boxShadow={UI_TOKENS.SHADOWS.cardRaised}
                   _hover={{
-                    bg: UI_TOKENS.COLORS.dqBlue,
+                    bg: effectiveDefaultTopicType === "カスタム" ? UI_TOKENS.COLORS.purpleAlpha80 : UI_TOKENS.COLORS.dqBlue,
                     borderColor: "white",
                     transform: "translateY(-1px)",
                   }}
@@ -506,7 +537,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   }}
                   transition="all 0.15s ease"
                 >
-                  <FaRegCreditCard />
+                  {effectiveDefaultTopicType === "カスタム" ? <FiEdit2 /> : <FaRegCreditCard />}
                 </IconButton>
               </Tooltip>
               <Tooltip content="数字を配り直す" showArrow openDelay={300}>
@@ -562,6 +593,38 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 </IconButton>
               </Tooltip>
             </>
+          )}
+          {/* 非ホストでもカスタムモード時は“ペン”を表示（待機/連想フェーズのみ） */}
+          {(!isHost && effectiveDefaultTopicType === "カスタム" && (roomStatus === "waiting" || roomStatus === "clue")) && (
+            <Tooltip content="カスタムお題を設定" showArrow openDelay={300}>
+              <IconButton
+                aria-label="カスタムお題"
+                onClick={() => {
+                  setCustomText(currentTopic || "");
+                  setCustomOpen(true);
+                }}
+                size="sm"
+                w="36px"
+                h="36px"
+                bg={UI_TOKENS.COLORS.panelBg}
+                color="white"
+                border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                borderRadius={0}
+                boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                _hover={{
+                  bg: UI_TOKENS.COLORS.purpleAlpha80,
+                  borderColor: "white",
+                  transform: "translateY(-1px)",
+                }}
+                _active={{
+                  transform: "translateY(0)",
+                  boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                }}
+                transition="all 0.15s ease"
+              >
+                <FiEdit2 />
+              </IconButton>
+            </Tooltip>
           )}
           {onOpenSettings && (
             <Tooltip content="設定を開く" showArrow openDelay={300}>

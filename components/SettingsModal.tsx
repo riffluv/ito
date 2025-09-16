@@ -92,6 +92,12 @@ export function SettingsModal({
         if (typeof window !== "undefined") {
           window.localStorage.setItem("defaultTopicType", defaultTopicType);
           window.localStorage.setItem("backgroundType", backgroundType);
+          // 🧩 他UIへ即時反映用のカスタムイベント
+          window.dispatchEvent(
+            new CustomEvent("defaultTopicTypeChanged", {
+              detail: { defaultTopicType },
+            })
+          );
         }
       } catch {}
       notify({ title: "設定を保存しました", type: "success" });
