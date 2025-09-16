@@ -21,10 +21,10 @@ export default function LobbyLeftRail({
   return (
     <Box as="aside" position="sticky" top="80px">
       <Box
-        rounded="xl"
+        borderRadius={0}
         p={4}
         bg="panelBg"
-        boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+        boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
       >
         <Text fontWeight="bold" mb={2}>
           クイックアクション
@@ -40,11 +40,11 @@ export default function LobbyLeftRail({
       </Box>
 
       <Box
-        rounded="xl"
+        borderRadius={0}
         p={4}
         mt={4}
         bg="panelBg"
-        boxShadow={UNIFIED_LAYOUT.ELEVATION.CARD.RAISED}
+        boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
       >
         <Text fontWeight="bold" mb={2}>
           ルームフィルター

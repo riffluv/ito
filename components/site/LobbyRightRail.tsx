@@ -32,7 +32,7 @@ export default function LobbyRightRail() {
                 boxShadow: UI_TOKENS.SHADOWS.panelSubtle
               }}
             >
-              <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
+              <Text fontSize="17px" color="white" fontFamily="monospace" fontWeight={700}>
                 ?
               </Text>
             </Box>
@@ -107,7 +107,7 @@ export default function LobbyRightRail() {
                 boxShadow: UI_TOKENS.SHADOWS.panelSubtle
               }}
             >
-              <Text fontSize="lg" color="white" fontFamily="monospace" fontWeight={700}>
+              <Text fontSize="17px" color="white" fontFamily="monospace" fontWeight={700}>
                 !
               </Text>
             </Box>
