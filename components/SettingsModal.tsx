@@ -69,7 +69,7 @@ export function SettingsModal({
     const checkAvailableImages = async () => {
       const imageNumbers: number[] = [];
 
-      for (let i = 1; i <= 8; i++) {
+      for (let i = 1; i <= 1; i++) {
         try {
           // PNG とJPG 両方をチェック
           const pngResponse = await fetch(`/images/backgrounds/hd2d/bg${i}.png`, { method: 'HEAD' });
