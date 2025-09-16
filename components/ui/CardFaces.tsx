@@ -46,7 +46,7 @@ export function CardFaceFront({
       width="100%"
       height="100%"
       p={{ base: 3, md: "13px" }}
-      borderRadius={0}
+      borderRadius="8px"
       border={border}
       borderColor={borderColor}
       bg={bg}
@@ -134,7 +134,7 @@ export function CardFaceBack({
       width="100%"
       height="100%"
       p={{ base: 3, md: "13px" }}
-      borderRadius={0}
+      borderRadius="8px"
       border={border}
       borderColor={borderColor}
       bg={bg}

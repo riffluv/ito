@@ -147,7 +147,7 @@ export function GameCard({
           minH={UNIFIED_LAYOUT.CARD.HEIGHT}
           css={cardSizeCss()}
           p={0}
-          borderRadius={0}
+          borderRadius="8px"
           border="none"
           bg="transparent"
           color={dragonQuestStyle.colors.text}

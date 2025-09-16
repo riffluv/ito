@@ -12,11 +12,11 @@ export default function DevBoard() {
       border="2px solid"
       borderColor="border"
       bg="glassBg05"
-      backdropFilter="blur(12px)"
-      borderRadius="xl"
+      // ガラス効果除去
+      borderRadius={0}
       p={6}
     >
-      <Heading size="md" color="text" mb={2} fontWeight={700}>
+      <Heading fontSize="16px" color="text" mb={2} fontWeight={700}>
         開発者からのお知らせ
       </Heading>
       <Text fontSize="sm" color="fgMuted" mb={4}>
@@ -26,13 +26,13 @@ export default function DevBoard() {
       <VStack align="stretch" gap={3}>
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <Box key={i} h="64px" borderRadius="md" bg="surfaceRaised" opacity={0.6} />
+            <Box key={i} h="64px" borderRadius={0} bg="surfaceRaised" opacity={0.6} />
           ))
         ) : posts.length === 0 ? (
           <Text color="fgMuted">まだ投稿はありません。</Text>
         ) : (
           posts.map((p) => (
-            <Box key={p.id} p={3} border="1px solid" borderColor="border" borderRadius="md" bg="glassBg05">
+            <Box key={p.id} p={3} border="1px solid" borderColor="border" borderRadius={0} bg="glassBg05">
               <HStack justify="space-between" mb={1}>
                 <Text fontWeight={700} color="text">
                   {p.title}

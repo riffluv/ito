@@ -309,9 +309,9 @@ export function GameResultOverlay({
         ref={overlayRef}
         px={8}
         py={5}
-        rounded="2xl"
+        borderRadius={0}
         fontWeight={800}
-        fontSize={{ base: "2xl", md: "3xl" }}
+        fontSize={{ base: "23px", md: "29px" }}
         color="white" // ドラクエ風統一白文字
         letterSpacing={1} // やや控えめに
         // ドラクエ風ボーダー統一
@@ -322,14 +322,14 @@ export function GameResultOverlay({
           // ドラクエ風統一リッチブラック背景
           background: UI_TOKENS.COLORS.panelBg,
           // ドラクエ風統一シャドウ
-          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-          backdropFilter: "blur(12px) saturate(1.2)", // メインメニューと同じ
+          boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
+          // ガラス効果除去 - ドラクエ風
         }}
       >
         <Box ref={textRef} textAlign="center">
           {failed ? "▲ しっぱい!" : "◆ クリア! ◆"} {/* ドラクエ風日本語 */}
           <Text
-            fontSize={{ base: "md", md: "lg" }}
+            fontSize={{ base: "15px", md: "17px" }}
             mt={2}
             opacity={0.9}
             fontFamily="monospace" // ドラクエ風フォント統一
