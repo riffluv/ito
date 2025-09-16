@@ -528,7 +528,7 @@ export default function RoomPage() {
       hostId={room?.hostId}
       roomId={roomId}
       isHostUser={isHost}
-      eligibleIds={eligibleIds}
+      eligibleIds={baseIds}
       roundIds={baseIds}
       variant="panel"
     />
