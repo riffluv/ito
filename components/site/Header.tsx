@@ -39,7 +39,7 @@ export default function Header() {
               filter={UI_TOKENS.FILTERS.dropShadowSoft}
             />
             <Heading
-              fontSize="xl"
+              fontSize="21px"
               fontWeight={800}
               lineHeight={1}
               letterSpacing="0.02em"

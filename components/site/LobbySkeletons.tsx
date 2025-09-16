@@ -5,7 +5,7 @@ import { UI_TOKENS } from "@/theme/layout";
 function RoomCardSkeleton() {
   return (
     <Box
-      borderRadius="xl"
+      borderRadius={0}
       border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
       bg={UI_TOKENS.COLORS.whiteAlpha05}
       backdropFilter="blur(20px)"
@@ -28,7 +28,7 @@ function RoomCardSkeleton() {
         right={4}
         w="60px"
         h="24px"
-        borderRadius="full"
+        borderRadius="2px"
         bg={UI_TOKENS.COLORS.whiteAlpha10}
       />
 
@@ -36,7 +36,7 @@ function RoomCardSkeleton() {
       <Box
         w="70%"
         h="20px"
-        borderRadius="8px"
+        borderRadius={0}
         bg={UI_TOKENS.COLORS.whiteAlpha15}
         mb={4}
       />
@@ -45,7 +45,7 @@ function RoomCardSkeleton() {
       <Box
         w="40%"
         h="14px"
-        borderRadius="6px"
+        borderRadius={0}
         bg={UI_TOKENS.COLORS.whiteAlpha10}
         mb={6}
       />
@@ -57,7 +57,7 @@ function RoomCardSkeleton() {
         left={6}
         right={6}
         h="40px"
-        borderRadius="lg"
+        borderRadius={0}
         bg={UI_TOKENS.COLORS.indigoAlpha20}
       />
     </Box>

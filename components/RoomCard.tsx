@@ -39,7 +39,7 @@ export function RoomCard({
     >
       {/* Main Card */}
       <Box
-        borderRadius="xl"
+        borderRadius={0}
         border="2px solid"
         borderColor="border"
         bg="glassBg05"
@@ -48,7 +48,7 @@ export function RoomCard({
         minH="180px"
         position="relative"
         overflow="hidden"
-        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+        boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)"
         transition="transform 0.18s ease, background 0.2s ease, border-color 0.2s ease"
         willChange="transform"
         _hover={{
@@ -77,7 +77,7 @@ export function RoomCard({
           <Badge
             variant={isWaiting ? "subtle" : "solid"}
             colorPalette={isWaiting ? "green" : "orange"}
-            borderRadius="full"
+            borderRadius="2px"
             fontSize="xs"
             fontWeight={600}
             px={3}
@@ -92,7 +92,7 @@ export function RoomCard({
           <Box flex={1} w="100%">
             <VStack align="start" gap={1} mb={3}>
               <Text
-                fontSize="xl"
+                fontSize="19px"
                 fontWeight={700}
                 color="text"
                 lineHeight={1.3}
@@ -175,7 +175,7 @@ export function RoomCard({
               py={3}
               px={4}
               width="100%"
-              borderRadius="md"
+              borderRadius={0}
               bg={UI_TOKENS.COLORS.whiteAlpha02}
               border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha10}`}
               css={{ pointerEvents: "none" }}
@@ -205,7 +205,7 @@ export function RoomCard({
           right={0}
           h="2px"
           bg="accentSubtle"
-          borderTopRadius="20px"
+          borderTopRadius={0}
           opacity={0}
           transition="opacity 0.3s ease"
         />

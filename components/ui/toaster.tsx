@@ -27,9 +27,9 @@ export function Toaster() {
           key={toast.id}
           px="3"
           py="2"
-          rounded="md"
+          borderRadius={0}
           borderWidth="thin"
-          shadow="md"
+          boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
           w="auto"
           minW={{ base: "240px", md: "280px" }}
           maxW={{ base: "calc(100vw - 32px)", md: "360px" }}
