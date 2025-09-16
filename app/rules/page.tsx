@@ -28,7 +28,7 @@ export default function RulesPage() {
               href="/"
               variant="subtle"
               size="md"
-              borderRadius="lg"
+              borderRadius={0}
               style={{
                 paddingLeft: "12px",
                 paddingRight: "16px",
@@ -39,7 +39,7 @@ export default function RulesPage() {
             </RPGButton>
             <Badge
               colorScheme="blue"
-              borderRadius="lg"
+              borderRadius={0}
               px={3}
               py={1}
               fontSize="sm"
@@ -241,14 +241,15 @@ export default function RulesPage() {
                 <List.Item key={index}>
                   <Box
                     p={4}
-                    borderRadius="lg"
-                    border="1px solid rgba(255,255,255,0.1)"
-                    bg="rgba(255,255,255,0.02)"
+                    borderRadius={0}
+                    border="borders.retrogameThin"
+                    bg="richBlack.700"
+                    boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
                   >
-                    <Text fontWeight="semibold" color="white" mb={2}>
+                    <Text fontWeight="bold" color="white" mb={2} fontFamily="monospace" textShadow="1px 1px 0px #000">
                       {mode.title}
                     </Text>
-                    <Text color="gray.300" fontSize="sm" lineHeight="relaxed">
+                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
                       {mode.desc}
                     </Text>
                   </Box>
@@ -279,7 +280,7 @@ export default function RulesPage() {
 
             <VStack gap={6} align="stretch">
               <Box>
-                <Text fontWeight="semibold" color="white" mb={3}>
+                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
                   ルール（要点）
                 </Text>
                 <List.Root as="ul" gap="2">
@@ -289,7 +290,7 @@ export default function RulesPage() {
                     "失敗した場合でも、残りのプレイヤーは最後までカードを出して遊べます（デフォルト仕様）。",
                   ].map((rule, index) => (
                     <List.Item key={index}>
-                      <Text color="gray.300" fontSize="sm">
+                      <Text color="white" fontSize="sm" fontFamily="monospace" textShadow="1px 1px 0px #000">
                         {rule}
                       </Text>
                     </List.Item>
@@ -298,7 +299,7 @@ export default function RulesPage() {
               </Box>
 
               <Box>
-                <Text fontWeight="semibold" color="white" mb={3}>
+                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
                   コツ
                 </Text>
                 <List.Root as="ul" gap="2">
@@ -308,7 +309,7 @@ export default function RulesPage() {
                     "表現の比喩は文化差が出るので、参加者の共通認識を確認すると良い。",
                   ].map((tip, index) => (
                     <List.Item key={index}>
-                      <Text color="gray.300" fontSize="sm">
+                      <Text color="white" fontSize="sm" fontFamily="monospace" textShadow="1px 1px 0px #000">
                         {tip}
                       </Text>
                     </List.Item>
@@ -317,25 +318,26 @@ export default function RulesPage() {
               </Box>
 
               <Box>
-                <Text fontWeight="semibold" color="white" mb={3}>
+                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
                   例
                 </Text>
                 <Box
                   p={4}
-                  borderRadius="lg"
-                  border="1px solid rgba(255,255,255,0.1)"
-                  bg="rgba(107,115,255,0.1)"
+                  borderRadius={0}
+                  border="borders.retrogame"
+                  bg="richBlack.700"
+                  boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
                 >
                   <VStack align="start" gap={1}>
-                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
-                      <Text as="span" fontWeight="semibold">
+                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                      <Text as="span" fontWeight="bold">
                         テーマ: ラスボスの風格を感じさせる攻撃手段
                       </Text>
                     </Text>
-                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
+                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
                       カードが20の人: 「さすまた」「ヨーヨー」
                     </Text>
-                    <Text color="gray.200" fontSize="sm" lineHeight="relaxed">
+                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
                       カードが80の人: 「メテオ」「聖なる槍」
                     </Text>
                   </VStack>
