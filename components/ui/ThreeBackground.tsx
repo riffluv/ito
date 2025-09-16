@@ -3,6 +3,20 @@ import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as PIXI from "pixi.js";
 import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
+import { logError, logInfo, logWarn } from "@/lib/utils/log";
+
+const logThreeBackgroundInfo = (event: string, data?: unknown) => {
+  logInfo("three-background", event, data);
+};
+const logPixiBackground = (level: "info" | "warn" | "error", event: string, data?: unknown) => {
+  if (level === "warn") {
+    logWarn("three-background-pixi", event, data);
+  } else if (level === "error") {
+    logError("three-background-pixi", event, data);
+  } else {
+    logInfo("three-background-pixi", event, data);
+  }
+};
 
 interface ThreeBackgroundProps {
   className?: string;
@@ -75,13 +89,13 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     }
     if (!mountRef.current) return;
 
-    console.log("ThreeBackground: Starting initialization...");
+    logThreeBackgroundInfo("init-start");
 
     try {
       // シーン初期化
       const scene = new THREE.Scene();
       sceneRef.current = scene;
-      console.log("ThreeBackground: Scene created");
+      logThreeBackgroundInfo("scene-created");
 
       // カメラ設定（魔法陣全体が見える距離）
       const camera = new THREE.PerspectiveCamera(
@@ -93,7 +107,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       camera.position.set(0, 0, 10); // 魔法陣全体が収まる距離
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
-      console.log("ThreeBackground: Camera positioned at", camera.position);
+      logThreeBackgroundInfo("camera-positioned", { position: camera.position.toArray() });
 
       // レンダラー設定（高品質）
       const renderer = new THREE.WebGLRenderer({
@@ -108,11 +122,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.05;
-      console.log("ThreeBackground: Three.js renderer configured");
+      logThreeBackgroundInfo("renderer-configured");
 
       rendererRef.current = renderer;
       mountRef.current.appendChild(renderer.domElement);
-      console.log("ThreeBackground: Canvas mounted to DOM");
+      logThreeBackgroundInfo("canvas-mounted");
 
       // ===== ChatGPT高品質魔法陣システム =====
 
@@ -408,12 +422,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       const { stars, starUniforms } = createAdvancedStars();
       const magicCircle = createAdvancedMagicCircle();
 
-      console.log("ThreeBackground: Advanced Magic Circle created");
+      logThreeBackgroundInfo("magic-circle-created");
 
       // 最初に一度レンダリングしてシーンが見えるかテスト
-      console.log("ThreeBackground: Performing initial render");
+      logThreeBackgroundInfo("initial-render-start");
       renderer.render(scene, camera);
-      console.log("ThreeBackground: Initial render completed");
+      logThreeBackgroundInfo("initial-render-complete");
 
       // 高品質魔法陣アニメーションループ
       const animate = () => {
@@ -457,7 +471,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         renderer.render(scene, camera);
       };
 
-      console.log("ThreeBackground: Starting Advanced Magic Circle animation");
+      logThreeBackgroundInfo("magic-circle-animation-start");
       animate();
 
       // ウィンドウリサイズ対応
@@ -475,7 +489,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
       window.addEventListener('resize', handleResize);
     } catch (error) {
-      console.error("ThreeBackground: Error during initialization:", error);
+      logError("three-background", "init-failed", error);
     }
 
     // クリーンアップ
@@ -499,7 +513,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     }
     if (!mountRef.current) return;
 
-    console.log("PixiJS: ころころかえます背景 starting...");
+    logPixiBackground("info", "init-start");
 
     let app: PIXI.Application | null = null;
     let frameId: number | undefined;
@@ -519,9 +533,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
         if (mountRef.current && app.canvas) {
           mountRef.current.appendChild(app.canvas);
-          console.log("PixiJS: Canvas mounted");
+          logPixiBackground("info", "canvas-mounted");
         } else {
-          console.error("PixiJS: Mount ref or app.canvas not available");
+          logPixiBackground("error", "mount-missing");
           return;
         }
 
@@ -663,10 +677,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         };
 
         animate(performance.now());
-        console.log("PixiJS: ころころかえます animation started ｗｗ");
+        logPixiBackground("info", "animation-started");
 
       } catch (error) {
-        console.error("PixiJS: Initialization error:", error);
+        logPixiBackground("error", "init-failed", error);
         // 初期化失敗時は app を null に設定
         if (app && app.stage) {
           try {
@@ -693,7 +707,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           app.renderer.resize(window.innerWidth, window.innerHeight);
         }
       } catch (error) {
-        console.warn("PixiJS: Resize error:", error);
+        logPixiBackground("warn", "resize-error", error);
       }
     };
 
@@ -709,7 +723,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         try {
           app.destroy();
         } catch (e) {
-          console.warn("PixiJS: Destroy error (safe to ignore):", e);
+          logPixiBackground("warn", "destroy-error", e);
         }
       }
       // DOMのクリーンアップ
@@ -718,7 +732,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         mountRef.current.innerHTML = '';
         mountRef.current.style.backgroundColor = '';
       }
-      console.log("PixiJS: ころころかえます cleaned up ｗｗ");
+      logPixiBackground("info", "cleanup");
     };
   }, [backgroundType]);
 

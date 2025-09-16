@@ -1,6 +1,7 @@
 "use client";
 import { Box, Button, Flex, Text, VStack, HStack, Badge, useDisclosure } from "@chakra-ui/react";
 import { useState, useEffect, useRef } from "react";
+import { logDebug } from "@/lib/utils/log";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
 
 interface DebugSnapshot {
@@ -259,7 +260,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
         errors: (window as any)._errors || [],
         timestamp: new Date().toISOString(),
       };
-      console.log('Debug logs:', logs);
+      logDebug("game-debugger", "logs", logs);
       return logs;
     },
   };

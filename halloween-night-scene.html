@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハロウィン夜景 - Pixi.js</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: pointer;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        .controls h3 {
+            margin: 0 0 10px 0;
+            color: #ff9500;
+        }
+
+        .controls p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>🌙 ハロウィン夜景</h3>
+        <p>クリック: 流れ星を発射</p>
+        <p>マウス移動: 視差効果</p>
+        <p>自動: 雲と霧の流れ</p>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Pixi.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+
+    <script>
+        // Pixi.js アプリケーションの初期化
+        const app = new PIXI.Application({
+            view: document.getElementById('gameCanvas'),
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: 0x0a0a0a,
+            antialias: true
+        });
+
+        // レスポンシブ対応
+        function resize() {
+            app.renderer.resize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', resize);
+
+        // メインコンテナ
+        const scene = new PIXI.Container();
+        app.stage.addChild(scene);
+
+        // 夜空のグラデーション背景
+        function createNightSky() {
+            const graphics = new PIXI.Graphics();
+
+            // グラデーション風の夜空
+            const gradient = [
+                { color: 0x0a0a0a, position: 0 },      // 深い黒
+                { color: 0x1a1a3a, position: 0.3 },    // 深い紺
+                { color: 0x2a2a5a, position: 0.6 },    // 紺色
+                { color: 0x3a3a7a, position: 1 }       // 薄い紺
+            ];
+
+            for (let i = 0; i < gradient.length - 1; i++) {
+                const startColor = gradient[i].color;
+                const endColor = gradient[i + 1].color;
+                const startY = app.screen.height * gradient[i].position;
+                const endY = app.screen.height * gradient[i + 1].position;
+
+                graphics.beginFill(startColor);
+                graphics.drawRect(0, startY, app.screen.width, endY - startY);
+                graphics.endFill();
+            }
+
+            return graphics;
+        }
+
+        // 星を生成
+        function createStars() {
+            const starContainer = new PIXI.Container();
+
+            for (let i = 0; i < 200; i++) {
+                const star = new PIXI.Graphics();
+                const size = Math.random() * 2 + 0.5;
+                const brightness = Math.random() * 0.8 + 0.2;
+
+                star.beginFill(0xffffff);
+                star.drawCircle(0, 0, size);
+                star.endFill();
+
+                star.x = Math.random() * app.screen.width;
+                star.y = Math.random() * app.screen.height * 0.6; // 上半分のみ
+                star.alpha = brightness;
+
+                // きらめき効果
+                star.twinkle = Math.random() * Math.PI * 2;
+                star.twinkleSpeed = Math.random() * 0.05 + 0.01;
+
+                starContainer.addChild(star);
+            }
+
+            return starContainer;
+        }
+
+        // 月を生成
+        function createMoon() {
+            const moonContainer = new PIXI.Container();
+
+            // 月本体
+            const moon = new PIXI.Graphics();
+            moon.beginFill(0xfff8dc);
+            moon.drawCircle(0, 0, 60);
+            moon.endFill();
+
+            // 月の模様（クレーター）
+            const craters = new PIXI.Graphics();
+            craters.beginFill(0xe6e6e6);
+            craters.drawCircle(-20, -10, 8);
+            craters.drawCircle(15, 5, 12);
+            craters.drawCircle(-5, 20, 6);
+            craters.drawCircle(25, -15, 4);
+            craters.endFill();
+
+            // 月の光輪
+            const glow = new PIXI.Graphics();
+            glow.beginFill(0xfff8dc, 0.1);
+            glow.drawCircle(0, 0, 100);
+            glow.endFill();
+
+            moonContainer.addChild(glow);
+            moonContainer.addChild(moon);
+            moonContainer.addChild(craters);
+
+            moonContainer.x = app.screen.width * 0.8;
+            moonContainer.y = app.screen.height * 0.2;
+
+            return moonContainer;
+        }
+
+        // 雲を生成
+        function createClouds() {
+            const cloudContainer = new PIXI.Container();
+
+            for (let i = 0; i < 8; i++) {
+                const cloud = new PIXI.Graphics();
+                cloud.beginFill(0x2a2a4a, 0.4);
+
+                // 不規則な雲の形
+                const cloudParts = Math.floor(Math.random() * 3) + 3;
+                for (let j = 0; j < cloudParts; j++) {
+                    const radius = Math.random() * 30 + 20;
+                    const x = j * 25 + Math.random() * 20 - 10;
+                    const y = Math.random() * 20 - 10;
+                    cloud.drawCircle(x, y, radius);
+                }
+                cloud.endFill();
+
+                cloud.x = Math.random() * (app.screen.width + 200) - 100;
+                cloud.y = Math.random() * app.screen.height * 0.5;
+                cloud.speed = Math.random() * 0.5 + 0.1;
+
+                cloudContainer.addChild(cloud);
+            }
+
+            return cloudContainer;
+        }
+
+        // 流れ星クラス
+        class ShootingStar {
+            constructor(startX, startY, targetX, targetY) {
+                this.container = new PIXI.Container();
+
+                // 流れ星の軌跡
+                this.trail = new PIXI.Graphics();
+                this.star = new PIXI.Graphics();
+
+                // 星本体
+                this.star.beginFill(0xffffff);
+                this.star.drawCircle(0, 0, 3);
+                this.star.endFill();
+
+                this.container.addChild(this.trail);
+                this.container.addChild(this.star);
+
+                this.startX = startX;
+                this.startY = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.progress = 0;
+                this.speed = 0.02;
+                this.trailPoints = [];
+
+                scene.addChild(this.container);
+            }
+
+            update() {
+                this.progress += this.speed;
+
+                if (this.progress >= 1) {
+                    scene.removeChild(this.container);
+                    return false;
+                }
+
+                // 現在位置を計算
+                const currentX = this.startX + (this.targetX - this.startX) * this.progress;
+                const currentY = this.startY + (this.targetY - this.startY) * this.progress;
+
+                this.container.x = currentX;
+                this.container.y = currentY;
+
+                // 軌跡を更新
+                this.trailPoints.push({ x: 0, y: 0 });
+                if (this.trailPoints.length > 10) {
+                    this.trailPoints.shift();
+                }
+
+                // 軌跡を描画
+                this.trail.clear();
+                this.trail.lineStyle(2, 0xffffff, 0.8);
+                for (let i = 0; i < this.trailPoints.length; i++) {
+                    const alpha = (i + 1) / this.trailPoints.length * 0.8;
+                    this.trail.lineStyle(2, 0xffffff, alpha);
+
+                    if (i === 0) {
+                        this.trail.moveTo(
+                            this.trailPoints[i].x - (i + 1) * 5,
+                            this.trailPoints[i].y - (i + 1) * 3
+                        );
+                    } else {
+                        this.trail.lineTo(
+                            this.trailPoints[i].x - (i + 1) * 5,
+                            this.trailPoints[i].y - (i + 1) * 3
+                        );
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        // シーンの構築
+        const nightSky = createNightSky();
+        const stars = createStars();
+        const moon = createMoon();
+        const clouds = createClouds();
+
+        scene.addChild(nightSky);
+        scene.addChild(stars);
+        scene.addChild(moon);
+        scene.addChild(clouds);
+
+        // 流れ星の配列
+        const shootingStars = [];
+
+        // マウスインタラクション
+        let mouseX = 0;
+        let mouseY = 0;
+
+        app.view.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        app.view.addEventListener('click', (e) => {
+            // 流れ星を生成
+            const startX = Math.random() * app.screen.width;
+            const startY = Math.random() * app.screen.height * 0.3;
+            const shootingStar = new ShootingStar(startX, startY, e.clientX, e.clientY);
+            shootingStars.push(shootingStar);
+        });
+
+        // アニメーションループ
+        app.ticker.add(() => {
+            const time = Date.now() * 0.001;
+
+            // 星のきらめき
+            stars.children.forEach(star => {
+                star.alpha = 0.3 + Math.sin(time * star.twinkleSpeed + star.twinkle) * 0.3;
+            });
+
+            // 雲の移動
+            clouds.children.forEach(cloud => {
+                cloud.x += cloud.speed;
+                if (cloud.x > app.screen.width + 100) {
+                    cloud.x = -200;
+                }
+            });
+
+            // 月の微妙な揺らぎ
+            moon.y = app.screen.height * 0.2 + Math.sin(time * 0.5) * 3;
+
+            // 視差効果（マウス追従）
+            const parallaxStrength = 0.02;
+            const centerX = app.screen.width / 2;
+            const centerY = app.screen.height / 2;
+
+            stars.x = (centerX - mouseX) * parallaxStrength;
+            stars.y = (centerY - mouseY) * parallaxStrength * 0.5;
+
+            clouds.x = (centerX - mouseX) * parallaxStrength * 0.5;
+            clouds.y = (centerY - mouseY) * parallaxStrength * 0.3;
+
+            moon.x = app.screen.width * 0.8 + (centerX - mouseX) * parallaxStrength * 0.3;
+
+            // 流れ星の更新
+            for (let i = shootingStars.length - 1; i >= 0; i--) {
+                if (!shootingStars[i].update()) {
+                    shootingStars.splice(i, 1);
+                }
+            }
+
+            // 自動流れ星（ランダム）
+            if (Math.random() < 0.003) {
+                const startX = Math.random() * app.screen.width;
+                const startY = Math.random() * app.screen.height * 0.3;
+                const targetX = Math.random() * app.screen.width;
+                const targetY = Math.random() * app.screen.height * 0.7 + app.screen.height * 0.3;
+                const shootingStar = new ShootingStar(startX, startY, targetX, targetY);
+                shootingStars.push(shootingStar);
+            }
+        });
+
+        console.log('🌙 ハロウィン夜景シーン起動完了！');
+    </script>
+</body>
+</html>

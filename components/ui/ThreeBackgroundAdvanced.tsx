@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { logError, logInfo } from "@/lib/utils/log";
 
 interface ThreeBackgroundAdvancedProps {
   className?: string;
@@ -16,7 +17,7 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
 
   useEffect(() => {
     if (!mountRef.current) return;
-    console.log("ThreeBackgroundAdvanced: Starting initialization...");
+    logInfo("three-background-advanced", "init-start");
 
     let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any, FXAAShader: any;
 
@@ -299,7 +300,7 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
 
         composerRef.current = composer;
 
-        console.log("ThreeBackgroundAdvanced: 豪華版初期化完了！");
+        logInfo("three-background-advanced", "init-complete");
 
         // アニメーションループ
         const clock = new THREE.Clock();
@@ -352,7 +353,7 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         window.addEventListener('resize', handleResize);
 
       } catch (error) {
-        console.error("ThreeBackgroundAdvanced: 初期化エラー:", error);
+        logError("three-background-advanced", "init-error", error);
       }
     };
 

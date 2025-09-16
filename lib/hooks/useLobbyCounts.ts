@@ -9,6 +9,7 @@ import {
 } from "@/lib/firebase/presence";
 import { ACTIVE_WINDOW_MS } from "@/lib/time";
 import { off, onValue, ref } from "firebase/database";
+import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
 import {
   Timestamp,
   collection,
@@ -115,10 +116,12 @@ export function useLobbyCounts(
       const ACCEPT_FRESH_MS = 5_000;
       // 一度だけデバッグ情報を表示（presentモードの有効値）
       if (typeof window !== "undefined") {
-        // eslint-disable-next-line no-console
-        console.info(
-          `[useLobbyCounts] presence mode: stale=${LOBBY_STALE_MS}ms, zeroFreeze=${ZERO_FREEZE_MS_DEFAULT}ms, acceptFresh=${ACCEPT_FRESH_MS}ms, excludeUids=${excludeSet.size}`
-        );
+        logInfo("useLobbyCounts", "presence-config", {
+          staleMs: LOBBY_STALE_MS,
+          zeroFreezeMs: ZERO_FREEZE_MS_DEFAULT,
+          acceptFreshMs: ACCEPT_FRESH_MS,
+          excludeCount: excludeSet.size,
+        });
       }
       // n===1 のときだけ行う軽量検証のスロットル管理
       const singleCheckInflight: Record<string, boolean> = {};
@@ -174,13 +177,13 @@ export function useLobbyCounts(
             }
           }
           if (DEBUG_UIDS) {
-            try {
-              // eslint-disable-next-line no-console
-              console.debug(
-                `[useLobbyCounts] room=${id} present=${presentUids?.join(",") || "-"} excludeSet=${
-                  excludeSet.size
-                } included=${includedUids?.join(",") || "-"} count=${n}`
-              );
+            try {            logDebug("useLobbyCounts", "presence-room", {
+              roomId: id,
+              present: presentUids?.join(",") || "-",
+              excluded: excludeSet.size,
+              included: includedUids?.join(",") || "-",
+              count: n,
+            });
             } catch {}
           }
           // 特殊対策: n===1 の場合だけ、players コレクションのサーバカウントで検証（任意有効化）。
@@ -214,11 +217,11 @@ export function useLobbyCounts(
                       quarantine[id][suspect] = now2 + ZERO_FREEZE_MS_DEFAULT;
                     }
                     if (DEBUG_UIDS) {
-                      try {
-                        // eslint-disable-next-line no-console
-                        console.debug(
-                          `[useLobbyCounts] room=${id} single-verify -> players=0, force 0 (freeze ${ZERO_FREEZE_MS_DEFAULT}ms), quarantine=${suspect || "-"}`
-                        );
+                      try {                        logDebug("useLobbyCounts", "verify-single-zero", {
+                          roomId: id,
+                          freezeMs: ZERO_FREEZE_MS_DEFAULT,
+                          suspect: suspect || "-",
+                        });
                       } catch {}
                     }
                   }
@@ -353,10 +356,7 @@ export function useLobbyCounts(
     );
     // デバッグ補助: 本来は presence を使う想定なので、フォールバック使用時に一度だけ警告
     if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[useLobbyCounts] Using Firestore count() fallback (presence unsupported or misconfigured). Consider setting NEXT_PUBLIC_FIREBASE_DATABASE_URL and NEXT_PUBLIC_DISABLE_FS_FALLBACK=1."
-      );
+      logWarn("useLobbyCounts", "firestore-fallback", {});
     }
 
     const fetchCounts = async () => {

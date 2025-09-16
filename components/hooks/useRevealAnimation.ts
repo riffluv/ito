@@ -1,7 +1,7 @@
 import { finalizeReveal } from "@/lib/game/room";
 import { evaluateSorted } from "@/lib/game/rules";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import { logDebug } from "@/lib/utils/log";
+import { logDebug, logWarn } from "@/lib/utils/log";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_LINGER,
@@ -147,7 +147,7 @@ export function useRevealAnimation({
                   });
                 });
               } catch (e) {
-                console.warn("成功保存エラー:", e);
+                logWarn("reveal", "result-save-error", e);
               }
             }, 0);
           }

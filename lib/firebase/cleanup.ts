@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase/client";
+import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import {
   collection,
   deleteDoc,
@@ -16,7 +17,7 @@ import {
  */
 export async function cleanupOldRooms(minutesOld: number = 5) {
   if (!db) {
-    console.warn("Firebase not initialized");
+    logWarn("cleanup", "firebase-not-initialized");
     return { success: false, error: "Firebase not initialized" };
   }
 
@@ -48,10 +49,12 @@ export async function cleanupOldRooms(minutesOld: number = 5) {
         if (playersSnapshot.size > 1) {
           // 2人以上の場合のみ保護
           if (process.env.NODE_ENV === "development") {
-            console.log(
-              `🎮 Protecting room with ${playersSnapshot.size} players: ${doc.id}`
-            );
-          }
+          logInfo("cleanup", "protecting-room", {
+            id: doc.id,
+            playerCount: playersSnapshot.size,
+            status,
+          });
+        }
           continue;
         }
 
@@ -60,12 +63,14 @@ export async function cleanupOldRooms(minutesOld: number = 5) {
         deletedCount++;
 
         if (process.env.NODE_ENV === "development") {
-          console.log(
-            `🧹 Deleted room (${status}): ${roomData.name || doc.id}`
-          );
+          logInfo("cleanup", "deleted-room", {
+            id: doc.id,
+            status,
+            name: roomData.name || doc.id,
+          });
         }
       } catch (error) {
-        console.error(`Error deleting room ${doc.id}:`, error);
+        logError("cleanup", `delete-room-failed: ${doc.id}`, error);
       }
     }
 
@@ -75,7 +80,7 @@ export async function cleanupOldRooms(minutesOld: number = 5) {
       message: `${deletedCount} old rooms deleted`,
     };
   } catch (error) {
-    console.error("Error during cleanup:", error);
+    logError("cleanup", "cleanup-failed", error);
     return { success: false, error: error };
   }
 }
@@ -95,11 +100,11 @@ export async function autoCleanupOnLobbyLoad() {
       deletedCount > 0 &&
       process.env.NODE_ENV === "development"
     ) {
-      console.log(`🧹 Emergency cleanup: ${deletedCount} rooms removed`);
+      logInfo("cleanup", "emergency-cleanup", { deletedCount });
     }
     return result;
   } catch (error) {
-    console.error("Emergency cleanup failed:", error);
+    logError("cleanup", "emergency-cleanup-failed", error);
     return null;
   }
 }

@@ -1,4 +1,5 @@
 import { firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import { logError, logInfo } from "@/lib/utils/log";
 import {
   get,
   off,
@@ -108,19 +109,19 @@ export async function attachPresence(roomId: string, uid: string) {
 
   // 明示的に解除するための関数を返す
   return async () => {
-    console.log(`🚪 Detaching presence for uid=${uid}, roomId=${roomId}`);
+    logInfo("presence", "detach", { uid, roomId });
     try {
       off(connectedRef, "value", connectedHandler as any);
     } catch {}
     stopHeartbeat();
     try {
       if (meConnPath) {
-        console.log(`🗑️ Removing presence path: ${meConnPath}`);
+        logInfo("presence", "remove-path", { path: meConnPath });
         await remove(ref(db, meConnPath));
-        console.log(`✅ Presence removed successfully`);
+        logInfo("presence", "removed", { path: meConnPath });
       }
     } catch (err) {
-      console.error(`❌ Failed to remove presence:`, err);
+      logError("presence", "remove-failed", err);
     }
   };
 }

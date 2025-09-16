@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { roomConverter } from "@/lib/firebase/converters";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
+import { logError } from "@/lib/utils/log";
 import {
   collection,
   getDocs,
@@ -93,7 +94,7 @@ export function useOptimizedRooms(enabled: boolean) {
       if (isFirebaseQuotaExceeded(err)) {
         handleFirebaseQuotaError("ルーム一覧取得");
       } else {
-        console.error("Failed to fetch rooms:", err);
+        logError("useOptimizedRooms", "fetch-failed", err);
       }
       setError(err);
       setRooms([]); // フォールバック

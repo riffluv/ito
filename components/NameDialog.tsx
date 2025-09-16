@@ -3,6 +3,8 @@ import React from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { Dialog, Field, Input, Stack, Box, Text, HStack } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
+import { notify } from "@/components/ui/notify";
+import { validateDisplayName } from "@/lib/validation/forms";
 
 export function NameDialog({
   isOpen,
@@ -196,7 +198,19 @@ export function NameDialog({
               </button>
 
               <button
-                onClick={() => onSubmit(value.trim())}
+                onClick={() => {
+                  try {
+                    const sanitized = validateDisplayName(value);
+                    onSubmit(sanitized);
+                  } catch (err: any) {
+                    notify({
+                      title: "入力エラー",
+                      description: err?.errors?.[0]?.message || "入力内容を確認してください",
+                      type: "error",
+                    });
+                    return;
+                  }
+                }}
                 disabled={submitting || !value.trim()}
                 style={{
                   minWidth: "140px",

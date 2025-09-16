@@ -14,12 +14,14 @@ import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
+import { logError } from "@/lib/utils/log";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { UI_TOKENS } from "@/theme/layout";
 import { sendSystemMessage } from "@/lib/firebase/chat";
+import { validateClue } from "@/lib/validation/forms";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
@@ -60,15 +62,22 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
   }, [currentValue]);
 
   const handleSubmit = async () => {
-    const value = text.trim();
-    if (!value) {
-      notify({ title: "連想ワードを入力してください", type: "warning" });
+    let sanitized: string;
+    try {
+      sanitized = validateClue(text);
+    } catch (err: any) {
+      notify({
+        title: "連想ワードを確認してください",
+        description: err?.errors?.[0]?.message,
+        type: "warning",
+      });
       return;
     }
     try {
-      await updateClue1(roomId, playerId, value);
+      await updateClue1(roomId, playerId, sanitized);
       notify({ title: "連想ワードを更新しました", type: "success" });
     } catch (err: any) {
+      logError("room", "clue-update", err);
       notify({
         title: "更新に失敗しました",
         description: err?.message,
@@ -319,7 +328,7 @@ export default function RoomPage() {
       });
       notify({ title: "ゲーム開始", type: "success" });
     } catch (e: any) {
-      console.error(e);
+      logError("room-page", "start-game", e);
       notify({
         title: "ゲーム開始に失敗しました",
         description: e?.message || "権限またはFirestoreルールをご確認ください",
@@ -375,7 +384,7 @@ export default function RoomPage() {
       // メインメニューに戻る
       router.push("/");
     } catch (error) {
-      console.error("退出エラー:", error);
+      logError("room-page", "leave-room", error);
       // エラーが発生してもメインメニューに戻る
       router.push("/");
     }

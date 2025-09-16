@@ -43,6 +43,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyCard } from "@/components/cards";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { notify } from "@/components/ui/notify";
+import { logError, logWarn } from "@/lib/utils/log";
 import {
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
@@ -355,7 +356,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
         // Debug logging for troubleshooting edge slot issues
         if (process.env.NODE_ENV === "development" && originalSlotIndex !== slotIndex) {
-          console.warn(`[DragDrop] Slot index clamped: ${originalSlotIndex} -> ${slotIndex} (maxSlots: ${maxSlots}, slotCountDragging: ${slotCountDragging})`);
+          logWarn("central-card-board", "slot-index-clamped", { originalSlotIndex, slotIndex, maxSlots, slotCountDragging });
         }
         // Optimistic: 待機→新規配置のときのみ pending を更新。既存カードの移動では pending を触らない
         if (!alreadyInProposal) {
@@ -380,7 +381,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           }
           return;
         } catch (error) {
-          console.error("Failed to add card to proposal at position:", error);
+          logError("central-card-board", "add-card-to-proposal", error);
           return;
         }
       }
