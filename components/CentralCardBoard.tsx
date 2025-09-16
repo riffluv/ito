@@ -347,8 +347,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (overId.startsWith("slot-")) {
       let slotIndex = parseInt(overId.split("-")[1]);
       if (!isNaN(slotIndex)) {
-        const maxSlots = Math.max(0, (eligibleIds?.length || 0) - 1);
+        // Use slotCountDragging instead of eligibleIds for consistent UI/logic alignment
+        // This ensures drop validation matches the actually rendered slot count
+        const maxSlots = Math.max(0, slotCountDragging - 1);
+        const originalSlotIndex = slotIndex;
         slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
+
+        // Debug logging for troubleshooting edge slot issues
+        if (process.env.NODE_ENV === "development" && originalSlotIndex !== slotIndex) {
+          console.warn(`[DragDrop] Slot index clamped: ${originalSlotIndex} -> ${slotIndex} (maxSlots: ${maxSlots}, slotCountDragging: ${slotCountDragging})`);
+        }
         // Optimistic: 待機→新規配置のときのみ pending を更新。既存カードの移動では pending を触らない
         if (!alreadyInProposal) {
           setPending((prev) => {
