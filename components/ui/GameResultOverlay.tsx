@@ -317,7 +317,6 @@ export function GameResultOverlay({
         // ドラクエ風ボーダー統一
         border="3px solid"
         borderColor={UI_TOKENS.COLORS.whiteAlpha90}
-        borderRadius={0} // ドラクエ風角ばった
         css={{
           // ドラクエ風統一リッチブラック背景
           background: UI_TOKENS.COLORS.panelBg,

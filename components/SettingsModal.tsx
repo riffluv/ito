@@ -510,10 +510,7 @@ export function SettingsModal({
 
             {activeTab === "graphics" && (
               <Stack gap={6}>
-                {/* グラフィック設定の説明 */}
-                <Text fontSize="sm" color="white" textAlign="center" fontFamily="monospace">
-                  グラフィック設定
-                </Text>
+                {/* グラフィック設定の説明は冗長なので削除 */}
                 {/* サブタブ（背景/アニメ） */}
                 <HStack gap={3} justify="center">
                   {[
