@@ -568,14 +568,38 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           app.stage.addChild(particle);
         }
 
-        // 4. 前景の草原（ドット風テクスチャ）
+        // 4. 可愛い前景の草原（なめらかな曲線）
         const foreground = new PIXI.Graphics();
-        foreground.rect(0, app.screen.height * 0.85, app.screen.width, app.screen.height * 0.15);
+        const grassY = app.screen.height * 0.87;
+
+        // なめらかな波形の草原（直線じゃない、でもボコボコしすぎない）
+        foreground.moveTo(0, grassY);
+        for (let i = 0; i <= app.screen.width; i += 30) {
+          const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
+          foreground.lineTo(i, gentleWave);
+        }
+        foreground.lineTo(app.screen.width, app.screen.height);
+        foreground.lineTo(0, app.screen.height);
         foreground.fill({
-          color: 0x1e4d2b,
-          alpha: 0.7,
+          color: 0x2d5940, // 落ち着いた深緑
+          alpha: 0.8,
         });
         app.stage.addChild(foreground);
+
+        // 可愛い小さな草のアクセント（少なめ）
+        for (let i = 0; i < 15; i++) {
+          const grassAccent = new PIXI.Graphics();
+          const x = Math.random() * app.screen.width;
+          const y = app.screen.height * (0.88 + Math.random() * 0.08);
+          const size = Math.random() * 1.5 + 0.8;
+
+          grassAccent.circle(x, y, size);
+          grassAccent.fill({
+            color: 0x4a7c59, // 明るめの緑
+            alpha: 0.7,
+          });
+          app.stage.addChild(grassAccent);
+        }
 
         // 5. アニメーションループ - パフォーマンス最適化版
         let lastTime = 0;
