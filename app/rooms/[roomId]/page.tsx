@@ -404,7 +404,12 @@ export default function RoomPage() {
         ])
       )
     : players.map((p) => p.id);
-  const eligibleIds = baseIds;
+
+  // ホストを最優先（左端）に配置するためのソート
+  const hostId = room?.hostId;
+  const eligibleIds = hostId
+    ? [hostId, ...baseIds.filter(id => id !== hostId)]
+    : baseIds;
 
   // 並び替えフェーズの判定（CentralCardBoardと同じロジック）
   const canStartSorting = useMemo(() => {
