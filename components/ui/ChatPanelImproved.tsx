@@ -46,6 +46,9 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
+  // 右上トースト（eventsコレクション）重複防止用
+  const lastEventSeenRef = useRef<string | null>(null);
+  const initializedEventsRef = useRef(false);
   const lastSystemMessageRef = useRef<string | null>(null);
   const initializedSystemRef = useRef(false);
 
@@ -122,6 +125,45 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
         try { clearTimeout(backoffTimer); } catch {}
       }
       stop();
+    };
+  }, [roomId]);
+
+  // rooms/{roomId}/events の notify を購読して右上トーストを表示（チャットには出さない）
+  useEffect(() => {
+    const q = query(
+      collection(db!, "rooms", roomId, "events"),
+      orderBy("createdAt", "asc"),
+      limitToLast(50)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      if (!initializedEventsRef.current) {
+        initializedEventsRef.current = true;
+        const docs = snap.docs;
+        const last = docs.length ? docs[docs.length - 1] : null;
+        if (last) lastEventSeenRef.current = last.id;
+        return;
+      }
+      snap.docChanges().forEach((c) => {
+        if (c.type !== "added") return;
+        if (lastEventSeenRef.current === c.doc.id) return;
+        lastEventSeenRef.current = c.doc.id;
+        const data = c.doc.data() as any;
+        if (data?.kind === "notify") {
+          notify({
+            title: data.title || "通知",
+            description:
+              typeof data.description === "string" && data.description.trim()
+                ? data.description.trim()
+                : undefined,
+            type: (data.type as any) || "info",
+          });
+        }
+      });
+    });
+    return () => {
+      try { unsub(); } catch {}
+      initializedEventsRef.current = false;
+      lastEventSeenRef.current = null;
     };
   }, [roomId]);
 
@@ -218,6 +260,10 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
             {messages.map((m) => {
               const isSystem = m.sender === "system";
               const isMe = m.sender === (displayName || "匿名");
+              // 防御的に、notify|で始まるシステムメッセージはチャットに表示しない
+              if (isSystem && typeof (m as any)?.text === "string" && (m as any).text.startsWith("notify|")) {
+                return null;
+              }
               return (
                 <Box key={m.id}>
                   {isSystem ? (
