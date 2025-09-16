@@ -128,69 +128,11 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
     };
   }, [roomId]);
 
-  // rooms/{roomId}/events の notify を購読して右上トーストを表示（チャットには出さない）
-  useEffect(() => {
-    const q = query(
-      collection(db!, "rooms", roomId, "events"),
-      orderBy("createdAt", "asc"),
-      limitToLast(50)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      if (!initializedEventsRef.current) {
-        initializedEventsRef.current = true;
-        const docs = snap.docs;
-        const last = docs.length ? docs[docs.length - 1] : null;
-        if (last) lastEventSeenRef.current = last.id;
-        return;
-      }
-      snap.docChanges().forEach((c) => {
-        if (c.type !== "added") return;
-        if (lastEventSeenRef.current === c.doc.id) return;
-        lastEventSeenRef.current = c.doc.id;
-        const data = c.doc.data() as any;
-        if (data?.kind === "notify") {
-          notify({
-            title: data.title || "通知",
-            description:
-              typeof data.description === "string" && data.description.trim()
-                ? data.description.trim()
-                : undefined,
-            type: (data.type as any) || "info",
-          });
-        }
-      });
-    });
-    return () => {
-      try { unsub(); } catch {}
-      initializedEventsRef.current = false;
-      lastEventSeenRef.current = null;
-    };
-  }, [roomId]);
+  // 通知は RoomNotifyBridge 側で購読・表示するため、
+  // チャット側では購読しない（重複トースト防止）。
 
 
-  useEffect(() => {
-    if (messages.length === 0) return;
-    const lastMessage = messages[messages.length - 1];
-    if (!initializedSystemRef.current) {
-      initializedSystemRef.current = true;
-      lastSystemMessageRef.current = lastMessage.id;
-      return;
-    }
-    if (lastMessage.sender !== "system") return;
-    if (lastSystemMessageRef.current === lastMessage.id) return;
-    lastSystemMessageRef.current = lastMessage.id;
-    if (typeof lastMessage.text !== "string") return;
-    if (!lastMessage.text.startsWith("notify|")) return;
-    const parts = lastMessage.text.split("|");
-    const type = parts[1] ?? "info";
-    const title = parts[2] ?? "通知";
-    const description = parts.length > 3 ? parts.slice(3).join("|") : undefined;
-    notify({
-      title,
-      description: description && description.length > 0 ? description : undefined,
-      type: (type as any) ?? "info",
-    });
-  }, [messages]);
+  // 互換目的の描画ガードのみ維持（notify| はチャットに描画しない）。
   const send = async () => {
     if (readOnly) return;
     let sanitized: string;

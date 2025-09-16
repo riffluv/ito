@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { sendSystemMessage } from "@/lib/firebase/chat";
+import { sendNotifyEvent } from "@/lib/firebase/events";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
@@ -30,11 +31,7 @@ async function broadcastNotify(
   description?: string
 ) {
   try {
-    const payload = ["notify", type, title];
-    if (description && description.trim()) {
-      payload.push(description.trim());
-    }
-    await sendSystemMessage(roomId, payload.join("|"));
+    await sendNotifyEvent(roomId, { type, title, description });
   } catch {
     // ignore broadcast failure
   }
