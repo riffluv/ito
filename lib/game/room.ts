@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
+import { sendSystemMessage } from "@/lib/firebase/chat";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
@@ -20,6 +21,24 @@ import {
   updateDoc,
 } from "firebase/firestore";
 // 乱数はクライアントで自分の番号計算に使用
+
+// 通知ブロードキャスト関数
+async function broadcastNotify(
+  roomId: string,
+  type: "info" | "warning" | "success" | "error",
+  title: string,
+  description?: string
+) {
+  try {
+    const payload = ["notify", type, title];
+    if (description && description.trim()) {
+      payload.push(description.trim());
+    }
+    await sendSystemMessage(roomId, payload.join("|"));
+  } catch {
+    // ignore broadcast failure
+  }
+}
 
 export async function startGame(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
@@ -49,14 +68,25 @@ export async function startGame(roomId: string) {
     });
     await batch.commit();
   } catch {}
+
+  // ゲーム開始通知をブロードキャスト
+  try {
+    await broadcastNotify(roomId, "success", "ゲームを開始しました", "連想ワードを入力してください");
+  } catch {
+    // 通知失敗は無視
+  }
 }
 
 // ホストがトピック選択後に配札（重複なし）
-export async function dealNumbers(roomId: string) {
+export async function dealNumbers(roomId: string): Promise<number> {
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: { id: string; uid?: string; lastSeen?: any }[] = [];
   snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
+  const now = Date.now();
+  const activeByRecency = all.filter((p) =>
+    isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+  );
   // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
   let target = all;
   try {
@@ -64,22 +94,25 @@ export async function dealNumbers(roomId: string) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids) && uids.length > 0) {
         const set = new Set(uids);
-        target = all.filter((p) => set.has(p.id));
+        const filtered = all.filter((p) => set.has(p.id));
+        target = filtered.length > 0
+          ? filtered
+          : activeByRecency.length > 0
+            ? activeByRecency
+            : all;
       } else {
-        // presenceは利用可能だが空のときは lastSeen でフォールバック
-        const now = Date.now();
-        target = all.filter((p) =>
-          isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
-        );
+        target = activeByRecency.length > 0 ? activeByRecency : all;
       }
     } else {
-      const now = Date.now();
-      target = all.filter((p) =>
-        isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
-      );
+      target = activeByRecency.length > 0 ? activeByRecency : all;
     }
   } catch {
-    // フォールバック: 取得失敗時は全員
+    target = activeByRecency.length > 0 ? activeByRecency : all;
+  }
+  if (!target.length) {
+    target = activeByRecency.length > 0 ? activeByRecency : all;
+  }
+  if (target.length < Math.min(2, all.length)) {
     target = all;
   }
   const ordered = target.sort((a, b) =>
@@ -91,6 +124,7 @@ export async function dealNumbers(roomId: string) {
     "order.total": ordered.length,
     lastActiveAt: serverTimestamp(),
   });
+  return ordered.length;
 }
 
 // finalizeOrder（公開順演出）は現行フローでは未使用

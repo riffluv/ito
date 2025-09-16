@@ -2,7 +2,7 @@
 import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { dealNumbers } from "@/lib/game/room";
+import { dealNumbers as dealNumbersRoom } from "@/lib/game/room";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import {
   fetchTopicSections,
@@ -12,6 +12,23 @@ import {
   type TopicType,
 } from "@/lib/topics";
 import { doc, updateDoc } from "firebase/firestore";
+
+async function broadcastNotify(
+  roomId: string,
+  type: "info" | "warning" | "success" | "error",
+  title: string,
+  description?: string
+) {
+  try {
+    const payload = ["notify", type, title];
+    if (description && description.trim()) {
+      payload.push(description.trim());
+    }
+    await sendSystemMessage(roomId, payload.join("|"));
+  } catch {
+    // ignore broadcast failure
+  }
+}
 
 // お題関連の制御機能
 export const topicControls = {
@@ -26,11 +43,13 @@ export const topicControls = {
         topicOptions: null,
         topic: picked,
       });
-      notify({
-        title: `カテゴリ「${type}」を選択しました`,
-        description: picked ? `お題: ${picked}` : "お題の取得に失敗しました",
-        type: "success",
-      });
+      const label = topicTypeLabels[type as keyof typeof topicTypeLabels] ?? type;
+      await broadcastNotify(
+        roomId,
+        "success",
+        `カテゴリ「${label}」を選択しました`,
+        picked ? `お題: ${picked}` : undefined
+      );
     } catch (error: any) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("お題選択");
@@ -59,7 +78,7 @@ export const topicControls = {
         topicBox: "カスタム",
         topicOptions: null,
       });
-      notify({ title: "お題を更新しました", type: "success" });
+      await broadcastNotify(roomId, "success", "お題を更新しました", `新しいお題: ${value}`);
       try {
         await sendSystemMessage(roomId, `📝 お題を変更: ${value}`);
       } catch {}
@@ -93,7 +112,7 @@ export const topicControls = {
 
       // バッチ処理で効率的に更新
       const batch = writeBatch(db!);
-      
+
       // 1. roomドキュメントをリセット
       batch.update(roomRef, {
         status: "waiting", // ★ ロビー状態に戻す
@@ -107,11 +126,11 @@ export const topicControls = {
         closedAt: null,
         expiresAt: null,
       });
-      
+
       // 2. すべてのplayerドキュメントのclue1をクリア
       const playersRef = collection(db!, "rooms", roomId, "players");
       const playersSnapshot = await getDocs(playersRef);
-      
+
       playersSnapshot.forEach((playerDoc) => {
         // clue1フィールドのみクリアして状態をリセット
         batch.update(playerDoc.ref, {
@@ -119,11 +138,11 @@ export const topicControls = {
           ready: false // readyフラグもリセット
         });
       });
-      
+
       // バッチ実行
       await batch.commit();
-      
-      notify({ title: "ゲームをリセットしました", type: "success" });
+
+      await broadcastNotify(roomId, "success", "ゲームをリセットしました");
     } catch (error: any) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("ゲームリセット");
@@ -149,13 +168,12 @@ export const topicControls = {
       const pool = getTopicsByType(sections, currentCategory as TopicType);
       const picked = pickOne(pool) || null;
       await updateDoc(doc(db!, "rooms", roomId), { topic: picked });
-      notify({
-        title: "お題をシャッフルしました",
-        description: picked
-          ? `新しいお題: ${picked}`
-          : "お題の取得に失敗しました",
-        type: "success",
-      });
+      await broadcastNotify(
+        roomId,
+        "success",
+        "お題をシャッフルしました",
+        picked ? `新しいお題: ${picked}` : undefined
+      );
     } catch (error: any) {
       notify({
         title: "シャッフル失敗",
@@ -168,8 +186,13 @@ export const topicControls = {
   // 数字を配布
   async dealNumbers(roomId: string) {
     try {
-      await dealNumbers(roomId);
-      notify({ title: "数字を配りました", type: "success" });
+      const assignedCount = await dealNumbersRoom(roomId);
+      await broadcastNotify(
+        roomId,
+        "success",
+        "数字を配りました",
+        `対象プレイヤー: ${assignedCount}人`
+      );
     } catch (error: any) {
       notify({
         title: "数字の配布に失敗",

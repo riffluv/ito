@@ -14,6 +14,8 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const frameRef = useRef<number>();
   const composerRef = useRef<any>();
+  const isAnimatingRef = useRef(true);
+  const visibilityCleanupRef = useRef<() => void>();
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -305,6 +307,10 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         // アニメーションループ
         const clock = new THREE.Clock();
         const animate = () => {
+          if (!isAnimatingRef.current) {
+            frameRef.current = undefined;
+            return;
+          }
           frameRef.current = requestAnimationFrame(animate);
           const t = clock.getElapsedTime();
 
@@ -335,7 +341,30 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
           composer.render();
         };
 
-        animate();
+        const startAnimation = () => {
+          if (!frameRef.current) {
+            isAnimatingRef.current = true;
+            animate();
+          }
+        };
+
+        const visibilityHandler = () => {
+          if (typeof document === "undefined") return;
+          const visible = document.visibilityState === "visible";
+          isAnimatingRef.current = visible;
+          if (visible && !frameRef.current) {
+            startAnimation();
+          }
+        };
+        if (typeof document !== "undefined") {
+          document.addEventListener("visibilitychange", visibilityHandler);
+          visibilityHandler();
+          visibilityCleanupRef.current = () => {
+            document.removeEventListener("visibilitychange", visibilityHandler);
+          };
+        }
+
+        startAnimation();
 
         // リサイズ対応
         const handleResize = () => {
@@ -361,8 +390,12 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
 
     // クリーンアップ
     return () => {
+      isAnimatingRef.current = false;
+      visibilityCleanupRef.current?.();
+      visibilityCleanupRef.current = undefined;
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
+        frameRef.current = undefined;
       }
       if (mountRef.current && rendererRef.current?.domElement) {
         mountRef.current.removeChild(rendererRef.current.domElement);

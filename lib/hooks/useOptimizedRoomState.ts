@@ -22,6 +22,51 @@ export type OptimizedRoomState = {
 // Selector types for fine-grained updates
 type RoomSelector<T> = (state: OptimizedRoomState) => T;
 
+
+function createRoomSignature(room: (RoomDoc & { id: string }) | null): string {
+  if (!room) return 'null';
+  const lastActive = typeof (room.lastActiveAt as any)?.toMillis === 'function'
+    ? (room.lastActiveAt as any).toMillis()
+    : room.lastActiveAt ?? '';
+  const expiresAt = typeof (room.expiresAt as any)?.toMillis === 'function'
+    ? (room.expiresAt as any).toMillis()
+    : room.expiresAt ?? '';
+  const orderList = room.order?.list?.join(',') ?? '';
+  const proposal = Array.isArray(room.order?.proposal)
+    ? (room.order?.proposal as (string | null)[]).join(',')
+    : '';
+  const resultKey = room.result ? `${room.result.success}-${(room.result as any)?.failedAt ?? ''}` : 'no-result';
+  return [
+    room.id,
+    room.name,
+    room.status,
+    room.hostId,
+    room.options?.displayMode ?? '',
+    room.options?.resolveMode ?? '',
+    room.round ?? 0,
+    orderList,
+    proposal,
+    resultKey,
+    room.topic ?? '',
+    lastActive,
+    expiresAt,
+  ].join('|');
+}
+
+function createPlayersSignature(players: (PlayerDoc & { id: string })[]): string {
+  if (!players || players.length === 0) return '[]';
+  return players
+    .map((p) => [
+      p.id,
+      p.name,
+      p.number ?? '',
+      p.ready ? 1 : 0,
+      p.orderIndex ?? 0,
+      p.clue1 ?? '',
+    ].join(':'))
+    .join('|');
+}
+
 interface UseOptimizedRoomStateOptions {
   // Optional selectors to only re-render when specific data changes
   roomSelector?: RoomSelector<any>;
@@ -43,6 +88,8 @@ export function useOptimizedRoomState(
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const leavingRef = useRef(false);
+  const playersSignatureRef = useRef<string>(createPlayersSignature([]));
+  const loadingFlagRef = useRef<boolean>(true);
   
   // Debouncing mechanism
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,7 +145,7 @@ export function useOptimizedRoomState(
   useEffect(() => {
     if (!firebaseEnabled) return;
 
-    let lastRoomData: string | null = null;
+    const lastRoomSignatureRef = { current: null as string | null };
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,17 +163,17 @@ export function useOptimizedRoomState(
         doc(db!, "rooms", roomId),
         (snap) => {
           if (!snap.exists()) {
-            if (lastRoomData !== null) {
+            if (lastRoomSignatureRef.current !== null) {
               scheduleDebouncedUpdate({ room: null });
-              lastRoomData = null;
+              lastRoomSignatureRef.current = null;
             }
             return;
           }
           const newRoom = { id: snap.id, ...sanitizeRoom(snap.data()) };
-          const newRoomData = JSON.stringify(newRoom);
-          if (newRoomData !== lastRoomData) {
+          const newSignature = createRoomSignature(newRoom);
+          if (newSignature !== lastRoomSignatureRef.current) {
             scheduleDebouncedUpdate({ room: newRoom });
-            lastRoomData = newRoomData;
+            lastRoomSignatureRef.current = newSignature;
           }
         },
         (error) => {
@@ -172,7 +219,7 @@ export function useOptimizedRoomState(
         try { clearTimeout(backoffTimer); } catch {}
       }
       stop();
-      lastRoomData = null;
+      lastRoomSignatureRef.current = null;
     };
   }, [roomId, scheduleDebouncedUpdate]);
 
@@ -191,22 +238,26 @@ export function useOptimizedRoomState(
   } = useParticipants(roomId, uid || null);
   
   useEffect(() => {
-    const playersChanged = JSON.stringify(fetchedPlayers) !== JSON.stringify(players);
-    const loadingChanged = partLoading !== loading;
-    
+    const nextSignature = createPlayersSignature(fetchedPlayers);
+    const playersChanged = nextSignature !== playersSignatureRef.current;
+    const nextLoading = partLoading === true;
+    const loadingChanged = nextLoading !== loadingFlagRef.current;
+
     if (playersChanged || loadingChanged) {
       const updates: typeof pendingUpdatesRef.current = {};
-      
+
       if (playersChanged) {
         updates.players = fetchedPlayers;
+        playersSignatureRef.current = nextSignature;
       }
       if (loadingChanged) {
-        updates.loading = partLoading === true;
+        updates.loading = nextLoading;
+        loadingFlagRef.current = nextLoading;
       }
-      
+
       scheduleDebouncedUpdate(updates);
     }
-  }, [fetchedPlayers, partLoading, players, loading, scheduleDebouncedUpdate]);
+  }, [fetchedPlayers, partLoading, scheduleDebouncedUpdate]);
 
   // Auto-join optimization - only when necessary
   const shouldAutoJoin = useMemo(() => {
