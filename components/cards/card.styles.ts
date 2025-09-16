@@ -27,24 +27,22 @@ export const CARD_SIZES = {
 
 // 統一カードスタイル定義
 export const CARD_STYLES = {
-  // 空きスロット用スタイル（魔法陣に合わせて統一済み）
+  // 空きスロット用スタイル（ドラクエ風完全改造済み）
   empty: {
-    bg: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
-    borderWidth: "2px",
-    borderColor: "rgba(167, 139, 250, 0.4)",
+    bg: "transparent", // 完全透明でHD-2D背景を活かす
+    borderWidth: "3px",
+    borderColor: "rgba(255, 255, 255, 0.3)", // 古い石板の白枠
     borderStyle: "dashed" as const,
-    borderRadius: "16px",
-    color: "rgba(196, 181, 253, 0.8)",
-    boxShadow: `
-      inset 0 0 12px rgba(139, 69, 197, 0.15),
-      0 0 8px rgba(167, 139, 250, 0.2),
-      0 2px 8px rgba(0, 0, 0, 0.1)
-    `,
-    backdropFilter: "blur(4px)",
-    fontSize: "lg",
-    fontWeight: "600",
-    letterSpacing: "-0.01em",
-    transition: `background-color 0.2s ${UI_TOKENS.EASING.standard}, border-color 0.2s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
+    borderRadius: 0, // 角ばったドラクエ風
+    color: "rgba(255, 255, 255, 0.7)", // ドラクエ風白文字
+    // シンプルなドラクエ風影のみ
+    boxShadow: "none",
+    fontSize: "16px", // 少し大きく
+    fontWeight: "bold", // ドラクエ風太字
+    fontFamily: "monospace", // ドラクエ風フォント統一
+    textShadow: "1px 1px 0px #000", // ドラクエ風テキストシャドウ
+    letterSpacing: "1px",
+    transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}, transform 0.15s ${UI_TOKENS.EASING.standard}`, // シンプルな遷移
     cursor: "pointer",
     position: "relative" as const,
     overflow: "hidden" as const,
@@ -52,17 +50,12 @@ export const CARD_STYLES = {
     alignItems: "center" as const,
     justifyContent: "center" as const,
     aspectRatio: "5/7",
-    // ホバー効果：魔法陣風のグロー
+    // ホバー効果：古い石が光るドラクエ風
     _hover: {
-      bg: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
-      borderColor: "rgba(167, 139, 250, 0.7)",
-      color: "rgba(196, 181, 253, 0.9)",
-      boxShadow: `
-        inset 0 0 20px rgba(139, 69, 197, 0.25),
-        0 0 16px rgba(167, 139, 250, 0.4),
-        0 4px 20px rgba(0, 0, 0, 0.2)
-      `,
-      transform: "translateY(-2px) scale(1.02)",
+      borderColor: "rgba(255, 255, 255, 0.6)", // 白枠が少し明るく
+      color: "rgba(255, 255, 255, 0.9)",
+      boxShadow: "inset 0 0 8px rgba(255, 255, 255, 0.1)", // 内側に薄い光
+      transform: "scale(1.02)", // シンプルな拡大
     },
   },
   
