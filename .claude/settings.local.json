@@ -121,7 +121,8 @@
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\GameCard.modern.module.css\")",
       "mcp__serena__get_current_config",
       "Bash(dir:*)",
-      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\PlayersStatus.tsx\")"
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\PlayersStatus.tsx\")",
+      "mcp__serena__list_memories"
     ],
     "deny": [],
     "ask": []

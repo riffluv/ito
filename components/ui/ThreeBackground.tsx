@@ -14,7 +14,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const frameRef = useRef<number>();
-  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs">("css");
+  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
+  const [hd2dImageIndex, setHd2dImageIndex] = useState<number>(1); // 1, 2, 3... の画像
 
   // LocalStorageから設定読み込み & イベントリスナー設定
   useEffect(() => {
@@ -22,7 +23,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     const loadBackgroundType = () => {
       try {
         const saved = localStorage.getItem("backgroundType");
-        if (saved && ["css", "three3d", "three3d_advanced", "pixijs"].includes(saved)) {
+        if (saved && ["css", "three3d", "three3d_advanced", "pixijs", "hd2d"].includes(saved)) {
           setBackgroundType(saved as any);
         }
       } catch {
@@ -32,21 +33,44 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     loadBackgroundType();
 
+    // HD-2D画像番号読み込み
+    const loadHd2dImageIndex = () => {
+      try {
+        const saved = localStorage.getItem("hd2dImageIndex");
+        if (saved) {
+          const index = parseInt(saved);
+          if (index >= 1 && index <= 8) {
+            setHd2dImageIndex(index);
+          }
+        }
+      } catch {
+        // エラーは無視
+      }
+    };
+
+    loadHd2dImageIndex();
+
     // 設定変更イベントリスナー
     const handleBackgroundChange = (event: any) => {
       setBackgroundType(event.detail.backgroundType);
     };
 
+    const handleHd2dImageChange = (event: any) => {
+      setHd2dImageIndex(event.detail.imageIndex);
+    };
+
     window.addEventListener("backgroundTypeChanged", handleBackgroundChange);
+    window.addEventListener("hd2dImageChanged", handleHd2dImageChange);
     return () => {
       window.removeEventListener("backgroundTypeChanged", handleBackgroundChange);
+      window.removeEventListener("hd2dImageChanged", handleHd2dImageChange);
     };
   }, []);
 
   // Three.js初期化用Effect
   useEffect(() => {
-    // CSS背景またはPixiJS背景の場合はThree.jsを初期化しない
-    if (backgroundType === "css" || backgroundType === "pixijs") {
+    // CSS背景、PixiJS背景、HD-2D背景の場合はThree.jsを初期化しない
+    if (backgroundType === "css" || backgroundType === "pixijs" || backgroundType === "hd2d") {
       return;
     }
     if (!mountRef.current) return;
@@ -715,8 +739,14 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         height: '100%',
         zIndex: 0, // BASEレベル（UI要素の直下）
         pointerEvents: 'none', // マウスイベントを通す
-        // CSS背景（cssモード時）- テーマトークン統一
-        background: backgroundType === "css" ? 'var(--chakra-colors-bg-canvas)' : backgroundType === "pixijs" ? 'var(--chakra-colors-bg-canvas)' : 'transparent',
+        // 背景タイプ別の設定
+        background: backgroundType === "css"
+          ? 'var(--chakra-colors-bg-canvas)'
+          : backgroundType === "pixijs"
+          ? 'var(--chakra-colors-bg-canvas)'
+          : backgroundType === "hd2d"
+          ? `url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.png) center/cover no-repeat, url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.jpg) center/cover no-repeat`
+          : 'transparent',
       }}
     >
       {/* PixiJS キャンバスはuseEffect内で動的に追加されます */}

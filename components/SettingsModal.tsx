@@ -40,7 +40,9 @@ export function SettingsModal({
   const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
 
   // 背景設定のstate（localStorageから読み込み）
-  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "three3d_advanced" | "pixijs">("css");
+  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
+  const [hd2dImageIndex, setHd2dImageIndex] = useLocalState<number>(1);
+  const [availableHd2dImages, setAvailableHd2dImages] = useState<number[]>([]);
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -61,6 +63,35 @@ export function SettingsModal({
       return false;
     }
   });
+
+  // HD-2D画像の存在をチェック
+  useEffect(() => {
+    const checkAvailableImages = async () => {
+      const imageNumbers: number[] = [];
+
+      for (let i = 1; i <= 8; i++) {
+        try {
+          // PNG とJPG 両方をチェック
+          const pngResponse = await fetch(`/images/backgrounds/hd2d/bg${i}.png`, { method: 'HEAD' });
+          if (pngResponse.ok) {
+            imageNumbers.push(i);
+            continue;
+          }
+
+          const jpgResponse = await fetch(`/images/backgrounds/hd2d/bg${i}.jpg`, { method: 'HEAD' });
+          if (jpgResponse.ok) {
+            imageNumbers.push(i);
+          }
+        } catch {
+          // ファイルが存在しない場合は無視
+        }
+      }
+
+      setAvailableHd2dImages(imageNumbers);
+    };
+
+    checkAvailableImages();
+  }, []);
 
   // OSのreduce-motion変化を監視
   useEffect(() => {
@@ -88,7 +119,7 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      if (saved && ["css", "three3d", "three3d_advanced", "pixijs"].includes(saved)) {
+      if (saved && ["css", "three3d", "three3d_advanced", "pixijs", "hd2d"].includes(saved)) {
         setBackgroundType(saved as any);
       }
     } catch {
@@ -546,7 +577,7 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "Three.js" : backgroundType === "three3d_advanced" ? "豪華版" : "軽量 3D"}
+                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "Three.js" : backgroundType === "three3d_advanced" ? "豪華版" : backgroundType === "hd2d" ? "HD-2D" : "軽量 3D"}
                   </Text>
                   <Stack gap={2}>
                     {[
@@ -569,6 +600,11 @@ export function SettingsModal({
                         value: "pixijs",
                         title: "ピクシー はいけい",
                         description: "ころころかえます PixiJS エフェクト",
+                      },
+                      {
+                        value: "hd2d",
+                        title: "HD-2D はいけい",
+                        description: "オクトパストラベラー風の美しい背景画像",
                       },
                     ].map((opt) => {
                       const isSelected = backgroundType === (opt.value as any);
@@ -643,6 +679,74 @@ export function SettingsModal({
                       );
                     })}
                   </Stack>
+
+                  {/* HD-2D背景の画像番号選択 */}
+                  {backgroundType === "hd2d" && (
+                    <Box mt={4} p={4} borderRadius={0} border="2px solid" borderColor={UI_TOKENS.COLORS.whiteAlpha30} bg={UI_TOKENS.COLORS.whiteAlpha05}>
+                      <Text fontSize="sm" fontWeight="600" color="white" mb={2} fontFamily="monospace" textShadow="1px 1px 0px #000">
+                        HD-2D がぞう ばんごう
+                      </Text>
+                      <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
+                        げんざい: {hd2dImageIndex}ばんめ
+                      </Text>
+                      <HStack gap={2} wrap="wrap">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
+                          const isAvailable = availableHd2dImages.includes(num);
+                          const isSelected = hd2dImageIndex === num;
+
+                          return (
+                            <Box
+                              key={num}
+                              as="button"
+                              onClick={() => {
+                                if (isAvailable) {
+                                  setHd2dImageIndex(num);
+                                  // 他のコンポーネントにも通知
+                                  window.dispatchEvent(new CustomEvent("hd2dImageChanged", {
+                                    detail: { imageIndex: num }
+                                  }));
+                                }
+                              }}
+                              w={10}
+                              h={10}
+                              borderRadius={0}
+                              border="2px solid"
+                              borderColor={
+                                !isAvailable
+                                  ? UI_TOKENS.COLORS.whiteAlpha30
+                                  : isSelected
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha50
+                              }
+                              bg={
+                                !isAvailable
+                                  ? UI_TOKENS.COLORS.whiteAlpha05
+                                  : isSelected
+                                  ? UI_TOKENS.COLORS.whiteAlpha15
+                                  : UI_TOKENS.COLORS.panelBg
+                              }
+                              color={isAvailable ? "white" : UI_TOKENS.COLORS.whiteAlpha40}
+                              fontSize="14px"
+                              fontFamily="monospace"
+                              fontWeight={isAvailable ? "bold" : "normal"}
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              cursor={isAvailable ? "pointer" : "not-allowed"}
+                              opacity={isAvailable ? 1 : 0.5}
+                              transition="background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease"
+                              _hover={isAvailable ? {
+                                borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                                bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha20 : UI_TOKENS.COLORS.whiteAlpha10,
+                              } : {}}
+                            >
+                              {num}
+                            </Box>
+                          );
+                        })}
+                      </HStack>
+                    </Box>
+                  )}
                 </Box>
 
                 <Box hidden={graphicsTab !== 'animation'}>
