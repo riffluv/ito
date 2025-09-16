@@ -106,11 +106,19 @@ export function EmptyCard({
         ...(id && dndDroppable.isOver && {
           backgroundColor: UI_TOKENS.COLORS.purpleAlpha15,
           borderColor: UI_TOKENS.COLORS.purpleAlpha80,
+          borderWidth: "3px",
           borderStyle: "solid",
-          transform: "scale(1.05)", // より明確なスケール
+          transform: "scale(1.08)",
           animation: "dragonQuestDrop 0.8s ease-in-out infinite",
-          // ドラクエ風の強い光る効果（テキスト装飾は削除）
-          boxShadow: UI_TOKENS.SHADOWS.activeArea,
+          boxShadow: `${UI_TOKENS.SHADOWS.activeArea}, 0 0 0 6px ${UI_TOKENS.COLORS.purpleAlpha15}`,
+        }),
+
+        // ドロップ不可のスロット上にドラッグ中の視覚フィードバック
+        ...(!isDroppable && isDragActive && {
+          borderColor: UI_TOKENS.COLORS.whiteAlpha40,
+          backgroundColor: "rgba(0,0,0,0.2)",
+          boxShadow: "inset 0 0 10px rgba(0,0,0,0.3)",
+          cursor: "not-allowed",
         }),
       }}
       {...props}
@@ -125,6 +133,49 @@ export function EmptyCard({
           {slotNumber}
         </span>
       ) : "?")}
+
+      {/* オーバーレイ: isOver 時の視覚強調（リング + ✓） */}
+      {id && dndDroppable.isOver && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            color: "white",
+            fontWeight: 800,
+            textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+            fontFamily: "monospace",
+          }}
+        >
+          ✓
+        </span>
+      )}
+
+      {/* オーバーレイ: ドロップ不可の明示 */}
+      {!isDroppable && isDragActive && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            color: "#ffdddd",
+            fontWeight: 800,
+            textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+            fontFamily: "monospace",
+            opacity: 0.9,
+          }}
+        >
+          ×
+        </span>
+      )}
       
       {/* ドラクエ風アニメーション定義 */}
       <style>{`
@@ -141,12 +192,12 @@ export function EmptyCard({
         
         @keyframes dragonQuestDrop {
           0%, 100% {
-            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 4px 16px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 0 24px ${UI_TOKENS.COLORS.purpleAlpha15};
-            transform: scale(1.05);
+            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 6px 18px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 0 28px ${UI_TOKENS.COLORS.purpleAlpha15};
+            transform: scale(1.08);
           }
           50% {
-            box-shadow: inset 0 0 20px ${UI_TOKENS.COLORS.purpleAlpha60}, 0 4px 20px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 0 32px ${UI_TOKENS.COLORS.purpleAlpha30};
-            transform: scale(1.08);
+            box-shadow: inset 0 0 20px ${UI_TOKENS.COLORS.purpleAlpha60}, 0 6px 22px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 0 34px ${UI_TOKENS.COLORS.purpleAlpha30};
+            transform: scale(1.12);
           }
         }
         
