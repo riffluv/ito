@@ -23,7 +23,7 @@ export function AppCard({ interactive = false, density = "comfortable", selected
       },
     }),
     ...(selected && {
-      boxShadow: "4px 4px 0 rgba(59, 130, 246, 0.8), 8px 8px 0 rgba(59, 130, 246, 0.6),"
+      boxShadow: "4px 4px 0 rgba(59, 130, 246, 0.8), 8px 8px 0 rgba(59, 130, 246, 0.6)",
       bg: "blue.50",
     }),
   }
