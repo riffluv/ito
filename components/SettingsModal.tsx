@@ -27,7 +27,7 @@ export function SettingsModal({
   isHost,
   roomStatus,
 }: SettingsModalProps) {
-  const { animationMode, setAnimationMode, effectiveMode, gpuCapability } =
+  const { animationMode, setAnimationMode, effectiveMode, gpuCapability, supports3D } =
     useAnimationSettings();
 
   const [resolveMode, setResolveMode] = useState<string>(
@@ -41,6 +41,48 @@ export function SettingsModal({
 
   // 背景設定のstate（localStorageから読み込み）
   const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "pixijs">("css");
+  const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
+  const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("force-animations") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [osReduced, setOsReduced] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return (
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  // OSのreduce-motion変化を監視
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const listener = () => setOsReduced(mq.matches);
+    try {
+      mq.addEventListener("change", listener);
+    } catch {
+      // Safari互換
+      // @ts-ignore
+      mq.addListener(listener);
+    }
+    return () => {
+      try {
+        mq.removeEventListener("change", listener);
+      } catch {
+        // @ts-ignore
+        mq.removeListener(listener);
+      }
+    };
+  }, []);
 
   // localStorageから背景設定を読み込み
   useEffect(() => {
@@ -66,6 +108,27 @@ export function SettingsModal({
     } catch {
       // エラーは無視
     }
+  };
+
+  // アニメーション優先トグル（reduced-motion無視）
+  const setForceAnimationsPersist = (next: boolean) => {
+    setForceAnimations(next);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("force-animations", next ? "true" : "false");
+        window.dispatchEvent(new CustomEvent("forceAnimationsChanged"));
+      }
+    } catch {}
+    notify({
+      title: next ? "アニメーション優先（強制ON）" : "OS設定を尊重",
+      description: next
+        ? "reduce-motion を無視して軽量アニメを有効にします"
+        : osReduced
+        ? "OSが動きを減らす=ONのため、アニメは控えめになります"
+        : "OSが動きを減らす=OFFのため、アニメは通常動作します",
+      type: "info",
+      duration: 1800,
+    });
   };
 
   const handleSave = async () => {
@@ -449,11 +512,39 @@ export function SettingsModal({
               <Stack gap={6}>
                 {/* グラフィック設定の説明 */}
                 <Text fontSize="sm" color="white" textAlign="center" fontFamily="monospace">
-                  ※ クリックすると きりかわるよ
+                  グラフィック設定
                 </Text>
+                {/* サブタブ（背景/アニメ） */}
+                <HStack gap={3} justify="center">
+                  {[
+                    { key: "background", label: "背景" },
+                    { key: "animation", label: "アニメ" },
+                  ].map((t) => {
+                    const isActive = graphicsTab === (t.key as any);
+                    return (
+                      <Box
+                        key={t.key}
+                        as="button"
+                        onClick={() => setGraphicsTab(t.key as any)}
+                        px={4}
+                        py={2}
+                        borderRadius={0}
+                        border="2px solid"
+                        borderColor={isActive ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                        bg={isActive ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                        color="white"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        transition={`background-color 0.12s ${UI_TOKENS.EASING.standard}, color 0.12s ${UI_TOKENS.EASING.standard}, border-color 0.12s ${UI_TOKENS.EASING.standard}`}
+                      >
+                        {t.label}
+                      </Box>
+                    );
+                  })}
+                </HStack>
 
                 {/* 背景設定セクション */}
-                <Box>
+                <Box hidden={graphicsTab !== 'background'}>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     はいけい モード
                   </Text>
@@ -552,14 +643,18 @@ export function SettingsModal({
                   </Stack>
                 </Box>
 
-                <Box>
+                <Box hidden={graphicsTab !== 'animation'}>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     アニメーション モード
                   </Text>
-                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}
-                    （自動判定: {gpuCapability === "high" ? "高" : "低"}）
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={1}>
+                    げんざい: {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}（自動判定: {gpuCapability === "high" ? "高" : "低"}）
                   </Text>
+                  {effectiveMode === "simple" && animationMode !== "simple" && supports3D === false && (
+                    <Text fontSize="xs" color={UI_TOKENS.COLORS.whiteAlpha60} mb={3}>
+                      注: この端末では3Dが使えないため、シンプルで動作中
+                    </Text>
+                  )}
                   <Stack gap={2}>
                     {[
                       {
@@ -650,6 +745,68 @@ export function SettingsModal({
                       );
                     })}
                   </Stack>
+                </Box>
+
+                {/* アニメーションの動作モード（明示ラジオ） */}
+                <Box hidden={graphicsTab !== 'animation'}>
+                  <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
+                    アニメの基準（どちらを優先するか）
+                  </Text>
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={2}>
+                    端末の設定: 動きを減らす = {osReduced ? "ON" : "OFF"}
+                  </Text>
+                  <Stack gap={2}>
+                    {/* OS尊重 */}
+                    <Box
+                      cursor="pointer"
+                      onClick={() => setForceAnimationsPersist(false)}
+                      p={4}
+                      borderRadius={0}
+                      border="2px solid"
+                      borderColor={!forceAnimations ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                      bg={!forceAnimations ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                    >
+                      <HStack justify="space-between" align="center">
+                        <VStack align="start" gap={1} flex="1">
+                          <Text fontSize="md" fontWeight="bold" color="white" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                            自動（端末に合わせる・おすすめ）
+                          </Text>
+                          <Text fontSize="sm" color={UI_TOKENS.COLORS.textMuted} lineHeight="short" fontFamily="monospace">
+                            端末が「動きを減らす=ON」なら控えめ、「OFF」なら通常のアニメになります
+                          </Text>
+                        </VStack>
+                        <Box w={5} h={5} borderRadius={0} border="2px solid" borderColor={!forceAnimations ? "white" : UI_TOKENS.COLORS.whiteAlpha50} bg={!forceAnimations ? "white" : "transparent"} />
+                      </HStack>
+                    </Box>
+                    {/* 強制ON */}
+                    <Box
+                      cursor="pointer"
+                      onClick={() => setForceAnimationsPersist(true)}
+                      p={4}
+                      borderRadius={0}
+                      border="2px solid"
+                      borderColor={forceAnimations ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
+                      bg={forceAnimations ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                    >
+                      <HStack justify="space-between" align="center">
+                        <VStack align="start" gap={1} flex="1">
+                          <Text fontSize="md" fontWeight="bold" color="white" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                            常に動かす（reduce-motionを無視）
+                          </Text>
+                          <Text fontSize="sm" color={UI_TOKENS.COLORS.textMuted} lineHeight="short" fontFamily="monospace">
+                            アクセシビリティ設定に関わらず、軽量アニメを有効にします
+                          </Text>
+                        </VStack>
+                        <Box w={5} h={5} borderRadius={0} border="2px solid" borderColor={forceAnimations ? "white" : UI_TOKENS.COLORS.whiteAlpha50} bg={forceAnimations ? "white" : "transparent"} />
+                      </HStack>
+                    </Box>
+                  </Stack>
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mt={2}>
+                    いま適用: {forceAnimations ? "常に動かす（軽量アニメON）" : osReduced ? "自動（控えめアニメ）" : "自動（通常アニメ）"}
+                  </Text>
+                  <Text fontSize="xs" color={UI_TOKENS.COLORS.whiteAlpha60} mt={1}>
+                    これは? → 「動きを減らす」は端末のアクセシビリティ設定です。目の疲れや酔いが出やすい方向けに、動きを少なくする指示をアプリに伝えます。
+                  </Text>
                 </Box>
               </Stack>
             )}
