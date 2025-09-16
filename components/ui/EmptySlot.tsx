@@ -20,39 +20,46 @@ export function EmptySlot({ index }: EmptySlotProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
-        border: `2px dashed rgba(167, 139, 250, 0.4)`,
-        boxShadow: `
-          inset 0 0 12px rgba(139, 69, 197, 0.15),
-          0 0 8px rgba(167, 139, 250, 0.2),
-          ${UI_TOKENS.SHADOWS.panelSubtle}
-        `,
-        borderRadius: "16px",
-        backdropFilter: "blur(4px)",
-        fontSize: "1.125rem",
-        fontWeight: 500,
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
-        color: "rgba(196, 181, 253, 0.7)",
-        letterSpacing: "-0.01em",
-        transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.2s ${UI_TOKENS.EASING.standard}`,
+        // 完全透明ベース
+        background: "transparent",
+        // ドラクエ風古い石板の破線枠
+        border: "3px dashed rgba(255, 255, 255, 0.3)",
+        borderRadius: 0, // 角ばったドラクエ風
+        // ドラクエ風フォント
+        fontSize: "1.5rem",
+        fontWeight: "bold",
+        fontFamily: "monospace",
+        color: "rgba(255, 255, 255, 0.6)",
+        textShadow: "1px 1px 0px #000",
+        letterSpacing: "1px",
         cursor: "pointer",
         position: "relative",
-        overflow: "hidden",
-        
+        // ドラクエ風遷移
+        transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}, color 0.2s ${UI_TOKENS.EASING.standard}, transform 0.15s ${UI_TOKENS.EASING.standard}`,
+
         "&:hover": {
-          background: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
-          borderColor: "rgba(167, 139, 250, 0.7)",
-          color: "rgba(196, 181, 253, 0.9)",
-          transform: "translateY(-2px)",
-          boxShadow: `
-            inset 0 0 20px rgba(139, 69, 197, 0.25),
-            0 0 16px rgba(167, 139, 250, 0.4),
-            0 4px 20px rgba(0, 0, 0, 0.3)
-          `,
+          // ホバー時は古い石の光る感じに
+          borderColor: "rgba(255, 255, 255, 0.7)",
+          color: "rgba(255, 255, 255, 0.9)",
+          transform: "scale(1.02)",
+          // 内側に薄い光を追加
+          boxShadow: "inset 0 0 8px rgba(255, 255, 255, 0.1)",
+        },
+
+        // 古い遺跡っぽい装飾を追加
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: "8px",
+          left: "8px",
+          right: "8px",
+          bottom: "8px",
+          border: "1px dotted rgba(255, 255, 255, 0.2)",
+          borderRadius: 0,
         },
       }}
     >
+      {/* ドラクエ風番号表示 */}
       {index}
     </Box>
   );

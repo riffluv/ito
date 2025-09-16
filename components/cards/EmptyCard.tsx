@@ -70,54 +70,58 @@ export function EmptyCard({
       onDrop={handleDrop}
       cursor={isDroppable ? "copy" : "not-allowed"}
       css={{
-        // ベース状態：魔法陣に合わせた紫系の点線ボーダー
-        border: `2px dashed rgba(167, 139, 250, 0.4)`,
-        borderRadius: "8px",
-        backgroundColor: "linear-gradient(135deg, rgba(139, 69, 197, 0.08), rgba(67, 56, 202, 0.05))",
-        boxShadow: `
-          inset 0 0 12px rgba(139, 69, 197, 0.15),
-          0 0 8px rgba(167, 139, 250, 0.2),
-          0 2px 8px rgba(0, 0, 0, 0.1)
-        `,
-        transition:
-          "background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        // ドラクエ風ベース状態：完全透明背景 + 古い石板の破線枠
+        background: "transparent", // 完全透明でHD-2D背景を活かす
+        border: "3px dashed rgba(255, 255, 255, 0.3)", // 古い石板の破線
+        borderRadius: 0, // 角ばったドラクエ風
+        // ドラクエ風シンプル遷移
+        transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}, transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}`,
         position: "relative",
-        
-        // ホバー状態：魔法陣風のグロー効果
-        "&:hover": {
-          borderColor: "rgba(167, 139, 250, 0.7)",
-          backgroundColor: "linear-gradient(135deg, rgba(139, 69, 197, 0.15), rgba(67, 56, 202, 0.12))",
-          transform: "scale(1.02)",
-          boxShadow: `
-            inset 0 0 20px rgba(139, 69, 197, 0.25),
-            0 0 16px rgba(167, 139, 250, 0.4),
-            0 4px 20px rgba(0, 0, 0, 0.2)
-          `,
+
+        // 古い遺跡っぽい内側装飾
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: "6px",
+          left: "6px",
+          right: "6px",
+          bottom: "6px",
+          border: "1px dotted rgba(255, 255, 255, 0.15)",
+          borderRadius: 0,
         },
 
-        // ドラッグ中の状態：ドロップ可能なスロットを微かに示唆
+        // ホバー状態：古い石が光る感じ
+        "&:hover": {
+          borderColor: "rgba(255, 255, 255, 0.6)",
+          transform: "scale(1.02)",
+          boxShadow: "inset 0 0 8px rgba(255, 255, 255, 0.1)",
+        },
+
+        // ドラッグ中の状態：ドロップ可能を控えめに表示
         ...(isDragActive && isDroppable && !dndDroppable.isOver && {
-          borderColor: UI_TOKENS.COLORS.purpleAlpha30,
-          backgroundColor: UI_TOKENS.COLORS.purpleAlpha02,
-          // アニメーションなしで、静的な状態表示
+          borderColor: "rgba(255, 255, 255, 0.4)",
+          boxShadow: "inset 0 0 6px rgba(255, 255, 255, 0.05)",
         }),
 
-        // @dnd-kitのisOver状態での洗練されたドロップフィードバック（テキストや矢印は表示しない）
+        // ドロップ可能時：ドラクエ風光る効果
         ...(id && dndDroppable.isOver && {
-          backgroundColor: UI_TOKENS.COLORS.purpleAlpha15,
-          borderColor: UI_TOKENS.COLORS.purpleAlpha80,
+          borderColor: "rgba(255, 255, 255, 0.9)",
           borderWidth: "3px",
-          borderStyle: "solid",
-          transform: "scale(1.08)",
-          animation: "dragonQuestDrop 0.8s ease-in-out infinite",
-          boxShadow: `${UI_TOKENS.SHADOWS.activeArea}, 0 0 0 6px ${UI_TOKENS.COLORS.purpleAlpha15}`,
+          borderStyle: "solid", // 実線に変更
+          transform: "scale(1.05)",
+          boxShadow: `
+            inset 0 0 12px rgba(255, 255, 255, 0.2),
+            0 0 8px rgba(255, 255, 255, 0.3),
+            ${UI_TOKENS.SHADOWS.panelDistinct}
+          `,
+          animation: "dragonQuestGlow 1s ease-in-out infinite", // 新しいアニメーション
         }),
 
-        // ドロップ不可のスロット上にドラッグ中の視覚フィードバック
+        // ドロップ不可：暗くしてわかりやすく
         ...(!isDroppable && isDragActive && {
-          borderColor: UI_TOKENS.COLORS.whiteAlpha40,
-          backgroundColor: "rgba(0,0,0,0.2)",
-          boxShadow: "inset 0 0 10px rgba(0,0,0,0.3)",
+          borderColor: "rgba(255, 255, 255, 0.2)",
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          boxShadow: "inset 0 0 6px rgba(0, 0, 0, 0.4)",
           cursor: "not-allowed",
         }),
       }}
@@ -125,10 +129,12 @@ export function EmptyCard({
     >
       {children || (slotNumber !== undefined ? (
         <span style={{
-          color: "rgba(196, 181, 253, 0.8)",
-          fontSize: "14px",
-          fontWeight: "500",
-          textShadow: "0 0 8px rgba(139, 69, 197, 0.6)"
+          color: "rgba(255, 255, 255, 0.7)", // ドラクエ風白文字
+          fontSize: "16px", // 少し大きく
+          fontWeight: "bold", // 太字でドラクエ風
+          fontFamily: "monospace", // ドラクエ風フォント統一
+          textShadow: "1px 1px 0px #000", // ドラクエ風テキストシャドウ
+          letterSpacing: "1px" // 文字間隔
         }}>
           {slotNumber}
         </span>
@@ -179,36 +185,16 @@ export function EmptyCard({
       
       {/* ドラクエ風アニメーション定義 */}
       <style>{`
-        @keyframes dragonQuestReady {
+        @keyframes dragonQuestGlow {
           0%, 100% {
-            border-color: ${UI_TOKENS.COLORS.purpleAlpha40};
-            box-shadow: inset 0 0 8px ${UI_TOKENS.COLORS.purpleAlpha15}, 0 2px 8px ${UI_TOKENS.COLORS.blackAlpha20};
+            border-color: rgba(255, 255, 255, 0.9);
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.2), 0 0 8px rgba(255, 255, 255, 0.3), ${UI_TOKENS.SHADOWS.panelDistinct};
+            transform: scale(1.05);
           }
           50% {
-            border-color: ${UI_TOKENS.COLORS.purpleAlpha80};
-            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 2px 12px ${UI_TOKENS.COLORS.purpleAlpha15};
-          }
-        }
-        
-        @keyframes dragonQuestDrop {
-          0%, 100% {
-            box-shadow: inset 0 0 12px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 6px 18px ${UI_TOKENS.COLORS.purpleAlpha30}, 0 0 28px ${UI_TOKENS.COLORS.purpleAlpha15};
+            border-color: rgba(255, 255, 255, 1.0);
+            box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.3), 0 0 12px rgba(255, 255, 255, 0.4), ${UI_TOKENS.SHADOWS.panelDistinct};
             transform: scale(1.08);
-          }
-          50% {
-            box-shadow: inset 0 0 20px ${UI_TOKENS.COLORS.purpleAlpha60}, 0 6px 22px ${UI_TOKENS.COLORS.purpleAlpha40}, 0 0 34px ${UI_TOKENS.COLORS.purpleAlpha30};
-            transform: scale(1.12);
-          }
-        }
-        
-        @keyframes dropPulse {
-          0%, 100% {
-            opacity: 0.6;
-            transform: translate(-50%, -50%) scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.2);
           }
         }
       `}</style>
