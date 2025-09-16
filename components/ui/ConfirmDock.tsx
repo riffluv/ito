@@ -16,7 +16,7 @@ export default function ConfirmDock({
       right={{ base: 3, md: 6 }}
       bottom={{ base: DOCK_BOTTOM_MOBILE, md: DOCK_BOTTOM_DESKTOP }}
       zIndex={22}
-      rounded="xl"
+      borderRadius={0}
       p={{ base: 3, md: 4 }}
       display="flex"
       alignItems="center"
@@ -24,20 +24,20 @@ export default function ConfirmDock({
       bg="surfaceOverlay"
       borderWidth="1px"
       borderColor="borderDefault"
-      shadow="md"
-      backdropFilter="blur(12px)"
+      boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+      // ガラス効果除去
     >
       <Button
-        size="lg"
+        fontSize="17px"
         onClick={onConfirm}
-        rounded="lg"
+        borderRadius={0}
         fontWeight={700}
         px={8}
         bg="accent"
         color="white"
         _hover={{
           bg: "accentHover",
-          shadow: "lg",
+          boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6)",
           transform: "translateY(-2px)",
         }}
         _active={{ bg: "accentActive", transform: "translateY(-1px)" }}
