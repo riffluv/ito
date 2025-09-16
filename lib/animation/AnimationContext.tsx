@@ -1,27 +1,92 @@
 "use client";
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
 
 export type AnimationSettings = {
   animationMode: "auto" | "3d" | "simple";
-  effectiveMode: "3d" | "simple";
+  effectiveMode: "3d" | "simple"; // 適用済み（機能ガード後）
   reducedMotion: boolean;
   gpuCapability?: "high" | "low";
   setAnimationMode: (m: "auto" | "3d" | "simple") => void;
+  supports3D?: boolean; // CSS 3D/環境での3Dサポート
 };
 
 const AnimationContext = createContext<AnimationSettings | null>(null);
 
 export function AnimationProvider({ children }: { children: React.ReactNode }) {
   const { animationMode, effectiveMode, setAnimationMode, gpuCapability } = useGPUPerformance();
-  const reducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // ユーザー強制フラグ（ローカル設定）。trueなら reduced-motion を無視してアニメON。
+  const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("force-animations") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  // 設定変更イベントを購読（SettingsModalから発火）
+  useEffect(() => {
+    const handler = () => {
+      try {
+        setForceAnimations(window.localStorage.getItem("force-animations") === "true");
+      } catch {}
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("forceAnimationsChanged", handler);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("forceAnimationsChanged", handler);
+      }
+    };
+  }, []);
+
+  const reducedMotion = useMemo(() => {
+    const base =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return forceAnimations ? false : !!base;
+  }, [forceAnimations]);
+
+  // 3Dサポートの簡易フィーチャーテスト（CSS 3D + WebGLのどちらかに依存するUI向け）
+  const [supports3D, setSupports3D] = useState<boolean>(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const css = (window as any).CSS;
+      const cssOK = !!(css && css.supports && css.supports("transform-style", "preserve-3d"));
+      const perspectiveOK = !!(css && css.supports && css.supports("perspective", "1px"));
+      // 実測チェック: 実DOMに追加して 3D transform の行列が有効かを見る
+      let transform3dOK = false;
+      try {
+        const el = document.createElement("div");
+        el.style.cssText = "position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;transform:translateZ(1px);";
+        document.body.appendChild(el);
+        const matrix = window.getComputedStyle(el).transform;
+        transform3dOK = !!(matrix && matrix !== "none");
+        document.body.removeChild(el);
+      } catch {}
+
+      // supports3D は CSS 3Dの可否のみで判定（WebGL可否は背景選択で個別に制御）
+      setSupports3D(Boolean(cssOK && (perspectiveOK || transform3dOK)));
+    } catch {
+      setSupports3D(false);
+    }
+  }, []);
+
+  // 機能ガード後の適用モード
+  const appliedMode: "3d" | "simple" = useMemo(() => {
+    if (reducedMotion) return "simple";
+    const base = effectiveMode; // auto→highなら3d, lowならsimple
+    if (base === "3d" && supports3D === false) return "simple";
+    return base;
+  }, [effectiveMode, reducedMotion, supports3D]);
 
   return (
     <AnimationContext.Provider
-      value={{ animationMode, effectiveMode, reducedMotion, gpuCapability, setAnimationMode }}
+      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, gpuCapability, setAnimationMode, supports3D }}
     >
       {children}
     </AnimationContext.Provider>
@@ -37,5 +102,5 @@ export function useAnimationSettings(): AnimationSettings {
     typeof window !== "undefined" &&
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  return { animationMode, effectiveMode, reducedMotion, setAnimationMode };
+  return { animationMode, effectiveMode, reducedMotion, setAnimationMode } as AnimationSettings;
 }
