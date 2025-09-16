@@ -3,6 +3,7 @@
  * プロジェクト全体で一貫したエラー処理とユーザー通知を提供
  */
 import { notify } from "@/components/ui/notify";
+import { logError } from "@/lib/utils/log";
 
 export type ErrorSeverity = "error" | "warning" | "info";
 
@@ -83,7 +84,7 @@ export function handleError(
   }
 
   // コンソールログ
-  console.error(`[${context}] ${appError.message}`, {
+  logError(context, appError.message, {
     code: appError.code,
     severity: appError.severity,
     technicalDetails: appError.technicalDetails,
@@ -178,5 +179,5 @@ export function handleFirebaseQuotaError(context: string = ""): void {
     type: "error",
   });
 
-  console.error(`[Firebase Quota] ${context}: Read quota exceeded`);
+  logError("firebase-quota", `Read quota exceeded: ${context}`);
 }

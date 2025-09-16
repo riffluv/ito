@@ -1,6 +1,7 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
+import { logError } from "@/lib/utils/log";
 import { joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -145,7 +146,7 @@ export function useOptimizedRoomState(
             };
             resume();
           } else {
-            console.error("Room subscription error:", error);
+            logError("useOptimizedRoomState", "subscription-error", error);
             scheduleDebouncedUpdate({ room: null });
           }
         }

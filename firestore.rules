@@ -1,125 +1,202 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // rooms コレクション
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function safeText(value, min, max) {
+      return value is string
+        && value.size() >= min
+        && value.size() <= max
+        && !value.matches('.*<.*')
+        && !value.matches('.*>.*');
+    }
+
+    function safeTextAllowEmpty(value, max) {
+      return value is string
+        && value.size() <= max
+        && !value.matches('.*<.*')
+        && !value.matches('.*>.*');
+    }
+
+    function optionalSafeText(value, min, max) {
+      return value == null || safeText(value, min, max);
+    }
+
+    function isTimestampValue(value) {
+      return value == null || value is timestamp;
+    }
+
+    function isValidRoomOptions(options) {
+      return options is map
+        && options.keys().hasOnly(['allowContinueAfterFail', 'resolveMode', 'displayMode', 'defaultTopicType'])
+        && options.allowContinueAfterFail is bool
+        && options.resolveMode is string
+        && options.resolveMode in ['sort-submit']
+        && (!('displayMode' in options) || options.displayMode == null || options.displayMode in ['full', 'minimal'])
+        && (!('defaultTopicType' in options) || options.defaultTopicType == null || safeText(options.defaultTopicType, 1, 24));
+    }
+
+    function isValidOrderMap(order) {
+      return order is map
+        && order.keys().hasOnly(['list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'total', 'proposal'])
+        && (!('list' in order) || (order.list is list && order.list.size() <= 16))
+        && (!('proposal' in order) || (order.proposal == null || (order.proposal is list && order.proposal.size() <= 16)))
+        && (!('decidedAt' in order) || isTimestampValue(order.decidedAt))
+        && (!('lastNumber' in order) || order.lastNumber == null || (order.lastNumber is number && order.lastNumber >= 0 && order.lastNumber <= 120))
+        && (!('failed' in order) || order.failed is bool)
+        && (!('failedAt' in order) || order.failedAt == null || order.failedAt is number)
+        && (!('total' in order) || order.total == null || (order.total is number && order.total >= 0 && order.total <= 16));
+    }
+
+    function isValidResultMap(result) {
+      return result is map
+        && result.keys().hasOnly(['success', 'revealedAt'])
+        && result.success is bool
+        && (!('revealedAt' in result) || isTimestampValue(result.revealedAt));
+    }
+
+    function isValidDealMap(deal) {
+      return deal is map
+        && deal.keys().hasOnly(['seed', 'min', 'max', 'players'])
+        && safeText(deal.seed, 1, 64)
+        && deal.min is number && deal.min >= 0 && deal.min <= 120
+        && deal.max is number && deal.max >= deal.min && deal.max <= 120
+        && (!('players' in deal) || (deal.players is list && deal.players.size() <= 16));
+    }
+
+    function isValidRoomDoc(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'name', 'hostId', 'hostName', 'options', 'status',
+          'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
+          'topic', 'topicOptions', 'topicBox',
+          'order', 'result', 'deal', 'round'
+        ])
+        && safeText(data.name, 1, 48)
+        && data.hostId is string && data.hostId.size() > 0
+        && (!('hostName' in data) || optionalSafeText(data.hostName, 1, 32))
+        && isValidRoomOptions(data.options)
+        && data.status in ['waiting', 'clue', 'reveal', 'finished']
+        && (!('topic' in data) || data.topic == null || safeText(data.topic, 1, 120))
+        && (!('topicOptions' in data) || data.topicOptions == null || (data.topicOptions is list && data.topicOptions.size() <= 12))
+        && (!('topicBox' in data) || data.topicBox == null || safeText(data.topicBox, 1, 24))
+        && (!('round' in data) || (data.round is number && data.round >= 0 && data.round <= 50))
+        && (!('order' in data) || data.order == null || isValidOrderMap(data.order))
+        && (!('result' in data) || data.result == null || isValidResultMap(data.result))
+        && (!('deal' in data) || data.deal == null || isValidDealMap(data.deal))
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('lastActiveAt' in data) || data.lastActiveAt is timestamp)
+        && (!('closedAt' in data) || isTimestampValue(data.closedAt))
+        && (!('expiresAt' in data) || isTimestampValue(data.expiresAt));
+    }
+
+    function isValidPlayerDoc(data) {
+      return data is map
+        && data.keys().hasOnly(['name', 'avatar', 'number', 'clue1', 'ready', 'orderIndex', 'uid', 'lastSeen'])
+        && safeText(data.name, 1, 24)
+        && safeTextAllowEmpty(data.avatar, 64)
+        && (data.number == null || (data.number is number && data.number >= 0 && data.number <= 120))
+        && safeTextAllowEmpty(data.clue1, 120)
+        && data.ready is bool
+        && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 20
+        && (!('uid' in data) || optionalSafeText(data.uid, 1, 64))
+        && (!('lastSeen' in data) || isTimestampValue(data.lastSeen));
+    }
+
+    function isValidChatDoc(data) {
+      return data is map
+        && data.keys().hasOnly(['sender', 'uid', 'text', 'createdAt'])
+        && safeText(data.sender, 1, 32)
+        && optionalSafeText(data.uid, 1, 64)
+        && safeText(data.text, 1, 500)
+        && data.text.matches('(?s).*\S.*')
+        && data.createdAt is timestamp;
+    }
+
+    function isValidHostAssignment(roomId) {
+      if (!(request.resource.data.hostId is string && request.resource.data.hostId.size() > 0)) {
+        return false;
+      }
+      if (request.resource.data.hostId == resource.data.hostId) {
+        return true;
+      }
+      let hostDoc = get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId));
+      return hostDoc.exists() && hostDoc.data.uid == request.resource.data.hostId;
+    }
+
     match /rooms/{roomId} {
-      allow read: if true; // 公開
+      allow read: if isAuthenticated();
 
-      // 作成は認証ユーザーのみ
-      allow create: if request.auth != null &&
-        // minimal validation
-        request.resource.data.name is string &&
-        request.resource.data.hostId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.hostId
+        && isValidRoomDoc(request.resource.data)
+        && request.resource.data.status == 'waiting';
 
-      // 更新はルームのホストに限定（status/closedAt など重要フィールド）
-      // + order.* フィールドの書き込みを厳格化
-      allow update: if request.auth != null && isHost(roomId)
-        // order フィールドの変更に対する追加制限
-        && (
-          // orderフィールドが変更されていない場合はOK
-          !('order' in request.resource.data) ||
-          resource.data.order == request.resource.data.order ||
-          // orderフィールドが変更される場合の制限
-          (
-            // ホストのみが order を変更可能
-            isHost(roomId) &&
-            // 特定のstatusでのみ変更可能
-            (resource.data.status in ['clue', 'reveal']) &&
-            // list が存在する場合、既存プレイヤーのみ含める
-            (
-              !('list' in request.resource.data.order) ||
-              isValidPlayerList(roomId, request.resource.data.order.list)
-            ) &&
-            // proposal が存在する場合、既存プレイヤーのみ含める  
-            (
-              !('proposal' in request.resource.data.order) ||
-              isValidPlayerList(roomId, request.resource.data.order.proposal)
-            )
-          )
-        );
+      allow update: if isAuthenticated()
+        && (isHost(roomId) || isAdmin())
+        && isValidRoomDoc(request.resource.data)
+        && isValidHostAssignment(roomId);
 
-      // 削除はホストまたは管理者（要カスタムクレーム）
-      allow delete: if request.auth != null && (isHost(roomId) || isAdmin());
+      allow delete: if isAuthenticated() && (isHost(roomId) || isAdmin());
 
-      // players サブコレクション
       match /players/{playerId} {
-        // プレイヤーは自身のドキュメントのみ作成/更新/削除可能
-        // ゲーム開始後の途中参加は不可（waiting時のみ作成許可）
-        allow create: if request.auth != null && 
-          request.auth.uid == request.resource.data.uid &&
-          isWaiting(roomId) &&
-          // 必須フィールドの検証
-          request.resource.data.name is string &&
-          request.resource.data.name.size() <= 20 &&
-          request.resource.data.uid is string;
-        
-        allow read: if true;
-        
-        // 更新は本人のみ、かつ制限付き
-        allow update: if request.auth != null && 
-          request.auth.uid == resource.data.uid &&
-          // nameフィールドの変更制限（waiting状態のみ）
-          (
-            !('name' in request.resource.data) ||
-            resource.data.name == request.resource.data.name ||
-            isWaiting(roomId)
-          ) &&
-          // numberフィールドの変更制限（プレイヤー自身のみ、クルー中のみ）
-          (
-            !('number' in request.resource.data) ||
-            resource.data.number == request.resource.data.number ||
-            (getRoomStatus(roomId) in ['clue', 'reveal'])
-          );
-        
-        allow delete: if request.auth != null && request.auth.uid == resource.data.uid;
-      }
+        allow read: if isAuthenticated();
 
-      // chat サブコレクション
-      match /chat/{msgId} {
-        allow read: if true;
-        // 作成: 認証済み かつ
-        //  - system メッセージ もしくは uid が本人
-        //  - createdAt は timestamp
-        //  - text は文字列（長さ<= 500 目安）
-        allow create: if request.auth != null
-          && request.resource.data.sender is string
+        allow create: if isAuthenticated()
+          && request.auth.uid == playerId
+          && request.resource.data.uid == request.auth.uid
+          && isWaiting(roomId)
+          && isValidPlayerDoc(request.resource.data);
+
+        allow update: if isAuthenticated()
+          && request.auth.uid == resource.data.uid
+          && request.resource.data.uid == resource.data.uid
+          && isValidPlayerDoc(request.resource.data)
           && (
-            request.resource.data.sender == "system" ||
-            (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+            !('name' in request.resource.data) || resource.data.name == request.resource.data.name || isWaiting(roomId)
           )
-          && request.resource.data.text is string
-          && request.resource.data.text.size() <= 500
-          && request.resource.data.createdAt is timestamp;
-        allow delete: if false;
+          && (
+            !('number' in request.resource.data)
+            || resource.data.number == request.resource.data.number
+            || (getRoomStatus(roomId) in ['clue', 'reveal'])
+          );
+
+        allow delete: if isAuthenticated() && request.auth.uid == resource.data.uid;
+      }
+
+      match /chat/{msgId} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAuthenticated()
+          && isValidChatDoc(request.resource.data)
+          && (
+            (request.resource.data.sender == 'system' && (isHost(roomId) || isAdmin()))
+            || (request.resource.data.sender != 'system' && request.resource.data.uid == request.auth.uid)
+          );
+
         allow update: if false;
+        allow delete: if false;
       }
     }
 
-    function isWaiting(roomId){
-      return get(/databases/$(database)/documents/rooms/$(roomId)).data.status == "waiting";
+    function isWaiting(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.status == 'waiting';
     }
-    function isHost(roomId){
+    function isHost(roomId) {
       return get(/databases/$(database)/documents/rooms/$(roomId)).data.hostId == request.auth.uid;
     }
-    function isAdmin(){
-      return request.auth.token.admin == true;
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
     }
-    function getRoomStatus(roomId){
+    function getRoomStatus(roomId) {
       return get(/databases/$(database)/documents/rooms/$(roomId)).data.status;
     }
-    // プレイヤーリストが既存のプレイヤーのみを含んでいるかチェック
     function isValidPlayerList(roomId, playerList) {
-      // 空リストは許可
-      return playerList.size() == 0 ||
-        // リスト内の各プレイヤーがルーム内に存在することを確認
-        // 注意: この実装は簡易版。実際の実装ではプレイヤーの存在確認が必要だが
-        // Firestoreルールでの複雑なクエリは制限があるため、
-        // アプリケーション側でも検証を行う
-        playerList.size() <= 10; // 最大プレイヤー数制限
+      return playerList.size() == 0 || playerList.size() <= 10;
     }
-    // レート制限のヘルパー関数
     function isRateLimited() {
-      // 簡易的なレート制限（実際の実装ではより複雑な制御が必要）
       return request.time < resource.data.lastUpdate + duration.value(1, 's');
     }
   }

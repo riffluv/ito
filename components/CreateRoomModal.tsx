@@ -11,6 +11,8 @@ import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp } from "fir
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { UI_TOKENS } from "@/theme/layout";
+import { logError } from "@/lib/utils/log";
+import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
 
 export function CreateRoomModal({
   isOpen,
@@ -39,30 +41,46 @@ export function CreateRoomModal({
       });
       return;
     }
-    if (!name.trim()) {
-      notify({ title: "部屋名を入力してください", type: "warning" });
+
+    let sanitizedRoomName: string;
+    try {
+      sanitizedRoomName = validateRoomName(name);
+    } catch (err: any) {
+      notify({
+        title: "部屋名を確認してください",
+        description: err?.errors?.[0]?.message,
+        type: "error",
+      });
       return;
     }
-    if (!displayName?.trim()) {
-      notify({ title: "プレイヤー名を設定してください", type: "warning" });
+
+    let sanitizedDisplayName: string;
+    try {
+      sanitizedDisplayName = validateDisplayName(displayName || "");
+    } catch (err: any) {
+      notify({
+        title: "プレイヤー名を設定してください",
+        description: err?.errors?.[0]?.message,
+        type: "warning",
+      });
       return;
     }
+
     setSubmitting(true);
     try {
       const options: RoomOptions = {
-        allowContinueAfterFail: true, // デフォルト: 最後まで並べる
-        resolveMode: "sort-submit", // デフォルト: 一括提出方式
-        displayMode, // 選択されたカード表示モード
-        defaultTopicType: "通常版", // ワンクリック開始のデフォルト
+        allowContinueAfterFail: true,
+        resolveMode: "sort-submit",
+        displayMode,
+        defaultTopicType: "通常版",
       };
-      // ルームのデフォルトTTL（12時間）を付与して放置部屋を自動清掃
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const room: RoomDoc = {
-        name: applyDisplayModeToName(name.trim(), displayMode),
+        name: applyDisplayModeToName(sanitizedRoomName, displayMode),
         hostId: user.uid,
-        hostName: displayName || "匿名", // ホスト名を直接埋め込み（Firestore最適化）
+        hostName: sanitizedDisplayName || "匿名",
         options,
-        status: "waiting", // 新規作成時は待機
+        status: "waiting",
         createdAt: serverTimestamp(),
         lastActiveAt: serverTimestamp(),
         closedAt: null,
@@ -74,8 +92,8 @@ export function CreateRoomModal({
       };
       const roomRef = await addDoc(collection(db!, "rooms"), room);
       const pdoc: PlayerDoc = {
-        name: displayName, // displayNameの存在は上でチェック済み
-        avatar: getAvatarByOrder(0), // ホストは常に最初のアバター
+        name: sanitizedDisplayName,
+        avatar: getAvatarByOrder(0),
         number: null,
         clue1: "",
         ready: false,
@@ -94,6 +112,7 @@ export function CreateRoomModal({
       } catch {}
       onCreated?.(roomRef.id);
     } catch (e: any) {
+      logError("rooms", "create-room", e);
       notify({
         title: "作成に失敗しました",
         description: e?.message,
@@ -103,6 +122,7 @@ export function CreateRoomModal({
       setSubmitting(false);
     }
   };
+
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>

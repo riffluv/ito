@@ -1,8 +1,10 @@
 import { doc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { sanitizePlainText } from "@/lib/utils/sanitize";
 
 export async function updateClue1(roomId: string, playerId: string, value: string) {
-  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { clue1: value, ready: true });
+  const clean = sanitizePlainText(value).slice(0, 120);
+  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { clue1: clean, ready: true });
 }
 
 export async function saveOrderIndices(roomId: string, order: string[]) {
@@ -31,9 +33,11 @@ export async function resetPlayerState(roomId: string, playerId: string) {
 }
 
 export async function setPlayerNameAvatar(roomId: string, playerId: string, name: string, avatar: string) {
-  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name, avatar });
+  const cleanName = sanitizePlainText(name).slice(0, 24);
+  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name: cleanName, avatar });
 }
 
 export async function setPlayerName(roomId: string, playerId: string, name: string) {
-  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name });
+  const cleanName = sanitizePlainText(name).slice(0, 24);
+  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { name: cleanName });
 }

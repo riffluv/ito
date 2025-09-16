@@ -1,6 +1,7 @@
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
+import { logWarn } from "@/lib/utils/log";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
   collection,
@@ -126,7 +127,7 @@ export async function leaveRoom(
       if (Object.keys(updates).length > 0) tx.update(roomRef, updates);
     });
   } catch (error) {
-    console.warn("Failed to update room state on leave:", error);
+    logWarn("rooms", "leave-room-update-failed", error);
   }
 
   // 退出システムメッセージ（UTF-8）
@@ -219,7 +220,7 @@ export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolea
     await batch.commit();
   } catch (e) {
     // クリア失敗は致命的ではないためログのみに留める
-    console.warn("resetRoomToWaiting: failed to reset players state", e);
+    logWarn("rooms", "reset-room-reset-players-failed", e);
   }
 }
 

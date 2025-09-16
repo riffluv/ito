@@ -5,6 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
+import { notify } from "@/components/ui/notify";
+import { validateChatMessage } from "@/lib/validation/forms";
 import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import ChatMessageRow from "@/components/ui/ChatMessageRow";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
@@ -122,17 +124,35 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   }, [roomId]);
 
   const send = async () => {
-    const t = text.trim();
-    if (!t) return;
     if (readOnly) return;
+    let sanitized: string;
+    try {
+      sanitized = validateChatMessage(text);
+    } catch (err: any) {
+      notify({
+        title: "メッセージを確認してください",
+        description: err?.errors?.[0]?.message,
+        type: "warning",
+      });
+      return;
+    }
     const now = Date.now();
-    if (now - lastSentAt.current < 600) return; // ローカルクールダウン
+    if (now - lastSentAt.current < 600) return;
     lastSentAt.current = now;
-    const clipped = t.slice(0, 100);
+    const clipped = sanitized.slice(0, 100);
     if (!user?.uid) return;
-    await sendMessage(roomId, user.uid, displayName || "匿名", clipped);
-    setText("");
+    try {
+      await sendMessage(roomId, user.uid, displayName || "匿名", clipped);
+      setText("");
+    } catch (err) {
+      notify({
+        title: "送信に失敗しました",
+        description: (err as any)?.message,
+        type: "error",
+      });
+    }
   };
+
 
   return (
     <Box

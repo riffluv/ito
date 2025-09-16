@@ -3,6 +3,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { logDebug, logError } from "@/lib/utils/log";
 import { Dialog, HStack, Text, VStack } from "@chakra-ui/react";
 import { X } from "lucide-react";
 
@@ -34,7 +35,7 @@ export function AdvancedHostPanel({
   const canChangeMode = room.status === "waiting";
 
   // Debug log for troubleshooting
-  console.log("AdvancedHostPanel Debug:", {
+  logDebug("advanced-host-panel", "state", {
     status: room.status,
     canChangeMode,
     currentMode,
@@ -60,6 +61,7 @@ export function AdvancedHostPanel({
         ((room as any)?.topicBox as string) || null
       );
     } catch (error: any) {
+      logError("advanced-host-panel", "shuffle-topic", error);
       notify({
         title: "シャッフルに失敗",
         description: error?.message,
@@ -75,6 +77,7 @@ export function AdvancedHostPanel({
       await topicControls.resetTopic(roomId);
       notify({ title: "ルームをリセットしました", type: "success" });
     } catch (error: any) {
+      logError("advanced-host-panel", "reset-topic", error);
       notify({
         title: "ルームリセットに失敗",
         description: error?.message,
