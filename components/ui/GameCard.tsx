@@ -25,57 +25,13 @@ export type GameCardProps = {
   waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
 };
 
-// ドラクエ風統一デザインシステム - メインメニューとの一体感
-const getDragonQuestStyle = (waitingInCentral: boolean, state: string) => {
-  // ベース色設定（メインメニューと統一）
-  const baseColors = {
-    bg: waitingInCentral ? "#1a1d23" : "#0f0f23", // 深い青黒
-    border: waitingInCentral
-      ? UI_TOKENS.COLORS.whiteAlpha80
-      : UI_TOKENS.COLORS.whiteAlpha60,
-    text: UI_TOKENS.COLORS.textBase,
-    meta: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.textMuted,
-  };
-
-  // 状態別アクセント
-  const stateAccent = {
-    success: UI_TOKENS.COLORS.dqBlue, // ドラクエ風の青
-    fail: UI_TOKENS.COLORS.dqRed, // 控えめな赤
-    default: baseColors.border,
-  };
-
-  // ドラクエ風の重厚なボーダー（メインメニューと統一）
-  const borderStyle = waitingInCentral
-    ? "2px solid" // 中央では少し太め
-    : "1px solid"; // 通常時は細め
-
-  // メインメニューレベルの豪華なドラクエ風シャドウ（トークン化）
-  const boxShadow = waitingInCentral
-    ? UI_TOKENS.SHADOWS.panelDistinct
-    : state === "success" || state === "ready"
-    ? UI_TOKENS.SHADOWS.cardFloating
-    : UI_TOKENS.SHADOWS.cardRaised;
-
-  return {
-    bg: baseColors.bg,
-    border: borderStyle,
-    borderColor:
-      state === "success"
-        ? UI_TOKENS.COLORS.dqBlue // 成功時は青
-        : state === "fail"
-          ? UI_TOKENS.COLORS.dqRed // 失敗時は赤
-          : state === "ready"
-            ? UI_TOKENS.COLORS.purpleAlpha80 // 連想ワード登録完了時は紫ボーダー
-            : stateAccent.default, // その他はデフォルト（白）
-    boxShadow,
-    colors: {
-      text: baseColors.text,
-      meta: baseColors.meta,
-      clue: waitingInCentral ? UI_TOKENS.COLORS.textBase : "#e2e8f0",
-      number: UI_TOKENS.COLORS.textBase, // 全状態で白色統一 - 視認性最優先
-    },
-  };
-};
+// Import the unified card system
+import { BaseCard } from "../cards/BaseCard";
+import {
+  getDragonQuestStyleOverrides,
+  getDragonQuestTextColors,
+  type GameCardState
+} from "../cards/card.styles";
 
 // 🎯 統一されたテキストスタイル関数（CSS ベストプラクティス）
 const getUnifiedTextStyle = (): React.CSSProperties => ({
@@ -103,7 +59,9 @@ export function GameCard({
   // hoverはCSS擬似クラスで処理し、再レンダーを避ける
 
   // ドラクエ風統一デザイン取得
-  const dragonQuestStyle = getDragonQuestStyle(waitingInCentral, state);
+  // 🎯 統一されたドラクエ風スタイルシステム使用
+  const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
+  const textColors = getDragonQuestTextColors(waitingInCentral);
 
   // Shared semantic colors
   const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
@@ -150,7 +108,7 @@ export function GameCard({
           borderRadius="8px"
           border="none"
           bg="transparent"
-          color={dragonQuestStyle.colors.text}
+          color={textColors.text}
         >
           <Box position="relative" width="100%" height="100%">
             {/* FRONT LAYER */}
@@ -160,15 +118,15 @@ export function GameCard({
                 index={typeof index === "number" ? index : null}
                 name={name}
                 clue={clue}
-                metaColor={dragonQuestStyle.colors.meta}
-                clueColor={dragonQuestStyle.colors.clue}
-                bg={dragonQuestStyle.bg}
-                border={dragonQuestStyle.border}
+                metaColor={textColors.meta}
+                clueColor={textColors.clue}
+                bg={styleOverrides.bg}
+                border={`${styleOverrides.borderWidth} solid`}
                 borderColor={successBorder}
                 boxShadow={
                   successShadow
-                    ? mergeShadow(dragonQuestStyle.boxShadow)
-                    : dragonQuestStyle.boxShadow
+                    ? mergeShadow(styleOverrides.boxShadow)
+                    : styleOverrides.boxShadow
                 }
                 waitingInCentral={waitingInCentral}
               />
@@ -181,15 +139,15 @@ export function GameCard({
                 index={typeof index === "number" ? index : null}
                 name={name}
                 number={typeof number === "number" ? number : null}
-                metaColor={dragonQuestStyle.colors.meta}
-                numberColor={dragonQuestStyle.colors.number}
-                bg={dragonQuestStyle.bg}
-                border={dragonQuestStyle.border}
+                metaColor={textColors.meta}
+                numberColor={textColors.number}
+                bg={styleOverrides.bg}
+                border={`${styleOverrides.borderWidth} solid`}
                 borderColor={successBorder}
                 boxShadow={
                   successShadow
-                    ? mergeShadow(dragonQuestStyle.boxShadow)
-                    : dragonQuestStyle.boxShadow
+                    ? mergeShadow(styleOverrides.boxShadow)
+                    : styleOverrides.boxShadow
                 }
                 waitingInCentral={waitingInCentral}
               />
@@ -241,12 +199,12 @@ export function GameCard({
               index={typeof index === "number" ? index : null}
               name={name}
               clue={clue}
-              metaColor={dragonQuestStyle.colors.meta}
-              clueColor={dragonQuestStyle.colors.clue}
-              bg={dragonQuestStyle.bg}
-              border={dragonQuestStyle.border}
+              metaColor={textColors.meta}
+              clueColor={textColors.clue}
+              bg={styleOverrides.bg}
+              border={`${styleOverrides.borderWidth} solid`}
               borderColor={successBorder}
-              boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+              boxShadow={successShadow ? mergeShadow(styleOverrides.boxShadow) : styleOverrides.boxShadow}
               waitingInCentral={waitingInCentral}
             />
           </Box>
@@ -257,12 +215,12 @@ export function GameCard({
               index={typeof index === "number" ? index : null}
               name={name}
               number={typeof number === "number" ? number : null}
-              metaColor={dragonQuestStyle.colors.meta}
-              numberColor={UI_TOKENS.COLORS.textBase}
-              bg={dragonQuestStyle.bg}
-              border={dragonQuestStyle.border}
+              metaColor={textColors.meta}
+              numberColor={textColors.number}
+              bg={styleOverrides.bg}
+              border={`${styleOverrides.borderWidth} solid`}
               borderColor={successBorder}
-              boxShadow={successShadow ? mergeShadow(dragonQuestStyle.boxShadow) : dragonQuestStyle.boxShadow}
+              boxShadow={successShadow ? mergeShadow(styleOverrides.boxShadow) : styleOverrides.boxShadow}
               waitingInCentral={waitingInCentral}
             />
           </Box>
@@ -286,10 +244,10 @@ export function GameCard({
       css={cardSizeCss()}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
-      border={dragonQuestStyle.border}
-      borderColor={dragonQuestStyle.borderColor}
-      bg={dragonQuestStyle.bg}
-      color={dragonQuestStyle.colors.text}
+      border={`${styleOverrides.borderWidth} solid`}
+      borderColor={styleOverrides.borderColor}
+      bg={styleOverrides.bg}
+      color={textColors.text}
       display="grid"
       gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
@@ -304,7 +262,7 @@ export function GameCard({
         textRendering: "optimizeLegibility",
       }}
       transition={`transform 0.3s ${HOVER_EASING}, box-shadow 0.3s ${HOVER_EASING}`}
-      boxShadow={dragonQuestStyle.boxShadow}
+      boxShadow={styleOverrides.boxShadow}
       _hover={{
         transform: hoveredTransform,
         boxShadow: hoveredBoxShadow,
@@ -315,7 +273,7 @@ export function GameCard({
         fontSize="2xs"
         lineHeight="1.3"
         fontWeight={700}
-        color={dragonQuestStyle.colors.meta}
+        color={textColors.meta}
         display="flex"
         alignItems="center"
       >
@@ -414,7 +372,7 @@ export function GameCard({
         fontSize="2xs"
         lineHeight="1.3"
         fontWeight={700}
-        color={dragonQuestStyle.colors.meta}
+        color={textColors.meta}
         display="flex"
         alignItems="center"
         justifyContent="flex-start"
