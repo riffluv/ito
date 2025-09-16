@@ -140,18 +140,17 @@ export function GameCard({
       );
       return (
         <Box
+          className={styles.root}
           width={UNIFIED_LAYOUT.CARD.WIDTH}
           height={UNIFIED_LAYOUT.CARD.HEIGHT}
           minW={UNIFIED_LAYOUT.CARD.WIDTH}
           minH={UNIFIED_LAYOUT.CARD.HEIGHT}
           css={cardSizeCss()}
-          p={{ base: 3, md: "13px" }}
+          p={0}
           borderRadius="lg"
-          border={dragonQuestStyle.border}
-          borderColor={dragonQuestStyle.borderColor}
-          bg={dragonQuestStyle.bg}
+          border="none"
+          bg="transparent"
           color={dragonQuestStyle.colors.text}
-          boxShadow={dragonQuestStyle.boxShadow}
         >
           <Box position="relative" width="100%" height="100%">
             {/* FRONT LAYER */}
@@ -163,10 +162,14 @@ export function GameCard({
                 clue={clue}
                 metaColor={dragonQuestStyle.colors.meta}
                 clueColor={dragonQuestStyle.colors.clue}
-                bg="transparent"
-                border="none"
-                borderColor="transparent"
-                boxShadow="none"
+                bg={dragonQuestStyle.bg}
+                border={dragonQuestStyle.border}
+                borderColor={successBorder}
+                boxShadow={
+                  successShadow
+                    ? mergeShadow(dragonQuestStyle.boxShadow)
+                    : dragonQuestStyle.boxShadow
+                }
                 waitingInCentral={waitingInCentral}
               />
             </Box>
@@ -180,10 +183,14 @@ export function GameCard({
                 number={typeof number === "number" ? number : null}
                 metaColor={dragonQuestStyle.colors.meta}
                 numberColor={dragonQuestStyle.colors.number}
-                bg="transparent"
-                border="none"
-                borderColor="transparent"
-                boxShadow="none"
+                bg={dragonQuestStyle.bg}
+                border={dragonQuestStyle.border}
+                borderColor={successBorder}
+                boxShadow={
+                  successShadow
+                    ? mergeShadow(dragonQuestStyle.boxShadow)
+                    : dragonQuestStyle.boxShadow
+                }
                 waitingInCentral={waitingInCentral}
               />
             </Box>
