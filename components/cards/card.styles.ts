@@ -103,6 +103,35 @@ export const CARD_STYLES = {
       boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04)",
     },
   },
+
+  // ドラクエ風ゲームカード用スタイル（GameCard統合用）
+  dragonQuest: {
+    bg: "#0f0f23", // 深い青黒（デフォルト）
+    borderWidth: "1px",
+    borderStyle: "solid" as const,
+    borderColor: UI_TOKENS.COLORS.whiteAlpha60,
+    borderRadius: "1rem",
+    color: UI_TOKENS.COLORS.textBase,
+    boxShadow: UI_TOKENS.SHADOWS.cardRaised,
+    display: "flex" as const,
+    flexDirection: "column" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    aspectRatio: "5/7",
+    fontFamily: "monospace", // ドラクエ風フォント
+    fontWeight: "bold" as const,
+    textShadow: "1px 1px 2px rgba(0,0,0,0.8)", // ドラクエ風テキストシャドウ
+    letterSpacing: "0.5px",
+    userSelect: "none" as const,
+    cursor: "pointer",
+    position: "relative" as const,
+    overflow: "hidden" as const,
+    transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.3s ${UI_TOKENS.EASING.standard}`,
+    _hover: {
+      transform: "translateY(-2px) scale(1.02)",
+      boxShadow: UI_TOKENS.SHADOWS.cardHover,
+    },
+  },
 } as const;
 
 // 数字サイズ計算関数（既存ロジックを統合）
@@ -123,5 +152,54 @@ export const getLetterSpacing = (number: number | null | undefined): string => {
   return digits >= 3 ? "-0.1em" : "normal";
 };
 
+// ドラクエ風ゲームカードの状態別スタイル生成関数
+export const getDragonQuestStyleOverrides = (
+  state?: "default" | "success" | "fail" | "ready",
+  waitingInCentral?: boolean
+) => {
+  // 基本色設定
+  const baseColors = {
+    bg: waitingInCentral ? "#1a1d23" : "#0f0f23",
+    border: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha80 : UI_TOKENS.COLORS.whiteAlpha60,
+  };
+
+  // 状態別のスタイルオーバーライド
+  const stateOverrides: Record<string, any> = {
+    success: {
+      borderColor: UI_TOKENS.COLORS.dqBlue,
+      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+    },
+    fail: {
+      borderColor: UI_TOKENS.COLORS.dqRed,
+      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+    },
+    ready: {
+      borderColor: UI_TOKENS.COLORS.purpleAlpha80,
+      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+    },
+    default: {
+      borderColor: baseColors.border,
+      boxShadow: waitingInCentral
+        ? UI_TOKENS.SHADOWS.panelDistinct
+        : UI_TOKENS.SHADOWS.cardRaised,
+    },
+  };
+
+  return {
+    bg: baseColors.bg,
+    borderWidth: waitingInCentral ? "2px" : "1px",
+    ...stateOverrides[state || "default"],
+  };
+};
+
+// ドラクエ風テキスト色の統一管理
+export const getDragonQuestTextColors = (waitingInCentral?: boolean) => ({
+  text: UI_TOKENS.COLORS.textBase,
+  meta: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.textMuted,
+  clue: waitingInCentral ? UI_TOKENS.COLORS.textBase : "#e2e8f0",
+  number: UI_TOKENS.COLORS.textBase, // 全状態で白色統一
+});
+
 export type CardStyleVariant = keyof typeof CARD_STYLES;
 export type CardSize = keyof typeof CARD_SIZES;
+export type GameCardState = "default" | "success" | "fail" | "ready";
