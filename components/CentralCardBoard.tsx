@@ -330,7 +330,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const onDragEnd = async (e: DragEndEvent) => {
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
+    if (!over) {
+      notify({ title: "ここには置けません", type: "info", duration: 900 });
+      return;
+    }
+    if (active.id === over.id) return;
 
     // Check if this is a WaitingCard being dropped to an empty slot
     const activeId = String(active.id);
