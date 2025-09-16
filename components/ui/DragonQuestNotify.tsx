@@ -75,17 +75,17 @@ export function dragonQuestNotify(options: {
   });
 }
 
-// 通知アイコンを取得
+// ドラクエ風ピクセルアイコンを取得
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case "success":
-      return "✓";
+      return "◆"; // ダイヤモンド：成功の宝石
     case "error":
-      return "✕";
+      return "■"; // 四角：警告の盾
     case "warning":
-      return "⚠";
+      return "▲"; // 三角：注意マーク
     default:
-      return "○";
+      return "●"; // 丸：一般的な情報
   }
 };
 
@@ -115,7 +115,7 @@ function NotificationItem({
   const contentRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<any>(null);
 
-  // 登場アニメーション
+  // ドラクエ風シンプルな登場アニメーション
   useEffect(() => {
     if (!containerRef.current || !contentRef.current) return;
 
@@ -130,54 +130,45 @@ function NotificationItem({
 
     if (prefersReduced) {
       // 最小限の状態をセットしてアニメーションをスキップ
-      gsap.set(container, { scale: 1, opacity: 1, x: 0, rotationY: 0 });
+      gsap.set(container, { opacity: 1, y: 0 });
       gsap.set(content, { y: 0 });
       return;
     }
 
-    // 初期状態
+    // 初期状態：上からスライドイン（ドラクエのメッセージボックス風）
     gsap.set(container, {
-      scale: 0.5,
       opacity: 0,
-      x: 100,
-      rotationY: 90,
+      y: -20,
     });
 
-    // 豪華な登場アニメーション
+    // コンテンツも初期状態で非表示
+    gsap.set(content, {
+      opacity: 0.3,
+    });
+
+    // シンプルなスライドイン
     const tl = gsap.timeline();
     tlRef.current = tl;
 
     tl.to(container, {
-      scale: 1.1,
       opacity: 1,
-      x: 0,
-      rotationY: 0,
-      duration: 0.5,
-      ease: "back.out(2)",
+      y: 0,
+      duration: 0.18,
+      ease: "power2.out",
     })
-      .to(container, {
-        scale: 1,
-        duration: 0.2,
-        ease: "power2.out",
-      })
-      // 内容の弾み
+      // 内容のタイピング風演出（ピクセルゲーム風）
       .to(
         content,
         {
-          y: -5,
-          duration: 0.1,
-          ease: "power2.out",
+          opacity: 1,
+          duration: 0.12,
+          ease: "none",
         },
-        "-=0.1"
-      )
-      .to(content, {
-        y: 0,
-        duration: 0.2,
-        ease: "bounce.out",
-      });
+        "-=0.06"
+      );
 
     return () => {
-      // クリーンアップ: timeline を停止・開放し、残った inline style をクリア
+      // クリーンアップ
       try {
         if (tlRef.current) {
           tlRef.current.kill();
@@ -186,25 +177,23 @@ function NotificationItem({
         gsap.killTweensOf(container);
         gsap.killTweensOf(content);
         gsap.set(container, {
-          clearProps: "transform,opacity,x,y,rotationY,scale",
+          clearProps: "transform,opacity,y",
         });
-        gsap.set(content, { clearProps: "y" });
+        gsap.set(content, { clearProps: "opacity" });
       } catch (e) {
         // ignore
       }
     };
   }, []);
 
-  // 退場アニメーション
+  // ドラクエ風シンプルな退場アニメーション
   const handleRemove = () => {
     if (!containerRef.current) return;
 
     gsap.to(containerRef.current, {
-      scale: 0.8,
       opacity: 0,
-      x: 100,
-      rotationY: -90,
-      duration: 0.3,
+      y: -10,
+      duration: 0.15,
       ease: "power2.in",
       onComplete: () => onRemove(notification.id),
     });
@@ -230,91 +219,100 @@ function NotificationItem({
         ref={contentRef}
         position="relative"
         bg={UI_TOKENS.COLORS.panelBg}
-        border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
         borderRadius={0}
-        minW="280px"
-        maxW="360px"
-        px={4}
-        py={3}
+        minW="320px"
+        maxW="400px"
+        px={5}
+        py={4}
         css={{
-          boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-          backdropFilter: "blur(8px) saturate(1.2)",
-          // ドラクエ風吹き出し三角
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            bottom: "-10px",
-            left: "20px",
-            width: "0",
-            height: "0",
-            borderLeft: "10px solid transparent",
-            borderRight: "10px solid transparent", 
-            borderTop: `10px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-            zIndex: 2,
-          },
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            bottom: "-12px",
-            left: "20px",
-            width: "0",
-            height: "0", 
-            borderLeft: "10px solid transparent",
-            borderRight: "10px solid transparent",
-            borderTop: `10px solid ${UI_TOKENS.COLORS.panelBg}`,
-            zIndex: 1,
-          },
+          // ドラクエ風ピクセルシャドウ（blur無し、段積み）
+          boxShadow: `
+            3px 3px 0 rgba(0,0,0,0.8),
+            6px 6px 0 rgba(0,0,0,0.6),
+            inset 1px 1px 0 rgba(255,255,255,0.3),
+            inset -1px -1px 0 rgba(0,0,0,0.5)
+          `,
+          // ドラクエ風の微ノイズテクスチャ
+          backgroundImage: `
+            radial-gradient(circle at 20% 80%, rgba(255,255,255,0.02) 1px, transparent 1px),
+            radial-gradient(circle at 80% 20%, rgba(255,255,255,0.02) 1px, transparent 1px)
+          `,
+          backgroundSize: '8px 8px, 12px 12px',
+          // モダンなガラス効果を除去
+          backdropFilter: "none",
         }}
       >
-        <Box display="flex" alignItems="flex-start" gap={3}>
-          <Text fontSize="lg" flexShrink={0}>
+        <Box display="flex" alignItems="flex-start" gap={4}>
+          <Box
+            fontSize="lg"
+            flexShrink={0}
+            color={getNotificationColor(notification.type)}
+            textShadow="2px 2px 0px #000, 0 0 4px rgba(0,0,0,0.8)"
+            fontFamily="monospace"
+            fontWeight="bold"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            w="24px"
+            h="24px"
+          >
             {getNotificationIcon(notification.type)}
-          </Text>
+          </Box>
 
           <Box flex={1} minW={0}>
             <Text
-              fontSize="sm"
+              fontSize="md"
               fontWeight={700}
-              color={getNotificationColor(notification.type)}
-              textShadow="1px 1px 0px #000"
-              letterSpacing="0.5px"
+              color="white"
+              textShadow="2px 2px 0px #000, 0 0 6px rgba(0,0,0,0.9)"
+              letterSpacing="1px"
               fontFamily="monospace"
-              lineHeight={1.3}
-              mb={notification.description ? 1 : 0}
+              lineHeight={1.4}
+              mb={notification.description ? 2 : 0}
             >
               {notification.title}
             </Text>
 
             {notification.description && (
               <Text
-                fontSize="xs"
-                color="white"
-                textShadow="1px 1px 0px #000"
+                fontSize="sm"
+                color={UI_TOKENS.COLORS.whiteAlpha90}
+                textShadow="1px 1px 0px #000, 0 0 4px rgba(0,0,0,0.7)"
                 fontFamily="monospace"
-                lineHeight={1.4}
-                opacity={0.9}
+                lineHeight={1.5}
+                letterSpacing="0.5px"
               >
                 {notification.description}
               </Text>
             )}
           </Box>
 
-          <Text
-            fontSize="xs"
-            color={UI_TOKENS.COLORS.whiteAlpha50}
+          <Box
+            fontSize="md"
+            color={UI_TOKENS.COLORS.whiteAlpha60}
             fontFamily="monospace"
             cursor="pointer"
-            _hover={{ color: "white" }}
+            _hover={{
+              color: "white",
+              textShadow: "1px 1px 0px #000"
+            }}
+            fontWeight="bold"
+            w="20px"
+            h="20px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
           >
-            ✕
-          </Text>
+            ×
+          </Box>
         </Box>
       </Box>
     </Box>
   );
 }
 
-// メイン通知コンテナ
+// メイン通知コンテナ（ドラクエ風メッセージウィンドウ位置）
 export function DragonQuestNotifyContainer() {
   const [notifications, setNotifications] = useState<DragonQuestNotification[]>(
     []
