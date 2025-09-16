@@ -596,8 +596,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               </Tooltip>
             </>
           )}
-          {/* 非ホストでもカスタムモード時は“ペン”を表示（待機/連想フェーズのみ） */}
-          {(!isHost && effectiveDefaultTopicType === "カスタム" && (roomStatus === "waiting" || roomStatus === "clue")) && (
+          {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
+          {(!isHost && defaultTopicType === "カスタム" && (roomStatus === "waiting" || roomStatus === "clue")) && (
             <Tooltip content="カスタムお題を設定" showArrow openDelay={300}>
               <IconButton
                 aria-label="カスタムお題"

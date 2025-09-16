@@ -46,6 +46,8 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
+  const lastSystemMessageRef = useRef<string | null>(null);
+  const initializedSystemRef = useRef(false);
 
   // 時刻表示は不要のため削除（UI簡素化）
 
@@ -123,6 +125,30 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
     };
   }, [roomId]);
 
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMessage = messages[messages.length - 1];
+    if (!initializedSystemRef.current) {
+      initializedSystemRef.current = true;
+      lastSystemMessageRef.current = lastMessage.id;
+      return;
+    }
+    if (lastMessage.sender !== "system") return;
+    if (lastSystemMessageRef.current === lastMessage.id) return;
+    lastSystemMessageRef.current = lastMessage.id;
+    if (typeof lastMessage.text !== "string") return;
+    if (!lastMessage.text.startsWith("notify|")) return;
+    const parts = lastMessage.text.split("|");
+    const type = parts[1] ?? "info";
+    const title = parts[2] ?? "通知";
+    const description = parts.length > 3 ? parts.slice(3).join("|") : undefined;
+    notify({
+      title,
+      description: description && description.length > 0 ? description : undefined,
+      type: (type as any) ?? "info",
+    });
+  }, [messages]);
   const send = async () => {
     if (readOnly) return;
     let sanitized: string;

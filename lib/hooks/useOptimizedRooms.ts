@@ -11,7 +11,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // 型定義（Room docに直接hostNameが含まれる）
 interface RoomWithHost {
@@ -25,6 +25,22 @@ interface RoomWithHost {
   lastActiveAt?: any;
 }
 
+
+function createRoomsSignature(rooms: RoomWithHost[]): string {
+  if (!rooms || rooms.length === 0) return '[]';
+  return rooms
+    .map((room) => {
+      const lastActive = typeof (room.lastActiveAt as any)?.toMillis === 'function'
+        ? (room.lastActiveAt as any).toMillis()
+        : room.lastActiveAt ?? '';
+      const expiresAt = typeof (room.expiresAt as any)?.toMillis === 'function'
+        ? (room.expiresAt as any).toMillis()
+        : room.expiresAt ?? '';
+      return [room.id, room.status, room.hostId, lastActive, expiresAt].join(':');
+    })
+    .join('|');
+}
+
 /**
  * 🔧 Firebase読み取り最適化版 - useRooms
  * onSnapshotの常時監視を削減し、アクティブルームのみ取得
@@ -33,14 +49,19 @@ export function useOptimizedRooms(enabled: boolean) {
   const [rooms, setRooms] = useState<RoomWithHost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const lastFetchRef = { current: 0 } as { current: number };
+  const lastFetchRef = useRef(0);
+  const roomsSignatureRef = useRef<string>(createRoomsSignature([]));
+
+  const setLoadingIfNeeded = useCallback((next: boolean) => {
+    setLoading((prev) => (prev === next ? prev : next));
+  }, []);
 
   // fetchActiveRooms を useEffect 外で定義して refresh で使えるように
-  const fetchActiveRooms = async () => {
+  const fetchActiveRooms = useCallback(async () => {
     if (!enabled || !db) return;
 
-    setLoading(true);
-    setError(null);
+    setLoadingIfNeeded(true);
+    setError((prev) => (prev ? null : prev));
 
     try {
       // 🚨 緊急読み取り削減: 直近3分のみに制限
@@ -87,7 +108,12 @@ export function useOptimizedRooms(enabled: boolean) {
       const map = new Map<string, any>();
       for (const r of recentRooms) map.set(r.id, r);
       for (const r of inprogRooms) map.set(r.id, r);
-      setRooms(Array.from(map.values()));
+      const combinedRooms = Array.from(map.values());
+      const nextSignature = createRoomsSignature(combinedRooms);
+      if (nextSignature !== roomsSignatureRef.current) {
+        roomsSignatureRef.current = nextSignature;
+        setRooms(combinedRooms);
+      }
       lastFetchRef.current = Date.now();
     } catch (err: any) {
       // Firebase制限エラー専用処理
@@ -97,15 +123,20 @@ export function useOptimizedRooms(enabled: boolean) {
         logError("useOptimizedRooms", "fetch-failed", err);
       }
       setError(err);
-      setRooms([]); // フォールバック
+      if (roomsSignatureRef.current !== "[]") {
+        roomsSignatureRef.current = "[]";
+        setRooms([]); // フォールバック
+      }
     } finally {
-      setLoading(false);
+      setLoadingIfNeeded(false);
     }
-  };
+  }, [enabled, db, setLoadingIfNeeded]);
 
   useEffect(() => {
     if (!enabled || !db) {
+      roomsSignatureRef.current = "[]";
       setRooms([]);
+      setLoadingIfNeeded(false);
       return;
     }
 
@@ -120,7 +151,6 @@ export function useOptimizedRooms(enabled: boolean) {
     wrappedFetch();
 
     // 読み取り削減: タブ非表示時は停止、表示時に単発fetchのみ（ポーリングなし）
-    let interval: any = null;
     const visibilityHandler = () => {
       if (document.visibilityState !== "visible") return;
       const now = Date.now();
@@ -132,14 +162,13 @@ export function useOptimizedRooms(enabled: boolean) {
 
     return () => {
       mounted = false;
-      if (interval) clearInterval(interval);
       document.removeEventListener("visibilitychange", visibilityHandler);
     };
-  }, [enabled]);
+  }, [enabled, db, fetchActiveRooms, setLoadingIfNeeded]);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     fetchActiveRooms();
-  };
+  }, [fetchActiveRooms]);
 
   return { rooms, loading, error, refresh };
 }
