@@ -703,12 +703,24 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           app.stage.addChild(rockAccent);
         }
 
-        // 5. アニメーションループ - パフォーマンス最適化版
+        // 5. 安全なアニメーションループ - Ticker使用を避ける
         let lastTime = 0;
         const targetFPS = 60;
         const frameInterval = 1000 / targetFPS;
+        let isAnimating = true; // アニメーション制御フラグ
+
+        // Pixi.jsの自動ティッカーを無効化
+        if (app.ticker) {
+          app.ticker.autoStart = false;
+          app.ticker.stop();
+        }
 
         const animate = (currentTime: number) => {
+          // アニメーション停止フラグチェック
+          if (!isAnimating) {
+            return;
+          }
+
           // フレームレート調整
           if (currentTime - lastTime < frameInterval) {
             frameId = requestAnimationFrame(animate);
@@ -717,38 +729,76 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           lastTime = currentTime;
 
           // アプリケーションが破棄されていたら停止
-          if (!app || !app.stage) {
+          if (!app || !app.stage || app.destroyed) {
+            isAnimating = false;
+            if (frameId) {
+              cancelAnimationFrame(frameId);
+              frameId = undefined;
+            }
             return;
           }
 
-          // ドラクエ風魔法光の粒子アニメーション
-          particles.forEach(data => {
-            const { particle, vx, vy, life } = data;
-            particle.x += vx;
-            particle.y += vy;
+          // 安全なアニメーション実行
+          try {
+            // ドラクエ風魔法光の粒子アニメーション
+            particles.forEach(data => {
+              const { particle, vx, vy, life } = data;
+              if (!particle || !particle.parent) return; // 安全チェック追加
 
-            // 画面外に出たら反対側から再出現
-            if (particle.x > app!.screen.width) particle.x = -10;
-            if (particle.x < -10) particle.x = app!.screen.width;
-            if (particle.y > app!.screen.height) particle.y = -10;
-            if (particle.y < -10) particle.y = app!.screen.height;
+              particle.x += vx;
+              particle.y += vy;
 
-            // ドラクエ風神秘的な明滅効果（より穏やかで魔法的に）
-            particle.alpha = Math.sin(currentTime * 0.0015 * life) * 0.3 + 0.7;
-          });
+              // 画面外に出たら反対側から再出現
+              if (particle.x > app!.screen.width) particle.x = -10;
+              if (particle.x < -10) particle.x = app!.screen.width;
+              if (particle.y > app!.screen.height) particle.y = -10;
+              if (particle.y < -10) particle.y = app!.screen.height;
 
-          // ファンタジー月の微妙な神秘的脈動
-          if (fantasyMoon) {
-            const moonPulse = Math.sin(currentTime * 0.0006) * 0.08 + 1;
-            fantasyMoon.scale.set(moonPulse);
+              // ドラクエ風神秘的な明滅効果（より穏やかで魔法的に）
+              particle.alpha = Math.sin(currentTime * 0.0015 * life) * 0.3 + 0.7;
+            });
 
-            // 月の光輪の色変化（神秘的な青紫の強弱）
-            const glowAlpha = Math.sin(currentTime * 0.0008) * 0.04 + 0.15;
-            fantasyMoon.children[0].alpha = glowAlpha; // glow部分
+            // ファンタジー月の微妙な神秘的脈動
+            if (fantasyMoon && fantasyMoon.parent) {
+              const moonPulse = Math.sin(currentTime * 0.0006) * 0.08 + 1;
+              fantasyMoon.scale.set(moonPulse);
+
+              // 月の光輪の色変化（神秘的な青紫の強弱）
+              if (fantasyMoon.children[0]) {
+                const glowAlpha = Math.sin(currentTime * 0.0008) * 0.04 + 0.15;
+                fantasyMoon.children[0].alpha = glowAlpha; // glow部分
+              }
+            }
+          } catch (error) {
+            // アニメーションエラー時は停止
+            logPixiBackground("error", "animation-error", error);
+            isAnimating = false;
+            if (frameId) {
+              cancelAnimationFrame(frameId);
+              frameId = undefined;
+            }
+            return;
+          }
+
+          // 手動レンダリング（Tickerを使わない）
+          try {
+            if (app && app.renderer && !app.destroyed) {
+              app.renderer.render(app.stage);
+            }
+          } catch (renderError) {
+            logPixiBackground("error", "render-error", renderError);
+            isAnimating = false;
+            return;
           }
 
           frameId = requestAnimationFrame(animate);
         };
+
+        // 既存のアニメーションがあれば停止
+        if (frameId) {
+          cancelAnimationFrame(frameId);
+          frameId = undefined;
+        }
 
         animate(performance.now());
         logPixiBackground("info", "animation-started");
@@ -787,26 +837,52 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     window.addEventListener('resize', handleResize);
 
-    // クリーンアップ - ベストプラクティス準拠
+    // 強化されたクリーンアップ - Runtime Error対策
     return () => {
       window.removeEventListener('resize', handleResize);
+
+      // アニメーション完全停止
+      isAnimating = false; // アニメーションフラグを無効化
       if (frameId) {
         cancelAnimationFrame(frameId);
+        frameId = undefined;
       }
-      if (app && app.stage) {
+
+      // Pixi.jsアプリケーション安全破棄
+      if (app) {
         try {
-          app.destroy();
+          // アプリケーションが既に破棄されていないかチェック
+          if (!app.destroyed) {
+            // ティッカー完全停止
+            if (app.ticker) {
+              app.ticker.stop();
+              app.ticker.autoStart = false;
+            }
+            // ステージクリア
+            if (app.stage) {
+              app.stage.removeChildren();
+            }
+            // アプリケーション破棄（オプション指定で確実に）
+            app.destroy({
+              children: true,
+              texture: true,
+              textureSource: true,
+              context: false // WebGLコンテキストは保持
+            });
+          }
         } catch (e) {
           logPixiBackground("warn", "destroy-error", e);
+        } finally {
+          app = null; // 確実にnullに設定
         }
       }
+
       // DOMのクリーンアップ
-      // mountRef.currentの完全クリア
       if (mountRef.current) {
         mountRef.current.innerHTML = '';
         mountRef.current.style.backgroundColor = '';
       }
-      logPixiBackground("info", "cleanup");
+      logPixiBackground("info", "cleanup-complete");
     };
   }, [backgroundType]);
 
