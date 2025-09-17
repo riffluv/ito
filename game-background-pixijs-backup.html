@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【保存版】ゲーム背景 - Octopath Traveler風 HD-2D Pixi.js</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0E0F13;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #pixiCanvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 100;
+            border: 2px solid #FFD700;
+        }
+
+        .controls h3 {
+            margin: 0 0 15px 0;
+            color: #FFD700;
+            text-shadow: 0 0 8px #FFD700;
+        }
+
+        .controls p {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+
+        .backup-notice {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            background: rgba(255, 215, 0, 0.9);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            z-index: 100;
+            font-weight: bold;
+            color: #000;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .feature-list {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+            max-width: 300px;
+        }
+
+        .feature-list h4 {
+            margin: 0 0 10px 0;
+            color: #FFD700;
+        }
+
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .feature-list li {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>🎮 Octopath Traveler風 HD-2D背景</h3>
+        <p><strong>ドラクエ風カードゲーム用</strong></p>
+        <p>✨ 浮遊する金色パーティクル</p>
+        <p>🏔️ 奥行きある山々のシルエット</p>
+        <p>🌿 可愛い草原の前景</p>
+        <p>💫 なめらかなアニメーション</p>
+    </div>
+
+    <div class="backup-notice">
+        💾 オリジナルゲーム背景保存版
+    </div>
+
+    <div class="feature-list">
+        <h4>実装機能</h4>
+        <ul>
+            <li>HD-2Dスタイルの深度表現</li>
+            <li>金色パーティクル（30個）</li>
+            <li>レスポンシブ対応</li>
+            <li>60FPS最適化</li>
+            <li>ドラクエテーマ色彩</li>
+            <li>なめらかな地形カーブ</li>
+        </ul>
+    </div>
+
+    <!-- Pixi.js CDN (v8対応) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.0.0/pixi.min.js"></script>
+
+    <script>
+        console.log('🎮 ゲーム背景 Pixi.js (Octopath風) 起動開始...');
+
+        let app = null;
+        let frameId = null;
+
+        const initPixi = async () => {
+            try {
+                // PixiJS v8対応: 正しいinit()方法
+                app = new PIXI.Application();
+                await app.init({
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    backgroundColor: 0x0E0F13, // テーマ統一（16進数で指定）
+                    antialias: true,
+                    resolution: Math.min(2, window.devicePixelRatio || 1),
+                    autoDensity: true,
+                });
+
+                // キャンバスをDOMに追加
+                app.canvas.id = 'pixiCanvas';
+                document.body.appendChild(app.canvas);
+                console.log('📱 キャンバス追加完了');
+
+                // === Octopath Traveler風HD-2D要素 ===
+
+                // 1. 奥行きのある背景グラデーション（大地のイメージ）
+                const bgGradient = new PIXI.Graphics();
+                bgGradient.rect(0, 0, app.screen.width, app.screen.height);
+                bgGradient.fill({
+                    color: 0x1a1b2e,
+                    alpha: 1,
+                });
+                app.stage.addChild(bgGradient);
+                console.log('🎨 背景グラデーション作成');
+
+                // 2. 遠景の山々（シルエット）
+                const mountains = new PIXI.Graphics();
+                mountains.moveTo(0, app.screen.height * 0.7);
+                for (let i = 0; i <= app.screen.width; i += 100) {
+                    const height = app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
+                    mountains.lineTo(i, height);
+                }
+                mountains.lineTo(app.screen.width, app.screen.height);
+                mountains.lineTo(0, app.screen.height);
+                mountains.fill({
+                    color: 0x2d1b4e,
+                    alpha: 0.8,
+                });
+                app.stage.addChild(mountains);
+                console.log('🏔️ 山々のシルエット作成');
+
+                // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
+                const particles = [];
+
+                // 安全な色の配列（ドラクエ風の金色系）
+                const safeColors = [
+                    0xffd700, // 金色
+                    0xffdc00, // 明るい金色
+                    0xffc700, // 濃い金色
+                    0xffed4a, // 黄金色
+                    0xfff176, // ライトゴールド
+                    0xffb300, // オレンジゴールド
+                ];
+
+                for (let i = 0; i < 30; i++) {
+                    const particle = new PIXI.Graphics();
+                    particle.circle(0, 0, Math.random() * 2 + 1);
+                    particle.fill({
+                        color: safeColors[Math.floor(Math.random() * safeColors.length)],
+                        alpha: Math.random() * 0.6 + 0.2,
+                    });
+
+                    particle.x = Math.random() * app.screen.width;
+                    particle.y = Math.random() * app.screen.height;
+
+                    const particleData = {
+                        particle,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.3,
+                        life: Math.random() * 2 + 1,
+                    };
+
+                    particles.push(particleData);
+                    app.stage.addChild(particle);
+                }
+                console.log('✨ 金色パーティクル30個作成');
+
+                // 4. 可愛い前景の草原（なめらかな曲線）
+                const foreground = new PIXI.Graphics();
+                const grassY = app.screen.height * 0.87;
+
+                // なめらかな波形の草原（直線じゃない、でもボコボコしすぎない）
+                foreground.moveTo(0, grassY);
+                for (let i = 0; i <= app.screen.width; i += 30) {
+                    const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
+                    foreground.lineTo(i, gentleWave);
+                }
+                foreground.lineTo(app.screen.width, app.screen.height);
+                foreground.lineTo(0, app.screen.height);
+                foreground.fill({
+                    color: 0x2d5940, // 落ち着いた深緑
+                    alpha: 0.8,
+                });
+                app.stage.addChild(foreground);
+
+                // 可愛い小さな草のアクセント（少なめ）
+                for (let i = 0; i < 15; i++) {
+                    const grassAccent = new PIXI.Graphics();
+                    const x = Math.random() * app.screen.width;
+                    const y = app.screen.height * (0.88 + Math.random() * 0.08);
+                    const size = Math.random() * 1.5 + 0.8;
+
+                    grassAccent.circle(x, y, size);
+                    grassAccent.fill({
+                        color: 0x4a7c59, // 明るめの緑
+                        alpha: 0.7,
+                    });
+                    app.stage.addChild(grassAccent);
+                }
+                console.log('🌿 草原の前景作成');
+
+                // 5. アニメーションループ - パフォーマンス最適化版
+                let lastTime = 0;
+                const targetFPS = 60;
+                const frameInterval = 1000 / targetFPS;
+
+                const animate = (currentTime) => {
+                    // フレームレート調整
+                    if (currentTime - lastTime < frameInterval) {
+                        frameId = requestAnimationFrame(animate);
+                        return;
+                    }
+                    lastTime = currentTime;
+
+                    // アプリケーションが破棄されていたら停止
+                    if (!app || !app.stage) {
+                        return;
+                    }
+
+                    // 光の粒子アニメーション
+                    particles.forEach(data => {
+                        const { particle, vx, vy, life } = data;
+                        particle.x += vx;
+                        particle.y += vy;
+
+                        // 画面外に出たら反対側から再出現
+                        if (particle.x > app.screen.width) particle.x = -10;
+                        if (particle.x < -10) particle.x = app.screen.width;
+                        if (particle.y > app.screen.height) particle.y = -10;
+                        if (particle.y < -10) particle.y = app.screen.height;
+
+                        // 明滅効果（最適化済み）
+                        particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
+                    });
+
+                    frameId = requestAnimationFrame(animate);
+                };
+
+                animate(performance.now());
+                console.log('🎬 アニメーション開始');
+
+            } catch (error) {
+                console.error('❌ Pixi.js初期化エラー:', error);
+
+                // エラー時はフォールバック背景を表示
+                document.body.style.backgroundColor = '#0E0F13';
+
+                // エラー表示
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: #fff;
+                    background: rgba(255, 0, 0, 0.8);
+                    padding: 20px;
+                    border-radius: 8px;
+                    text-align: center;
+                    z-index: 1000;
+                `;
+                errorDiv.innerHTML = `
+                    <h3>⚠️ 背景初期化エラー</h3>
+                    <p>フォールバック背景を表示中</p>
+                `;
+                document.body.appendChild(errorDiv);
+
+                if (app && app.stage) {
+                    try {
+                        app.destroy();
+                    } catch (e) {
+                        // 破棄エラーは無視
+                    }
+                }
+                app = null;
+            }
+        };
+
+        // 初期化実行
+        initPixi();
+
+        // リサイズ対応 - PixiJS v8対応
+        const handleResize = () => {
+            try {
+                if (app && app.stage && app.renderer) {
+                    app.renderer.resize(window.innerWidth, window.innerHeight);
+                    console.log('📐 リサイズ対応');
+                }
+            } catch (error) {
+                console.warn('⚠️ リサイズエラー:', error);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        // ページアンロード時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+            }
+            if (app && app.stage) {
+                try {
+                    app.destroy();
+                    console.log('🧹 クリーンアップ完了');
+                } catch (e) {
+                    console.warn('⚠️ 破棄エラー:', e);
+                }
+            }
+        });
+
+        console.log('🎮 ゲーム背景 Pixi.js (保存版) 起動完了！');
+    </script>
+</body>
+</html>

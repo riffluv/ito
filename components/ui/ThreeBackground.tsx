@@ -541,11 +541,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
         // === Octopath Traveler風HD-2D要素 ===
 
-        // 1. 奥行きのある背景グラデーション（大地のイメージ）
+        // 1. ハロウィーン風背景グラデーション（暖かいオレンジ系）
         const bgGradient = new PIXI.Graphics();
         bgGradient.rect(0, 0, app.screen.width, app.screen.height);
         bgGradient.fill({
-          color: 0x1a1b2e,
+          color: 0x2d1810, // 暖かいオレンジブラウン
           alpha: 1,
         });
         app.stage.addChild(bgGradient);
@@ -560,8 +560,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         mountains.lineTo(app.screen.width, app.screen.height);
         mountains.lineTo(0, app.screen.height);
         mountains.fill({
-          color: 0x2d1b4e,
-          alpha: 0.8,
+          color: 0x4a2c1a, // ハロウィーンオレンジブラウン
+          alpha: 0.9,
         });
         app.stage.addChild(mountains);
 
@@ -573,14 +573,16 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           life: number;
         }
 
-        // 安全な色の配列（ドラクエ風の金色系）
-        const safeColors = [
-          0xffd700, // 金色
-          0xffdc00, // 明るい金色
-          0xffc700, // 濃い金色
-          0xffed4a, // 黄金色
-          0xfff176, // ライトゴールド
-          0xffb300, // オレンジゴールド
+        // ハロウィーン風の暖かいオレンジ系色彩
+        const halloweenColors = [
+          0xff8c00, // ダークオレンジ
+          0xffa500, // 明るいオレンジ
+          0xff7f00, // 濃いオレンジ
+          0xffb347, // 薄いオレンジ
+          0xff6347, // トマトオレンジ
+          0xffd700, // ゴールド
+          0xffa000, // アンバー
+          0xff9500, // 暖かいオレンジ
         ];
 
         const particles: ParticleData[] = [];
@@ -588,8 +590,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           const particle = new PIXI.Graphics();
           particle.circle(0, 0, Math.random() * 2 + 1);
           particle.fill({
-            color: safeColors[Math.floor(Math.random() * safeColors.length)], // 安全な色から選択
-            alpha: Math.random() * 0.6 + 0.2,
+            color: halloweenColors[Math.floor(Math.random() * halloweenColors.length)], // ハロウィーン色から選択
+            alpha: Math.random() * 0.7 + 0.3, // より明るく
           });
 
           particle.x = Math.random() * app.screen.width;
@@ -619,10 +621,56 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         foreground.lineTo(app.screen.width, app.screen.height);
         foreground.lineTo(0, app.screen.height);
         foreground.fill({
-          color: 0x2d5940, // 落ち着いた深緑
-          alpha: 0.8,
+          color: 0x3d4a1a, // ハロウィーンの秋色グリーン
+          alpha: 0.85,
         });
         app.stage.addChild(foreground);
+
+        // 6. 右上の美しいハロウィーン月
+        const createHalloweenMoon = () => {
+          const moonContainer = new PIXI.Container();
+
+          // 月本体（暖かいオレンジがかった色）
+          const moon = new PIXI.Graphics();
+          moon.circle(0, 0, 45); // 少し小さめ
+          moon.fill({
+            color: 0xffeaa7, // 暖かいクリーム色
+            alpha: 0.95,
+          });
+
+          // 月の光輪（ハロウィーンオレンジ）
+          const glow = new PIXI.Graphics();
+          glow.circle(0, 0, 85);
+          glow.fill({
+            color: 0xff8c00, // ハロウィーンオレンジ
+            alpha: 0.12,
+          });
+
+          // 月のクレーター（より詳細に）
+          const craters = new PIXI.Graphics();
+          craters.circle(-12, -8, 5);
+          craters.circle(10, 3, 7);
+          craters.circle(-3, 15, 4);
+          craters.circle(18, -10, 3);
+          craters.circle(-8, 12, 2);
+          craters.fill({
+            color: 0xddd6a3, // 少し暗めのクレーター
+            alpha: 0.6,
+          });
+
+          // 月の位置（右上）
+          moonContainer.x = app!.screen.width * 0.85;
+          moonContainer.y = app!.screen.height * 0.15;
+
+          moonContainer.addChild(glow);
+          moonContainer.addChild(moon);
+          moonContainer.addChild(craters);
+
+          app!.stage.addChild(moonContainer);
+          return moonContainer;
+        };
+
+        const halloweenMoon = createHalloweenMoon();
 
         // 可愛い小さな草のアクセント（少なめ）
         for (let i = 0; i < 15; i++) {
@@ -633,8 +681,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
           grassAccent.circle(x, y, size);
           grassAccent.fill({
-            color: 0x4a7c59, // 明るめの緑
-            alpha: 0.7,
+            color: 0x5a6c2a, // ハロウィーンアクセント秋色
+            alpha: 0.8,
           });
           app.stage.addChild(grassAccent);
         }
@@ -657,7 +705,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             return;
           }
 
-          // 光の粒子アニメーション
+          // ハロウィーン光の粒子アニメーション
           particles.forEach(data => {
             const { particle, vx, vy, life } = data;
             particle.x += vx;
@@ -669,9 +717,19 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             if (particle.y > app!.screen.height) particle.y = -10;
             if (particle.y < -10) particle.y = app!.screen.height;
 
-            // 明滅効果（最適化済み）
-            particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
+            // ハロウィーン風の明滅効果（より明るく活発に）
+            particle.alpha = Math.sin(currentTime * 0.002 * life) * 0.4 + 0.6;
           });
+
+          // ハロウィーン月の微妙な光の脈動
+          if (halloweenMoon) {
+            const moonPulse = Math.sin(currentTime * 0.0008) * 0.1 + 1;
+            halloweenMoon.scale.set(moonPulse);
+
+            // 月の光輪の色変化（オレンジの強弱）
+            const glowAlpha = Math.sin(currentTime * 0.001) * 0.05 + 0.12;
+            halloweenMoon.children[0].alpha = glowAlpha; // glow部分
+          }
 
           frameId = requestAnimationFrame(animate);
         };

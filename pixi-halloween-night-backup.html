@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ハロウィン夜景 - Pixi.js</title>
+    <title>【保存版】ハロウィン夜景 - Pixi.js</title>
     <style>
         body {
             margin: 0;
@@ -38,6 +38,19 @@
         .controls p {
             margin: 5px 0;
         }
+
+        .backup-notice {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            background: rgba(255, 149, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -46,6 +59,10 @@
         <p>クリック: 流れ星を発射</p>
         <p>マウス移動: 視差効果</p>
         <p>自動: 雲と霧の流れ</p>
+    </div>
+
+    <div class="backup-notice">
+        💾 オリジナル保存版
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -344,7 +361,7 @@
             }
         });
 
-        console.log('🌙 ハロウィン夜景シーン起動完了！');
+        console.log('🌙 【保存版】ハロウィン夜景シーン起動完了！');
     </script>
 </body>
 </html>
