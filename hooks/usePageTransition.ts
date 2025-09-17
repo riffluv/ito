@@ -1,0 +1,272 @@
+"use client";
+
+import { useState, useCallback, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
+
+export interface TransitionLoadingStep {
+  id: string;
+  message: string;
+  duration: number;
+  icon?: string;
+  color?: string;
+}
+
+export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
+  { id: "firebase", message: "せつぞく中です...", duration: 1500, icon: "🔥" },
+  {
+    id: "room",
+    message: "ルームの じょうほうを とくていしています...",
+    duration: 2000,
+    icon: "⚔️",
+  },
+  { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800, icon: "👥" },
+  { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000, icon: "🎮" },
+];
+
+interface TransitionOptions {
+  direction?: "slideLeft" | "slideRight" | "slideUp" | "slideDown" | "fade" | "scale";
+  duration?: number;
+  showLoading?: boolean;
+  loadingSteps?: TransitionLoadingStep[];
+}
+
+export function usePageTransition() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>("");
+  const [progress, setProgress] = useState(0);
+  const [fromPage, setFromPage] = useState("");
+  const [toPage, setToPage] = useState("");
+  const [loadingStepsState, setLoadingStepsState] = useState<TransitionLoadingStep[]>([]);
+
+  const transitionRef = useRef<{
+    direction: string;
+    duration: number;
+  }>({
+    direction: "slideLeft",
+    duration: 0.6,
+  });
+
+  // ページ遷移実行（Firebase処理含む）
+  const navigateWithTransition = useCallback(
+    async (
+      href: string,
+      options: TransitionOptions = {},
+      firebaseOperation?: () => Promise<void>
+    ) => {
+      const {
+        direction = "slideLeft",
+        duration = 0.6,
+        showLoading = false,
+        loadingSteps = [],
+      } = options;
+
+      // 現在実行中なら無視
+      if (isTransitioning || isLoading) return;
+
+      setFromPage(pathname);
+      setToPage(href);
+      transitionRef.current = { direction, duration };
+
+      try {
+        // ローディング表示が有効な場合（Firebase操作の有無を問わず）
+        if (showLoading) {
+          const stepsToRun =
+            loadingSteps && loadingSteps.length > 0 ? loadingSteps : DEFAULT_LOADING_STEPS;
+
+          setIsLoading(true);
+          setProgress(0);
+          setLoadingStepsState(stepsToRun);
+          setCurrentStep(stepsToRun[0]?.id ?? "");
+
+          // Firebase操作を実行
+          if (firebaseOperation) {
+            await firebaseOperation();
+          }
+
+          // ローディング中に背景でページ遷移を実行（ユーザーには見えない）
+          setTimeout(() => {
+            router.push(href);
+          }, 200);
+
+          // 総時間を計算
+          const totalDuration = stepsToRun.reduce(
+            (sum, step) => sum + Math.max(step.duration, 0),
+            0
+          );
+          let elapsedTime = 0;
+
+          // 段階的ローディング実行
+          for (let i = 0; i < stepsToRun.length; i++) {
+            const step = stepsToRun[i];
+            setCurrentStep(step.id);
+
+            // ステップ間の待機時間
+            const waitTime = Math.max(step.duration, 0);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+
+            // ステップ完了時にプログレスを更新
+            elapsedTime += waitTime;
+            const progress = Math.min(
+              totalDuration > 0
+                ? (elapsedTime / totalDuration) * 100
+                : ((i + 1) / stepsToRun.length) * 100,
+              100
+            );
+            setProgress(progress);
+          }
+
+          // 最終的に100%を確実に設定
+          setProgress(100);
+
+          // ローディング完了 - DragonQuestLoadingのonCompleteでcompleteLoading()が呼ばれる
+          // この時点では既に目的のページに遷移済み
+
+          return; // 追加の遷移処理をスキップ
+        } else if (firebaseOperation) {
+          // ローディング表示なしでFirebase操作実行
+          await firebaseOperation();
+          setLoadingStepsState([]);
+          setCurrentStep("");
+          setProgress(0);
+        }
+
+        // Firebase操作なし、またはローディング表示なしの場合のみ遷移アニメーション
+        setLoadingStepsState([]);
+        setCurrentStep("");
+        setProgress(0);
+        setIsTransitioning(true);
+
+        // 暗転の中間でナビゲーション実行
+        setTimeout(() => {
+          router.push(href);
+        }, duration * 400);
+
+      } catch (error) {
+        console.error("遷移エラー:", error);
+        setIsLoading(false);
+        setIsTransitioning(false);
+        setLoadingStepsState([]);
+        setCurrentStep("");
+        setProgress(0);
+
+        // エラー時の回復アニメーション
+        // TODO: エラー表示機能を追加
+      }
+    },
+    [router, pathname, isTransitioning, isLoading]
+  );
+
+  // ルーム参加専用の遷移
+  const navigateToRoom = useCallback(
+    async (roomId: string, joinRoomOperation: () => Promise<void>) => {
+      const loadingSteps = [
+        { id: "firebase", message: "🔥 Firebase接続中...", duration: 800, icon: "🔥" },
+        { id: "room", message: "⚔️ ルーム情報取得中...", duration: 1200, icon: "⚔️" },
+        { id: "player", message: "👥 プレイヤー登録中...", duration: 600, icon: "👥" },
+        { id: "ready", message: "🎮 ゲーム準備完了！", duration: 400, icon: "🎮" },
+      ];
+
+      await navigateWithTransition(
+        `/rooms/${roomId}`,
+        {
+          direction: "slideLeft",
+          duration: 0.8,
+          showLoading: true,
+          loadingSteps,
+        },
+        joinRoomOperation
+      );
+    },
+    [navigateWithTransition]
+  );
+
+  // ロビーへの遷移
+  const navigateToLobby = useCallback(() => {
+    navigateWithTransition("/", {
+      direction: "slideRight",
+      duration: 0.6,
+    });
+  }, [navigateWithTransition]);
+
+  // 設定画面への遷移
+  const navigateToSettings = useCallback(() => {
+    navigateWithTransition("/settings", {
+      direction: "slideUp",
+      duration: 0.5,
+    });
+  }, [navigateWithTransition]);
+
+  // 遷移完了時のクリーンアップ
+  const completeTransition = useCallback(() => {
+    setIsTransitioning(false);
+    setIsLoading(false); // ローディングも確実に終了
+    setProgress(0);
+    setCurrentStep("");
+    setFromPage("");
+    setToPage("");
+    setLoadingStepsState([]);
+  }, []);
+
+  // ローディング完了時のクリーンアップ
+  const completeLoading = useCallback(() => {
+    setIsLoading(false);
+    setProgress(0);
+    setCurrentStep("");
+    setLoadingStepsState([]);
+    setFromPage("");
+    setToPage("");
+    // ローディング画面が消えると、既に遷移済みの目的ページが表示される
+  }, []);
+
+  return {
+    // 状態
+    isTransitioning,
+    isLoading,
+    currentStep,
+    progress,
+    fromPage,
+    toPage,
+    loadingSteps: loadingStepsState,
+    direction: transitionRef.current.direction,
+    duration: transitionRef.current.duration,
+
+    // アクション
+    navigateWithTransition,
+    navigateToRoom,
+    navigateToLobby,
+    navigateToSettings,
+    completeTransition,
+    completeLoading,
+  };
+}
+
+// 使用例とプリセット
+export const TRANSITION_PRESETS = {
+  // 基本遷移
+  forward: { direction: "slideLeft" as const, duration: 0.6 },
+  back: { direction: "slideRight" as const, duration: 0.6 },
+  modal: { direction: "scale" as const, duration: 0.4 },
+
+  // ゲーム特有
+  enterRoom: { direction: "slideLeft" as const, duration: 0.8, showLoading: true },
+  exitRoom: { direction: "slideRight" as const, duration: 0.6 },
+  settings: { direction: "slideUp" as const, duration: 0.5 },
+
+  // Firebase関連
+  withFirebase: {
+    direction: "slideLeft" as const,
+    duration: 1.0,
+    showLoading: true,
+    loadingSteps: [
+      { id: "firebase", message: "🔥 Firebase接続中...", duration: 800 },
+      { id: "operation", message: "⚡ 処理実行中...", duration: 600 },
+      { id: "complete", message: "✅ 完了", duration: 400 },
+    ],
+  },
+};
+
+export default usePageTransition;

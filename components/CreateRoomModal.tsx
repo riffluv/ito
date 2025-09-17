@@ -1,6 +1,7 @@
 "use client";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
+import { useTransition } from "@/components/ui/TransitionProvider";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
@@ -25,6 +26,7 @@ export function CreateRoomModal({
 }) {
   const { user, displayName } = useAuth() as any;
   const router = useRouter();
+  const transition = useTransition();
   const [name, setName] = useState("");
   const [displayMode, setDisplayMode] = useState<"full" | "minimal">("full");
   const [submitting, setSubmitting] = useState(false);
@@ -67,7 +69,13 @@ export function CreateRoomModal({
     }
 
     setSubmitting(true);
+    onClose(); // モーダルをすぐに閉じる
+
     try {
+      // Firebase操作を実行してルームを作成
+      let createdRoomId: string;
+
+      // Firebase操作
       const options: RoomOptions = {
         allowContinueAfterFail: true,
         resolveMode: "sort-submit",
@@ -102,15 +110,34 @@ export function CreateRoomModal({
         lastSeen: serverTimestamp(),
       };
       await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
-      onClose();
-      try {
-        (window as any).requestIdleCallback?.(() => {
+      createdRoomId = roomRef.id;
+
+      // 新しい遷移システムを使って移動
+      await transition.navigateWithTransition(
+        `/rooms/${createdRoomId}`,
+        {
+          direction: "fade",
+          duration: 1.2,
+          showLoading: true,
+          loadingSteps: [
+            { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+            { id: "room", message: "ルームを さくせいしています...", duration: 2000 },
+            { id: "player", message: "プレイヤーじょうほうを せっていしています...", duration: 1800 },
+            { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+          ],
+        },
+        async () => {
+          // プリフェッチなどの最終処理
           try {
-            (router as any)?.prefetch?.(`/rooms/${roomRef.id}`);
+            (window as any).requestIdleCallback?.(() => {
+              try {
+                (router as any)?.prefetch?.(`/rooms/${createdRoomId}`);
+              } catch {}
+            });
           } catch {}
-        });
-      } catch {}
-      onCreated?.(roomRef.id);
+          onCreated?.(createdRoomId);
+        }
+      );
     } catch (e: any) {
       logError("rooms", "create-room", e);
       notify({

@@ -17,6 +17,7 @@
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
+      "@/hooks/*": ["hooks/*"],
       "@/theme": ["theme/index"],
       "@/theme/*": ["theme/*"],
       "@/context/*": ["context/*"]

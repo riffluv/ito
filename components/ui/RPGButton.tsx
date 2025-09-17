@@ -1,25 +1,27 @@
 "use client";
 import { AppButton } from "./AppButton";
-import { rpgNavigate } from "./RPGPageTransition";
 import { ComponentProps } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 
 interface RPGButtonProps extends Omit<ComponentProps<typeof AppButton>, "onClick" | "as" | "href"> {
-  href: string;
+  href?: string;
   onClick?: () => void;
 }
 
 export function RPGButton({ href, onClick, children, ...props }: RPGButtonProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    // カスタムonClickがある場合は先に実行
+
+    // カスタムonClickがある場合は先に実行（href遷移は無視）
     if (onClick) {
       onClick();
+      return; // onClickがある場合は旧rpgNavigateを実行しない
     }
-    
-    // RPG風画面遷移を実行
-    rpgNavigate(href);
+
+    // hrefが指定されている場合は通常のナビゲーション（TransitionProviderに委ねる）
+    if (href) {
+      window.location.href = href;
+    }
   };
 
   return (
