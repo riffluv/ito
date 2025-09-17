@@ -212,9 +212,7 @@ service cloud.firestore {
     function getRoomStatus(roomId) {
       return get(/databases/$(database)/documents/rooms/$(roomId)).data.status;
     }
-    function isValidPlayerList(roomId, playerList) {
-      return playerList.size() == 0 || playerList.size() <= 10;
-    }
+    // (unused) 旧ロジックの名残は削除（警告軽減）
     function isValidEventDoc(data) {
       return data is map
         && data.keys().hasOnly(['kind','type','title','description','createdAt'])
@@ -224,16 +222,13 @@ service cloud.firestore {
         && (!('description' in data) || data.description == null || safeTextAllowEmpty(data.description, 200))
         && isTimestampValue(data.createdAt);
     }
-    function isRateLimited() {
-      return request.time < resource.data.lastUpdate + duration.value(1, 's');
-    }
     // ホスト入れ替え時の妥当性（従来どおり）
     function isValidHostAssignment(roomId) {
       return (!('hostId' in request.resource.data) || request.resource.data.hostId == resource.data.hostId)
         || (
           request.resource.data.hostId is string
           && request.resource.data.hostId.size() > 0
-          && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId)).exists()
+          && exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId))
           && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId)).data.uid == request.resource.data.hostId
         );
     }
