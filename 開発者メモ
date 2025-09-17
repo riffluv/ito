@@ -42,3 +42,29 @@ public/sfx/notify/notify_success.wav
 public/sfx/notify/notify_error.wav
 public/sfx/result/result_victory.ogg
 まずはこの8音だけ作ればOK。できたら教えてください。実装側は再生レイヤーで変調を入れて“少数精鋭”に仕上げます。
+
+
+
+
+はい、TTLの有効化はコンソール操作なので、あなたが実行する作業になります。やり方は簡単です。壊さない前提で、必要最小の手順だけまとめます。
+
+手順（Firestore TTL を有効化）
+
+移動先
+Google Cloud Console → Firestore → TTL（「ルール/インデックス」付近のメニュー）
+ポリシー追加
+コレクショングループ: rooms/*/events
+TTLフィールド: expireAt
+状態: 有効化（Enable）
+確認
+ゲーム中に発行される events ドキュメントに expireAt が入っているかを1件確認
+ない場合でもポリシーは作れますが、expireAt があるドキュメントだけが自動削除対象になります
+補足（いまのコードと整合）
+
+送信側は expireAt を自動で入れるようになっています（保持日数は .env の NEXT_PUBLIC_EVENT_TTL_DAYS で変更可。既定=7日）。
+TTLによる削除は即時ではありません（一般に数時間〜最大24時間程度）。早いと数十分で反映されることもあります。
+注意点
+
+TTLは「自動削除ルール」であり、セキュリティルールではありません。権限制御には影響しません。
+既存eventsにexpireAtが無いものは削除されません（以降の新規は対象）。
+もしTTLメニューが見つからない場合は、私に教えてください。画面位置の案内（スクリーンショット相当の説明）か、gcloudでの設定手順をご提示します。
