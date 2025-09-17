@@ -122,7 +122,9 @@
       "mcp__serena__get_current_config",
       "Bash(dir:*)",
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\PlayersStatus.tsx\")",
-      "mcp__serena__list_memories"
+      "mcp__serena__list_memories",
+      "Bash(firebase login:*)",
+      "Bash(npx firebase deploy:*)"
     ],
     "deny": [],
     "ask": []

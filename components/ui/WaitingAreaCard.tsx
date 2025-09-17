@@ -18,7 +18,9 @@ export default function WaitingAreaCard({
   meId,
   optimisticReset = false,
 }: WaitingAreaCardProps) {
-  const ready = !optimisticReset && !!(player?.clue1 && player.clue1.trim() !== "");
+  // 連想ワードの有効性を厳密にチェック（空文字列も無効とする）
+  const hasValidClue = !!(player?.clue1 && player.clue1.trim() !== "");
+  const ready = !optimisticReset && hasValidClue;
 
   // ドラッグ機能（連想ワード確定後のみ有効）
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -55,7 +57,7 @@ export default function WaitingAreaCard({
       <GameCard
         index={null}
         name={player.name || ""}
-        clue={ready ? player.clue1 || READY_LABEL : WAITING_LABEL}
+        clue={hasValidClue ? player.clue1 : WAITING_LABEL}
         number={null}
         state={ready ? "ready" : "default"}
         waitingInCentral={true}

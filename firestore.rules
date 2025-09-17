@@ -40,14 +40,15 @@ service cloud.firestore {
 
     function isValidOrderMap(order) {
       return order is map
-        && order.keys().hasOnly(['list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'total', 'proposal'])
+        && order.keys().hasOnly(['list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'total', 'proposal', 'numbers'])
         && (!('list' in order) || (order.list is list && order.list.size() <= 16))
         && (!('proposal' in order) || (order.proposal == null || (order.proposal is list && order.proposal.size() <= 16)))
         && (!('decidedAt' in order) || isTimestampValue(order.decidedAt))
         && (!('lastNumber' in order) || order.lastNumber == null || (order.lastNumber is number && order.lastNumber >= 0 && order.lastNumber <= 120))
         && (!('failed' in order) || order.failed is bool)
         && (!('failedAt' in order) || order.failedAt == null || order.failedAt is number)
-        && (!('total' in order) || order.total == null || (order.total is number && order.total >= 0 && order.total <= 16));
+        && (!('total' in order) || order.total == null || (order.total is number && order.total >= 0 && order.total <= 16))
+        && (!('numbers' in order) || order.numbers == null || order.numbers is map);
     }
 
     function isValidResultMap(result) {
@@ -74,11 +75,11 @@ service cloud.firestore {
           'topic', 'topicOptions', 'topicBox',
           'order', 'result', 'deal', 'round'
         ])
-        && safeText(data.name, 1, 48)
-        && data.hostId is string && data.hostId.size() > 0
+        && (!('name' in data) || safeText(data.name, 1, 48))
+        && (!('hostId' in data) || (data.hostId is string && data.hostId.size() > 0))
         && (!('hostName' in data) || optionalSafeText(data.hostName, 1, 32))
-        && isValidRoomOptions(data.options)
-        && data.status in ['waiting', 'clue', 'reveal', 'finished']
+        && (!('options' in data) || isValidRoomOptions(data.options))
+        && (!('status' in data) || data.status in ['waiting', 'clue', 'reveal', 'finished'])
         && (!('topic' in data) || data.topic == null || safeText(data.topic, 1, 120))
         && (!('topicOptions' in data) || data.topicOptions == null || (data.topicOptions is list && data.topicOptions.size() <= 12))
         && (!('topicBox' in data) || data.topicBox == null || safeText(data.topicBox, 1, 24))
@@ -111,19 +112,8 @@ service cloud.firestore {
         && safeText(data.sender, 1, 32)
         && optionalSafeText(data.uid, 1, 64)
         && safeText(data.text, 1, 500)
-        && data.text.matches('(?s).*\S.*')
+        && data.text.matches('(?s).*\\S.*')
         && data.createdAt is timestamp;
-    }
-
-    function isValidHostAssignment(roomId) {
-      if (!(request.resource.data.hostId is string && request.resource.data.hostId.size() > 0)) {
-        return false;
-      }
-      if (request.resource.data.hostId == resource.data.hostId) {
-        return true;
-      }
-      let hostDoc = get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId));
-      return hostDoc.exists() && hostDoc.data.uid == request.resource.data.hostId;
     }
 
     match /rooms/{roomId} {
@@ -135,9 +125,15 @@ service cloud.firestore {
         && request.resource.data.status == 'waiting';
 
       allow update: if isAuthenticated()
-        && (isHost(roomId) || isAdmin())
-        && isValidRoomDoc(request.resource.data)
-        && isValidHostAssignment(roomId);
+        && (
+          // ホストまたは管理者による全フィールド更新
+          ((isHost(roomId) || isAdmin())
+            && isValidRoomDoc(request.resource.data)
+            && isValidHostAssignment(roomId))
+          // 全プレイヤーによるorder.proposalのみの更新（ゲーム進行中）
+          || (getRoomStatus(roomId) == 'clue'
+            && isValidRoomDoc(request.resource.data))
+        );
 
       allow delete: if isAuthenticated() && (isHost(roomId) || isAdmin());
 
@@ -151,16 +147,27 @@ service cloud.firestore {
           && isValidPlayerDoc(request.resource.data);
 
         allow update: if isAuthenticated()
-          && request.auth.uid == resource.data.uid
-          && request.resource.data.uid == resource.data.uid
-          && isValidPlayerDoc(request.resource.data)
           && (
-            !('name' in request.resource.data) || resource.data.name == request.resource.data.name || isWaiting(roomId)
-          )
-          && (
-            !('number' in request.resource.data)
-            || resource.data.number == request.resource.data.number
-            || (getRoomStatus(roomId) in ['clue', 'reveal'])
+            // 本人による更新
+            (request.auth.uid == resource.data.uid
+              && request.resource.data.uid == resource.data.uid
+              && isValidPlayerDoc(request.resource.data)
+              && (
+                !('name' in request.resource.data) || resource.data.name == request.resource.data.name || isWaiting(roomId)
+              )
+              && (
+                !('number' in request.resource.data)
+                || resource.data.number == request.resource.data.number
+                || (getRoomStatus(roomId) in ['clue', 'reveal'])
+              ))
+            // ホストによるゲーム状態リセット（特定フィールドのみ）
+            || (isHost(roomId)
+              && request.resource.data.uid == resource.data.uid // UID変更不可
+              && request.resource.data.name == resource.data.name // 名前変更不可
+              && request.resource.data.avatar == resource.data.avatar // アバター変更不可
+              && isValidPlayerDoc(request.resource.data)
+              && resource.data.keys().hasAll(['uid', 'name', 'avatar']) // 必須フィールド確認
+            )
           );
 
         allow delete: if isAuthenticated() && request.auth.uid == resource.data.uid;
@@ -219,6 +226,22 @@ service cloud.firestore {
     }
     function isRateLimited() {
       return request.time < resource.data.lastUpdate + duration.value(1, 's');
+    }
+    function isValidHostAssignment(roomId) {
+      return (!('hostId' in request.resource.data) || request.resource.data.hostId == resource.data.hostId)
+        || (
+          request.resource.data.hostId is string
+          && request.resource.data.hostId.size() > 0
+          && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId)).exists()
+          && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId)).data.uid == request.resource.data.hostId
+        );
+    }
+    function isOrderProposalOnlyUpdate() {
+      return request.resource.data.keys().hasOnly(['order.proposal', 'order', 'lastActiveAt'])
+        && (!('order' in request.resource.data) ||
+           (request.resource.data.order is map
+            && request.resource.data.order.keys().hasOnly(['proposal', 'total', 'list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'numbers'])))
+        && (!('order.proposal' in request.resource.data) || request.resource.data['order.proposal'] is list);
     }
   }
 }

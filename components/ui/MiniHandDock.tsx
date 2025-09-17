@@ -96,7 +96,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, []);
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
-  React.useEffect(() => setText(me?.clue1 || ""), [me?.clue1]);
+
+  // 連想ワードの同期を強化（空文字列の場合も確実にリセット）
+  React.useEffect(() => {
+    const newValue = me?.clue1 || "";
+    setText(newValue);
+  }, [me?.clue1]);
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const placed = !!proposal?.includes(me?.id || "");
@@ -232,21 +237,27 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const continueRound = async () => {
+    console.log("🔥 continueRound: 呼び出し開始", roomId);
     await continueAfterFailAction(roomId);
     try { postRoundReset(roomId); } catch {}
+    console.log("✅ continueRound: 完了", roomId);
   };
 
   const resetGame = async () => {
+    console.log("🔥 resetGame: 呼び出し開始", roomId);
     try {
       // 在席者だけでやり直す（presenceのオンラインUIDを利用、追加読取なし）
       const keep = Array.isArray(roundIds) && Array.isArray(onlineUids)
         ? roundIds.filter((id) => onlineUids.includes(id))
         : (onlineUids || []);
+      console.log("🔄 resetGame: resetRoomWithPrune呼び出し", { roomId, keep });
       await resetRoomWithPrune(roomId, keep, { notifyChat: true });
       notify({ title: "ゲームをリセット！", type: "success" });
       try { postRoundReset(roomId); } catch {}
+      console.log("✅ resetGame: 完了", roomId);
     } catch (e: any) {
       const msg = String(e?.message || e || "");
+      console.error("❌ resetGame: 失敗", e);
       notify({ title: "リセットに失敗しました", description: msg, type: "error" });
     }
   };
@@ -465,7 +476,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <AppButton
               size="md"
               visual="solid"
-              onClick={roomStatus === "finished" ? resetGame : continueRound}
+              onClick={async () => {
+                console.log("🔥 もう一度ボタン: クリック", { roomStatus, isFinished: roomStatus === "finished" });
+                if (roomStatus === "finished") {
+                  await resetGame();
+                } else {
+                  await continueRound();
+                }
+              }}
               minW="110px"
               px={4}
               py={2}
@@ -571,7 +589,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               <Tooltip content="ゲームをリセット" showArrow openDelay={300}>
                 <IconButton
                   aria-label="リセット"
-                  onClick={resetGame}
+                  onClick={async () => {
+                    console.log("🔥 リセットボタン: クリック");
+                    await resetGame();
+                  }}
                   size="sm"
                   w="36px"
                   h="36px"
