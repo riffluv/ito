@@ -17,6 +17,7 @@ import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { notify } from "@/components/ui/notify";
 import { logError } from "@/lib/utils/log";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
+import { useTransition } from "@/components/ui/TransitionProvider";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
@@ -132,6 +133,7 @@ export default function RoomPage() {
   const roomId = params.roomId;
   const { user, displayName, setDisplayName } = useAuth();
   const router = useRouter();
+  const transition = useTransition();
   const uid = user?.uid || null;
   const {
     room,
@@ -370,26 +372,71 @@ export default function RoomPage() {
     if (!uid) return;
     try {
       leavingRef.current = true;
-      // presence detach（即時反映）
-      try {
-        await detachNow();
-        await forceDetachAll(roomId, uid);
-      } catch {}
-      await leaveRoomAction(roomId, uid, displayName);
-      try {
-        if (typeof window !== "undefined") {
-          const lr = window.localStorage.getItem("lastRoom");
-          if (lr === roomId) window.localStorage.removeItem("lastRoom");
-        }
-      } catch {}
-      // メインメニューに戻る
-      router.push("/");
+
+      // 先にローディング画面を表示してから Firebase操作を実行
+      if (transition) {
+        await transition.navigateWithTransition(
+          "/",
+          {
+            direction: "fade",
+            duration: 1.0,
+            showLoading: true,
+            loadingSteps: [
+              { id: "leave", message: "メインメニューに もどっています...", duration: 1200 },
+            ],
+          },
+          async () => {
+            // Firebase操作をローディング中に実行
+            try {
+              await detachNow();
+              await forceDetachAll(roomId, uid);
+            } catch {}
+            await leaveRoomAction(roomId, uid, displayName);
+            try {
+              if (typeof window !== "undefined") {
+                const lr = window.localStorage.getItem("lastRoom");
+                if (lr === roomId) window.localStorage.removeItem("lastRoom");
+              }
+            } catch {}
+          }
+        );
+      } else {
+        // フォールバック
+        try {
+          await detachNow();
+          await forceDetachAll(roomId, uid);
+        } catch {}
+        await leaveRoomAction(roomId, uid, displayName);
+        try {
+          if (typeof window !== "undefined") {
+            const lr = window.localStorage.getItem("lastRoom");
+            if (lr === roomId) window.localStorage.removeItem("lastRoom");
+          }
+        } catch {}
+        router.push("/");
+      }
     } catch (error) {
       logError("room-page", "leave-room", error);
       // エラーが発生してもメインメニューに戻る
-      router.push("/");
+      if (transition) {
+        await transition.navigateWithTransition(
+          "/",
+          {
+            direction: "fade",
+            duration: 0.8,
+            showLoading: true,
+            loadingSteps: [
+              { id: "error", message: "エラーが はっせいしました...", duration: 800 },
+              { id: "return", message: "メインメニューに もどっています...", duration: 800 },
+              { id: "complete", message: "いどう かんりょう！", duration: 400 },
+            ],
+          }
+        );
+      } else {
+        router.push("/");
+      }
     }
-  }, [uid, detachNow, roomId, displayName, router]);
+  }, [uid, detachNow, roomId, displayName, router, transition]);
 
   // 退出時処理をフックで一元化
   useLeaveCleanup({

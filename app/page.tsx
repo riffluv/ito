@@ -6,6 +6,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
+import { useTransition } from "@/components/ui/TransitionProvider";
 import { handleFirebaseQuotaError } from "@/lib/utils/errorHandling";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
@@ -63,6 +64,7 @@ function KnightCharacter() {
 export default function MainMenu() {
   const router = useRouter();
   const { user, displayName, setDisplayName } = useAuth();
+  const transition = useTransition();
   const nameDialog = useDisclosure({ defaultOpen: false });
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
@@ -410,7 +412,37 @@ export default function MainMenu() {
                       size="lg"
                       visual="outline"
                       palette="gray"
-                      onClick={() => router.push(`/rooms/${lastRoom}`)}
+                      onClick={async () => {
+                        if (!lastRoom) return;
+                        try {
+                          await transition.navigateWithTransition(
+                            `/rooms/${lastRoom}`,
+                            {
+                              direction: "fade",
+                              duration: 1.2,
+                              showLoading: true,
+                              loadingSteps: [
+                                { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+                                { id: "room", message: "まえかいの ルームに もどっています...", duration: 2000 },
+                                { id: "player", message: "プレイヤーじょうほうを かくにんしています...", duration: 1800 },
+                                { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+                              ],
+                            },
+                            async () => {
+                              try {
+                                (window as any).requestIdleCallback?.(() => {
+                                  try {
+                                    router.prefetch(`/rooms/${lastRoom}`);
+                                  } catch {}
+                                });
+                              } catch {}
+                            }
+                          );
+                        } catch (error) {
+                          console.error("Last room transition failed:", error);
+                          router.push(`/rooms/${lastRoom}`);
+                        }
+                      }}
                     >
                       戻る: 前回のルーム
                     </AppButton>
@@ -418,7 +450,26 @@ export default function MainMenu() {
                   <RPGButton
                     size="lg"
                     visual="outline"
-                    href="/rules"
+                    onClick={async () => {
+                      try {
+                        await transition.navigateWithTransition(
+                          "/rules",
+                          {
+                            direction: "fade",
+                            duration: 1.0,
+                            showLoading: true,
+                            loadingSteps: [
+                              { id: "loading", message: "ルールせつめいを よみこんでいます...", duration: 1000 },
+                              { id: "prepare", message: "せつめいを じゅんびしています...", duration: 800 },
+                              { id: "ready", message: "よみこみ かんりょう！", duration: 600 },
+                            ],
+                          }
+                        );
+                      } catch (error) {
+                        console.error("Rules navigation failed:", error);
+                        router.push("/rules");
+                      }
+                    }}
                     onMouseEnter={() => router.prefetch("/rules")}
                   >
                     <BookOpen size={20} style={{ marginRight: "8px" }} />
@@ -584,7 +635,38 @@ export default function MainMenu() {
                     status={room.status}
                     count={lobbyCounts[room.id] ?? 0}
                     hostName={room.hostName || "匿名"}
-                    onJoin={() => router.push(`/rooms/${room.id}`)}
+                    onJoin={async () => {
+                      try {
+                        await transition.navigateWithTransition(
+                          `/rooms/${room.id}`,
+                          {
+                            direction: "fade",
+                            duration: 1.2,
+                            showLoading: true,
+                            loadingSteps: [
+                              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+                              { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
+                              { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
+                              { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+                            ],
+                          },
+                          async () => {
+                            // プリフェッチなどの最終処理
+                            try {
+                              (window as any).requestIdleCallback?.(() => {
+                                try {
+                                  router.prefetch(`/rooms/${room.id}`);
+                                } catch {}
+                              });
+                            } catch {}
+                          }
+                        );
+                      } catch (error) {
+                        console.error("Room join transition failed:", error);
+                        // フォールバック: 通常のナビゲーション
+                        router.push(`/rooms/${room.id}`);
+                      }
+                    }}
                   />
                 ))}
               </Grid>
@@ -773,6 +855,48 @@ export default function MainMenu() {
                       </VStack>
                     </Box>
                   </VStack>
+
+                  {/* テスト用ローディングアニメーション */}
+                  <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.2)">
+                    <Text
+                      fontSize="sm"
+                      color="white"
+                      fontFamily="monospace"
+                      fontWeight={600}
+                      mb={2}
+                    >
+                      🛠️ 開発テスト
+                    </Text>
+                    <AppButton
+                      size="sm"
+                      visual="outline"
+                      palette="gray"
+                      onClick={async () => {
+                        await transition.navigateWithTransition(
+                          window.location.pathname,
+                          {
+                            direction: "fade",
+                            duration: 0.8,
+                            showLoading: true,
+                            loadingSteps: [
+                              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+                              { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
+                              { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
+                              { id: "ready", message: "じゅんび かんりょう！", duration: 1000 },
+                            ],
+                          }
+                        );
+                      }}
+                      css={{
+                        width: "100%",
+                        fontSize: "xs",
+                        fontFamily: "monospace",
+                        height: "28px",
+                      }}
+                    >
+                      ローディングテスト
+                    </AppButton>
+                  </Box>
                 </VStack>
               </Box>
             </VStack>

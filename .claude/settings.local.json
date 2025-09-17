@@ -124,7 +124,8 @@
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\components\\ui\\PlayersStatus.tsx\")",
       "mcp__serena__list_memories",
       "Bash(firebase login:*)",
-      "Bash(npx firebase deploy:*)"
+      "Bash(npx firebase deploy:*)",
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\app\\rooms\\[roomId]\\loading.tsx\")"
     ],
     "deny": [],
     "ask": []

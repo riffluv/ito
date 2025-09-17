@@ -1,3 +1,5 @@
+"use client";
+
 import { RPGButton } from "@/components/ui/RPGButton";
 import {
   Badge,
@@ -13,7 +15,12 @@ import {
 } from "@chakra-ui/react";
 import { ArrowLeft, BookOpen } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+import { useTransition } from "@/components/ui/TransitionProvider";
+
 export default function RulesPage() {
+  const router = useRouter();
+  const transition = useTransition();
   return (
     <Box
       minH="100dvh"
@@ -25,7 +32,24 @@ export default function RulesPage() {
         <VStack mb={{ base: 8, md: 12 }} align="stretch" gap={6}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
             <RPGButton
-              href="/"
+              onClick={async () => {
+                try {
+                  await transition.navigateWithTransition(
+                    "/",
+                    {
+                      direction: "fade",
+                      duration: 0.8,
+                      showLoading: true,
+                      loadingSteps: [
+                        { id: "return", message: "メインメニューに もどっています...", duration: 1000 },
+                      ],
+                    }
+                  );
+                } catch (error) {
+                  console.error("Main menu navigation failed:", error);
+                  router.push("/");
+                }
+              }}
               variant="subtle"
               size="md"
               borderRadius={0}
@@ -373,7 +397,24 @@ export default function RulesPage() {
 
           {/* 戻るボタン */}
           <RPGButton
-            href="/"
+            onClick={async () => {
+              try {
+                await transition.navigateWithTransition(
+                  "/",
+                  {
+                    direction: "fade",
+                    duration: 0.8,
+                    showLoading: true,
+                    loadingSteps: [
+                      { id: "return", message: "メインメニューに もどっています...", duration: 1000 },
+                    ],
+                  }
+                );
+              } catch (error) {
+                console.error("Main menu navigation failed:", error);
+                router.push("/");
+              }
+            }}
             visual="solid"
             palette="brand"
             size="lg"
