@@ -268,6 +268,29 @@ export async function resetRoomWithPrune(
     });
   });
 
+  // プレイヤーの連想ワードと状態もクリア（「リセット」ボタン用）
+  try {
+    console.log("🔥 resetRoomWithPrune: プレイヤー状態クリア開始", roomId);
+    const playersRef = collection(db!, "rooms", roomId, "players");
+    const snap = await getDocs(playersRef);
+    const batch = writeBatch(db!);
+    let updateCount = 0;
+    snap.forEach((d) => {
+      batch.update(d.ref, {
+        number: null,
+        clue1: "", // 🚨 連想ワードをクリア
+        ready: false,
+        orderIndex: 0,
+      });
+      updateCount++;
+    });
+    await batch.commit();
+    console.log("✅ resetRoomWithPrune: プレイヤー状態クリア完了", { roomId, updateCount });
+  } catch (e) {
+    console.error("❌ resetRoomWithPrune: プレイヤー状態クリア失敗", e);
+    logWarn("rooms", "reset-room-with-prune-players-failed", e);
+  }
+
   // 任意のチャット告知（軽量）
   // チャット告知は「だれかを除外した」ときのみ（連投で会話を圧迫しないため）
   if (opts?.notifyChat && removedCount != null && removedCount > 0) {

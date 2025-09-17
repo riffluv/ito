@@ -57,9 +57,9 @@ interface ClueInputMiniProps {
 function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
   const [text, setText] = useState<string>(currentValue);
 
-  // props が変わったら内部状態も更新
+  // props が変わったら内部状態も更新（空文字列の場合も確実にリセット）
   useEffect(() => {
-    setText(currentValue);
+    setText(currentValue || "");
   }, [currentValue]);
 
   const handleSubmit = async () => {

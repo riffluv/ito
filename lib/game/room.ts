@@ -158,15 +158,21 @@ export async function continueAfterFail(roomId: string) {
   });
   // waiting に戻るタイミングでプレイヤーの連想/readyも即時クリア
   try {
+    console.log("🔥 continueAfterFail: プレイヤー状態クリア開始", roomId);
     const { collection, getDocs, writeBatch } = await import("firebase/firestore");
     const playersRef = collection(db!, "rooms", roomId, "players");
     const ps = await getDocs(playersRef);
     const batch = writeBatch(db!);
+    let updateCount = 0;
     ps.forEach((d) => {
       batch.update(d.ref, { clue1: "", ready: false, number: null, orderIndex: 0 });
+      updateCount++;
     });
     await batch.commit();
-  } catch {}
+    console.log("✅ continueAfterFail: プレイヤー状態クリア完了", { roomId, updateCount });
+  } catch (e) {
+    console.error("❌ continueAfterFail: プレイヤー状態クリア失敗", e);
+  }
 }
 
 export async function resetRoom(roomId: string) {
