@@ -54,16 +54,13 @@ export function DragonQuestLoading({
     return resolvedSteps.length > 0 ? 0 : -1;
   }, [resolvedSteps, currentStep, progress]);
 
-  // 画面のスクロール制御と入場アニメーション
+  // 画面のスクロール制御と即時オーバーレイ表示
   useEffect(() => {
     const container = containerRef.current;
 
     if (!isVisible) {
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
-      if (container) {
-        gsap.killTweensOf(container);
-      }
       return;
     }
 
@@ -81,25 +78,12 @@ export function DragonQuestLoading({
       };
     }
 
-    // ドラクエ風：瞬間的にくっきり現れる（AI感排除）
-    const entry = gsap.fromTo(
-      container,
-      {
-        opacity: 0,
-      },
-      {
-        opacity: 1,
-        duration: 0.2,
-        ease: "none",
-        clearProps: "opacity",
-      }
-    );
+    container.style.opacity = "1";
+    container.style.transform = "none";
 
     return () => {
-      entry.kill();
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
-      gsap.killTweensOf(container);
     };
   }, [isVisible, shouldReduceMotion]);
 
@@ -183,10 +167,12 @@ export function DragonQuestLoading({
       position="fixed"
       top={0}
       left={0}
+      right={0}
+      bottom={0}
       width="100vw"
       height="100vh"
       bg="#000000"
-      zIndex={9999}
+      zIndex={999999}
       display="flex"
       alignItems="center"
       justifyContent="center"
