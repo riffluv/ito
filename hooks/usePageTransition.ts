@@ -49,6 +49,14 @@ export function usePageTransition() {
     direction: "slideLeft",
     duration: 0.6,
   });
+  const pushTimeoutRef = useRef<number | null>(null);
+
+  const clearScheduledNavigation = useCallback(() => {
+    if (pushTimeoutRef.current !== null) {
+      clearTimeout(pushTimeoutRef.current);
+      pushTimeoutRef.current = null;
+    }
+  }, []);
 
   // ページ遷移実行（Firebase処理含む）
   const navigateWithTransition = useCallback(
@@ -87,16 +95,17 @@ export function usePageTransition() {
             await firebaseOperation();
           }
 
-          // ローディング画面が完全に表示されてからページ遷移を実行
-          setTimeout(() => {
-            router.push(href);
-          }, 800);
-
           // 総時間を計算
           const totalDuration = stepsToRun.reduce(
             (sum, step) => sum + Math.max(step.duration, 0),
             0
           );
+          const routerPushDelay = totalDuration > 0 ? Math.max(totalDuration - 500, 1000) : 600;
+          clearScheduledNavigation();
+          pushTimeoutRef.current = window.setTimeout(() => {
+            router.push(href);
+            pushTimeoutRef.current = null;
+          }, routerPushDelay);
           let elapsedTime = 0;
 
           // 段階的ローディング実行
@@ -141,9 +150,12 @@ export function usePageTransition() {
         setIsTransitioning(true);
 
         // 暗転の中間でナビゲーション実行
-        setTimeout(() => {
+        const delay = Math.max(duration * 400, 120);
+        clearScheduledNavigation();
+        pushTimeoutRef.current = window.setTimeout(() => {
           router.push(href);
-        }, duration * 400);
+          pushTimeoutRef.current = null;
+        }, delay);
 
       } catch (error) {
         console.error("遷移エラー:", error);
@@ -152,12 +164,13 @@ export function usePageTransition() {
         setLoadingStepsState([]);
         setCurrentStep("");
         setProgress(0);
+        clearScheduledNavigation();
 
         // エラー時の回復アニメーション
         // TODO: エラー表示機能を追加
       }
     },
-    [router, pathname, isTransitioning, isLoading]
+    [router, pathname, isTransitioning, isLoading, clearScheduledNavigation]
   );
 
   // ルーム参加専用の遷移
@@ -209,7 +222,8 @@ export function usePageTransition() {
     setFromPage("");
     setToPage("");
     setLoadingStepsState([]);
-  }, []);
+    clearScheduledNavigation();
+  }, [clearScheduledNavigation]);
 
   // ローディング完了時のクリーンアップ
   const completeLoading = useCallback(() => {

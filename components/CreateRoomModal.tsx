@@ -108,9 +108,10 @@ export function CreateRoomModal({
       await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
       createdRoomId = roomRef.id;
 
-      // 先にローディング画面を表示してからモーダルを閉じる（ちらつき防止）
-      // navigateWithTransitionを先に開始
-      const transitionPromise = transition.navigateWithTransition(
+      // モーダルを閉じてからシームレス遷移を開始
+      onClose();
+
+      await transition.navigateWithTransition(
         `/rooms/${createdRoomId}`,
         {
           direction: "fade",
@@ -135,14 +136,6 @@ export function CreateRoomModal({
           onCreated?.(createdRoomId);
         }
       );
-
-      // ローディング画面が表示されたらモーダルを閉じる
-      setTimeout(() => {
-        onClose();
-      }, 100);
-
-      // 遷移完了を待つ
-      await transitionPromise;
     } catch (e: any) {
       logError("rooms", "create-room", e);
       notify({
