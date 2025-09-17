@@ -149,12 +149,13 @@ export async function leaveRoom(
       await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
     } catch {}
   } else {
-    // トランザクション内で委譲できなかった場合のフォールバック:
-    // players コレクションから残存メンバーを確認して委譲する
+    // ホスト委譲が失敗した場合のフォールバック：他のプレイヤーがいるかチェック
     try {
       const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
       const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+
       if (others.length > 0) {
+        // 他のプレイヤーがいる場合：ホスト委譲
         let nextHost = others[0];
         try {
           if (presenceSupported()) {
@@ -176,8 +177,18 @@ export async function leaveRoom(
           } catch {}
           await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
         } catch {}
+      } else {
+        // 誰もいなくなった場合：部屋を待機状態にリセット（開かずの扉問題を防ぐ）
+        try {
+          await resetRoomToWaiting(roomId, { force: true });
+          await sendSystemMessage(roomId, "🔄 部屋が空になったため、ゲーム状態をリセットしました");
+        } catch (error) {
+          logWarn("rooms", "auto-reset-empty-room-failed", error);
+        }
       }
-    } catch {}
+    } catch (error) {
+      logWarn("rooms", "leave-room-fallback-failed", error);
+    }
   }
 }
 
