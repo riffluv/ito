@@ -6,6 +6,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentSingleTabManager,
+  setLogLevel,
   type Firestore,
 } from "firebase/firestore";
 
@@ -60,6 +61,11 @@ export const app: FirebaseApp | null = ((): FirebaseApp | null => {
 export const db: Firestore | null = ((): Firestore | null => {
   if (!firebaseEnabled || !app) return null;
   try {
+    // SDKのログレベルを環境変数で制御（デフォルト: 本番=error, 開発=warn）
+    try {
+      const lv = (process.env.NEXT_PUBLIC_FIRESTORE_LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'error' : 'warn')) as any;
+      setLogLevel(lv);
+    } catch {}
     // 高速・安定化: ローカル永続キャッシュ + 自動ロングポーリング検出
     return initializeFirestore(app, {
       localCache: persistentLocalCache({
