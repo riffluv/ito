@@ -29,7 +29,6 @@ export function CreateRoomModal({
   const transition = useTransition();
   const [name, setName] = useState("");
   const [displayMode, setDisplayMode] = useState<"full" | "minimal">("full");
-  const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
     if (!firebaseEnabled) {
@@ -67,9 +66,6 @@ export function CreateRoomModal({
       });
       return;
     }
-
-    setSubmitting(true);
-    onClose(); // モーダルをすぐに閉じる
 
     try {
       // Firebase操作を実行してルームを作成
@@ -112,8 +108,9 @@ export function CreateRoomModal({
       await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
       createdRoomId = roomRef.id;
 
-      // 新しい遷移システムを使って移動
-      await transition.navigateWithTransition(
+      // 先にローディング画面を表示してからモーダルを閉じる（ちらつき防止）
+      // navigateWithTransitionを先に開始
+      const transitionPromise = transition.navigateWithTransition(
         `/rooms/${createdRoomId}`,
         {
           direction: "fade",
@@ -138,6 +135,14 @@ export function CreateRoomModal({
           onCreated?.(createdRoomId);
         }
       );
+
+      // ローディング画面が表示されたらモーダルを閉じる
+      setTimeout(() => {
+        onClose();
+      }, 100);
+
+      // 遷移完了を待つ
+      await transitionPromise;
     } catch (e: any) {
       logError("rooms", "create-room", e);
       notify({
@@ -145,8 +150,6 @@ export function CreateRoomModal({
         description: e?.message,
         type: "error",
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -449,7 +452,7 @@ export function CreateRoomModal({
 
               <button
                 onClick={handleCreate}
-                disabled={submitting || !name.trim()}
+                disabled={!name.trim()}
                 style={{
                   minWidth: "140px",
                   height: "40px",
@@ -459,31 +462,31 @@ export function CreateRoomModal({
                   fontFamily: "monospace",
                   border: "borders.retrogameThin",
                   background:
-                    submitting || !name.trim()
+                    !name.trim()
                       ? "#666"
                       : "var(--colors-richBlack-600)",
                   color: "white",
                   cursor:
-                    submitting || !name.trim() ? "not-allowed" : "pointer",
+                    !name.trim() ? "not-allowed" : "pointer",
                   textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
                   transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  opacity: submitting || !name.trim() ? 0.6 : 1,
+                  opacity: !name.trim() ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (!submitting && name.trim()) {
+                  if (name.trim()) {
                     e.currentTarget.style.background = "white";
                     e.currentTarget.style.color = "var(--colors-richBlack-800)";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!submitting && name.trim()) {
+                  if (name.trim()) {
                     e.currentTarget.style.background =
                       "var(--colors-richBlack-600)";
                     e.currentTarget.style.color = "white";
                   }
                 }}
               >
-                {submitting ? "作成中..." : "作成"}
+                作成
               </button>
             </HStack>
           </Box>

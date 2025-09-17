@@ -87,10 +87,10 @@ export function usePageTransition() {
             await firebaseOperation();
           }
 
-          // ローディング中に背景でページ遷移を実行（ユーザーには見えない）
+          // ローディング画面が完全に表示されてからページ遷移を実行
           setTimeout(() => {
             router.push(href);
-          }, 200);
+          }, 800);
 
           // 総時間を計算
           const totalDuration = stepsToRun.reduce(
