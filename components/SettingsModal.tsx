@@ -45,11 +45,16 @@ export function SettingsModal({
   const [availableHd2dImages, setAvailableHd2dImages] = useState<number[]>([]);
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
-      return window.localStorage.getItem("force-animations") === "true";
+      const stored = window.localStorage.getItem("force-animations");
+      if (stored === null) {
+        window.localStorage.setItem("force-animations", "true");
+        return true;
+      }
+      return stored === "true";
     } catch {
-      return false;
+      return true;
     }
   });
   const [osReduced, setOsReduced] = useState<boolean>(() => {
