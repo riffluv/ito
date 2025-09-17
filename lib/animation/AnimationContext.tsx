@@ -17,11 +17,16 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
   const { animationMode, effectiveMode, setAnimationMode, gpuCapability } = useGPUPerformance();
   // ユーザー強制フラグ（ローカル設定）。trueなら reduced-motion を無視してアニメON。
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
-      return window.localStorage.getItem("force-animations") === "true";
+      const stored = window.localStorage.getItem("force-animations");
+      if (stored === null) {
+        window.localStorage.setItem("force-animations", "true");
+        return true;
+      }
+      return stored === "true";
     } catch {
-      return false;
+      return true;
     }
   });
 
