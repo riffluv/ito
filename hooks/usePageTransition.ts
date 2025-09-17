@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 export interface TransitionLoadingStep {
@@ -58,6 +58,12 @@ export function usePageTransition() {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      clearScheduledNavigation();
+    };
+  }, [clearScheduledNavigation]);
+
   // ページ遷移実行（Firebase処理含む）
   const navigateWithTransition = useCallback(
     async (
@@ -100,7 +106,10 @@ export function usePageTransition() {
             (sum, step) => sum + Math.max(step.duration, 0),
             0
           );
-          const routerPushDelay = totalDuration > 0 ? Math.max(totalDuration - 500, 1000) : 600;
+          const routerPushDelay =
+            totalDuration > 0
+              ? Math.max(Math.min(totalDuration - 300, totalDuration * 0.8), 120)
+              : 0;
           clearScheduledNavigation();
           pushTimeoutRef.current = window.setTimeout(() => {
             router.push(href);
