@@ -124,15 +124,15 @@ service cloud.firestore {
         && isValidRoomDoc(request.resource.data)
         && request.resource.data.status == 'waiting';
 
-      allow update: if isAuthenticated()
-        && (
-          // ホストまたは管理者による全フィールド更新
+      allow update: if isAuthenticated() && (
+          // ホスト/管理者の通常更新（厳格）
           ((isHost(roomId) || isAdmin())
-            && isValidRoomDoc(request.resource.data)
-            && isValidHostAssignment(roomId))
-          // 全プレイヤーによるorder.proposalのみの更新（ゲーム進行中）
-          || (getRoomStatus(roomId) == 'clue'
+            && isValidHostAssignment(roomId)
             && isValidRoomDoc(request.resource.data))
+          // 一般参加者: clue中のみ、order.* と lastActiveAt だけを変更（差分ベース）
+          || (getRoomStatus(roomId) == 'clue'
+            && onlyOrderAndLastActiveChanged()
+            && orderChangeKeysAreSafe())
         );
 
       allow delete: if isAuthenticated() && (isHost(roomId) || isAdmin());
@@ -227,6 +227,7 @@ service cloud.firestore {
     function isRateLimited() {
       return request.time < resource.data.lastUpdate + duration.value(1, 's');
     }
+    // ホスト入れ替え時の妥当性（従来どおり）
     function isValidHostAssignment(roomId) {
       return (!('hostId' in request.resource.data) || request.resource.data.hostId == resource.data.hostId)
         || (
@@ -236,12 +237,15 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.resource.data.hostId)).data.uid == request.resource.data.hostId
         );
     }
-    function isOrderProposalOnlyUpdate() {
-      return request.resource.data.keys().hasOnly(['order.proposal', 'order', 'lastActiveAt'])
-        && (!('order' in request.resource.data) ||
-           (request.resource.data.order is map
-            && request.resource.data.order.keys().hasOnly(['proposal', 'total', 'list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'numbers'])))
-        && (!('order.proposal' in request.resource.data) || request.resource.data['order.proposal'] is list);
+
+    // トップレベル差分: order と lastActiveAt 以外は変えていないこと
+    function onlyOrderAndLastActiveChanged() {
+      return resource.data.diff(request.resource.data).changedKeys().hasOnly(['order','lastActiveAt']);
+    }
+    // order の差分: proposal のみ（互換で total 同時更新も可）
+    function orderChangeKeysAreSafe() {
+      let keys = request.resource.data.order.diff(resource.data.order).changedKeys();
+      return keys.hasOnly(['proposal']) || keys.hasOnly(['proposal','total']);
     }
   }
 }
