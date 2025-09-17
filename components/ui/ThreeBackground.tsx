@@ -517,6 +517,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     let app: PIXI.Application | null = null;
     let frameId: number | undefined;
+    let isAnimating = false; // アニメーションフラグをトップレベルで宣言
 
     const initPixi = async () => {
       try {
@@ -707,7 +708,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         let lastTime = 0;
         const targetFPS = 60;
         const frameInterval = 1000 / targetFPS;
-        let isAnimating = true; // アニメーション制御フラグ
+        isAnimating = true; // アニメーション制御フラグを有効化
 
         // Pixi.jsの自動ティッカーを無効化
         if (app.ticker) {
@@ -729,7 +730,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           lastTime = currentTime;
 
           // アプリケーションが破棄されていたら停止
-          if (!app || !app.stage || app.destroyed) {
+          if (!app || !app.stage) {
             isAnimating = false;
             if (frameId) {
               cancelAnimationFrame(frameId);
@@ -782,7 +783,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
           // 手動レンダリング（Tickerを使わない）
           try {
-            if (app && app.renderer && !app.destroyed) {
+            if (app && app.renderer && app.stage) {
               app.renderer.render(app.stage);
             }
           } catch (renderError) {
@@ -852,7 +853,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       if (app) {
         try {
           // アプリケーションが既に破棄されていないかチェック
-          if (!app.destroyed) {
+          if (app.stage) {
             // ティッカー完全停止
             if (app.ticker) {
               app.ticker.stop();
@@ -862,13 +863,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             if (app.stage) {
               app.stage.removeChildren();
             }
-            // アプリケーション破棄（オプション指定で確実に）
-            app.destroy({
-              children: true,
-              texture: true,
-              textureSource: true,
-              context: false // WebGLコンテキストは保持
-            });
+            // アプリケーション破棄（シンプルに）
+            app.destroy(true);
           }
         } catch (e) {
           logPixiBackground("warn", "destroy-error", e);
