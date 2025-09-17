@@ -539,31 +539,46 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           return;
         }
 
-        // === Octopath Traveler風HD-2D要素 ===
+        // === ドラクエ風ファンタジー背景 ===
 
-        // 1. ハロウィーン風背景グラデーション（暖かいオレンジ系）
+        // 1. 統一された夜空背景（月があるところと同じ色で全画面統一）
         const bgGradient = new PIXI.Graphics();
         bgGradient.rect(0, 0, app.screen.width, app.screen.height);
         bgGradient.fill({
-          color: 0x2d1810, // 暖かいオレンジブラウン
+          color: 0x1a1a2e, // ドラクエ風濃紺（全画面統一）
           alpha: 1,
         });
         app.stage.addChild(bgGradient);
 
-        // 2. 遠景の山々（シルエット）
+        // 上部のグラデーション効果も全画面に適用
+        const bgGradient2 = new PIXI.Graphics();
+        bgGradient2.rect(0, 0, app.screen.width, app.screen.height); // 全画面に変更
+        bgGradient2.fill({
+          color: 0x16213e, // 少し明るい深紫（全画面統一）
+          alpha: 0.7,
+        });
+        app.stage.addChild(bgGradient2);
+
+        // 2. 山岳地帯のシルエット（茶色の謎の物体=城を削除、山のみ残す）
         const mountains = new PIXI.Graphics();
-        mountains.moveTo(0, app.screen.height * 0.7);
-        for (let i = 0; i <= app.screen.width; i += 100) {
-          const height = app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
+
+        // 山岳地帯のみ（城は削除）
+        mountains.moveTo(0, app.screen.height * 0.8);
+        for (let i = 0; i <= app.screen.width; i += 80) {
+          const height = app.screen.height * (0.75 + Math.sin(i * 0.008) * 0.1 + Math.random() * 0.05);
           mountains.lineTo(i, height);
         }
         mountains.lineTo(app.screen.width, app.screen.height);
         mountains.lineTo(0, app.screen.height);
+
         mountains.fill({
-          color: 0x4a2c1a, // ハロウィーンオレンジブラウン
-          alpha: 0.9,
+          color: 0x2c1810, // 山のシルエット色（濃いブラウン）
+          alpha: 0.8,
         });
         app.stage.addChild(mountains);
+
+        // 3. 神秘的な月（重複削除、1個のみ）
+        // 下で作成されるfantasyMoonのみを使用するため、この月は削除
 
         // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
         interface ParticleData {
@@ -573,16 +588,16 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           life: number;
         }
 
-        // ハロウィーン風の暖かいオレンジ系色彩
-        const halloweenColors = [
-          0xff8c00, // ダークオレンジ
-          0xffa500, // 明るいオレンジ
-          0xff7f00, // 濃いオレンジ
-          0xffb347, // 薄いオレンジ
-          0xff6347, // トマトオレンジ
-          0xffd700, // ゴールド
-          0xffa000, // アンバー
-          0xff9500, // 暖かいオレンジ
+        // ドラクエ風神秘的な青白・紫系魔法色彩
+        const magicColors = [
+          0x87ceeb, // スカイブルー
+          0x9370db, // ミディアムパープル
+          0x6495ed, // コーンフラワーブルー
+          0xb19cd9, // ライトパープル
+          0x5f9ea0, // カデットブルー
+          0x9966cc, // アメジスト
+          0x66cdaa, // ミディアムアクアマリン
+          0x7b68ee, // ミディアムスレートブルー
         ];
 
         const particles: ParticleData[] = [];
@@ -590,8 +605,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           const particle = new PIXI.Graphics();
           particle.circle(0, 0, Math.random() * 2 + 1);
           particle.fill({
-            color: halloweenColors[Math.floor(Math.random() * halloweenColors.length)], // ハロウィーン色から選択
-            alpha: Math.random() * 0.7 + 0.3, // より明るく
+            color: magicColors[Math.floor(Math.random() * magicColors.length)], // ドラクエ魔法色から選択
+            alpha: Math.random() * 0.6 + 0.4, // 神秘的な光度
           });
 
           particle.x = Math.random() * app.screen.width;
@@ -608,42 +623,43 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           app.stage.addChild(particle);
         }
 
-        // 4. 可愛い前景の草原（なめらかな曲線）
+        // 4. ファンタジー岩場・丘陵地形（右下まで確実に埋める）
         const foreground = new PIXI.Graphics();
-        const grassY = app.screen.height * 0.87;
+        const terrainY = app.screen.height * 0.87;
 
-        // なめらかな波形の草原（直線じゃない、でもボコボコしすぎない）
-        foreground.moveTo(0, grassY);
-        for (let i = 0; i <= app.screen.width; i += 30) {
-          const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
-          foreground.lineTo(i, gentleWave);
+        // ドラクエ風の険しい岩場地形（右下まで確実に埋める）
+        foreground.moveTo(0, terrainY);
+        for (let i = 0; i <= app.screen.width + 10; i += 25) { // +10で確実に右端まで
+          const rockiness = Math.sin(i * 0.012) * 18 + Math.cos(i * 0.025) * 8 + terrainY;
+          foreground.lineTo(i, rockiness);
         }
-        foreground.lineTo(app.screen.width, app.screen.height);
-        foreground.lineTo(0, app.screen.height);
+        // 確実に右下角まで埋める
+        foreground.lineTo(app.screen.width + 10, app.screen.height + 10);
+        foreground.lineTo(-10, app.screen.height + 10);
         foreground.fill({
-          color: 0x3d4a1a, // ハロウィーンの秋色グリーン
-          alpha: 0.85,
+          color: 0x2f2f2f, // ダークグレイ（ファンタジー岩場）
+          alpha: 0.88,
         });
         app.stage.addChild(foreground);
 
-        // 6. 右上の美しいハロウィーン月
-        const createHalloweenMoon = () => {
+        // 6. 右上の神秘的なファンタジー月
+        const createFantasyMoon = () => {
           const moonContainer = new PIXI.Container();
 
-          // 月本体（暖かいオレンジがかった色）
+          // 月本体（ドラクエ風の青白い神秘的な色）
           const moon = new PIXI.Graphics();
-          moon.circle(0, 0, 45); // 少し小さめ
+          moon.circle(0, 0, 45);
           moon.fill({
-            color: 0xffeaa7, // 暖かいクリーム色
-            alpha: 0.95,
+            color: 0xe6f3ff, // 神秘的な青白色
+            alpha: 0.92,
           });
 
-          // 月の光輪（ハロウィーンオレンジ）
+          // 月の光輪（青紫の神秘的な光）
           const glow = new PIXI.Graphics();
           glow.circle(0, 0, 85);
           glow.fill({
-            color: 0xff8c00, // ハロウィーンオレンジ
-            alpha: 0.12,
+            color: 0x9370db, // ミディアムパープルの神秘光
+            alpha: 0.15,
           });
 
           // 月のクレーター（より詳細に）
@@ -654,8 +670,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           craters.circle(18, -10, 3);
           craters.circle(-8, 12, 2);
           craters.fill({
-            color: 0xddd6a3, // 少し暗めのクレーター
-            alpha: 0.6,
+            color: 0xc8d9f0, // 少し暗めの青白クレーター
+            alpha: 0.65,
           });
 
           // 月の位置（右上）
@@ -670,21 +686,21 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           return moonContainer;
         };
 
-        const halloweenMoon = createHalloweenMoon();
+        const fantasyMoon = createFantasyMoon();
 
-        // 可愛い小さな草のアクセント（少なめ）
+        // ファンタジー世界の小さな岩石・鉱物アクセント
         for (let i = 0; i < 15; i++) {
-          const grassAccent = new PIXI.Graphics();
+          const rockAccent = new PIXI.Graphics();
           const x = Math.random() * app.screen.width;
           const y = app.screen.height * (0.88 + Math.random() * 0.08);
-          const size = Math.random() * 1.5 + 0.8;
+          const size = Math.random() * 1.8 + 0.6;
 
-          grassAccent.circle(x, y, size);
-          grassAccent.fill({
-            color: 0x5a6c2a, // ハロウィーンアクセント秋色
-            alpha: 0.8,
+          rockAccent.circle(x, y, size);
+          rockAccent.fill({
+            color: 0x4a4a4a, // ファンタジー岩石グレイ
+            alpha: 0.75,
           });
-          app.stage.addChild(grassAccent);
+          app.stage.addChild(rockAccent);
         }
 
         // 5. アニメーションループ - パフォーマンス最適化版
@@ -705,7 +721,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             return;
           }
 
-          // ハロウィーン光の粒子アニメーション
+          // ドラクエ風魔法光の粒子アニメーション
           particles.forEach(data => {
             const { particle, vx, vy, life } = data;
             particle.x += vx;
@@ -717,18 +733,18 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             if (particle.y > app!.screen.height) particle.y = -10;
             if (particle.y < -10) particle.y = app!.screen.height;
 
-            // ハロウィーン風の明滅効果（より明るく活発に）
-            particle.alpha = Math.sin(currentTime * 0.002 * life) * 0.4 + 0.6;
+            // ドラクエ風神秘的な明滅効果（より穏やかで魔法的に）
+            particle.alpha = Math.sin(currentTime * 0.0015 * life) * 0.3 + 0.7;
           });
 
-          // ハロウィーン月の微妙な光の脈動
-          if (halloweenMoon) {
-            const moonPulse = Math.sin(currentTime * 0.0008) * 0.1 + 1;
-            halloweenMoon.scale.set(moonPulse);
+          // ファンタジー月の微妙な神秘的脈動
+          if (fantasyMoon) {
+            const moonPulse = Math.sin(currentTime * 0.0006) * 0.08 + 1;
+            fantasyMoon.scale.set(moonPulse);
 
-            // 月の光輪の色変化（オレンジの強弱）
-            const glowAlpha = Math.sin(currentTime * 0.001) * 0.05 + 0.12;
-            halloweenMoon.children[0].alpha = glowAlpha; // glow部分
+            // 月の光輪の色変化（神秘的な青紫の強弱）
+            const glowAlpha = Math.sin(currentTime * 0.0008) * 0.04 + 0.15;
+            fantasyMoon.children[0].alpha = glowAlpha; // glow部分
           }
 
           frameId = requestAnimationFrame(animate);
