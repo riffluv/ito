@@ -446,6 +446,7 @@ export default function RoomPage() {
     displayName,
     detachNow,
     leavingRef,
+    user,
   });
 
   // isMember は上で算出済み

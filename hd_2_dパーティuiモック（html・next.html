@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ito Party UI Mock (HD-2D style)</title>
+<style>
+  :root{
+    --bg-deep:#0b0f1a;
+    --bg-window:rgba(0,0,32,0.72);
+    --border:#ffffff;
+    --text:#ffffff;
+    --text-dim:#cfd8e3;
+    --accent:#9bd5ff;
+    --accent-2:#ffe38a;
+    --ok:#27d17c;
+    --warn:#ef476f;
+    --slot:#5a6b82;
+    --panel:#0f1422;
+    --shadow: 0 0 0.75rem rgba(0,0,0,.55);
+  }
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background: radial-gradient(1200px 800px at 80% 10%, #101a2e 0%, #0b1022 55%, #070c18 100%), var(--bg-deep);
+    color:var(--text);
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN","Yu Gothic", Meiryo, sans-serif;
+    overflow:hidden;
+  }
+  /* starry night */
+  .stars{position:fixed; inset:0; pointer-events:none; background:
+    radial-gradient(2px 2px at 10% 20%, #b3c7ff 0 40%, transparent 42%) ,
+    radial-gradient(1.5px 1.5px at 40% 10%, #cbe4ff 0 40%, transparent 42%) ,
+    radial-gradient(2px 2px at 70% 30%, #9bd5ff 0 40%, transparent 42%) ,
+    radial-gradient(1.5px 1.5px at 85% 55%, #ffffff 0 40%, transparent 42%) ,
+    radial-gradient(2px 2px at 20% 70%, #cfd8e3 0 40%, transparent 42%);
+    opacity:.45;
+  }
+  .mounts{
+    position:fixed; left:0; right:0; bottom:0; height:28%;
+    background:
+      radial-gradient(100% 120% at 20% 120%, #3b2f2f 0 55%, transparent 56%) ,
+      radial-gradient(92% 120% at 60% 120%, #3b2f2f 0 55%, transparent 56%) ,
+      radial-gradient(120% 120% at 90% 120%, #2e2424 0 55%, transparent 56%);
+    opacity:.9;
+    filter: blur(0.2px);
+  }
+  /* generic window */
+  .window{
+    background:var(--bg-window);
+    border:2px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .game-text{
+    color:var(--text);
+    text-shadow:
+      1px 0 0 #000, -1px 0 0 #000,
+      0 1px 0 #000,  0 -1px 0 #000;
+  }
+  .badge{
+    font-size:12px; letter-spacing:.02em;
+    padding:.15rem .45rem;
+    border:1px solid var(--border);
+    background:rgba(0,0,0,.5);
+    border-radius:4px;
+    display:inline-flex; gap:.4rem; align-items:center;
+  }
+  .top-left{
+    position:fixed; top:14px; left:14px;
+  }
+  .star{ color: var(--accent-2); }
+
+  /* party dock (left) */
+  .party-dock{
+    position:fixed; top:64px; left:24px; width:320px;
+  }
+  .dock-title{
+    font-weight:700; font-size:14px; padding:10px 12px; border-bottom:1px solid #9fb3d9;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .party-list{ list-style:none; margin:0; padding:8px 8px 10px 8px; display:flex; flex-direction:column; gap:8px;}
+  .player{
+    display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px;
+    padding:8px; border:1px solid rgba(255,255,255,.6); border-radius:6px;
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.0));
+  }
+  .player .avatar{
+    width:28px; height:28px; image-rendering: pixelated; border:2px solid #fff; background:
+    linear-gradient(#c0392b, #8e1b17);
+    box-shadow: inset 0 0 0 2px #000;
+    border-radius:4px; position:relative;
+  }
+  .avatar::after{ /* tiny pixel face */
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(3px 3px at 35% 40%, #000 0 45%, transparent 46%),
+      radial-gradient(3px 3px at 65% 40%, #000 0 45%, transparent 46%),
+      linear-gradient(#000 0 0) 50% 66% / 10px 3px no-repeat;
+    opacity:.9;
+  }
+  .name-line{ display:flex; align-items:center; gap:6px; }
+  .name{ font-weight:700; color:var(--accent); }
+  .host{ font-size:12px; color:var(--accent-2); filter:drop-shadow(0 0 2px rgba(0,0,0,.8)); }
+  .inline-icons{ display:flex; gap:6px; align-items:center; }
+  .pill{ font-size:11px; padding:.15rem .5rem; border:1px solid #fff; border-radius:999px; }
+  .pill.ready{ background:rgba(39,209,124,.18); border-color: var(--ok); color: var(--ok); }
+  .pill.wait{ background:rgba(0,0,0,.35); color:#d2d8e6; }
+  .bubble-btn{
+    width:28px; height:28px; display:grid; place-items:center; border:1px solid #fff; border-radius:6px;
+    background:rgba(0,0,0,.3); cursor:pointer;
+  }
+  .bubble-btn:hover{ background:rgba(255,255,255,.08); }
+  .bubble{
+    position:absolute; transform: translateY(-8px);
+    display:none;
+  }
+  .bubble .tip{ width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid var(--border); margin-left:18px;}
+  .bubble .inner{ background:#151b2c; border:2px solid var(--border); padding:8px; border-radius:6px; width:220px; }
+  .bubble input{
+    width:100%; background:#0e1424; border:1px solid #aab7cf; color:#fff; padding:6px 8px; border-radius:4px;
+  }
+  .tag-words{ margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{ font-size:11px; border:1px solid #93b7ff; background:rgba(155,213,255,.15); color:#9bd5ff; padding:.1rem .4rem; border-radius:999px; }
+
+  /* center slots/cards */
+  .slots{ position:fixed; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; gap:16px;}
+  .slot{ width:110px; height:150px; border:2px dashed #8792a6; border-radius:8px; display:grid; place-items:center; color:#8792a6; }
+  .cards{ position:fixed; top:50%; left:50%; transform:translate(-50%,-10%); display:flex; gap:12px; }
+  .card{
+    width:130px; height:180px; border-radius:10px;
+    background: #1a2235;
+    border:2px solid #cdd6ea;
+    box-shadow: 0 4px 0 #cdd6ea, var(--shadow);
+    display:grid; grid-template-rows:auto 1fr auto; align-items:center; justify-items:center;
+  }
+  .card .state{ margin-top:12px; font-weight:700; }
+  .card .who{ margin-bottom:10px; font-size:12px; color:#bcd3ff; }
+
+  /* bottom control panel */
+  .controlbar{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    min-width:70%; padding:10px; display:flex; align-items:center; gap:10px;
+    background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35));
+    border:2px solid #fff; box-shadow: var(--shadow);
+  }
+  .control-group{ display:flex; align-items:center; gap:8px; padding:6px; border:1px solid rgba(255,255,255,.5); background:rgba(0,0,0,.25); }
+  .iconbtn{
+    width:36px; height:32px; border:1px solid #fff; background:rgba(255,255,255,.06); border-radius:6px;
+    display:grid; place-items:center; cursor:pointer;
+  }
+  .iconbtn:hover{ background:rgba(255,255,255,.12); }
+  .input-group{ flex:1; display:flex; align-items:center; gap:8px; }
+  .input-box{
+    position:relative; flex:1; display:flex; align-items:center; gap:8px; padding:0 8px; height:38px;
+    border:1px solid #fff; background:rgba(0,0,0,.35);
+  }
+  .input-box .q{ width:22px; height:22px; border:1px solid #fff; display:grid; place-items:center; margin-right:6px; }
+  .input-box input{
+    flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:14px;
+  }
+  .btn{
+    height:38px; padding:0 14px; border:2px solid #fff; background:rgba(255,255,255,.08); color:#fff; cursor:pointer; border-radius:6px;
+  }
+  .btn:hover{ background:rgba(255,255,255,.16); }
+  .btn.primary{ background:#0d3b2a; border-color:#27d17c; box-shadow: 0 0 0 2px rgba(39,209,124,.25) inset; }
+  .btn.primary:hover{ background:#145e41; }
+  .sep{ width:1px; height:30px; background:rgba(255,255,255,.35); }
+
+  /* utility */
+  .mt-2{ margin-top:.5rem; }
+  .rel{ position:relative; }
+  .right{ justify-content:flex-end; }
+</style>
+</head>
+<body>
+  <div class="stars"></div>
+  <div class="mounts"></div>
+
+  <div class="top-left">
+    <span class="badge game-text"><span class="star">★</span> ゲーム準備中</span>
+  </div>
+
+  <!-- PARTY DOCK -->
+  <aside class="party-dock window game-text">
+    <div class="dock-title">
+      <span>R1 – PARTY <span class="text-dim">(2)</span></span>
+      <span style="font-size:12px;color:#bcd3ff;">🛡︎ Lobby</span>
+    </div>
+    <ul class="party-list">
+      <!-- player 1 (host) -->
+      <li class="player rel" id="p1">
+        <div class="avatar"></div>
+        <div>
+          <div class="name-line">
+            <span class="name">chrome</span>
+            <span class="host">👑 HOST</span>
+          </div>
+          <div class="inline-icons mt-2">
+            <span class="pill wait" data-state="wait">WAITING</span>
+            <div class="tag-words" id="p1-tags"></div>
+          </div>
+        </div>
+        <div>
+          <button class="bubble-btn" data-target="p1-bubble" title="連想ワードを登録">💬</button>
+          <div class="bubble" id="p1-bubble">
+            <div class="tip"></div>
+            <div class="inner">
+              <label class="game-text" style="font-size:12px;opacity:.85;">連想ワードを入力</label>
+              <input type="text" placeholder="例）月・夜・静かな…" onkeydown="addTag(event,'p1-tags')" />
+            </div>
+          </div>
+        </div>
+      </li>
+      <!-- player 2 -->
+      <li class="player rel" id="p2">
+        <div class="avatar"></div>
+        <div>
+          <div class="name-line">
+            <span class="name">vercel</span>
+          </div>
+          <div class="inline-icons mt-2">
+            <span class="pill ready" data-state="ready">READY</span>
+            <div class="tag-words" id="p2-tags">
+              <span class="tag">砂漠</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button class="bubble-btn" data-target="p2-bubble" title="連想ワードを登録">💬</button>
+          <div class="bubble" id="p2-bubble">
+            <div class="tip"></div>
+            <div class="inner">
+              <label class="game-text" style="font-size:12px;opacity:.85;">連想ワードを入力</label>
+              <input type="text" placeholder="例）太陽・熱い…" onkeydown="addTag(event,'p2-tags')" />
+            </div>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- CENTER SLOTS & CARDS -->
+  <div class="slots">
+    <div class="slot game-text">1</div>
+    <div class="slot game-text">2</div>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <div class="state game-text">WAITING</div>
+      <div></div>
+      <div class="who game-text">chrome</div>
+    </div>
+    <div class="card">
+      <div class="state game-text">READY</div>
+      <div></div>
+      <div class="who game-text">vercel</div>
+    </div>
+  </div>
+
+  <!-- CONTROL BAR -->
+  <div class="controlbar game-text">
+    <div class="input-group">
+      <div class="input-box">
+        <div class="q">?</div>
+        <input type="text" placeholder="連想ワード" />
+      </div>
+      <button class="btn">決定</button>
+      <button class="btn">出す</button>
+    </div>
+    <div class="sep"></div>
+    <div class="control-group">
+      <div class="iconbtn" title="カード山">🃏</div>
+      <div class="iconbtn" title="リセット">↻</div>
+      <div class="iconbtn" title="コピー">⎘</div>
+      <div class="iconbtn" title="設定">⚙</div>
+    </div>
+    <button class="btn primary">ゲーム開始</button>
+  </div>
+
+<script>
+  // toggle bubble visibility
+  document.querySelectorAll('.bubble-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = btn.dataset.target;
+      const b = document.getElementById(id);
+      const opened = b.style.display === 'block';
+      document.querySelectorAll('.bubble').forEach(bb=>bb.style.display='none');
+      b.style.display = opened ? 'none' : 'block';
+    });
+  });
+  // click-away to close
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.bubble') && !e.target.closest('.bubble-btn')){
+      document.querySelectorAll('.bubble').forEach(bb=>bb.style.display='none');
+    }
+  });
+  // add tag on Enter
+  window.addTag = function(ev, containerId){
+    if(ev.key === 'Enter' && ev.target.value.trim()){
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = ev.target.value.trim();
+      document.getElementById(containerId).appendChild(tag);
+      ev.target.value = '';
+    }
+  }
+</script>
+</body>
+</html>
