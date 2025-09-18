@@ -1,6 +1,7 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
 
@@ -114,6 +115,7 @@ function NotificationItem({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<any>(null);
+  const prefersReduced = useReducedMotionPreference();
 
   // ドラクエ風シンプルな登場アニメーション
   useEffect(() => {
@@ -121,12 +123,6 @@ function NotificationItem({
 
     const container = containerRef.current;
     const content = contentRef.current;
-
-    // reduced-motion の尊重
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (prefersReduced) {
       // 最小限の状態をセットしてアニメーションをスキップ
@@ -184,7 +180,7 @@ function NotificationItem({
         // ignore
       }
     };
-  }, []);
+  }, [prefersReduced]);
 
   // ドラクエ風シンプルな退場アニメーション
   const handleRemove = () => {

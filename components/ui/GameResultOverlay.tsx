@@ -2,6 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -15,6 +16,7 @@ export function GameResultOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<any>(null);
+  const prefersReduced = useReducedMotionPreference();
 
   // 豪華なGSAPアニメーション（CSS版より遥かに派手で美しい）
   useEffect(() => {
@@ -22,12 +24,6 @@ export function GameResultOverlay({
 
     const overlay = overlayRef.current;
     const text = textRef.current;
-
-    // ユーザーのアクセシビリティ設定を尊重
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // 初期状態をリセット（より派手な初期設定）
     gsap.set(overlay, {
@@ -245,7 +241,7 @@ export function GameResultOverlay({
         });
       } catch {}
     };
-  }, [failed, mode]);
+  }, [failed, mode, prefersReduced]);
 
   // インライン表示: カードと被せず帯として表示
   if (mode === "inline") {

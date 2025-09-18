@@ -4,6 +4,7 @@ import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import Tooltip from "@/components/ui/Tooltip";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 // ドラクエ風フェーズアナウンス（シンプル版）
 const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
@@ -52,6 +53,7 @@ export function SimplePhaseDisplay({
   const { text, subText, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
   const tlRef = useRef<any>(null);
+  const prefersReduced = useReducedMotionPreference();
 
   // フェーズ変更時のGSAPアニメーション
   useEffect(() => {
@@ -60,12 +62,6 @@ export function SimplePhaseDisplay({
     const container = containerRef.current;
     const textEl = textRef.current;
     const iconEl = iconRef.current;
-
-    // reduced-motion の尊重
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // 初回表示の場合 または 状態変更がない場合
     if (
@@ -199,7 +195,7 @@ export function SimplePhaseDisplay({
         // ignore
       }
     };
-  }, [roomStatus, canStartSorting, text, icon]);
+  }, [roomStatus, canStartSorting, text, icon, prefersReduced]);
 
   // お題テキスト変更時のぴょーん！アニメーション
   useEffect(() => {
@@ -208,12 +204,6 @@ export function SimplePhaseDisplay({
     // お題テキストが変更された場合のみアニメーション
     if (previousTopicText.current !== null && previousTopicText.current !== topicText) {
       const topicEl = topicRef.current;
-
-      // reduced-motion の尊重
-      const prefersReduced =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (!prefersReduced) {
         // ぴょーん！バウンスアニメーション
@@ -241,7 +231,7 @@ export function SimplePhaseDisplay({
     }
 
     previousTopicText.current = topicText;
-  }, [topicText]);
+  }, [topicText, prefersReduced]);
 
   return (
     <Box
