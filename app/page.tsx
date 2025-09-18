@@ -447,9 +447,10 @@ export default function MainMenu() {
                       戻る: 前回のルーム
                     </AppButton>
                   ) : null}
-                  <RPGButton
+                  <AppButton
                     size="lg"
                     visual="outline"
+                    palette="gray"
                     onClick={async () => {
                       try {
                         await transition.navigateWithTransition(
@@ -474,7 +475,7 @@ export default function MainMenu() {
                   >
                     <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
-                  </RPGButton>
+                  </AppButton>
                 </HStack>
               </VStack>
             </VStack>
@@ -517,7 +518,18 @@ export default function MainMenu() {
           }}
         >
           <GridItem>
-            <Box mb={8}>
+            <Box
+              mb={8}
+              css={{
+                background: "rgba(8,9,15,0.9)",
+                border: "3px solid rgba(255,255,255,0.9)",
+                borderRadius: 0,
+                padding: "20px",
+                boxShadow:
+                  "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+                position: "relative",
+              }}
+            >
               <HStack justify="space-between" mb={4}>
                 <HStack gap={3}>
                   <Box
@@ -533,7 +545,14 @@ export default function MainMenu() {
                   </Box>
                   <VStack align="start" gap={1}>
                     <HStack gap={2} align="center">
-                      <Heading size="xl" fontWeight={700} color="text">
+                      <Heading
+                        size="xl"
+                        fontWeight={700}
+                        color="white"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                        letterSpacing="0.5px"
+                      >
                         アクティブルーム
                       </Heading>
                       <Badge
@@ -548,7 +567,11 @@ export default function MainMenu() {
                         {filteredRooms.length}件
                       </Badge>
                     </HStack>
-                    <Text fontSize="md" color="fgMuted">
+                    <Text
+                      fontSize="sm"
+                      color="rgba(255,255,255,0.8)"
+                      fontFamily="monospace"
+                    >
                       進行中のルームも表示します（参加は待機中のみ）
                     </Text>
                   </VStack>
