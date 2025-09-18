@@ -1,6 +1,6 @@
 "use client";
 
-import { RPGButton } from "@/components/ui/RPGButton";
+import { AppButton } from "@/components/ui/AppButton";
 import {
   Badge,
   Box,
@@ -31,7 +31,7 @@ export default function RulesPage() {
         {/* Hero Header */}
         <VStack mb={{ base: 8, md: 12 }} align="stretch" gap={6}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
-            <RPGButton
+            <AppButton
               onClick={async () => {
                 try {
                   await transition.navigateWithTransition(
@@ -50,17 +50,13 @@ export default function RulesPage() {
                   router.push("/");
                 }
               }}
-              variant="subtle"
+              visual="outline"
+              palette="gray"
               size="md"
-              borderRadius={0}
-              style={{
-                paddingLeft: "12px",
-                paddingRight: "16px",
-              }}
             >
               <ArrowLeft size={16} style={{ marginRight: "8px" }} />
               トップへ戻る
-            </RPGButton>
+            </AppButton>
             <Badge
               colorScheme="blue"
               borderRadius={0}
@@ -114,9 +110,12 @@ export default function RulesPage() {
               {/* テキストボックス */}
               <Box
                 p={6}
-                bg="richBlack.800"
-                border="borders.retrogame"
-                borderRadius={0}
+                css={{
+                  background: "rgba(8,9,15,0.9)",
+                  border: "3px solid rgba(255,255,255,0.9)",
+                  borderRadius: 0,
+                  boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+                }}
                 flex={1}
                 minW={{ base: "100%", md: "0" }}
               >
@@ -148,9 +147,12 @@ export default function RulesPage() {
         <VStack gap={{ base: 8, md: 10 }} align="stretch">
           {/* ゲームの流れ */}
           <Box
-            bg="richBlack.800"
-            border="borders.retrogame"
-            borderRadius={0}
+            css={{
+              background: "rgba(8,9,15,0.9)",
+              border: "3px solid rgba(255,255,255,0.9)",
+              borderRadius: 0,
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+            }}
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -229,9 +231,12 @@ export default function RulesPage() {
 
           {/* 判定方法（モード） */}
           <Box
-            bg="richBlack.800"
-            border="borders.retrogame"
-            borderRadius={0}
+            css={{
+              background: "rgba(8,9,15,0.9)",
+              border: "3px solid rgba(255,255,255,0.9)",
+              borderRadius: 0,
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+            }}
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -284,9 +289,12 @@ export default function RulesPage() {
 
           {/* ルール要点・コツ・例 */}
           <Box
-            bg="richBlack.800"
-            border="borders.retrogame"
-            borderRadius={0}
+            css={{
+              background: "rgba(8,9,15,0.9)",
+              border: "3px solid rgba(255,255,255,0.9)",
+              borderRadius: 0,
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+            }}
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -396,7 +404,7 @@ export default function RulesPage() {
           </Box>
 
           {/* 戻るボタン */}
-          <RPGButton
+          <AppButton
             onClick={async () => {
               try {
                 await transition.navigateWithTransition(
@@ -421,7 +429,7 @@ export default function RulesPage() {
           >
             <ArrowLeft size={20} style={{ marginRight: "8px" }} />
             メインメニューに戻る
-          </RPGButton>
+          </AppButton>
         </VStack>
       </Container>
     </Box>
