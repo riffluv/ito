@@ -27,7 +27,8 @@ interface DragonQuestPartyProps {
   roomId?: string; // 手動委譲用
   isHostUser?: boolean; // 自分がホストか
   eligibleIds?: string[]; // ラウンド対象（オンライン）
-  roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
+  roundIds?: string[];
+  variant?: "overlay" | "panel"; // 今ラウンドの全対象（オフライン含む）
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -73,8 +74,14 @@ export function DragonQuestParty({
   isHostUser,
   eligibleIds,
   roundIds,
+  variant = "overlay",
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isPanel = variant === "panel";
+  const overlayOffsets = {
+    top: { base: "112px", md: "128px" } as const,
+    left: { base: "20px", md: "24px" } as const,
+  } as const;
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
@@ -135,13 +142,14 @@ export function DragonQuestParty({
   return (
     <Box
       ref={containerRef}
-      position="fixed"
-      // 左側配置（チャット被り回避）
-      top={{ base: "112px", md: "128px" }}
-      left={{ base: "20px", md: "24px" }}
-      zIndex={60}
+      position={isPanel ? "relative" : "fixed"}
+      top={isPanel ? undefined : overlayOffsets.top}
+      left={isPanel ? undefined : overlayOffsets.left}
+      zIndex={isPanel ? undefined : 60}
+      w={isPanel ? "100%" : undefined}
+      maxW={isPanel ? "100%" : undefined}
       css={{
-        pointerEvents: "none",
+        pointerEvents: isPanel ? "auto" : "none",
         transform: "none",
         opacity: 1,
       }}
@@ -299,7 +307,7 @@ export function DragonQuestParty({
 
                       {/* 連想ワード + 進捗バー */}
                       <HStack justify="space-between" align="center" w="100%">
-                        <HStack spacing={1} flex={1} minW={0}>
+                        <HStack gap={1} flex={1} minW={0}>
                           <Text
                             fontSize="xs"
                             color="rgba(255, 139, 139, 0.9)"
