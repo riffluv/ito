@@ -280,10 +280,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       px={{ base: 4, md: 6 }}
       py={{ base: 3, md: 4 }}
       gap={{ base: 3, md: 5 }}
-      bg="rgba(20,23,34,0.90)" // パネル色を少し透過して背景となじませる
-      border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-      borderRadius={0}
-      boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+      css={{
+        background: "rgba(8,9,15,0.9)",
+        border: "3px solid rgba(255,255,255,0.9)",
+        borderRadius: 0,
+        boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+      }}
       position="relative"
       _before={{
         content: '""',
