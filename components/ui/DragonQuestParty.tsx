@@ -149,14 +149,12 @@ export function DragonQuestParty({
       }}
     >
       <Box
-        bg={UI_TOKENS.COLORS.panelBg}
-        border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-        borderRadius={0}
-        px={4}
-        py={2}
         css={{
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-          backdropFilter: "blur(8px) saturate(1.1)",
+          background: "rgba(8,9,15,0.9)",
+          border: "3px solid rgba(255,255,255,0.9)",
+          borderRadius: 0,
+          padding: "16px",
+          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
           pointerEvents: "auto",
         }}
       >
