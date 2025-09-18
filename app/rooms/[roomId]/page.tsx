@@ -443,10 +443,8 @@ export default function RoomPage() {
     enabled: true,
     roomId,
     uid,
-    displayName,
     detachNow,
     leavingRef,
-    user,
   });
 
   // isMember は上で算出済み
