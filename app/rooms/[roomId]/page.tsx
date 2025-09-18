@@ -588,7 +588,6 @@ export default function RoomPage() {
       isHostUser={isHost}
       eligibleIds={baseIds}
       roundIds={baseIds}
-      variant="panel"
     />
   );
 
