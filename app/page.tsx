@@ -423,7 +423,7 @@ export default function MainMenu() {
                               showLoading: true,
                               loadingSteps: [
                                 { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-                                { id: "room", message: "まえかいの ルームに もどっています...", duration: 2000 },
+                                { id: "room", message: "ぜんかいの ルームに もどっています...", duration: 2000 },
                                 { id: "player", message: "プレイヤーじょうほうを かくにんしています...", duration: 1800 },
                                 { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
                               ],
