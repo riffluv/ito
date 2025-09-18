@@ -3,6 +3,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 // ドラクエ風フェーズアナウンス
 const getPhaseAnnouncement = (status: string) => {
@@ -35,6 +36,7 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
   const { text, icon } = getPhaseAnnouncement(roomStatus);
 
   const tlRef = useRef<any>(null);
+  const prefersReduced = useReducedMotionPreference();
 
   // フェーズ変更時の豪華なGSAPアニメーション
   useEffect(() => {
@@ -43,11 +45,6 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
     const container = containerRef.current;
     const textEl = textRef.current;
     const iconEl = iconRef.current;
-
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // 初回表示時のアニメーション
     if (previousStatus.current === roomStatus) {
@@ -175,7 +172,7 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
         // ignore
       }
     };
-  }, [roomStatus, text, icon]);
+  }, [roomStatus, text, icon, prefersReduced]);
 
   return (
     <Box

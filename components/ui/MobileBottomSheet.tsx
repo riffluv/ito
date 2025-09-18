@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 /**
  * MobileBottomSheet: モバイル用ボトムシート実装
@@ -48,6 +49,7 @@ export function MobileBottomSheet({
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
+  const prefersReduced = useReducedMotionPreference();
 
   // ドラッグ状態
   const dragStartY = useRef(0);
@@ -258,12 +260,6 @@ export function MobileBottomSheet({
 
   // 状態変更時のアニメーション実行
   useEffect(() => {
-    // reduced-motion を尊重
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     if (prefersReduced) {
       // 最小限の状態にセット
       if (sheetRef.current)
@@ -284,7 +280,7 @@ export function MobileBottomSheet({
         setTimeout(() => animateContent(), 100);
       }
     }
-  }, [sheetState]);
+  }, [sheetState, prefersReduced]);
 
   // 初期化時のポジション設定
   useEffect(() => {
