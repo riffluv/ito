@@ -162,7 +162,7 @@ export function DragonQuestParty({
           border={`1px solid rgba(255,255,255,0.2)`}
           px={2}
           py={1}
-          mb={2}
+          mb={1}
           css={{
             borderRadius: 0,
             boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
@@ -178,7 +178,7 @@ export function DragonQuestParty({
             textAlign="left"
             pl={1}
           >
-            PARTY ({actualCount})
+            R1 - PARTY ({actualCount})
           </Text>
         </Box>
 
@@ -186,7 +186,7 @@ export function DragonQuestParty({
         <Box
           display="flex"
           flexDirection="column"
-          gap={0.25}
+          gap={0}
           w={{ base: "240px", md: "280px" }}
           css={{ pointerEvents: "auto" }}
         >
@@ -227,7 +227,7 @@ export function DragonQuestParty({
                   bg="rgba(20, 23, 34, 0.8)"
                   borderRadius={0}
                   px={2}
-                  py={0.25}
+                  py={0}
                   w="100%"
                   position="relative"
                   css={{
@@ -238,7 +238,7 @@ export function DragonQuestParty({
                   onDoubleClick={onTransfer}
                 >
                   {/* アバター + 情報レイアウト */}
-                  <Box display="flex" alignItems="center" gap={2}>
+                  <Box display="flex" alignItems="center" gap={1}>
                     {/* アバター表示エリア */}
                     <Box
                       flexShrink={0}
@@ -297,7 +297,7 @@ export function DragonQuestParty({
                         {fresh.name}
                       </Text>
 
-                      {/* 連想ワード + 状態表示（1行構成） */}
+                      {/* 連想ワード + 進捗バー */}
                       <HStack justify="space-between" align="center" w="100%">
                         <HStack spacing={1} flex={1} minW={0}>
                           <Text
@@ -322,6 +322,35 @@ export function DragonQuestParty({
                             {fresh.clue1?.trim() || "---"}
                           </Text>
                         </HStack>
+
+                        {/* DQ風進捗バー */}
+                        <Box
+                          width="24px"
+                          height="4px"
+                          bg="rgba(0,0,0,0.4)"
+                          border="1px solid rgba(255,255,255,0.2)"
+                          borderRadius={0}
+                          overflow="hidden"
+                          flexShrink={0}
+                          ml={1}
+                        >
+                          <Box
+                            height="100%"
+                            width={fresh.ready ? "100%" : fresh.clue1?.trim() ? "65%" : "0%"}
+                            background={fresh.ready
+                              ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
+                              : fresh.clue1?.trim()
+                              ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
+                              : "transparent"
+                            }
+                            transition="all 0.3s ease"
+                            css={{
+                              boxShadow: fresh.ready || fresh.clue1?.trim()
+                                ? "inset 0 1px 0 rgba(255,255,255,0.3)"
+                                : "none"
+                            }}
+                          />
+                        </Box>
 
                       </HStack>
                     </Box>
