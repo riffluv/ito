@@ -125,7 +125,9 @@
       "mcp__serena__list_memories",
       "Bash(firebase login:*)",
       "Bash(npx firebase deploy:*)",
-      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\app\\rooms\\[roomId]\\loading.tsx\")"
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\app\\rooms\\[roomId]\\loading.tsx\")",
+      "WebFetch(domain:www.gameuidatabase.com)",
+      "WebFetch(domain:interfaceingame.com)"
     ],
     "deny": [],
     "ask": []
