@@ -156,6 +156,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   };
 
+  const handleClear = async () => {
+    if (!me?.id) return;
+    try {
+      await updateClue1(roomId, me.id, "");
+      setText("");
+      notify({ title: "連想ワードをクリアしました", type: "info" });
+    } catch (e: any) {
+      notify({
+        title: "クリアに失敗しました",
+        description: e?.message,
+        type: "error",
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!me?.id) return;
 
@@ -379,6 +394,45 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           transition="all 0.15s ease"
         >
           決定
+        </AppButton>
+      </Tooltip>
+      <Tooltip
+        content={
+          placed
+            ? "カード提出中はクリアできません"
+            : !text.trim()
+              ? "連想ワードが入力されていません"
+              : "連想ワードをクリア"
+        }
+        showArrow
+        openDelay={300}
+      >
+        <AppButton
+          size="sm"
+          visual="outline"
+          palette="gray"
+          onClick={handleClear}
+          disabled={!text.trim() || placed}
+          px={3}
+          py={2}
+          bg="rgba(55, 65, 81, 0.7)"
+          color="white"
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
+          borderRadius={0}
+          fontWeight="600"
+          boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+          _hover={{
+            bg: "rgba(75, 85, 99, 0.8)",
+            borderColor: UI_TOKENS.COLORS.whiteAlpha90,
+            transform: "translateY(-1px)",
+          }}
+          _active={{
+            transform: "translateY(0)",
+            boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+          }}
+          transition="all 0.15s ease"
+        >
+          クリア
         </AppButton>
       </Tooltip>
       <Tooltip content={actionTooltip} showArrow openDelay={300}>
