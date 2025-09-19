@@ -50,7 +50,7 @@ export default function WaitingArea({
   return (
     <VStack
       width="100%"
-      maxWidth="600px"
+      maxWidth="var(--board-max-width)"
       mx="auto"
       mt={{ base: 4, md: 6 }}
       p={{ base: 3, md: 4 }}
@@ -84,10 +84,11 @@ export default function WaitingArea({
         position="relative"
         width="100%"
         display="flex"
-        flexWrap="wrap"
+        flexWrap="nowrap"
         justifyContent="center"
         alignItems={players.length === 0 ? "center" : "flex-start"}
         gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
+        overflowX="auto"
         data-drop-enabled={dropZoneEnabled ? "true" : undefined}
         data-drop-over={dropZoneEnabled ? "true" : undefined}
         css={dropZoneCss}
