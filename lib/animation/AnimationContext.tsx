@@ -46,6 +46,31 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let params: URLSearchParams | null = null;
+    try {
+      params = new URLSearchParams(window.location.search || "");
+    } catch {
+      params = null;
+    }
+    if (!params) return;
+    const animParam = params.get("anim");
+    if (animParam !== "on" && animParam !== "off") return;
+    const nextForce = animParam === "on";
+    setForceAnimations(nextForce);
+    try {
+      window.localStorage.setItem("force-animations", nextForce ? "true" : "false");
+      window.dispatchEvent(new CustomEvent("forceAnimationsChanged"));
+    } catch {}
+    params.delete("anim");
+    const query = params.toString();
+    const hash = window.location.hash || "";
+    const nextUrl = window.location.pathname + (query ? "?" + query : "") + hash;
+    try {
+      window.history.replaceState(null, "", nextUrl);
+    } catch {}
+  }, []);
 
   const reducedMotion = useMemo(() => {
     const base =
