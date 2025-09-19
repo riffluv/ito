@@ -753,7 +753,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   meId={meId}
                   displayMode={displayMode}
                   returnDropZoneId={RETURN_DROP_ZONE_ID}
-                  isReturnActive={isDraggingOwnPlacedCard}
                 />
               </Box>
             )}

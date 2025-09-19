@@ -127,9 +127,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     ? !!me?.id && (placed || canSubmit)
     : !!me?.id && canSubmit;
 
-  const actionLabel = isSortMode && placed ? "引く" : "出す";
+  const actionLabel = isSortMode && placed ? "戻す" : "出す";
   const actionTooltip = isSortMode && placed
-    ? "待機エリアに戻す"
+    ? "カードを待機エリアに戻す"
     : "カードを場に出す";
 
   const handleDecide = async () => {
