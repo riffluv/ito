@@ -131,7 +131,7 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params.roomId;
-  const { user, displayName, setDisplayName } = useAuth();
+  const { user, displayName, setDisplayName, loading: authLoading } = useAuth();
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
@@ -177,7 +177,8 @@ export default function RoomPage() {
   useEffect(() => {
     if (!room || !uid) return;
     // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
-    if (loading) return;
+    // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
+    if (loading || authLoading) return;
     let pendingRejoin = false;
     if (rejoinSessionKey && typeof window !== "undefined") {
       try {
@@ -210,7 +211,7 @@ export default function RoomPage() {
         }
       })();
     }
-  }, [room?.status, uid, canAccess, loading, rejoinSessionKey]);
+  }, [room?.status, uid, canAccess, loading, authLoading, rejoinSessionKey]);
 
   useEffect(() => {
     if (!room || !uid || !user) return;
