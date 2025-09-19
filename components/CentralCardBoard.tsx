@@ -9,6 +9,7 @@ import {
   addCardToProposalAtPosition,
   finalizeReveal,
   moveCardInProposalToPosition,
+  removeCardFromProposal,
   submitSortedOrder,
 } from "@/lib/game/room";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -68,6 +69,8 @@ interface CentralCardBoardProps {
   // 親からスロット数を明示指定する場合に使用（サーバ/親と厳密一致）
   slotCount?: number;
 }
+
+const RETURN_DROP_ZONE_ID = "waiting-return-zone";
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
@@ -345,6 +348,26 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     );
 
     // Handle WaitingCard -> EmptySlot drops
+    if (overId === RETURN_DROP_ZONE_ID) {
+      if (activeId !== meId) {
+        notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
+        return;
+      }
+      setPending((prev) => prev.filter((id) => id !== activeId));
+      try {
+        await removeCardFromProposal(roomId, activeId);
+        notify({ title: "カードを待機エリアに戻しました", type: "info", duration: 900 });
+      } catch (error) {
+        logError("central-card-board", "remove-card-from-proposal", error);
+        notify({
+          title: "カードを戻せませんでした",
+          type: "error",
+          duration: 1200,
+        });
+      }
+      return;
+    }
+
     if (overId.startsWith("slot-")) {
       let slotIndex = parseInt(overId.split("-")[1]);
       if (!isNaN(slotIndex)) {
@@ -708,7 +731,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             </DragOverlay>
 
             {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
-            {waitingPlayers.length > 0 && (
+            {(roomStatus === "clue" || roomStatus === "waiting") && (
               <Box 
                 mt={{ base: 6, md: 8 }}
                 css={{
@@ -723,6 +746,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   isDraggingEnabled={true}
                   meId={meId}
                   displayMode={displayMode}
+                  returnDropZoneId={RETURN_DROP_ZONE_ID}
                 />
               </Box>
             )}

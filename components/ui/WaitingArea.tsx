@@ -1,9 +1,11 @@
 "use client";
+import { useDroppable } from "@dnd-kit/core";
 import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
+import { useId } from "react";
 import type { PlayerDoc } from "@/lib/types";
 import { DOCK_BOTTOM_DESKTOP, DOCK_BOTTOM_MOBILE } from "@/lib/ui/layout";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
-import { Box, Text, VStack } from "@chakra-ui/react";
+import { Box, Text, VStack, VisuallyHidden } from "@chakra-ui/react";
 
 export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
@@ -12,6 +14,7 @@ export interface WaitingAreaProps {
   meId?: string; // 自分のID（本人のみドラッグ可能にする）
   displayMode?: "full" | "minimal"; // カード表示モード
   roomId?: string; // Broadcast 受信のため
+  returnDropZoneId?: string;
 }
 
 export default function WaitingArea({
@@ -21,7 +24,17 @@ export default function WaitingArea({
   meId,
   displayMode = "full",
   roomId,
+  returnDropZoneId,
 }: WaitingAreaProps) {
+  const generatedDropId = useId();
+  const dropZoneId = returnDropZoneId ?? `waiting-area-${generatedDropId.replace(/:/g, "")}`;
+  const dropZoneEnabled = Boolean(returnDropZoneId && isDraggingEnabled);
+  const { setNodeRef: setReturnZoneRef, isOver: isReturnZoneOver } = useDroppable({
+    id: dropZoneId,
+    disabled: !dropZoneEnabled,
+  });
+  const showEmptyDropHint = dropZoneEnabled && players.length === 0;
+
   // Broadcast 同期は一時停止（警告回避）。サーバ確定＋常時購読で十分速い同期を実現済み。
   return (
     <VStack
@@ -62,21 +75,44 @@ export default function WaitingArea({
         </Text>
       )}
 
+
       <Box
+        ref={dropZoneEnabled ? setReturnZoneRef : undefined}
         display="flex"
         justifyContent="center"
+        alignItems={showEmptyDropHint ? "center" : "flex-start"}
         gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
+        data-drop-enabled={dropZoneEnabled ? "true" : undefined}
+        data-drop-over={dropZoneEnabled && isReturnZoneOver ? "true" : undefined}
         css={{
-          // 上のカードエリアと全く同じスタイル
-          // DPI125%用最適化
+          position: "relative",
+          flexWrap: "wrap",
+          minHeight: dropZoneEnabled && showEmptyDropHint ? "64px" : undefined,
+          transition: "background 0.2s ease, box-shadow 0.2s ease",
+          ...(dropZoneEnabled && {
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              inset: showEmptyDropHint ? "-16px" : "-12px",
+              borderRadius: "24px",
+              background: isReturnZoneOver ? "rgba(148, 163, 184, 0.12)" : "transparent",
+              border: isReturnZoneOver
+                ? `1px dashed ${UI_TOKENS.COLORS.whiteAlpha70}`
+                : "1px dashed transparent",
+              transition: "background 0.2s ease, border-color 0.2s ease",
+              pointerEvents: "none",
+            },
+          }),
+          // ��̃J�[�h�G���A�ƑS�������X�^�C��
+          // DPI125%�p�œK��
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            gap: "8px", // DPI125%用最適化
+            gap: "8px", // DPI125%�p�œK��
           },
-          // DPI 150%対応：空きスロットと統一
+          // DPI 150%�Ή��F�󂫃X���b�g�Ɠ���
           "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
-            gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
+            gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // �����Ԋu�F18px
           },
-          // モバイル対応
+          // ���o�C���Ή�
           "@media (max-width: 480px)": {
             gap: "10px",
           },
@@ -85,15 +121,14 @@ export default function WaitingArea({
           },
         }}
       >
-        {/* エキスパートモード: 自分のカードのみ表示 */}
-        {displayMode === "minimal" 
+        {/* �G�L�X�p�[�g���[�h: �����̃J�[�h�̂ݕ\�� */}
+        {displayMode === "minimal"
           ? players.filter(p => p.id === meId).map((p) => (
               <WaitingAreaCard
                 key={p.id}
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
-                
               />
             ))
           : players.map((p) => (
@@ -102,12 +137,17 @@ export default function WaitingArea({
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
-                
               />
             ))
         }
+        {dropZoneEnabled && (
+          <VisuallyHidden>
+            {showEmptyDropHint
+              ? "カードを下方向にドラッグすると手札に戻せます"
+              : "カードを待機エリアに戻すにはここにドロップしてください"}
+          </VisuallyHidden>
+        )}
       </Box>
-
 
       <Box as="style">{`@keyframes pulseW{0%{opacity:.85}100%{opacity:1}}`}</Box>
     </VStack>

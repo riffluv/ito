@@ -293,6 +293,54 @@ export async function addCardToProposalAtPosition(
 }
 
 // 既にproposalに含まれるカードを、空きスロットに移動（重複防止）。
+
+
+// proposal からカードを取り除き、待機エリアへ戻す
+export async function removeCardFromProposal(roomId: string, playerId: string) {
+  const roomRef = doc(db!, "rooms", roomId);
+  await runTransaction(db!, async (tx) => {
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists()) throw new Error("room not found");
+    const room: any = roomSnap.data();
+    if (room.status !== "clue") return;
+    if (room?.options?.resolveMode !== "sort-submit") return;
+    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[])
+      : null;
+    if (!roundPlayers || roundPlayers.length === 0) return;
+    if (!roundPlayers.includes(playerId)) return;
+
+    const maxCount: number = roundPlayers.length;
+    let current: (string | null)[] = [];
+    if (Array.isArray(room?.order?.proposal)) {
+      current = (room.order?.proposal as (string | null)[]).map((v) =>
+        typeof v === "string" ? v : null
+      );
+    }
+
+    if (maxCount > 0) {
+      if (current.length < maxCount) {
+        current = [
+          ...current,
+          ...new Array(maxCount - current.length).fill(null),
+        ];
+      } else if (current.length > maxCount) {
+        current.length = maxCount;
+      }
+    }
+
+    const targetIndex = current.findIndex((v) => v === playerId);
+    if (targetIndex < 0) return;
+
+    current[targetIndex] = null;
+
+    tx.update(roomRef, {
+      "order.proposal": current,
+      order: { ...(room.order || {}), proposal: current },
+      lastActiveAt: serverTimestamp(),
+    });
+  });
+}
 export async function moveCardInProposalToPosition(
   roomId: string,
   playerId: string,
