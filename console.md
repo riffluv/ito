@@ -1,85 +1,202 @@
-content.js:85 [VSC] Content script initialized
 react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-log.ts:18 [three-background-pixi] init-start 
-log.ts:18 [three-background-pixi] canvas-mounted 
-log.ts:18 [three-background-pixi] animation-started 
-index.esm2017.js:85 [2025-09-19T09:32:55.645Z]  @firebase/firestore: Firestore (10.14.1): BloomFilter error:  {"name":"BloomFilterError"}
-defaultLogHandler @ index.esm2017.js:85
-index.esm2017.js:85 [2025-09-19T09:32:55.739Z]  @firebase/firestore: Firestore (10.14.1): BloomFilter error:  {"name":"BloomFilterError"}
-defaultLogHandler @ index.esm2017.js:85
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=6gGAX0KltTuSw4GnRfv96rrfl6D_Fs0bFSy_08u8snQ&SID=UHlewVeUAGdMsbqv7_O33g&RID=1316&TYPE=terminate&zx=5u1i6lectj4o:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/api/rooms/IXssHjeCyEh69LdZZDXS/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-index.esm2017.js:85 [2025-09-19T09:32:55.965Z]  @firebase/firestore: Firestore (10.14.1): BloomFilter error:  {"name":"BloomFilterError"}
-defaultLogHandler @ index.esm2017.js:85
-:3000/api/rooms/IXssHjeCyEh69LdZZDXS/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=SCSNEdyGBGUERQ4VZ-M4203_mMHD5bNaMJ5vlXzsUlE&SID=ioetRqUeo9wUFXL-Kvxe7Q&RID=75746&TYPE=terminate&zx=h7dodhn1sp4m:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/api/rooms/IXssHjeCyEh69LdZZDXS/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=SbojYKZw3uiIca1X964k2Gw76_ebjt2naaSyG4DKILQ&SID=kHCKxQFjoeuX8cT4ZEa2Zw&RID=61526&TYPE=terminate&zx=ly17wa272vpb:1  Failed to load resource: the server responded with a status of 400 ()
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit:1  Failed to load resource: the server responded with a status of 403 ()
-index.esm2017.js:85 [2025-09-19T09:32:56.743Z]  @firebase/firestore: Firestore (10.14.1): RestConnection RPC 'Commit' 0x1398bdcc failed with error:  {"code":"permission-denied","name":"FirebaseError"} url:  https://firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit request: {"writes":[{"update":{"name":"projects/online-ito/databases/(default)/documents/rooms/IXssHjeCyEh69LdZZDXS","fields":{"hostId":{"stringValue":"qU8C5ouK5hYBhydRX6yHSQTVBPC3"}}},"updateMask":{"fieldPaths":["hostId"]},"currentDocument":{"updateTime":"2025-09-19T09:32:53.291763000Z"}},{"verify":"projects/online-ito/databases/(default)/documents/rooms/IXssHjeCyEh69LdZZDXS/players/qU8C5ouK5hYBhydRX6yHSQTVBPC3","currentDocument":{"updateTime":"2025-09-19T09:32:55.237648000Z"}}]}
-defaultLogHandler @ index.esm2017.js:85
-log.ts:18 [presence] removed Object
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-log.ts:18 [three-background-pixi] cleanup-complete 
-log.ts:18 [presence] removed Object
+content.js:85 [VSC] Content script initialized
 log.ts:18 [useLobbyCounts] presence-config Object
-log.ts:18 [three-background-pixi] init-start 
-log.ts:18 [three-background-pixi] canvas-mounted 
-log.ts:18 [three-background-pixi] animation-started 
-layout-router.js:110 Skipping auto-scroll behavior due to `position: sticky` or `position: fixed` on element: <div style=​"position:​ fixed;​ top:​ 0px;​ left:​ 0px;​ width:​ 100%;​ height:​ 100%;​ z-index:​ 0;​ pointer-events:​ none;​ background:​ var(--chakra-colors-bg-canvas)​;​">​</div>​
-shouldSkipElement @ layout-router.js:110
-MiniHandDock.tsx:595 🔥 リセットボタン: クリック
-MiniHandDock.tsx:247 🔥 resetGame: 呼び出し開始 qDYZ1lNWM5eTG3dNkzgc
-MiniHandDock.tsx:253 🔄 resetGame: resetRoomWithPrune呼び出し Object
-rooms.ts:284 🔥 resetRoomWithPrune: プレイヤー状態クリア開始 qDYZ1lNWM5eTG3dNkzgc
-rooms.ts:299 ✅ resetRoomWithPrune: プレイヤー状態クリア完了 Object
-MiniHandDock.tsx:257 ✅ resetGame: 完了 qDYZ1lNWM5eTG3dNkzgc
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-log.ts:18 [presence] removed Object
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-log.ts:18 [three-background-pixi] cleanup-complete 
-log.ts:18 [presence] removed Object
-log.ts:18 [useLobbyCounts] presence-config Object
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=kIVYF_nLU1txBofiwsopZ07gFWZK6GPtUAQ8-idRLq4&SID=EwhRcqLwpzZkwGlFdztCvQ&RID=46283&TYPE=terminate&zx=u87vz89bdkgl:1  Failed to load resource: the server responded with a status of 400 ()
-log.ts:18 [three-background-pixi] init-start 
-log.ts:18 [three-background-pixi] canvas-mounted 
-log.ts:18 [three-background-pixi] animation-started 
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=zmZEIE8ufjqnobXf8VnUDmPjyKn8R5ywHMuarQ9jOBs&SID=Yi1WWI39Ji5sqCoGzKXVMQ&RID=71131&TYPE=terminate&zx=d2k9j6sgopl:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/api/rooms/qDYZ1lNWM5eTG3dNkzgc/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=--2vn90iGEFxDPZ4qe4kmhQi4M1nNMxTZMJEjSh_ByQ&SID=jnkaApFC8tlrw5ce3OsCEg&RID=69381&TYPE=terminate&zx=c15g3650n9wh:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/api/rooms/qDYZ1lNWM5eTG3dNkzgc/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=ZiJqY_5HwJyWYKOfA-R-GOFlPmme4qYD3-0c-ztburw&SID=mDkM5X-73yddPZU51XUHMg&RID=22638&TYPE=terminate&zx=17c2xhk9allk:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=Zs-JB_SQzniU7vMN_x-sbW-gIEy7hA7ahLNhU1-7qiE&SID=TcP5AuCrv4nROtgp2gZvPQ&RID=46709&TYPE=terminate&zx=w4ajr9gcg7ob:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit:1  Failed to load resource: the server responded with a status of 403 ()
-index.esm2017.js:85 [2025-09-19T09:33:25.669Z]  @firebase/firestore: Firestore (10.14.1): RestConnection RPC 'Commit' 0x1398bde7 failed with error:  {"code":"permission-denied","name":"FirebaseError"} url:  https://firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit request: {"writes":[{"update":{"name":"projects/online-ito/databases/(default)/documents/rooms/qDYZ1lNWM5eTG3dNkzgc","fields":{"hostId":{"stringValue":"qU8C5ouK5hYBhydRX6yHSQTVBPC3"}}},"updateMask":{"fieldPaths":["hostId"]},"currentDocument":{"updateTime":"2025-09-19T09:33:15.407688000Z"}},{"verify":"projects/online-ito/databases/(default)/documents/rooms/qDYZ1lNWM5eTG3dNkzgc/players/qU8C5ouK5hYBhydRX6yHSQTVBPC3","currentDocument":{"updateTime":"2025-09-19T09:33:24.153986000Z"}}]}
-defaultLogHandler @ index.esm2017.js:85
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-log.ts:18 [presence] removed Object
-log.ts:18 [presence] detach Object
-log.ts:18 [presence] remove-path Object
-log.ts:18 [three-background-pixi] cleanup-complete 
-log.ts:18 [presence] removed Object
-log.ts:18 [useLobbyCounts] presence-config Object
-log.ts:18 [three-background-pixi] init-start 
-log.ts:18 [three-background-pixi] canvas-mounted 
-log.ts:18 [three-background-pixi] animation-started 
-index.esm2017.js:85 [2025-09-19T09:33:53.834Z]  @firebase/firestore: Firestore (10.14.1): BloomFilter error:  {"name":"BloomFilterError"}
-defaultLogHandler @ index.esm2017.js:85
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=2gJ2V3sayc9vHg_PxccdmEWWoEytViWlKOoN96AGRwo&SID=I7sPktse9xqeu26G81F7mQ&RID=92234&TYPE=terminate&zx=qljdxuux1nd8:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=-BlkQNtOBN5bUxcoZnZqYx3M4PaX15sB5u7r1wvmzzc&SID=MYKfvunmeBQ-FJsKFR_YUw&RID=64943&TYPE=terminate&zx=6yro77axv6nd:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/api/rooms/qDYZ1lNWM5eTG3dNkzgc/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-:3000/api/rooms/qDYZ1lNWM5eTG3dNkzgc/claim-host:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=odVzCtHollJUlDQfvAbnmWrgNDNFNRL68IKlCJixbBk&SID=m00Yjsml02dNVKu0V2WsXw&RID=8658&TYPE=terminate&zx=lifmbsowswco:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=covPXFVkALHJT_-jXyPB0oIjs6YljniauA3CknEpxiQ&SID=QMYjVodykJ0U03bEKXEYjQ&RID=97309&TYPE=terminate&zx=ivuz8oe2p97v:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=4-HMupVzVZ8kS9LZho5Qs07E6u7TBWior4sHY7Qszck&SID=om1EvsyCrUewEFiLtUOgRQ&RID=31624&TYPE=terminate&zx=xwf4z6c7i0oy:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit:1  Failed to load resource: the server responded with a status of 403 ()
-index.esm2017.js:85 [2025-09-19T09:33:54.804Z]  @firebase/firestore: Firestore (10.14.1): RestConnection RPC 'Commit' 0x1398bdf2 failed with error:  {"code":"permission-denied","name":"FirebaseError"} url:  https://firestore.googleapis.com/v1/projects/online-ito/databases/(default)/documents:commit request: {"writes":[{"update":{"name":"projects/online-ito/databases/(default)/documents/rooms/qDYZ1lNWM5eTG3dNkzgc","fields":{"hostId":{"stringValue":"qU8C5ouK5hYBhydRX6yHSQTVBPC3"}}},"updateMask":{"fieldPaths":["hostId"]},"currentDocument":{"updateTime":"2025-09-19T09:33:15.407688000Z"}},{"verify":"projects/online-ito/databases/(default)/documents/rooms/qDYZ1lNWM5eTG3dNkzgc/players/qU8C5ouK5hYBhydRX6yHSQTVBPC3","currentDocument":{"updateTime":"2025-09-19T09:33:53.219374000Z"}}]}
-defaultLogHandler @ index.esm2017.js:85
+app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`RoomPage`). To locate the bad setState() call inside `RoomPage`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:181:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+window.console.error @ app-index.js:33
+page.tsx:158 Uncaught ReferenceError: useRef is not defined
+    at RoomPage (page.tsx:158:31)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopConcurrent (react-dom.development.js:25734:5)
+    at renderRootConcurrent (react-dom.development.js:25690:9)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:38)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+redirect-boundary.js:57 Uncaught ReferenceError: useRef is not defined
+    at RoomPage (page.tsx:158:31)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopConcurrent (react-dom.development.js:25734:5)
+    at renderRootConcurrent (react-dom.development.js:25690:9)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:38)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+page.tsx:158 Uncaught ReferenceError: useRef is not defined
+    at RoomPage (page.tsx:158:31)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+redirect-boundary.js:57 Uncaught ReferenceError: useRef is not defined
+    at RoomPage (page.tsx:158:31)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+app-index.js:33 The above error occurred in the <RedirectErrorBoundary> component:
+
+    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:181:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
+window.console.error @ app-index.js:33
 hot-reloader-client.js:187 [Fast Refresh] rebuilding
-hot-reloader-client.js:44 [Fast Refresh] done in 346ms
+hot-reloader-client.js:44 [Fast Refresh] done in 78ms

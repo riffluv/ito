@@ -142,6 +142,26 @@ export function useLeaveCleanup({
     }
   }, [uid, roomId, readToken, displayName])
 
+
+  useEffect(() => {
+    if (!uid || !rejoinKey) return
+    if (typeof window === "undefined") return
+    const persistRejoin = () => setSessionValue(rejoinKey, uid)
+    const handleVisibility = () => {
+      try {
+        if (document.visibilityState === "hidden") {
+          persistRejoin()
+        }
+      } catch {}
+    }
+    window.addEventListener("pagehide", persistRejoin)
+    window.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      window.removeEventListener("pagehide", persistRejoin)
+      window.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [uid, rejoinKey])
+
   const performCleanup = useCallback(() => {
     if (!uid) return
     if (leavingRef.current) return

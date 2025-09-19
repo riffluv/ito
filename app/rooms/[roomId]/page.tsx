@@ -46,7 +46,7 @@ import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ClueInputMini: 手札エリア用のコンパクトな連想ワード入力コンポーネント
 interface ClueInputMiniProps {
@@ -154,6 +154,15 @@ export default function RoomPage() {
 
   // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
   const [pop, setPop] = useState(false);
+  const [redirectGuard, setRedirectGuard] = useState(true);
+  const hostClaimAttemptRef = useRef(0);
+  const hostClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setRedirectGuard(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (typeof me?.number === "number") {
       setPop(true);
@@ -179,6 +188,7 @@ export default function RoomPage() {
     // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
     // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
     if (loading || authLoading) return;
+    if (redirectGuard) return;
     let pendingRejoin = false;
     if (rejoinSessionKey && typeof window !== "undefined") {
       try {
@@ -211,18 +221,31 @@ export default function RoomPage() {
         }
       })();
     }
-  }, [room?.status, uid, canAccess, loading, authLoading, rejoinSessionKey]);
+  }, [room?.status, uid, canAccess, loading, authLoading, rejoinSessionKey, redirectGuard]);
 
   useEffect(() => {
-    if (!room || !uid || !user) return;
+    if (!room || !uid || !user) {
+      if (hostClaimTimerRef.current) {
+        try { clearTimeout(hostClaimTimerRef.current); } catch {}
+        hostClaimTimerRef.current = null;
+      }
+      return;
+    }
     if (leavingRef.current) return;
     const hostId = typeof room.hostId === "string" ? room.hostId.trim() : "";
-    if (hostId) return;
+    if (hostId) {
+      hostClaimAttemptRef.current = 0;
+      if (hostClaimTimerRef.current) {
+        try { clearTimeout(hostClaimTimerRef.current); } catch {}
+        hostClaimTimerRef.current = null;
+      }
+      return;
+    }
     if (players.length !== 1 || players[0]?.id !== uid) return;
 
     let cancelled = false;
 
-    (async () => {
+    const attemptClaim = async () => {
       try {
         const token = await user.getIdToken();
         if (!token || cancelled) return;
@@ -232,13 +255,34 @@ export default function RoomPage() {
           body: JSON.stringify({ uid, token }),
           keepalive: true,
         });
+        hostClaimAttemptRef.current = 0;
       } catch (error) {
         logError("room-page", "claim-host", error);
+        if (!cancelled) {
+          const attempt = hostClaimAttemptRef.current + 1;
+          if (attempt <= 3) {
+            hostClaimAttemptRef.current = attempt;
+            const delay = 800 * Math.pow(2, attempt - 1);
+            try {
+              if (hostClaimTimerRef.current) clearTimeout(hostClaimTimerRef.current);
+            } catch {}
+            hostClaimTimerRef.current = setTimeout(() => {
+              hostClaimTimerRef.current = null;
+              if (!cancelled) attemptClaim();
+            }, delay);
+          }
+        }
       }
-    })();
+    };
+
+    attemptClaim();
 
     return () => {
       cancelled = true;
+      if (hostClaimTimerRef.current) {
+        try { clearTimeout(hostClaimTimerRef.current); } catch {}
+        hostClaimTimerRef.current = null;
+      }
     };
   }, [room?.hostId, players, uid, user, roomId, leavingRef]);
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
