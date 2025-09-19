@@ -72,6 +72,7 @@ interface CentralCardBoardProps {
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
 
+
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
   players,
@@ -349,6 +350,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     // Handle WaitingCard -> EmptySlot drops
     if (overId === RETURN_DROP_ZONE_ID) {
+      if (!alreadyInProposal) {
+        return;
+      }
       if (activeId !== meId) {
         notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
         return;
@@ -429,6 +433,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setActiveId(String(e.active.id));
   };
   const clearActive = () => setActiveId(null);
+  const isDraggingOwnPlacedCard =
+    activeId === meId && (activeProposal as (string | null)[]).includes(activeId);
 
   // 安全装置: sort-submit で "reveal" に入ったが何らかの理由でアニメ完了検知が漏れた場合、
   // 理論上の総所要時間後に finalizeReveal を呼ぶ。
@@ -747,6 +753,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   meId={meId}
                   displayMode={displayMode}
                   returnDropZoneId={RETURN_DROP_ZONE_ID}
+                  isReturnActive={isDraggingOwnPlacedCard}
                 />
               </Box>
             )}
