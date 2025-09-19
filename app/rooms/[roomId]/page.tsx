@@ -212,6 +212,34 @@ export default function RoomPage() {
     }
   }, [room?.status, uid, canAccess, loading, rejoinSessionKey]);
 
+  useEffect(() => {
+    if (!room || !uid || !user) return;
+    if (leavingRef.current) return;
+    const hostId = typeof room.hostId === "string" ? room.hostId.trim() : "";
+    if (hostId) return;
+    if (players.length !== 1 || players[0]?.id !== uid) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        if (!token || cancelled) return;
+        await fetch(`/api/rooms/${roomId}/claim-host`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid, token }),
+          keepalive: true,
+        });
+      } catch (error) {
+        logError("room-page", "claim-host", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [room?.hostId, players, uid, user, roomId, leavingRef]);
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {
     try {

@@ -136,6 +136,30 @@ async function getPlayerName(roomId: string, playerId: string): Promise<string> 
   return playerId;
 }
 
+
+export async function ensureHostAssignedServer(roomId: string, uid: string) {
+  const db = getAdminDb();
+  const roomRef = db.collection("rooms").doc(roomId);
+  await db.runTransaction(async (tx) => {
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists) return;
+
+    const room = roomSnap.data() as any;
+    const currentHost =
+      typeof room?.hostId === "string" && room.hostId.trim() ? room.hostId : null;
+
+    if (currentHost) {
+      const hostSnap = await tx.get(roomRef.collection("players").doc(currentHost));
+      if (hostSnap.exists) return;
+    }
+
+    const meSnap = await tx.get(roomRef.collection("players").doc(uid));
+    if (!meSnap.exists) return;
+
+    tx.update(roomRef, { hostId: uid });
+  });
+}
+
 export async function leaveRoomServer(
   roomId: string,
   userId: string,
@@ -271,6 +295,4 @@ export async function leaveRoomServer(
     logWarn("rooms", "leave-room-server-fallback-failed", error);
   }
 }
-
-
 
