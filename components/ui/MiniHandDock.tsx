@@ -14,6 +14,7 @@ import {
   addCardToProposal,
   commitPlayFromClue,
   continueAfterFail as continueAfterFailAction,
+  removeCardFromProposal,
   startGame as startGameAction,
   submitSortedOrder,
 } from "@/lib/game/room";
@@ -104,6 +105,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, [me?.clue1]);
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
+  const isSortMode = isSortSubmit(actualResolveMode);
   const placed = !!proposal?.includes(me?.id || "");
   const ready = !!(me && (me as any).ready === true);
   const canDecide =
@@ -120,6 +122,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     placed,
     cluesReady,
   });
+
+  const canClickProposalButton = isSortMode
+    ? !!me?.id && (placed || canSubmit)
+    : !!me?.id && canSubmit;
+
+  const actionLabel = isSortMode && placed ? "引く" : "出す";
+  const actionTooltip = isSortMode && placed
+    ? "待機エリアに戻す"
+    : "カードを場に出す";
 
   const handleDecide = async () => {
     if (!canDecide || !me?.id) return;
@@ -146,33 +157,47 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit || !me?.id) return;
+    if (!me?.id) return;
+
+    const isRemoving = isSortMode && placed;
+    if (isSortMode) {
+      if (!placed && !canSubmit) return;
+    } else {
+      if (!canSubmit || !cluesReady) return;
+    }
 
     try {
-      if (isSortSubmit(actualResolveMode)) {
-        if (!placed) await addCardToProposal(roomId, me.id);
+      if (isSortMode) {
+        if (isRemoving) {
+          await removeCardFromProposal(roomId, me.id);
+          notify({ title: "カードを待機エリアに戻しました", type: "info" });
+        } else {
+          await addCardToProposal(roomId, me.id);
+          notify({ title: "カードを場に出しました", type: "success" });
+        }
       } else {
-        if (!cluesReady) return;
         await commitPlayFromClue(roomId, me.id);
+        notify({ title: "カードを場に出しました", type: "success" });
       }
-      notify({ title: "提出しました", type: "success" });
     } catch (e: any) {
+      const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(e)) {
-        handleFirebaseQuotaError("カード提出");
+        handleFirebaseQuotaError(actionLabel);
         notify({
-          title: "🚨 Firebase読み取り制限",
-          description: "現在カードを提出できません。24時間後に再度お試しください。",
+          title: "Firebase 制限により処理できません",
+          description: "現在カード操作を完了できません。しばらく待って再度お試しください。",
           type: "error",
         });
       } else {
         notify({
-          title: "提出に失敗しました",
+          title: actionLabel + "処理に失敗しました",
           description: e?.message,
           type: "error",
         });
       }
     }
   };
+
 
   // カスタムお題モーダル制御
   const [customOpen, setCustomOpen] = React.useState(false);
@@ -356,13 +381,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           決定
         </AppButton>
       </Tooltip>
-      <Tooltip content="カードを場に出す" showArrow openDelay={300}>
+      <Tooltip content={actionTooltip} showArrow openDelay={300}>
         <AppButton
           size="sm"
           visual="solid"
           palette="brand"
           onClick={handleSubmit}
-          disabled={!canSubmit}
+          disabled={!canClickProposalButton}
           px={4}
           py={2}
           bg="rgba(75, 85, 99, 0.9)"
@@ -382,7 +407,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }}
           transition="all 0.15s ease"
         >
-          出す
+          {actionLabel}
         </AppButton>
       </Tooltip>
       </HStack>
