@@ -117,7 +117,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   });
   const canSubmit = canSubmitCard({
     mode: actualResolveMode,
-    canDecide,
+    canDecide: !!me?.id && typeof me?.number === "number" && !!me?.clue1?.trim(), // Firebase保存済みチェック
     ready,
     placed,
     cluesReady,
