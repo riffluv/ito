@@ -659,6 +659,16 @@ export default function MainMenu() {
                     count={lobbyCounts[room.id] ?? 0}
                     hostName={room.hostName || "匿名"}
                     onJoin={async () => {
+                      // 名前未設定の場合は先にモーダルを表示
+                      if (!displayName || !String(displayName).trim()) {
+                        setTempName("");
+                        setNameDialogMode("create");
+                        // 参加予定のルームIDを一時保存
+                        setLastRoom(room.id);
+                        nameDialog.onOpen();
+                        return;
+                      }
+
                       try {
                         await transition.navigateWithTransition(
                           `/rooms/${room.id}`,
@@ -932,14 +942,50 @@ export default function MainMenu() {
         defaultValue={tempName}
         mode={nameDialogMode}
         onCancel={() => nameDialog.onClose()}
-        onSubmit={(val) => {
+        onSubmit={async (val) => {
           if (!val?.trim()) return;
           setDisplayName(val.trim());
           nameDialog.onClose();
 
-          // 名前変更モードの場合はルーム作成ダイアログを開かない
+          // 名前設定後のアクション判定
           if (nameDialogMode === "create") {
-            createDialog.onOpen();
+            // lastRoomがある場合（参加待ちルーム）は自動参加
+            if (lastRoom) {
+              const roomToJoin = lastRoom;
+              setLastRoom(null); // 一時保存をクリア
+
+              try {
+                await transition.navigateWithTransition(
+                  `/rooms/${roomToJoin}`,
+                  {
+                    direction: "fade",
+                    duration: 1.2,
+                    showLoading: true,
+                    loadingSteps: [
+                      { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+                      { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
+                      { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
+                      { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+                    ],
+                  },
+                  async () => {
+                    try {
+                      (window as any).requestIdleCallback?.(() => {
+                        try {
+                          router.prefetch(`/rooms/${roomToJoin}`);
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+                );
+              } catch (error) {
+                console.error("Room join after name setup failed:", error);
+                router.push(`/rooms/${roomToJoin}`);
+              }
+            } else {
+              // 通常のルーム作成フロー
+              createDialog.onOpen();
+            }
           }
         }}
       />
