@@ -145,26 +145,30 @@ export async function joinRoomFully({
   roomId,
   uid,
   displayName,
+  notifyChat = true,
 }: {
   roomId: string;
   uid: string;
   displayName: string | null | undefined;
+  notifyChat?: boolean;
 }) {
   const created = await ensureMember({ roomId, uid, displayName });
   if (created.joined) {
     await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
     await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
     await updateLastActive(roomId).catch(() => void 0);
-    try {
-      const { addDoc, collection, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
-      await addDoc(collection(db!, "rooms", roomId, "chat"), {
-        sender: "system",
-        text: `${displayName || "匿名"} が参加しました`,
-        createdAt: serverTimestamp(),
-      } as any);
-    } catch {}
+    if (notifyChat) {
+      try {
+        const { addDoc, collection, serverTimestamp } = await import(
+          "firebase/firestore"
+        );
+        await addDoc(collection(db!, "rooms", roomId, "chat"), {
+          sender: "system",
+          text: `${displayName || "匿名"} さんが参加しました`,
+          createdAt: serverTimestamp(),
+        } as any);
+      } catch {}
+    }
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
 }

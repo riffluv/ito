@@ -196,5 +196,7 @@ export async function forceDetachAll(roomId: string, uid: string) {
       );
     }
     await Promise.all(tasks);
+    await remove(baseRef).catch(() => {});
   } catch {}
 }
+

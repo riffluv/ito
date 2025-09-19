@@ -62,8 +62,10 @@ async function forceDetachAll(roomId: string, uid: string, db: Database | null) 
           .catch(() => void 0)
       )
     );
+    await baseRef.remove().catch(() => void 0);
   } catch {}
 }
+
 
 async function sendSystemMessage(roomId: string, text: string) {
   const clean = sanitizeServerText(text);

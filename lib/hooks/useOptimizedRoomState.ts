@@ -273,7 +273,7 @@ export function useOptimizedRoomState(
 
   useEffect(() => {
     if (shouldAutoJoin) {
-      joinRoomFully({ roomId, uid: uid!, displayName: displayName }).catch(
+      joinRoomFully({ roomId, uid: uid!, displayName: displayName, notifyChat: true }).catch(
         () => void 0
       );
     }
