@@ -173,25 +173,31 @@ export default function RoomPage() {
   // ただし、ホストは常にアクセス可能
   const isMember = !!(uid && players.some((p) => p.id === uid));
   const canAccess = isMember || isHost;
+  const rejoinSessionKey = useMemo(() => (uid ? `pendingRejoin:${roomId}` : null), [uid, roomId]);
   useEffect(() => {
     if (!room || !uid) return;
-    // プレイヤー購読が未完了の間は判定しない（ハードリフレッシュ時の誤リダイレクト防止）
+    // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
     if (loading) return;
-    // ゲーム進行中（waiting以外）は非メンバー入室不可
+    let pendingRejoin = false;
+    if (rejoinSessionKey && typeof window !== "undefined") {
+      try {
+        pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
+      } catch {}
+    }
+    if (pendingRejoin) return;
+    // ゲーム中(waiting以外)では外部へ退室させる
     if (!canAccess && room.status !== "waiting") {
       (async () => {
         try {
-          // 二重呼び出し防止
           if (!leavingRef.current) leavingRef.current = true;
           try {
             notify({
-              title: "入室できません",
+              title: "参加できません",
               description:
-                "ゲーム進行中です。ホストがリセットすると入室可能になります。",
+                "ゲーム進行中です。ホストがリセットすると参加可能になります。",
               type: "info",
             });
           } catch {}
-          // 可能な限りクリーンアップ（presence と players 残骸防止）
           try {
             await detachNow();
             await forceDetachAll(roomId, uid);
@@ -204,7 +210,7 @@ export default function RoomPage() {
         }
       })();
     }
-  }, [room?.status, uid, canAccess, loading]);
+  }, [room?.status, uid, canAccess, loading, rejoinSessionKey]);
 
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {
@@ -370,10 +376,61 @@ export default function RoomPage() {
 
   const leaveRoom = useCallback(async () => {
     if (!uid) return;
-    try {
-      leavingRef.current = true;
+    leavingRef.current = true;
 
-      // 先にローディング画面を表示してから Firebase操作を実行
+    const getToken = async () => {
+      try {
+        if (!user) return null;
+        return await user.getIdToken();
+      } catch {
+        return null;
+      }
+    };
+
+    const clearSessionFlags = () => {
+      try {
+        if (rejoinSessionKey && typeof window !== "undefined") {
+          window.sessionStorage.removeItem(rejoinSessionKey);
+        }
+      } catch {}
+      try {
+        if (typeof window !== "undefined") {
+          const lr = window.localStorage.getItem("lastRoom");
+          if (lr === roomId) window.localStorage.removeItem("lastRoom");
+        }
+      } catch {}
+    };
+
+    const performLeave = async (token: string | null) => {
+      try {
+        await Promise.resolve(detachNow()).catch(() => {});
+      } catch {}
+      try {
+        await Promise.resolve(forceDetachAll(roomId, uid)).catch(() => {});
+      } catch {}
+      let viaApi = false;
+      if (token) {
+        try {
+          const res = await fetch(`/api/rooms/${roomId}/leave`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid, token, displayName: displayName ?? null }),
+            keepalive: true,
+          });
+          viaApi = res.ok;
+        } catch {}
+      }
+      if (!viaApi) {
+        try {
+          await leaveRoomAction(roomId, uid, displayName);
+        } catch {}
+      }
+      clearSessionFlags();
+    };
+
+    const token = await getToken();
+
+    try {
       if (transition) {
         await transition.navigateWithTransition(
           "/",
@@ -382,42 +439,19 @@ export default function RoomPage() {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "leave", message: "メインメニューに もどっています...", duration: 1200 },
+              { id: "leave", message: "ロビーへ戻ります...", duration: 1200 },
             ],
           },
           async () => {
-            // Firebase操作をローディング中に実行
-            try {
-              await detachNow();
-              await forceDetachAll(roomId, uid);
-            } catch {}
-            await leaveRoomAction(roomId, uid, displayName);
-            try {
-              if (typeof window !== "undefined") {
-                const lr = window.localStorage.getItem("lastRoom");
-                if (lr === roomId) window.localStorage.removeItem("lastRoom");
-              }
-            } catch {}
+            await performLeave(token);
           }
         );
       } else {
-        // フォールバック
-        try {
-          await detachNow();
-          await forceDetachAll(roomId, uid);
-        } catch {}
-        await leaveRoomAction(roomId, uid, displayName);
-        try {
-          if (typeof window !== "undefined") {
-            const lr = window.localStorage.getItem("lastRoom");
-            if (lr === roomId) window.localStorage.removeItem("lastRoom");
-          }
-        } catch {}
+        await performLeave(token);
         router.push("/");
       }
     } catch (error) {
       logError("room-page", "leave-room", error);
-      // エラーが発生してもメインメニューに戻る
       if (transition) {
         await transition.navigateWithTransition(
           "/",
@@ -426,9 +460,9 @@ export default function RoomPage() {
             duration: 0.8,
             showLoading: true,
             loadingSteps: [
-              { id: "error", message: "エラーが はっせいしました...", duration: 800 },
-              { id: "return", message: "メインメニューに もどっています...", duration: 800 },
-              { id: "complete", message: "いどう かんりょう！", duration: 400 },
+              { id: "error", message: "エラーが発生しました...", duration: 800 },
+              { id: "return", message: "ロビーに戻ります...", duration: 800 },
+              { id: "complete", message: "完了 しました!", duration: 400 },
             ],
           }
         );
@@ -436,15 +470,17 @@ export default function RoomPage() {
         router.push("/");
       }
     }
-  }, [uid, detachNow, roomId, displayName, router, transition]);
+  }, [uid, detachNow, roomId, displayName, router, transition, user, rejoinSessionKey]);
 
   // 退出時処理をフックで一元化
   useLeaveCleanup({
     enabled: true,
     roomId,
     uid,
+    displayName,
     detachNow,
     leavingRef,
+    user,
   });
 
   // isMember は上で算出済み
@@ -731,3 +767,6 @@ export default function RoomPage() {
     </>
   );
 }
+
+
+

@@ -119,26 +119,52 @@ export function useRoomState(
     setLoading(partLoading === true);
   }, [fetchedPlayers, partLoading]);
 
+
+  const rejoinSessionKey = useMemo(() => (uid ? `pendingRejoin:${roomId}` : null), [roomId, uid]);
   // auto-join (待機中のみ自動参加。ゲーム中の途中参加は禁止)
   // さらに、displayName未設定時は入室を保留して名前入力ダイアログを促す
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
     if (leavingRef.current) return;
-    // displayName が空文字や未定義の場合はjoinを行わない（匿名作成を防止）
     if (!displayName || !String(displayName).trim()) return;
-    if (room.status === "waiting") {
-      joinRoomFully({ roomId, uid, displayName: displayName }).catch(
-        () => void 0
-      );
+
+    let pendingRejoin = false;
+    if (rejoinSessionKey && typeof window !== "undefined") {
+      try {
+        pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
+      } catch {}
+    }
+
+    const clearPending = () => {
+      if (pendingRejoin && rejoinSessionKey && typeof window !== "undefined") {
+        try { window.sessionStorage.removeItem(rejoinSessionKey); } catch {}
+      }
+    };
+
+    if (room.status === "waiting" || pendingRejoin) {
+      joinRoomFully({
+        roomId,
+        uid,
+        displayName: displayName,
+        notifyChat: !pendingRejoin,
+      })
+        .catch(() => void 0)
+        .finally(clearPending);
     } else {
-      // 進行中に入室した場合でも、参加者一覧の不一致を防ぐため
-      // players コレクションに自分のDocだけは必ず存在させる
       ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
     }
-  }, [roomId, uid || "", room?.status, displayName || ""]);
+  }, [roomId, uid || "", room?.status, displayName || "", rejoinSessionKey]);
+  useEffect(() => {
+    if (!rejoinSessionKey || typeof window === "undefined") return;
+    if (isMember) {
+      try { window.sessionStorage.removeItem(rejoinSessionKey); } catch {}
+    }
+  }, [isMember, rejoinSessionKey]);
+
+
 
   const onlinePlayers = participants;
 
