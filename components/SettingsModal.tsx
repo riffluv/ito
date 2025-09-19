@@ -608,7 +608,7 @@ export function SettingsModal({
                       },
                       {
                         value: "hd2d",
-                        title: "HD-2D はいけい",
+                        title: "HD-2D はいけい（思ったより微妙なので廃止予定☕）",
                         description: "オクトパストラベラー風の美しい背景画像",
                       },
                     ].map((opt) => {
