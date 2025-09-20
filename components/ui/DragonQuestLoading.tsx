@@ -39,7 +39,7 @@ export function DragonQuestLoading({
 }: DragonQuestLoadingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const shouldReduceMotion = useReducedMotionPreference();
+  const shouldReduceMotion = useReducedMotionPreference({ force: true });
   const [furthestStepIndex, setFurthestStepIndex] = useState(-1);
 
   const resolvedSteps = useMemo<TransitionLoadingStep[]>(() => {

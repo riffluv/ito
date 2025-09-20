@@ -116,7 +116,7 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AnimationContext.Provider
-      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, gpuCapability, setAnimationMode, supports3D }}
+      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, forceAnimations, gpuCapability, setAnimationMode, supports3D }}
     >
       {children}
     </AnimationContext.Provider>
@@ -132,5 +132,5 @@ export function useAnimationSettings(): AnimationSettings {
     typeof window !== "undefined" &&
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  return { animationMode, effectiveMode, reducedMotion, setAnimationMode } as AnimationSettings;
+  return { animationMode, effectiveMode, reducedMotion, forceAnimations: true, setAnimationMode } as AnimationSettings;
 }
