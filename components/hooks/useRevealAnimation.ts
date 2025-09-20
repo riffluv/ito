@@ -169,6 +169,18 @@ export function useRevealAnimation({
     }
   }, [roomStatus]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const event = new CustomEvent("ito:reveal-animating", {
+        detail: { roomId, animating: revealAnimating },
+      });
+      window.dispatchEvent(event);
+    } catch {
+      /* ignore */
+    }
+  }, [revealAnimating, roomId]);
+
   return {
     revealAnimating,
     revealIndex,
