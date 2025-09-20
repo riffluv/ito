@@ -1,15 +1,26 @@
 "use client";
 
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export function useReducedMotionPreference() {
-  const { reducedMotion } = useAnimationSettings();
-  const [shouldReduce, setShouldReduce] = useState(reducedMotion);
+type ReducedMotionOptions = {
+  force?: boolean;
+};
+
+export function useReducedMotionPreference(options?: ReducedMotionOptions) {
+  const { reducedMotion, forceAnimations } = useAnimationSettings();
+  const target = useMemo(() => {
+    if (options?.force) {
+      return forceAnimations ? false : reducedMotion;
+    }
+    return reducedMotion;
+  }, [options?.force, reducedMotion, forceAnimations]);
+
+  const [shouldReduce, setShouldReduce] = useState(target);
 
   useEffect(() => {
-    setShouldReduce(reducedMotion);
-  }, [reducedMotion]);
+    setShouldReduce(target);
+  }, [target]);
 
   return shouldReduce;
 }
