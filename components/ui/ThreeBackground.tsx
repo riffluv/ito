@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as PIXI from "pixi.js";
 import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
+import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 
 const logThreeBackgroundInfo = (event: string, data?: unknown) => {
@@ -28,8 +29,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const frameRef = useRef<number>();
+  const { reducedMotion, effectiveMode, supports3D, gpuCapability } = useAnimationSettings();
+  const isLowPowerDevice = reducedMotion || gpuCapability === "low";
+
   const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
   const [hd2dImageIndex, setHd2dImageIndex] = useState<number>(1); // 1, 2, 3... の画像
+  const allowThreeBackground = backgroundType === "three3d" && !reducedMotion && effectiveMode === "3d" && supports3D !== false;
 
   // LocalStorageから設定読み込み & イベントリスナー設定
   useEffect(() => {
@@ -83,10 +88,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
   // Three.js初期化用Effect
   useEffect(() => {
-    // CSS背景、PixiJS背景、HD-2D背景の場合はThree.jsを初期化しない
-    if (backgroundType === "css" || backgroundType === "pixijs" || backgroundType === "hd2d") {
+    if (!allowThreeBackground) {
       return;
     }
+
     if (!mountRef.current) return;
 
     logThreeBackgroundInfo("init-start");
@@ -116,12 +121,18 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         powerPreference: 'high-performance'
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
+      const pixelRatio = isLowPowerDevice ? 1 : Math.min(1.4, window.devicePixelRatio || 1);
+      renderer.setPixelRatio(pixelRatio);
       renderer.setClearColor(0x04020a, 1); // より深い宇宙の闇（3D魔法陣用）
       // 色空間・トーンマッピング設定
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.05;
+
+      const targetFPS = isLowPowerDevice ? 30 : 45;
+      const frameInterval = 1000 / targetFPS;
+      let lastFrameTime = performance.now();
+
       logThreeBackgroundInfo("renderer-configured");
 
       rendererRef.current = renderer;
@@ -432,7 +443,18 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       // 高品質魔法陣アニメーションループ
       const animate = () => {
         frameRef.current = requestAnimationFrame(animate);
-        const time = Date.now() * 0.001;
+
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+          return;
+        }
+
+        const now = performance.now();
+        if (now - lastFrameTime < frameInterval) {
+          return;
+        }
+        lastFrameTime = now;
+
+        const time = now * 0.001;
 
         // ネビュラ背景アニメーション
         nebulaUniforms.u_time.value = time;
@@ -511,6 +533,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     if (backgroundType !== "pixijs") {
       return;
     }
+    if (reducedMotion) {
+      return;
+    }
     if (!mountRef.current) return;
 
     logPixiBackground("info", "init-start");
@@ -527,9 +552,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           width: window.innerWidth,
           height: window.innerHeight,
           backgroundColor: 0x0E0F13, // テーマ統一（16進数で指定）
-          antialias: true,
-          resolution: Math.min(2, window.devicePixelRatio || 1),
-          autoDensity: true,
+          antialias: !isLowPowerDevice,
+          resolution: isLowPowerDevice ? 1 : Math.min(1.3, window.devicePixelRatio || 1),
+          autoDensity: false,
         });
 
         if (mountRef.current && app.canvas) {
@@ -706,7 +731,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
         // 5. 安全なアニメーションループ - Ticker使用を避ける
         let lastTime = 0;
-        const targetFPS = 60;
+        const targetFPS = isLowPowerDevice ? 30 : 45;
         const frameInterval = 1000 / targetFPS;
         isAnimating = true; // アニメーション制御フラグを有効化
 
@@ -719,6 +744,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         const animate = (currentTime: number) => {
           // アニメーション停止フラグチェック
           if (!isAnimating) {
+            return;
+          }
+
+          if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+            frameId = requestAnimationFrame(animate);
             return;
           }
 
@@ -880,7 +910,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       }
       logPixiBackground("info", "cleanup-complete");
     };
-  }, [backgroundType]);
+  }, [backgroundType, reducedMotion, effectiveMode, supports3D, isLowPowerDevice]);
 
   // 豪華版が選択された場合は専用コンポーネントを使用
   if (backgroundType === "three3d_advanced") {
@@ -906,7 +936,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           ? 'var(--chakra-colors-bg-canvas)'
           : backgroundType === "hd2d"
           ? `url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.png) center/cover no-repeat, url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.jpg) center/cover no-repeat`
-          : 'transparent',
+          : allowThreeBackground ? 'transparent' : 'var(--chakra-colors-bg-canvas)',
       }}
     >
       {/* PixiJS キャンバスはuseEffect内で動的に追加されます */}
