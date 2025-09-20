@@ -13,7 +13,6 @@ import {
 import {
   addCardToProposal,
   commitPlayFromClue,
-  continueAfterFail as continueAfterFailAction,
   removeCardFromProposal,
   startGame as startGameAction,
   submitSortedOrder,
@@ -97,12 +96,38 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, []);
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
+  const [isRestarting, setIsRestarting] = React.useState(false);
+  const [isRevealAnimating, setIsRevealAnimating] = React.useState(
+    roomStatus === "reveal"
+  );
 
   // 連想ワードの同期を強化（空文字列の場合も確実にリセット）
   React.useEffect(() => {
     const newValue = me?.clue1 || "";
     setText(newValue);
   }, [me?.clue1]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ roomId?: string; animating?: boolean }>).detail;
+      if (!detail) return;
+      if (detail.roomId && detail.roomId !== roomId) return;
+      setIsRevealAnimating(!!detail.animating);
+    };
+    window.addEventListener("ito:reveal-animating", handler as EventListener);
+    return () => {
+      window.removeEventListener("ito:reveal-animating", handler as EventListener);
+    };
+  }, [roomId]);
+
+  React.useEffect(() => {
+    if (roomStatus === "reveal") {
+      setIsRevealAnimating(true);
+    } else {
+      setIsRevealAnimating(false);
+    }
+  }, [roomStatus]);
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
@@ -276,13 +301,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     await submitSortedOrder(roomId, list);
   };
 
-  const continueRound = async () => {
-    console.log("🔥 continueRound: 呼び出し開始", roomId);
-    await continueAfterFailAction(roomId);
-    try { postRoundReset(roomId); } catch {}
-    console.log("✅ continueRound: 完了", roomId);
-  };
-
   const resetGame = async () => {
     console.log("🔥 resetGame: 呼び出し開始", roomId);
     try {
@@ -299,6 +317,27 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       const msg = String(e?.message || e || "");
       console.error("❌ resetGame: 失敗", e);
       notify({ title: "リセットに失敗しました", description: msg, type: "error" });
+    }
+  };
+
+  const restartGame = async () => {
+    await resetGame();
+    await quickStart();
+  };
+
+  const handleNextGame = async () => {
+    if (!isHost) return;
+    if (isRestarting) return;
+    if (roomStatus === "reveal" && isRevealAnimating) return;
+
+    setIsRestarting(true);
+    try {
+      console.log("🔥 nextGameButton: クリック", { roomStatus });
+      await restartGame();
+    } catch (e) {
+      console.error("❌ nextGameButton: 失敗", e);
+    } finally {
+      setIsRestarting(false);
     }
   };
 
@@ -557,14 +596,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <AppButton
               size="md"
               visual="solid"
-              onClick={async () => {
-                console.log("🔥 もう一度ボタン: クリック", { roomStatus, isFinished: roomStatus === "finished" });
-                if (roomStatus === "finished") {
-                  await resetGame();
-                } else {
-                  await continueRound();
-                }
-              }}
+              onClick={handleNextGame}
+              disabled={
+                isRestarting ||
+                (roomStatus === "reveal" && isRevealAnimating)
+              }
               minW="110px"
               px={4}
               py={2}
@@ -591,7 +627,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               }}
               transition="all 0.15s ease"
             >
-              もう一度
+              次のゲーム
             </AppButton>
           )}
 
