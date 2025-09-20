@@ -1,7 +1,8 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getDatabase, type Database } from "firebase/database";
+import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
+import { getDatabase, connectDatabaseEmulator, type Database } from "firebase/database";
 import {
+  connectFirestoreEmulator,
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
@@ -46,16 +47,39 @@ function hasValue(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0 && !isPlaceholder(v);
 }
 
-export const firebaseEnabled =
+const useEmulator = process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR === "true";
+
+const FIRESTORE_EMULATOR_HOST = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST || "localhost";
+const FIRESTORE_EMULATOR_PORT = Number(process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT || 8080);
+const AUTH_EMULATOR_HOST = process.env.NEXT_PUBLIC_AUTH_EMULATOR_HOST || "localhost";
+const AUTH_EMULATOR_PORT = Number(process.env.NEXT_PUBLIC_AUTH_EMULATOR_PORT || 9099);
+const DATABASE_EMULATOR_HOST = process.env.NEXT_PUBLIC_DATABASE_EMULATOR_HOST || "localhost";
+const DATABASE_EMULATOR_PORT = Number(process.env.NEXT_PUBLIC_DATABASE_EMULATOR_PORT || 9000);
+
+const hasFullConfig =
   hasValue(firebaseConfig.apiKey) &&
   hasValue(firebaseConfig.authDomain) &&
   hasValue(firebaseConfig.projectId) &&
   hasValue(firebaseConfig.appId);
 
+const fallbackConfig = {
+  apiKey: firebaseConfig.apiKey || "emulator-api-key",
+  authDomain: firebaseConfig.authDomain || "localhost",
+  projectId: firebaseConfig.projectId || "demo-emulator",
+  databaseURL: firebaseConfig.databaseURL,
+  storageBucket: firebaseConfig.storageBucket,
+  messagingSenderId: firebaseConfig.messagingSenderId,
+  appId: firebaseConfig.appId || "emulator-app-id",
+};
+
+export const firebaseEnabled = hasFullConfig || useEmulator;
+
+const resolvedConfig = hasFullConfig ? firebaseConfig : fallbackConfig;
+
 export const app: FirebaseApp | null = ((): FirebaseApp | null => {
   if (!firebaseEnabled) return null;
   const apps = getApps();
-  return apps.length ? apps[0] : initializeApp(firebaseConfig);
+  return apps.length ? apps[0] : initializeApp(resolvedConfig);
 })();
 
 export const db: Firestore | null = ((): Firestore | null => {
@@ -88,3 +112,32 @@ export const rtdb: Database | null = (() => {
     return null;
   }
 })();
+
+const globalScope = globalThis as typeof globalThis & {
+  __FIRESTORE_EMULATOR_INITIALIZED__?: boolean;
+  __AUTH_EMULATOR_INITIALIZED__?: boolean;
+  __RTDB_EMULATOR_INITIALIZED__?: boolean;
+};
+
+if (useEmulator && db) {
+  if (!globalScope.__FIRESTORE_EMULATOR_INITIALIZED__) {
+    connectFirestoreEmulator(db, FIRESTORE_EMULATOR_HOST, FIRESTORE_EMULATOR_PORT);
+    globalScope.__FIRESTORE_EMULATOR_INITIALIZED__ = true;
+  }
+}
+
+if (useEmulator && auth) {
+  if (!globalScope.__AUTH_EMULATOR_INITIALIZED__) {
+    const host =
+      process.env.NEXT_PUBLIC_AUTH_EMULATOR_URL || `http://${AUTH_EMULATOR_HOST}:${AUTH_EMULATOR_PORT}`;
+    connectAuthEmulator(auth, host, { disableWarnings: true });
+    globalScope.__AUTH_EMULATOR_INITIALIZED__ = true;
+  }
+}
+
+if (useEmulator && rtdb) {
+  if (!globalScope.__RTDB_EMULATOR_INITIALIZED__) {
+    connectDatabaseEmulator(rtdb, DATABASE_EMULATOR_HOST, DATABASE_EMULATOR_PORT);
+    globalScope.__RTDB_EMULATOR_INITIALIZED__ = true;
+  }
+}
