@@ -131,37 +131,55 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
+  const trimmedText = text.trim();
+  const hasText = trimmedText.length > 0;
+  const clueEditable = roomStatus === "waiting" || roomStatus === "clue";
   const placed = !!proposal?.includes(me?.id || "");
   const ready = !!(me && (me as any).ready === true);
   const canDecide =
-    !!me?.id && typeof me?.number === "number" && text.trim().length > 0;
+    clueEditable && !!me?.id && typeof me?.number === "number" && hasText;
   const allSubmitted = computeAllSubmitted({
     mode: actualResolveMode,
     eligibleIds,
     proposal,
   });
-  const canSubmit = canSubmitCard({
+  const canSubmitBase = canSubmitCard({
     mode: actualResolveMode,
     canDecide: !!me?.id && typeof me?.number === "number" && !!me?.clue1?.trim(), // Firebase保存済みチェック
     ready,
     placed,
     cluesReady,
   });
+  const canSubmit = clueEditable && canSubmitBase;
 
   const canClickProposalButton = isSortMode
-    ? !!me?.id && (placed || canSubmit)
+    ? !!me?.id && clueEditable && (placed || canSubmitBase)
     : !!me?.id && canSubmit;
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
-  const actionTooltip = isSortMode && placed
+  const baseActionTooltip = isSortMode && placed
     ? "カードを待機エリアに戻す"
     : "カードを場に出す";
+  const clearButtonDisabled = !clueEditable || !hasText || placed;
+  const clearTooltip = !clueEditable
+    ? "判定中は操作できません"
+    : placed
+      ? "カード提出中は操作できません"
+      : !hasText
+        ? "連想ワードが入力されていません"
+        : "連想ワードをクリア";
+  const decideTooltip = !clueEditable
+    ? "判定中は操作できません"
+    : !hasText
+      ? "連想ワードを入力してください"
+      : "連想ワードを決定";
+  const submitTooltip = !clueEditable ? "判定中は操作できません" : baseActionTooltip;
 
   const handleDecide = async () => {
     if (!canDecide || !me?.id) return;
 
     try {
-      await updateClue1(roomId, me.id, text.trim());
+      await updateClue1(roomId, me.id, trimmedText);
       notify({ title: "連想ワードを記録しました", type: "success" });
     } catch (e: any) {
       if (isFirebaseQuotaExceeded(e)) {
@@ -182,7 +200,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const handleClear = async () => {
-    if (!me?.id) return;
+    if (!clueEditable || !me?.id) return;
     try {
       await updateClue1(roomId, me.id, "");
       setText("");
@@ -197,7 +215,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const handleSubmit = async () => {
-    if (!me?.id) return;
+    if (!me?.id || !clueEditable) return;
 
     const isRemoving = isSortMode && placed;
     if (isSortMode) {
@@ -415,7 +433,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         w={{ base: "48vw", md: "420px" }}
         maxW="560px"
       />
-      <Tooltip content="連想ワードを決定" showArrow openDelay={300}>
+      <Tooltip content={decideTooltip} showArrow openDelay={300}>
         <AppButton
           size="sm"
           visual="solid"
@@ -445,13 +463,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </AppButton>
       </Tooltip>
       <Tooltip
-        content={
-          placed
-            ? "カード提出中はクリアできません"
-            : !text.trim()
-              ? "連想ワードが入力されていません"
-              : "連想ワードをクリア"
-        }
+        content={clearTooltip}
         showArrow
         openDelay={300}
       >
@@ -460,7 +472,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           visual="outline"
           palette="gray"
           onClick={handleClear}
-          disabled={!text.trim() || placed}
+          disabled={clearButtonDisabled}
           px={3}
           py={2}
           bg="rgba(55, 65, 81, 0.7)"
@@ -483,7 +495,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           クリア
         </AppButton>
       </Tooltip>
-      <Tooltip content={actionTooltip} showArrow openDelay={300}>
+      <Tooltip content={submitTooltip} showArrow openDelay={300}>
         <AppButton
           size="sm"
           visual="solid"
