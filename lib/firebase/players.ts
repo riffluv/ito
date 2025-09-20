@@ -4,7 +4,11 @@ import { sanitizePlainText } from "@/lib/utils/sanitize";
 
 export async function updateClue1(roomId: string, playerId: string, value: string) {
   const clean = sanitizePlainText(value).slice(0, 120);
-  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), { clue1: clean, ready: true });
+  const hasClue = clean.trim().length > 0;
+  await updateDoc(doc(db!, "rooms", roomId, "players", playerId), {
+    clue1: clean,
+    ready: hasClue,
+  });
 }
 
 export async function saveOrderIndices(roomId: string, order: string[]) {
