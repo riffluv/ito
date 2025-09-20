@@ -621,6 +621,23 @@ export default function RoomPage() {
     : null;
   const showHostInHud = false; // Always show host controls in hand area instead of HUD
 
+  const orderProposal = room?.order?.proposal;
+  const orderListFinal = room?.order?.list;
+  const submittedPlayerIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (Array.isArray(orderProposal)) {
+      for (const pid of orderProposal) {
+        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
+      }
+    }
+    if (Array.isArray(orderListFinal)) {
+      for (const pid of orderListFinal) {
+        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
+      }
+    }
+    return Array.from(ids);
+  }, [orderProposal, orderListFinal]);
+
   if (!firebaseEnabled) {
     return (
       <Box
@@ -695,6 +712,7 @@ export default function RoomPage() {
       isHostUser={isHost}
       eligibleIds={baseIds}
       roundIds={baseIds}
+      submittedPlayerIds={submittedPlayerIds}
     />
   );
 

@@ -3,7 +3,7 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { notify } from "@/components/ui/notify";
 import { transferHost } from "@/lib/firebase/rooms";
 import { sendSystemMessage } from "@/lib/firebase/chat";
@@ -28,20 +28,24 @@ interface DragonQuestPartyProps {
   isHostUser?: boolean; // 自分がホストか
   eligibleIds?: string[]; // ラウンド対象（オンライン）
   roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
+  submittedPlayerIds?: string[]; // 「提出済み」扱いにするプレイヤーID
 }
 
 // ドラクエ風プレイヤー状態表示
 const getPlayerStatus = (
   player: PlayerDoc & { id: string },
-  roomStatus: string
+  roomStatus: string,
+  submitted: boolean
 ) => {
   // clueフェーズでの連想ワード入力状況
   if (roomStatus === "clue") {
-    if (player.clue1 && player.clue1.trim() !== "") {
-      return { icon: "✅", color: "#22c55e", status: "連想完了" };
-    } else {
-      return { icon: "📝", color: "#fbbf24", status: "考え中" };
+    if (submitted) {
+      return { icon: "✅", color: "#22c55e", status: "提出済み" };
     }
+    if (player.clue1 && player.clue1.trim() !== "") {
+      return { icon: "📝", color: "#fbbf24", status: "連想OK" };
+    }
+    return { icon: "💡", color: "#fbbf24", status: "考え中" };
   }
 
   // waitingフェーズでの準備状況
@@ -73,6 +77,7 @@ export function DragonQuestParty({
   isHostUser,
   eligibleIds,
   roundIds,
+  submittedPlayerIds,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
@@ -99,6 +104,13 @@ export function DragonQuestParty({
     byId.get(id) ||
     ({ id, name: "プレイヤー", avatar: "", number: null, clue1: "", ready: false, orderIndex: 0 } as any)
   );
+
+  const submittedSet = useMemo(() => {
+    if (!Array.isArray(submittedPlayerIds) || submittedPlayerIds.length === 0) {
+      return new Set<string>();
+    }
+    return new Set(submittedPlayerIds);
+  }, [submittedPlayerIds?.join(",")]);
 
   // 実際の参加者数は表示対象の長さと一致させる（UIの一貫性を担保）
   const actualCount = displayedPlayers.length;
@@ -201,9 +213,12 @@ export function DragonQuestParty({
             })
             .map((player) => {
               const fresh = displayedPlayers.find((p) => p.id === player.id) || player;
+              const isSubmitted = submittedSet.has(player.id);
+              const hasClue = !!fresh.clue1?.trim();
               const { icon, color, status } = getPlayerStatus(
                 fresh,
-                roomStatus
+                roomStatus,
+                isSubmitted
               );
               const isHost = hostId && player.id === hostId;
               const canTransfer = !!(isHostUser && roomId && player.id !== hostId);
@@ -312,14 +327,26 @@ export function DragonQuestParty({
                           <Text
                             fontSize={{ base: "xs", md: "sm" }}
                             fontWeight={600}
-                            color={fresh.clue1?.trim() ? "white" : "rgba(255,255,255,0.4)"}
+                            color={
+                              isSubmitted && hasClue
+                                ? "white"
+                                : hasClue
+                                ? "rgba(255,255,255,0.7)"
+                                : "rgba(255,255,255,0.4)"
+                            }
                             textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                             fontFamily="monospace"
                             truncate
                             flex={1}
-                            title={fresh.clue1?.trim() || "未入力"}
+                            title={
+                              isSubmitted && hasClue
+                                ? fresh.clue1.trim()
+                                : hasClue
+                                ? "未提出"
+                                : "未入力"
+                            }
                           >
-                            {fresh.clue1?.trim() || "---"}
+                            {isSubmitted && hasClue ? fresh.clue1.trim() : "---"}
                           </Text>
                         </HStack>
 
@@ -336,16 +363,22 @@ export function DragonQuestParty({
                         >
                           <Box
                             height="100%"
-                            width={fresh.ready ? "100%" : fresh.clue1?.trim() ? "65%" : "0%"}
-                            background={fresh.ready
+                            width={
+                              isSubmitted
+                                ? "100%"
+                                : hasClue
+                                ? "60%"
+                                : "0%"
+                            }
+                            background={isSubmitted
                               ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
-                              : fresh.clue1?.trim()
+                              : hasClue
                               ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
                               : "transparent"
                             }
                             transition="all 0.3s ease"
                             css={{
-                              boxShadow: fresh.ready || fresh.clue1?.trim()
+                              boxShadow: isSubmitted || hasClue
                                 ? "inset 0 1px 0 rgba(255,255,255,0.3)"
                                 : "none"
                             }}
@@ -368,7 +401,7 @@ export function DragonQuestParty({
                     justifyContent="center"
                     title={status}
                   >
-                    {fresh.ready ? (
+                    {isSubmitted ? (
                       <Box
                         borderRadius="50%"
                         css={{
@@ -394,7 +427,7 @@ export function DragonQuestParty({
                     ) : (
                       <Text
                         fontSize="sm"
-                        style={{ color }}
+                        style={{ color: hasClue ? color : "rgba(148,163,184,0.9)" }}
                         filter="drop-shadow(0 1px 2px rgba(0,0,0,0.6))"
                         textAlign="center"
                         lineHeight="16px"
