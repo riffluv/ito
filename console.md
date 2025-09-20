@@ -1,202 +1,60 @@
-react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-content.js:85 [VSC] Content script initialized
-log.ts:18 [useLobbyCounts] presence-config Object
-app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`RoomPage`). To locate the bad setState() call inside `RoomPage`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
-    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:181:79)
-    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at main
-    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
-    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
-    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
-    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
-    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
-    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
-    at Suspense
-    at LoadableComponent (Server)
-    at Providers (Server)
-    at body
-    at html
-    at RootLayout (Server)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
-    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
-    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
-    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
-    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
-window.console.error @ app-index.js:33
-page.tsx:158 Uncaught ReferenceError: useRef is not defined
-    at RoomPage (page.tsx:158:31)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at mountIndeterminateComponent (react-dom.development.js:16869:13)
-    at beginWork$1 (react-dom.development.js:18458:16)
-    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
-    at invokeGuardedCallback (react-dom.development.js:20689:29)
-    at beginWork (react-dom.development.js:26949:7)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopConcurrent (react-dom.development.js:25734:5)
-    at renderRootConcurrent (react-dom.development.js:25690:9)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24504:38)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-redirect-boundary.js:57 Uncaught ReferenceError: useRef is not defined
-    at RoomPage (page.tsx:158:31)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at mountIndeterminateComponent (react-dom.development.js:16869:13)
-    at beginWork$1 (react-dom.development.js:18458:16)
-    at beginWork (react-dom.development.js:26927:14)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopConcurrent (react-dom.development.js:25734:5)
-    at renderRootConcurrent (react-dom.development.js:25690:9)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24504:38)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-page.tsx:158 Uncaught ReferenceError: useRef is not defined
-    at RoomPage (page.tsx:158:31)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at mountIndeterminateComponent (react-dom.development.js:16869:13)
-    at beginWork$1 (react-dom.development.js:18458:16)
-    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
-    at invokeGuardedCallback (react-dom.development.js:20689:29)
-    at beginWork (react-dom.development.js:26949:7)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at recoverFromConcurrentError (react-dom.development.js:24597:20)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-redirect-boundary.js:57 Uncaught ReferenceError: useRef is not defined
-    at RoomPage (page.tsx:158:31)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at mountIndeterminateComponent (react-dom.development.js:16869:13)
-    at beginWork$1 (react-dom.development.js:18458:16)
-    at beginWork (react-dom.development.js:26927:14)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at recoverFromConcurrentError (react-dom.development.js:24597:20)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-app-index.js:33 The above error occurred in the <RedirectErrorBoundary> component:
-
-    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:181:79)
-    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at main
-    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
-    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
-    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
-    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
-    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
-    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
-    at Suspense
-    at LoadableComponent (Server)
-    at Providers (Server)
-    at body
-    at html
-    at RootLayout (Server)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
-    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
-    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
-    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
-    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
-
-React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
-window.console.error @ app-index.js:33
-hot-reloader-client.js:187 [Fast Refresh] rebuilding
-hot-reloader-client.js:44 [Fast Refresh] done in 78ms
+18:59:30.654 Running build in Washington, D.C., USA (East) – iad1
+18:59:30.655 Build machine configuration: 2 cores, 8 GB
+18:59:30.678 Cloning github.com/riffluv/ito (Branch: master, Commit: 5e7eaa4)
+18:59:39.200 Cloning completed: 8.522s
+18:59:39.562 Restored build cache from previous deployment (Cc3V9tUh28WGoHg5nbDwGW8hZSuJ)
+18:59:40.625 Running "vercel build"
+18:59:41.515 Vercel CLI 48.0.2
+18:59:42.142 Installing dependencies...
+18:59:45.111 
+18:59:45.112 > online-ito@0.1.0 prepare
+18:59:45.112 > npm run chakra:typegen
+18:59:45.113 
+18:59:45.357 
+18:59:45.358 > online-ito@0.1.0 chakra:typegen
+18:59:45.359 > npx @chakra-ui/cli typegen ./theme/index.ts --outdir types
+18:59:45.359 
+18:59:48.222 [90m┌[39m  Chakra CLI ⚡️
+18:59:48.992 [?25l[90m│[39m
+18:59:49.080 [35m◒[39m  Generating conditions types[999D[J[32m◇[39m  ✅ Generated conditions typings
+18:59:49.081 [?25h[?25l[90m│[39m
+18:59:49.461 [35m◒[39m  Generating recipe types[999D[J[32m◇[39m  ✅ Generated recipe typings
+18:59:49.463 [?25h[?25l[90m│[39m
+18:59:49.535 [32m◇[39m  ✅ Generated utility typings
+18:59:49.535 [?25h[?25l[90m│[39m
+18:59:49.614 [32m◇[39m  ✅ Generated token typings
+18:59:49.615 [?25h[?25l[90m│[39m
+18:59:49.947 [35m◒[39m  Generating system types[999D[J[32m◇[39m  ✅ Generated system types
+18:59:49.949 [?25h[90m│[39m
+18:59:49.956 [90m└[39m  🎉 Done!
+18:59:49.957 
+18:59:50.011 
+18:59:50.011 up to date in 8s
+18:59:50.013 
+18:59:50.013 299 packages are looking for funding
+18:59:50.013   run `npm fund` for details
+18:59:50.045 Detected Next.js version: 14.2.5
+18:59:50.054 Running "npm run build"
+18:59:50.158 
+18:59:50.159 > online-ito@0.1.0 build
+18:59:50.159 > next build
+18:59:50.159 
+18:59:50.807   ▲ Next.js 14.2.5
+18:59:50.808 
+18:59:50.877    Creating an optimized production build ...
+19:00:07.452  ✓ Compiled successfully
+19:00:07.454    Skipping linting
+19:00:07.454    Checking validity of types ...
+19:00:22.888 Failed to compile.
+19:00:22.889 
+19:00:22.889 ./hooks/useReducedMotionPreference.ts:11:26
+19:00:22.895 Type error: Property 'forceAnimations' does not exist on type 'AnimationSettings'.
+19:00:22.895 
+19:00:22.895 [0m [90m  9 |[39m[0m
+19:00:22.895 [0m [90m 10 |[39m [36mexport[39m [36mfunction[39m useReducedMotionPreference(options[33m?[39m[33m:[39m [33mReducedMotionOptions[39m) {[0m
+19:00:22.895 [0m[31m[1m>[22m[39m[90m 11 |[39m   [36mconst[39m { reducedMotion[33m,[39m forceAnimations } [33m=[39m useAnimationSettings()[33m;[39m[0m
+19:00:22.896 [0m [90m    |[39m                          [31m[1m^[22m[39m[0m
+19:00:22.896 [0m [90m 12 |[39m   [36mconst[39m target [33m=[39m useMemo(() [33m=>[39m {[0m
+19:00:22.896 [0m [90m 13 |[39m     [36mif[39m (options[33m?[39m[33m.[39mforce) {[0m
+19:00:22.896 [0m [90m 14 |[39m       [36mreturn[39m forceAnimations [33m?[39m [36mfalse[39m [33m:[39m reducedMotion[33m;[39m[0m
+19:00:23.030 Error: Command "npm run build" exited with 1
