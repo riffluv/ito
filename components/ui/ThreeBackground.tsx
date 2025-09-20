@@ -34,7 +34,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
   const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
   const [hd2dImageIndex, setHd2dImageIndex] = useState<number>(1); // 1, 2, 3... の画像
-  const allowThreeBackground = backgroundType === "three3d" && !reducedMotion && effectiveMode === "3d" && supports3D !== false;
 
   // LocalStorageから設定読み込み & イベントリスナー設定
   useEffect(() => {
@@ -88,7 +87,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
   // Three.js初期化用Effect
   useEffect(() => {
-    if (!allowThreeBackground) {
+    if (backgroundType !== "three3d") {
       return;
     }
 
@@ -533,9 +532,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     if (backgroundType !== "pixijs") {
       return;
     }
-    if (reducedMotion) {
-      return;
-    }
     if (!mountRef.current) return;
 
     logPixiBackground("info", "init-start");
@@ -936,7 +932,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           ? 'var(--chakra-colors-bg-canvas)'
           : backgroundType === "hd2d"
           ? `url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.png) center/cover no-repeat, url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.jpg) center/cover no-repeat`
-          : allowThreeBackground ? 'transparent' : 'var(--chakra-colors-bg-canvas)',
+          : 'transparent',
       }}
     >
       {/* PixiJS キャンバスはuseEffect内で動的に追加されます */}
