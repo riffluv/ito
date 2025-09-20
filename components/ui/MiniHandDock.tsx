@@ -263,17 +263,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const quickStart = async () => {
     // サーバのオプションだけを使用（最新値を明示取得して反映遅延を吸収）
     let effectiveType = defaultTopicType as string;
+    let latestTopic: string | null = currentTopic ?? null;
     try {
       if (db) {
         const snap = await getDoc(doc(db, "rooms", roomId));
-        const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
-        if (latest && typeof latest === "string") effectiveType = latest;
+        const data = snap.data() as any;
+        const latestType = data?.options?.defaultTopicType as string | undefined;
+        if (latestType && typeof latestType === "string") effectiveType = latestType;
+        const topicFromSnapshot = data?.topic;
+        if (typeof topicFromSnapshot === "string") {
+          latestTopic = topicFromSnapshot;
+        } else if (topicFromSnapshot == null) {
+          latestTopic = null;
+        }
       }
     } catch {}
 
+    const topicToUse = typeof latestTopic === "string" ? latestTopic : "";
     if (effectiveType === "カスタム") {
       // お題未設定なら、まだ開始せずにモーダルへ誘導
-      if (!currentTopic || !String(currentTopic).trim()) {
+      if (!topicToUse.trim()) {
         setCustomStartPending(true);
         setCustomText("");
         setCustomOpen(true);
