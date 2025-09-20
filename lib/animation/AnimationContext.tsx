@@ -6,6 +6,7 @@ export type AnimationSettings = {
   animationMode: "auto" | "3d" | "simple";
   effectiveMode: "3d" | "simple"; // 適用済み（機能ガード後）
   reducedMotion: boolean;
+  forceAnimations: boolean;
   gpuCapability?: "high" | "low";
   setAnimationMode: (m: "auto" | "3d" | "simple") => void;
   supports3D?: boolean; // CSS 3D/環境での3Dサポート
@@ -134,3 +135,5 @@ export function useAnimationSettings(): AnimationSettings {
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   return { animationMode, effectiveMode, reducedMotion, forceAnimations: true, setAnimationMode } as AnimationSettings;
 }
+
+
