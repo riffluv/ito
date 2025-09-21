@@ -788,23 +788,17 @@ export default function MainMenu() {
                 <VStack gap={4} align="stretch">
                   <HStack gap={3} align="center">
                     <Box
-                      w={10}
-                      h={10}
-                      borderRadius={0}
-                      bg="bgSubtle"
-                      border="borders.retrogameThin"
-                      borderColor="whiteAlpha.60"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                      mt="1px"
                     >
                       <img
                         src="/images/hanepen1.webp"
                         alt="羽ペン"
                         style={{
-                          width: "20px",
-                          height: "20px",
+                          width: "28px",
+                          height: "28px",
                           filter: "brightness(0) invert(1)",
                           objectFit: "contain",
                         }}
