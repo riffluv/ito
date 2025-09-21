@@ -1045,7 +1045,11 @@ export default function MainMenu() {
       <CreateRoomModal
         isOpen={createDialog.open}
         onClose={createDialog.onClose}
-        onCreated={(roomId) => router.push(`/rooms/${roomId}`)}
+        onCreated={(roomId) => {
+          // CreateRoomModal内でtransition.navigateWithTransitionが既に実行済み
+          // 二重ナビゲーションを防ぐため、ここでは何もしない
+          console.log(`Room created: ${roomId}`);
+        }}
       />
     </Box>
   );
