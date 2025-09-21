@@ -100,6 +100,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
+  const [inlineFeedback, setInlineFeedback] = React.useState<
+    { message: string; tone: "info" | "success" } | null
+  >(null);
+
+  React.useEffect(() => {
+    if (!inlineFeedback) return;
+    const timer = setTimeout(() => setInlineFeedback(null), 2000);
+    return () => clearTimeout(timer);
+  }, [inlineFeedback]);
 
   // 連想ワードの同期を強化（空文字列の場合も確実にリセット）
   React.useEffect(() => {
@@ -156,6 +165,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     ? !!me?.id && clueEditable && (placed || canSubmitBase)
     : !!me?.id && canSubmit;
 
+  React.useEffect(() => {
+    if (!clueEditable) {
+      setInlineFeedback(null);
+    }
+  }, [clueEditable]);
+
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
   const baseActionTooltip = isSortMode && placed
     ? "カードを待機エリアに戻す"
@@ -180,7 +195,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
     try {
       await updateClue1(roomId, me.id, trimmedText);
-      notify({ title: "連想ワードを記録しました", type: "success" });
+      setInlineFeedback({ message: "連想ワードを保存しました", tone: "success" });
     } catch (e: any) {
       if (isFirebaseQuotaExceeded(e)) {
         handleFirebaseQuotaError("連想ワード記録");
@@ -204,7 +219,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     try {
       await updateClue1(roomId, me.id, "");
       setText("");
-      notify({ title: "連想ワードをクリアしました", type: "info" });
+      setInlineFeedback({ message: "連想ワードをクリアしました", tone: "info" });
     } catch (e: any) {
       notify({
         title: "クリアに失敗しました",
@@ -228,14 +243,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (isSortMode) {
         if (isRemoving) {
           await removeCardFromProposal(roomId, me.id);
-          notify({ title: "カードを待機エリアに戻しました", type: "info" });
+          setInlineFeedback({ message: "カードを待機エリアに戻しました", tone: "info" });
         } else {
           await addCardToProposal(roomId, me.id);
-          notify({ title: "カードを場に出しました", type: "success" });
+          setInlineFeedback({ message: "カードを提出しました", tone: "success" });
         }
       } else {
         await commitPlayFromClue(roomId, me.id);
-        notify({ title: "カードを場に出しました", type: "success" });
+        setInlineFeedback({ message: "カードを提出しました", tone: "success" });
       }
     } catch (e: any) {
       const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
@@ -525,6 +540,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </AppButton>
       </Tooltip>
       </HStack>
+
+      {inlineFeedback && (
+        <Text
+          mt={2}
+          fontSize="0.75rem"
+          color={inlineFeedback.tone === "success" ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha60}
+          fontFamily="monospace"
+        >
+          {inlineFeedback.message}
+        </Text>
+      )}
 
       {/* Spacer */}
       <Box flex="1" />
