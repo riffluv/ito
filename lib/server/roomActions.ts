@@ -168,6 +168,15 @@ export async function leaveRoomServer(
   const db = getAdminDb();
   const rtdb = getAdminRtdb();
 
+  if (rtdb) {
+    try {
+      const online = await fetchPresenceUids(roomId, rtdb);
+      if (online.includes(userId)) {
+        return;
+      }
+    } catch {}
+  }
+
   await forceDetachAll(roomId, userId, rtdb);
 
   try {

@@ -103,7 +103,10 @@ export function useParticipants(
       return;
     }
     if (!roomId) return;
-    const off = subscribePresence(roomId, (uids) => setOnlineUids(uids));
+    const off = subscribePresence(roomId, (uids) => {
+      console.info("[presence] update", { roomId, uids });
+      setOnlineUids(uids);
+    });
     return () => off();
   }, [roomId]);
 

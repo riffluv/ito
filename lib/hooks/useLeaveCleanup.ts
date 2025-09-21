@@ -179,6 +179,20 @@ export function useLeaveCleanup({
     } catch {}
   }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey])
 
+  const performCleanupRef = useRef(performCleanup)
+  useEffect(() => {
+    performCleanupRef.current = performCleanup
+  }, [performCleanup])
+
+  useEffect(() => {
+    if (!enabled) return
+    return () => {
+      try {
+        performCleanupRef.current?.()
+      } catch {}
+    }
+  }, [enabled])
+
   useEffect(() => {
     if (!enabled) return
     const handleBeforeUnload = () => {
