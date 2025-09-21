@@ -154,6 +154,19 @@ export default function RoomPage() {
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
 
+  const fallbackNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (room?.hostId && room?.hostName) {
+      map[room.hostId] = room.hostName;
+    }
+    const trimmedDisplayName =
+      typeof displayName === "string" ? displayName.trim() : "";
+    if (uid && trimmedDisplayName) {
+      map[uid] = trimmedDisplayName;
+    }
+    return map;
+  }, [room?.hostId, room?.hostName, uid, displayName]);
+
   // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
   const [pop, setPop] = useState(false);
   const [redirectGuard, setRedirectGuard] = useState(true);
@@ -803,6 +816,7 @@ export default function RoomPage() {
       eligibleIds={baseIds}
       roundIds={baseIds}
       submittedPlayerIds={submittedPlayerIds}
+      fallbackNames={fallbackNames}
     />
   );
 

@@ -29,6 +29,7 @@ interface DragonQuestPartyProps {
   eligibleIds?: string[]; // ラウンド対象（オンライン）
   roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
   submittedPlayerIds?: string[]; // 「提出済み」扱いにするプレイヤーID
+  fallbackNames?: Record<string, string>;
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -78,6 +79,7 @@ export function DragonQuestParty({
   eligibleIds,
   roundIds,
   submittedPlayerIds,
+  fallbackNames,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
@@ -100,10 +102,21 @@ export function DragonQuestParty({
   if (hostId && !displayedIds.includes(hostId)) {
     displayedIds = [hostId, ...displayedIds];
   }
-  const displayedPlayers = displayedIds.map((id) =>
-    byId.get(id) ||
-    ({ id, name: "プレイヤー", avatar: "", number: null, clue1: "", ready: false, orderIndex: 0 } as any)
-  );
+  const displayedPlayers = displayedIds.map((id) => {
+    const existing = byId.get(id);
+    if (existing) return existing;
+    const fallbackName = fallbackNames?.[id];
+    return ({
+      id,
+      uid: id,
+      name: fallbackName ? fallbackName : "プレイヤー",
+      avatar: "",
+      number: null,
+      clue1: "",
+      ready: false,
+      orderIndex: 0,
+    } as any);
+  });
 
   const submittedSet = useMemo(() => {
     if (!Array.isArray(submittedPlayerIds) || submittedPlayerIds.length === 0) {
