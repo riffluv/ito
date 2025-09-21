@@ -74,6 +74,33 @@ export default function MainMenu() {
   );
   const [lastRoom, setLastRoom] = useState<string | null>(null);
 
+  useEffect(() => {
+    const prefetchRules = () => {
+      try {
+        router.prefetch("/rules");
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.debug("prefetch('/rules') はスキップされました", error);
+        }
+      }
+    };
+
+    const idleCallback = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined;
+    if (typeof idleCallback === "function") {
+      const idleHandle = idleCallback(prefetchRules);
+      return () => {
+        const cancelIdle = (window as any).cancelIdleCallback as ((handle: number) => void) | undefined;
+        if (typeof cancelIdle === "function") {
+          cancelIdle(idleHandle);
+        }
+      };
+    }
+
+    const timeoutId = window.setTimeout(prefetchRules, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [router]);
   // タイトルアニメーション用のref
   const titleRef = useRef<HTMLHeadingElement>(null);
 

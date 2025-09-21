@@ -41,6 +41,7 @@ export function usePageTransition() {
   const [fromPage, setFromPage] = useState("");
   const [toPage, setToPage] = useState("");
   const [loadingStepsState, setLoadingStepsState] = useState<TransitionLoadingStep[]>([]);
+  const [pendingCompletion, setPendingCompletion] = useState(false);
 
   const transitionRef = useRef<{
     direction: string;
@@ -64,6 +65,24 @@ export function usePageTransition() {
     };
   }, [clearScheduledNavigation]);
 
+  const finalizeLoading = useCallback(() => {
+    setIsLoading(false);
+    setProgress(0);
+    setCurrentStep("");
+    setLoadingStepsState([]);
+    setFromPage("");
+    setToPage("");
+    setPendingCompletion(false);
+    clearScheduledNavigation();
+  }, [clearScheduledNavigation]);
+
+  useEffect(() => {
+    if (!pendingCompletion) return;
+    if (!toPage || pathname === toPage) {
+      finalizeLoading();
+    }
+  }, [pendingCompletion, pathname, toPage, finalizeLoading]);
+
   // ページ遷移実行（Firebase処理含む）
   const navigateWithTransition = useCallback(
     async (
@@ -81,6 +100,7 @@ export function usePageTransition() {
       // 現在実行中なら無視
       if (isTransitioning || isLoading) return;
 
+      setPendingCompletion(false);
       setFromPage(pathname);
       setToPage(href);
       transitionRef.current = { direction, duration };
@@ -231,19 +251,18 @@ export function usePageTransition() {
     setFromPage("");
     setToPage("");
     setLoadingStepsState([]);
+    setPendingCompletion(false);
     clearScheduledNavigation();
   }, [clearScheduledNavigation]);
 
   // ローディング完了時のクリーンアップ
   const completeLoading = useCallback(() => {
-    setIsLoading(false);
-    setProgress(0);
-    setCurrentStep("");
-    setLoadingStepsState([]);
-    setFromPage("");
-    setToPage("");
-    // ローディング画面が消えると、既に遷移済みの目的ページが表示される
-  }, []);
+    if (toPage && pathname !== toPage) {
+      setPendingCompletion(true);
+      return;
+    }
+    finalizeLoading();
+  }, [finalizeLoading, pathname, toPage]);
 
   return {
     // 状態
