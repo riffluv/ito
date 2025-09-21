@@ -110,22 +110,22 @@ export default function RulesPage() {
               {/* テキストボックス */}
               <Box
                 p={6}
-                css={{
-                  background: "rgba(8,9,15,0.9)",
-                  border: "3px solid rgba(255,255,255,0.9)",
-                  borderRadius: 0,
-                  boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-                }}
+                bg="bgPanel"
+                border="borders.retrogame"
+                borderColor="whiteAlpha.90"
+                borderRadius={0}
+                boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
                 flex={1}
                 minW={{ base: "100%", md: "0" }}
               >
                 <Text
                   fontSize={{ base: "md", md: "lg" }}
-                  color="white"
+                  color="whiteAlpha.95"
                   fontFamily="monospace"
-                  lineHeight="1.8"
+                  lineHeight="1.7"
                   textAlign="center"
-                  textShadow="1px 1px 0px #000"
+                  textShadow="1px 1px 2px rgba(0,0,0,0.8)"
+                  letterSpacing="0.3px"
                 >
                   きょうりょくがたの パーティーゲーム。
                   <br />
@@ -144,15 +144,14 @@ export default function RulesPage() {
           </VStack>
         </VStack>
 
-        <VStack gap={{ base: 8, md: 10 }} align="stretch">
+        <VStack gap={{ base: 6, md: 8 }} align="stretch">
           {/* ゲームの流れ */}
           <Box
-            css={{
-              background: "rgba(8,9,15,0.9)",
-              border: "3px solid rgba(255,255,255,0.9)",
-              borderRadius: 0,
-              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-            }}
+            bg="bgPanel"
+            border="borders.retrogame"
+            borderColor="whiteAlpha.90"
+            borderRadius={0}
+            boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -199,9 +198,11 @@ export default function RulesPage() {
                   <Box
                     p={4}
                     mb={3}
-                    bg="richBlack.700"
+                    bg="bgSubtle"
                     border="borders.retrogameThin"
+                    borderColor="whiteAlpha.60"
                     borderRadius={0}
+                    boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                   >
                     <VStack align="start" gap={2} flex={1}>
                       <Text
@@ -231,12 +232,11 @@ export default function RulesPage() {
 
           {/* 判定方法（モード） */}
           <Box
-            css={{
-              background: "rgba(8,9,15,0.9)",
-              border: "3px solid rgba(255,255,255,0.9)",
-              borderRadius: 0,
-              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-            }}
+            bg="bgPanel"
+            border="borders.retrogame"
+            borderColor="whiteAlpha.90"
+            borderRadius={0}
+            boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -272,8 +272,9 @@ export default function RulesPage() {
                     p={4}
                     borderRadius={0}
                     border="borders.retrogameThin"
-                    bg="richBlack.700"
-                    boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+                    borderColor="whiteAlpha.60"
+                    bg="bgSubtle"
+                    boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                   >
                     <Text fontWeight="bold" color="white" mb={2} fontFamily="monospace" textShadow="1px 1px 0px #000">
                       {mode.title}
@@ -289,12 +290,11 @@ export default function RulesPage() {
 
           {/* ルール要点・コツ・例 */}
           <Box
-            css={{
-              background: "rgba(8,9,15,0.9)",
-              border: "3px solid rgba(255,255,255,0.9)",
-              borderRadius: 0,
-              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-            }}
+            bg="bgPanel"
+            border="borders.retrogame"
+            borderColor="whiteAlpha.90"
+            borderRadius={0}
+            boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
             p={{ base: 6, md: 8 }}
           >
             <Heading
@@ -310,7 +310,7 @@ export default function RulesPage() {
               ▼ こうりゃくの ポイント ▼
             </Heading>
 
-            <VStack gap={6} align="stretch">
+            <VStack gap={5} align="stretch">
               <Box>
                 <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
                   ルール（要点）
@@ -357,8 +357,9 @@ export default function RulesPage() {
                   p={4}
                   borderRadius={0}
                   border="borders.retrogame"
-                  bg="richBlack.700"
-                  boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+                  borderColor="whiteAlpha.80"
+                  bg="bgSubtle"
+                  boxShadow="2px 2px 0 rgba(0,0,0,0.8), 3px 3px 0 rgba(0,0,0,0.6)"
                 >
                   <VStack align="start" gap={1}>
                     <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
@@ -384,12 +385,14 @@ export default function RulesPage() {
         <VStack gap={6} mt={{ base: 10, md: 12 }}>
           <Box
             p={4}
-            bg="richBlack.700"
+            bg="bgSubtle"
             border="borders.retrogameThin"
+            borderColor="whiteAlpha.60"
             borderRadius={0}
             mx="auto"
             maxW="2xl"
             textAlign="center"
+            boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
           >
             <Text
               fontSize="sm"
