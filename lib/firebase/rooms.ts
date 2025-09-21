@@ -310,7 +310,7 @@ export async function resetRoomWithPrune(
       const prev = prevTotal ?? kept + removedCount;
       await sendSystemMessage(
         roomId,
-        `🔄 在席者でやり直し（前ラウンド ${prev} 名 → 在席 ${kept} 名、除外 ${removedCount} 名）`
+        `ホストが在席者だけでリセットしました：前回${prev}→今回${kept}（離脱${removedCount}）`
       );
     } catch {}
   }
