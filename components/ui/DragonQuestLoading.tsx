@@ -7,7 +7,6 @@ import {
   DEFAULT_LOADING_STEPS,
   TransitionLoadingStep,
 } from "@/hooks/usePageTransition";
-import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
 interface DragonQuestLoadingProps {
   isVisible: boolean;
@@ -39,7 +38,7 @@ export function DragonQuestLoading({
 }: DragonQuestLoadingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const shouldReduceMotion = useReducedMotionPreference({ force: true });
+  const shouldReduceMotion = false;
   const [furthestStepIndex, setFurthestStepIndex] = useState(-1);
 
   const resolvedSteps = useMemo<TransitionLoadingStep[]>(() => {
