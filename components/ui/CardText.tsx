@@ -12,7 +12,7 @@ interface CardTextProps {
 
 // 🎯 高度な動的フォントサイズ計算（実際の文字幅とカードサイズを考慮）
 const getClueFontSize = (clue: string | undefined): string => {
-  if (!clue) return "1.22rem";
+  if (!clue) return "1.05rem";
   
   // 文字の特性を考慮した重み付け文字数計算
   const calculateEffectiveLength = (text: string): number => {
@@ -58,16 +58,19 @@ const getClueFontSize = (clue: string | undefined): string => {
     return `${Math.round(optimalSize * 0.8)}px`; // 0.8倍で余裕を持たせる
   };
   
-  // 段階的調整（可読性とパフォーマンスのバランス）
-  if (effectiveLength <= 3) return "1.2rem";
-  if (effectiveLength <= 5) return "1.05rem";
-  if (effectiveLength <= 8) return "0.9rem";
-  if (effectiveLength <= 12) return "0.75rem";
-  if (effectiveLength <= 16) return "0.65rem";
-  if (effectiveLength <= 20) return "0.58rem";
-  
-  // 超長文の場合は計算ベースの最適化
-  return getOptimalFontSize(effectiveLength);
+  // 段階的調整（可読性が急激に落ちないよう緩やかに縮小）
+  if (effectiveLength <= 4) return "1.05rem";
+  if (effectiveLength <= 7) return "0.95rem";
+  if (effectiveLength <= 11) return "0.86rem";
+  if (effectiveLength <= 16) return "0.78rem";
+  if (effectiveLength <= 22) return "0.7rem";
+  if (effectiveLength <= 28) return "0.66rem";
+
+  // 超長文の場合は計算ベースの最適化（ただし極端に小さくしない）
+  const optimizedPx = getOptimalFontSize(effectiveLength);
+  const optimized = parseFloat(optimizedPx) / 16; // px → rem 換算
+  const clamped = Math.max(0.6, Math.min(0.66, optimized));
+  return `${clamped}rem`;
 };
 
 const getNumberFontSize = (number: number | null): string => {
