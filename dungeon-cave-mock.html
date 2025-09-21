@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洞窟ダンジョン - Three.js モック</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: monospace;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        洞窟ダンジョン背景 (固定表示)<br>
+        2D感重視のドラクエ風
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x1a2332, 1);
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.1;
+        controls.maxPolarAngle = Math.PI / 2.2;
+
+        // 洞窟の雰囲気を作る霧効果
+        scene.fog = new THREE.Fog(0x1a2332, 10, 80);
+
+        // 床の作成（石の洞窟床）
+        const floorGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+        const floorMaterial = new THREE.MeshLambertMaterial({
+            color: 0x2a3441,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        // 床の凹凸を作成
+        const floorVertices = floorGeometry.attributes.position.array;
+        for (let i = 0; i < floorVertices.length; i += 3) {
+            floorVertices[i + 2] += Math.random() * 0.5 - 0.25; // Z軸にランダムな高さ
+        }
+        floorGeometry.attributes.position.needsUpdate = true;
+        floorGeometry.computeVertexNormals();
+
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // 洞窟の壁を作成
+        function createCaveWall(x, z, width, height, depth) {
+            const wallGeometry = new THREE.BoxGeometry(width, height, depth);
+            const wallMaterial = new THREE.MeshLambertMaterial({
+                color: 0x1a1a2e,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            // 壁の凹凸を追加
+            const wallVertices = wallGeometry.attributes.position.array;
+            for (let i = 0; i < wallVertices.length; i += 3) {
+                wallVertices[i] += (Math.random() - 0.5) * 0.3;
+                wallVertices[i + 1] += (Math.random() - 0.5) * 0.3;
+                wallVertices[i + 2] += (Math.random() - 0.5) * 0.3;
+            }
+            wallGeometry.attributes.position.needsUpdate = true;
+            wallGeometry.computeVertexNormals();
+
+            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+            wall.position.set(x, height/2, z);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            return wall;
+        }
+
+        // 洞窟の壁を配置
+        scene.add(createCaveWall(-30, 0, 5, 15, 60));  // 左壁
+        scene.add(createCaveWall(30, 0, 5, 15, 60));   // 右壁
+        scene.add(createCaveWall(0, -30, 60, 15, 5));  // 奥壁
+        scene.add(createCaveWall(0, 30, 60, 15, 5));   // 手前壁
+
+        // 洞窟の天井
+        const ceilingGeometry = new THREE.PlaneGeometry(60, 60, 30, 30);
+        const ceilingMaterial = new THREE.MeshLambertMaterial({
+            color: 0x0f1419,
+            transparent: true,
+            opacity: 0.7
+        });
+
+        // 天井の凹凸
+        const ceilingVertices = ceilingGeometry.attributes.position.array;
+        for (let i = 0; i < ceilingVertices.length; i += 3) {
+            ceilingVertices[i + 2] += Math.random() * 2 - 1;
+        }
+        ceilingGeometry.attributes.position.needsUpdate = true;
+        ceilingGeometry.computeVertexNormals();
+
+        const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.y = 15;
+        scene.add(ceiling);
+
+        // 鍾乳石の作成
+        function createStalactite(x, z) {
+            const stalactiteGeometry = new THREE.ConeGeometry(0.5 + Math.random(), 3 + Math.random() * 4, 8);
+            const stalactiteMaterial = new THREE.MeshLambertMaterial({
+                color: 0x2a2a3e,
+                transparent: true,
+                opacity: 0.8
+            });
+            const stalactite = new THREE.Mesh(stalactiteGeometry, stalactiteMaterial);
+            stalactite.position.set(x, 15 - stalactiteGeometry.parameters.height/2, z);
+            stalactite.rotation.x = Math.PI;
+            stalactite.castShadow = true;
+            return stalactite;
+        }
+
+        // 鍾乳石をランダム配置
+        for (let i = 0; i < 15; i++) {
+            const x = (Math.random() - 0.5) * 50;
+            const z = (Math.random() - 0.5) * 50;
+            scene.add(createStalactite(x, z));
+        }
+
+        // 岩の作成
+        function createRock(x, z, scale = 1) {
+            const rockGeometry = new THREE.DodecahedronGeometry(scale, 0);
+            const rockMaterial = new THREE.MeshLambertMaterial({
+                color: 0x3a3a4e,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            // 岩の不規則な形状
+            const rockVertices = rockGeometry.attributes.position.array;
+            for (let i = 0; i < rockVertices.length; i += 3) {
+                const factor = 0.3;
+                rockVertices[i] += (Math.random() - 0.5) * factor;
+                rockVertices[i + 1] += (Math.random() - 0.5) * factor;
+                rockVertices[i + 2] += (Math.random() - 0.5) * factor;
+            }
+            rockGeometry.attributes.position.needsUpdate = true;
+            rockGeometry.computeVertexNormals();
+
+            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+            rock.position.set(x, scale/2, z);
+            rock.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            return rock;
+        }
+
+        // 岩をランダム配置
+        for (let i = 0; i < 20; i++) {
+            const x = (Math.random() - 0.5) * 40;
+            const z = (Math.random() - 0.5) * 40;
+            const scale = 0.5 + Math.random() * 1.5;
+            scene.add(createRock(x, z, scale));
+        }
+
+        // ライティング - ドラクエ風の神秘的な照明
+
+        // メインの環境光（薄暗い）
+        const ambientLight = new THREE.AmbientLight(0x404080, 0.3);
+        scene.add(ambientLight);
+
+        // 神秘的な青い光源
+        const mysticalLight1 = new THREE.PointLight(0x4080ff, 0.8, 30);
+        mysticalLight1.position.set(10, 8, 10);
+        mysticalLight1.castShadow = true;
+        mysticalLight1.shadow.mapSize.width = 1024;
+        mysticalLight1.shadow.mapSize.height = 1024;
+        scene.add(mysticalLight1);
+
+        const mysticalLight2 = new THREE.PointLight(0x8040ff, 0.6, 25);
+        mysticalLight2.position.set(-15, 6, -10);
+        mysticalLight2.castShadow = true;
+        scene.add(mysticalLight2);
+
+        // 魔法のオーブ的な光る球体
+        const orbGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const orbMaterial = new THREE.MeshBasicMaterial({
+            color: 0x4080ff,
+            transparent: true,
+            opacity: 0.7
+        });
+        const orb1 = new THREE.Mesh(orbGeometry, orbMaterial);
+        orb1.position.copy(mysticalLight1.position);
+        scene.add(orb1);
+
+        const orb2 = new THREE.Mesh(orbGeometry, orbMaterial.clone());
+        orb2.material.color.setHex(0x8040ff);
+        orb2.position.copy(mysticalLight2.position);
+        scene.add(orb2);
+
+        // カメラ初期位置
+        camera.position.set(0, 8, 20);
+        camera.lookAt(0, 0, 0);
+
+        // アニメーション
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.01;
+
+            // 光るオーブのアニメーション
+            orb1.material.opacity = 0.5 + Math.sin(time * 2) * 0.2;
+            orb2.material.opacity = 0.5 + Math.cos(time * 1.5) * 0.2;
+
+            // 光源の強度変化
+            mysticalLight1.intensity = 0.6 + Math.sin(time * 3) * 0.2;
+            mysticalLight2.intensity = 0.4 + Math.cos(time * 2) * 0.2;
+
+            // オーブの浮遊アニメーション
+            orb1.position.y = mysticalLight1.position.y + Math.sin(time * 2) * 0.5;
+            orb2.position.y = mysticalLight2.position.y + Math.cos(time * 1.8) * 0.3;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // ウィンドウリサイズ対応
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 開始
+        animate();
+
+        console.log("洞窟ダンジョン Three.js モック作成完了！");
+    </script>
+</body>
+</html>

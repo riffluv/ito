@@ -137,12 +137,13 @@ export function useRoomState(
     }
 
     const clearPending = () => {
-      if (pendingRejoin && rejoinSessionKey && typeof window !== "undefined") {
+      if (!pendingRejoin) return;
+      if (rejoinSessionKey && typeof window !== "undefined") {
         try { window.sessionStorage.removeItem(rejoinSessionKey); } catch {}
       }
     };
 
-    if (room.status === "waiting" || pendingRejoin) {
+    if (room.status === "waiting") {
       joinRoomFully({
         roomId,
         uid,
@@ -151,12 +152,12 @@ export function useRoomState(
       })
         .catch(() => void 0)
         .finally(clearPending);
-    } else {
+    } else if (isMember) {
       ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
     }
-  }, [roomId, uid || "", room?.status, displayName || "", rejoinSessionKey]);
+  }, [roomId, uid || "", room?.status, displayName || "", rejoinSessionKey, isMember]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
     if (isMember) {
