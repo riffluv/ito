@@ -65,7 +65,7 @@ export function CardFaceFront({
           position="absolute"
           top="50%"
           left="50%"
-          transform="translate(-50%, -50%)"
+          transform="translate3d(-50%, -50%, 0)"
           fontWeight={700}
           fontSize={getClueFontSize(clue)}
           color={clueColor}
@@ -157,7 +157,7 @@ export function CardFaceBack({
           position="absolute"
           top="50%"
           left="50%"
-          transform="translate(-50%, -50%)"
+          transform="translate3d(-50%, -50%, 0)"
           fontWeight={700}
           fontSize={backNumberFontSize}
           color={numberColor}

@@ -99,7 +99,7 @@ export function CardText({
     position: "absolute" as const,
     top: "50%",
     left: "50%",
-    transform: "translate(-50%, -50%)",
+    transform: "translate3d(-50%, -50%, 0)",
     fontWeight: 700,
     fontSize: isNumber ? getNumberFontSize(text as number) : getClueFontSize(text as string),
     color,
