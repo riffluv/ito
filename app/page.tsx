@@ -415,10 +415,10 @@ export default function MainMenu() {
                   }
                 }}
               >
-                <HStack 
-                  gap={4} 
-                  flexWrap="wrap" 
-                  justify="center"
+                <HStack
+                  gap={4}
+                  flexWrap="wrap"
+                  justify={{ base: "center", md: "flex-end" }}
                   css={{
                     // Ensure minimum touch target size (44px)
                     "& button": {
@@ -561,86 +561,84 @@ export default function MainMenu() {
               boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
               position="relative"
             >
-              <VStack gap={4} align="stretch" mb={4}>
-                {/* メインタイトル行 */}
-                <HStack justify="space-between" align="center">
-                  <HStack gap={3} align="center">
-                    <Users size={24} color="white" />
-                    <Heading
-                      size="xl"
-                      fontWeight={700}
-                      color="white"
-                      fontFamily="monospace"
-                      textShadow="1px 1px 0px #000"
-                      letterSpacing="0.5px"
-                    >
-                      アクティブルーム
-                    </Heading>
-                  </HStack>
-
-                  <HStack gap={2}>
-                    {/* リフレッシュボタン */}
-                    <AppButton
-                      size="sm"
-                      visual="outline"
-                      palette="gray"
-                      onClick={() => {
-                        refreshRooms();
-                        refreshLobbyCounts();
-                      }}
-                      loading={roomsLoading}
-                      disabled={!firebaseEnabled}
-                    >
-                      <RefreshCw size={16} />
-                    </AppButton>
-
-                    {/* プレイヤー設定ボタン */}
-                    <AppButton
-                      size="sm"
-                      visual={displayName ? "outline" : "solid"}
-                      palette={displayName ? "gray" : "brand"}
-                      onClick={openNameChange}
-                    >
-                      <User size={16} style={{ marginRight: 8 }} />
-                      {displayName ? "プレイヤー設定" : "名前を設定"}
-                    </AppButton>
-                  </HStack>
-                </HStack>
-
-                {/* ステータス行 */}
-                <HStack justify="space-between" align="center">
-                  <HStack gap={4} align="center">
-                    <Box
-                      bg="bgSubtle"
-                      px={3}
-                      py={2}
-                      borderRadius={0}
-                      border="borders.retrogameThin"
-                      borderColor="whiteAlpha.60"
-                      boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
-                    >
+              <HStack justify="space-between" mb={4}>
+                <HStack gap={3}>
+                  <Box
+                    w={10}
+                    h={10}
+                    borderRadius={0}
+                    bg="bgSubtle"
+                    border="borders.retrogameThin"
+                    borderColor="whiteAlpha.60"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                  >
+                    <Users size={20} />
+                  </Box>
+                  <VStack align="start" gap={1}>
+                    <HStack gap={2} align="center">
+                      <Heading
+                        size="xl"
+                        fontWeight={700}
+                        color="white"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                        letterSpacing="0.5px"
+                      >
+                        アクティブルーム
+                      </Heading>
                       <Text
-                        fontSize="lg"
-                        fontWeight={800}
+                        fontSize="sm"
+                        fontWeight={700}
                         color="green.300"
                         fontFamily="monospace"
                         textShadow="1px 1px 0px rgba(0,0,0,0.8)"
-                        letterSpacing="1px"
+                        letterSpacing="0.5px"
                       >
                         {filteredRooms.length}件
                       </Text>
-                    </Box>
+                    </HStack>
                     <Text
-                      fontSize="xs"
-                      color="whiteAlpha.70"
+                      fontSize="sm"
+                      color="whiteAlpha.80"
                       fontFamily="monospace"
                       textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                     >
-                      ※進行中のルームも表示（参加は待機中のみ）
+                      進行中のルームも表示します（参加は待機中のみ）
                     </Text>
-                  </HStack>
+                  </VStack>
                 </HStack>
-              </VStack>
+
+                <HStack gap={2}>
+                  {/* リフレッシュボタン */}
+                  <AppButton
+                    size="sm"
+                    visual="outline"
+                    palette="gray"
+                    onClick={() => {
+                      refreshRooms();
+                      refreshLobbyCounts();
+                    }}
+                    loading={roomsLoading}
+                    disabled={!firebaseEnabled}
+                  >
+                    <RefreshCw size={16} />
+                  </AppButton>
+
+                  {/* スタイリッシュな名前設定ボタン */}
+                  <AppButton
+                    size="sm"
+                    visual={displayName ? "outline" : "solid"}
+                    palette={displayName ? "gray" : "brand"}
+                    onClick={openNameChange}
+                  >
+                    <User size={16} style={{ marginRight: 8 }} />
+                    {displayName ? "プレイヤー設定" : "名前を設定"}
+                  </AppButton>
+                </HStack>
+              </HStack>
             </Box>
 
             {!firebaseEnabled ? (
@@ -786,17 +784,23 @@ export default function MainMenu() {
                 <VStack gap={4} align="stretch">
                   <HStack gap={3} align="center">
                     <Box
+                      w={10}
+                      h={10}
+                      borderRadius={0}
+                      bg="bgSubtle"
+                      border="borders.retrogameThin"
+                      borderColor="whiteAlpha.60"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      mt="1px"
+                      boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                     >
                       <img
                         src="/images/hanepen1.webp"
                         alt="羽ペン"
                         style={{
-                          width: "28px",
-                          height: "28px",
+                          width: "20px",
+                          height: "20px",
                           filter: "brightness(0) invert(1)",
                           objectFit: "contain",
                         }}
