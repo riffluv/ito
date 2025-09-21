@@ -30,3 +30,28 @@ export function hashCode(s: string): number {
 
 export function range(n: number): number[] { return Array.from({ length: n }, (_, i) => i); }
 
+// 入室順でプレイヤーIDをソートする関数
+export function sortPlayersByJoinOrder(
+  playerIds: string[],
+  players: Array<{ id: string; lastSeen?: any }>
+): string[] {
+  const playerMap = new Map(players.map(p => [p.id, p]));
+
+  return [...playerIds].sort((a, b) => {
+    const playerA = playerMap.get(a);
+    const playerB = playerMap.get(b);
+
+    // lastSeenが存在しない場合は元の順序を維持
+    if (!playerA?.lastSeen || !playerB?.lastSeen) {
+      return playerIds.indexOf(a) - playerIds.indexOf(b);
+    }
+
+    // Timestamp型の比較（Firestore serverTimestamp）
+    const timeA = playerA.lastSeen?.seconds || 0;
+    const timeB = playerB.lastSeen?.seconds || 0;
+
+    // 入室順（早い順）でソート
+    return timeA - timeB;
+  });
+}
+

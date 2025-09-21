@@ -16,6 +16,7 @@ import MinimalChat from "@/components/ui/MinimalChat";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { notify } from "@/components/ui/notify";
 import { logError } from "@/lib/utils/log";
+import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import UniversalMonitor from "@/components/UniversalMonitor";
@@ -560,8 +561,8 @@ export default function RoomPage() {
 
   // ラウンド対象（表示の安定性重視）
   // presenceの一時的な揺れでスロット/待機カード数が減らないよう、
-  // 基本はラウンドメンバー（deal.players ∪ players）をそのまま採用する。
-  const baseIds = Array.isArray((room as any)?.deal?.players)
+  // 基本はラウンドメンバー（deal.players ∪ players）を入室順でソートして採用する。
+  const unsortedBaseIds = Array.isArray((room as any)?.deal?.players)
     ? Array.from(
         new Set<string>([
           ...(((room as any).deal.players as string[]) || []),
@@ -569,6 +570,9 @@ export default function RoomPage() {
         ])
       )
     : players.map((p) => p.id);
+
+  // 入室順でソート（一貫した並び順を保持）
+  const baseIds = sortPlayersByJoinOrder(unsortedBaseIds, players);
 
   // ホストを最優先（左端）に配置するためのソート
   const hostId = room?.hostId;
