@@ -5,7 +5,7 @@ import { useTransition } from "@/components/ui/TransitionProvider";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
-import { getAvatarByOrder } from "@/lib/utils";
+import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
 import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
@@ -95,9 +95,11 @@ export function CreateRoomModal({
         result: null,
       };
       const roomRef = await addDoc(collection(db!, "rooms"), room);
+      // ホストのアバターもランダム選択
+      const randomIndex = Math.floor(Math.random() * AVATAR_LIST.length);
       const pdoc: PlayerDoc = {
         name: sanitizedDisplayName,
-        avatar: getAvatarByOrder(0),
+        avatar: AVATAR_LIST[randomIndex],
         number: null,
         clue1: "",
         ready: false,

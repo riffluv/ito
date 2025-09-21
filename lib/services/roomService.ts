@@ -1,7 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { hashString } from "@/lib/game/random";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { getAvatarByOrder } from "@/lib/utils";
+import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
 import {
   collection,
   deleteDoc,
@@ -30,14 +30,32 @@ export async function ensureMember({
   const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
   if (!meSnap.exists()) {
-    // 既存プレイヤー数を取得して参加順でアバター決定
+    // クリーンアップ後の正確なプレイヤー数を取得
     const playersCollectionRef = collection(db!, "rooms", roomId, "players");
     const playersSnap = await getDocs(playersCollectionRef);
-    const currentPlayerCount = playersSnap.size;
+
+    // 既に使用されているアバターを収集
+    const usedAvatars = new Set<string>();
+    playersSnap.docs.forEach(doc => {
+      const player = doc.data();
+      if (player.avatar) {
+        usedAvatars.add(player.avatar);
+      }
+    });
+
+    // 使用されていないアバターをランダムに選択
+    const availableAvatars = AVATAR_LIST.filter(avatar => !usedAvatars.has(avatar));
+    let selectedAvatar = getAvatarByOrder(0); // フォールバック
+
+    if (availableAvatars.length > 0) {
+      // 利用可能なアバターからランダム選択
+      const randomIndex = Math.floor(Math.random() * availableAvatars.length);
+      selectedAvatar = availableAvatars[randomIndex];
+    }
 
     const p: PlayerDoc = {
       name: displayName || "匿名",
-      avatar: getAvatarByOrder(currentPlayerCount),
+      avatar: selectedAvatar,
       number: null,
       clue1: "",
       ready: false,
