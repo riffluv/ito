@@ -115,8 +115,14 @@ export default function MainMenu() {
 
   useEffect(() => {
     let t: number | undefined;
-    if (roomsLoading) t = window.setTimeout(() => setShowSkeletons(true), 150);
-    else setShowSkeletons(false);
+    if (roomsLoading) {
+      // スケルトンローディングを完全に無効化
+      // リアルタイムゲームではローディング体験よりも
+      // 瞬時のレスポンスを優先する
+      // t = window.setTimeout(() => setShowSkeletons(true), 150);
+    } else {
+      setShowSkeletons(false);
+    }
     return () => {
       if (t) clearTimeout(t);
     };
@@ -547,26 +553,27 @@ export default function MainMenu() {
           <GridItem>
             <Box
               mb={8}
-              css={{
-                background: "rgba(8,9,15,0.9)",
-                border: "3px solid rgba(255,255,255,0.9)",
-                borderRadius: 0,
-                padding: "20px",
-                boxShadow:
-                  "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-                position: "relative",
-              }}
+              bg="bgPanel"
+              border="borders.retrogame"
+              borderColor="whiteAlpha.90"
+              borderRadius={0}
+              p={5}
+              boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+              position="relative"
             >
               <HStack justify="space-between" mb={4}>
                 <HStack gap={3}>
                   <Box
                     w={10}
                     h={10}
-                    borderRadius="lg"
-                    bg="accentSubtle"
+                    borderRadius={0}
+                    bg="bgSubtle"
+                    border="borders.retrogameThin"
+                    borderColor="whiteAlpha.60"
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
+                    boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                   >
                     <Users size={20} />
                   </Box>
@@ -587,17 +594,21 @@ export default function MainMenu() {
                         colorPalette="green"
                         px={3}
                         py={1}
-                        borderRadius="full"
+                        borderRadius={0}
                         fontSize="sm"
                         fontWeight={600}
+                        border="borders.retrogameThin"
+                        borderColor="whiteAlpha.60"
+                        boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                       >
                         {filteredRooms.length}件
                       </Badge>
                     </HStack>
                     <Text
                       fontSize="sm"
-                      color="rgba(255,255,255,0.8)"
+                      color="whiteAlpha.80"
                       fontFamily="monospace"
+                      textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                     >
                       進行中のルームも表示します（参加は待機中のみ）
                     </Text>
@@ -638,10 +649,11 @@ export default function MainMenu() {
               <Box
                 p={12}
                 textAlign="center"
-                borderRadius="xl"
-                border="2px solid"
+                borderRadius={0}
+                border="borders.retrogame"
                 borderColor="dangerBorder"
                 bg="dangerSubtle"
+                boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
               >
                 <Text fontSize="xl" color="dangerSolid" fontWeight={600} mb={3}>
                   Firebase未設定です
@@ -663,9 +675,12 @@ export default function MainMenu() {
                   <Box
                     key={i}
                     h="200px"
-                    borderRadius="xl"
-                    bg="surfaceRaised"
+                    borderRadius={0}
+                    bg="bgSubtle"
+                    border="borders.retrogameThin"
+                    borderColor="whiteAlpha.40"
                     opacity={0.6}
+                    boxShadow="1px 1px 0 rgba(0,0,0,0.4)"
                   />
                 ))}
               </Grid>
@@ -735,10 +750,11 @@ export default function MainMenu() {
                 textAlign="center"
                 py={16}
                 px={8}
-                borderRadius="xl"
-                border="2px dashed"
-                borderColor="borderMuted"
-                bg="glassBg03"
+                borderRadius={0}
+                border="borders.retrogame"
+                borderColor="whiteAlpha.60"
+                bg="bgSubtle"
+                boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
               >
                 <Heading size="md" color="text" mb={3} fontWeight={600}>
                   まだアクティブなルームがありません
@@ -761,30 +777,34 @@ export default function MainMenu() {
             <VStack gap={6} align="stretch">
               {/* 開発者メモ */}
               <Box
-                css={{
-                  background: "rgba(8,9,15,0.9)",
-                  border: "3px solid rgba(255,255,255,0.9)",
-                  borderRadius: 0,
-                  padding: "20px",
-                  boxShadow:
-                    "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
-                  position: "relative",
-                }}
+                bg="bgPanel"
+                border="borders.retrogame"
+                borderColor="whiteAlpha.90"
+                borderRadius={0}
+                p={5}
+                boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+                position="relative"
               >
                 <VStack gap={4} align="stretch">
                   <HStack gap={3} align="center">
                     <Box
+                      w={10}
+                      h={10}
+                      borderRadius={0}
+                      bg="bgSubtle"
+                      border="borders.retrogameThin"
+                      borderColor="whiteAlpha.60"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      mt="1px"
+                      boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                     >
                       <img
                         src="/images/hanepen1.webp"
                         alt="羽ペン"
                         style={{
-                          width: "28px",
-                          height: "28px",
+                          width: "20px",
+                          height: "20px",
                           filter: "brightness(0) invert(1)",
                           objectFit: "contain",
                         }}
@@ -816,29 +836,33 @@ export default function MainMenu() {
                       <VStack gap={1} align="start" pl={4}>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・DPIスケール対応
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・Firebase最適化
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・ロビーリフレッシュ機能
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・パフォーマンス向上
                         </Text>
@@ -858,15 +882,17 @@ export default function MainMenu() {
                       <VStack gap={1} align="start" pl={4}>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・UI細部ブラッシュアップ
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・アニメーション最適化
                         </Text>
@@ -886,29 +912,33 @@ export default function MainMenu() {
                       <VStack gap={1} align="start" pl={4}>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・新機能検討
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・ユーザビリティ向上
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・コーヒーを辞める
                         </Text>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.8)"
+                          color="whiteAlpha.80"
                           fontFamily="monospace"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
                           ・制限エラー通知システム
                         </Text>
