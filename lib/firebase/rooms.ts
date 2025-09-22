@@ -281,7 +281,6 @@ export async function resetRoomWithPrune(
 
   // プレイヤーの連想ワードと状態もクリア（「リセット」ボタン用）
   try {
-    console.log("🔥 resetRoomWithPrune: プレイヤー状態クリア開始", roomId);
     const playersRef = collection(db!, "rooms", roomId, "players");
     const snap = await getDocs(playersRef);
     const batch = writeBatch(db!);
@@ -296,7 +295,6 @@ export async function resetRoomWithPrune(
       updateCount++;
     });
     await batch.commit();
-    console.log("✅ resetRoomWithPrune: プレイヤー状態クリア完了", { roomId, updateCount });
   } catch (e) {
     console.error("❌ resetRoomWithPrune: プレイヤー状態クリア失敗", e);
     logWarn("rooms", "reset-room-with-prune-players-failed", e);

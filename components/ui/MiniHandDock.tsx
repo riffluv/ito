@@ -345,7 +345,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const resetGame = async () => {
-    console.log("🔥 resetGame: 呼び出し開始", roomId);
     try {
       // 在席者だけでやり直すための keep を決定（presence のオンラインUIDを利用）
       const keep = Array.isArray(roundIds) && Array.isArray(onlineUids)
@@ -373,7 +372,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             const user = auth.currentUser;
             const token = await user?.getIdToken();
             if (token && user?.uid) {
-              console.log("[resetGame] prune request", { roomId, targetsCount: targets.length });
+              console.log("[ゲームリセット] 削除リクエスト", { roomId, targetsCount: targets.length });
               await fetch(`/api/rooms/${roomId}/prune`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -384,11 +383,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         }
       }
 
-      console.log("🔄 resetGame: resetRoomWithPrune呼び出し", { roomId, keep });
       await resetRoomWithPrune(roomId, keep, { notifyChat: true });
       notify({ title: "ゲームをリセット！", type: "success" });
       try { postRoundReset(roomId); } catch {}
-      console.log("✅ resetGame: 完了", roomId);
     } catch (e: any) {
       const msg = String(e?.message || e || "");
       console.error("❌ resetGame: 失敗", e);
@@ -408,7 +405,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
     setIsRestarting(true);
     try {
-      console.log("🔥 nextGameButton: クリック", { roomStatus });
       await restartGame();
     } catch (e) {
       console.error("❌ nextGameButton: 失敗", e);
@@ -788,7 +784,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 <IconButton
                   aria-label="リセット"
                   onClick={async () => {
-                    console.log("🔥 リセットボタン: クリック");
                     await resetGame();
                   }}
                   size="sm"
