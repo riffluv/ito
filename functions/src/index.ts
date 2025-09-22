@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { leaveRoomServer } from '@/lib/server/roomActions';
 
 // Initialize admin if not already
 if (!admin.apps.length) {
@@ -13,6 +14,18 @@ const rtdb = admin.database ? admin.database() : (null as any);
 // 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
 // 以降の定期ジョブ/トリガは早期 return して何もしない
 const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === '1';
+
+const PRESENCE_STALE_THRESHOLD_MS = Number(
+  process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
+    process.env.PRESENCE_STALE_MS ||
+    90_000
+);
+
+const MAX_CLOCK_SKEW_MS = Number(
+  process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
+    process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
+    30_000
+);
 
 /**
  * Recalculates playersCount and lastActive for a room.
@@ -66,6 +79,76 @@ export const onPlayerUpdate = functions.firestore
     } catch (err) {
       console.error('onPlayerUpdate error', err);
     }
+  });
+
+function isPresenceConnActive(conn: any, now: number): boolean {
+  if (!conn) return false;
+  if (conn.online === false) return false;
+  if (conn.online === true && typeof conn.ts !== 'number') return true;
+  const ts = typeof conn.ts === 'number' ? conn.ts : 0;
+  if (!ts) return false;
+  if (ts - now > MAX_CLOCK_SKEW_MS) return false;
+  return now - ts <= PRESENCE_STALE_THRESHOLD_MS;
+}
+
+export const onPresenceWrite = functions.database
+  .ref('presence/{roomId}/{uid}/{connId}')
+  .onWrite(async (change, ctx) => {
+    if (EMERGENCY_STOP) return null;
+    const { roomId, uid } = ctx.params as { roomId: string; uid: string };
+    try {
+      const after = change.after.val();
+      const before = change.before.val();
+
+      const now = Date.now();
+
+      const afterActive = change.after.exists()
+        ? isPresenceConnActive(after, now)
+        : false;
+      const beforeActive = change.before.exists()
+        ? isPresenceConnActive(before, now)
+        : false;
+
+      if (afterActive) {
+        // まだオンライン扱いなので何もしない
+        return null;
+      }
+
+      // 変化がなく単純に stale な書き込みでなければスキップ
+      const wentOffline = beforeActive && !afterActive;
+      const removed = change.after.exists() === false && change.before.exists();
+      const markedOffline = change.after.exists() && after?.online === false;
+
+      if (!wentOffline && !removed && !markedOffline) {
+        return null;
+      }
+
+      const dbi = admin.database();
+      const userRef = dbi.ref(`presence/${roomId}/${uid}`);
+      const snap = await userRef.get();
+      const val = snap.val() as Record<string, any> | null;
+      const stillActive = val
+        ? Object.values(val).some((conn) => isPresenceConnActive(conn, now))
+        : false;
+
+      if (stillActive) {
+        return null;
+      }
+
+      // 完全に切断されたのでノードを掃除し、部屋から退室させる
+      await userRef.remove().catch((err) => {
+        console.warn('presence-user-remove-failed', { roomId, uid, err });
+      });
+
+      try {
+        await leaveRoomServer(roomId, uid, null);
+      } catch (err) {
+        console.error('presence-leaveRoomServer-failed', { roomId, uid, err });
+      }
+    } catch (err) {
+      console.error('onPresenceWrite error', { roomId, uid, err });
+    }
+    return null;
   });
 
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
