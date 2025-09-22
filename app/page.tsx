@@ -1048,7 +1048,7 @@ export default function MainMenu() {
         onCreated={(roomId) => {
           // CreateRoomModal内でtransition.navigateWithTransitionが既に実行済み
           // 二重ナビゲーションを防ぐため、ここでは何もしない
-          console.log(`Room created: ${roomId}`);
+          console.log(`ルーム作成: ${roomId}`);
         }}
       />
     </Box>

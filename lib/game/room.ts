@@ -158,7 +158,6 @@ export async function continueAfterFail(roomId: string) {
   });
   // waiting に戻るタイミングでプレイヤーの連想/readyも即時クリア
   try {
-    console.log("🔥 continueAfterFail: プレイヤー状態クリア開始", roomId);
     const { collection, getDocs, writeBatch } = await import("firebase/firestore");
     const playersRef = collection(db!, "rooms", roomId, "players");
     const ps = await getDocs(playersRef);
@@ -169,7 +168,6 @@ export async function continueAfterFail(roomId: string) {
       updateCount++;
     });
     await batch.commit();
-    console.log("✅ continueAfterFail: プレイヤー状態クリア完了", { roomId, updateCount });
   } catch (e) {
     console.error("❌ continueAfterFail: プレイヤー状態クリア失敗", e);
   }
