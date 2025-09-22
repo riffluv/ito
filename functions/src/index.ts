@@ -187,6 +187,8 @@ export const cleanupGhostRooms = functions.pubsub
             for (const uid of Object.keys(val)) {
               const conns = val[uid] || {};
               const online = Object.values(conns).some((c: any) => {
+                if (c?.online === false) return false;
+                if (c?.online === true && typeof c?.ts !== 'number') return true;
                 const ts = typeof c?.ts === 'number' ? c.ts : 0;
                 if (!ts) return false;
                 if (ts - nowLocal > PRESENCE_STALE_MS) return false;

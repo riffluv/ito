@@ -151,6 +151,12 @@ export function useLobbyCounts(
             // より厳格な判定：最新の有効なタイムスタンプのみ
             let latestValidTs = 0;
             for (const c of Object.values(conns) as any[]) {
+              if (c?.online === false) continue;
+              if (c?.online === true && typeof c?.ts !== "number") {
+                latestValidTs = Math.max(latestValidTs, now);
+                hasFresh = true;
+                continue;
+              }
               const ts = typeof c?.ts === "number" ? c.ts : 0;
               if (ts <= 0) continue; // 無効なタイムスタンプ
               if (ts - now > MAX_CLOCK_SKEW_MS) continue; // 未来すぎる

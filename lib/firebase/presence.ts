@@ -1,5 +1,5 @@
 import { firebaseEnabled, rtdb } from "@/lib/firebase/client";
-import { logError, logInfo } from "@/lib/utils/log";
+import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import {
   get,
   off,
@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   set,
   update,
+  type Database,
 } from "firebase/database";
 
 // ルーム配下: presence/<roomId>/<uid>/<connId> = { online: true, ts }
@@ -20,7 +21,12 @@ const ROOM_PATH = (roomId: string) => `presence/${roomId}`;
 const CONN_PATH = (roomId: string, uid: string, connId: string) =>
   `presence/${roomId}/${uid}/${connId}`;
 
-export type PresenceConn = { online?: boolean; ts?: any };
+export type PresenceConn = {
+  online?: boolean;
+  ts?: any;
+  offlineAt?: any;
+  connectedAt?: any;
+};
 export type PresenceUserMap = Record<string, PresenceConn>; // connId -> PresenceConn
 export type PresenceRoomMap = Record<string, PresenceUserMap>; // uid -> PresenceUserMap
 
@@ -49,15 +55,68 @@ const ENV_SKEW = Number(
 export const MAX_CLOCK_SKEW_MS =
   Number.isFinite(ENV_SKEW) && ENV_SKEW > 0 ? ENV_SKEW : 30_000; // 30s
 
+const presenceLog = (action: string, detail?: Record<string, unknown>) =>
+  logInfo("presence", action, detail);
+const presenceWarn = (action: string, detail?: Record<string, unknown>) =>
+  logWarn("presence", action, detail);
+const presenceError = (action: string, detail?: Record<string, unknown>) =>
+  logError("presence", action, detail);
+
+const toNumber = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+export function isPresenceConnectionActive(
+  conn: PresenceConn | Record<string, any> | null | undefined,
+  now: number
+): boolean {
+  if (!conn) return false;
+  const onlineFlag = (conn as PresenceConn | Record<string, any>)?.online;
+  if (onlineFlag === false) return false;
+  if (onlineFlag === true && typeof (conn as any)?.ts !== "number") return true;
+  const ts = toNumber((conn as any)?.ts);
+  if (!ts) return false;
+  if (ts - now > MAX_CLOCK_SKEW_MS) return false;
+  return now - ts <= PRESENCE_STALE_MS;
+}
+
+async function cleanupResidualConnections(
+  db: Database,
+  roomId: string,
+  uid: string,
+  keepConnId: string | null
+) {
+  try {
+    const baseRef = ref(db, ROOM_PATH(roomId) + "/" + uid);
+    const snap = await get(baseRef);
+    const val = snap.val() as PresenceUserMap | null;
+    if (!val) return;
+    const now = Date.now();
+    const tasks: Promise<unknown>[] = [];
+    for (const [connId, payload] of Object.entries(val)) {
+      if (keepConnId && connId === keepConnId) continue;
+      if (!payload) continue;
+      if (payload.online === true && isPresenceConnectionActive(payload, now)) continue;
+      const targetRef = ref(db, CONN_PATH(roomId, uid, connId));
+      tasks.push(remove(targetRef).catch((err) => {
+        presenceWarn("cleanup-remove-failed", { roomId, uid, connId, error: err });
+      }));
+    }
+    if (tasks.length) await Promise.all(tasks);
+  } catch (err) {
+    presenceWarn("cleanup-residual-error", { roomId, uid, error: err });
+  }
+}
+
 export async function attachPresence(roomId: string, uid: string) {
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
   // 接続状態を監視し、接続ごとに push で一意キーを作成
   const connectedRef = ref(db, "/.info/connected");
   let meConnPath: string | null = null;
+  let meConnId: string | null = null;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
 
-  const startHeartbeat = (path: string) => {
+  const startHeartbeat = (path: string, connId: string) => {
     if (heartbeat) {
       try {
         clearInterval(heartbeat);
@@ -68,8 +127,25 @@ export async function attachPresence(roomId: string, uid: string) {
     heartbeat = setInterval(() => {
       try {
         // サーバ時刻で更新（ローカル時計への依存を排除）
-        update(meConnRef, { ts: serverTimestamp() as any }).catch(() => {});
-      } catch {}
+        update(meConnRef, {
+          ts: serverTimestamp() as any,
+          online: true,
+        }).catch((err) => {
+          presenceWarn("heartbeat-update-failed", {
+            roomId,
+            uid,
+            connId,
+            error: err,
+          });
+        });
+      } catch (err) {
+        presenceWarn("heartbeat-update-error", {
+          roomId,
+          uid,
+          connId,
+          error: err,
+        });
+      }
     }, PRESENCE_HEARTBEAT_MS);
   };
 
@@ -88,19 +164,43 @@ export async function attachPresence(roomId: string, uid: string) {
       // 新しい接続ノードを作成
       const baseRef = ref(db, ROOM_PATH(roomId) + "/" + uid);
       const meRef = push(baseRef);
-      // push() の toJSON() はフル URL を返すことがあり、ref(db, fullUrl) は無効になる。
-      // ここでは connId を取り出して相対パスを保持する（ref() に渡すため）。
       const connId = meRef.key;
       meConnPath = connId ? CONN_PATH(roomId, uid, connId) : null;
+      meConnId = connId ?? null;
+      presenceLog("connected", { roomId, uid, connId });
+      if (!connId || !meConnPath) {
+        presenceWarn("missing-connid", { roomId, uid });
+        return;
+      }
       try {
-        await onDisconnect(meRef).remove();
-      } catch {}
+        await onDisconnect(meRef).set({
+          online: false,
+          ts: serverTimestamp() as any,
+          offlineAt: serverTimestamp() as any,
+        });
+        presenceLog("ondisconnect-armed", { roomId, uid, connId });
+      } catch (err) {
+        presenceWarn("ondisconnect-arm-failed", {
+          roomId,
+          uid,
+          connId,
+          error: err,
+        });
+      }
       try {
-        await set(meRef, { online: true, ts: serverTimestamp() as any });
-      } catch {}
-      if (meConnPath) startHeartbeat(meConnPath);
+        await set(meRef, {
+          online: true,
+          ts: serverTimestamp() as any,
+          connectedAt: serverTimestamp() as any,
+        });
+      } catch (err) {
+        presenceError("initial-set-failed", { roomId, uid, connId, error: err });
+      }
+      startHeartbeat(meConnPath, connId);
+      cleanupResidualConnections(db, roomId, uid, connId).catch(() => {});
     } else {
       // 切断検知: ハートビート停止（onDisconnect がサーバ側で削除する）
+      presenceLog("connection-offline", { roomId, uid, connId: meConnId });
       stopHeartbeat();
     }
   };
@@ -109,20 +209,47 @@ export async function attachPresence(roomId: string, uid: string) {
 
   // 明示的に解除するための関数を返す
   return async () => {
-    logInfo("presence", "detach", { uid, roomId });
+    presenceLog("detach", { uid, roomId, connId: meConnId });
     try {
       off(connectedRef, "value", connectedHandler as any);
     } catch {}
     stopHeartbeat();
     try {
       if (meConnPath) {
-        logInfo("presence", "remove-path", { path: meConnPath });
         await remove(ref(db, meConnPath));
-        logInfo("presence", "removed", { path: meConnPath });
+        presenceLog("detach-remove", { roomId, uid, connId: meConnId });
       }
     } catch (err) {
-      logError("presence", "remove-failed", err);
+      presenceWarn("detach-remove-failed", {
+        roomId,
+        uid,
+        connId: meConnId,
+        error: err,
+      });
+      if (meConnPath) {
+        try {
+          await update(ref(db, meConnPath), {
+            online: false,
+            ts: serverTimestamp() as any,
+            offlineAt: serverTimestamp() as any,
+          });
+          presenceLog("detach-mark-offline", {
+            roomId,
+            uid,
+            connId: meConnId,
+          });
+        } catch (err2) {
+          presenceError("detach-mark-offline-failed", {
+            roomId,
+            uid,
+            connId: meConnId,
+            error: err2,
+          });
+        }
+      }
     }
+    meConnPath = null;
+    meConnId = null;
   };
 }
 
@@ -136,18 +263,11 @@ export function subscribePresence(
   const handler = (snap: any) => {
     const val = (snap.val() || {}) as PresenceRoomMap;
     const now = Date.now();
-    const uids = Object.keys(val).filter((uid) => {
-      const conns = val[uid] || {};
-      // いずれかの接続で ts が鮮度内ならオンライン
-      return Object.values(conns).some((c: any) => {
-        // serverTimestamp() 直後は数値でない可能性があるため online:true で即時オンライン扱い
-        if (c?.online === true && typeof c?.ts !== "number") return true;
-        const ts = typeof c?.ts === "number" ? c.ts : 0;
-        if (ts <= 0) return false;
-        // 未来に大きく進んだ ts は無効扱い（時計ズレ対策）
-        if (ts - now > MAX_CLOCK_SKEW_MS) return false;
-        return now - ts <= PRESENCE_STALE_MS;
-      });
+    const uids = Object.keys(val).filter((uidKey) => {
+      const conns = val[uidKey] || {};
+      return Object.values(conns).some((conn) =>
+        isPresenceConnectionActive(conn as any, now)
+      );
     });
     cb(uids, val as any);
   };
@@ -167,14 +287,11 @@ export async function fetchPresenceUids(roomId: string): Promise<string[]> {
     const snap = await get(ref(rtdb!, ROOM_PATH(roomId)));
     const val = (snap.val() || {}) as PresenceRoomMap;
     const now = Date.now();
-    return Object.keys(val).filter((uid) => {
-      const conns = val[uid] || {};
-      return Object.values(conns).some((c: any) => {
-        const ts = typeof c?.ts === "number" ? c.ts : 0;
-        if (ts <= 0) return false;
-        if (ts - now > MAX_CLOCK_SKEW_MS) return false;
-        return now - ts <= PRESENCE_STALE_MS;
-      });
+    return Object.keys(val).filter((uidKey) => {
+      const conns = val[uidKey] || {};
+      return Object.values(conns).some((conn) =>
+        isPresenceConnectionActive(conn as any, now)
+      );
     });
   } catch {
     return [];
