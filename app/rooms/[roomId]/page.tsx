@@ -132,11 +132,17 @@ function ClueInputMini({ roomId, playerId, currentValue }: ClueInputMiniProps) {
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
-  const roomId = params.roomId;
+  const roomId = params?.roomId;
   const { user, displayName, setDisplayName, loading: authLoading } = useAuth();
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
+
+  // roomIdが取得できない場合は早期リターン
+  if (!roomId) {
+    return <div>ルームIDが見つかりません</div>;
+  }
+
   const {
     room,
     players,

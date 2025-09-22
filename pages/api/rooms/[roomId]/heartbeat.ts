@@ -4,8 +4,8 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/server';
+import { getAdminDb } from '@/lib/server/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function heartbeatHandler(
   req: NextApiRequest,
@@ -23,10 +23,11 @@ export default async function heartbeatHandler(
   }
 
   try {
-    // FirestoreのプレイヤードキュメントのlastSeenを更新
-    const playerRef = doc(db, 'rooms', roomId as string, 'players', uid);
-    await updateDoc(playerRef, {
-      lastSeen: serverTimestamp(),
+    // Firebase Admin SDKでFirestoreのプレイヤードキュメントのlastSeenを更新
+    const db = getAdminDb();
+    const playerRef = db.collection('rooms').doc(roomId as string).collection('players').doc(uid);
+    await playerRef.update({
+      lastSeen: FieldValue.serverTimestamp(),
     });
 
     res.status(200).json({ success: true });
