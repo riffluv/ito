@@ -273,12 +273,8 @@ export type ColorSwatchVariantMap = {
 export interface AppButtonVariant {
   /** @default "md" */
   size?: "xs" | "sm" | "md" | "lg" | "xl" | undefined
-  /** @default "comfortable" */
-  density?: "compact" | "comfortable" | undefined
-  /** @default "solid" */
-  visual?: "solid" | "outline" | "ghost" | "subtle" | "surface" | "plain" | undefined
-  /** @default "brand" */
-  palette?: "brand" | "gray" | "danger" | "success" | "teal" | undefined
+  /** @default "dq" */
+  variant?: "dq" | "solid" | "outline" | "ghost" | "danger" | "success" | "highlight" | undefined
 }
 
 export type AppButtonVariantProps = {
@@ -287,6 +283,25 @@ export type AppButtonVariantProps = {
 
 export type AppButtonVariantMap = {
   [K in keyof AppButtonVariant]: Array<AppButtonVariant[K]>
+}
+
+export interface AppCardVariant {
+  interactive?: boolean | undefined
+  /** @default "comfortable" */
+  density?: "compact" | "comfortable" | "spacious" | undefined
+  selected?: boolean | undefined
+  /** @default "default" */
+  variant?: "default" | "elevated" | "outlined" | "success" | "danger" | "highlight" | undefined
+  /** @default "md" */
+  size?: "sm" | "md" | "lg" | undefined
+}
+
+export type AppCardVariantProps = {
+  [K in keyof AppCardVariant]?: ConditionalValue<AppCardVariant[K]> | undefined
+}
+
+export type AppCardVariantMap = {
+  [K in keyof AppCardVariant]: Array<AppCardVariant[K]>
 }
 
 export interface GameCardVariant {
@@ -303,7 +318,7 @@ export type GameCardVariantMap = {
 }
 
 export interface GamePanelVariant {
-  variant?: "default" | "elevated" | "glass" | undefined
+  variant?: "default" | "elevated" | "subtle" | undefined
 }
 
 export type GamePanelVariantProps = {
@@ -348,6 +363,7 @@ export interface ConfigRecipes {
   radiomark: SystemRecipeFn<RadiomarkVariantProps, RadiomarkVariantMap>
   colorSwatch: SystemRecipeFn<ColorSwatchVariantProps, ColorSwatchVariantMap>
   appButton: SystemRecipeFn<AppButtonVariantProps, AppButtonVariantMap>
+  appCard: SystemRecipeFn<AppCardVariantProps, AppCardVariantMap>
   gameCard: SystemRecipeFn<GameCardVariantProps, GameCardVariantMap>
   gamePanel: SystemRecipeFn<GamePanelVariantProps, GamePanelVariantMap>
   primaryButton: SystemRecipeFn<PrimaryButtonVariantProps, PrimaryButtonVariantMap>
