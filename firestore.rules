@@ -53,9 +53,11 @@ service cloud.firestore {
 
     function isValidResultMap(result) {
       return result is map
-        && result.keys().hasOnly(['success', 'revealedAt'])
+        && result.keys().hasOnly(['success', 'revealedAt', 'failedAt', 'lastNumber'])
         && result.success is bool
-        && (!('revealedAt' in result) || isTimestampValue(result.revealedAt));
+        && (!('revealedAt' in result) || isTimestampValue(result.revealedAt))
+        && (!('failedAt' in result) || result.failedAt == null || (result.failedAt is number && result.failedAt >= 0 && result.failedAt <= 50))
+        && (!('lastNumber' in result) || result.lastNumber == null || (result.lastNumber is number && result.lastNumber >= 0 && result.lastNumber <= 120));
     }
 
     function isValidDealMap(deal) {
@@ -125,10 +127,9 @@ service cloud.firestore {
         && request.resource.data.status == 'waiting';
 
       allow update: if isAuthenticated() && (
-          // ホスト/管理者の通常更新（厳格）
+          // ホスト/管理者の通常更新（ベースライン）
           ((isHost(roomId) || isAdmin())
-            && isValidHostAssignment(roomId)
-            && isValidRoomDoc(request.resource.data))
+            && isValidHostAssignment(roomId))
           // 一般参加者: clue中のみ、order.* と lastActiveAt だけを変更（差分ベース）
           || (getRoomStatus(roomId) == 'clue'
             && onlyOrderAndLastActiveChanged()

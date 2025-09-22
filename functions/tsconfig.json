@@ -2,11 +2,16 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "lib",
-    "rootDir": "src",
-  "module": "commonjs",
-  "moduleResolution": "node",
+    "rootDir": "../",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "target": "es2020",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "noEmit": false
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../lib/server/**/*",
+    "../lib/utils/log.ts"
+  ]
 }
