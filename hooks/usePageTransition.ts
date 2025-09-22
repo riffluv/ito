@@ -101,7 +101,7 @@ export function usePageTransition() {
       if (isTransitioning || isLoading) return;
 
       setPendingCompletion(false);
-      setFromPage(pathname);
+      setFromPage(pathname || "");
       setToPage(href);
       transitionRef.current = { direction, duration };
 
