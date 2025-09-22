@@ -223,7 +223,9 @@ export const UI_TOKENS = {
     // ドラクエ風の基調色
     dqBlue: "#4a9eff",
     dqPurple: "#8b5cf6",
-    dqRed: "#ff6b6b",
+    dqRed: "#dc2626",
+    dqGold: "#d4af37",
+    dqSilver: "#c0c0c0",
     // 拡張: 主要アクセント色のアルファ付き
     dqBlueAlpha30: "rgba(74,158,255,0.3)",
     dqBlueAlpha20: "rgba(74,158,255,0.2)",

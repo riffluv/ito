@@ -160,13 +160,13 @@ export const getDragonQuestStyleOverrides = (
   // 基本色設定
   const baseColors = {
     bg: waitingInCentral ? "#1a1d23" : "#0f0f23",
-    border: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha80 : UI_TOKENS.COLORS.whiteAlpha60,
+    border: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha30 : UI_TOKENS.COLORS.whiteAlpha20,
   };
 
   // 状態別のスタイルオーバーライド
   const stateOverrides: Record<string, any> = {
     success: {
-      borderColor: UI_TOKENS.COLORS.dqBlue,
+      borderColor: UI_TOKENS.COLORS.dqGold,
       boxShadow: UI_TOKENS.SHADOWS.cardFloating,
     },
     fail: {
@@ -174,7 +174,7 @@ export const getDragonQuestStyleOverrides = (
       boxShadow: UI_TOKENS.SHADOWS.cardFloating,
     },
     ready: {
-      borderColor: UI_TOKENS.COLORS.purpleAlpha80,
+      borderColor: UI_TOKENS.COLORS.dqSilver,
       boxShadow: UI_TOKENS.SHADOWS.cardFloating,
     },
     default: {

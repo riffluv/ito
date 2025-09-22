@@ -68,12 +68,12 @@ export function GameCard({
   const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
   const successBorder =
     state === "success"
-      ? UI_TOKENS.COLORS.dqBlue // Blue for success  
+      ? UI_TOKENS.COLORS.dqGold // Gold for success
       : state === "fail"
         ? UI_TOKENS.COLORS.dqRed // Red for failure
         : state === "ready"
-          ? UI_TOKENS.COLORS.purpleAlpha80 // Purple for ready (with clue)
-          : UI_TOKENS.COLORS.textBase; // White for default/pending
+          ? UI_TOKENS.COLORS.dqSilver // Silver for ready (with clue)
+          : styleOverrides.borderColor; // Use style system for default
   const successShadow =
     state === "success"
       ? successLevel === "mild"
