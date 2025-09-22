@@ -21,6 +21,7 @@ import { resetRoomWithPrune } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
 import { db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import type { PlayerDoc } from "@/lib/types";
 import { Box, HStack, IconButton, Input, Dialog, Text, VStack } from "@chakra-ui/react";
 import React from "react";
@@ -346,10 +347,43 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const resetGame = async () => {
     console.log("🔥 resetGame: 呼び出し開始", roomId);
     try {
-      // 在席者だけでやり直す（presenceのオンラインUIDを利用、追加読取なし）
+      // 在席者だけでやり直すための keep を決定（presence のオンラインUIDを利用）
       const keep = Array.isArray(roundIds) && Array.isArray(onlineUids)
         ? roundIds.filter((id) => onlineUids.includes(id))
         : (onlineUids || []);
+
+      // オプション: リセット前に不在者を一括追い出し（prune）
+      // NEXT_PUBLIC_RESET_PRUNE=0 / false で無効化可能
+      const shouldPrune = (() => {
+        try {
+          const raw = (process.env.NEXT_PUBLIC_RESET_PRUNE || "").toString().toLowerCase();
+          if (!raw) return true; // 既定: 有効
+          return !(raw === "0" || raw === "false");
+        } catch {
+          return true;
+        }
+      })();
+
+      if (shouldPrune && Array.isArray(roundIds)) {
+        const keepSet = new Set(keep);
+        const targets = roundIds.filter((id) => !keepSet.has(id));
+        if (targets.length > 0) {
+          try {
+            const auth = getAuth();
+            const user = auth.currentUser;
+            const token = await user?.getIdToken();
+            if (token && user?.uid) {
+              console.log("[resetGame] prune request", { roomId, targetsCount: targets.length });
+              await fetch(`/api/rooms/${roomId}/prune`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token, callerUid: user.uid, targets }),
+              }).catch(() => {});
+            }
+          } catch {}
+        }
+      }
+
       console.log("🔄 resetGame: resetRoomWithPrune呼び出し", { roomId, keep });
       await resetRoomWithPrune(roomId, keep, { notifyChat: true });
       notify({ title: "ゲームをリセット！", type: "success" });
