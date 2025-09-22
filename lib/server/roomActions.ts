@@ -1,4 +1,4 @@
-import { FieldValue } from "firebase-admin/firestore";
+﻿import { FieldValue } from "firebase-admin/firestore";
 import type { Database } from "firebase-admin/database";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { logWarn } from "@/lib/utils/log";
@@ -167,15 +167,6 @@ export async function leaveRoomServer(
 ) {
   const db = getAdminDb();
   const rtdb = getAdminRtdb();
-
-  if (rtdb) {
-    try {
-      const online = await fetchPresenceUids(roomId, rtdb);
-      if (online.includes(userId)) {
-        return;
-      }
-    } catch {}
-  }
 
   await forceDetachAll(roomId, userId, rtdb);
 
