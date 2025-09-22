@@ -3,6 +3,7 @@ export {
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_STALE_MS,
   attachPresence,
+  isPresenceConnectionActive,
   presenceSupported,
   subscribePresence,
   type PresenceConn,

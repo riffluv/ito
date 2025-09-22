@@ -26,6 +26,7 @@ function sanitizeServerText(input: unknown, maxLength = 500): string {
 }
 
 function isConnectionActive(conn: any, now: number): boolean {
+  if (conn?.online === false) return false;
   if (conn?.online === true && typeof conn?.ts !== "number") return true;
   const ts = typeof conn?.ts === "number" ? conn.ts : 0;
   if (!ts) return false;
