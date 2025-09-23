@@ -2,7 +2,9 @@
 // - Uses BroadcastChannel when available
 // - Falls back to window.storage event via localStorage
 
-type RoundEvent = { type: 'ROUND_RESET'; roomId: string; at: number };
+type RoundEvent =
+  | { type: 'ROUND_RESET'; roomId: string; at: number }
+  | { type: 'ROUND_PREPARE'; roomId: string; at: number };
 
 const CHANNEL_NAME = 'ito-round-events';
 
@@ -30,6 +32,27 @@ export function postRoundReset(roomId: string) {
       // remove soon to avoid clutter
       setTimeout(() => {
         try { localStorage.removeItem(`ito:round:${roomId}:reset`); } catch {}
+      }, 1000);
+    }
+  } catch {}
+}
+
+// Fire when the host starts the next round preparation (auto-start lock target)
+export function postRoundPrepare(roomId: string) {
+  const evt: RoundEvent = { type: 'ROUND_PREPARE', roomId, at: Date.now() };
+  const ch = getChannel();
+  if (ch) {
+    try { ch.postMessage(evt as any); } catch {}
+    try { ch.close(); } catch {}
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`ito:round:${roomId}:prepare`, String(evt.at));
+      const until = Date.now() + 5000;
+      localStorage.setItem(`ito:round:${roomId}:prepareUntil`, String(until));
+      setTimeout(() => {
+        try { localStorage.removeItem(`ito:round:${roomId}:prepare`); } catch {}
+        // keep prepareUntil; it expires naturally by time check
       }, 1000);
     }
   } catch {}
@@ -76,3 +99,41 @@ export function subscribeRoundEvents(
   return () => subs.forEach((fn) => fn());
 }
 
+export function subscribeRoundPrepare(
+  roomId: string,
+  onPrepare: (at: number) => void
+): () => void {
+  const subs: Array<() => void> = [];
+  const ch = getChannel();
+  if (ch) {
+    const onMsg = (e: MessageEvent) => {
+      const data = e.data as RoundEvent;
+      if (data && data.type === 'ROUND_PREPARE' && data.roomId === roomId) {
+        onPrepare(data.at);
+      }
+    };
+    ch.addEventListener('message', onMsg as any);
+    subs.push(() => {
+      try { ch.removeEventListener('message', onMsg as any); } catch {}
+      try { ch.close(); } catch {}
+    });
+  }
+  const onStorage = (e: StorageEvent) => {
+    try {
+      if (!e.key) return;
+      const key = `ito:round:${roomId}:prepare`;
+      if (e.key === key && e.newValue) {
+        const ts = parseInt(e.newValue, 10);
+        if (!Number.isNaN(ts)) onPrepare(ts);
+      }
+    } catch {}
+  };
+  try {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage);
+      subs.push(() => window.removeEventListener('storage', onStorage));
+    }
+  } catch {}
+
+  return () => subs.forEach((fn) => fn());
+}

@@ -21,12 +21,19 @@ export type HostAction = {
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
 };
 
+type AutoStartControl = {
+  locked: boolean;
+  begin: (duration?: number, options?: { broadcast?: boolean }) => void;
+  clear: () => void;
+};
+
 export function useHostActions({
   room,
   players,
   roomId,
   hostPrimaryAction,
   onlineCount,
+  autoStartControl,
 }: {
   room: RoomDoc & { id?: string };
   players: (PlayerDoc & { id: string })[];
@@ -38,6 +45,7 @@ export function useHostActions({
     title?: string;
   } | null;
   onlineCount?: number;
+  autoStartControl?: AutoStartControl;
 }): HostAction[] {
   // buildHostActionModelをメモ化して不必要な再計算を防ぐ
   const intents = useMemo(
@@ -75,7 +83,9 @@ export function useHostActions({
   // quickStartアクションのハンドラーを個別にメモ化
   const handleQuickStart = useCallback(async () => {
     try {
-      // 最新 props に基づく人数再検証（稀な遅延差分対策）
+      if (autoStartControl?.locked) {
+        return;
+      }
       const activeCount =
         typeof onlineCount === "number" ? onlineCount : players.length;
       if (activeCount < 2) {
@@ -83,19 +93,19 @@ export function useHostActions({
         return;
       }
       const defaultType = room.options?.defaultTopicType || "通常版";
-      // 手順を明確化: status 遷移 -> topic -> deal
+      autoStartControl?.begin?.(4500, { broadcast: true });
       if (room.status === "waiting") {
-        await startGameAction(roomId); // sets status: clue
+        await startGameAction(roomId);
       }
-      // "カスタム"はカテゴリ型に含まれないため、既定の通常版にフォールバック
       const selectType = defaultType === "カスタム" ? "通常版" : defaultType;
       await topicControls.selectCategory(roomId, selectType as any);
       await topicControls.dealNumbers(roomId);
       notify({ title: "🚀 クイック開始しました", type: "success" });
     } catch (error) {
+      autoStartControl?.clear?.();
       handleGameError(error, "クイック開始");
     }
-  }, [onlineCount, players.length, room.options?.defaultTopicType, room.status, roomId]);
+  }, [autoStartControl, onlineCount, players.length, room.options?.defaultTopicType, room.status, roomId]);
 
   // resetアクションのハンドラーを個別にメモ化
   const handleReset = useCallback(async () => {
@@ -128,7 +138,13 @@ export function useHostActions({
       return make(handleEvaluate);
     }
     if (i.key === "quickStart") {
-      return make(handleQuickStart);
+      const action = make(handleQuickStart);
+      return {
+        ...action,
+        disabled: action.disabled || autoStartControl?.locked,
+        title: autoStartControl?.locked ? "次のラウンドを準備中です" : action.title,
+        label: autoStartControl?.locked ? "準備中..." : action.label,
+      };
     }
     if (i.key === "advancedMode") {
       return make(() => {});

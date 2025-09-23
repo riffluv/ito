@@ -1,10 +1,11 @@
 "use client";
 
 import { useHostActions } from "@/components/hooks/useHostActions";
+import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { HStack } from "@chakra-ui/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AdvancedHostPanel } from "./AdvancedHostPanel";
 
 interface HostControlDockProps {
@@ -29,12 +30,25 @@ export default function HostControlDock({
 }: HostControlDockProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   
+  const {
+    autoStartLocked,
+    beginLock: beginAutoStartLock,
+    clearLock: clearAutoStartLock,
+  } = useHostAutoStartLock(roomId, room?.status);
+  
+  const autoStartControl = useMemo(() => ({
+    locked: autoStartLocked,
+    begin: beginAutoStartLock,
+    clear: clearAutoStartLock,
+  }), [autoStartLocked, beginAutoStartLock, clearAutoStartLock]);
+  
   const hostActions = useHostActions({
     room,
     players,
     roomId,
     hostPrimaryAction,
     onlineCount,
+    autoStartControl,
   });
 
   // Filter out advancedMode action since we handle it separately
