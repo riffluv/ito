@@ -156,12 +156,29 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
 
     const playerDocs = playersSnap.docs;
 
-    const meDoc = playerDocs.find((doc) => doc.id === uid);
+    const meDoc =
+      playerDocs.find((doc) => doc.id === uid) ||
+      playerDocs.find((doc) => {
+        const data = doc.data() as any;
+        return typeof data?.uid === "string" && data.uid === uid;
+      });
     if (!meDoc) return;
+
+    const canonicalDocs = playerDocs.filter((doc) => {
+      if (doc.id === meDoc.id) return true;
+      const data = doc.data() as any;
+      const sameUid = typeof data?.uid === "string" && data.uid === uid;
+      if (sameUid || doc.id === uid) {
+        tx.delete(doc.ref);
+        return false;
+      }
+      return true;
+    });
 
     const rtdb = getAdminRtdb();
     const onlineSet = new Set<string>();
-    onlineSet.add(uid);
+    onlineSet.add(meDoc.id);
+    if (meDoc.id !== uid) onlineSet.add(uid);
 
     if (rtdb) {
       try {
@@ -172,8 +189,8 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       } catch {}
     }
 
-    const candidateDocs = playerDocs.filter((doc) => onlineSet.has(doc.id));
-    const effectiveDocs = candidateDocs.length > 0 ? candidateDocs : playerDocs;
+    const candidateDocs = canonicalDocs.filter((doc) => onlineSet.has(doc.id));
+    const effectiveDocs = candidateDocs.length > 0 ? candidateDocs : canonicalDocs;
     const remainingIds = effectiveDocs.map((doc) => doc.id);
 
     if (!shouldReassignHost({ currentHostId: currentHost, remainingIds })) {
@@ -193,10 +210,10 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       null as QueryDocumentSnapshot | null
     );
 
-    if (!fallbackDoc || fallbackDoc.id !== uid) return;
+    if (!fallbackDoc || fallbackDoc.id !== meDoc.id) return;
 
     const fallbackData = fallbackDoc.data() as any;
-    const updates: Record<string, any> = { hostId: uid };
+    const updates: Record<string, any> = { hostId: meDoc.id };
     const fallbackName =
       typeof fallbackData?.name === "string" && fallbackData.name.trim()
         ? fallbackData.name.trim()
