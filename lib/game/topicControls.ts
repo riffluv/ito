@@ -5,6 +5,8 @@ import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/e
 import { dealNumbers as dealNumbersRoom } from "@/lib/game/room";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
+import { emergencyResetPlayerStates, verifyPlayerStatesCleared } from "@/lib/utils/emergencyRecovery";
+import { logWarn } from "@/lib/utils/log";
 import {
   fetchTopicSections,
   getTopicsByType,
@@ -137,7 +139,25 @@ export const topicControls = {
       });
 
       // バッチ実行
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (commitError) {
+        logWarn("topicControls", "reset-topic-batch-commit-failed", commitError);
+        await emergencyResetPlayerStates(roomId);
+        throw commitError;
+      }
+
+      let verified = true;
+      try {
+        verified = await verifyPlayerStatesCleared(roomId);
+      } catch (verifyError) {
+        logWarn("topicControls", "reset-topic-verify-failed", verifyError);
+        verified = false;
+      }
+      if (!verified) {
+        await emergencyResetPlayerStates(roomId);
+        throw new Error("プレイヤー状態を安全に再初期化しました。もう一度お試しください。");
+      }
 
       await broadcastNotify(roomId, "success", "ゲームをリセットしました");
     } catch (error: any) {
@@ -203,3 +223,5 @@ export const topicControls = {
 // TopicType配列をエクスポート
 export { topicTypeLabels };
 export type { TopicType };
+
+
