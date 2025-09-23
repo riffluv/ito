@@ -2,6 +2,7 @@ import { FieldValue, type QueryDocumentSnapshot } from "firebase-admin/firestore
 import type { Database } from "firebase-admin/database";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { logWarn } from "@/lib/utils/log";
+import { shouldReassignHost } from "@/lib/host/hostRules";
 
 const PRESENCE_STALE_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
@@ -156,9 +157,9 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const meDoc = playersSnap.docs.find((doc) => doc.id === uid);
     if (!meDoc) return;
 
-    if (currentHost) {
-      const currentHostDoc = playersSnap.docs.find((doc) => doc.id === currentHost);
-      if (currentHostDoc) return;
+    const playerIds = playersSnap.docs.map((doc) => doc.id);
+    if (!shouldReassignHost({ currentHostId: currentHost, remainingIds: playerIds })) {
+      return;
     }
 
     const fallbackDoc = playersSnap.docs.reduce(
@@ -302,9 +303,11 @@ export async function leaveRoomServer(
       if (roomSnapshot.exists) {
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-        if (currentHostId && currentHostId !== userId && others.includes(currentHostId)) {
-          needsHost = false;
-        }
+        needsHost = shouldReassignHost({
+          currentHostId,
+          leavingUid: userId,
+          remainingIds: others,
+        });
       }
     } catch {}
 
