@@ -1,6 +1,7 @@
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
+import { shouldReassignHost } from "@/lib/host/hostRules";
 import { logWarn } from "@/lib/utils/log";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
@@ -160,9 +161,11 @@ export async function leaveRoom(
         if (roomSnap.exists()) {
           const data = roomSnap.data() as any;
           const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-          if (currentHostId && currentHostId !== userId && others.includes(currentHostId)) {
-            needsHost = false;
-          }
+          needsHost = shouldReassignHost({
+            currentHostId,
+            leavingUid: userId,
+            remainingIds: others,
+          });
         }
       } catch {}
 
