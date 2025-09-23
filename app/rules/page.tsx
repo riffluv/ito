@@ -27,9 +27,9 @@ export default function RulesPage() {
       bg="richBlack.900" // ドラクエ風リッチブラック背景
       position="relative"
     >
-      <Container maxW="4xl" py={{ base: 12, md: 16 }} position="relative">
+      <Container maxW="4xl" py={{ base: 20, md: 24 }} position="relative">
         {/* Hero Header */}
-        <VStack mb={{ base: 8, md: 12 }} align="stretch" gap={6}>
+        <VStack mb={{ base: 32, md: 40 }} align="stretch" gap={12}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
             <AppButton
               onClick={async () => {
@@ -50,12 +50,12 @@ export default function RulesPage() {
                   router.push("/");
                 }
               }}
-              visual="outline"
-              palette="gray"
-              size="md"
+              visual="solid"
+              palette="brand"
+              size="lg"
             >
-              <ArrowLeft size={16} style={{ marginRight: "8px" }} />
-              トップへ戻る
+              <ArrowLeft size={20} style={{ marginRight: "8px" }} />
+              メインメニューに戻る
             </AppButton>
             <Badge
               colorScheme="blue"
@@ -73,7 +73,7 @@ export default function RulesPage() {
             </Badge>
           </Flex>
 
-          <VStack align="start" gap={4}>
+          <VStack align="start" gap={6}>
             <Heading
               size="4xl"
               fontWeight="bold"
@@ -94,7 +94,14 @@ export default function RulesPage() {
               w="100%"
             >
               {/* カード画像 */}
-              <Box flex="0 0 auto" display="flex" justifyContent="center" alignItems="center">
+              <Box
+                flex="0 0 auto"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                w={{ base: "120px", md: "150px", lg: "170px" }}
+                mx="auto"
+              >
                 <Image
                   src="/images/card3.webp"
                   alt="ゲームカード"
@@ -102,7 +109,8 @@ export default function RulesPage() {
                   height={{ base: "100px", md: "130px", lg: "150px" }}
                   style={{
                     imageRendering: "pixelated",
-                    filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.8))",
+                    filter: "drop-shadow(0 8px 25px rgba(0,0,0,0.9))",
+                    transform: "translateZ(0)",
                   }}
                 />
               </Box>
@@ -144,7 +152,7 @@ export default function RulesPage() {
           </VStack>
         </VStack>
 
-        <VStack gap={{ base: 6, md: 8 }} align="stretch">
+        <VStack gap={{ base: 10, md: 12 }} align="stretch">
           {/* ゲームの流れ */}
           <Box
             bg="bgPanel"
@@ -252,14 +260,14 @@ export default function RulesPage() {
               ▼ Online版の とくちょう ▼
             </Heading>
 
-            <List.Root as="ul" gap="4">
+            <List.Root as="ul" gap="4" style={{ listStyleType: "none" }}>
               {[
                 {
-                  title: "リアルタイム協力",
+                  title: "▶ リアルタイム協力",
                   desc: "全員が連想ワード（ヒント）だけを出し合います。全員分のカードが揃ったら、ドラッグ＆ドロップで並び順を共同編集し、ホストの判定で結果が公開されます。",
                 },
                 {
-                  title: "基本ルール",
+                  title: "▶ 基本ルール",
                   desc: "数字そのものを直接口にすることは禁止。ヒントの抽象度や範囲感を揃えて協力しましょう。",
                 },
               ].map((mode, index) => (
@@ -306,16 +314,24 @@ export default function RulesPage() {
               ▼ こうりゃくの ポイント ▼
             </Heading>
 
-            <VStack gap={5} align="stretch">
+            <VStack gap={{ base: 8, md: 10 }} align="stretch">
               <Box>
-                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
+                <Text
+                  fontWeight="bold"
+                  color="white"
+                  mb={4}
+                  fontFamily="monospace"
+                  textShadow="2px 2px 0px #000"
+                  fontSize={{ base: "lg", md: "xl" }}
+                  letterSpacing="0.05em"
+                >
                   ルール（要点）
                 </Text>
-                <List.Root as="ul" gap="2">
+                <List.Root as="ul" gap="2" style={{ listStyleType: "none" }}>
                   {[
-                    "自分の数字をそのまま言ってはいけません。",
-                    "他のプレイヤーと協力して順序を推理し合います。",
-                    "失敗した場合でも、残りのプレイヤーは最後までカードを出して遊べます（デフォルト仕様）。",
+                    "▶ 自分の数字をそのまま言ってはいけません。",
+                    "▶ 他のプレイヤーと協力して順序を推理し合います。",
+                    "▶ 失敗した場合でも、残りのプレイヤーは最後までカードを出して遊べます（デフォルト仕様）。",
                   ].map((rule, index) => (
                     <List.Item key={index}>
                       <Text color="white" fontSize="sm" fontFamily="monospace" textShadow="1px 1px 0px #000">
@@ -327,14 +343,22 @@ export default function RulesPage() {
               </Box>
 
               <Box>
-                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
+                <Text
+                  fontWeight="bold"
+                  color="white"
+                  mb={4}
+                  fontFamily="monospace"
+                  textShadow="2px 2px 0px #000"
+                  fontSize={{ base: "lg", md: "xl" }}
+                  letterSpacing="0.05em"
+                >
                   コツ
                 </Text>
-                <List.Root as="ul" gap="2">
+                <List.Root as="ul" gap="2" style={{ listStyleType: "none" }}>
                   {[
-                    "テーマに対して分かりやすい具体例を選ぶ（抽象的すぎない）。",
-                    "小さい数字は「身近で安価なもの」、大きい数字は「大きい/高価/壮大なもの」を表現すると伝わりやすい。",
-                    "表現の比喩は文化差が出るので、参加者の共通認識を確認すると良い。",
+                    "▶ テーマに対して分かりやすい具体例を選ぶ（抽象的すぎない）。",
+                    "▶ 小さい数字は「身近で安価なもの」、大きい数字は「大きい/高価/壮大なもの」を表現すると伝わりやすい。",
+                    "▶ 表現の比喩は文化差が出るので、参加者の共通認識を確認すると良い。",
                   ].map((tip, index) => (
                     <List.Item key={index}>
                       <Text color="white" fontSize="sm" fontFamily="monospace" textShadow="1px 1px 0px #000">
@@ -346,7 +370,15 @@ export default function RulesPage() {
               </Box>
 
               <Box>
-                <Text fontWeight="bold" color="white" mb={3} fontFamily="monospace" textShadow="1px 1px 0px #000">
+                <Text
+                  fontWeight="bold"
+                  color="white"
+                  mb={4}
+                  fontFamily="monospace"
+                  textShadow="2px 2px 0px #000"
+                  fontSize={{ base: "lg", md: "xl" }}
+                  letterSpacing="0.05em"
+                >
                   例
                 </Text>
                 <Box
@@ -357,16 +389,34 @@ export default function RulesPage() {
                   bg="bgSubtle"
                   boxShadow="2px 2px 0 rgba(0,0,0,0.8), 3px 3px 0 rgba(0,0,0,0.6)"
                 >
-                  <VStack align="start" gap={1}>
-                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
-                      <Text as="span" fontWeight="bold">
+                  <VStack align="start" gap={3}>
+                    <Text
+                      color="white"
+                      fontSize={{ base: "sm", md: "md" }}
+                      lineHeight="1.7"
+                      fontFamily="monospace"
+                      textShadow="1px 1px 0px #000"
+                    >
+                      <Text as="span" fontWeight="bold" color="yellow.300">
                         テーマ: ラスボスの風格を感じさせる攻撃手段
                       </Text>
                     </Text>
-                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                    <Text
+                      color="white"
+                      fontSize={{ base: "sm", md: "md" }}
+                      lineHeight="1.7"
+                      fontFamily="monospace"
+                      textShadow="1px 1px 0px #000"
+                    >
                       カードが20の人: 「さすまた」「ヨーヨー」
                     </Text>
-                    <Text color="white" fontSize="sm" lineHeight="1.6" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                    <Text
+                      color="white"
+                      fontSize={{ base: "sm", md: "md" }}
+                      lineHeight="1.7"
+                      fontFamily="monospace"
+                      textShadow="1px 1px 0px #000"
+                    >
                       カードが80の人: 「メテオ」「聖なる槍」
                     </Text>
                   </VStack>
@@ -378,7 +428,7 @@ export default function RulesPage() {
           </Box>
         </VStack>
 
-        <VStack gap={6} mt={{ base: 10, md: 12 }}>
+        <VStack gap={10} mt={{ base: 16, md: 20 }}>
           <Box
             p={4}
             bg="bgSubtle"
