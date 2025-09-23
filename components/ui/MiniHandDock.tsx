@@ -31,6 +31,7 @@ import { FiLogOut, FiSettings, FiEdit2 } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import Tooltip from "@/components/ui/Tooltip";
+import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -98,12 +99,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
   const [isRestarting, setIsRestarting] = React.useState(false);
+  const [quickStartPending, setQuickStartPending] = React.useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
   const [inlineFeedback, setInlineFeedback] = React.useState<
     { message: string; tone: "info" | "success" } | null
   >(null);
+
+  const { autoStartLocked, beginLock: beginAutoStartLock, clearLock: clearAutoStartLock, showIndicator: showAutoStartIndicator } = useHostAutoStartLock(roomId, roomStatus);
 
   React.useEffect(() => {
     if (!inlineFeedback) return;
@@ -294,8 +298,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   };
 
-  const quickStart = async () => {
-    // サーバのオプションだけを使用（最新値を明示取得して反映遅延を吸収）
+  const quickStart = async (opts?: { broadcast?: boolean }) => {
+    if (quickStartPending) return false;
+
+    setQuickStartPending(true);
+
     let effectiveType = defaultTopicType as string;
     let latestTopic: string | null = currentTopic ?? null;
     try {
@@ -314,26 +321,50 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } catch {}
 
     const topicToUse = typeof latestTopic === "string" ? latestTopic : "";
-    if (effectiveType === "カスタム") {
-      // お題未設定なら、まだ開始せずにモーダルへ誘導
-      if (!topicToUse.trim()) {
-        setCustomStartPending(true);
-        setCustomText("");
-        setCustomOpen(true);
-        return;
-      }
-      // すでにお題があるなら開始→配布
-      await startGameAction(roomId);
-      await topicControls.dealNumbers(roomId);
-      notify({ title: "カスタムお題で開始", type: "success", duration: 1500 });
-      try { postRoundReset(roomId); } catch {}
-      return;
+    if (effectiveType === "カスタム" && !topicToUse.trim()) {
+      setCustomStartPending(true);
+      setCustomText("");
+      setCustomOpen(true);
+      setQuickStartPending(false);
+      return false;
     }
-    await startGameAction(roomId);
-    try { delete (window as any).__ITO_LAST_RESET; } catch {}
-    await topicControls.selectCategory(roomId, effectiveType as any);
-    await topicControls.dealNumbers(roomId);
-    try { postRoundReset(roomId); } catch {}
+
+    const shouldBroadcast = opts?.broadcast ?? true;
+    beginAutoStartLock(4500, { broadcast: shouldBroadcast });
+
+    let success = false;
+    try {
+      if (effectiveType === "カスタム") {
+        await startGameAction(roomId);
+        await topicControls.dealNumbers(roomId);
+        notify({ title: "カスタムお題で開始", type: "success", duration: 1500 });
+        try { postRoundReset(roomId); } catch {}
+      } else {
+        await startGameAction(roomId);
+        try { delete (window as any).__ITO_LAST_RESET; } catch {}
+        const selectType = effectiveType === "カスタム" ? "通常版" : effectiveType;
+        await topicControls.selectCategory(roomId, selectType as any);
+        await topicControls.dealNumbers(roomId);
+        try { postRoundReset(roomId); } catch {}
+      }
+      success = true;
+    } catch (error: any) {
+      clearAutoStartLock();
+      if (isFirebaseQuotaExceeded(error)) {
+        handleFirebaseQuotaError("ゲーム開始");
+      } else {
+        const message = error?.message || "処理に失敗しました";
+        notify({
+          title: "ゲーム開始に失敗しました",
+          description: message,
+          type: "error",
+        });
+      }
+    } finally {
+      setQuickStartPending(false);
+    }
+
+    return success;
   };
 
   const evalSorted = async () => {
@@ -395,18 +426,23 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const restartGame = async () => {
     await resetGame();
-    await quickStart();
+    return quickStart({ broadcast: false });
   };
 
   const handleNextGame = async () => {
     if (!isHost) return;
-    if (isRestarting) return;
+    if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
 
+    beginAutoStartLock(5000, { broadcast: true });
     setIsRestarting(true);
     try {
-      await restartGame();
+      const ok = await restartGame();
+      if (!ok) {
+        clearAutoStartLock();
+      }
     } catch (e) {
+      clearAutoStartLock();
       console.error("❌ nextGameButton: 失敗", e);
     } finally {
       setIsRestarting(false);
@@ -419,6 +455,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (isSortSubmit(actualResolveMode) && roomStatus === "clue") ||
     ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished")
   );
+
+  const quickStartDisabled = autoStartLocked || quickStartPending;
+
+  const LOADING_BG = "linear-gradient(135deg, rgba(71,85,105,0.9), rgba(30,41,59,0.98))";
+  const canShowStart =
+    !!isHost && roomStatus === "waiting" && !autoStartLocked && !quickStartPending && !isRestarting;
+  const showWaitingPlaceholder = !!isHost && roomStatus === "waiting" && !canShowStart;
 
   return (
     <Box
@@ -587,12 +630,33 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {/* Right cluster */}
       <HStack gap={3} align="center">
-        {isHost && roomStatus === "waiting" && (
+        {showWaitingPlaceholder && (
+          <AppButton
+            size="md"
+            visual="solid"
+            disabled
+            minW="110px"
+            px={4}
+            py={2}
+            bg={LOADING_BG}
+            color="white"
+            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
+            borderRadius={0}
+            fontWeight="700"
+            fontFamily="monospace"
+            textShadow="1px 1px 0px #000"
+            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+            transition="all 0.15s ease"
+          >
+            準備中...
+          </AppButton>
+        )}
+        {canShowStart && (
           <Tooltip content="ゲームを開始する" showArrow openDelay={300}>
             <AppButton
               size="md"
               visual="solid"
-              onClick={quickStart}
+              onClick={() => quickStart()}
               minW="110px"
               px={4}
               py={2}
@@ -675,6 +739,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               onClick={handleNextGame}
               disabled={
+                autoStartLocked ||
                 isRestarting ||
                 (roomStatus === "reveal" && isRevealAnimating)
               }
@@ -704,7 +769,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               }}
               transition="all 0.15s ease"
             >
-              次のゲーム
+              {showAutoStartIndicator ? "準備中..." : "次のゲーム"}
             </AppButton>
           )}
 
@@ -1002,3 +1067,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </Box>
   );
 }
+
+
+
+
