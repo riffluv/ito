@@ -343,6 +343,9 @@ export async function leaveRoomServer(
         if (currentHostId && currentHostId !== userId && remainingTrimmed.includes(currentHostId)) {
           needsHost = false;
         } else {
+          if (currentHostId && currentHostId !== userId && !remainingTrimmed.includes(currentHostId)) {
+            console.warn("[host-maintain] host id missing from remaining players", { roomId, leavingUid: userId, currentHostId, remainingTrimmed, rawRemaining: others });
+          }
           needsHost = shouldReassignHost({
             currentHostId,
             leavingUid: userId,
