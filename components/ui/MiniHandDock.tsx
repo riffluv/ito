@@ -459,9 +459,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const quickStartDisabled = autoStartLocked || quickStartPending;
 
   const LOADING_BG = "linear-gradient(135deg, rgba(71,85,105,0.9), rgba(30,41,59,0.98))";
+  const preparing = !!(autoStartLocked || quickStartPending || isRestarting);
   const canShowStart =
     !!isHost && roomStatus === "waiting" && !autoStartLocked && !quickStartPending && !isRestarting;
-  const showWaitingPlaceholder = !!isHost && roomStatus === "waiting" && !canShowStart;
+  // 短時間の待機では何も出さず、一定時間を超えた場合のみプレースホルダを出す
+  const showWaitingPlaceholder = !!isHost && roomStatus === "waiting" && !!showAutoStartIndicator;
 
   return (
     <Box
@@ -630,37 +632,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {/* Right cluster */}
       <HStack gap={3} align="center">
-        {showWaitingPlaceholder && (
-          <AppButton
-            size="md"
-            visual="solid"
-            disabled
-            minW="110px"
-            px={4}
-            py={2}
-            bg={LOADING_BG}
-            color="white"
-            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-            borderRadius={0}
-            fontWeight="700"
-            fontFamily="monospace"
-            textShadow="1px 1px 0px #000"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
-            transition="all 0.15s ease"
+        {isHost && roomStatus === "waiting" && (
+          <Tooltip
+            content={preparing ? "準備中です" : "ゲームを開始する"}
+            showArrow
+            openDelay={300}
           >
-            準備中...
-          </AppButton>
-        )}
-        {canShowStart && (
-          <Tooltip content="ゲームを開始する" showArrow openDelay={300}>
             <AppButton
               size="md"
               visual="solid"
               onClick={() => quickStart()}
+              disabled={preparing}
               minW="110px"
               px={4}
               py={2}
-              bg={UI_TOKENS.GRADIENTS.forestGreen}
+              bg={preparing ? LOADING_BG : UI_TOKENS.GRADIENTS.forestGreen}
               color="white"
               border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
               borderRadius={0}
@@ -669,21 +655,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               textShadow="1px 1px 0px #000"
               boxShadow={UI_TOKENS.SHADOWS.cardRaised}
               _hover={{
-                bg: UI_TOKENS.GRADIENTS.forestGreenHover,
+                bg: preparing
+                  ? LOADING_BG
+                  : UI_TOKENS.GRADIENTS.forestGreenHover,
                 color: UI_TOKENS.COLORS.whiteAlpha95,
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "white",
                 transform: "translateY(-1px)",
               }}
               _active={{
-                bg: UI_TOKENS.GRADIENTS.forestGreenActive,
+                bg: preparing
+                  ? LOADING_BG
+                  : UI_TOKENS.GRADIENTS.forestGreenActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
                 boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                 transform: "translateY(0)",
               }}
               transition="all 0.15s ease"
             >
-              ゲーム開始
+              {preparing ? "準備中..." : "ゲーム開始"}
             </AppButton>
           </Tooltip>
         )}
@@ -1067,6 +1057,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </Box>
   );
 }
+
 
 
 
