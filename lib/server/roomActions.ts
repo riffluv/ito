@@ -154,15 +154,33 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const playersSnap = await tx.get(playersRef);
     if (playersSnap.empty) return;
 
-    const meDoc = playersSnap.docs.find((doc) => doc.id === uid);
+    const playerDocs = playersSnap.docs;
+
+    const meDoc = playerDocs.find((doc) => doc.id === uid);
     if (!meDoc) return;
 
-    const playerIds = playersSnap.docs.map((doc) => doc.id);
-    if (!shouldReassignHost({ currentHostId: currentHost, remainingIds: playerIds })) {
+    const rtdb = getAdminRtdb();
+    const onlineSet = new Set<string>();
+    onlineSet.add(uid);
+
+    if (rtdb) {
+      try {
+        const online = await fetchPresenceUids(roomId, rtdb);
+        for (const onlineUid of online) {
+          onlineSet.add(onlineUid);
+        }
+      } catch {}
+    }
+
+    const candidateDocs = playerDocs.filter((doc) => onlineSet.has(doc.id));
+    const effectiveDocs = candidateDocs.length > 0 ? candidateDocs : playerDocs;
+    const remainingIds = effectiveDocs.map((doc) => doc.id);
+
+    if (!shouldReassignHost({ currentHostId: currentHost, remainingIds })) {
       return;
     }
 
-    const fallbackDoc = playersSnap.docs.reduce(
+    const fallbackDoc = effectiveDocs.reduce(
       (best, doc) => {
         if (!best) return doc;
         const bestTime = best.createTime ? best.createTime.toMillis() : Number.MAX_SAFE_INTEGER;
