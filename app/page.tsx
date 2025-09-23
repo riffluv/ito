@@ -928,7 +928,7 @@ export default function MainMenu() {
                           fontFamily="monospace"
                           textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
-                          ・コーヒーを辞める
+                          ・コーヒーを辞める（最重要）
                         </Text>
                         <Text
                           fontSize="xs"
@@ -936,7 +936,7 @@ export default function MainMenu() {
                           fontFamily="monospace"
                           textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                         >
-                          ・制限エラー通知システム
+                          ・音響システム実装
                         </Text>
                       </VStack>
                     </Box>
