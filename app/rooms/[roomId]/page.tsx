@@ -173,6 +173,17 @@ export default function RoomPage() {
     return map;
   }, [room?.hostId, room?.hostName, uid, displayName]);
 
+  const hostClaimCandidateId = useMemo(() => {
+    if (!room || players.length === 0) return null;
+    const sorted = [...players].sort((a, b) => {
+      const ao = typeof a.orderIndex === "number" ? a.orderIndex : Number.MAX_SAFE_INTEGER;
+      const bo = typeof b.orderIndex === "number" ? b.orderIndex : Number.MAX_SAFE_INTEGER;
+      if (ao !== bo) return ao - bo;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    return sorted[0]?.id ?? null;
+  }, [room?.id, players]);
+
   // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
   const [pop, setPop] = useState(false);
   const [redirectGuard, setRedirectGuard] = useState(true);
@@ -264,7 +275,7 @@ export default function RoomPage() {
       }
       return;
     }
-    if (players.length !== 1 || players[0]?.id !== uid) return;
+    if (hostClaimCandidateId !== uid) return;
 
     let cancelled = false;
 
@@ -307,7 +318,7 @@ export default function RoomPage() {
         hostClaimTimerRef.current = null;
       }
     };
-  }, [room?.hostId, players, uid, user, roomId, leavingRef]);
+  }, [room?.hostId, players, uid, user, roomId, leavingRef, hostClaimCandidateId]);
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {
     try {

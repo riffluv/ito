@@ -1,4 +1,4 @@
-﻿import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import type { Database } from "firebase-admin/database";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { logWarn } from "@/lib/utils/log";
@@ -147,17 +147,46 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
 
     const room = roomSnap.data() as any;
     const currentHost =
-      typeof room?.hostId === "string" && room.hostId.trim() ? room.hostId : null;
+      typeof room?.hostId === "string" && room.hostId.trim() ? room.hostId.trim() : null;
+
+    const playersRef = roomRef.collection("players");
+    const playersSnap = await tx.get(playersRef);
+    if (playersSnap.empty) return;
+
+    const meDoc = playersSnap.docs.find((doc) => doc.id === uid);
+    if (!meDoc) return;
 
     if (currentHost) {
-      const hostSnap = await tx.get(roomRef.collection("players").doc(currentHost));
-      if (hostSnap.exists) return;
+      const currentHostDoc = playersSnap.docs.find((doc) => doc.id === currentHost);
+      if (currentHostDoc) return;
     }
 
-    const meSnap = await tx.get(roomRef.collection("players").doc(uid));
-    if (!meSnap.exists) return;
+    const fallbackDoc = playersSnap.docs.reduce(
+      (best, doc) => {
+        if (!best) return doc;
+        const bestTime = best.createTime ? best.createTime.toMillis() : Number.MAX_SAFE_INTEGER;
+        const docTime = doc.createTime ? doc.createTime.toMillis() : Number.MAX_SAFE_INTEGER;
+        if (docTime !== bestTime) {
+          return docTime < bestTime ? doc : best;
+        }
+        return doc.id < best.id ? doc : best;
+      },
+      null as QueryDocumentSnapshot | null
+    );
 
-    tx.update(roomRef, { hostId: uid });
+    if (!fallbackDoc || fallbackDoc.id !== uid) return;
+
+    const fallbackData = fallbackDoc.data() as any;
+    const updates: Record<string, any> = { hostId: uid };
+    const fallbackName =
+      typeof fallbackData?.name === "string" && fallbackData.name.trim()
+        ? fallbackData.name.trim()
+        : null;
+    if (fallbackName) {
+      updates.hostName = fallbackName;
+    }
+
+    tx.update(roomRef, updates);
   });
 }
 
@@ -267,6 +296,22 @@ export async function leaveRoomServer(
       .get();
     const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
 
+    let needsHost = true;
+    try {
+      const roomSnapshot = await db.collection("rooms").doc(roomId).get();
+      if (roomSnapshot.exists) {
+        const data = roomSnapshot.data() as any;
+        const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
+        if (currentHostId && currentHostId !== userId && others.includes(currentHostId)) {
+          needsHost = false;
+        }
+      }
+    } catch {}
+
+    if (!needsHost) {
+      return;
+    }
+
     if (others.length > 0) {
       let nextHost = others[0]!;
       if (rtdb) {
@@ -296,4 +341,6 @@ export async function leaveRoomServer(
     logWarn("rooms", "leave-room-server-fallback-failed", error);
   }
 }
+
+
 
