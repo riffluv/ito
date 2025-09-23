@@ -29,7 +29,7 @@ export default function RulesPage() {
     >
       <Container maxW="4xl" py={{ base: 20, md: 24 }} position="relative">
         {/* Hero Header */}
-        <VStack mb={{ base: 32, md: 40 }} align="stretch" gap={12}>
+        <VStack mb={{ base: 16, md: 20 }} align="stretch" gap={12}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
             <AppButton
               onClick={async () => {
