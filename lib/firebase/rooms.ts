@@ -154,6 +154,22 @@ export async function leaveRoom(
       const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
       const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
 
+      let needsHost = true;
+      try {
+        const roomSnap = await getDoc(doc(db!, "rooms", roomId));
+        if (roomSnap.exists()) {
+          const data = roomSnap.data() as any;
+          const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
+          if (currentHostId && currentHostId !== userId && others.includes(currentHostId)) {
+            needsHost = false;
+          }
+        }
+      } catch {}
+
+      if (!needsHost) {
+        return;
+      }
+
       if (others.length > 0) {
         // 他のプレイヤーがいる場合：ホスト委譲
         let nextHost = others[0];

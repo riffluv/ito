@@ -1,367 +1,261 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【保存版】ハロウィン夜景 - Pixi.js</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #0a0a0a;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        #gameCanvas {
-            display: block;
-            cursor: pointer;
-        }
-
-        .controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-            z-index: 100;
-        }
-
-        .controls h3 {
-            margin: 0 0 10px 0;
-            color: #ff9500;
-        }
-
-        .controls p {
-            margin: 5px 0;
-        }
-
-        .backup-notice {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #fff;
-            background: rgba(255, 149, 0, 0.8);
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 100;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="utf-8" />
+<title>HD-2D Mock (Three.js)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  html,body{margin:0;height:100%;background:#cfe0ee;overflow:hidden}
+  canvas{display:block}
+  .note{position:fixed;left:10px;bottom:10px;color:#fff;background:rgba(0,0,0,.35);
+        padding:6px 8px;border-radius:8px;font:12px/1.2 system-ui}
+</style>
 </head>
 <body>
-    <div class="controls">
-        <h3>🌙 ハロウィン夜景</h3>
-        <p>クリック: 流れ星を発射</p>
-        <p>マウス移動: 視差効果</p>
-        <p>自動: 雲と霧の流れ</p>
-    </div>
+<div class="note">HD-2D風モック：見下ろし + Bloom + 擬似ティルトシフト</div>
 
-    <div class="backup-notice">
-        💾 オリジナル保存版
-    </div>
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.155.0/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.155.0/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.155.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.155.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.155.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'https://unpkg.com/three@0.155.0/examples/jsm/postprocessing/ShaderPass.js';
 
-    <canvas id="gameCanvas"></canvas>
+// === 基本 ===
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xb6cde0, 70, 260);
 
-    <!-- Pixi.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;      // ← 互換性重視（暗転回避）
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
 
-    <script>
-        // Pixi.js アプリケーションの初期化
-        const app = new PIXI.Application({
-            view: document.getElementById('gameCanvas'),
-            width: window.innerWidth,
-            height: window.innerHeight,
-            backgroundColor: 0x0a0a0a,
-            antialias: true
-        });
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(35, 24, 35);
+camera.lookAt(0,0,0);
 
-        // レスポンシブ対応
-        function resize() {
-            app.renderer.resize(window.innerWidth, window.innerHeight);
-        }
-        window.addEventListener('resize', resize);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 18;
+controls.maxDistance = 70;
+controls.minPolarAngle = 0.7;
+controls.maxPolarAngle = 1.3;
 
-        // メインコンテナ
-        const scene = new PIXI.Container();
-        app.stage.addChild(scene);
+// === ライト ===
+scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x4d3d2f, 0.7));
+const sun = new THREE.DirectionalLight(0xfff7e0, 1.2);
+sun.position.set(60,80,20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left = -90; sun.shadow.camera.right = 90;
+sun.shadow.camera.top = 90;   sun.shadow.camera.bottom = -90;
+scene.add(sun);
 
-        // 夜空のグラデーション背景
-        function createNightSky() {
-            const graphics = new PIXI.Graphics();
+// === タイル地面（CanvasTexture）===
+function makeTilesTexture(size=512, tile=64){
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#a29688'; ctx.fillRect(0,0,size,size);
+  ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 3;
+  for(let x=0;x<=size;x+=tile){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,size);ctx.stroke();}
+  for(let y=0;y<=size;y+=tile){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y);ctx.stroke();}
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(30,30);
+  tex.anisotropy = 8;
+  return tex;
+}
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(240, 240),
+  new THREE.MeshStandardMaterial({ map: makeTilesTexture(), roughness:0.9 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
 
-            // グラデーション風の夜空
-            const gradient = [
-                { color: 0x0a0a0a, position: 0 },      // 深い黒
-                { color: 0x1a1a3a, position: 0.3 },    // 深い紺
-                { color: 0x2a2a5a, position: 0.6 },    // 紺色
-                { color: 0x3a3a7a, position: 1 }       // 薄い紺
-            ];
+// === 植え込みリング ===
+function hedgeRing(r=20, n=48){
+  const g = new THREE.Group();
+  const bushGeo = new THREE.SphereGeometry(1.25, 12, 12);
+  const bushMat = new THREE.MeshStandardMaterial({ color:0x4aa84f, roughness:0.95 });
+  for(let i=0;i<n;i++){
+    const a = i/n*Math.PI*2;
+    const m = new THREE.Mesh(bushGeo, bushMat);
+    m.position.set(Math.cos(a)*r, 1.25, Math.sin(a)*r);
+    m.castShadow = true; m.receiveShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+scene.add(hedgeRing(22,64));
+scene.add(hedgeRing(11,40));
 
-            for (let i = 0; i < gradient.length - 1; i++) {
-                const startColor = gradient[i].color;
-                const endColor = gradient[i + 1].color;
-                const startY = app.screen.height * gradient[i].position;
-                const endY = app.screen.height * gradient[i + 1].position;
+// === 簡易噴水 + 水しぶき ===
+function createFountain(){
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(6,6,1.6,40),
+    new THREE.MeshStandardMaterial({ color:0xbdb5a8, roughness:0.9 })
+  );
+  base.position.y = 0.8; base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
 
-                graphics.beginFill(startColor);
-                graphics.drawRect(0, startY, app.screen.width, endY - startY);
-                graphics.endFill();
-            }
+  const water = new THREE.Mesh(
+    new THREE.CircleGeometry(5.2,48),
+    new THREE.MeshPhysicalMaterial({ color:0x70ccff, roughness:0.07, transmission:0.85, thickness:0.35, transparent:true, opacity:0.95 })
+  );
+  water.rotation.x = -Math.PI/2; water.position.y = 1.62; g.add(water);
 
-            return graphics;
-        }
+  const pillar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.7,1.6,4,24),
+    new THREE.MeshStandardMaterial({ color:0xbdb5a8, roughness:0.8 })
+  );
+  pillar.position.y = 3.6; pillar.castShadow = true; pillar.receiveShadow = true; g.add(pillar);
 
-        // 星を生成
-        function createStars() {
-            const starContainer = new PIXI.Container();
+  // 水しぶき（Points）
+  const N=500;
+  const pos = new Float32Array(N*3), vel = new Float32Array(N*3), life = new Float32Array(N);
+  function reset(i){
+    const r = 0.4 + Math.random()*4.6, a = Math.random()*Math.PI*2;
+    pos[i*3]=Math.cos(a)*r; pos[i*3+1]=1.7; pos[i*3+2]=Math.sin(a)*r;
+    vel[i*3]=Math.cos(a)*0.3; vel[i*3+1]=4+Math.random()*6; vel[i*3+2]=Math.sin(a)*0.3;
+    life[i]=1.5+Math.random()*1.8;
+  }
+  for(let i=0;i<N;i++) reset(i);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const mat = new THREE.PointsMaterial({ color:0xe8f7ff, size:0.08, sizeAttenuation:true, transparent:true, opacity:0.9 });
+  const points = new THREE.Points(geo, mat); g.add(points);
 
-            for (let i = 0; i < 200; i++) {
-                const star = new PIXI.Graphics();
-                const size = Math.random() * 2 + 0.5;
-                const brightness = Math.random() * 0.8 + 0.2;
+  const light = new THREE.PointLight(0x9fd3ff, 0.9, 35, 2); light.position.set(0,4.5,0); g.add(light);
 
-                star.beginFill(0xffffff);
-                star.drawCircle(0, 0, size);
-                star.endFill();
+  g.userData.update = (dt)=>{
+    for(let i=0;i<N;i++){
+      life[i]-=dt;
+      pos[i*3]+=vel[i*3]*dt; pos[i*3+1]+=vel[i*3+1]*dt; pos[i*3+2]+=vel[i*3+2]*dt;
+      vel[i*3+1]-=9.81*0.9*dt;
+      if(life[i]<=0 || pos[i*3+1]<0.1) reset(i);
+    }
+    geo.attributes.position.needsUpdate = true;
+    water.material.opacity = 0.9 + Math.sin(performance.now()*0.004)*0.04;
+  };
+  return g;
+}
+const fountain = createFountain();
+scene.add(fountain);
 
-                star.x = Math.random() * app.screen.width;
-                star.y = Math.random() * app.screen.height * 0.6; // 上半分のみ
-                star.alpha = brightness;
+// === ランプポスト ===
+function createLamp(){
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25,0.35,8,12),
+    new THREE.MeshStandardMaterial({ color:0x3c322d, roughness:0.8 })
+  );
+  pole.position.y=4; pole.castShadow=true; pole.receiveShadow=true; g.add(pole);
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35,12,12),
+    new THREE.MeshStandardMaterial({ color:0x111111, emissive:0xfff0c8, emissiveIntensity:2.5 })
+  );
+  bulb.position.y=8.3; g.add(bulb);
+  const l = new THREE.PointLight(0xffe6b0, 1.1, 24, 2); l.position.y=8.3; l.castShadow=true; g.add(l);
+  return g;
+}
+[[15,15],[-15,15],[15,-15],[-15,-15],[0,20],[20,0],[0,-20],[-20,0]].forEach(([x,z])=>{
+  const lamp = createLamp(); lamp.position.set(x,0,z); scene.add(lamp);
+});
 
-                // きらめき効果
-                star.twinkle = Math.random() * Math.PI * 2;
-                star.twinkleSpeed = Math.random() * 0.05 + 0.01;
+// === 2D風キャラ（Sprite）===
+function makeSprite(){
+  const c = document.createElement('canvas'); c.width=c.height=64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle='#0000'; ctx.fillRect(0,0,64,64);
+  ctx.fillStyle='#f08c2e'; ctx.fillRect(26,8,12,10); // 髪
+  ctx.fillStyle='#ffd7b3'; ctx.fillRect(28,16,8,8);  // 顔
+  ctx.fillStyle='#2d6cdf'; ctx.fillRect(26,24,12,14);// 服
+  ctx.fillStyle='#e0e0e0'; ctx.fillRect(26,38,12,6); // 脚
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = tex.magFilter = THREE.NearestFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true }));
+  sp.scale.set(1.3,1.8,1); sp.position.set(10,1.0,10);
+  return sp;
+}
+scene.add(makeSprite());
 
-                starContainer.addChild(star);
-            }
+// === ポストプロセス（安全版：Bloom + 擬似ティルトシフトのみ）===
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
 
-            return starContainer;
-        }
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.9, 0.85);
+composer.addPass(bloom);
 
-        // 月を生成
-        function createMoon() {
-            const moonContainer = new PIXI.Container();
+// 本格的なDOFは環境により真っ暗になることがあるので、
+// ここでは「上下にいくほど強くなる簡易ぼかし」をシェーダで再現
+const TiltShift = {
+  uniforms:{
+    tDiffuse:{value:null},
+    amount:{value:0.6},    // ぼかし強さ
+    center:{value:0.5},    // シャープに保つ中心ライン（0〜1）
+    range:{value:0.35},    // シャープ領域の幅
+    resolution:{value:new THREE.Vector2(innerWidth, innerHeight)}
+  },
+  vertexShader:`
+    varying vec2 vUv;
+    void main(){ vUv=uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }
+  `,
+  fragmentShader:`
+    uniform sampler2D tDiffuse;
+    uniform float amount, center, range;
+    uniform vec2 resolution;
+    varying vec2 vUv;
+    // 簡易ガウシアン（5tap）
+    vec4 blur(vec2 uv, float r){
+      vec2 px = vec2(1.0)/resolution * r;
+      vec4 c = texture2D(tDiffuse, uv) * 0.4;
+      c += texture2D(tDiffuse, uv + vec2( px.x, 0.0)) * 0.15;
+      c += texture2D(tDiffuse, uv + vec2(-px.x, 0.0)) * 0.15;
+      c += texture2D(tDiffuse, uv + vec2(0.0,  px.y)) * 0.15;
+      c += texture2D(tDiffuse, uv + vec2(0.0, -px.y)) * 0.15;
+      return c;
+    }
+    void main(){
+      float d = abs(vUv.y - center);
+      float edge = smoothstep(range*0.6, range, d);  // 中央はシャープ、上下でボケ
+      float r = edge * amount * 6.0;                 // サンプル半径
+      vec4 col = mix(texture2D(tDiffuse, vUv), blur(vUv, r), edge);
+      gl_FragColor = col;
+    }
+  `
+};
+const tilt = new ShaderPass(TiltShift);
+composer.addPass(tilt);
 
-            // 月本体
-            const moon = new PIXI.Graphics();
-            moon.beginFill(0xfff8dc);
-            moon.drawCircle(0, 0, 60);
-            moon.endFill();
+// === ループ ===
+let last = performance.now();
+function tick(){
+  const now = performance.now();
+  const dt = Math.min(0.033, (now-last)/1000); last = now;
 
-            // 月の模様（クレーター）
-            const craters = new PIXI.Graphics();
-            craters.beginFill(0xe6e6e6);
-            craters.drawCircle(-20, -10, 8);
-            craters.drawCircle(15, 5, 12);
-            craters.drawCircle(-5, 20, 6);
-            craters.drawCircle(25, -15, 4);
-            craters.endFill();
+  controls.update();
+  if (fountain.userData.update) fountain.userData.update(dt);
 
-            // 月の光輪
-            const glow = new PIXI.Graphics();
-            glow.beginFill(0xfff8dc, 0.1);
-            glow.drawCircle(0, 0, 100);
-            glow.endFill();
+  composer.render();
+  requestAnimationFrame(tick);
+}
+tick();
 
-            moonContainer.addChild(glow);
-            moonContainer.addChild(moon);
-            moonContainer.addChild(craters);
-
-            moonContainer.x = app.screen.width * 0.8;
-            moonContainer.y = app.screen.height * 0.2;
-
-            return moonContainer;
-        }
-
-        // 雲を生成
-        function createClouds() {
-            const cloudContainer = new PIXI.Container();
-
-            for (let i = 0; i < 8; i++) {
-                const cloud = new PIXI.Graphics();
-                cloud.beginFill(0x2a2a4a, 0.4);
-
-                // 不規則な雲の形
-                const cloudParts = Math.floor(Math.random() * 3) + 3;
-                for (let j = 0; j < cloudParts; j++) {
-                    const radius = Math.random() * 30 + 20;
-                    const x = j * 25 + Math.random() * 20 - 10;
-                    const y = Math.random() * 20 - 10;
-                    cloud.drawCircle(x, y, radius);
-                }
-                cloud.endFill();
-
-                cloud.x = Math.random() * (app.screen.width + 200) - 100;
-                cloud.y = Math.random() * app.screen.height * 0.5;
-                cloud.speed = Math.random() * 0.5 + 0.1;
-
-                cloudContainer.addChild(cloud);
-            }
-
-            return cloudContainer;
-        }
-
-        // 流れ星クラス
-        class ShootingStar {
-            constructor(startX, startY, targetX, targetY) {
-                this.container = new PIXI.Container();
-
-                // 流れ星の軌跡
-                this.trail = new PIXI.Graphics();
-                this.star = new PIXI.Graphics();
-
-                // 星本体
-                this.star.beginFill(0xffffff);
-                this.star.drawCircle(0, 0, 3);
-                this.star.endFill();
-
-                this.container.addChild(this.trail);
-                this.container.addChild(this.star);
-
-                this.startX = startX;
-                this.startY = startY;
-                this.targetX = targetX;
-                this.targetY = targetY;
-                this.progress = 0;
-                this.speed = 0.02;
-                this.trailPoints = [];
-
-                scene.addChild(this.container);
-            }
-
-            update() {
-                this.progress += this.speed;
-
-                if (this.progress >= 1) {
-                    scene.removeChild(this.container);
-                    return false;
-                }
-
-                // 現在位置を計算
-                const currentX = this.startX + (this.targetX - this.startX) * this.progress;
-                const currentY = this.startY + (this.targetY - this.startY) * this.progress;
-
-                this.container.x = currentX;
-                this.container.y = currentY;
-
-                // 軌跡を更新
-                this.trailPoints.push({ x: 0, y: 0 });
-                if (this.trailPoints.length > 10) {
-                    this.trailPoints.shift();
-                }
-
-                // 軌跡を描画
-                this.trail.clear();
-                this.trail.lineStyle(2, 0xffffff, 0.8);
-                for (let i = 0; i < this.trailPoints.length; i++) {
-                    const alpha = (i + 1) / this.trailPoints.length * 0.8;
-                    this.trail.lineStyle(2, 0xffffff, alpha);
-
-                    if (i === 0) {
-                        this.trail.moveTo(
-                            this.trailPoints[i].x - (i + 1) * 5,
-                            this.trailPoints[i].y - (i + 1) * 3
-                        );
-                    } else {
-                        this.trail.lineTo(
-                            this.trailPoints[i].x - (i + 1) * 5,
-                            this.trailPoints[i].y - (i + 1) * 3
-                        );
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        // シーンの構築
-        const nightSky = createNightSky();
-        const stars = createStars();
-        const moon = createMoon();
-        const clouds = createClouds();
-
-        scene.addChild(nightSky);
-        scene.addChild(stars);
-        scene.addChild(moon);
-        scene.addChild(clouds);
-
-        // 流れ星の配列
-        const shootingStars = [];
-
-        // マウスインタラクション
-        let mouseX = 0;
-        let mouseY = 0;
-
-        app.view.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-
-        app.view.addEventListener('click', (e) => {
-            // 流れ星を生成
-            const startX = Math.random() * app.screen.width;
-            const startY = Math.random() * app.screen.height * 0.3;
-            const shootingStar = new ShootingStar(startX, startY, e.clientX, e.clientY);
-            shootingStars.push(shootingStar);
-        });
-
-        // アニメーションループ
-        app.ticker.add(() => {
-            const time = Date.now() * 0.001;
-
-            // 星のきらめき
-            stars.children.forEach(star => {
-                star.alpha = 0.3 + Math.sin(time * star.twinkleSpeed + star.twinkle) * 0.3;
-            });
-
-            // 雲の移動
-            clouds.children.forEach(cloud => {
-                cloud.x += cloud.speed;
-                if (cloud.x > app.screen.width + 100) {
-                    cloud.x = -200;
-                }
-            });
-
-            // 月の微妙な揺らぎ
-            moon.y = app.screen.height * 0.2 + Math.sin(time * 0.5) * 3;
-
-            // 視差効果（マウス追従）
-            const parallaxStrength = 0.02;
-            const centerX = app.screen.width / 2;
-            const centerY = app.screen.height / 2;
-
-            stars.x = (centerX - mouseX) * parallaxStrength;
-            stars.y = (centerY - mouseY) * parallaxStrength * 0.5;
-
-            clouds.x = (centerX - mouseX) * parallaxStrength * 0.5;
-            clouds.y = (centerY - mouseY) * parallaxStrength * 0.3;
-
-            moon.x = app.screen.width * 0.8 + (centerX - mouseX) * parallaxStrength * 0.3;
-
-            // 流れ星の更新
-            for (let i = shootingStars.length - 1; i >= 0; i--) {
-                if (!shootingStars[i].update()) {
-                    shootingStars.splice(i, 1);
-                }
-            }
-
-            // 自動流れ星（ランダム）
-            if (Math.random() < 0.003) {
-                const startX = Math.random() * app.screen.width;
-                const startY = Math.random() * app.screen.height * 0.3;
-                const targetX = Math.random() * app.screen.width;
-                const targetY = Math.random() * app.screen.height * 0.7 + app.screen.height * 0.3;
-                const shootingStar = new ShootingStar(startX, startY, targetX, targetY);
-                shootingStars.push(shootingStar);
-            }
-        });
-
-        console.log('🌙 【保存版】ハロウィン夜景シーン起動完了！');
-    </script>
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  tilt.uniforms.resolution.value.set(innerWidth, innerHeight);
+});
+</script>
 </body>
 </html>
