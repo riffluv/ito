@@ -12,7 +12,7 @@
 ### 追加する環境変数
 ```
 Name: NEXT_PUBLIC_FIREBASE_API_KEY
-Value: AIzaSyC6AZfNZYB8R53laqA9SyOrFqIe0U8Cnxs
+Value: [Firebase Console で取得したAPIキーを設定]
 
 Name: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 Value: online-ito.firebaseapp.com
