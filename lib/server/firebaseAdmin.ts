@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { App, AppOptions } from "firebase-admin/app";
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
+import type { ServiceAccount } from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { getDatabase } from "firebase-admin/database";
 import { getAuth } from "firebase-admin/auth";
@@ -46,6 +47,61 @@ function buildOptions(): AppOptions {
   return opts;
 }
 
+function parseServiceAccount(raw: string): ServiceAccount | null {
+  try {
+    return JSON.parse(raw) as ServiceAccount;
+  } catch (error) {
+    console.error("[firebaseAdmin] Failed to parse service account JSON", error);
+    return null;
+  }
+}
+
+function resolveServiceAccountFromEnv(): ServiceAccount | null {
+  const directJson = process.env.FIREBASE_ADMIN_KEY_JSON;
+  if (directJson && directJson.trim().length > 0) {
+    const parsed = parseServiceAccount(directJson.trim());
+    if (parsed) return parsed;
+  }
+
+  const base64Json = process.env.FIREBASE_ADMIN_KEY_BASE64 || process.env.FIREBASE_ADMIN_CREDENTIAL;
+  if (base64Json && base64Json.trim().length > 0) {
+    try {
+      const decoded = Buffer.from(base64Json.trim(), "base64").toString("utf8");
+      const parsed = parseServiceAccount(decoded);
+      if (parsed) return parsed;
+    } catch (error) {
+      console.error("[firebaseAdmin] Failed to decode base64 service account", error);
+    }
+  }
+
+  return null;
+}
+
+function resolveServiceAccountFromFile(): ServiceAccount | null {
+  const customPath = process.env.FIREBASE_ADMIN_KEY_PATH;
+  const defaultPath = path.join(process.cwd(), "service-account-key.json");
+  const candidatePaths = [customPath, defaultPath].filter((p): p is string => !!p && p.trim().length > 0);
+
+  for (const credentialPath of candidatePaths) {
+    try {
+      if (!fs.existsSync(credentialPath)) continue;
+      const raw = fs.readFileSync(credentialPath, "utf8");
+      const parsed = parseServiceAccount(raw);
+      if (parsed) return parsed;
+    } catch (error) {
+      console.error(`[firebaseAdmin] Failed to read credential file at ${credentialPath}`, error);
+    }
+  }
+
+  return null;
+}
+
+function resolveServiceAccount(): ServiceAccount | null {
+  const fromEnv = resolveServiceAccountFromEnv();
+  if (fromEnv) return fromEnv;
+  return resolveServiceAccountFromFile();
+}
+
 function ensureApp(): App {
   if (cachedApp) return cachedApp;
   const existing = getApps();
@@ -61,16 +117,15 @@ function ensureApp(): App {
     return cachedApp;
   }
 
-  const keyPath =
-    process.env.FIREBASE_ADMIN_KEY_PATH || path.join(process.cwd(), "service-account-key.json");
-  if (fs.existsSync(keyPath)) {
-    const raw = fs.readFileSync(keyPath, "utf8");
-    const data = JSON.parse(raw);
-    cachedApp = initializeApp({ ...options, credential: cert(data) });
+  const serviceAccount = resolveServiceAccount();
+  if (serviceAccount) {
+    cachedApp = initializeApp({ ...options, credential: cert(serviceAccount) });
     return cachedApp;
   }
 
-  throw new Error("Firebase admin credential not found. Set GOOGLE_APPLICATION_CREDENTIALS or provide service-account-key.json");
+  throw new Error(
+    "Firebase admin credential not found. Provide FIREBASE_ADMIN_KEY_JSON, FIREBASE_ADMIN_KEY_BASE64, FIREBASE_ADMIN_KEY_PATH, or set GOOGLE_APPLICATION_CREDENTIALS."
+  );
 }
 
 export function getAdminApp(): App {
