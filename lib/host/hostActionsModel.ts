@@ -3,6 +3,7 @@
  * Receives current room snapshot and players/onlineCount, returns
  * UI-agnostic host action intents (labels, states). No side effects here.
  */
+import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 export type HostIntentKey =
@@ -52,8 +53,7 @@ export function buildHostActionModel(
   const proposal = getProposalArray(room);
   const assigned = players.filter((p) => typeof p.number === "number").length;
   // アクティブ人数: realtime presence 集計があればそれを、なければ players 配列長
-  const effectiveActive =
-    typeof _onlineCount === "number" ? _onlineCount : players.length;
+  const effectiveActive = calculateEffectiveActive(_onlineCount, players.length);
   const enoughPlayers = effectiveActive >= 2; // 最低2人
 
   const intents: HostIntent[] = [];
@@ -131,3 +131,6 @@ export function buildHostActionModel(
 
   return intents;
 }
+
+
+

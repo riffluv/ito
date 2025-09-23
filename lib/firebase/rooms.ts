@@ -3,6 +3,7 @@ import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { shouldReassignHost } from "@/lib/host/hostRules";
 import { logWarn } from "@/lib/utils/log";
+import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
   collection,
@@ -39,175 +40,184 @@ export async function leaveRoom(
   userId: string,
   displayName: string | null | undefined
 ) {
-  // Presence クリーンアップを先に実行（ベストプラクティス）
-  try {
-    if (presenceSupported()) {
-      const { forceDetachAll } = await import("@/lib/firebase/presence");
-      await forceDetachAll(roomId, userId);
-    }
-  } catch {
-    // Presence 削除失敗は無視（他の処理を継続）
+  if (!acquireLeaveLock(roomId, userId)) {
+    logWarn("rooms", "leave-room-duplicate-request", { roomId, userId });
+    return;
   }
-  // プレイヤーDoc重複安全削除
+
   try {
-    const dupQ = query(
-      collection(db!, "rooms", roomId, "players"),
-      where("uid", "==", userId)
-    );
-    const dupSnap = await getDocs(dupQ);
-    const ids = new Set<string>(dupSnap.docs.map((d) => d.id));
-    ids.add(userId); // 元UIDの doc も確実に削除
-    await Promise.all(
-      Array.from(ids).map(async (id) => {
-        try {
-          await deleteDoc(doc(db!, "rooms", roomId, "players", id));
-        } catch {}
-      })
-    );
-  } catch {
+      // Presence クリーンアップを先に実行（ベストプラクティス）
     try {
-      await deleteDoc(doc(db!, "rooms", roomId, "players", userId));
-    } catch {}
-  }
+      if (presenceSupported()) {
+        const { forceDetachAll } = await import("@/lib/firebase/presence");
+        await forceDetachAll(roomId, userId);
+      }
+    } catch {
+      // Presence 削除失敗は無視（他の処理を継続）
+    }
+    // プレイヤーDoc重複安全削除
+    try {
+      const dupQ = query(
+        collection(db!, "rooms", roomId, "players"),
+        where("uid", "==", userId)
+      );
+      const dupSnap = await getDocs(dupQ);
+      const ids = new Set<string>(dupSnap.docs.map((d) => d.id));
+      ids.add(userId); // 元UIDの doc も確実に削除
+      await Promise.all(
+        Array.from(ids).map(async (id) => {
+          try {
+            await deleteDoc(doc(db!, "rooms", roomId, "players", id));
+          } catch {}
+        })
+      );
+    } catch {
+      try {
+        await deleteDoc(doc(db!, "rooms", roomId, "players", userId));
+      } catch {}
+    }
 
-  // ゲーム状態からも除去（カード待機エリア、並び順から削除）およびホスト委譲をトランザクションで原子的に実施
-  let transferredTo: string | null = null;
-  try {
-    const roomRef = doc(db!, "rooms", roomId);
-    await runTransaction(db!, async (tx) => {
-      const snap = await tx.get(roomRef);
-      if (!snap.exists()) return;
-      const roomData = snap.data() as any;
+    // ゲーム状態からも除去（カード待機エリア、並び順から削除）およびホスト委譲をトランザクションで原子的に実施
+    let transferredTo: string | null = null;
+    try {
+      const roomRef = doc(db!, "rooms", roomId);
+      await runTransaction(db!, async (tx) => {
+        const snap = await tx.get(roomRef);
+        if (!snap.exists()) return;
+        const roomData = snap.data() as any;
 
-      // deal.players フィルタ
-      const origPlayers: string[] = Array.isArray(roomData?.deal?.players)
-        ? (roomData.deal.players as string[])
-        : [];
-      const filteredPlayers = origPlayers.filter((id) => id !== userId);
+        // deal.players フィルタ
+        const origPlayers: string[] = Array.isArray(roomData?.deal?.players)
+          ? (roomData.deal.players as string[])
+          : [];
+        const filteredPlayers = origPlayers.filter((id) => id !== userId);
 
-      // order.* フィルタ
-      const origList: string[] = Array.isArray(roomData?.order?.list)
-        ? (roomData.order.list as string[])
-        : [];
-      const origProposal: (string | null)[] = Array.isArray(roomData?.order?.proposal)
-        ? (roomData.order.proposal as (string | null)[])
-        : [];
-      const filteredList = origList.filter((id) => id !== userId);
-      const filteredProposal = origProposal.filter((id) => id !== userId);
+        // order.* フィルタ
+        const origList: string[] = Array.isArray(roomData?.order?.list)
+          ? (roomData.order.list as string[])
+          : [];
+        const origProposal: (string | null)[] = Array.isArray(roomData?.order?.proposal)
+          ? (roomData.order.proposal as (string | null)[])
+          : [];
+        const filteredList = origList.filter((id) => id !== userId);
+        const filteredProposal = origProposal.filter((id) => id !== userId);
 
-      // ホスト委譲（他に誰かいれば）
-      if (roomData.hostId === userId) {
-        let nextHost: string | null = null;
-        if (filteredPlayers.length > 0) {
-          nextHost = filteredPlayers[0];
+        // ホスト委譲（他に誰かいれば）
+        if (roomData.hostId === userId) {
+          let nextHost: string | null = null;
+          if (filteredPlayers.length > 0) {
+            nextHost = filteredPlayers[0];
+            try {
+              if (presenceSupported()) {
+                const uids = await fetchPresenceUids(roomId);
+                const online = filteredPlayers.find((id) => uids.includes(id));
+                if (online) nextHost = online;
+              }
+            } catch {}
+          }
+          if (nextHost) {
+            tx.update(roomRef, { hostId: nextHost });
+            transferredTo = nextHost;
+          }
+        }
+
+        const updates: any = {};
+        if (origPlayers.length !== filteredPlayers.length) {
+          updates["deal.players"] = filteredPlayers;
+          updates["order.total"] = filteredPlayers.length;
+        }
+        if (origList.length !== filteredList.length) {
+          updates["order.list"] = filteredList;
+        }
+        if (origProposal.length !== filteredProposal.length) {
+          updates["order.proposal"] = filteredProposal;
+        }
+        if (Object.keys(updates).length > 0) tx.update(roomRef, updates);
+      });
+    } catch (error) {
+      logWarn("rooms", "leave-room-update-failed", error);
+    }
+
+    // 退出システムメッセージ（UTF-8）
+    await sendSystemMessage(
+      roomId,
+      `${displayName || "匿名"} さんが退出しました`
+    );
+
+    // ホスト委譲が発生した場合は告知
+    if (transferredTo) {
+      try {
+        // UIDではなく表示名を取得して告知
+        let nextHostName: string = transferredTo || "";
+        try {
+          const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
+          const nm = (pSnap.data() as any)?.name;
+          if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+        } catch {}
+        await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
+      } catch {}
+    } else {
+      // ホスト委譲が失敗した場合のフォールバック：他のプレイヤーがいるかチェック
+      try {
+        const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
+        const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+
+        let needsHost = true;
+        try {
+          const roomSnap = await getDoc(doc(db!, "rooms", roomId));
+          if (roomSnap.exists()) {
+            const data = roomSnap.data() as any;
+            const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
+            needsHost = shouldReassignHost({
+              currentHostId,
+              leavingUid: userId,
+              remainingIds: others,
+            });
+          }
+        } catch {}
+
+        if (!needsHost) {
+          return;
+        }
+
+        if (others.length > 0) {
+          // 他のプレイヤーがいる場合：ホスト委譲
+          let nextHost = others[0];
           try {
             if (presenceSupported()) {
               const uids = await fetchPresenceUids(roomId);
-              const online = filteredPlayers.find((id) => uids.includes(id));
+              const online = others.find((id) => uids.includes(id));
               if (online) nextHost = online;
             }
           } catch {}
-        }
-        if (nextHost) {
-          tx.update(roomRef, { hostId: nextHost });
-          transferredTo = nextHost;
-        }
-      }
-
-      const updates: any = {};
-      if (origPlayers.length !== filteredPlayers.length) {
-        updates["deal.players"] = filteredPlayers;
-        updates["order.total"] = filteredPlayers.length;
-      }
-      if (origList.length !== filteredList.length) {
-        updates["order.list"] = filteredList;
-      }
-      if (origProposal.length !== filteredProposal.length) {
-        updates["order.proposal"] = filteredProposal;
-      }
-      if (Object.keys(updates).length > 0) tx.update(roomRef, updates);
-    });
-  } catch (error) {
-    logWarn("rooms", "leave-room-update-failed", error);
-  }
-
-  // 退出システムメッセージ（UTF-8）
-  await sendSystemMessage(
-    roomId,
-    `${displayName || "匿名"} さんが退出しました`
-  );
-
-  // ホスト委譲が発生した場合は告知
-  if (transferredTo) {
-    try {
-      // UIDではなく表示名を取得して告知
-      let nextHostName: string = transferredTo || "";
-      try {
-        const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
-        const nm = (pSnap.data() as any)?.name;
-        if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
-      } catch {}
-      await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
-    } catch {}
-  } else {
-    // ホスト委譲が失敗した場合のフォールバック：他のプレイヤーがいるかチェック
-    try {
-      const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
-      const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
-
-      let needsHost = true;
-      try {
-        const roomSnap = await getDoc(doc(db!, "rooms", roomId));
-        if (roomSnap.exists()) {
-          const data = roomSnap.data() as any;
-          const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-          needsHost = shouldReassignHost({
-            currentHostId,
-            leavingUid: userId,
-            remainingIds: others,
+          await updateDoc(doc(db!, "rooms", roomId), {
+            hostId: nextHost,
           });
-        }
-      } catch {}
-
-      if (!needsHost) {
-        return;
-      }
-
-      if (others.length > 0) {
-        // 他のプレイヤーがいる場合：ホスト委譲
-        let nextHost = others[0];
-        try {
-          if (presenceSupported()) {
-            const uids = await fetchPresenceUids(roomId);
-            const online = others.find((id) => uids.includes(id));
-            if (online) nextHost = online;
-          }
-        } catch {}
-        await updateDoc(doc(db!, "rooms", roomId), {
-          hostId: nextHost,
-        });
-        try {
-          // UIDではなく表示名を取得して告知
-          let nextHostName: string = nextHost || "";
           try {
-            const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", nextHost));
-            const nm = (pSnap.data() as any)?.name;
-            if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+            // UIDではなく表示名を取得して告知
+            let nextHostName: string = nextHost || "";
+            try {
+              const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", nextHost));
+              const nm = (pSnap.data() as any)?.name;
+              if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
+            } catch {}
+            await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
           } catch {}
-          await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
-        } catch {}
-      } else {
-        // 誰もいなくなった場合：部屋を待機状態にリセット（開かずの扉問題を防ぐ）
-        try {
-          await resetRoomToWaiting(roomId, { force: true });
-          await sendSystemMessage(roomId, "🔄 部屋が空になったため、ゲーム状態をリセットしました");
-        } catch (error) {
-          logWarn("rooms", "auto-reset-empty-room-failed", error);
+        } else {
+          // 誰もいなくなった場合：部屋を待機状態にリセット（開かずの扉問題を防ぐ）
+          try {
+            await resetRoomToWaiting(roomId, { force: true });
+            await sendSystemMessage(roomId, "🔄 部屋が空になったため、ゲーム状態をリセットしました");
+          } catch (error) {
+            logWarn("rooms", "auto-reset-empty-room-failed", error);
+          }
         }
+      } catch (error) {
+        logWarn("rooms", "leave-room-fallback-failed", error);
       }
-    } catch (error) {
-      logWarn("rooms", "leave-room-fallback-failed", error);
-    }
+  }
+  } finally {
+    releaseLeaveLock(roomId, userId);
   }
 }
 
@@ -332,3 +342,7 @@ export async function resetRoomWithPrune(
     } catch {}
   }
 }
+
+
+
+
