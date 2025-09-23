@@ -338,11 +338,17 @@ export async function leaveRoomServer(
       if (roomSnapshot.exists) {
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-        needsHost = shouldReassignHost({
-          currentHostId,
-          leavingUid: userId,
-          remainingIds: others,
-        });
+        const remainingTrimmed = others.map((id) => id.trim()).filter((id) => id.length > 0);
+
+        if (currentHostId && currentHostId !== userId && remainingTrimmed.includes(currentHostId)) {
+          needsHost = false;
+        } else {
+          needsHost = shouldReassignHost({
+            currentHostId,
+            leavingUid: userId,
+            remainingIds: remainingTrimmed,
+          });
+        }
       }
     } catch {}
 
