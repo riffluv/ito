@@ -224,19 +224,19 @@ service cloud.firestore {
         && isTimestampValue(data.createdAt);
     }
     // ホスト入れ替え時の妥当性（従来どおり）
+    function hostCandidateIsValid(roomId, candidate) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(candidate))
+        && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(candidate)).data.uid == candidate;
+    }
+
     function isValidHostAssignment(roomId) {
-      if (!('hostId' in request.resource.data)) {
-        return true;
-      }
-      let nextHost = request.resource.data.hostId;
-      if (!(nextHost is string) || nextHost.size() == 0) {
-        return false;
-      }
-      if (('hostId' in resource.data) && nextHost == resource.data.hostId) {
-        return true;
-      }
-      return exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(nextHost))
-        && get(/databases/$(database)/documents/rooms/$(roomId)/players/$(nextHost)).data.uid == nextHost;
+      return !('hostId' in request.resource.data)
+        || (
+          request.resource.data.hostId is string
+          && request.resource.data.hostId.size() > 0
+          && ((('hostId' in resource.data) && request.resource.data.hostId == resource.data.hostId)
+            || hostCandidateIsValid(roomId, request.resource.data.hostId))
+        );
     }
 
     // トップレベル差分: order と lastActiveAt 以外は変えていないこと
@@ -245,8 +245,8 @@ service cloud.firestore {
     }
     // order の差分: proposal のみ（互換で total 同時更新も可）
     function orderChangeKeysAreSafe() {
-      let keys = request.resource.data.order.diff(resource.data.order).changedKeys();
-      return keys.hasOnly(['proposal']) || keys.hasOnly(['proposal','total']);
+      return request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal'])
+        || request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal','total']);
     }
   }
 }
