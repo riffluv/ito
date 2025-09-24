@@ -336,6 +336,7 @@ export async function leaveRoomServer(
     try {
       const roomSnapshot = await db.collection("rooms").doc(roomId).get();
       if (roomSnapshot.exists) {
+        console.info("[host-debug] fallback-check", { roomId, leavingUid: userId, currentHostId: roomSnapshot.data()?.hostId ?? null, rawRemaining: others });
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
         const remainingTrimmed = others.map((id) => id.trim()).filter((id) => id.length > 0);

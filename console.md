@@ -1,7 +1,15 @@
-/api/rooms/wHPaM4E5SJDmpn43pKap/leave:1  Failed to load resource: the server responded with a status of 401 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=-5de5YwPnBra0264NaqBk0c4JP2NArc33eMYZfyqUUU&SID=9Vm9u4TWQj4RFidBzfnO5w&RID=34518&TYPE=terminate&zx=l0raqerywd72:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=d5K7y2Oa3N3GV4JkuczGDtHMdHElJpS7cY4ybGBA6MQ&SID=1cuhGKkHkxlyPV4EVMhZqQ&RID=89249&TYPE=terminate&zx=2ayb2dv75sc0:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=uP7eVJKrt-4mE7XP2HOLs7gRI1YVrbvuWuvAzObgDu0&SID=nMowpPKtIueXoh2_wJNRIA&RID=8085&TYPE=terminate&zx=w0e8y6h4810m:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=YrkoPBF4ncS7D-LYWlffAU6J6RGq6D3qWttXoDyQYzA&SID=Ktq2nm0CaoqqOC6zV2vEsQ&RID=78492&TYPE=terminate&zx=79p2dz8m2mb3:1  Failed to load resource: the server responded with a status of 400 ()
-/api/rooms/wHPaM4E5SJDmpn43pKap/claim-host:1  Failed to load resource: the server responded with a status of 401 ()
-/api/rooms/wHPaM4E5SJDmpn43pKap/claim-host:1  Failed to load resource: the server responded with a status of 401 ()
+content.js:85 [VSC] Content script initialized
+7492-098230bd0ebd9ce1.js:1 [useLobbyCounts] presence-config Object
+page-ba2bb2ab4bd9b7e6.js:1 ルーム作成: 1qaKVdqY0nQeyarTarNX
+7492-098230bd0ebd9ce1.js:1 [presence] connected Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+7492-098230bd0ebd9ce1.js:1 [presence] ondisconnect-armed Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
+page-21a3ade20420a69e.js:1 [presence] update Object
