@@ -299,14 +299,17 @@ export async function leaveRoomServer(
         if (nextHost) {
           updates.hostId = nextHost;
           transferredTo = nextHost;
+          console.info("[host-leave] transferred-from-transaction", { roomId, leavingUid: userId, nextHost });
         } else {
           updates.hostId = FieldValue.delete();
           transferredTo = null;
+          console.info("[host-leave] cleared-host-in-transaction", { roomId, leavingUid: userId });
         }
       }
 
       if (Object.keys(updates).length > 0) {
         tx.update(roomRef, updates);
+        console.info("[host-leave] transaction-updates", { roomId, leavingUid: userId, updates });
       }
     });
   } catch (error) {
@@ -326,6 +329,7 @@ export async function leaveRoomServer(
         `👑 ホストが ${nextHostName} さんに委譲されました`
       );
     } catch {}
+    console.info("[host-leave] transferred-direct", { roomId, leavingUid: userId, transferredTo });
     return;
   }
 
@@ -336,6 +340,7 @@ export async function leaveRoomServer(
       .collection("players")
       .get();
     const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+    console.info("[host-leave] fallback-begin", { roomId, leavingUid: userId, others });
 
     let needsHost = true;
     try {
@@ -362,6 +367,7 @@ export async function leaveRoomServer(
     } catch {}
 
     if (!needsHost) {
+      console.info("[host-leave] fallback-no-host-needed", { roomId, leavingUid: userId });
       return;
     }
 
@@ -375,6 +381,7 @@ export async function leaveRoomServer(
         } catch {}
       }
       await db.collection("rooms").doc(roomId).update({ hostId: nextHost });
+      console.info("[host-leave] fallback-assigned", { roomId, leavingUid: userId, nextHost, others });
       try {
         const nextHostName = await getPlayerName(roomId, nextHost);
         await sendSystemMessage(
@@ -390,6 +397,7 @@ export async function leaveRoomServer(
       roomId,
       "🔄 部屋が空になったため、ゲーム状態をリセットしました"
     );
+    console.info("[host-leave] fallback-reset", { roomId, leavingUid: userId });
   } catch (error) {
     logWarn("rooms", "leave-room-server-fallback-failed", error);
   }
