@@ -99,6 +99,10 @@ export async function leaveRoom(
 
     try {
       const roomRef = doc(db!, "rooms", roomId);
+      const playersRef = collection(db!, "rooms", roomId, "players");
+      const playersSnap = await getDocs(playersRef);
+      const playerDocs = playersSnap.docs;
+
       await runTransaction(db!, async (tx) => {
         const snap = await tx.get(roomRef);
         if (!snap.exists()) return;
@@ -108,10 +112,8 @@ export async function leaveRoom(
             ? roomData.hostId.trim()
             : null;
 
-        const playersRef = collection(db!, "rooms", roomId, "players");
-        const playersSnap = await tx.get(playersRef);
-        const playerDocs = playersSnap.docs;
-        remainingCount = playerDocs.length;
+        const remainingDocs = playerDocs.filter((docSnap) => docSnap.id !== userId);
+        remainingCount = remainingDocs.length;
 
         const origPlayers: string[] = Array.isArray(roomData?.deal?.players)
           ? [...(roomData.deal.players as string[])]
@@ -142,7 +144,7 @@ export async function leaveRoom(
         }
 
         const playerInputs = buildHostPlayerInputsFromSnapshots({
-          docs: playerDocs,
+          docs: remainingDocs,
           getJoinedAt: (docSnap) => {
             const data = docSnap.data() as any;
             const raw = data?.joinedAt;
@@ -376,7 +378,5 @@ export async function resetRoomWithPrune(
     } catch {}
   }
 }
-
-
 
 
