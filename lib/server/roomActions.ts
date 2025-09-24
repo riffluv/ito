@@ -226,14 +226,6 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
 
     const decision = manager.evaluateClaim(uid);
 
-    logDebug("rooms", "host-claim evaluate", {
-      roomId,
-      uid,
-      currentHost,
-      decision,
-      onlineSet: Array.from(onlineSet),
-    });
-
     if (decision.action !== "assign") {
       return;
     }
@@ -372,14 +364,6 @@ export async function leaveRoomServer(
       });
 
       const decision = manager.evaluateAfterLeave();
-
-      logDebug("rooms", "host-leave evaluate", {
-        roomId,
-        leavingUid: userId,
-        currentHostId,
-        decision,
-        remainingCount,
-      });
 
       if (decision.action === "assign") {
         transferredTo = decision.hostId;

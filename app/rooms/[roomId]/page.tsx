@@ -237,10 +237,6 @@ export default function RoomPage() {
           if (!leavingRef.current) leavingRef.current = true;
 
           // 🔥 NEW: 強制退室でもホスト復帰情報を記録
-          if (isHost && uid && displayName) {
-            console.log(`[Debug] Leaving as host: ${uid}`);
-          }
-
           try {
             notify({
               title: "参加できません",
@@ -289,14 +285,6 @@ export default function RoomPage() {
 
     const attemptClaim = async () => {
       try {
-        // 🔥 NEW: クレーム前のログ出力（デバッグ用）
-        console.log(`[HostClaim] Attempting claim: ${uid}`, {
-          roomId,
-          hostClaimCandidateId,
-          currentHostId: room?.hostId || 'none'
-        });
-
-
         const token = await user.getIdToken();
         if (!token || cancelled) return;
 
@@ -307,8 +295,6 @@ export default function RoomPage() {
           keepalive: true,
         });
         hostClaimAttemptRef.current = 0;
-
-        console.log(`[HostClaim] Host claimed successfully: ${uid}`);
       } catch (error) {
         logError("room-page", "claim-host", error);
         if (!cancelled) {
@@ -612,12 +598,6 @@ export default function RoomPage() {
 
     const performLeave = async (token: string | null) => {
       // 🔥 NEW: ホストが退室する場合、復帰情報を記録
-      const wasHost = isHost || (room?.hostId === uid);
-      if (wasHost && uid && displayName) {
-        console.log(`[Debug] User ${uid} (${displayName}) is leaving as host`);
-      } else {
-        console.log(`[HostReturning] Not marking (not host): wasHost=${wasHost}, isHost=${isHost}, uid=${uid}, displayName=${displayName}`);
-      }
 
       try {
         await Promise.resolve(detachNow()).catch(() => {});
