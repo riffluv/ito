@@ -134,6 +134,8 @@ service cloud.firestore {
           || (getRoomStatus(roomId) == 'clue'
             && onlyOrderAndLastActiveChanged()
             && orderChangeKeysAreSafe())
+          // カスタムお題モード時、参加者によるお題更新を許可
+          || canParticipantUpdateCustomTopic(roomId)
         );
 
       allow delete: if isAuthenticated() && (isHost(roomId) || isAdmin());
@@ -237,6 +239,20 @@ service cloud.firestore {
           && ((('hostId' in resource.data) && request.resource.data.hostId == resource.data.hostId)
             || hostCandidateIsValid(roomId, request.resource.data.hostId))
         );
+    }
+
+    function isParticipant(roomId) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.auth.uid));
+    }
+
+    function canParticipantUpdateCustomTopic(roomId) {
+      return isParticipant(roomId)
+        && getRoomStatus(roomId) in ['waiting','clue']
+        && resource.data.topicBox == 'カスタム'
+        && request.resource.data.topicBox == 'カスタム'
+        && safeText(request.resource.data.topic, 1, 120)
+        && (!('topicOptions' in request.resource.data) || request.resource.data.topicOptions == null)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['topic','topicOptions']);
     }
 
     // トップレベル差分: order と lastActiveAt 以外は変えていないこと
