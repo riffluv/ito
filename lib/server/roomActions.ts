@@ -210,7 +210,11 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       null as QueryDocumentSnapshot | null
     );
 
-    if (!fallbackDoc || fallbackDoc.id !== meDoc.id) return;
+    if (!fallbackDoc || fallbackDoc.id !== meDoc.id) {
+      const fallbackId = fallbackDoc ? fallbackDoc.id : null;
+      console.info("[host-claim] fallback-check skipped", { roomId, uid, fallbackId, meDocId: meDoc.id });
+      return;
+    }
 
     const fallbackData = fallbackDoc.data() as any;
     const updates: Record<string, any> = { hostId: meDoc.id };
@@ -223,6 +227,7 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     }
 
     tx.update(roomRef, updates);
+    console.info("[host-claim] assigned-server", { roomId, uid, hostId: meDoc.id, updates });
   });
 }
 
