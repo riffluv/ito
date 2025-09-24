@@ -139,22 +139,25 @@ export async function leaveRoom(
     }
 
     // 退出システムメッセージ（UTF-8）
+    const safeDisplayName =
+      typeof displayName === "string" && displayName.trim().length > 0
+        ? displayName.trim()
+        : "Player";
     await sendSystemMessage(
       roomId,
-      `${displayName || "匿名"} さんが退出しました`
+      `[system] ${safeDisplayName} left the room.`
     );
 
     // ホスト委譲が発生した場合は告知
     if (transferredTo) {
       try {
-        // UIDではなく表示名を取得して告知
         let nextHostName: string = transferredTo || "";
         try {
           const pSnap = await getDoc(doc(db!, "rooms", roomId, "players", transferredTo));
           const nm = (pSnap.data() as any)?.name;
           if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
         } catch {}
-        await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
+        await sendSystemMessage(roomId, `[system] Host role moved to ${nextHostName}.`);
       } catch {}
     } else {
       // ホスト委譲が失敗した場合のフォールバック：他のプレイヤーがいるかチェック
@@ -248,13 +251,13 @@ export async function leaveRoom(
               const nm = (pSnap.data() as any)?.name;
               if (typeof nm === "string" && nm.trim()) nextHostName = nm.trim();
             } catch {}
-            await sendSystemMessage(roomId, `👑 ホストが ${nextHostName} さんに委譲されました`);
+            await sendSystemMessage(roomId, `[system] Host role moved to ${nextHostName}.`);
           } catch {}
         } else {
           // 誰もいなくなった場合：部屋を待機状態にリセット（開かずの扉問題を防ぐ）
           try {
             await resetRoomToWaiting(roomId, { force: true });
-            await sendSystemMessage(roomId, "🔄 部屋が空になったため、ゲーム状態をリセットしました");
+            await sendSystemMessage(roomId, "[system] Room is empty. Resetting game state.");
           } catch (error) {
             logWarn("rooms", "auto-reset-empty-room-failed", error);
           }

@@ -316,9 +316,13 @@ export async function leaveRoomServer(
     logWarn("rooms", "leave-room-server-transaction-failed", error);
   }
 
+  const safeDisplayName =
+    typeof displayName === "string" && displayName.trim().length > 0
+      ? displayName.trim()
+      : "Player";
   await sendSystemMessage(
     roomId,
-    `${displayName || "匿名"} さんが退出しました`
+    `[system] ${safeDisplayName} left the room.`
   );
 
   if (transferredTo) {
@@ -326,7 +330,7 @@ export async function leaveRoomServer(
       const nextHostName = await getPlayerName(roomId, transferredTo);
       await sendSystemMessage(
         roomId,
-        `👑 ホストが ${nextHostName} さんに委譲されました`
+        `[system] Host role moved to ${nextHostName}.`
       );
     } catch {}
     logDebug("rooms", "host-leave transferred-direct", { roomId, leavingUid: userId, transferredTo });
@@ -421,9 +425,9 @@ export async function leaveRoomServer(
       try {
         const nextHostName = await getPlayerName(roomId, nextHost);
         await sendSystemMessage(
-          roomId,
-          `?? �z�X�g�� ${nextHostName} ����ɈϏ�����܂���`
-        );
+        roomId,
+        `[system] Host role moved to ${nextHostName}.`
+      );
       } catch {}
       return;
     }
@@ -431,7 +435,7 @@ export async function leaveRoomServer(
     await resetRoomToWaiting(roomId);
     await sendSystemMessage(
       roomId,
-      "🔄 部屋が空になったため、ゲーム状態をリセットしました"
+      "[system] Room is empty. Resetting game state."
     );
     logDebug("rooms", "host-leave fallback-reset", { roomId, leavingUid: userId });
   } catch (error) {
