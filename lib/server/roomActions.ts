@@ -1,8 +1,11 @@
-import { FieldValue, type QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import type { Database } from "firebase-admin/database";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { logWarn, logDebug } from "@/lib/utils/log";
-import { shouldReassignHost } from "@/lib/host/hostRules";
+import {
+  HostManager,
+  buildHostPlayerInputsFromSnapshots,
+} from "@/lib/host/HostManager";
 
 const PRESENCE_STALE_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
@@ -189,45 +192,68 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       } catch {}
     }
 
-    const candidateDocs = canonicalDocs.filter((doc) => onlineSet.has(doc.id));
-    const effectiveDocs = candidateDocs.length > 0 ? candidateDocs : canonicalDocs;
-    const remainingIds = effectiveDocs.map((doc) => doc.id);
-
-    if (!shouldReassignHost({ currentHostId: currentHost, remainingIds })) {
-      return;
-    }
-
-    const fallbackDoc = effectiveDocs.reduce(
-      (best, doc) => {
-        if (!best) return doc;
-        const bestTime = best.createTime ? best.createTime.toMillis() : Number.MAX_SAFE_INTEGER;
-        const docTime = doc.createTime ? doc.createTime.toMillis() : Number.MAX_SAFE_INTEGER;
-        if (docTime !== bestTime) {
-          return docTime < bestTime ? doc : best;
-        }
-        return doc.id < best.id ? doc : best;
+    const playerInputs = buildHostPlayerInputsFromSnapshots({
+      docs: canonicalDocs,
+      getJoinedAt: (doc) => (doc.createTime ? doc.createTime.toMillis() : null),
+      getOrderIndex: (doc) => {
+        const data = doc.data() as any;
+        return typeof data?.orderIndex === "number" ? data.orderIndex : null;
       },
-      null as QueryDocumentSnapshot | null
-    );
+      getLastSeenAt: (doc) => {
+        const data = doc.data() as any;
+        const raw = data?.lastSeen;
+        if (raw && typeof raw.toMillis === "function") {
+          try {
+            return raw.toMillis();
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      },
+      getName: (doc) => {
+        const data = doc.data() as any;
+        return typeof data?.name === "string" ? data.name : null;
+      },
+      onlineIds: onlineSet,
+    });
 
-    if (!fallbackDoc || fallbackDoc.id !== meDoc.id) {
-      const fallbackId = fallbackDoc ? fallbackDoc.id : null;
-      logDebug("rooms", "host-claim fallback-check skipped", { roomId, uid, fallbackId, meDocId: meDoc.id });
+    const manager = new HostManager({
+      roomId,
+      currentHostId: currentHost,
+      players: playerInputs,
+    });
+
+    const decision = manager.evaluateClaim(uid);
+
+    logDebug("rooms", "host-claim evaluate", {
+      roomId,
+      uid,
+      currentHost,
+      decision,
+      onlineSet: Array.from(onlineSet),
+    });
+
+    if (decision.action !== "assign") {
       return;
     }
 
-    const fallbackData = fallbackDoc.data() as any;
-    const updates: Record<string, any> = { hostId: meDoc.id };
-    const fallbackName =
-      typeof fallbackData?.name === "string" && fallbackData.name.trim()
-        ? fallbackData.name.trim()
-        : null;
-    if (fallbackName) {
-      updates.hostName = fallbackName;
+    const updates: Record<string, any> = { hostId: decision.hostId };
+    const meta = manager.getPlayerMeta(decision.hostId);
+    const trimmedName = meta?.name && typeof meta.name === "string" ? meta.name.trim() : "";
+    if (trimmedName) {
+      updates.hostName = trimmedName;
+    } else {
+      updates.hostName = FieldValue.delete();
     }
 
     tx.update(roomRef, updates);
-    logDebug("rooms", "host-claim assigned-server", { roomId, uid, hostId: meDoc.id, updates });
+    logDebug("rooms", "host-claim assigned-server", {
+      roomId,
+      uid,
+      hostId: decision.hostId,
+      reason: decision.reason,
+    });
   });
 }
 
@@ -250,7 +276,24 @@ export async function leaveRoomServer(
     await batch.commit();
   } catch {}
 
+  const presenceIds = new Set<string>();
+  if (rtdb) {
+    try {
+      const currentOnline = await fetchPresenceUids(roomId, rtdb);
+      for (const onlineUid of currentOnline) {
+        if (typeof onlineUid !== "string") continue;
+        const trimmed = onlineUid.trim();
+        if (trimmed && trimmed !== userId) {
+          presenceIds.add(trimmed);
+        }
+      }
+    } catch {}
+  }
+
   let transferredTo: string | null = null;
+  let transferredToName: string | null = null;
+  let hostCleared = false;
+  let remainingCount = 0;
 
   try {
     const roomRef = db.collection("rooms").doc(roomId);
@@ -258,6 +301,14 @@ export async function leaveRoomServer(
       const snap = await tx.get(roomRef);
       if (!snap.exists) return;
       const room = snap.data() as any;
+      const currentHostId =
+        typeof room?.hostId === "string" && room.hostId.trim()
+          ? room.hostId.trim()
+          : null;
+
+      const playersSnap = await tx.get(roomRef.collection("players"));
+      const playerDocs = playersSnap.docs;
+      remainingCount = playerDocs.length;
 
       const origPlayers: string[] = Array.isArray(room?.deal?.players)
         ? [...(room.deal.players as string[])]
@@ -287,30 +338,65 @@ export async function leaveRoomServer(
         updates["order.proposal"] = filteredProposal;
       }
 
+      const playerInputs = buildHostPlayerInputsFromSnapshots({
+        docs: playerDocs,
+        getJoinedAt: (doc) => (doc.createTime ? doc.createTime.toMillis() : null),
+        getOrderIndex: (doc) => {
+          const data = doc.data() as any;
+          return typeof data?.orderIndex === "number" ? data.orderIndex : null;
+        },
+        getLastSeenAt: (doc) => {
+          const data = doc.data() as any;
+          const raw = data?.lastSeen;
+          if (raw && typeof raw.toMillis === "function") {
+            try {
+              return raw.toMillis();
+            } catch {
+              return null;
+            }
+          }
+          return null;
+        },
+        getName: (doc) => {
+          const data = doc.data() as any;
+          return typeof data?.name === "string" ? data.name : null;
+        },
+        onlineIds: presenceIds,
+      });
 
-      if (room?.hostId === userId) {
-        let nextHost: string | null = filteredPlayers.length > 0 ? filteredPlayers[0]! : null;
-        if (nextHost && rtdb) {
-          try {
-            const online = await fetchPresenceUids(roomId, rtdb);
-            const prefer = filteredPlayers.find((id) => online.includes(id));
-            if (prefer) nextHost = prefer;
-          } catch {}
-        }
-        if (nextHost) {
-          updates.hostId = nextHost;
-          transferredTo = nextHost;
-          logDebug("rooms", "host-leave transferred-from-transaction", { roomId, leavingUid: userId, nextHost });
-        } else {
-          updates.hostId = "";
-          transferredTo = null;
-          logDebug("rooms", "host-leave cleared-host-in-transaction", { roomId, leavingUid: userId });
-        }
+      const manager = new HostManager({
+        roomId,
+        currentHostId,
+        players: playerInputs,
+        leavingUid: userId,
+      });
+
+      const decision = manager.evaluateAfterLeave();
+
+      logDebug("rooms", "host-leave evaluate", {
+        roomId,
+        leavingUid: userId,
+        currentHostId,
+        decision,
+        remainingCount,
+      });
+
+      if (decision.action === "assign") {
+        transferredTo = decision.hostId;
+        const meta = manager.getPlayerMeta(decision.hostId);
+        const trimmedName =
+          meta?.name && typeof meta.name === "string" ? meta.name.trim() : "";
+        transferredToName = trimmedName || null;
+        updates.hostId = decision.hostId;
+        updates.hostName = trimmedName ? trimmedName : FieldValue.delete();
+      } else if (decision.action === "clear") {
+        updates.hostId = "";
+        updates.hostName = FieldValue.delete();
+        hostCleared = true;
       }
 
       if (Object.keys(updates).length > 0) {
         tx.update(roomRef, updates);
-        logDebug("rooms", "host-leave transaction-updates", { roomId, leavingUid: userId, updates });
       }
     });
   } catch (error) {
@@ -328,125 +414,35 @@ export async function leaveRoomServer(
 
   if (transferredTo) {
     try {
-      const nextHostName = await getPlayerName(roomId, transferredTo);
+      const nextHostName =
+        transferredToName || (await getPlayerName(roomId, transferredTo));
       await sendSystemMessage(
         roomId,
         `[system] Host role moved to ${nextHostName}.`
       );
     } catch {}
-    logDebug("rooms", "host-leave transferred-direct", { roomId, leavingUid: userId, transferredTo });
+    logDebug("rooms", "host-leave transferred-direct", {
+      roomId,
+      leavingUid: userId,
+      transferredTo,
+    });
     return;
   }
 
-  try {
-    const playersSnap = await db
-      .collection("rooms")
-      .doc(roomId)
-      .collection("players")
-      .get();
-    const playerDocs = playersSnap.docs;
-    const othersDocs = playerDocs.filter((doc) => doc.id.trim() !== userId);
-    const others = Array.from(
-      new Set(
-        othersDocs
-          .map((doc) => doc.id.trim())
-          .filter((id) => id.length > 0)
-      )
-    );
-    logDebug("rooms", "host-leave fallback-begin", { roomId, leavingUid: userId, others });
-
-    const remainingIdSet = new Set<string>();
-    for (const doc of othersDocs) {
-      const trimmedId = doc.id.trim();
-      if (trimmedId && trimmedId !== userId) {
-        remainingIdSet.add(trimmedId);
-      }
-      const docData = doc.data() as any;
-      const uidField =
-        typeof docData?.uid === "string" ? docData.uid.trim() : "";
-      if (uidField && uidField !== userId) {
-        remainingIdSet.add(uidField);
-      }
-    }
-    const remainingTrimmed = Array.from(remainingIdSet);
-
-    let needsHost = true;
+  if (hostCleared && remainingCount === 0) {
     try {
-      const roomSnapshot = await db.collection("rooms").doc(roomId).get();
-      if (roomSnapshot.exists) {
-        logDebug("rooms", "host-leave fallback-check", { roomId, leavingUid: userId, currentHostId: roomSnapshot.data()?.hostId ?? null, rawRemaining: others });
-        const data = roomSnapshot.data() as any;
-        const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-        const hostStillPresent = playerDocs.some((doc) => {
-          const trimmedId = doc.id.trim();
-          const docData = doc.data() as any;
-          const uidField = typeof docData?.uid === "string" ? docData.uid.trim() : "";
-          return (trimmedId && trimmedId === currentHostId) || (uidField && uidField === currentHostId);
-        });
-        if (
-          currentHostId &&
-          currentHostId !== userId &&
-          (remainingTrimmed.includes(currentHostId) || hostStillPresent)
-        ) {
-          needsHost = false;
-        } else {
-          if (
-            currentHostId &&
-            currentHostId !== userId &&
-            remainingTrimmed.length > 0 &&
-            !remainingTrimmed.includes(currentHostId)
-          ) {
-            logWarn("rooms", "host-maintain missing from remaining players", {
-              roomId,
-              leavingUid: userId,
-              currentHostId,
-              remainingTrimmed,
-              rawRemaining: others,
-            });
-          }
-          needsHost = shouldReassignHost({
-            currentHostId,
-            leavingUid: userId,
-            remainingIds: remainingTrimmed,
-          });
-        }
-      }
-    } catch {}
-
-    if (!needsHost) {
-      logDebug("rooms", "host-leave fallback-no-host-needed", { roomId, leavingUid: userId });
-      return;
-    }
-
-    if (others.length > 0) {
-      let nextHost = others[0]!;
-      if (rtdb) {
-        try {
-          const online = await fetchPresenceUids(roomId, rtdb);
-          const prefer = others.find((id) => online.includes(id));
-          if (prefer) nextHost = prefer;
-        } catch {}
-      }
-      await db.collection("rooms").doc(roomId).update({ hostId: nextHost });
-      logDebug("rooms", "host-leave fallback-assigned", { roomId, leavingUid: userId, nextHost, others });
-      try {
-        const nextHostName = await getPlayerName(roomId, nextHost);
-        await sendSystemMessage(
+      await resetRoomToWaiting(roomId);
+      await sendSystemMessage(
         roomId,
-        `[system] Host role moved to ${nextHostName}.`
+        "[system] Room is empty. Resetting game state."
       );
-      } catch {}
-      return;
+      logDebug("rooms", "host-leave fallback-reset", {
+        roomId,
+        leavingUid: userId,
+      });
+    } catch (error) {
+      logWarn("rooms", "leave-room-server-reset-failed", error);
     }
-
-    await resetRoomToWaiting(roomId);
-    await sendSystemMessage(
-      roomId,
-      "[system] Room is empty. Resetting game state."
-    );
-    logDebug("rooms", "host-leave fallback-reset", { roomId, leavingUid: userId });
-  } catch (error) {
-    logWarn("rooms", "leave-room-server-fallback-failed", error);
   }
 }
 
