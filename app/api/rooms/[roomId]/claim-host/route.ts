@@ -37,8 +37,10 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  console.info("[host-claim] request", { roomId, uid });
   try {
     await ensureHostAssignedServer(roomId, uid);
+    console.info("[host-claim] assigned", { roomId, uid });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("claim-host error", error);
