@@ -1,48 +1,82 @@
-import { shouldReassignHost } from "@/lib/host/hostRules";
+import { HostManager } from "@/lib/host/HostManager";
 
-describe("shouldReassignHost", () => {
-  test("returns false when current host remains after another player leaves", () => {
-    const result = shouldReassignHost({
+describe("HostManager", () => {
+  const basePlayers = [
+    { id: "host-1", joinedAt: 10, orderIndex: 0, isOnline: true, name: "Host" },
+    { id: "guest-1", joinedAt: 20, orderIndex: 1, isOnline: true, name: "Guest A" },
+    { id: "guest-2", joinedAt: 30, orderIndex: 2, isOnline: false, name: "Guest B" },
+  ];
+
+  const mapPlayers = (overrides: Partial<typeof basePlayers[number]>[] = []) => {
+    return basePlayers.map((p, index) => ({
+      ...p,
+      ...(overrides[index] ?? {}),
+    }));
+  };
+
+  test("evaluateClaim does not reassign when current host remains", () => {
+    const manager = new HostManager({
+      roomId: "room-1",
       currentHostId: "host-1",
-      leavingUid: "guest-1",
-      remainingIds: ["host-1", "guest-2"],
+      players: mapPlayers(),
     });
-    expect(result).toBe(false);
+
+    expect(manager.evaluateClaim("guest-1")).toEqual({
+      action: "none",
+      reason: "host-present",
+      hostId: "host-1",
+    });
   });
 
-  test("returns true when the host leaves but other players remain", () => {
-    const result = shouldReassignHost({
-      currentHostId: "host-1",
-      leavingUid: "host-1",
-      remainingIds: ["guest-2", "guest-3"],
-    });
-    expect(result).toBe(true);
-  });
-
-  test("returns true when the recorded host is missing from remaining players", () => {
-    const result = shouldReassignHost({
-      currentHostId: "host-1",
-      leavingUid: "guest-2",
-      remainingIds: ["guest-2", "guest-3"],
-    });
-    expect(result).toBe(true);
-  });
-
-  test("returns false when no players remain to assume host duties", () => {
-    const result = shouldReassignHost({
-      currentHostId: "host-1",
-      leavingUid: "host-1",
-      remainingIds: [],
-    });
-    expect(result).toBe(false);
-  });
-
-  test("returns true when there is no current host but players remain", () => {
-    const result = shouldReassignHost({
+  test("evaluateClaim auto-assigns to primary candidate when host is missing", () => {
+    const manager = new HostManager({
+      roomId: "room-1",
       currentHostId: null,
-      leavingUid: "guest-1",
-      remainingIds: ["guest-1", "guest-2"],
+      players: mapPlayers(),
     });
-    expect(result).toBe(true);
+
+    expect(manager.evaluateClaim("guest-2")).toEqual({
+      action: "assign",
+      reason: "auto-assign",
+      hostId: "host-1",
+    });
+  });
+
+  test("evaluateAfterLeave transfers host to next player when current host leaves", () => {
+    const manager = new HostManager({
+      roomId: "room-1",
+      currentHostId: "host-1",
+      leavingUid: "host-1",
+      players: mapPlayers([{ }, { joinedAt: 15 }, { joinedAt: 25 }]),
+    });
+
+    expect(manager.evaluateAfterLeave()).toEqual({
+      action: "assign",
+      reason: "host-left",
+      hostId: "guest-1",
+    });
+  });
+
+  test("evaluateAfterLeave clears host when room becomes empty", () => {
+    const manager = new HostManager({
+      roomId: "room-1",
+      currentHostId: "host-1",
+      leavingUid: "host-1",
+      players: [],
+    });
+
+    expect(manager.evaluateAfterLeave()).toEqual({ action: "clear", reason: "no-players" });
+  });
+
+  test("getPlayerMeta returns stored name for the selected host", () => {
+    const manager = new HostManager({
+      roomId: "room-1",
+      currentHostId: null,
+      players: mapPlayers([{ name: " Host " }]),
+    });
+
+    const decision = manager.evaluateClaim("guest-1");
+    expect(decision.action).toBe("assign");
+    expect(manager.getPlayerMeta(decision.hostId)).toEqual({ name: " Host " });
   });
 });
