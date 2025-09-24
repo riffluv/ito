@@ -196,10 +196,18 @@ export async function leaveRoom(
             const currentHostId =
               typeof data?.hostId === "string" ? data.hostId.trim() : "";
 
+            const hostStillPresent = playerDocs.some((doc) => {
+              const trimmedId = doc.id.trim();
+              const docData = doc.data() as any;
+              const uidField =
+                typeof docData?.uid === "string" ? docData.uid.trim() : "";
+              return (trimmedId && trimmedId === currentHostId) || (uidField && uidField === currentHostId);
+            });
+
             if (
               currentHostId &&
               currentHostId !== userId &&
-              remainingTrimmed.includes(currentHostId)
+              (remainingTrimmed.includes(currentHostId) || hostStillPresent)
             ) {
               needsHost = false;
             } else {
