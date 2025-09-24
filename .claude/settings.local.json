@@ -127,7 +127,8 @@
       "Bash(npx firebase deploy:*)",
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\app\\rooms\\[roomId]\\loading.tsx\")",
       "WebFetch(domain:www.gameuidatabase.com)",
-      "WebFetch(domain:interfaceingame.com)"
+      "WebFetch(domain:interfaceingame.com)",
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")"
     ],
     "deny": [],
     "ask": []

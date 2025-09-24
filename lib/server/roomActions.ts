@@ -287,6 +287,7 @@ export async function leaveRoomServer(
         updates["order.proposal"] = filteredProposal;
       }
 
+
       if (room?.hostId === userId) {
         let nextHost: string | null = filteredPlayers.length > 0 ? filteredPlayers[0]! : null;
         if (nextHost && rtdb) {
@@ -301,7 +302,7 @@ export async function leaveRoomServer(
           transferredTo = nextHost;
           logDebug("rooms", "host-leave transferred-from-transaction", { roomId, leavingUid: userId, nextHost });
         } else {
-          updates.hostId = FieldValue.delete();
+          updates.hostId = "";
           transferredTo = null;
           logDebug("rooms", "host-leave cleared-host-in-transaction", { roomId, leavingUid: userId });
         }
