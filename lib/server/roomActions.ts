@@ -339,11 +339,31 @@ export async function leaveRoomServer(
       .doc(roomId)
       .collection("players")
       .get();
-    const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+    const playerDocs = playersSnap.docs;
+    const othersDocs = playerDocs.filter((doc) => doc.id.trim() !== userId);
+    const others = Array.from(
+      new Set(
+        othersDocs
+          .map((doc) => doc.id.trim())
+          .filter((id) => id.length > 0)
+      )
+    );
     console.info("[host-leave] fallback-begin", { roomId, leavingUid: userId, others });
 
-    const remainingTrimmed = others.map((id) => id.trim()).filter((id) => id.length > 0);
-    console.info("[host-leave] fallback-trimmed", { roomId, leavingUid: userId, remainingTrimmed });
+    const remainingIdSet = new Set<string>();
+    for (const doc of othersDocs) {
+      const trimmedId = doc.id.trim();
+      if (trimmedId && trimmedId !== userId) {
+        remainingIdSet.add(trimmedId);
+      }
+      const docData = doc.data() as any;
+      const uidField =
+        typeof docData?.uid === "string" ? docData.uid.trim() : "";
+      if (uidField && uidField !== userId) {
+        remainingIdSet.add(uidField);
+      }
+    }
+    const remainingTrimmed = Array.from(remainingIdSet);
 
     let needsHost = true;
     try {
@@ -351,35 +371,26 @@ export async function leaveRoomServer(
       if (roomSnapshot.exists) {
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-        if (currentHostId && currentHostId !== userId && remainingTrimmed.includes(currentHostId)) {
-          console.info("[host-leave] host-still-present", { roomId, leavingUid: userId, currentHostId, remainingTrimmed });
-          return;
-        }
-        needsHost = shouldReassignHost({
-          currentHostId,
-          leavingUid: userId,
-          remainingIds: remainingTrimmed,
-        });
-        console.info("[host-leave] fallback-needs-host", { roomId, leavingUid: userId, currentHostId, needsHost, remainingTrimmed });
-      }
-    } catch {}
-
-    if (!needsHost) {
-      console.info("[host-leave] fallback-no-host-needed", { roomId, leavingUid: userId });
-      return;
-    }
-
-    if (others.length > 0) {
-        console.info("[host-debug] fallback-check", { roomId, leavingUid: userId, currentHostId: roomSnapshot.data()?.hostId ?? null, rawRemaining: others });
-        const data = roomSnapshot.data() as any;
-        const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-        const remainingTrimmed = others.map((id) => id.trim()).filter((id) => id.length > 0);
-
-        if (currentHostId && currentHostId !== userId && remainingTrimmed.includes(currentHostId)) {
+        if (
+          currentHostId &&
+          currentHostId !== userId &&
+          remainingTrimmed.includes(currentHostId)
+        ) {
           needsHost = false;
         } else {
-          if (currentHostId && currentHostId !== userId && !remainingTrimmed.includes(currentHostId)) {
-            console.warn("[host-maintain] host id missing from remaining players", { roomId, leavingUid: userId, currentHostId, remainingTrimmed, rawRemaining: others });
+          if (
+            currentHostId &&
+            currentHostId !== userId &&
+            remainingTrimmed.length > 0 &&
+            !remainingTrimmed.includes(currentHostId)
+          ) {
+            console.warn("[host-maintain] host id missing from remaining players", {
+              roomId,
+              leavingUid: userId,
+              currentHostId,
+              remainingTrimmed,
+              rawRemaining: others,
+            });
           }
           needsHost = shouldReassignHost({
             currentHostId,
@@ -410,7 +421,7 @@ export async function leaveRoomServer(
         const nextHostName = await getPlayerName(roomId, nextHost);
         await sendSystemMessage(
           roomId,
-          `👑 ホストが ${nextHostName} さんに委譲されました`
+          `?? �z�X�g�� ${nextHostName} ����ɈϏ�����܂���`
         );
       } catch {}
       return;

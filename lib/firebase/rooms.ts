@@ -160,19 +160,66 @@ export async function leaveRoom(
       // ホスト委譲が失敗した場合のフォールバック：他のプレイヤーがいるかチェック
       try {
         const playersSnap = await getDocs(collection(db!, "rooms", roomId, "players"));
-        const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
+        const playerDocs = playersSnap.docs;
+        const othersDocs = playerDocs.filter((doc) => doc.id.trim() !== userId);
+        const others = Array.from(
+          new Set(
+            othersDocs
+              .map((doc) => doc.id.trim())
+              .filter((id) => id.length > 0)
+          )
+        );
+
+        const remainingIdSet = new Set<string>();
+        for (const docSnap of othersDocs) {
+          const trimmedId = docSnap.id.trim();
+          if (trimmedId && trimmedId !== userId) {
+            remainingIdSet.add(trimmedId);
+          }
+          const docData = docSnap.data() as any;
+          const uidField =
+            typeof docData?.uid === "string" ? docData.uid.trim() : "";
+          if (uidField && uidField !== userId) {
+            remainingIdSet.add(uidField);
+          }
+        }
+        const remainingTrimmed = Array.from(remainingIdSet);
 
         let needsHost = true;
         try {
           const roomSnap = await getDoc(doc(db!, "rooms", roomId));
           if (roomSnap.exists()) {
             const data = roomSnap.data() as any;
-            const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
-            needsHost = shouldReassignHost({
-              currentHostId,
-              leavingUid: userId,
-              remainingIds: others,
-            });
+            const currentHostId =
+              typeof data?.hostId === "string" ? data.hostId.trim() : "";
+
+            if (
+              currentHostId &&
+              currentHostId !== userId &&
+              remainingTrimmed.includes(currentHostId)
+            ) {
+              needsHost = false;
+            } else {
+              if (
+                currentHostId &&
+                currentHostId !== userId &&
+                remainingTrimmed.length > 0 &&
+                !remainingTrimmed.includes(currentHostId)
+              ) {
+                logWarn("rooms", "host-id-missing-after-leave", {
+                  roomId,
+                  leavingUid: userId,
+                  currentHostId,
+                  remainingIds: remainingTrimmed,
+                  rawRemaining: others,
+                });
+              }
+              needsHost = shouldReassignHost({
+                currentHostId,
+                leavingUid: userId,
+                remainingIds: remainingTrimmed,
+              });
+            }
           }
         } catch {}
 
