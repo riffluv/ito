@@ -342,10 +342,34 @@ export async function leaveRoomServer(
     const others = playersSnap.docs.map((d) => d.id).filter((id) => id !== userId);
     console.info("[host-leave] fallback-begin", { roomId, leavingUid: userId, others });
 
+    const remainingTrimmed = others.map((id) => id.trim()).filter((id) => id.length > 0);
+    console.info("[host-leave] fallback-trimmed", { roomId, leavingUid: userId, remainingTrimmed });
+
     let needsHost = true;
     try {
       const roomSnapshot = await db.collection("rooms").doc(roomId).get();
       if (roomSnapshot.exists) {
+        const data = roomSnapshot.data() as any;
+        const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
+        if (currentHostId && currentHostId !== userId && remainingTrimmed.includes(currentHostId)) {
+          console.info("[host-leave] host-still-present", { roomId, leavingUid: userId, currentHostId, remainingTrimmed });
+          return;
+        }
+        needsHost = shouldReassignHost({
+          currentHostId,
+          leavingUid: userId,
+          remainingIds: remainingTrimmed,
+        });
+        console.info("[host-leave] fallback-needs-host", { roomId, leavingUid: userId, currentHostId, needsHost, remainingTrimmed });
+      }
+    } catch {}
+
+    if (!needsHost) {
+      console.info("[host-leave] fallback-no-host-needed", { roomId, leavingUid: userId });
+      return;
+    }
+
+    if (others.length > 0) {
         console.info("[host-debug] fallback-check", { roomId, leavingUid: userId, currentHostId: roomSnapshot.data()?.hostId ?? null, rawRemaining: others });
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
