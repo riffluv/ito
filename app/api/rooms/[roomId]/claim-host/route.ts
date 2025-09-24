@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/server/firebaseAdmin";
+import { logDebug, logError } from "@/lib/utils/log";
 import { ensureHostAssignedServer } from "@/lib/server/roomActions";
 
 export const runtime = "nodejs";
@@ -33,17 +34,17 @@ export async function POST(
       return NextResponse.json({ error: "unauthorized" }, { status: 403 });
     }
   } catch (error) {
-    console.error("claim-host verify failed", error);
+    logError("rooms", "claim-host verify failed", error);
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  console.info("[host-claim] request", { roomId, uid });
+  logDebug("rooms", "host-claim request", { roomId, uid });
   try {
     await ensureHostAssignedServer(roomId, uid);
-    console.info("[host-claim] assigned", { roomId, uid });
+    logDebug("rooms", "host-claim assigned", { roomId, uid });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("claim-host error", error);
+    logError("rooms", "claim-host error", error);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
