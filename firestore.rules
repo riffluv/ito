@@ -248,11 +248,13 @@ service cloud.firestore {
     function canParticipantUpdateCustomTopic(roomId) {
       return isParticipant(roomId)
         && getRoomStatus(roomId) in ['waiting','clue']
-        && resource.data.topicBox == 'カスタム'
         && request.resource.data.topicBox == 'カスタム'
         && safeText(request.resource.data.topic, 1, 120)
         && (!('topicOptions' in request.resource.data) || request.resource.data.topicOptions == null)
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['topic','topicOptions']);
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['topic','topicOptions','topicBox'])
+        && (!('topicBox' in resource.data)
+          || resource.data.topicBox == null
+          || resource.data.topicBox == 'カスタム');
     }
 
     // トップレベル差分: order と lastActiveAt 以外は変えていないこと
