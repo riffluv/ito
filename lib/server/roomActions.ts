@@ -1,7 +1,7 @@
 import { FieldValue, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import type { Database } from "firebase-admin/database";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
-import { logWarn } from "@/lib/utils/log";
+import { logWarn, logDebug } from "@/lib/utils/log";
 import { shouldReassignHost } from "@/lib/host/hostRules";
 
 const PRESENCE_STALE_MS = Number(
@@ -212,7 +212,7 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
 
     if (!fallbackDoc || fallbackDoc.id !== meDoc.id) {
       const fallbackId = fallbackDoc ? fallbackDoc.id : null;
-      console.info("[host-claim] fallback-check skipped", { roomId, uid, fallbackId, meDocId: meDoc.id });
+      logDebug("rooms", "host-claim fallback-check skipped", { roomId, uid, fallbackId, meDocId: meDoc.id });
       return;
     }
 
@@ -227,7 +227,7 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     }
 
     tx.update(roomRef, updates);
-    console.info("[host-claim] assigned-server", { roomId, uid, hostId: meDoc.id, updates });
+    logDebug("rooms", "host-claim assigned-server", { roomId, uid, hostId: meDoc.id, updates });
   });
 }
 
@@ -299,17 +299,17 @@ export async function leaveRoomServer(
         if (nextHost) {
           updates.hostId = nextHost;
           transferredTo = nextHost;
-          console.info("[host-leave] transferred-from-transaction", { roomId, leavingUid: userId, nextHost });
+          logDebug("rooms", "host-leave transferred-from-transaction", { roomId, leavingUid: userId, nextHost });
         } else {
           updates.hostId = FieldValue.delete();
           transferredTo = null;
-          console.info("[host-leave] cleared-host-in-transaction", { roomId, leavingUid: userId });
+          logDebug("rooms", "host-leave cleared-host-in-transaction", { roomId, leavingUid: userId });
         }
       }
 
       if (Object.keys(updates).length > 0) {
         tx.update(roomRef, updates);
-        console.info("[host-leave] transaction-updates", { roomId, leavingUid: userId, updates });
+        logDebug("rooms", "host-leave transaction-updates", { roomId, leavingUid: userId, updates });
       }
     });
   } catch (error) {
@@ -329,7 +329,7 @@ export async function leaveRoomServer(
         `👑 ホストが ${nextHostName} さんに委譲されました`
       );
     } catch {}
-    console.info("[host-leave] transferred-direct", { roomId, leavingUid: userId, transferredTo });
+    logDebug("rooms", "host-leave transferred-direct", { roomId, leavingUid: userId, transferredTo });
     return;
   }
 
@@ -348,7 +348,7 @@ export async function leaveRoomServer(
           .filter((id) => id.length > 0)
       )
     );
-    console.info("[host-leave] fallback-begin", { roomId, leavingUid: userId, others });
+    logDebug("rooms", "host-leave fallback-begin", { roomId, leavingUid: userId, others });
 
     const remainingIdSet = new Set<string>();
     for (const doc of othersDocs) {
@@ -369,6 +369,7 @@ export async function leaveRoomServer(
     try {
       const roomSnapshot = await db.collection("rooms").doc(roomId).get();
       if (roomSnapshot.exists) {
+        logDebug("rooms", "host-leave fallback-check", { roomId, leavingUid: userId, currentHostId: roomSnapshot.data()?.hostId ?? null, rawRemaining: others });
         const data = roomSnapshot.data() as any;
         const currentHostId = typeof data?.hostId === "string" ? data.hostId.trim() : "";
         if (
@@ -384,7 +385,7 @@ export async function leaveRoomServer(
             remainingTrimmed.length > 0 &&
             !remainingTrimmed.includes(currentHostId)
           ) {
-            console.warn("[host-maintain] host id missing from remaining players", {
+            logWarn("rooms", "host-maintain missing from remaining players", {
               roomId,
               leavingUid: userId,
               currentHostId,
@@ -402,7 +403,7 @@ export async function leaveRoomServer(
     } catch {}
 
     if (!needsHost) {
-      console.info("[host-leave] fallback-no-host-needed", { roomId, leavingUid: userId });
+      logDebug("rooms", "host-leave fallback-no-host-needed", { roomId, leavingUid: userId });
       return;
     }
 
@@ -416,7 +417,7 @@ export async function leaveRoomServer(
         } catch {}
       }
       await db.collection("rooms").doc(roomId).update({ hostId: nextHost });
-      console.info("[host-leave] fallback-assigned", { roomId, leavingUid: userId, nextHost, others });
+      logDebug("rooms", "host-leave fallback-assigned", { roomId, leavingUid: userId, nextHost, others });
       try {
         const nextHostName = await getPlayerName(roomId, nextHost);
         await sendSystemMessage(
@@ -432,7 +433,7 @@ export async function leaveRoomServer(
       roomId,
       "🔄 部屋が空になったため、ゲーム状態をリセットしました"
     );
-    console.info("[host-leave] fallback-reset", { roomId, leavingUid: userId });
+    logDebug("rooms", "host-leave fallback-reset", { roomId, leavingUid: userId });
   } catch (error) {
     logWarn("rooms", "leave-room-server-fallback-failed", error);
   }
