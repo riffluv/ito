@@ -1,202 +1,62 @@
-  ▲ Next.js 14.2.5
-  - Local:        http://localhost:3000
-  - Environments: .env.local, .env
-
- ✓ Starting...
- ✓ Ready in 2.7s
- ○ Compiling /api/rooms/[roomId]/leave ...
- ✓ Compiled /api/rooms/[roomId]/leave in 1747ms (110 modules)
-[DEBUG] Host transfer check: {
-  roomHostId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: 'NrM5iqN8N7ulr3tnazXM'
-}
-[DEBUG] Host transfer check: {
-  roomHostId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: true,
-  roomId: 'NrM5iqN8N7ulr3tnazXM'
-}
-[DEBUG] Host transfer check: {
-  roomHostId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  leavingUserId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  isMatch: false,
-  roomId: 'NrM5iqN8N7ulr3tnazXM'
-}
- POST /api/rooms/NrM5iqN8N7ulr3tnazXM/leave 200 in 4602ms
- POST /api/rooms/NrM5iqN8N7ulr3tnazXM/leave 200 in 6378ms
- ○ Compiling / ...
-[DEBUG] Host transfer check: {
-  roomHostId: undefined,
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'NrM5iqN8N7ulr3tnazXM'
-}
- POST /api/rooms/NrM5iqN8N7ulr3tnazXM/leave 200 in 4809ms
- ✓ Compiled / in 12.6s (3153 modules)
- GET / 200 in 12266ms
- GET / 200 in 10449ms
- GET / 200 in 14639ms
- ○ Compiling /_not-found ...
- ✓ Compiled /rooms/[roomId] in 12.7s (3133 modules)
- ✓ Compiled in 10.3s (2241 modules)
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 23627ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 602ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  isMatch: true,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 343ms
- ○ Compiling /api/rooms/[roomId]/claim-host ...
- ✓ Compiled /api/rooms/[roomId]/claim-host in 669ms (2480 modules)
-[DEBUG] Host transfer check: {
-  roomHostId: undefined,
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 648ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 575ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 2149ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 2810ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 2162ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 2173ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 1275ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/claim-host 200 in 219ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 348ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 271ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 699ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 458ms
- ✓ Compiled in 2.1s (4668 modules)
- ○ Compiling /api/rooms/[roomId]/leave ...
- ✓ Compiled /api/rooms/[roomId]/leave in 924ms (2477 modules)
-[DEBUG] Host transfer check: {
-  roomHostId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  leavingUserId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
-[DEBUG] Host transfer check: {
-  roomHostId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: true,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
-[DEBUG] Host transfer check: {
-  roomHostId: undefined,
-  leavingUserId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  isMatch: false,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 2761ms
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 650ms
-[DEBUG] Host transfer check: {
-  roomHostId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: true,
-  roomId: '9wY3eeWAemOmO4iVoCMN'
-}
- POST /api/rooms/9wY3eeWAemOmO4iVoCMN/leave 200 in 472ms
- GET / 200 in 316ms
- GET / 200 in 24ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  isMatch: true,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 291ms
- GET / 200 in 28ms
-[DEBUG] Host transfer check: {
-  roomHostId: undefined,
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 431ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 285ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 270ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: '4jrGOFSKygYbS8ichOcZEKFhiKE3',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 734ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 279ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 444ms
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
-[DEBUG] Host transfer check: {
-  roomHostId: '66LT5TfKPpYpIrgf6bxaxSXfBlP2',
-  leavingUserId: 'XFXNS0RtbPUCnqt49H4ErSIhF363',
-  isMatch: false,
-  roomId: 'BG5Y7tMNuH0rNjqjkPQg'
-}
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 554ms
- POST /api/rooms/BG5Y7tMNuH0rNjqjkPQg/leave 200 in 565ms
- ○ Compiling /_not-found ...
- ✓ Compiled /_not-found in 1743ms (4709 modules)
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 2023ms
- ✓ Compiled in 2.2s (4668 modules)
+01:19:50.530 Running build in Washington, D.C., USA (East) – iad1
+01:19:50.530 Build machine configuration: 2 cores, 8 GB
+01:19:50.546 Cloning github.com/riffluv/ito (Branch: master, Commit: be5d37d)
+01:19:57.112 Cloning completed: 6.565s
+01:19:57.298 Restored build cache from previous deployment (4uZehu4DuqPdyVs317vQBevJNS3q)
+01:19:58.483 Running "vercel build"
+01:19:58.860 Vercel CLI 48.1.1
+01:19:59.266 Installing dependencies...
+01:20:02.878 
+01:20:02.879 > online-ito@0.1.0 prepare
+01:20:02.879 > npm run chakra:typegen
+01:20:02.880 
+01:20:03.016 
+01:20:03.017 > online-ito@0.1.0 chakra:typegen
+01:20:03.017 > npx @chakra-ui/cli typegen ./theme/index.ts --outdir types
+01:20:03.018 
+01:20:05.640 [90m┌[39m  Chakra CLI ⚡️
+01:20:06.499 [?25l[90m│[39m
+01:20:06.608 [35m◒[39m  Generating conditions types[999D[J[32m◇[39m  ✅ Generated conditions typings
+01:20:06.609 [?25h[?25l[90m│[39m
+01:20:06.982 [35m◒[39m  Generating recipe types[999D[J[32m◇[39m  ✅ Generated recipe typings
+01:20:06.984 [?25h[?25l[90m│[39m
+01:20:07.085 [35m◒[39m  Generating utility types[999D[J[32m◇[39m  ✅ Generated utility typings
+01:20:07.085 [?25h[?25l[90m│[39m
+01:20:07.204 [35m◒[39m  Generating token types[999D[J[32m◇[39m  ✅ Generated token typings
+01:20:07.205 [?25h[?25l[90m│[39m
+01:20:07.513 [35m◒[39m  Generating system types[999D[J[32m◇[39m  ✅ Generated system types
+01:20:07.519 [?25h[90m│[39m
+01:20:07.520 [90m└[39m  🎉 Done!
+01:20:07.520 
+01:20:07.578 
+01:20:07.579 up to date in 8s
+01:20:07.579 
+01:20:07.580 299 packages are looking for funding
+01:20:07.580   run `npm fund` for details
+01:20:07.611 Detected Next.js version: 14.2.5
+01:20:07.620 Running "npm run build"
+01:20:07.729 
+01:20:07.729 > online-ito@0.1.0 build
+01:20:07.729 > next build
+01:20:07.729 
+01:20:08.395   ▲ Next.js 14.2.5
+01:20:08.396 
+01:20:08.471    Creating an optimized production build ...
+01:20:24.905  ✓ Compiled successfully
+01:20:24.907    Skipping linting
+01:20:24.908    Checking validity of types ...
+01:20:41.062 Failed to compile.
+01:20:41.063 
+01:20:41.063 ./lib/firebase/rooms.ts:112:42
+01:20:41.063 Type error: Argument of type 'CollectionReference<DocumentData, DocumentData>' is not assignable to parameter of type 'DocumentReference<DocumentData, DocumentData>'.
+01:20:41.063   Types of property 'type' are incompatible.
+01:20:41.063     Type '"collection"' is not assignable to type '"document"'.
+01:20:41.063 
+01:20:41.063 [0m [90m 110 |[39m[0m
+01:20:41.063 [0m [90m 111 |[39m         [36mconst[39m playersRef [33m=[39m collection(db[33m![39m[33m,[39m [32m"rooms"[39m[33m,[39m roomId[33m,[39m [32m"players"[39m)[33m;[39m[0m
+01:20:41.064 [0m[31m[1m>[22m[39m[90m 112 |[39m         [36mconst[39m playersSnap [33m=[39m [36mawait[39m tx[33m.[39m[36mget[39m(playersRef)[33m;[39m[0m
+01:20:41.064 [0m [90m     |[39m                                          [31m[1m^[22m[39m[0m
+01:20:41.064 [0m [90m 113 |[39m         [36mconst[39m playerDocs [33m=[39m playersSnap[33m.[39mdocs[33m;[39m[0m
+01:20:41.064 [0m [90m 114 |[39m         remainingCount [33m=[39m playerDocs[33m.[39mlength[33m;[39m[0m
+01:20:41.064 [0m [90m 115 |[39m[0m
+01:20:41.192 Error: Command "npm run build" exited with 1
