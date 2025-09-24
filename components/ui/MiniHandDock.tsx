@@ -43,6 +43,7 @@ interface MiniHandDockProps {
   isHost?: boolean;
   roomStatus?: string;
   defaultTopicType?: string;
+  topicBox?: string | null;
   allowContinueAfterFail?: boolean;
   roomName?: string;
   onOpenSettings?: () => void;
@@ -67,6 +68,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     roomStatus,
     defaultTopicType = "通常版",
     allowContinueAfterFail,
+    topicBox = null,
     onOpenSettings,
     onLeaveRoom,
     pop = false,
@@ -145,6 +147,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
+  const isCustomModeSelectable = topicBox === "カスタム" || (!topicBox && effectiveDefaultTopicType === "カスタム");
   const trimmedText = text.trim();
   const hasText = trimmedText.length > 0;
   const clueEditable = roomStatus === "waiting" || roomStatus === "clue";
@@ -286,6 +289,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     if (!v) return;
     await topicControls.setCustomTopic(roomId, v);
     setCustomOpen(false);
+
+    if (!isHost) {
+      setCustomStartPending(false);
+      notify({
+        title: "お題を更新しました",
+        description: "ホストが開始するとゲームがスタートします",
+        type: "success",
+        duration: 2000,
+      });
+      return;
+    }
+
     try {
       // カスタムお題確定後、まだゲームが始まっていなければ開始→配布まで自動進行
       if ((roomStatus === "waiting" || customStartPending) && isSortSubmit(actualResolveMode)) {
@@ -866,7 +881,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </>
           )}
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
-          {(!isHost && defaultTopicType === "カスタム" && (roomStatus === "waiting" || roomStatus === "clue")) && (
+          {(!isHost && isCustomModeSelectable && (roomStatus === "waiting" || roomStatus === "clue")) && (
             <Tooltip content="カスタムお題を設定" showArrow openDelay={300}>
               <IconButton
                 aria-label="カスタムお題"

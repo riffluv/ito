@@ -924,6 +924,7 @@ export default function RoomPage() {
       isHost={isHost}
       roomStatus={room.status}
       defaultTopicType={room.options?.defaultTopicType || "通常版"}
+      topicBox={room.topicBox ?? null}
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
       // ヘッダー機能統合
       roomName={displayRoomName}
