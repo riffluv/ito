@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase/client";
+﻿import { db } from "@/lib/firebase/client";
 import { roomConverter } from "@/lib/firebase/converters";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { logError } from "@/lib/utils/log";
@@ -26,6 +26,16 @@ interface RoomWithHost {
 }
 
 
+export const ROOMS_PER_PAGE = 6;
+const PREFETCH_PAGE_PAD = 1;
+const MAX_RECENT_FETCH = 48;
+
+type UseOptimizedRoomsOptions = {
+  enabled: boolean;
+  page?: number;
+  searchQuery?: string;
+};
+
 function createRoomsSignature(rooms: RoomWithHost[]): string {
   if (!rooms || rooms.length === 0) return '[]';
   return rooms
@@ -45,12 +55,15 @@ function createRoomsSignature(rooms: RoomWithHost[]): string {
  * 🔧 Firebase読み取り最適化版 - useRooms
  * onSnapshotの常時監視を削減し、アクティブルームのみ取得
  */
-export function useOptimizedRooms(enabled: boolean) {
+export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimizedRoomsOptions) {
   const [rooms, setRooms] = useState<RoomWithHost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const lastFetchRef = useRef(0);
   const roomsSignatureRef = useRef<string>(createRoomsSignature([]));
+  const pageIndex = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0;
+  const normalizedQuery = (searchQuery ?? "").trim().toLowerCase();
+
 
   const setLoadingIfNeeded = useCallback((next: boolean) => {
     setLoading((prev) => (prev === next ? prev : next));
@@ -64,6 +77,17 @@ export function useOptimizedRooms(enabled: boolean) {
     setError((prev) => (prev ? null : prev));
 
     try {
+      const prefetchPages = Math.max(pageIndex + 1 + PREFETCH_PAGE_PAD, 1);
+      let recentLimit = Math.min(
+        Math.max(ROOMS_PER_PAGE, ROOMS_PER_PAGE * prefetchPages),
+        MAX_RECENT_FETCH
+      );
+      if (normalizedQuery) {
+        recentLimit = Math.min(
+          MAX_RECENT_FETCH,
+          Math.max(recentLimit, ROOMS_PER_PAGE * 6)
+        );
+      }
       // 🚨 緊急読み取り削減: 直近3分のみに制限
       const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
       const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
@@ -71,7 +95,7 @@ export function useOptimizedRooms(enabled: boolean) {
         roomsCol,
         where("lastActiveAt", ">=", Timestamp.fromDate(threeMinAgo)),
         orderBy("lastActiveAt", "desc"),
-        limit(5) // 🚨 20 → 5に削減
+        limit(recentLimit)
       );
       const INPROGRESS_LIMIT = Number(
         (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
@@ -82,7 +106,7 @@ export function useOptimizedRooms(enabled: boolean) {
       const qInprog = query(
         roomsCol,
         where("status", "in", ["clue", "reveal"] as any),
-        limit(inprogLimit)
+        limit(Math.max(inprogLimit, ROOMS_PER_PAGE))
       );
 
       const [snapRecent, snapInprog] = await Promise.all([getDocs(qRecent), getDocs(qInprog)]);
@@ -130,7 +154,7 @@ export function useOptimizedRooms(enabled: boolean) {
     } finally {
       setLoadingIfNeeded(false);
     }
-  }, [enabled, db, setLoadingIfNeeded]);
+  }, [enabled, db, setLoadingIfNeeded, pageIndex, normalizedQuery]);
 
   useEffect(() => {
     if (!enabled || !db) {
@@ -170,5 +194,14 @@ export function useOptimizedRooms(enabled: boolean) {
     fetchActiveRooms();
   }, [fetchActiveRooms]);
 
-  return { rooms, loading, error, refresh };
+  return { rooms, loading, error, refresh, pageSize: ROOMS_PER_PAGE };
 }
+
+
+
+
+
+
+
+
+

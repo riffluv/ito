@@ -1,17 +1,17 @@
-"use client";
+﻿"use client";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
-import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
+import { AVATAR_LIST } from "@/lib/utils";
 import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp, DocumentReference } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { logError } from "@/lib/utils/log";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
@@ -30,8 +30,35 @@ export function CreateRoomModal({
   const transition = useTransition();
   const [name, setName] = useState("");
   const [displayMode, setDisplayMode] = useState<"full" | "minimal">("full");
+  const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setName("");
+      setDisplayMode("full");
+      setCreatedRoomId(null);
+      setInviteCopied(false);
+      setSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const isSuccess = Boolean(createdRoomId);
+
+  const inviteUrl = useMemo(() => {
+    if (!createdRoomId) return "";
+    if (typeof window === "undefined") {
+      return `/r/${createdRoomId}`;
+    }
+    return `${window.location.origin}/r/${createdRoomId}`;
+  }, [createdRoomId]);
+
+  const invitePath = createdRoomId ? `/r/${createdRoomId}` : "";
 
   const handleCreate = async () => {
+    if (submitting) return;
+
     if (!firebaseEnabled) {
       notify({ title: "Firebaseの設定が見つかりません", type: "error" });
       return;
@@ -68,11 +95,9 @@ export function CreateRoomModal({
       return;
     }
 
-    try {
-      // Firebase操作を実行してルームを作成
-      let createdRoomId: string;
+    setSubmitting(true);
 
-      // Firebase操作
+    try {
       const options: RoomOptions = {
         allowContinueAfterFail: true,
         resolveMode: "sort-submit",
@@ -113,7 +138,7 @@ export function CreateRoomModal({
         }
       }
       if (!roomRef) throw new Error("failed to create room");
-      // ホストのアバターもランダム選択
+
       const randomIndex = Math.floor(Math.random() * AVATAR_LIST.length);
       const pdoc: PlayerDoc = {
         name: sanitizedDisplayName,
@@ -126,36 +151,10 @@ export function CreateRoomModal({
         lastSeen: serverTimestamp(),
       };
       await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
-      createdRoomId = roomRef.id;
 
-      // モーダルを閉じてからシームレス遷移を開始
-      onClose();
-
-      await transition.navigateWithTransition(
-        `/rooms/${createdRoomId}`,
-        {
-          direction: "fade",
-          duration: 1.2,
-          showLoading: true,
-          loadingSteps: [
-            { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-            { id: "room", message: "ルームを さくせいしています...", duration: 2000 },
-            { id: "player", message: "プレイヤーじょうほうを せっていしています...", duration: 1800 },
-            { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
-          ],
-        },
-        async () => {
-          // プリフェッチなどの最終処理
-          try {
-            (window as any).requestIdleCallback?.(() => {
-              try {
-                (router as any)?.prefetch?.(`/rooms/${createdRoomId}`);
-              } catch {}
-            });
-          } catch {}
-          onCreated?.(createdRoomId);
-        }
-      );
+      setCreatedRoomId(roomRef.id);
+      setInviteCopied(false);
+      onCreated?.(roomRef.id);
     } catch (e: any) {
       logError("rooms", "create-room", e);
       notify({
@@ -163,10 +162,79 @@ export function CreateRoomModal({
         description: e?.message,
         type: "error",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const handleCopyInvite = useCallback(async () => {
+    if (!inviteUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = inviteUrl;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setInviteCopied(true);
+      notify({ title: "招待URLをコピーしました", type: "success" });
+    } catch (error) {
+      setInviteCopied(false);
+      notify({ title: "コピーできませんでした", type: "error" });
+    }
+  }, [inviteUrl]);
 
+  const handleEnterRoom = useCallback(async () => {
+    if (!createdRoomId) return;
+    const roomId = createdRoomId;
+    const targetUrl = `/rooms/${roomId}`;
+    try {
+      await transition.navigateWithTransition(
+        targetUrl,
+        {
+          direction: "fade",
+          duration: 1.2,
+          showLoading: true,
+          loadingSteps: [
+            { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+            { id: "room", message: "ルームに じゅんびしています...", duration: 2000 },
+            { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
+            { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+          ],
+        },
+        async () => {
+          try {
+            (window as any).requestIdleCallback?.(() => {
+              try {
+                router.prefetch?.(targetUrl);
+              } catch {}
+            });
+          } catch {}
+        }
+      );
+    } catch (error) {
+      console.error("Room enter transition failed:", error);
+      router.push(targetUrl);
+    } finally {
+      onClose();
+    }
+  }, [createdRoomId, onClose, router, transition]);
+
+  const handleReset = useCallback(() => {
+    setCreatedRoomId(null);
+    setInviteCopied(false);
+    setName("");
+    setDisplayMode("full");
+  }, []);
+
+  const canSubmit = name.trim().length > 0 && !submitting;
   return (
     <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
       {/* Sophisticated backdrop */}
@@ -240,7 +308,7 @@ export function CreateRoomModal({
                   // NameDialogと同じ通常フォント（monospace削除）
                 }}
               >
-                ルームを作成
+                {isSuccess ? "ルームができました！" : "ルームを作成"}
               </Dialog.Title>
               <Text
                 fontSize="sm"
@@ -250,179 +318,286 @@ export function CreateRoomModal({
                 fontFamily="monospace"
                 textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
               >
-                あたらしい ぼうけんの はじまり
+                {isSuccess ? "なかまを さそって いざ ぼうけんへ" : "あたらしい ぼうけんの はじまり"}
               </Text>
             </VStack>
           </Box>
 
           {/* Form Content - ドラクエ風 */}
-          <Box px={6} py={6} position="relative" zIndex={1}>
-            <VStack gap={4} align="stretch">
-              {!user && (
+          {isSuccess ? (
+            <Box px={6} py={6} position="relative" zIndex={1}>
+              <VStack gap={5} align="stretch">
                 <Box
                   p={4}
-                  bg="richBlack.700" // 少し明るいリッチブラック
-                  border="2px solid white"
-                  borderRadius={0}
+                  border="borders.retrogame"
+                  borderColor="whiteAlpha.80"
+                  bg="bgSubtle"
+                  boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                 >
                   <VStack align="start" gap={2}>
                     <Text
-                      fontSize="sm"
+                      fontSize="lg"
+                      fontWeight={700}
                       color="white"
                       fontFamily="monospace"
-                      fontWeight="bold"
-                      textShadow="1px 1px 0px #000"
+                      textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
                     >
-                      ▼ おしらせ
+                      ✅ ルームができました！
                     </Text>
                     <Text
                       fontSize="sm"
-                      color="white"
+                      color="whiteAlpha.80"
                       fontFamily="monospace"
-                      lineHeight={1.6}
-                      textShadow="1px 1px 0px #000"
+                      textShadow="1px 1px 0 rgba(0,0,0,0.6)"
                     >
-                      なまえがみとうろく です。　先に とうろく
-                      をおねがいします。
+                      招待URLを なかまと 共有して しゅっぱつしましょう。
                     </Text>
                   </VStack>
                 </Box>
-              )}
 
-              <Field.Root>
-                <Field.Label
-                  css={{
-                    fontSize: "1rem",
-                    fontWeight: "bold",
-                    color: "white",
-                    marginBottom: "8px",
-                    fontFamily: "monospace",
-                    textShadow: "1px 1px 0px #000",
-                  }}
-                >
-                  ▼ ルームの なまえ
-                </Field.Label>
-                <Input
-                  placeholder="れい: 友達とあそぶ"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={20}
-                  css={{
-                    height: "48px",
-                    background: "white",
-                    border: "borders.retrogameInput",
-                    borderRadius: 0,
-                    fontSize: "1rem",
-                    padding: "0 16px",
-                    color: "black",
-                    fontWeight: "normal",
-                    fontFamily: "monospace",
-                    transition: "none",
-                    _placeholder: {
-                      color: "#666",
-                      fontFamily: "monospace",
-                    },
-                    _focus: {
-                      borderColor: "black",
-                      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                      background: "#f8f8f8",
-                      outline: "none",
-                    },
-                    _hover: {
-                      background: "#f8f8f8",
-                    },
-                  }}
-                />
-              </Field.Root>
+                <VStack align="stretch" gap={3}>
+                  <Text
+                    fontSize="sm"
+                    color="white"
+                    fontFamily="monospace"
+                    textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                  >
+                    招待URL
+                  </Text>
+                  <Box
+                    border="borders.retrogameThin"
+                    borderColor="whiteAlpha.70"
+                    bg="var(--colors-richBlack-700)"
+                    p={3}
+                    display="flex"
+                    flexDirection={{ base: "column", md: "row" }}
+                    gap={3}
+                    alignItems={{ base: "stretch", md: "center" }}
+                  >
+                    <Text
+                      flex={1}
+                      fontSize="sm"
+                      color="white"
+                      fontFamily="monospace"
+                      wordBreak="break-all"
+                    >
+                      {inviteUrl}
+                    </Text>
+                    <button
+                      type="button"
+                      onClick={handleCopyInvite}
+                      style={{
+                        minWidth: "130px",
+                        borderRadius: 0,
+                        border: "2px solid rgba(255,255,255,0.85)",
+                        background: inviteCopied ? "white" : "transparent",
+                        color: inviteCopied ? "var(--colors-richBlack-800)" : "white",
+                        fontFamily: "monospace",
+                        fontWeight: "bold",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        textShadow: inviteCopied ? "none" : "1px 1px 0 rgba(0,0,0,0.6)",
+                        transition: "all 0.12s ease",
+                      }}
+                      onMouseEnter={(event) => {
+                        event.currentTarget.style.background = "white";
+                        event.currentTarget.style.color = "var(--colors-richBlack-800)";
+                      }}
+                      onMouseLeave={(event) => {
+                        if (!inviteCopied) {
+                          event.currentTarget.style.background = "transparent";
+                          event.currentTarget.style.color = "white";
+                        }
+                      }}
+                    >
+                      {inviteCopied ? "コピー済み！" : "📋 コピー"}
+                    </button>
+                  </Box>
+                  <Text
+                    fontSize="xs"
+                    color="whiteAlpha.70"
+                    fontFamily="monospace"
+                  >
+                    ショートリンク: <strong>{invitePath}</strong>
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    color="whiteAlpha.60"
+                    fontFamily="monospace"
+                  >
+                    このリンクを ひらくと /rooms/{createdRoomId} に りだいれくと されます。
+                  </Text>
+                </VStack>
+              </VStack>
+            </Box>
+          ) : (
+            <Box px={6} py={6} position="relative" zIndex={1}>
+              <VStack gap={4} align="stretch">
+                {!user && (
+                  <Box
+                    p={4}
+                    bg="richBlack.700"
+                    border="2px solid white"
+                    borderRadius={0}
+                  >
+                    <VStack align="start" gap={2}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textShadow="1px 1px 0px #000"
+                      >
+                        ▼ おしらせ
+                      </Text>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        lineHeight={1.6}
+                        textShadow="1px 1px 0px #000"
+                      >
+                        なまえが みとうろく です。 先に とうろく を おねがいします。
+                      </Text>
+                    </VStack>
+                  </Box>
+                )}
 
-              <Field.Root>
-                <Field.Label
-                  css={{
-                    fontSize: "1rem",
-                    fontWeight: "bold",
-                    color: "white",
-                    marginBottom: "8px",
-                    fontFamily: "monospace",
-                    textShadow: "1px 1px 0px #000",
-                  }}
-                >
-                  ▼ カード表示モード
-                </Field.Label>
-                <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
-                  <button
-                    type="button"
-                    onClick={() => setDisplayMode("full")}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      height: "48px",
-                      borderRadius: 0,
+                <Field.Root>
+                  <Field.Label
+                    css={{
+                      fontSize: "1rem",
                       fontWeight: "bold",
-                      fontSize: "0.9rem",
+                      color: "white",
+                      marginBottom: "8px",
                       fontFamily: "monospace",
-                      border: "2px solid white",
-                      background: displayMode === "full" ? "white" : "transparent",
-                      color: displayMode === "full" ? "black" : "white",
-                      cursor: "pointer",
-                      textShadow: displayMode === "full" ? "none" : "1px 1px 0px #000",
-                      transition: "all 0.1s ease",
-                      whiteSpace: "nowrap",
-                      overflow: "visible",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "0 8px",
+                      textShadow: "1px 1px 0px #000",
                     }}
-                    role="radio"
-                    aria-checked={displayMode === "full"}
-                    tabIndex={displayMode === "full" ? 0 : -1}
                   >
-                    🤝 みんな
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDisplayMode("minimal")}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
+                    ▼ ルームの なまえ
+                  </Field.Label>
+                  <Input
+                    placeholder="れい: 友達とあそぶ"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={20}
+                    css={{
                       height: "48px",
+                      background: "white",
+                      border: "borders.retrogameInput",
                       borderRadius: 0,
-                      fontWeight: "bold",
-                      fontSize: "0.9rem",
+                      fontSize: "1rem",
+                      padding: "0 16px",
+                      color: "black",
+                      fontWeight: "normal",
                       fontFamily: "monospace",
-                      border: "2px solid white",
-                      background: displayMode === "minimal" ? "white" : "transparent",
-                      color: displayMode === "minimal" ? "black" : "white",
-                      cursor: "pointer",
-                      textShadow: displayMode === "minimal" ? "none" : "1px 1px 0px #000",
-                      transition: "all 0.1s ease",
-                      whiteSpace: "nowrap",
-                      overflow: "visible",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "0 8px",
+                      transition: "none",
+                      _placeholder: {
+                        color: "#666",
+                        fontFamily: "monospace",
+                      },
+                      _focus: {
+                        borderColor: "black",
+                        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                        background: "#f8f8f8",
+                        outline: "none",
+                      },
+                      _hover: {
+                        background: "#f8f8f8",
+                      },
                     }}
-                    role="radio"
-                    aria-checked={displayMode === "minimal"}
-                    tabIndex={displayMode === "minimal" ? 0 : -1}
+                  />
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label
+                    css={{
+                      fontSize: "1rem",
+                      fontWeight: "bold",
+                      color: "white",
+                      marginBottom: "8px",
+                      fontFamily: "monospace",
+                      textShadow: "1px 1px 0px #000",
+                    }}
                   >
-                    👤 自分
-                  </button>
-                </HStack>
-                <Text
-                  fontSize="xs"
-                  color="white"
-                  mt={2}
-                  fontFamily="monospace"
-                  opacity={0.7}
-                  textShadow="1px 1px 0px #000"
-                >
-                  みんな: 全員のカード表示 / 自分: 自分のみ表示
-                </Text>
-              </Field.Root>
-            </VStack>
-          </Box>
+                    ▼ カード表示モード
+                  </Field.Label>
+                  <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
+                    <button
+                      type="button"
+                      onClick={() => setDisplayMode("full")}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: "48px",
+                        borderRadius: 0,
+                        fontWeight: "bold",
+                        fontSize: "0.9rem",
+                        fontFamily: "monospace",
+                        border: "2px solid white",
+                        background: displayMode === "full" ? "white" : "transparent",
+                        color: displayMode === "full" ? "black" : "white",
+                        cursor: "pointer",
+                        textShadow: displayMode === "full" ? "none" : "1px 1px 0px #000",
+                        transition: "all 0.1s ease",
+                        whiteSpace: "nowrap",
+                        overflow: "visible",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 8px",
+                      }}
+                      role="radio"
+                      aria-checked={displayMode === "full"}
+                      tabIndex={displayMode === "full" ? 0 : -1}
+                    >
+                      🤝 みんな
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDisplayMode("minimal")}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: "48px",
+                        borderRadius: 0,
+                        fontWeight: "bold",
+                        fontSize: "0.9rem",
+                        fontFamily: "monospace",
+                        border: "2px solid white",
+                        background: displayMode === "minimal" ? "white" : "transparent",
+                        color: displayMode === "minimal" ? "black" : "white",
+                        cursor: "pointer",
+                        textShadow: displayMode === "minimal" ? "none" : "1px 1px 0px #000",
+                        transition: "all 0.1s ease",
+                        whiteSpace: "nowrap",
+                        overflow: "visible",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 8px",
+                      }}
+                      role="radio"
+                      aria-checked={displayMode === "minimal"}
+                      tabIndex={displayMode === "minimal" ? 0 : -1}
+                    >
+                      👤 自分
+                    </button>
+                  </HStack>
+                  <Text
+                    fontSize="xs"
+                    color="white"
+                    mt={2}
+                    fontFamily="monospace"
+                    opacity={0.7}
+                    textShadow="1px 1px 0px #000"
+                  >
+                    みんな: 全員のカード表示 / 自分: 自分のみ表示
+                  </Text>
+                </Field.Root>
+              </VStack>
+            </Box>
+          )}
 
           {/* Footer - ドラクエ風 */}
           <Box
@@ -434,77 +609,172 @@ export function CreateRoomModal({
               borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
-            <HStack justify="space-between" gap={3} mt={4}>
-              <button
-                onClick={onClose}
-                style={{
-                  minWidth: "120px",
-                  height: "40px",
-                  borderRadius: 0,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  fontFamily: "monospace",
-                  border: "borders.retrogameThin",
-                  background: "transparent",
-                  color: "white",
-                  cursor: "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
-                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "white";
-                  e.currentTarget.style.color = "var(--colors-richBlack-800)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "white";
-                }}
-              >
-                やめる
-              </button>
-
-              <button
-                onClick={handleCreate}
-                disabled={!name.trim()}
-                style={{
-                  minWidth: "140px",
-                  height: "40px",
-                  borderRadius: 0,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  fontFamily: "monospace",
-                  border: "borders.retrogameThin",
-                  background:
-                    !name.trim()
-                      ? "#666"
-                      : "var(--colors-richBlack-600)",
-                  color: "white",
-                  cursor:
-                    !name.trim() ? "not-allowed" : "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
-                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  opacity: !name.trim() ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (name.trim()) {
+            {isSuccess ? (
+              <HStack justify="space-between" gap={3} mt={4}>
+                <button
+                  onClick={handleReset}
+                  style={{
+                    minWidth: "140px",
+                    height: "40px",
+                    borderRadius: 0,
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    fontFamily: "monospace",
+                    border: "borders.retrogameThin",
+                    background: "transparent",
+                    color: "white",
+                    cursor: "pointer",
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                  }}
+                  onMouseEnter={(e) => {
                     e.currentTarget.style.background = "white";
                     e.currentTarget.style.color = "var(--colors-richBlack-800)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (name.trim()) {
-                    e.currentTarget.style.background =
-                      "var(--colors-richBlack-600)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
-                  }
-                }}
-              >
-                作成
-              </button>
-            </HStack>
+                  }}
+                >
+                  べつのルームを つくる
+                </button>
+                <HStack gap={3}>
+                  <button
+                    onClick={onClose}
+                    style={{
+                      minWidth: "120px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: "transparent",
+                      color: "white",
+                      cursor: "pointer",
+                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "white";
+                    }}
+                  >
+                    とじる
+                  </button>
+                  <button
+                    onClick={handleEnterRoom}
+                    style={{
+                      minWidth: "160px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: "var(--colors-richBlack-600)",
+                      color: "white",
+                      cursor: "pointer",
+                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                  >
+                    ルームへ すすむ
+                  </button>
+                </HStack>
+              </HStack>
+            ) : (
+              <HStack justify="space-between" gap={3} mt={4}>
+                <button
+                  onClick={onClose}
+                  style={{
+                    minWidth: "120px",
+                    height: "40px",
+                    borderRadius: 0,
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    fontFamily: "monospace",
+                    border: "borders.retrogameThin",
+                    background: "transparent",
+                    color: "white",
+                    cursor: "pointer",
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "white";
+                  }}
+                >
+                  やめる
+                </button>
+
+                <button
+                  onClick={handleCreate}
+                  disabled={!canSubmit}
+                  style={{
+                    minWidth: "140px",
+                    height: "40px",
+                    borderRadius: 0,
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    fontFamily: "monospace",
+                    border: "borders.retrogameThin",
+                    background: !canSubmit
+                      ? "#666"
+                      : "var(--colors-richBlack-600)",
+                    color: "white",
+                    cursor: !canSubmit ? "not-allowed" : "pointer",
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    opacity: !canSubmit ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canSubmit) {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canSubmit) {
+                      e.currentTarget.style.background = "var(--colors-richBlack-600)";
+                      e.currentTarget.style.color = "white";
+                    }
+                  }}
+                >
+                  {submitting ? "さくせい中..." : "作成"}
+                </button>
+              </HStack>
+            )}
           </Box>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
   );
 }
+
+
+
+
+
+
+
+
+
+

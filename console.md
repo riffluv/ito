@@ -1,128 +1,579 @@
- [VSC] Content script initialized
- [useLobbyCounts] presence-config Object
- ルーム作成: vAV1Treew7DmiyhBrjDR
- [presence] connected Object
- [presence] update Object
- [presence] ondisconnect-armed Object
- [presence] update Object
- [three-background-pixi] init-start
- [three-background-pixi] canvas-mounted
- [three-background-pixi] animation-started
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
- [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-global-error-2f9ca8257b4e3e5b.js:1 [presence] detach Object
-global-error-2f9ca8257b4e3e5b.js:1 [presence] detach Object
-global-error-2f9ca8257b4e3e5b.js:1 [three-background-pixi] cleanup-complete
-global-error-2f9ca8257b4e3e5b.js:1 [presence] detach-remove Object
-global-error-2f9ca8257b4e3e5b.js:1 [presence] detach-remove Object
-global-error-2f9ca8257b4e3e5b.js:1 [useLobbyCounts] presence-config Object
-global-error-2f9ca8257b4e3e5b.js:1 [presence] connected Object
-global-error-2f9ca8257b4e3e5b.js:1 [three-background-pixi] init-start
-global-error-2f9ca8257b4e3e5b.js:1 [three-background-pixi] canvas-mounted
-global-error-2f9ca8257b4e3e5b.js:1 [three-background-pixi] animation-started
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-global-error-2f9ca8257b4e3e5b.js:1 [presence] ondisconnect-armed Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=9r-ts8QStbIYFRDi9cUIOWrdWN0E6FAFSQ9yGSM4i6E&SID=5ZTtth4x_Lx1UBqHctiPNw&RID=22847&TYPE=terminate&zx=jvzy1va0m8wo:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=5T7J7VkSK_YU0g8ekQBn7xAolpTyqJBWJqPo2YneSiw&SID=iZTPUp1sCLh6COdfmBRLQQ&RID=28865&TYPE=terminate&zx=xjcf4q5zvvxy:1  Failed to load resource: the server responded with a status of 400 ()
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=lp_ZXfyZ5cNjKEF3yQx_Qh26JW2piryrtpgTFmsB0lc&SID=bNjRO4vuyaoX7Zd0uVu5sg&RID=53428&TYPE=terminate&zx=5ng4vi4ulocc:1  Failed to load resource: the server responded with a status of 400 ()
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
-page-9396f406d0b4ddbe.js:1 [presence] update Object
+content.js:85 [VSC] Content script initialized
+main-app.js?v=1758798009542:1825 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`MainMenu`). To locate the bad setState() call inside `MainMenu`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at MainMenu (webpack-internal:///(app-pages-browser)/./app/page.tsx:97:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
+printWarning @ react-dom.development.js:94
+error @ react-dom.development.js:68
+warnAboutRenderPhaseUpdatesInDEV @ react-dom.development.js:26990
+scheduleUpdateOnFiber @ react-dom.development.js:24395
+dispatchReducerAction @ react-dom.development.js:13001
+eval @ hot-reloader-client.js:361
+eval @ use-error-handler.js:62
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+page.tsx:318 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+callCallback @ react-dom.development.js:20565
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+performConcurrentWorkOnRoot @ react-dom.development.js:24504
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+page.tsx:318 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+callCallback @ react-dom.development.js:20565
+invokeGuardedCallbackImpl @ react-dom.development.js:20614
+invokeGuardedCallback @ react-dom.development.js:20689
+beginWork @ react-dom.development.js:26949
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+redirect-boundary.js:57 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+not-found-boundary.js:37 Uncaught ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+MainMenu @ page.tsx:318
+renderWithHooks @ react-dom.development.js:11121
+mountIndeterminateComponent @ react-dom.development.js:16869
+beginWork$1 @ react-dom.development.js:18458
+beginWork @ react-dom.development.js:26927
+performUnitOfWork @ react-dom.development.js:25748
+workLoopSync @ react-dom.development.js:25464
+renderRootSync @ react-dom.development.js:25419
+recoverFromConcurrentError @ react-dom.development.js:24597
+performConcurrentWorkOnRoot @ react-dom.development.js:24542
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> component:
+
+    at MainMenu (webpack-internal:///(app-pages-browser)/./app/page.tsx:97:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
+window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
+logCapturedError @ react-dom.development.js:15295
+update.callback @ react-dom.development.js:15344
+callCallback @ react-dom.development.js:8696
+commitCallbacks @ react-dom.development.js:8743
+commitClassCallbacks @ react-dom.development.js:21323
+commitLayoutEffectOnFiber @ react-dom.development.js:21425
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21488
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21488
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21552
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21518
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21488
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21488
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21418
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21407
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21577
+recursivelyTraverseLayoutEffects @ react-dom.development.js:22926
+commitLayoutEffectOnFiber @ react-dom.development.js:21437
+commitLayoutEffects @ react-dom.development.js:22912
+commitRootImpl @ react-dom.development.js:26226
+commitRoot @ react-dom.development.js:26077
+commitRootWhenReady @ react-dom.development.js:24749
+finishConcurrentRender @ react-dom.development.js:24714
+performConcurrentWorkOnRoot @ react-dom.development.js:24559
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+log.ts:50 [app] route-error ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
+emit @ log.ts:50
+logError @ log.ts:65
+eval @ error.tsx:16
+commitHookEffectListMount @ react-dom.development.js:21102
+commitHookPassiveMountEffects @ react-dom.development.js:23154
+reconnectPassiveEffects @ react-dom.development.js:23406
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23485
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+reconnectPassiveEffects @ react-dom.development.js:23404
+recursivelyTraverseReconnectPassiveEffects @ react-dom.development.js:23386
+commitPassiveMountOnFiber @ react-dom.development.js:23341
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23256
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23370
+recursivelyTraversePassiveMountEffects @ react-dom.development.js:23237
+commitPassiveMountOnFiber @ react-dom.development.js:23267
+commitPassiveMountEffects @ react-dom.development.js:23225
+flushPassiveEffectsImpl @ react-dom.development.js:26497
+flushPassiveEffects @ react-dom.development.js:26438
+performSyncWorkOnRoot @ react-dom.development.js:24870
+flushSyncWorkAcrossRoots_impl @ react-dom.development.js:7758
+flushSyncWorkOnAllRoots @ react-dom.development.js:7718
+commitRootImpl @ react-dom.development.js:26369
+commitRoot @ react-dom.development.js:26077
+commitRootWhenReady @ react-dom.development.js:24749
+finishConcurrentRender @ react-dom.development.js:24714
+performConcurrentWorkOnRoot @ react-dom.development.js:24559
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+log.ts:50 [app] route-error ReferenceError: roomsPerPage is not defined
+    at MainMenu (page.tsx:318:20)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+window.console.error @ app-index.js:33
+console.error @ hydration-error-info.js:63
+emit @ log.ts:50
+logError @ log.ts:65
+eval @ error.tsx:16
+commitHookEffectListMount @ react-dom.development.js:21102
+invokePassiveEffectMountInDEV @ react-dom.development.js:23980
+invokeEffectsInDev @ react-dom.development.js:26852
+legacyCommitDoubleInvokeEffectsInDEV @ react-dom.development.js:26835
+commitDoubleInvokeEffectsInDEV @ react-dom.development.js:26816
+flushPassiveEffectsImpl @ react-dom.development.js:26514
+flushPassiveEffects @ react-dom.development.js:26438
+performSyncWorkOnRoot @ react-dom.development.js:24870
+flushSyncWorkAcrossRoots_impl @ react-dom.development.js:7758
+flushSyncWorkOnAllRoots @ react-dom.development.js:7718
+commitRootImpl @ react-dom.development.js:26369
+commitRoot @ react-dom.development.js:26077
+commitRootWhenReady @ react-dom.development.js:24749
+finishConcurrentRender @ react-dom.development.js:24714
+performConcurrentWorkOnRoot @ react-dom.development.js:24559
+workLoop @ scheduler.development.js:256
+flushWork @ scheduler.development.js:225
+performWorkUntilDeadline @ scheduler.development.js:534
+scheduler.development.js:519 [Violation] 'message' handler took 212ms
