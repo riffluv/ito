@@ -120,7 +120,7 @@ export function RoomPasswordPrompt({
                     background: "white",
                     borderRadius: 0,
                     fontFamily: "monospace",
-                    color: "var(--colors-richBlack-900)",
+                    color: "richBlack.900",
                     letterSpacing: "0.08em",
                     fontWeight: 600,
                   }}
