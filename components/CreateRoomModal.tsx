@@ -105,8 +105,8 @@ export function CreateRoomModal({
         if (error instanceof FirebaseError && error.code === "permission-denied") {
           console.warn("[rooms] create-room without creator fields (fallback)", error);
           const fallbackPayload = { ...baseRoomData };
-          delete fallbackPayload.creatorId;
-          delete fallbackPayload.creatorName;
+          fallbackPayload.creatorId = undefined;
+          fallbackPayload.creatorName = undefined;
           roomRef = await addDoc(collection(db!, "rooms"), fallbackPayload);
         } else {
           throw error;
