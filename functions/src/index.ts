@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions/v1';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { leaveRoomServer } from '@/lib/server/roomActions';
 
@@ -141,7 +141,13 @@ export const onPresenceWrite = functions.database
       });
 
       try {
+        console.log('presence-leaveRoomServer-call', {
+          roomId,
+          uid,
+          flags: { wentOffline, removed, markedOffline },
+        });
         await leaveRoomServer(roomId, uid, null);
+        console.log('presence-leaveRoomServer-success', { roomId, uid });
       } catch (err) {
         console.error('presence-leaveRoomServer-failed', { roomId, uid, err });
       }
@@ -401,7 +407,10 @@ export const onPlayerDeleted = functions.firestore
         if (!hostId) {
           const next = await roomRef.collection("players").limit(1).get();
           const nextId = next.empty ? null : next.docs[0].id;
-          if (nextId) await roomRef.update({ hostId: nextId });
+          if (nextId) {
+            console.warn('onPlayerDeleted-host-reassign', { roomId: ctx.params.roomId, nextId });
+            await roomRef.update({ hostId: nextId });
+          }
         }
       }
     } catch {}
