@@ -377,28 +377,28 @@ export function CreateRoomModal({
               <VStack gap={5} align="stretch">
                 <Box
                   p={4}
-                  border="borders.retrogame"
-                  borderColor="whiteAlpha.80"
-                  bg="bgSubtle"
-                  boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                  border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                  borderRadius={0}
+                  bg={UI_TOKENS.COLORS.panelBg}
+                  boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
                 >
                   <VStack align="start" gap={2}>
                     <Text
                       fontSize="lg"
-                      fontWeight={700}
+                      fontWeight="bold"
                       color="white"
                       fontFamily="monospace"
-                      textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
+                      textShadow="1px 1px 0px #000"
                     >
-                      ✅ ルームができました！
+                      ▼ ルームが かんせい しました！
                     </Text>
                     <Text
                       fontSize="sm"
                       color="whiteAlpha.80"
                       fontFamily="monospace"
-                      textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                      textShadow="1px 1px 0px #000"
                     >
-                      招待URLを なかまと 共有して しゅっぱつしましょう。
+                      なかまを さそって ぼうけんに でかけましょう。
                     </Text>
                   </VStack>
                 </Box>
@@ -437,14 +437,14 @@ export function CreateRoomModal({
                       style={{
                         minWidth: "130px",
                         borderRadius: 0,
-                        border: "2px solid rgba(255,255,255,0.85)",
+                        border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
                         background: inviteCopied ? "white" : "transparent",
                         color: inviteCopied ? "var(--colors-richBlack-800)" : "white",
                         fontFamily: "monospace",
                         fontWeight: "bold",
                         padding: "8px 12px",
                         cursor: "pointer",
-                        textShadow: inviteCopied ? "none" : "1px 1px 0 rgba(0,0,0,0.6)",
+                        textShadow: inviteCopied ? "none" : "1px 1px 0px #000",
                         transition: "all 0.12s ease",
                       }}
                       onMouseEnter={(event) => {
@@ -458,22 +458,24 @@ export function CreateRoomModal({
                         }
                       }}
                     >
-                      {inviteCopied ? "コピー済み！" : "📋 コピー"}
+                      {inviteCopied ? "◆ コピーしました" : "◆ コピー"}
                     </button>
                   </Box>
                   <Text
                     fontSize="xs"
                     color="whiteAlpha.70"
                     fontFamily="monospace"
+                    textShadow="1px 1px 0px #000"
                   >
-                    ショートリンク: <strong>{invitePath}</strong>
+                    ▼ ショートリンク: <strong>{invitePath}</strong>
                   </Text>
                   <Text
                     fontSize="xs"
                     color="whiteAlpha.60"
                     fontFamily="monospace"
+                    textShadow="1px 1px 0px #000"
                   >
-                    このリンクを ひらくと /rooms/{createdRoomId} に りだいれくと されます。
+                    このリンクを ひらくと ルームに じどうで いどうします。
                   </Text>
                 </VStack>
               </VStack>
