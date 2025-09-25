@@ -581,7 +581,7 @@ export function CreateRoomModal({
                       onCheckedChange={(details) => setEnablePassword(details.checked)}
                       css={{
                         "& [data-part='control']": {
-                          background: enablePassword ? "var(--colors-green-500)" : "var(--colors-gray-700)",
+                          background: enablePassword ? "#22C55E" : "#6B7280",
                           border: "3px solid rgba(255,255,255,0.9)",
                           borderRadius: 0,
                           boxShadow: "0 4px 0px 0px #000000",
@@ -590,6 +590,7 @@ export function CreateRoomModal({
                           transition: "all 0.2s ease",
                           cursor: "pointer",
                           "&:hover": {
+                            background: enablePassword ? "#16A34A" : "#4B5563",
                             boxShadow: "0 2px 0px 0px #000000",
                             transform: "translateY(2px)",
                           },
