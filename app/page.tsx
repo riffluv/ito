@@ -3,6 +3,8 @@ import { CreateRoomModal } from "@/components/CreateRoomModal";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import { AppButton } from "@/components/ui/AppButton";
+import { Pagination } from "@/components/ui/Pagination";
+import { SearchBar } from "@/components/ui/SearchBar";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
@@ -10,7 +12,7 @@ import { useTransition } from "@/components/ui/TransitionProvider";
 import { handleFirebaseQuotaError } from "@/lib/utils/errorHandling";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
-import { useOptimizedRooms } from "@/lib/hooks/useOptimizedRooms";
+import { useOptimizedRooms, ROOMS_PER_PAGE } from "@/lib/hooks/useOptimizedRooms";
 import {
   Badge,
   Box,
@@ -73,6 +75,9 @@ export default function MainMenu() {
     "create"
   );
   const [lastRoom, setLastRoom] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
 
   useEffect(() => {
     const prefetchRules = () => {
@@ -101,6 +106,15 @@ export default function MainMenu() {
       window.clearTimeout(timeoutId);
     };
   }, [router]);
+
+  useEffect(() => {
+    const handler = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => {
+      window.clearTimeout(handler);
+    };
+  }, [searchInput]);
   // タイトルアニメーション用のref
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -111,7 +125,12 @@ export default function MainMenu() {
     loading: roomsLoading,
     error: roomsError,
     refresh: refreshRooms,
-  } = useOptimizedRooms(!!(firebaseEnabled && user));
+    pageSize: roomsPerPage,
+  } = useOptimizedRooms({
+    enabled: !!(firebaseEnabled && user),
+    page: pageIndex,
+    searchQuery: debouncedSearch,
+  });
 
   useEffect(() => {
     let t: number | undefined;
@@ -264,6 +283,21 @@ export default function MainMenu() {
     });
   }, [rooms, lobbyCounts]);
 
+  const searchFilteredRooms = useMemo(() => {
+    if (!debouncedSearch) return filteredRooms;
+    const query = debouncedSearch.toLowerCase();
+    return filteredRooms.filter((room: any) => {
+      const baseName = (stripMinimalTag(room.name) || "").toString().toLowerCase();
+      const hostName = typeof room.hostName === "string" ? room.hostName.toLowerCase() : "";
+      const creatorName = typeof room.creatorName === "string" ? room.creatorName.toLowerCase() : "";
+      return (
+        baseName.includes(query) ||
+        hostName.includes(query) ||
+        creatorName.includes(query)
+      );
+    });
+  }, [filteredRooms, debouncedSearch]);
+
   // 直感的な並び順: 
   // 1) オンライン人数が多い順（>0 を優先）
   // 2) createdAt の新しい順（新規作成を優先表示）
@@ -271,7 +305,7 @@ export default function MainMenu() {
   const sortedRooms = useMemo(() => {
     const getMs = (v: any) =>
       v?.toMillis ? v.toMillis() : v instanceof Date ? v.getTime() : typeof v === 'number' ? v : 0;
-    const list = [...filteredRooms];
+    const list = [...searchFilteredRooms];
     list.sort((a: any, b: any) => {
       const ca = lobbyCounts[a.id] ?? 0;
       const cb = lobbyCounts[b.id] ?? 0;
@@ -284,7 +318,30 @@ export default function MainMenu() {
       return bActive - aActive;
     });
     return list;
-  }, [filteredRooms, lobbyCounts]);
+  }, [searchFilteredRooms, lobbyCounts]);
+
+  const pageSize = roomsPerPage && roomsPerPage > 0 ? roomsPerPage : ROOMS_PER_PAGE;
+
+  const totalPages = useMemo(() => {
+    if (!pageSize || pageSize <= 0) return 1;
+    return Math.max(1, Math.ceil(sortedRooms.length / pageSize));
+  }, [sortedRooms.length, pageSize]);
+
+  useEffect(() => {
+    if (pageIndex > 0 && pageIndex >= totalPages) {
+      setPageIndex(totalPages - 1);
+    }
+  }, [pageIndex, totalPages]);
+
+  const paginatedRooms = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return sortedRooms.slice(start, start + pageSize);
+  }, [sortedRooms, pageIndex, pageSize]);
+
+  const hasPrevPage = pageIndex > 0;
+  const hasNextPage = pageIndex < totalPages - 1;
+  const activeSearch = debouncedSearch.length > 0;
+  const displaySearchKeyword = activeSearch ? debouncedSearch.slice(0, 40) : "";
 
   const openCreateFlow = () => {
     if (!displayName) {
@@ -597,7 +654,7 @@ export default function MainMenu() {
                         textShadow="1px 1px 0px rgba(0,0,0,0.8)"
                         letterSpacing="0.5px"
                       >
-                        {filteredRooms.length}件
+                        {searchFilteredRooms.length}件
                       </Text>
                     </HStack>
                     <Text
@@ -641,6 +698,21 @@ export default function MainMenu() {
               </HStack>
             </Box>
 
+            <Box mt={6} mb={6}>
+              <SearchBar
+                value={searchInput}
+                onChange={(value) => {
+                  setSearchInput(value);
+                  setPageIndex(0);
+                }}
+                onClear={() => {
+                  setSearchInput("");
+                  setPageIndex(0);
+                }}
+                placeholder="部屋を さがす..."
+              />
+            </Box>
+
             {!firebaseEnabled ? (
               <Box
                 p={12}
@@ -680,8 +752,9 @@ export default function MainMenu() {
                   />
                 ))}
               </Grid>
-            ) : filteredRooms.length > 0 ? (
-              <Grid
+            ) : sortedRooms.length > 0 ? (
+              <VStack align="stretch" gap={6}>
+                <Grid
                 templateColumns={{
                   base: "1fr",
                   md: "repeat(2, 1fr)",
@@ -689,7 +762,7 @@ export default function MainMenu() {
                 }}
                 gap={6}
               >
-                {sortedRooms.map((room: any) => (
+                {paginatedRooms.map((room: any) => (
                   <RoomCard
                     key={room.id}
                     name={stripMinimalTag(room.name) || ""}
@@ -742,6 +815,17 @@ export default function MainMenu() {
                   />
                 ))}
               </Grid>
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={pageIndex}
+                    totalPages={totalPages}
+                    onPrev={() => setPageIndex((prev) => Math.max(prev - 1, 0))}
+                    onNext={() => setPageIndex((prev) => Math.min(prev + 1, totalPages - 1))}
+                    disablePrev={!hasPrevPage}
+                    disableNext={!hasNextPage}
+                  />
+                )}
+              </VStack>
             ) : (
               <Box
                 textAlign="center"
@@ -754,19 +838,36 @@ export default function MainMenu() {
                 boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
               >
                 <Heading size="md" color="text" mb={3} fontWeight={600}>
-                  まだアクティブなルームがありません
+                  {activeSearch
+                    ? `「${displaySearchKeyword}」に ぴったりの ルームは ありません`
+                    : "まだアクティブなルームがありません"}
                 </Heading>
                 <Text color="fgMuted" mb={6} maxW="400px" mx="auto">
-                  新しいルームを作成して、友だちを招待しましょう
+                  {activeSearch
+                    ? "ことばを かえて さがすか、新しいルームを つくって みんなを まねきましょう"
+                    : "新しいルームを作成して、友だちを招待しましょう"}
                 </Text>
-                <AppButton
-                  onClick={openCreateFlow}
-                  visual="solid"
-                  palette="brand"
-                >
-                  <Plus size={18} style={{ marginRight: "8px" }} />
-                  新しいルームを作成
-                </AppButton>
+                {activeSearch ? (
+                  <AppButton
+                    onClick={() => {
+                      setSearchInput("");
+                      setPageIndex(0);
+                    }}
+                    visual="outline"
+                    palette="gray"
+                  >
+                    検索をクリア
+                  </AppButton>
+                ) : (
+                  <AppButton
+                    onClick={openCreateFlow}
+                    visual="solid"
+                    palette="brand"
+                  >
+                    <Plus size={18} style={{ marginRight: "8px" }} />
+                    新しいルームを作成
+                  </AppButton>
+                )}
               </Box>
             )}
           </GridItem>
@@ -1055,3 +1156,25 @@ export default function MainMenu() {
     </Box>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
