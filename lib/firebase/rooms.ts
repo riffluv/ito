@@ -58,7 +58,8 @@ export async function leaveRoom(
 
     let token: string | null = null;
     try {
-      token = await auth?.currentUser?.getIdToken(true);
+      const rawToken = await auth?.currentUser?.getIdToken(true);
+      token = rawToken ?? null;
     } catch (error) {
       logWarn("rooms", "leave-room-token-failed", error);
     }
