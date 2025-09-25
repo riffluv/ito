@@ -13,7 +13,7 @@ const createTextSchema = (max: number) =>
     });
 
 const displayNameSchema = createTextSchema(20);
-const roomNameSchema = createTextSchema(48);
+const roomNameSchema = createTextSchema(24);
 const chatMessageSchema = createTextSchema(500);
 const clueSchema = createTextSchema(120);
 

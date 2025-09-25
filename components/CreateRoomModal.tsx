@@ -535,7 +535,7 @@ export function CreateRoomModal({
                     placeholder="れい: 友達とあそぶ"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    maxLength={20}
+                    maxLength={24}
                     css={{
                       height: "48px",
                       background: "white",

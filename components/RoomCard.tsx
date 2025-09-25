@@ -98,7 +98,7 @@ export function RoomCard({
         <VStack align="start" gap={4} position="relative" h="100%">
           {/* Header */}
           <Box flex={1} w="100%">
-            <VStack align="start" gap={1} mb={3}>
+            <VStack align="start" gap={1} mb={2}>
               <Text
                 fontSize="19px"
                 fontWeight={700}
@@ -111,78 +111,88 @@ export function RoomCard({
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: "vertical",
+                  wordBreak: "break-word",
+                  hyphens: "auto",
+                  minHeight: "46px", // 2行分の高さを少し縮小
                 }}
               >
                 {name}
               </Text>
-              <Text
-                fontSize="xs"
-                fontWeight={600}
-                lineHeight={1.2}
-                color="#FFD700"
-                css={{
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
-                  animation: "hostGlow 2s ease-in-out infinite alternate",
-                }}
-              >
-                👑 作成者: {displayCreator}
-              </Text>
-              {showHostLine ? (
+
+              {/* 固定高さのホスト情報エリア */}
+              <Box minH="32px" w="100%">
                 <Text
                   fontSize="xs"
-                  fontWeight={500}
+                  fontWeight={600}
                   lineHeight={1.2}
-                  color="fgMuted"
+                  color="#FFD700"
+                  css={{
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.heroGold,
+                    animation: "hostGlow 2s ease-in-out infinite alternate",
+                  }}
                 >
-                  🎮 現ホスト: {displayHost}
+                  👑 作成者: {displayCreator}
                 </Text>
-              ) : null}
+                {showHostLine && (
+                  <Text
+                    fontSize="xs"
+                    fontWeight={500}
+                    lineHeight={1.2}
+                    color="fgMuted"
+                    mt={1}
+                  >
+                    🎮 現ホスト: {displayHost}
+                  </Text>
+                )}
+              </Box>
             </VStack>
 
             {/* Room stats */}
-            <HStack gap={4} opacity={0.8}>
-              <HStack gap={1.5}>
-                <Users size={14} color="var(--colors-textMuted)" />
-                <Text fontSize="sm" color="fgMuted" fontWeight={500}>
-                  {count}人オンライン
-                </Text>
-              </HStack>
-
-              <HStack gap={1.5}>
-                <UserCheck
-                  size={14}
-                  color={
-                    isWaiting
-                      ? "var(--colors-success)"
-                      : "var(--colors-textMuted)"
-                  }
-                />
-                <Text
-                  fontSize="sm"
-                  color={
-                    isWaiting
-                      ? "var(--colors-success)"
-                      : "var(--colors-textMuted)"
-                  }
-                  fontWeight={500}
-                >
-                  {isWaiting ? "参加可能" : "参加不可"}
-                </Text>
-              </HStack>
-
-              {locked ? (
+            <VStack gap={2} opacity={0.8}>
+              <HStack justify="space-between" w="100%">
                 <HStack gap={1.5}>
-                  <Lock size={14} color="var(--colors-warning-300, #F6AD55)" />
+                  <Users size={14} color="var(--colors-textMuted)" />
+                  <Text fontSize="sm" color="fgMuted" fontWeight={500}>
+                    {count}人
+                  </Text>
+                </HStack>
+
+                <HStack gap={1.5}>
+                  <UserCheck
+                    size={14}
+                    color={
+                      isWaiting
+                        ? "var(--colors-success)"
+                        : "var(--colors-textMuted)"
+                    }
+                  />
+                  <Text
+                    fontSize="sm"
+                    color={
+                      isWaiting
+                        ? "var(--colors-success)"
+                        : "var(--colors-textMuted)"
+                    }
+                    fontWeight={500}
+                  >
+                    {isWaiting ? "参加可能" : "参加不可"}
+                  </Text>
+                </HStack>
+              </HStack>
+
+              {/* 鍵付きステータスを固定位置で表示（高さ統一のため）*/}
+              <HStack justify="center" w="100%" minH="20px">
+                {locked && (
                   <Text
                     fontSize="sm"
                     color="var(--colors-warning-300, #F6AD55)"
                     fontWeight={600}
                   >
-                    鍵付き
+                    🔐 パスワード保護
                   </Text>
-                </HStack>
-              ) : null}
-            </HStack>
+                )}
+              </HStack>
+            </VStack>
           </Box>
 
           {/* Join button or status */}
