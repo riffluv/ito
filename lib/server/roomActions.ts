@@ -389,6 +389,18 @@ export async function leaveRoomServer(
         onlineIds: presenceIds,
       });
 
+      const hostLeaving = currentHostId ? currentHostId === userId : false;
+      const hostStillRegistered = currentHostId
+        ? playerDocs.some((doc) => doc.id === currentHostId)
+        : false;
+
+      if (!hostLeaving && hostStillRegistered) {
+        if (Object.keys(updates).length > 0) {
+          tx.update(roomRef, updates);
+        }
+        return;
+      }
+
       const manager = new HostManager({
         roomId,
         currentHostId,
