@@ -1,5 +1,6 @@
 "use client";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
+import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import { AppButton } from "@/components/ui/AppButton";
@@ -7,6 +8,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { RPGButton } from "@/components/ui/RPGButton";
 import { notify } from "@/components/ui/notify";
+import { verifyPassword } from "@/lib/security/password";
 import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { handleFirebaseQuotaError } from "@/lib/utils/errorHandling";
@@ -29,8 +31,9 @@ import {
 import { gsap } from "gsap";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { stripMinimalTag } from "@/lib/game/displayMode";
+import { getCachedRoomPasswordHash, storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 
 // 固定男性ナイトコンポーネント
 function KnightCharacter() {
@@ -78,6 +81,9 @@ export default function MainMenu() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
+  const [passwordPrompt, setPasswordPrompt] = useState<{ room: any } | null>(null);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     const prefetchRules = () => {
@@ -342,6 +348,93 @@ export default function MainMenu() {
   const hasNextPage = pageIndex < totalPages - 1;
   const activeSearch = debouncedSearch.length > 0;
   const displaySearchKeyword = activeSearch ? debouncedSearch.slice(0, 40) : "";
+
+  const goToRoom = useCallback(async (room: any) => {
+    if (!room) return;
+    if (!displayName || !String(displayName).trim()) {
+      setTempName("");
+      setNameDialogMode("create");
+      setLastRoom(room.id);
+      nameDialog.onOpen();
+      return;
+    }
+
+    try {
+      await transition.navigateWithTransition(
+        `/rooms/${room.id}`,
+        {
+          direction: "fade",
+          duration: 1.2,
+          showLoading: true,
+          loadingSteps: [
+            { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+            { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
+            { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
+            { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+          ],
+        },
+        async () => {
+          try {
+            (window as any).requestIdleCallback?.(() => {
+              try {
+                router.prefetch(`/rooms/${room.id}`);
+              } catch {}
+            });
+          } catch {}
+        }
+      );
+    } catch (error) {
+      console.error("Room join transition failed:", error);
+      router.push(`/rooms/${room.id}`);
+    }
+  }, [displayName, nameDialog, router, setLastRoom, setNameDialogMode, setTempName, transition]);
+
+  const handleJoinRoom = useCallback((room: any) => {
+    if (!room) return;
+    if (room.requiresPassword) {
+      const cached = getCachedRoomPasswordHash(room.id);
+      if (cached && room.passwordHash && cached === room.passwordHash) {
+        void goToRoom(room);
+        return;
+      }
+      setPasswordPrompt({ room });
+      setPasswordError(null);
+      return;
+    }
+    void goToRoom(room);
+  }, [goToRoom]);
+
+  const handlePasswordSubmit = useCallback(async (input: string) => {
+    if (!passwordPrompt?.room) return;
+    setPasswordSubmitting(true);
+    setPasswordError(null);
+    try {
+      const ok = await verifyPassword(
+        input.trim(),
+        passwordPrompt.room.passwordSalt ?? null,
+        passwordPrompt.room.passwordHash ?? null
+      );
+      if (!ok) {
+        setPasswordError("パスワードが違います");
+        return;
+      }
+      storeRoomPasswordHash(passwordPrompt.room.id, passwordPrompt.room.passwordHash ?? "");
+      const targetRoom = passwordPrompt.room;
+      setPasswordPrompt(null);
+      await goToRoom(targetRoom);
+    } catch (error) {
+      console.error("verify password failed", error);
+      setPasswordError("パスワードの検証に失敗しました");
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  }, [goToRoom, passwordPrompt]);
+
+  const handlePasswordCancel = useCallback(() => {
+    if (passwordSubmitting) return;
+    setPasswordPrompt(null);
+    setPasswordError(null);
+  }, [passwordSubmitting]);
 
   const openCreateFlow = () => {
     if (!displayName) {
@@ -770,48 +863,8 @@ export default function MainMenu() {
                     count={lobbyCounts[room.id] ?? 0}
                     creatorName={room.creatorName || room.hostName || "匿名"}
                     hostName={room.hostName || null}
-                    onJoin={async () => {
-                      // 名前未設定の場合は先にモーダルを表示
-                      if (!displayName || !String(displayName).trim()) {
-                        setTempName("");
-                        setNameDialogMode("create");
-                        // 参加予定のルームIDを一時保存
-                        setLastRoom(room.id);
-                        nameDialog.onOpen();
-                        return;
-                      }
-
-                      try {
-                        await transition.navigateWithTransition(
-                          `/rooms/${room.id}`,
-                          {
-                            direction: "fade",
-                            duration: 1.2,
-                            showLoading: true,
-                            loadingSteps: [
-                              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-                              { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
-                              { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
-                              { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
-                            ],
-                          },
-                          async () => {
-                            // プリフェッチなどの最終処理
-                            try {
-                              (window as any).requestIdleCallback?.(() => {
-                                try {
-                                  router.prefetch(`/rooms/${room.id}`);
-                                } catch {}
-                              });
-                            } catch {}
-                          }
-                        );
-                      } catch (error) {
-                        console.error("Room join transition failed:", error);
-                        // フォールバック: 通常のナビゲーション
-                        router.push(`/rooms/${room.id}`);
-                      }
-                    }}
+                    requiresPassword={room.requiresPassword}
+                    onJoin={() => handleJoinRoom(room)}
                   />
                 ))}
               </Grid>
@@ -1153,9 +1206,20 @@ export default function MainMenu() {
           console.log(`ルーム作成: ${roomId}`);
         }}
       />
+      <RoomPasswordPrompt
+        isOpen={!!passwordPrompt}
+        roomName={passwordPrompt?.room ? stripMinimalTag(passwordPrompt.room.name) : undefined}
+        isLoading={passwordSubmitting}
+        error={passwordError}
+        onSubmit={handlePasswordSubmit}
+        onCancel={handlePasswordCancel}
+      />
     </Box>
   );
 }
+
+
+
 
 
 

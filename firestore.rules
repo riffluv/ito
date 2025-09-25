@@ -75,7 +75,8 @@ service cloud.firestore {
           'name', 'hostId', 'hostName', 'creatorId', 'creatorName', 'options', 'status',
           'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
           'topic', 'topicOptions', 'topicBox',
-          'order', 'result', 'deal', 'round'
+          'order', 'result', 'deal', 'round',
+          'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion'
         ])
         && (!('name' in data) || safeText(data.name, 1, 48))
         && (!('hostId' in data) || (data.hostId is string && data.hostId.size() > 0))
@@ -84,6 +85,21 @@ service cloud.firestore {
         && (!('creatorName' in data) || optionalSafeText(data.creatorName, 1, 32))
         && (!('options' in data) || isValidRoomOptions(data.options))
         && (!('status' in data) || data.status in ['waiting', 'clue', 'reveal', 'finished'])
+        && (!('requiresPassword' in data) || data.requiresPassword is bool)
+        && (!('passwordHash' in data) || data.passwordHash == null || (data.passwordHash is string && data.passwordHash.size() >= 16 && data.passwordHash.size() <= 128))
+        && (!('passwordSalt' in data) || data.passwordSalt == null || (data.passwordSalt is string && data.passwordSalt.size() >= 8 && data.passwordSalt.size() <= 64))
+        && (!('passwordVersion' in data) || data.passwordVersion == null || (data.passwordVersion is number && data.passwordVersion >= 0 && data.passwordVersion <= 10))
+        && (!(('requiresPassword' in data) && data.requiresPassword)
+          || (
+            ('passwordHash' in data) && data.passwordHash is string && data.passwordHash.size() >= 16 && data.passwordHash.size() <= 128
+            && ('passwordSalt' in data) && data.passwordSalt is string && data.passwordSalt.size() >= 8 && data.passwordSalt.size() <= 64
+          ))
+        && (!(('requiresPassword' in data) && !data.requiresPassword)
+          || (
+            (!('passwordHash' in data) || data.passwordHash == null)
+            && (!('passwordSalt' in data) || data.passwordSalt == null)
+            && (!('passwordVersion' in data) || data.passwordVersion == null)
+          ))
         && (!('topic' in data) || data.topic == null || safeText(data.topic, 1, 120))
         && (!('topicOptions' in data) || data.topicOptions == null || (data.topicOptions is list && data.topicOptions.size() <= 12))
         && (!('topicBox' in data) || data.topicBox == null || safeText(data.topicBox, 1, 24))

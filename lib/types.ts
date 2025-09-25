@@ -23,6 +23,10 @@ export type RoomOptions = {
 export type RoomDoc = {
   name: string;
   hostId: string;
+  requiresPassword?: boolean;
+  passwordHash?: string | null;
+  passwordSalt?: string | null;
+  passwordVersion?: number | null;
   hostName?: string; // ホスト名（Firestore最適化のため直接埋め込み）
   creatorId: string;
   creatorName?: string;
@@ -79,3 +83,4 @@ export type ChatDoc = {
   text: string;
   createdAt?: Timestamp | FieldValue;
 };
+

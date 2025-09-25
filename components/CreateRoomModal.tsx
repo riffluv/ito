@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
@@ -6,7 +6,9 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
 import { AVATAR_LIST } from "@/lib/utils";
-import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import { createPasswordEntry } from "@/lib/security/password";
+import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
+import { Box, Dialog, Field, HStack, Input, Switch, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp, DocumentReference } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
@@ -33,6 +35,18 @@ export function CreateRoomModal({
   const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [enablePassword, setEnablePassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enablePassword) {
+      setPassword("");
+      setPasswordConfirm("");
+      setPasswordError(null);
+    }
+  }, [enablePassword]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -41,6 +55,10 @@ export function CreateRoomModal({
       setCreatedRoomId(null);
       setInviteCopied(false);
       setSubmitting(false);
+      setEnablePassword(false);
+      setPassword("");
+      setPasswordConfirm("");
+      setPasswordError(null);
     }
   }, [isOpen]);
 
@@ -95,6 +113,21 @@ export function CreateRoomModal({
       return;
     }
 
+    if (enablePassword) {
+      const trimmed = password.trim();
+      if (trimmed.length < 4) {
+        setPasswordError("パスワードは4文字以上で設定してください");
+        return;
+      }
+      if (trimmed !== passwordConfirm.trim()) {
+        setPasswordError("確認用のパスワードが一致しません");
+        return;
+      }
+      setPasswordError(null);
+    } else if (passwordError) {
+      setPasswordError(null);
+    }
+
     setSubmitting(true);
 
     try {
@@ -104,6 +137,10 @@ export function CreateRoomModal({
         displayMode,
         defaultTopicType: "通常版",
       };
+      let passwordEntry: { hash: string; salt: string; version: number } | null = null;
+      if (enablePassword) {
+        passwordEntry = await createPasswordEntry(password.trim());
+      }
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const baseRoomData: RoomDoc & Record<string, any> = {
         name: applyDisplayModeToName(sanitizedRoomName, displayMode),
@@ -121,6 +158,10 @@ export function CreateRoomModal({
         topicOptions: null,
         topicBox: null,
         result: null,
+        requiresPassword: enablePassword,
+        passwordHash: passwordEntry?.hash ?? null,
+        passwordSalt: passwordEntry?.salt ?? null,
+        passwordVersion: passwordEntry?.version ?? null,
       };
 
       let roomRef: DocumentReference | null = null;
@@ -139,6 +180,10 @@ export function CreateRoomModal({
       }
       if (!roomRef) throw new Error("failed to create room");
 
+      if (enablePassword && passwordEntry?.hash) {
+        storeRoomPasswordHash(roomRef.id, passwordEntry.hash);
+      }
+
       const randomIndex = Math.floor(Math.random() * AVATAR_LIST.length);
       const pdoc: PlayerDoc = {
         name: sanitizedDisplayName,
@@ -154,6 +199,8 @@ export function CreateRoomModal({
 
       setCreatedRoomId(roomRef.id);
       setInviteCopied(false);
+      setPassword("");
+      setPasswordConfirm("");
       onCreated?.(roomRef.id);
     } catch (e: any) {
       logError("rooms", "create-room", e);
@@ -166,6 +213,7 @@ export function CreateRoomModal({
       setSubmitting(false);
     }
   };
+
 
   const handleCopyInvite = useCallback(async () => {
     if (!inviteUrl) return;
@@ -432,8 +480,13 @@ export function CreateRoomModal({
             </Box>
           ) : (
             <Box px={6} py={6} position="relative" zIndex={1}>
-              <VStack gap={4} align="stretch">
-                {!user && (
+              <form
+                autoComplete="off"
+                onSubmit={(event) => event.preventDefault()}
+                style={{ display: "contents" }}
+              >
+                <VStack gap={4} align="stretch">
+                  {!user && (
                   <Box
                     p={4}
                     bg="richBlack.700"
@@ -508,6 +561,105 @@ export function CreateRoomModal({
                     }}
                   />
                 </Field.Root>
+
+                <Field.Root>
+                  <Field.Label
+                    css={{
+                      fontSize: "1rem",
+                      fontWeight: "bold",
+                      color: "white",
+                      marginBottom: "8px",
+                      fontFamily: "monospace",
+                      textShadow: "1px 1px 0px #000",
+                    }}
+                  >
+                    ▼ 鍵をかける
+                  </Field.Label>
+                  <HStack align="center" gap={3}>
+                    <Switch.Root
+                      checked={enablePassword}
+                      onCheckedChange={(details) => setEnablePassword(details.checked)}
+                    >
+                      <Switch.HiddenInput />
+                      <Switch.Control />
+                    </Switch.Root>
+                    <Text fontSize="sm" color="whiteAlpha.80" fontFamily="monospace">
+                      パスワードを設定すると入室時に入力が必要になります
+                    </Text>
+                  </HStack>
+                </Field.Root>
+
+                {enablePassword ? (
+                  <VStack align="stretch" gap={3}>
+                    <input type="text" name="roomKeyDummy" autoComplete="username" style={{ display: "none" }} />
+                    <input type="password" name="roomKeyHidden" autoComplete="new-password" style={{ display: "none" }} />
+                    <Input
+                      type="text"
+                      name="roomKey"
+                      placeholder="パスワード (4文字以上)"
+                      value={password}
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      inputMode="text"
+                      aria-autocomplete="none"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      onChange={(event) => setPassword(event.target.value)}
+                      css={{
+                        WebkitTextSecurity: "disc",
+                        MozTextSecurity: "disc",
+                        height: "44px",
+                        background: "white",
+                        border: "borders.retrogameInput",
+                        borderRadius: 0,
+                        fontFamily: "monospace",
+                        color: "var(--colors-richBlack-900)",
+                        letterSpacing: "0.08em",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Input
+                      type="text"
+                      name="roomKeyConfirm"
+                      placeholder="もう一度入力"
+                      value={passwordConfirm}
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      inputMode="text"
+                      aria-autocomplete="none"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      onChange={(event) => setPasswordConfirm(event.target.value)}
+                      css={{
+                        WebkitTextSecurity: "disc",
+                        MozTextSecurity: "disc",
+                        height: "44px",
+                        background: "white",
+                        border: "borders.retrogameInput",
+                        borderRadius: 0,
+                        fontFamily: "monospace",
+                        color: "var(--colors-richBlack-900)",
+                        letterSpacing: "0.08em",
+                        fontWeight: 600,
+                      }}
+                    />
+                    {passwordError ? (
+                      <Text fontSize="xs" color="dangerSolid" fontFamily="monospace">
+                        {passwordError}
+                      </Text>
+                    ) : (
+                      <Text fontSize="xs" color="whiteAlpha.70" fontFamily="monospace">
+                        友だちにだけパスワードを共有してください
+                      </Text>
+                    )}
+                  </VStack>
+                ) : null}
 
                 <Field.Root>
                   <Field.Label
@@ -596,6 +748,7 @@ export function CreateRoomModal({
                   </Text>
                 </Field.Root>
               </VStack>
+            </form>
             </Box>
           )}
 
@@ -768,6 +921,7 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
+
 
 
 
