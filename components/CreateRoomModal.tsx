@@ -579,6 +579,35 @@ export function CreateRoomModal({
                     <Switch.Root
                       checked={enablePassword}
                       onCheckedChange={(details) => setEnablePassword(details.checked)}
+                      css={{
+                        "& [data-part='control']": {
+                          background: enablePassword ? "var(--colors-green-500)" : "var(--colors-gray-700)",
+                          border: "3px solid rgba(255,255,255,0.9)",
+                          borderRadius: 0,
+                          boxShadow: "0 4px 0px 0px #000000",
+                          width: "48px",
+                          height: "24px",
+                          transition: "all 0.2s ease",
+                          cursor: "pointer",
+                          "&:hover": {
+                            boxShadow: "0 2px 0px 0px #000000",
+                            transform: "translateY(2px)",
+                          },
+                          "&::before": {
+                            content: '""',
+                            position: "absolute",
+                            top: "2px",
+                            left: enablePassword ? "22px" : "2px",
+                            width: "16px",
+                            height: "16px",
+                            background: "white",
+                            border: "2px solid rgba(0,0,0,0.3)",
+                            borderRadius: 0,
+                            transition: "left 0.2s ease",
+                            boxShadow: "1px 1px 0px 0px #000000",
+                          }
+                        }
+                      }}
                     >
                       <Switch.HiddenInput />
                       <Switch.Control />
@@ -616,7 +645,7 @@ export function CreateRoomModal({
                         border: "borders.retrogameInput",
                         borderRadius: 0,
                         fontFamily: "monospace",
-                        color: "var(--colors-richBlack-900)",
+                        color: "richBlack.900",
                         letterSpacing: "0.08em",
                         fontWeight: 600,
                       }}
@@ -644,7 +673,7 @@ export function CreateRoomModal({
                         border: "borders.retrogameInput",
                         borderRadius: 0,
                         fontFamily: "monospace",
-                        color: "var(--colors-richBlack-900)",
+                        color: "richBlack.900",
                         letterSpacing: "0.08em",
                         fontWeight: 600,
                       }}
