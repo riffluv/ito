@@ -695,7 +695,8 @@ export default function MainMenu() {
                     name={stripMinimalTag(room.name) || ""}
                     status={room.status}
                     count={lobbyCounts[room.id] ?? 0}
-                    hostName={room.hostName || "匿名"}
+                    creatorName={room.creatorName || room.hostName || "匿名"}
+                    hostName={room.hostName || null}
                     onJoin={async () => {
                       // 名前未設定の場合は先にモーダルを表示
                       if (!displayName || !String(displayName).trim()) {

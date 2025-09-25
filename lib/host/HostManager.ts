@@ -35,6 +35,65 @@ type HostPlayer = {
   name?: string | null;
 };
 
+function buildNormalizedPlayers(
+  inputs: HostPlayerInput[],
+  leavingUid: string
+): { players: HostPlayer[]; byId: Map<string, HostPlayer> } {
+  const players: HostPlayer[] = [];
+  const byId = new Map<string, HostPlayer>();
+
+  for (const raw of inputs) {
+    const id = normalizeId(raw?.id ?? null);
+    if (!id) continue;
+    if (id === leavingUid) continue;
+    if (byId.has(id)) {
+      const existing = byId.get(id)!;
+      existing.joinedAt = Math.min(
+        existing.joinedAt,
+        toTimestamp(raw?.joinedAt ?? null)
+      );
+      existing.orderIndex = Math.min(
+        existing.orderIndex,
+        toOrderIndex(raw?.orderIndex ?? null)
+      );
+      existing.lastSeenAt = Math.min(
+        existing.lastSeenAt,
+        toTimestamp(raw?.lastSeenAt ?? null)
+      );
+      existing.isOnline = existing.isOnline || !!raw?.isOnline;
+      if (!existing.name && raw?.name) existing.name = raw.name;
+      continue;
+    }
+    const player: HostPlayer = {
+      id,
+      joinedAt: toTimestamp(raw?.joinedAt ?? null),
+      orderIndex: toOrderIndex(raw?.orderIndex ?? null),
+      lastSeenAt: toTimestamp(raw?.lastSeenAt ?? null),
+      isOnline: !!raw?.isOnline,
+      name: raw?.name ?? null,
+    };
+    byId.set(id, player);
+    players.push(player);
+  }
+
+  players.sort((a, b) => {
+    if (a.isOnline !== b.isOnline) {
+      return a.isOnline ? -1 : 1;
+    }
+    if (a.joinedAt !== b.joinedAt) {
+      return a.joinedAt - b.joinedAt;
+    }
+    if (a.orderIndex !== b.orderIndex) {
+      return a.orderIndex - b.orderIndex;
+    }
+    if (a.lastSeenAt !== b.lastSeenAt) {
+      return a.lastSeenAt - b.lastSeenAt;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  return { players, byId };
+}
 function normalizeId(value: string | null | undefined): string {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
@@ -51,6 +110,15 @@ function toOrderIndex(value: number | null | undefined): number {
   return Number.MAX_SAFE_INTEGER;
 }
 
+export function selectHostCandidate(
+  inputs: HostPlayerInput[],
+  opts?: { leavingUid?: string | null }
+): string | null {
+  const leavingUid = normalizeId(opts?.leavingUid ?? null);
+  const { players } = buildNormalizedPlayers(inputs, leavingUid);
+  return players[0]?.id ?? null;
+}
+
 export class HostManager {
   private readonly roomId: string;
   private readonly currentHostId: string;
@@ -63,49 +131,8 @@ export class HostManager {
     this.currentHostId = normalizeId(context.currentHostId ?? null);
     this.leavingUid = normalizeId(context.leavingUid ?? null);
 
-    const players: HostPlayer[] = [];
-    const byId = new Map<string, HostPlayer>();
-
-    for (const raw of context.players) {
-      const id = normalizeId(raw?.id ?? null);
-      if (!id) continue;
-      if (id === this.leavingUid) continue;
-      if (byId.has(id)) {
-        const existing = byId.get(id)!;
-        existing.joinedAt = Math.min(existing.joinedAt, toTimestamp(raw?.joinedAt ?? null));
-        existing.orderIndex = Math.min(existing.orderIndex, toOrderIndex(raw?.orderIndex ?? null));
-        existing.lastSeenAt = Math.min(existing.lastSeenAt, toTimestamp(raw?.lastSeenAt ?? null));
-        existing.isOnline = existing.isOnline || !!raw?.isOnline;
-        if (!existing.name && raw?.name) existing.name = raw.name;
-        continue;
-      }
-      const player: HostPlayer = {
-        id,
-        joinedAt: toTimestamp(raw?.joinedAt ?? null),
-        orderIndex: toOrderIndex(raw?.orderIndex ?? null),
-        lastSeenAt: toTimestamp(raw?.lastSeenAt ?? null),
-        isOnline: !!raw?.isOnline,
-        name: raw?.name ?? null,
-      };
-      byId.set(id, player);
-      players.push(player);
-    }
-
-    players.sort((a, b) => {
-      if (a.isOnline !== b.isOnline) {
-        return a.isOnline ? -1 : 1;
-      }
-      if (a.joinedAt !== b.joinedAt) {
-        return a.joinedAt - b.joinedAt;
-      }
-      if (a.orderIndex !== b.orderIndex) {
-        return a.orderIndex - b.orderIndex;
-      }
-      if (a.lastSeenAt !== b.lastSeenAt) {
-        return a.lastSeenAt - b.lastSeenAt;
-      }
-      return a.id.localeCompare(b.id);
-    });
+    const leavingUid = this.leavingUid;
+    const { players, byId } = buildNormalizedPlayers(context.players, leavingUid);
 
     this.playersById = byId;
     this.orderedPlayers = players;

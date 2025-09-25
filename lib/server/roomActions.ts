@@ -153,11 +153,41 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const currentHost =
       typeof room?.hostId === "string" && room.hostId.trim() ? room.hostId.trim() : null;
 
+    const existingCreatorId =
+      typeof room?.creatorId === "string" && room.creatorId.trim() ? room.creatorId.trim() : null;
+    const existingCreatorName =
+      typeof room?.creatorName === "string" && room.creatorName.trim() ? room.creatorName.trim() : null;
+
+    const baseUpdates: Record<string, any> = {};
+    if (!existingCreatorId && currentHost) {
+      baseUpdates.creatorId = currentHost;
+      if (typeof room?.hostName === "string" && room.hostName.trim()) {
+        baseUpdates.creatorName = room.hostName.trim();
+      } else if (existingCreatorName === null) {
+        baseUpdates.creatorName = FieldValue.delete();
+      }
+    }
+
     const playersRef = roomRef.collection("players");
     const playersSnap = await tx.get(playersRef);
     if (playersSnap.empty) return;
 
     const playerDocs = playersSnap.docs;
+
+    const normalizedHostId = currentHost ? currentHost : null;
+    if (normalizedHostId && normalizedHostId !== uid) {
+      const hostStillRegistered = playerDocs.some((doc) => {
+        if (doc.id === normalizedHostId) return true;
+        const data = doc.data() as any;
+        return typeof data?.uid === "string" && data.uid === normalizedHostId;
+      });
+      if (hostStillRegistered) {
+        if (Object.keys(baseUpdates).length > 0) {
+          tx.update(roomRef, baseUpdates);
+        }
+        return;
+      }
+    }
 
     const meDoc =
       playerDocs.find((doc) => doc.id === uid) ||
@@ -227,10 +257,13 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const decision = manager.evaluateClaim(uid);
 
     if (decision.action !== "assign") {
+      if (Object.keys(baseUpdates).length > 0) {
+        tx.update(roomRef, baseUpdates);
+      }
       return;
     }
 
-    const updates: Record<string, any> = { hostId: decision.hostId };
+    const updates: Record<string, any> = { ...baseUpdates, hostId: decision.hostId };
     const meta = manager.getPlayerMeta(decision.hostId);
     const trimmedName = meta?.name && typeof meta.name === "string" ? meta.name.trim() : "";
     if (trimmedName) {

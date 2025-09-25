@@ -8,7 +8,8 @@ import { applyDisplayModeToName } from "@/lib/game/displayMode";
 import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
 import { Box, Dialog, Field, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
-import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp, DocumentReference } from "firebase/firestore";
+import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { UI_TOKENS } from "@/theme/layout";
@@ -79,10 +80,12 @@ export function CreateRoomModal({
         defaultTopicType: "通常版",
       };
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const room: RoomDoc = {
+      const baseRoomData: RoomDoc & Record<string, any> = {
         name: applyDisplayModeToName(sanitizedRoomName, displayMode),
         hostId: user.uid,
         hostName: sanitizedDisplayName || "匿名",
+        creatorId: user.uid,
+        creatorName: sanitizedDisplayName || "匿名",
         options,
         status: "waiting",
         createdAt: serverTimestamp(),
@@ -94,7 +97,22 @@ export function CreateRoomModal({
         topicBox: null,
         result: null,
       };
-      const roomRef = await addDoc(collection(db!, "rooms"), room);
+
+      let roomRef: DocumentReference | null = null;
+      try {
+        roomRef = await addDoc(collection(db!, "rooms"), baseRoomData);
+      } catch (error) {
+        if (error instanceof FirebaseError && error.code === "permission-denied") {
+          console.warn("[rooms] create-room without creator fields (fallback)", error);
+          const fallbackPayload = { ...baseRoomData };
+          delete fallbackPayload.creatorId;
+          delete fallbackPayload.creatorName;
+          roomRef = await addDoc(collection(db!, "rooms"), fallbackPayload);
+        } else {
+          throw error;
+        }
+      }
+      if (!roomRef) throw new Error("failed to create room");
       // ホストのアバターもランダム選択
       const randomIndex = Math.floor(Math.random() * AVATAR_LIST.length);
       const pdoc: PlayerDoc = {
