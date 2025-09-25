@@ -1,260 +1,60 @@
-react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-content.js:85 [VSC] Content script initialized
-:9099/identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyC6AZfNZYB8R53laqA9SyOrFqIe0U8Cnxs:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
-page.tsx:1052 ルーム作成: ns0qCBPfSh605dAKnyNz
-hot-reloader-client.js:187 [Fast Refresh] rebuilding
-hot-reloader-client.js:44 [Fast Refresh] done in 4140ms
-log.ts:44 [presence] connection-offline Object
-log.ts:44 [presence] connection-offline Object
-log.ts:44 [presence] connected Object
-log.ts:44 [presence] connected Object
-useParticipants.ts:107 [presence] update Object
-log.ts:44 [presence] ondisconnect-armed Object
-useParticipants.ts:107 [presence] update Object
-log.ts:44 [presence] ondisconnect-armed Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-:8080/v1/projects/online-ito/databases/(default)/documents:commit:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
-index.esm2017.js:85 [2025-09-25T06:39:04.091Z]  @firebase/firestore: Firestore (10.14.1): RestConnection RPC 'Commit' 0x48e7ff39 failed with error:  {"code":"failed-precondition","name":"FirebaseError"} url:  http://localhost:8080/v1/projects/online-ito/databases/(default)/documents:commit request: {"writes":[{"update":{"name":"projects/online-ito/databases/(default)/documents/rooms/ns0qCBPfSh605dAKnyNz","fields":{"status":{"stringValue":"finished"}}},"updateMask":{"fieldPaths":["status"]},"currentDocument":{"updateTime":"2025-09-25T06:39:01.988237000Z"}}]}
-defaultLogHandler @ index.esm2017.js:85
-MiniHandDock.tsx:421 [ゲームリセット] 削除リクエスト Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-useParticipants.ts:107 [presence] update Object
-react-dom.development.js:20769 Uncaught ReferenceError: toMillis is not defined
-    at eval (page.tsx:527:20)
-    at commitHookEffectListMount (react-dom.development.js:21102:23)
-    at commitHookPassiveMountEffects (react-dom.development.js:23154:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23259:11)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-redirect-boundary.js:57 Uncaught ReferenceError: toMillis is not defined
-    at eval (page.tsx:527:20)
-    at commitHookEffectListMount (react-dom.development.js:21102:23)
-    at commitHookPassiveMountEffects (react-dom.development.js:23154:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23259:11)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-redirect-boundary.js:57 Uncaught ReferenceError: toMillis is not defined
-    at eval (page.tsx:527:20)
-    at commitHookEffectListMount (react-dom.development.js:21102:23)
-    at commitHookPassiveMountEffects (react-dom.development.js:23154:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23259:11)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23370:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-    at recursivelyTraversePassiveMountEffects (react-dom.development.js:23237:7)
-    at commitPassiveMountOnFiber (react-dom.development.js:23256:9)
-app-index.js:33 The above error occurred in the <RedirectErrorBoundary> component:
-
-    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:185:79)
-    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at main
-    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
-    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
-    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
-    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:16:11)
-    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:37:11)
-    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
-    at Suspense
-    at LoadableComponent (Server)
-    at Providers (Server)
-    at body
-    at html
-    at RootLayout (Server)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
-    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
-    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
-    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
-    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
-
-React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
-window.console.error @ app-index.js:33
-log.ts:44 [presence] detach Object
-log.ts:44 [presence] detach Object
-log.ts:44 [presence] detach-remove Object
-log.ts:44 [presence] detach-remove Object
-hot-reloader-client.js:187 [Fast Refresh] rebuilding
-hot-reloader-client.js:44 [Fast Refresh] done in 104ms
+15:55:15.106 Running build in Washington, D.C., USA (East) – iad1
+15:55:15.106 Build machine configuration: 2 cores, 8 GB
+15:55:15.128 Cloning github.com/riffluv/ito (Branch: master, Commit: e744709)
+15:55:19.735 Cloning completed: 4.606s
+15:55:20.030 Restored build cache from previous deployment (HFXY9z5ugx2F9HUKiADHQr5cUcMi)
+15:55:21.190 Running "vercel build"
+15:55:21.575 Vercel CLI 48.1.6
+15:55:21.963 Installing dependencies...
+15:55:24.997 
+15:55:24.998 > online-ito@0.1.0 prepare
+15:55:24.998 > npm run chakra:typegen
+15:55:24.998 
+15:55:25.140 
+15:55:25.140 > online-ito@0.1.0 chakra:typegen
+15:55:25.140 > npx @chakra-ui/cli typegen ./theme/index.ts --outdir types
+15:55:25.140 
+15:55:27.564 [90m┌[39m  Chakra CLI ⚡️
+15:55:28.365 [?25l[90m│[39m
+15:55:28.454 [35m◒[39m  Generating conditions types[999D[J[32m◇[39m  ✅ Generated conditions typings
+15:55:28.455 [?25h[?25l[90m│[39m
+15:55:28.792 [35m◒[39m  Generating recipe types[999D[J[32m◇[39m  ✅ Generated recipe typings
+15:55:28.793 [?25h[?25l[90m│[39m
+15:55:28.928 [35m◒[39m  Generating utility types[999D[J[32m◇[39m  ✅ Generated utility typings
+15:55:28.929 [?25h[?25l[90m│[39m
+15:55:29.006 [32m◇[39m  ✅ Generated token typings
+15:55:29.007 [?25h[?25l[90m│[39m
+15:55:29.354 [35m◒[39m  Generating system types[999D[J[32m◇[39m  ✅ Generated system types
+15:55:29.355 [?25h[90m│[39m
+15:55:29.355 [90m└[39m  🎉 Done!
+15:55:29.356 
+15:55:29.420 
+15:55:29.421 up to date in 7s
+15:55:29.421 
+15:55:29.421 299 packages are looking for funding
+15:55:29.421   run `npm fund` for details
+15:55:29.454 Detected Next.js version: 14.2.5
+15:55:29.464 Running "npm run build"
+15:55:29.571 
+15:55:29.571 > online-ito@0.1.0 build
+15:55:29.572 > next build
+15:55:29.572 
+15:55:30.265   ▲ Next.js 14.2.5
+15:55:30.266 
+15:55:30.338    Creating an optimized production build ...
+15:55:47.904  ✓ Compiled successfully
+15:55:47.906    Skipping linting
+15:55:47.907    Checking validity of types ...
+15:56:04.075 Failed to compile.
+15:56:04.075 
+15:56:04.076 ./components/CreateRoomModal.tsx:108:18
+15:56:04.076 Type error: The operand of a 'delete' operator must be optional.
+15:56:04.076 
+15:56:04.076 [0m [90m 106 |[39m           console[33m.[39mwarn([32m"[rooms] create-room without creator fields (fallback)"[39m[33m,[39m error)[33m;[39m[0m
+15:56:04.077 [0m [90m 107 |[39m           [36mconst[39m fallbackPayload [33m=[39m { [33m...[39mbaseRoomData }[33m;[39m[0m
+15:56:04.077 [0m[31m[1m>[22m[39m[90m 108 |[39m           [36mdelete[39m fallbackPayload[33m.[39mcreatorId[33m;[39m[0m
+15:56:04.077 [0m [90m     |[39m                  [31m[1m^[22m[39m[0m
+15:56:04.077 [0m [90m 109 |[39m           [36mdelete[39m fallbackPayload[33m.[39mcreatorName[33m;[39m[0m
+15:56:04.077 [0m [90m 110 |[39m           roomRef [33m=[39m [36mawait[39m addDoc(collection(db[33m![39m[33m,[39m [32m"rooms"[39m)[33m,[39m fallbackPayload)[33m;[39m[0m
+15:56:04.077 [0m [90m 111 |[39m         } [36melse[39m {[0m
+15:56:04.218 Error: Command "npm run build" exited with 1
