@@ -398,7 +398,7 @@ export function CreateRoomModal({
                       fontFamily="monospace"
                       textShadow="1px 1px 0px #000"
                     >
-                      なかまを さそって ぼうけんに でかけましょう。
+                      なかまに このリンクを おくって いっしょに あそぼう！
                     </Text>
                   </VStack>
                 </Box>
@@ -410,7 +410,7 @@ export function CreateRoomModal({
                     fontFamily="monospace"
                     textShadow="1px 1px 0 rgba(0,0,0,0.6)"
                   >
-                    招待URL
+                    ▼ なかま しょうたい リンク
                   </Text>
                   <Box
                     border="borders.retrogameThin"
@@ -458,7 +458,7 @@ export function CreateRoomModal({
                         }
                       }}
                     >
-                      {inviteCopied ? "◆ コピーしました" : "◆ コピー"}
+                      {inviteCopied ? "◆ コピーできた！" : "◆ コピーする"}
                     </button>
                   </Box>
                   <Text
@@ -466,16 +466,9 @@ export function CreateRoomModal({
                     color="whiteAlpha.70"
                     fontFamily="monospace"
                     textShadow="1px 1px 0px #000"
+                    textAlign="center"
                   >
-                    ▼ ショートリンク: <strong>{invitePath}</strong>
-                  </Text>
-                  <Text
-                    fontSize="xs"
-                    color="whiteAlpha.60"
-                    fontFamily="monospace"
-                    textShadow="1px 1px 0px #000"
-                  >
-                    このリンクを ひらくと ルームに じどうで いどうします。
+                    このリンクで なかまが かんたんに さんか できるよ！
                   </Text>
                 </VStack>
               </VStack>
@@ -821,7 +814,7 @@ export function CreateRoomModal({
                     e.currentTarget.style.color = "white";
                   }}
                 >
-                  べつのルームを つくる
+                  もどる
                 </button>
                 <HStack gap={3}>
                   <button
