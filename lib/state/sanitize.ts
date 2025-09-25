@@ -25,6 +25,11 @@ export function sanitizeRoom(input: any): RoomDoc {
       typeof input?.creatorName === "string" && input.creatorName.trim()
         ? String(input.creatorName)
         : undefined,
+    requiresPassword: !!input?.requiresPassword,
+    passwordHash: typeof input?.passwordHash === "string" ? input.passwordHash : null,
+    passwordSalt: typeof input?.passwordSalt === "string" ? input.passwordSalt : null,
+    passwordVersion: typeof input?.passwordVersion === "number" ? input.passwordVersion : null,
+
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
       resolveMode: normalizeResolveMode(options.resolveMode),

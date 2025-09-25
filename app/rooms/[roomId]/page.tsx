@@ -13,8 +13,10 @@ import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import MinimalChat from "@/components/ui/MinimalChat";
+import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { notify } from "@/components/ui/notify";
+import { verifyPassword } from "@/lib/security/password";
 import { logError } from "@/lib/utils/log";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
@@ -27,6 +29,7 @@ import { sendSystemMessage } from "@/lib/firebase/chat";
 import { validateClue } from "@/lib/validation/forms";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { toMillis } from "@/lib/time";
+import { getCachedRoomPasswordHash, storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 import {
   resetPlayerState,
   setPlayerName,
@@ -138,6 +141,10 @@ export default function RoomPage() {
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
+  const [passwordVerified, setPasswordVerified] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
+  const [passwordDialogError, setPasswordDialogError] = useState<string | null>(null);
 
   // roomIdが取得できない場合は早期リターン
   if (!roomId) {
@@ -153,7 +160,7 @@ export default function RoomPage() {
     isHost,
     detachNow,
     leavingRef,
-  } = useRoomState(roomId, uid, displayName);
+  } = useRoomState(roomId, uid, passwordVerified ? displayName : null);
 
   // 設定モーダルの状態管理
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -161,9 +168,59 @@ export default function RoomPage() {
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
   const [joinVersion, setJoinVersion] = useState(0);
-
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+
+  useEffect(() => {
+    if (!room) {
+      setPasswordDialogOpen(false);
+      setPasswordVerified(false);
+      return;
+    }
+    if (!room.requiresPassword) {
+      setPasswordVerified(true);
+      setPasswordDialogOpen(false);
+      setPasswordDialogError(null);
+      return;
+    }
+    const cached = getCachedRoomPasswordHash(roomId);
+    if (cached && room.passwordHash && cached === room.passwordHash) {
+      setPasswordVerified(true);
+      setPasswordDialogOpen(false);
+      setPasswordDialogError(null);
+      return;
+    }
+    setPasswordVerified(false);
+    setPasswordDialogOpen(true);
+    setPasswordDialogError(null);
+  }, [roomId, room, room?.requiresPassword, room?.passwordHash]);
+
+  const handleRoomPasswordSubmit = useCallback(async (input: string) => {
+    if (!room) return;
+    setPasswordDialogLoading(true);
+    setPasswordDialogError(null);
+    try {
+      const ok = await verifyPassword(input.trim(), room.passwordSalt ?? null, room.passwordHash ?? null);
+      if (!ok) {
+        setPasswordDialogError("パスワードが違います");
+        return;
+      }
+      storeRoomPasswordHash(roomId, room.passwordHash ?? "");
+      setPasswordVerified(true);
+      setPasswordDialogOpen(false);
+    } catch (error) {
+      console.error("verify room password failed", error);
+      setPasswordDialogError("パスワードの検証に失敗しました");
+    } finally {
+      setPasswordDialogLoading(false);
+    }
+  }, [room, roomId]);
+
+  const handleRoomPasswordCancel = useCallback(() => {
+    notify({ title: "ロビーに戻りました", type: "info" });
+    router.push('/');
+  }, [router]);
+
 
   const fallbackNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -1037,6 +1094,15 @@ export default function RoomPage() {
       {/* チャットはトグル式（FABで開閉） */}
       <MinimalChat roomId={roomId} />
 
+      <RoomPasswordPrompt
+        isOpen={passwordDialogOpen}
+        roomName={room ? stripMinimalTag(room.name) : undefined}
+        isLoading={passwordDialogLoading}
+        error={passwordDialogError}
+        onSubmit={handleRoomPasswordSubmit}
+        onCancel={handleRoomPasswordCancel}
+      />
+
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
 
       <SettingsModal
@@ -1050,6 +1116,8 @@ export default function RoomPage() {
     </>
   );
 }
+
+
 
 
 

@@ -2,7 +2,7 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
-import { Play, UserCheck, Users } from "lucide-react";
+import { Lock, Play, UserCheck, Users } from "lucide-react";
 
 export function RoomCard({
   name,
@@ -10,6 +10,7 @@ export function RoomCard({
   count,
   creatorName,
   hostName,
+  requiresPassword,
   onJoin,
 }: {
   name: string;
@@ -17,6 +18,7 @@ export function RoomCard({
   count: number;
   creatorName?: string | null;
   hostName?: string | null;
+  requiresPassword?: boolean;
   onJoin: () => void;
 }) {
   const displayCreator = (creatorName && creatorName.trim()) || "匿名";
@@ -24,6 +26,7 @@ export function RoomCard({
   const showHostLine = displayHost !== displayCreator;
   const statusLabel = status === "waiting" ? "待機中" : "進行中";
   const isWaiting = status === "waiting";
+  const locked = !!requiresPassword;
 
   return (
     <Box
@@ -166,6 +169,19 @@ export function RoomCard({
                   {isWaiting ? "参加可能" : "参加不可"}
                 </Text>
               </HStack>
+
+              {locked ? (
+                <HStack gap={1.5}>
+                  <Lock size={14} color="var(--colors-warning-300, #F6AD55)" />
+                  <Text
+                    fontSize="sm"
+                    color="var(--colors-warning-300, #F6AD55)"
+                    fontWeight={600}
+                  >
+                    鍵付き
+                  </Text>
+                </HStack>
+              ) : null}
             </HStack>
           </Box>
 
@@ -181,8 +197,12 @@ export function RoomCard({
                 onJoin();
               }}
             >
-              <Play size={16} style={{ marginRight: "8px" }} />
-              参加する
+              {locked ? (
+                <Lock size={16} style={{ marginRight: "8px" }} />
+              ) : (
+                <Play size={16} style={{ marginRight: "8px" }} />
+              )}
+              {locked ? "パスワード入室" : "参加する"}
             </AppButton>
           ) : (
             <Box
@@ -228,3 +248,4 @@ export function RoomCard({
     </Box>
   );
 }
+
