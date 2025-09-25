@@ -23,17 +23,20 @@ export function SearchBar({
 
   return (
     <Box
-      border="3px solid rgba(255,255,255,0.9)"
+      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
       borderRadius={0}
       bg={UI_TOKENS.COLORS.panelBg}
-      boxShadow="2px 2px 0 rgba(0,0,0,0.8)"
-      px={{ base: 3, md: 4 }}
-      py={2}
+      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+      px={4}
+      py={3}
+      position="relative"
     >
       <HStack spacing={3} align="center">
+        {/* 検索アイコン */}
         <Box color="whiteAlpha.80" display="flex" alignItems="center">
           <Search size={18} />
         </Box>
+
         <Input
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -43,26 +46,47 @@ export function SearchBar({
           variant="unstyled"
           fontFamily="monospace"
           fontSize="md"
+          fontWeight="normal"
           color="white"
-          _placeholder={{ color: "whiteAlpha.70" }}
-          _focusVisible={{ outline: "none", textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any }}
+          textShadow="1px 1px 0px #000"
+          _placeholder={{
+            color: "whiteAlpha.70",
+            fontFamily: "monospace",
+            textShadow: "1px 1px 0px #000"
+          }}
+          _focusVisible={{
+            outline: "none",
+            textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+            bg: "whiteAlpha.50"
+          }}
         />
-        {showClear ? (
-          <IconButton
+
+        {showClear && (
+          <Box
+            as="button"
             aria-label="検索条件をクリア"
-            icon={<X size={16} />}
-            size="sm"
-            variant="ghost"
-            borderRadius={0}
             onClick={() => {
               onClear?.();
               onChange("");
             }}
-            _hover={{ bg: "whiteAlpha.300" }}
-            _active={{ bg: "whiteAlpha.400" }}
             color="white"
-          />
-        ) : null}
+            fontFamily="monospace"
+            fontSize="lg"
+            fontWeight="bold"
+            textShadow="1px 1px 0px #000"
+            cursor="pointer"
+            p={1}
+            borderRadius={0}
+            transition="all 0.1s ease"
+            _hover={{
+              bg: "white",
+              color: UI_TOKENS.COLORS.panelBg,
+              textShadow: "none"
+            }}
+          >
+            ✕
+          </Box>
+        )}
       </HStack>
     </Box>
   );
