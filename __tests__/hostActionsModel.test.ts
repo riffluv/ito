@@ -6,6 +6,9 @@ function room(partial: Partial<RoomDoc>): RoomDoc {
   return {
     name: "r",
     hostId: "host",
+    hostName: "Host",
+    creatorId: "creator",
+    creatorName: "Creator",
     options: { allowContinueAfterFail: true, resolveMode: "sequential" },
     status: "waiting",
     topic: null,

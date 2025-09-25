@@ -26,6 +26,7 @@ import { UI_TOKENS } from "@/theme/layout";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { validateClue } from "@/lib/validation/forms";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { toMillis } from "@/lib/time";
 import {
   resetPlayerState,
   setPlayerName,
@@ -44,7 +45,7 @@ import {
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { assignNumberIfNeeded } from "@/lib/services/roomService";
-import { toMillis } from "@/lib/time";
+import { selectHostCandidate } from "@/lib/host/HostManager";
 import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
@@ -156,6 +157,10 @@ export default function RoomPage() {
 
   // 設定モーダルの状態管理
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
+  const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
+  const joinCounterRef = useRef(0);
+  const [joinVersion, setJoinVersion] = useState(0);
 
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
@@ -175,14 +180,37 @@ export default function RoomPage() {
 
   const hostClaimCandidateId = useMemo(() => {
     if (!room || players.length === 0) return null;
-    const sorted = [...players].sort((a, b) => {
-      const ao = typeof a.orderIndex === "number" ? a.orderIndex : Number.MAX_SAFE_INTEGER;
-      const bo = typeof b.orderIndex === "number" ? b.orderIndex : Number.MAX_SAFE_INTEGER;
-      if (ao !== bo) return ao - bo;
-      return String(a.id).localeCompare(String(b.id));
+
+    if (lastKnownHostId && players.some((p) => p.id === lastKnownHostId)) {
+      return lastKnownHostId;
+    }
+
+    const onlineSet = new Set(Array.isArray(onlineUids) ? onlineUids : []);
+    const inputs = players.map((player) => {
+      const joinedAt =
+        playerJoinOrderRef.current.get(player.id) ?? Number.MAX_SAFE_INTEGER;
+      let lastSeenAt: number | null = null;
+      const rawLastSeen = (player as any).lastSeen;
+      if (rawLastSeen && typeof rawLastSeen.toMillis === "function") {
+        try {
+          lastSeenAt = rawLastSeen.toMillis();
+        } catch {
+          lastSeenAt = null;
+        }
+      }
+      return {
+        id: player.id,
+        joinedAt,
+        orderIndex:
+          typeof player.orderIndex === "number" ? player.orderIndex : null,
+        lastSeenAt,
+        isOnline: onlineSet.has(player.id),
+        name: player.name ?? null,
+      };
     });
-    return sorted[0]?.id ?? null;
-  }, [room?.id, players]);
+
+    return selectHostCandidate(inputs) ?? null;
+  }, [room?.id, players, onlineUids, lastKnownHostId, joinVersion]);
 
   // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
   const [pop, setPop] = useState(false);
@@ -196,6 +224,34 @@ export default function RoomPage() {
     const timer = setTimeout(() => setRedirectGuard(false), 1200);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    let updated = false;
+    for (const player of players) {
+      if (!playerJoinOrderRef.current.has(player.id)) {
+        playerJoinOrderRef.current.set(player.id, joinCounterRef.current++);
+        updated = true;
+      }
+    }
+    if (updated) {
+      setJoinVersion((value) => value + 1);
+    }
+  }, [players]);
+
+  useEffect(() => {
+    if (lastKnownHostId || !room?.creatorId) return;
+    const trimmedCreator = room.creatorId.trim();
+    if (trimmedCreator) {
+      setLastKnownHostId(trimmedCreator);
+    }
+  }, [room?.creatorId, lastKnownHostId]);
+
+  useEffect(() => {
+    const stableHost = typeof room?.hostId === "string" ? room.hostId.trim() : "";
+    if (stableHost) {
+      setLastKnownHostId(stableHost);
+    }
+  }, [room?.hostId]);
 
   useEffect(() => {
     if (typeof me?.number === "number") {
@@ -219,6 +275,7 @@ export default function RoomPage() {
   const rejoinSessionKey = useMemo(() => (uid ? `pendingRejoin:${roomId}` : null), [uid, roomId]);
   useEffect(() => {
     if (!room || !uid) return;
+    if (lastKnownHostId === uid) return;
     // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
     // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
     if (loading || authLoading) return;
@@ -257,7 +314,7 @@ export default function RoomPage() {
         }
       })();
     }
-  }, [room?.status, uid, canAccess, loading, authLoading, rejoinSessionKey, redirectGuard]);
+  }, [room?.status, uid, canAccess, loading, authLoading, rejoinSessionKey, redirectGuard, lastKnownHostId]);
 
   useEffect(() => {
     if (!room || !uid || !user) {
@@ -277,7 +334,13 @@ export default function RoomPage() {
       }
       return;
     }
-    const shouldAttemptClaim = (hostClaimCandidateId === uid);
+    const previousHostId = lastKnownHostId;
+    const previousHostStillMember =
+      previousHostId && players.some((p) => p.id === previousHostId);
+
+    const shouldAttemptClaim =
+      hostClaimCandidateId === uid &&
+      (!previousHostId || previousHostId === uid || !previousHostStillMember);
 
     if (!shouldAttemptClaim) return;
 
@@ -323,7 +386,7 @@ export default function RoomPage() {
         hostClaimTimerRef.current = null;
       }
     };
-  }, [room?.hostId, players, uid, user, roomId, leavingRef]); // 🔥 FIXED: hostClaimCandidateIdを依存配列から除去（無限ループ防止）
+  }, [room?.hostId, players, uid, user, roomId, leavingRef, lastKnownHostId]); // 🔥 FIXED: hostClaimCandidateIdを依存配列から除去（無限ループ防止）
   // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
   useEffect(() => {
     try {

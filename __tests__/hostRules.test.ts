@@ -1,4 +1,4 @@
-import { HostManager } from "@/lib/host/HostManager";
+import { HostManager, selectHostCandidate } from "@/lib/host/HostManager";
 
 describe("HostManager", () => {
   const basePlayers = [
@@ -13,6 +13,16 @@ describe("HostManager", () => {
       ...(overrides[index] ?? {}),
     }));
   };
+
+  test("selectHostCandidate keeps earlier joined host over lexicographically smaller uid", () => {
+    const players = [
+      { id: "host-creator", joinedAt: 10, orderIndex: 0, isOnline: true, name: "Host" },
+      { id: "guest-a", joinedAt: 30, orderIndex: 0, isOnline: true, name: "Guest" },
+      { id: "aaa-third", joinedAt: 40, orderIndex: 0, isOnline: true, name: "AAA" },
+    ];
+
+    expect(selectHostCandidate(players)).toBe("host-creator");
+  });
 
   test("evaluateClaim does not reassign when current host remains", () => {
     const manager = new HostManager({

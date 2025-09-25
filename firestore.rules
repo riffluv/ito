@@ -72,7 +72,7 @@ service cloud.firestore {
     function isValidRoomDoc(data) {
       return data is map
         && data.keys().hasOnly([
-          'name', 'hostId', 'hostName', 'options', 'status',
+          'name', 'hostId', 'hostName', 'creatorId', 'creatorName', 'options', 'status',
           'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
           'topic', 'topicOptions', 'topicBox',
           'order', 'result', 'deal', 'round'
@@ -80,6 +80,8 @@ service cloud.firestore {
         && (!('name' in data) || safeText(data.name, 1, 48))
         && (!('hostId' in data) || (data.hostId is string && data.hostId.size() > 0))
         && (!('hostName' in data) || optionalSafeText(data.hostName, 1, 32))
+        && (!('creatorId' in data) || (data.creatorId is string && data.creatorId.size() > 0))
+        && (!('creatorName' in data) || optionalSafeText(data.creatorName, 1, 32))
         && (!('options' in data) || isValidRoomOptions(data.options))
         && (!('status' in data) || data.status in ['waiting', 'clue', 'reveal', 'finished'])
         && (!('topic' in data) || data.topic == null || safeText(data.topic, 1, 120))

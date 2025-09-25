@@ -20,6 +20,11 @@ export function sanitizeRoom(input: any): RoomDoc {
       typeof input?.hostName === "string" && input.hostName.trim()
         ? String(input.hostName)
         : undefined,
+    creatorId: String(input?.creatorId || ""),
+    creatorName:
+      typeof input?.creatorName === "string" && input.creatorName.trim()
+        ? String(input.creatorName)
+        : undefined,
     options: {
       allowContinueAfterFail: !!options.allowContinueAfterFail,
       resolveMode: normalizeResolveMode(options.resolveMode),

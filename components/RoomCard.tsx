@@ -8,15 +8,20 @@ export function RoomCard({
   name,
   status,
   count,
+  creatorName,
   hostName,
   onJoin,
 }: {
   name: string;
   status: string;
   count: number;
-  hostName: string;
+  creatorName?: string | null;
+  hostName?: string | null;
   onJoin: () => void;
 }) {
+  const displayCreator = (creatorName && creatorName.trim()) || "匿名";
+  const displayHost = (hostName && hostName.trim()) || displayCreator;
+  const showHostLine = displayHost !== displayCreator;
   const statusLabel = status === "waiting" ? "待機中" : "進行中";
   const isWaiting = status === "waiting";
 
@@ -117,8 +122,18 @@ export function RoomCard({
                   animation: "hostGlow 2s ease-in-out infinite alternate",
                 }}
               >
-                👑 ホスト: {hostName}
+                👑 作成者: {displayCreator}
               </Text>
+              {showHostLine ? (
+                <Text
+                  fontSize="xs"
+                  fontWeight={500}
+                  lineHeight={1.2}
+                  color="fgMuted"
+                >
+                  🎮 現ホスト: {displayHost}
+                </Text>
+              ) : null}
             </VStack>
 
             {/* Room stats */}
