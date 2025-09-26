@@ -21,8 +21,10 @@ const MAX_CLOCK_SKEW_MS = Number(
 
 function sanitizeServerText(input: unknown, maxLength = 500): string {
   if (typeof input !== "string") return "";
+  // eslint-disable-next-line no-control-regex -- 制御文字を明示的に除去するためのパターン
+  const controlCharsPattern = /[\u0000-\u001F\u007F]/g;
   const normalized = input
-    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(controlCharsPattern, " ")
     .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim();
