@@ -29,6 +29,7 @@
     "@dnd-kit/sortable": "^7.0.0",
     "@dnd-kit/utilities": "^3.2.1",
     "@emotion/react": "latest",
+    "@sentry/nextjs": "^10.15.0",
     "@types/three": "^0.180.0",
     "@xstate/react": "^6.0.0",
     "firebase": "^10.12.3",

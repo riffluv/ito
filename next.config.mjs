@@ -1,4 +1,5 @@
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -66,4 +67,11 @@ const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-export default bundleAnalyzer(nextConfig);
+const configWithAnalyzer = bundleAnalyzer(nextConfig);
+
+const sentryWebpackPluginOptions = {
+  silent: true,
+  dryRun: !process.env.SENTRY_DSN && !process.env.NEXT_PUBLIC_SENTRY_DSN,
+};
+
+export default withSentryConfig(configWithAnalyzer, sentryWebpackPluginOptions);

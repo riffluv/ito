@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import React from "react";
 import ClientFrame from "./ClientFrame";
+import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   description:
     "連想（ヒント）だけで数字を小さい順に並べるオンライン協力カードゲーム。　なかまと一緒に遊ぼう！",
   icons: [{ rel: "icon", url: "/images/knight1.webp" }],
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -31,9 +33,8 @@ export default function RootLayout({
         <meta name="color-scheme" content="dark" />
       </head>
       <body>
-        {/* Client コンポーネント内でパス判定するためラッパーを分離 */}
         <Providers>
-          {/* ClientFrame 内で /rooms/ 判定し Header を条件表示 */}
+          <ServiceWorkerRegistration />
           <ClientFrame>{children}</ClientFrame>
         </Providers>
       </body>
