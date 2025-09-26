@@ -38,6 +38,7 @@ export function RoomCard({
         onJoin();
       }}
       aria-disabled={!isWaiting}
+      data-locked={locked ? "true" : "false"}
       _hover={{}}
       css={{
         "&:hover .hover-decoration": {
@@ -80,6 +81,31 @@ export function RoomCard({
           }
         }}
       >
+        {locked && (
+          <Box
+            position="absolute"
+            top={4}
+            left={4}
+            zIndex={2}
+          >
+            <Badge
+              variant="solid"
+              colorPalette="purple"
+              display="flex"
+              alignItems="center"
+              gap={1.5}
+              borderRadius="2px"
+              fontSize="xs"
+              fontWeight={600}
+              px={3}
+              py={1}
+            >
+              <Lock size={12} />
+              ロック中
+            </Badge>
+          </Box>
+        )}
+
         {/* Status indicator */}
         <Box position="absolute" top={4} right={4} zIndex={2}>
           <Badge

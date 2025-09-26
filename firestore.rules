@@ -164,7 +164,7 @@ service cloud.firestore {
         allow create: if isAuthenticated()
           && request.auth.uid == playerId
           && request.resource.data.uid == request.auth.uid
-          && isWaiting(roomId)
+          && (isWaiting(roomId) || isHost(roomId) || isAdmin())
           && isValidPlayerDoc(request.resource.data);
 
         allow update: if isAuthenticated()
@@ -174,7 +174,7 @@ service cloud.firestore {
               && request.resource.data.uid == resource.data.uid
               && isValidPlayerDoc(request.resource.data)
               && (
-                !('name' in request.resource.data) || resource.data.name == request.resource.data.name || isWaiting(roomId)
+                !('name' in request.resource.data) || resource.data.name == request.resource.data.name || isWaiting(roomId) || isHost(roomId)
               )
               && (
                 !('number' in request.resource.data)
