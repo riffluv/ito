@@ -850,10 +850,13 @@ export default function MainMenu() {
                 <Grid
                 templateColumns={{
                   base: "1fr",
+                  sm: "repeat(2, 1fr)",
                   md: "repeat(2, 1fr)",
                   lg: "repeat(3, 1fr)",
+                  xl: "repeat(3, 1fr)",
                 }}
-                gap={6}
+                gap={{ base: 4, md: 5 }}
+                alignItems="stretch"
               >
                 {paginatedRooms.map((room: any) => (
                   <RoomCard
