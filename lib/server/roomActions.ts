@@ -10,13 +10,13 @@ import {
 const PRESENCE_STALE_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
     process.env.PRESENCE_STALE_MS ||
-    45_000
+    300_000
 );
 
 const MAX_CLOCK_SKEW_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
     process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
-    30_000
+    120_000
 );
 
 function sanitizeServerText(input: unknown, maxLength = 500): string {
