@@ -1,7 +1,9 @@
 "use client";
+import React, { useCallback } from "react";
 import { Button as CButton } from "@chakra-ui/react";
 import { buttonRecipe } from "../../theme/recipes/button.recipe";
 import { UI_TOKENS } from "@/theme/layout";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 type ButtonVariants = {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -14,7 +16,7 @@ type AppButtonProps = React.ComponentProps<typeof CButton> & ButtonVariants & {
   href?: string;
 };
 
-// ✅ 高度なボタンアニメーション (エージェント対応)
+// ? ????????????? (????????)
 export const useButtonAnimation = () => {
   const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.transform = "translateY(0px)";
@@ -44,15 +46,58 @@ export function AppButton({
   colorPalette,
   className,
   css,
+  onMouseDown,
+  onMouseUp,
+  onMouseEnter,
+  onMouseLeave,
+  onPointerDown,
+  onKeyDown,
   ...rest
 }: AppButtonProps) {
   const finalPalette = (colorPalette ?? palette) as NonNullable<ButtonVariants["palette"]>;
   const animation = useButtonAnimation();
+  const playPress = useSoundEffect("ui_click");
 
-  // レシピclass名 + 呼び出し側のclassNameを合成（テスト: buttonRecipeを無効化）
+  const handleMouseDownInternal = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    animation.handleMouseDown(event);
+    playPress();
+    onMouseDown?.(event);
+  }, [animation, onMouseDown, playPress]);
+
+  const handleMouseUpInternal = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    animation.handleMouseUp(event);
+    onMouseUp?.(event);
+  }, [animation, onMouseUp]);
+
+  const handleMouseEnterInternal = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    animation.handleMouseEnter(event);
+    onMouseEnter?.(event);
+  }, [animation, onMouseEnter]);
+
+  const handleMouseLeaveInternal = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    animation.handleMouseLeave(event);
+    onMouseLeave?.(event);
+  }, [animation, onMouseLeave]);
+
+  const handlePointerDownInternal = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType !== "mouse") {
+      playPress();
+    }
+    onPointerDown?.(event);
+  }, [onPointerDown, playPress]);
+
+  const handleKeyDownInternal = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === " " || event.key === "Enter") {
+      playPress();
+    }
+    onKeyDown?.(event);
+  }, [onKeyDown, playPress]);
+
+
+  // ???class? + ??????className???????: buttonRecipe?????
   const combinedClassName = `${className ?? ''}`.trim();
 
-  // ドラクエ風重厚ボタン: ピクセル風の段積みシャドウ + エンボス
+  // ??????????: ????????????? + ????
   const palettes = {
     brand: {
       baseBg: "rgba(20, 23, 34, 0.95)",
@@ -87,7 +132,7 @@ export function AppButton({
   } as const;
   const p = palettes[finalPalette] ?? palettes.brand;
 
-  // ✅ ドラクエ風重厚ボタン: ピクセル段積みシャドウ + エンボス効果
+  // ? ??????????: ??????????? + ??????
   const dqSolid = visual === "solid" ? {
     background: p.baseBg,
     color: p.textColor,
@@ -105,7 +150,7 @@ export function AppButton({
       1px 1px 0 rgba(0,0,0,0.7),
       0 2px 0 rgba(0,0,0,0.5)
     `,
-    // transform/hoverアニメーションはJSイベントで統一管理
+    // transform/hover????????JS?????????
   } : {};
 
   const dqOutline = visual === "outline" ? {
@@ -121,13 +166,13 @@ export function AppButton({
       inset 0 1px 0 rgba(255,255,255,0.1),
       0 2px 4px rgba(0,0,0,0.2)
     `,
-    // hover/activeはJSイベントで管理
+    // hover/active?JS???????
   } : {};
 
   const dqGhost = visual === "ghost" ? {
     background: "transparent",
     border: "1px solid transparent",
-    // hover/activeはJSイベントで管理
+    // hover/active?JS???????
   } : {};
 
   const premiumStyles = {
@@ -137,7 +182,7 @@ export function AppButton({
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
     transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}`,
     ...((css as any) || {}),
-    // ドラクエ風ホバー・アクティブ効果
+    // ????????????????
     ...(visual === "solid"
       ? {
           "&:hover": {
@@ -191,3 +236,4 @@ export function AppButton({
 }
 
 export default AppButton;
+
