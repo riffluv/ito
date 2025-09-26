@@ -84,6 +84,8 @@ export default function MainMenu() {
   const [passwordPrompt, setPasswordPrompt] = useState<{ room: any } | null>(null);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [hideLockedRooms, setHideLockedRooms] = useState(false);
+  const [showJoinableOnly, setShowJoinableOnly] = useState(false);
 
   useEffect(() => {
     const prefetchRules = () => {
@@ -289,10 +291,24 @@ export default function MainMenu() {
     });
   }, [rooms, lobbyCounts]);
 
-  const searchFilteredRooms = useMemo(() => {
-    if (!debouncedSearch) return filteredRooms;
-    const query = debouncedSearch.toLowerCase();
+  const optionFilteredRooms = useMemo(() => {
     return filteredRooms.filter((room: any) => {
+      if (hideLockedRooms && room.requiresPassword) return false;
+      if (
+        showJoinableOnly &&
+        room.status &&
+        room.status !== "waiting"
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [filteredRooms, hideLockedRooms, showJoinableOnly]);
+
+  const searchFilteredRooms = useMemo(() => {
+    if (!debouncedSearch) return optionFilteredRooms;
+    const query = debouncedSearch.toLowerCase();
+    return optionFilteredRooms.filter((room: any) => {
       const baseName = (stripMinimalTag(room.name) || "").toString().toLowerCase();
       const hostName = typeof room.hostName === "string" ? room.hostName.toLowerCase() : "";
       const creatorName = typeof room.creatorName === "string" ? room.creatorName.toLowerCase() : "";
@@ -302,7 +318,7 @@ export default function MainMenu() {
         creatorName.includes(query)
       );
     });
-  }, [filteredRooms, debouncedSearch]);
+  }, [optionFilteredRooms, debouncedSearch]);
 
   // 直感的な並び順: 
   // 1) オンライン人数が多い順（>0 を優先）
@@ -812,6 +828,37 @@ export default function MainMenu() {
                 }}
                 placeholder="部屋を さがす..."
               />
+              <HStack
+                gap={3}
+                mt={4}
+                flexWrap="wrap"
+                data-testid="lobby-filter-controls"
+              >
+                <AppButton
+                  size="sm"
+                  visual={hideLockedRooms ? "solid" : "outline"}
+                  palette={hideLockedRooms ? "brand" : "gray"}
+                  aria-pressed={hideLockedRooms}
+                  onClick={() => {
+                    setHideLockedRooms((prev) => !prev);
+                    setPageIndex(0);
+                  }}
+                >
+                  {hideLockedRooms ? "🔓 ロック部屋を除外中" : "🔒 ロック部屋を除外"}
+                </AppButton>
+                <AppButton
+                  size="sm"
+                  visual={showJoinableOnly ? "solid" : "outline"}
+                  palette={showJoinableOnly ? "brand" : "gray"}
+                  aria-pressed={showJoinableOnly}
+                  onClick={() => {
+                    setShowJoinableOnly((prev) => !prev);
+                    setPageIndex(0);
+                  }}
+                >
+                  {showJoinableOnly ? "🎮 待機中のみ表示中" : "🎮 待機中のみ表示"}
+                </AppButton>
+              </HStack>
             </Box>
 
             {!firebaseEnabled ? (

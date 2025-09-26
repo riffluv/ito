@@ -189,7 +189,7 @@ export async function joinRoomFully({
 }): Promise<EnsureMemberResult> {
   const created = await ensureMember({ roomId, uid, displayName });
   if ((created as any)?.reason === "inProgress") {
-    return created;
+    throw new Error("ROOM_IN_PROGRESS");
   }
   if (created.joined) {
     await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
