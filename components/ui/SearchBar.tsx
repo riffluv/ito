@@ -31,7 +31,7 @@ export function SearchBar({
       py={3}
       position="relative"
     >
-      <HStack spacing={3} align="center">
+      <HStack gap={3} align="center">
         {/* 検索アイコン */}
         <Box color="whiteAlpha.80" display="flex" alignItems="center">
           <Search size={18} />
@@ -43,12 +43,13 @@ export function SearchBar({
           placeholder={placeholder}
           aria-label={ariaLabel}
           autoComplete="off"
-          variant="unstyled"
           fontFamily="monospace"
           fontSize="md"
           fontWeight="normal"
           color="white"
           textShadow="1px 1px 0px #000"
+          border="none"
+          bg="transparent"
           _placeholder={{
             color: "whiteAlpha.70",
             fontFamily: "monospace",
