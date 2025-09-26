@@ -8,8 +8,12 @@ import {
   limit,
   orderBy,
   query,
+  startAfter,
   Timestamp,
   where,
+  type QueryDocumentSnapshot,
+  type DocumentData,
+  type QuerySnapshot,
 } from "firebase/firestore";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -77,26 +81,52 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
     setError((prev) => (prev ? null : prev));
 
     try {
-      const prefetchPages = Math.max(pageIndex + 1 + PREFETCH_PAGE_PAD, 1);
-      let recentLimit = Math.min(
-        Math.max(ROOMS_PER_PAGE, ROOMS_PER_PAGE * prefetchPages),
-        MAX_RECENT_FETCH
-      );
-      if (normalizedQuery) {
-        recentLimit = Math.min(
-          MAX_RECENT_FETCH,
-          Math.max(recentLimit, ROOMS_PER_PAGE * 6)
-        );
-      }
-      // 🚨 緊急読み取り削減: 直近3分のみに制限
-      const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
       const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
-      const qRecent = query(
-        roomsCol,
+
+      const targetPageCount = Math.max(pageIndex + 1 + PREFETCH_PAGE_PAD, 1);
+      const additionalPagesForSearch = normalizedQuery ? 4 : 0;
+      const maxPageFetch = Math.min(
+        targetPageCount + additionalPagesForSearch,
+        Math.ceil(MAX_RECENT_FETCH / ROOMS_PER_PAGE)
+      );
+
+      const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
+      const recentConstraints = [
         where("lastActiveAt", ">=", Timestamp.fromDate(threeMinAgo)),
         orderBy("lastActiveAt", "desc"),
-        limit(recentLimit)
-      );
+      ] as const;
+
+      const fetchPageBatch = async () => {
+        const collected: QueryDocumentSnapshot<DocumentData>[] = [];
+        let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
+
+        for (let page = 0; page < maxPageFetch; page += 1) {
+          let snap: QuerySnapshot<DocumentData>;
+          if (cursor) {
+            snap = await getDocs(
+              query(roomsCol, ...recentConstraints, startAfter(cursor), limit(ROOMS_PER_PAGE))
+            );
+          } else {
+            snap = await getDocs(
+              query(roomsCol, ...recentConstraints, limit(ROOMS_PER_PAGE))
+            );
+          }
+          if (snap.empty) break;
+
+          collected.push(...snap.docs);
+          cursor = snap.docs[snap.docs.length - 1];
+
+          if (snap.docs.length < ROOMS_PER_PAGE) {
+            break;
+          }
+        }
+
+        return collected;
+      };
+
+      const recentDocs = await fetchPageBatch();
+      const recentRooms = recentDocs.map((d) => d.data() as any);
+
       const INPROGRESS_LIMIT = Number(
         (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
       );
@@ -109,8 +139,6 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
         limit(Math.max(inprogLimit, ROOMS_PER_PAGE))
       );
 
-      const [snapRecent, snapInprog] = await Promise.all([getDocs(qRecent), getDocs(qInprog)]);
-
       const now = Date.now();
       const filterValid = (r: any) => {
         const exp = (r as any).expiresAt;
@@ -118,8 +146,7 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
         if (expMs && expMs <= now) return false;
         return true;
       };
-
-      const recentRooms = snapRecent.docs.map((d) => d.data() as any).filter(filterValid);
+      const snapInprog = await getDocs(qInprog);
       const inprogRooms = snapInprog.docs.map((d) => d.data() as any).filter(filterValid)
         .sort((a: any, b: any) => {
           // クライアント側でlastActiveAtソート

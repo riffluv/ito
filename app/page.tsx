@@ -391,6 +391,14 @@ export default function MainMenu() {
 
   const handleJoinRoom = useCallback((room: any) => {
     if (!room) return;
+    if (room.status && room.status !== "waiting" && room.status !== "completed") {
+      notify({
+        title: "ただいま進行中です",
+        description: "ゲームが進行中のため新しい参加を受付できません。",
+        type: "warning",
+      });
+      return;
+    }
     if (room.requiresPassword) {
       const cached = getCachedRoomPasswordHash(room.id);
       if (cached && room.passwordHash && cached === room.passwordHash) {

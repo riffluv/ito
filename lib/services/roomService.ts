@@ -15,6 +15,11 @@ import {
   where,
 } from "firebase/firestore";
 
+type EnsureMemberResult =
+  | { joined: true }
+  | { joined: false }
+  | { joined: false; reason: "inProgress" };
+
 export async function ensureMember({
   roomId,
   uid,
@@ -23,13 +28,25 @@ export async function ensureMember({
   roomId: string;
   uid: string;
   displayName: string | null | undefined;
-}): Promise<{ joined: boolean } | { joined: false }> {
+}): Promise<EnsureMemberResult> {
   // まず重複チェック＆クリーンアップを実行（ベストプラクティス）
   await cleanupDuplicatePlayerDocs(roomId, uid);
-  
+
   const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
   if (!meSnap.exists()) {
+    const roomRef = doc(db!, "rooms", roomId);
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) {
+      throw new Error("ROOM_NOT_FOUND");
+    }
+    const room = roomSnap.data() as RoomDoc & Partial<{ hostId: string; status: string }>;
+    const status = room?.status;
+    const isHost = typeof room?.hostId === "string" && room.hostId.trim() === uid;
+    if (!isHost && status && status !== "waiting") {
+      return { joined: false, reason: "inProgress" } as const;
+    }
+
     // クリーンアップ後の正確なプレイヤー数を取得
     const playersCollectionRef = collection(db!, "rooms", roomId, "players");
     const playersSnap = await getDocs(playersCollectionRef);
@@ -169,8 +186,11 @@ export async function joinRoomFully({
   uid: string;
   displayName: string | null | undefined;
   notifyChat?: boolean;
-}) {
+}): Promise<EnsureMemberResult> {
   const created = await ensureMember({ roomId, uid, displayName });
+  if ((created as any)?.reason === "inProgress") {
+    return created;
+  }
   if (created.joined) {
     await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
     await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
@@ -189,4 +209,5 @@ export async function joinRoomFully({
     }
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
+  return created;
 }

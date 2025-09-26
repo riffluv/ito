@@ -62,6 +62,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebasedatabase.app
+# 推奨: RTDB プレゼンスが利用できる環境ではフォールバックを無効化
+NEXT_PUBLIC_DISABLE_FS_FALLBACK=1
 ```
 
 ### 3. Firebase設定
