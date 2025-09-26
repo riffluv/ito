@@ -837,26 +837,80 @@ export default function MainMenu() {
                 <AppButton
                   size="sm"
                   visual={hideLockedRooms ? "solid" : "outline"}
-                  palette={hideLockedRooms ? "brand" : "gray"}
+                  palette={hideLockedRooms ? "success" : "gray"}
                   aria-pressed={hideLockedRooms}
                   onClick={() => {
                     setHideLockedRooms((prev) => !prev);
                     setPageIndex(0);
                   }}
+                  css={{
+                    minWidth: "180px",
+                    textAlign: "center",
+                    position: "relative",
+                    ...(hideLockedRooms && {
+                      boxShadow: `
+                        inset 0 3px 6px rgba(0,0,0,0.4),
+                        inset 0 -1px 0 rgba(255,255,255,0.1),
+                        0 1px 2px rgba(0,0,0,0.2)
+                      `,
+                      transform: "translateY(1px)"
+                    })
+                  }}
                 >
-                  {hideLockedRooms ? "🔓 ロック部屋を除外中" : "🔒 ロック部屋を除外"}
+                  🔒 ロック部屋を除外
+                  {hideLockedRooms && (
+                    <Box
+                      as="span"
+                      position="absolute"
+                      top="-4px"
+                      right="-4px"
+                      w="12px"
+                      h="12px"
+                      bg="success.500"
+                      borderRadius="50%"
+                      border="2px solid white"
+                      boxShadow="0 0 8px rgba(34, 197, 94, 0.6)"
+                    />
+                  )}
                 </AppButton>
                 <AppButton
                   size="sm"
                   visual={showJoinableOnly ? "solid" : "outline"}
-                  palette={showJoinableOnly ? "brand" : "gray"}
+                  palette={showJoinableOnly ? "success" : "gray"}
                   aria-pressed={showJoinableOnly}
                   onClick={() => {
                     setShowJoinableOnly((prev) => !prev);
                     setPageIndex(0);
                   }}
+                  css={{
+                    minWidth: "180px",
+                    textAlign: "center",
+                    position: "relative",
+                    ...(showJoinableOnly && {
+                      boxShadow: `
+                        inset 0 3px 6px rgba(0,0,0,0.4),
+                        inset 0 -1px 0 rgba(255,255,255,0.1),
+                        0 1px 2px rgba(0,0,0,0.2)
+                      `,
+                      transform: "translateY(1px)"
+                    })
+                  }}
                 >
-                  {showJoinableOnly ? "🎮 待機中のみ表示中" : "🎮 待機中のみ表示"}
+                  🎮 待機中のみ表示
+                  {showJoinableOnly && (
+                    <Box
+                      as="span"
+                      position="absolute"
+                      top="-4px"
+                      right="-4px"
+                      w="12px"
+                      h="12px"
+                      bg="success.500"
+                      borderRadius="50%"
+                      border="2px solid white"
+                      boxShadow="0 0 8px rgba(34, 197, 94, 0.6)"
+                    />
+                  )}
                 </AppButton>
               </HStack>
             </Box>
