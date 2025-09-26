@@ -112,7 +112,15 @@ export function GamePasswordInput({ value, onChange, disabled = false, error = f
           disabled={disabled}
           type="text"
           inputMode="numeric"
-          autoComplete="new-password"
+          pattern="[0-9]*"
+          enterKeyHint="next"
+          autoComplete="one-time-code"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-invalid={error || undefined}
+          data-lpignore="true"
+          data-1p-ignore="true"
           style={{
             width: "60px",
             height: "60px",

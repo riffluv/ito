@@ -21,6 +21,14 @@ export type ParticipantsState = {
   error: Error | null;
 };
 
+const disableFsFallback =
+  (process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK || "")
+    .toString()
+    .toLowerCase() === "1" ||
+  (process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK || "")
+    .toString()
+    .toLowerCase() === "true";
+
 export function useParticipants(
   roomId: string,
   uid: string | null
@@ -99,7 +107,7 @@ export function useParticipants(
   // RTDB: presence 購読
   useEffect(() => {
     if (!presenceSupported()) {
-      setOnlineUids(undefined);
+      setOnlineUids(disableFsFallback ? [] : undefined);
       return;
     }
     if (!roomId) return;
@@ -145,7 +153,10 @@ export function useParticipants(
 
   const participants = useMemo(() => {
     // presence 未対応/利用不可時: lastSeen を用いた近似で“実活動中”のみ表示
-    if (!Array.isArray(onlineUids)) {
+    if (!Array.isArray(onlineUids) || onlineUids.length === 0) {
+      if (disableFsFallback) {
+        return players;
+      }
       const now = Date.now();
       return players.filter((p) => isActive((p as any).lastSeen, now, ACTIVE_WINDOW_MS));
     }
