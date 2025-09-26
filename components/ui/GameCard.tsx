@@ -4,11 +4,12 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { memo, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 import { CardFaceFront, CardFaceBack } from "./CardFaces";
 import { cardSizeCss } from "./cardSize";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { WAITING_LABEL } from "@/lib/ui/constants";
 
 export type GameCardProps = {
@@ -33,7 +34,7 @@ import {
   type GameCardState
 } from "../cards/card.styles";
 
-// 🎯 統一されたテキストスタイル関数（CSS ベストプラクティス）
+// ?? ????????????????CSS ??????????
 const getUnifiedTextStyle = (): React.CSSProperties => ({
   fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif`,
   fontWeight: 400,
@@ -56,12 +57,26 @@ export function GameCard({
   flipped = false,
   waitingInCentral = true,
 }: GameCardProps) {
-  // hoverはCSS擬似クラスで処理し、再レンダーを避ける
+  // hover?CSS???????????????????
 
-  // ドラクエ風統一デザイン取得
-  // 🎯 統一されたドラクエ風スタイルシステム使用
+  // ?????????????
+  // ?? ????????????????????
   const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
   const textColors = getDragonQuestTextColors(waitingInCentral);
+
+  const playCardFlip = useSoundEffect("card_flip");
+  const previousFlipRef = useRef<boolean>(flipped);
+
+  useEffect(() => {
+    if (variant !== "flip") {
+      previousFlipRef.current = flipped;
+      return;
+    }
+    if (flipped && !previousFlipRef.current) {
+      playCardFlip();
+    }
+    previousFlipRef.current = flipped;
+  }, [flipped, variant, playCardFlip]);
 
   // Shared semantic colors
   const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
@@ -85,14 +100,14 @@ export function GameCard({
 
   const mergeShadow = (core: string) =>
     boundaryRing ? `${boundaryRing}, ${core}` : core;
-  // 3D FLIP CARD IMPLEMENTATION - 以前の動作していたバージョンを復活
+  // 3D FLIP CARD IMPLEMENTATION - ?????????????????
   if (variant === "flip") {
     const { effectiveMode, reducedMotion } = useAnimationSettings();
-    // 初回レンダー時のモードを固定し、途中切替（auto判定の反映）によるDOM差し替えを防ぐ
+    // ?????????????????????auto?????????DOM???????
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
     const stableMode = stableModeRef.current;
     if (stableMode === "simple") {
-      // 低スペック向け: クロスフェードで“めくった感”を演出（回転なし）
+      // ???????: ????????????????????????
       const backNumberFontSize = getNumberFontSize(
         typeof number === "number" ? number : null
       );
@@ -156,7 +171,7 @@ export function GameCard({
         </Box>
       );
     }
-    // 3Dモード（従来）
+    // 3D???????
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
@@ -173,7 +188,7 @@ export function GameCard({
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
           ...cardSizeCss(),
-          // ホバー時は3D要素にわずかなY移動を加える（transformの競合を避けて親から指定）
+          // ?????3D???????Y???????transform?????????????
           "&:hover .gc3d": {
             transform: `${flipTransform} translateY(-4px) translateZ(0)`,
           },
@@ -193,7 +208,7 @@ export function GameCard({
             transition: `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
           }}
         >
-          {/* FRONT SIDE - 連想ワード面 */}
+          {/* FRONT SIDE - ?????? */}
           <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(0)", willChange: "auto" }}>
             <CardFaceFront
               index={typeof index === "number" ? index : null}
@@ -209,7 +224,7 @@ export function GameCard({
             />
           </Box>
 
-          {/* BACK SIDE - 数字面 */}
+          {/* BACK SIDE - ??? */}
           <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(0)", willChange: "auto" }}>
             <CardFaceBack
               index={typeof index === "number" ? index : null}
@@ -229,7 +244,7 @@ export function GameCard({
     );
   }
 
-  // FLAT VARIANT - 通常のカード表示（CSSホバーで再レンダー無し）
+  // FLAT VARIANT - ?????????CSS????????????
   const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
   const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
   const hoveredBoxShadow = UI_TOKENS.SHADOWS.cardHover;
@@ -255,7 +270,7 @@ export function GameCard({
       style={{
         transformStyle: "preserve-3d",
         willChange: "transform",
-        // フォント描画改善: レイヤー促進（判定ボタン押下時と同等の描画品質を常時適用）
+        // ????????: ?????????????????????????????
         transform: "translateZ(0)",
         WebkitFontSmoothing: "antialiased",
         MozOsxFontSmoothing: "grayscale",
@@ -291,9 +306,9 @@ export function GameCard({
           fontSize={
             typeof number === "number"
               ? getNumberFontSize(number)
-              : getClueFontSize(clue) // 連想ワード用の動的フォントサイズ
+              : getClueFontSize(clue) // ????????????????
           }
-          color={UI_TOKENS.COLORS.textBase} // 全状態で白色統一
+          color={UI_TOKENS.COLORS.textBase} // ????????
           lineHeight={typeof number === "number" ? 1.3 : 1.3}
           textShadow={
             waitingInCentral
@@ -321,27 +336,27 @@ export function GameCard({
           letterSpacing={
             typeof number === "number"
               ? String(number).length >= 3
-                ? "-0.8px" // 3桁数字の適切な文字間隔
-                : "-0.3px" // 2桁数字の適切な文字間隔
+                ? "-0.8px" // 3???????????
+                : "-0.3px" // 2???????????
               : undefined
           }
           style={{
             wordWrap: typeof number === "number" ? "normal" : "break-word",
             hyphens: typeof number === "number" ? "none" : "auto",
-            // フォント描画の統一のみ適用（transformは除外）
+            // ??????????????transform????
             WebkitFontSmoothing: "antialiased",
             MozOsxFontSmoothing: "grayscale",
           }}
           css={
             typeof number === "number"
               ? {
-                  // CSS詳細度を上げて適切に上書き
+                  // CSS?????????????
                   width: "100%",
                   minWidth: "0",
                   maxWidth: "100%",
                   fontVariantNumeric: "normal",
                   fontFamily: "inherit",
-                  // ネストした子要素も制御
+                  // ???????????
                   "& > *": {
                     width: "100%",
                     minWidth: "0",
@@ -378,7 +393,7 @@ export function GameCard({
         justifyContent="flex-start"
         textAlign="left"
       >
-        <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
+        <span className={styles.cardMeta}>{name ?? "(??)"}</span>
       </Box>
     </Box>
   );

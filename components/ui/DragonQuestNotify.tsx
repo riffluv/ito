@@ -3,6 +3,8 @@ import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { gsap } from "gsap";
+import { playSound } from "@/lib/audio/playSound";
+import type { SoundId } from "@/lib/audio/types";
 import { useEffect, useRef, useState } from "react";
 
 export interface DragonQuestNotification {
@@ -14,10 +16,28 @@ export interface DragonQuestNotification {
   timestamp: number;
 }
 
-// グローバル通知ストア
+const NOTIFICATION_SOUND_MAP: Record<DragonQuestNotification["type"], SoundId> = {
+  info: "notify_success",
+  success: "notify_success",
+  warning: "notify_warning",
+  error: "notify_error",
+};
+
+const NOTIFICATION_ICON_MAP: Record<DragonQuestNotification["type"], string> = {
+  success: "✨",
+  error: "✖",
+  warning: "⚠",
+  info: "★",
+};
+
+const DEFAULT_DURATION_MS = 5500;
+
+const playNotificationSound = (type: DragonQuestNotification["type"]) => {
+  playSound(NOTIFICATION_SOUND_MAP[type] ?? "notify_success");
+};
+
 class NotificationStore {
-  private listeners: Set<(notifications: DragonQuestNotification[]) => void> =
-    new Set();
+  private listeners = new Set<(notifications: DragonQuestNotification[]) => void>();
   private notifications: DragonQuestNotification[] = [];
 
   subscribe(listener: (notifications: DragonQuestNotification[]) => void) {
@@ -27,71 +47,60 @@ class NotificationStore {
     };
   }
 
-  private notify() {
-    this.listeners.forEach((listener) => listener([...this.notifications]));
+  private emit() {
+    const snapshot = [...this.notifications];
+    this.listeners.forEach((listener) => listener(snapshot));
   }
 
   add(notification: Omit<DragonQuestNotification, "id" | "timestamp">) {
-    const newNotification: DragonQuestNotification = {
+    const entry: DragonQuestNotification = {
       ...notification,
       id: `dq-notify-${Date.now()}-${Math.random()}`,
       timestamp: Date.now(),
     };
+    this.notifications.push(entry);
+    this.emit();
 
-    this.notifications.push(newNotification);
-    this.notify();
-
-    // 自動削除
-    const duration = notification.duration ?? 4000;
-    setTimeout(() => {
-      this.remove(newNotification.id);
+    const duration = notification.duration ?? DEFAULT_DURATION_MS;
+    const timer = window.setTimeout(() => {
+      this.remove(entry.id);
     }, duration);
 
-    return newNotification.id;
+    return entry.id;
   }
 
   remove(id: string) {
     this.notifications = this.notifications.filter((n) => n.id !== id);
-    this.notify();
+    this.emit();
   }
 
   clear() {
     this.notifications = [];
-    this.notify();
+    this.emit();
   }
 }
 
 export const notificationStore = new NotificationStore();
 
-// ドラクエ風通知の外観関数
 export function dragonQuestNotify(options: {
   title: string;
   description?: string;
   type?: "info" | "warning" | "success" | "error";
   duration?: number;
 }) {
-  return notificationStore.add({
-    type: "info",
+  const payload: Omit<DragonQuestNotification, "id" | "timestamp"> = {
+    type: options.type ?? "info",
     ...options,
-  });
+  };
+  const id = notificationStore.add(payload);
+  playNotificationSound(payload.type as DragonQuestNotification["type"]);
+  return id;
 }
 
-// ドラクエ風ピクセルアイコンを取得
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case "success":
-      return "◆"; // ダイヤモンド：成功の宝石
-    case "error":
-      return "■"; // 四角：警告の盾
-    case "warning":
-      return "▲"; // 三角：注意マーク
-    default:
-      return "●"; // 丸：一般的な情報
-  }
-};
+const getNotificationIcon = (type: DragonQuestNotification["type"]) =>
+  NOTIFICATION_ICON_MAP[type] ?? NOTIFICATION_ICON_MAP.info;
 
-// 通知色を取得
-const getNotificationColor = (type: string) => {
+const getNotificationColor = (type: DragonQuestNotification["type"]) => {
   switch (type) {
     case "success":
       return UI_TOKENS.COLORS.limeGreen;
@@ -104,7 +113,6 @@ const getNotificationColor = (type: string) => {
   }
 };
 
-// 個別通知コンポーネント
 function NotificationItem({
   notification,
   onRemove,
@@ -114,103 +122,60 @@ function NotificationItem({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const tlRef = useRef<any>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
 
-  // ドラクエ風シンプルな登場アニメーション
   useEffect(() => {
     if (!containerRef.current || !contentRef.current) return;
-
     const container = containerRef.current;
     const content = contentRef.current;
 
     if (prefersReduced) {
-      // 最小限の状態をセットしてアニメーションをスキップ
       gsap.set(container, { opacity: 1, y: 0 });
-      gsap.set(content, { y: 0 });
+      gsap.set(content, { opacity: 1, y: 0 });
       return;
     }
 
-    // 初期状態：上からスライドイン（ドラクエのメッセージボックス風）
-    gsap.set(container, {
-      opacity: 0,
-      y: -20,
-    });
+    gsap.set(container, { opacity: 0, y: -16 });
+    gsap.set(content, { opacity: 0.3 });
 
-    // コンテンツも初期状態で非表示
-    gsap.set(content, {
-      opacity: 0.3,
-    });
-
-    // シンプルなスライドイン
     const tl = gsap.timeline();
     tlRef.current = tl;
-
     tl.to(container, {
       opacity: 1,
       y: 0,
-      duration: 0.18,
+      duration: 0.2,
       ease: "power2.out",
-    })
-      // 内容のタイピング風演出（ピクセルゲーム風）
-      .to(
-        content,
-        {
-          opacity: 1,
-          duration: 0.12,
-          ease: "none",
-        },
-        "-=0.06"
-      );
+    }).to(
+      content,
+      {
+        opacity: 1,
+        duration: 0.14,
+        ease: "none",
+      },
+      "-=0.08"
+    );
 
     return () => {
-      // クリーンアップ
-      try {
-        if (tlRef.current) {
-          tlRef.current.kill();
-          tlRef.current = null;
-        }
-        gsap.killTweensOf(container);
-        gsap.killTweensOf(content);
-        gsap.set(container, {
-          clearProps: "transform,opacity,y",
-        });
-        gsap.set(content, { clearProps: "opacity" });
-      } catch (e) {
-        // ignore
-      }
+      tlRef.current?.kill();
+      tlRef.current = null;
+      gsap.killTweensOf(container);
+      gsap.killTweensOf(content);
+      gsap.set(container, { clearProps: "transform,opacity,y" });
+      gsap.set(content, { clearProps: "opacity" });
     };
   }, [prefersReduced]);
 
-  // ドラクエ風シンプルな退場アニメーション
-  const handleRemove = () => {
-    if (!containerRef.current) return;
-
-    gsap.to(containerRef.current, {
-      opacity: 0,
-      y: -10,
-      duration: 0.15,
-      ease: "power2.in",
-      onComplete: () => onRemove(notification.id),
-    });
-  };
-
-  // 自動削除タイマー
   useEffect(() => {
-    const duration = notification.duration ?? 4000;
-    const timer = setTimeout(handleRemove, duration);
-    return () => clearTimeout(timer);
-  }, [notification.duration, notification.id]);
+    const duration = notification.duration ?? DEFAULT_DURATION_MS;
+    const timer = window.setTimeout(() => onRemove(notification.id), duration);
+    return () => window.clearTimeout(timer);
+  }, [notification.duration, notification.id, onRemove]);
+
+  const handleRemove = () => onRemove(notification.id);
 
   return (
-    <Box
-      ref={containerRef}
-      mb={3}
-      css={{
-        cursor: "pointer",
-      }}
-      onClick={handleRemove}
-    >
+    <Box ref={containerRef} mb={3} css={{ cursor: "pointer" }} onClick={handleRemove}>
       <Box
         ref={contentRef}
         position="relative"
@@ -222,21 +187,11 @@ function NotificationItem({
         px={5}
         py={4}
         css={{
-          // ドラクエ風ピクセルシャドウ（blur無し、段積み）
-          boxShadow: `
-            3px 3px 0 rgba(0,0,0,0.8),
-            6px 6px 0 rgba(0,0,0,0.6),
-            inset 1px 1px 0 rgba(255,255,255,0.3),
-            inset -1px -1px 0 rgba(0,0,0,0.5)
-          `,
-          // ドラクエ風の微ノイズテクスチャ
-          backgroundImage: `
-            radial-gradient(circle at 20% 80%, rgba(255,255,255,0.02) 1px, transparent 1px),
-            radial-gradient(circle at 80% 20%, rgba(255,255,255,0.02) 1px, transparent 1px)
-          `,
-          backgroundSize: '8px 8px, 12px 12px',
-          // モダンなガラス効果を除去
-          backdropFilter: "none",
+          boxShadow:
+            "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.5)",
+          backgroundImage:
+            "radial-gradient(circle at 20% 80%, rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.02) 1px, transparent 1px)",
+          backgroundSize: "8px 8px, 12px 12px",
         }}
       >
         <Box display="flex" alignItems="flex-start" gap={4}>
@@ -289,16 +244,14 @@ function NotificationItem({
             color={UI_TOKENS.COLORS.whiteAlpha60}
             fontFamily="monospace"
             cursor="pointer"
-            _hover={{
-              color: "white",
-              textShadow: "1px 1px 0px #000"
-            }}
-            fontWeight="bold"
+            _hover={{ color: "white", textShadow: "1px 1px 0px #000" }}
+            fontWeight={700}
             w="20px"
             h="20px"
             display="flex"
             alignItems="center"
             justifyContent="center"
+            aria-label="通知を閉じる"
           >
             ×
           </Box>
@@ -308,11 +261,8 @@ function NotificationItem({
   );
 }
 
-// メイン通知コンテナ（ドラクエ風メッセージウィンドウ位置）
 export function DragonQuestNotifyContainer() {
-  const [notifications, setNotifications] = useState<DragonQuestNotification[]>(
-    []
-  );
+  const [notifications, setNotifications] = useState<DragonQuestNotification[]>([]);
 
   useEffect(() => {
     const unsubscribe = notificationStore.subscribe(setNotifications);
@@ -326,21 +276,9 @@ export function DragonQuestNotifyContainer() {
   if (notifications.length === 0) return null;
 
   return (
-    <Box
-      position="fixed"
-      top="24px"
-      right="24px"
-      zIndex="toast"
-      css={{
-        pointerEvents: "auto",
-      }}
-    >
+    <Box position="fixed" top="24px" right="24px" zIndex="toast" css={{ pointerEvents: "auto" }}>
       {notifications.map((notification) => (
-        <NotificationItem
-          key={notification.id}
-          notification={notification}
-          onRemove={handleRemove}
-        />
+        <NotificationItem key={notification.id} notification={notification} onRemove={handleRemove} />
       ))}
     </Box>
   );

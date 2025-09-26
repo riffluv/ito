@@ -40,6 +40,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
@@ -65,8 +66,8 @@ interface CentralCardBoardProps {
   resolveMode?: ResolveMode | null;
   orderNumbers?: Record<string, number | null | undefined>;
   isHost?: boolean;
-  displayMode?: "full" | "minimal"; // カード表示モード
-  // 親からスロット数を明示指定する場合に使用（サーバ/親と厳密一致）
+  displayMode?: "full" | "minimal"; // ????????
+  // ????????????????????????/???????
   slotCount?: number;
 }
 
@@ -134,17 +135,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     })
   );
 
-  // Collision detection: pointerWithin → distance fallback → rectIntersection
-  // ポインタが空隙にある時でも隣接スロットへ入りやすいように動的しきい値を採用
+  // Collision detection: pointerWithin ? distance fallback ? rectIntersection
+  // ?????????????????????????????????????
   const collisionDetection: CollisionDetection = (args) => {
-    // 1) まずはデフォルトの pointerWithin を最優先
+    // 1) ????????? pointerWithin ????
     const within = pointerWithin(args);
     if (within.length) return within;
 
     const { collisionRect, droppableRects } = args;
     if (!collisionRect) return [];
 
-    // 2) ドラッグ要素中心と各ドロップ領域中心の距離で評価（動的しきい値）
+    // 2) ????????????????????????????????
     const dragCenter = {
       x: collisionRect.left + collisionRect.width / 2,
       y: collisionRect.top + collisionRect.height / 2,
@@ -159,7 +160,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     });
     distances.sort((a, b) => a.value - b.value);
 
-    // 動的しきい値: スロット幅の60%（最小60px / 最大140px）
+    // ??????: ??????60%???60px / ??140px?
     const best = distances[0];
     if (best) {
       const rect = droppableRects.get(best.id as any)!;
@@ -169,7 +170,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     }
 
-    // 3) それでも入らない場合は rectIntersection で最も交差している領域へフォールバック
+    // 3) ??????????? rectIntersection ???????????????????
     return rectIntersection(args);
   };
 
@@ -177,6 +178,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const mePlaced = useMemo(() => {
     return placedIds.has(meId);
   }, [placedIds, meId]);
+
+  const playPickup = useSoundEffect("drag_pickup");
+  const playDropSuccess = useSoundEffect("drop_success");
+  const playDropInvalid = useSoundEffect("drop_invalid");
+  const playOrderConfirm = useSoundEffect("order_confirm");
 
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
@@ -192,7 +198,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         : null,
   });
 
-  // sequential 用の reveal hook は pending 情報も考慮した枚数を渡したいので
+  // sequential ?? reveal hook ? pending ????????????????
   const {
     pending,
     setPending,
@@ -214,11 +220,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     mePlaced,
   });
 
-  // 結果オーバーレイの表示・自動クローズ
+  // ??????????????????
   const [showResult, setShowResult] = useState(false);
   useEffect(() => {
     if (roomStatus === "finished") {
-      const appear = setTimeout(() => setShowResult(true), REVEAL_LINGER); // 余韻後に演出
+      const appear = setTimeout(() => setShowResult(true), REVEAL_LINGER); // ??????
       const close = setTimeout(
         () => setShowResult(false),
         REVEAL_LINGER + RESULT_VISIBLE_MS
@@ -231,7 +237,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setShowResult(false);
   }, [roomStatus]);
 
-  // 軽いトースト: リビール完了時に一度だけ表示（成功/失敗）
+  // ??????: ?????????????????/???
   const finishedToastRef = useRef(false);
   useEffect(() => {
     if (roomStatus === "finished") {
@@ -239,9 +245,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         finishedToastRef.current = true;
         const failedAt = realtimeResult?.failedAt ?? null;
         if (typeof failedAt === "number") {
-          notify({ title: "しっぱい…", description: `${failedAt}枚目で降順`, type: "warning", duration: 1800 });
+          notify({ title: "?????", description: `${failedAt}?????`, type: "warning", duration: 1800 });
         } else {
-          notify({ title: "せいこう！", type: "success", duration: 1800 });
+          notify({ title: "?????", type: "success", duration: 1800 });
         }
       }
     } else {
@@ -259,7 +265,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setPending((cur) => cur.filter((id) => !orderListSet.has(id)));
   }, [orderListSet, setPending]);
 
-  // proposal 反映時に proposal 上に存在するIDの pending ゴーストを掃除
+  // proposal ???? proposal ??????ID? pending ???????
   useEffect(() => {
     if (!proposal || proposal.length === 0) return;
     const present = new Set(
@@ -268,7 +274,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setPending((cur) => cur.filter((id) => !present.has(id)));
   }, [proposal?.join(","), setPending]);
 
-  // 背景タブ/非表示化時はローカルの pending をクリアしてチラつきを抑止
+  // ????/??????????? pending ?????????????
   useEffect(() => {
     const onVis = () => {
       try {
@@ -298,23 +304,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       proposal={proposal}
       resolveMode={(resolveMode || undefined) as any}
       roomStatus={roomStatus}
-      // sort-submit ではサーバ駆動の revealIndex、順次ではローカル progressive index
+      // sort-submit ???????? revealIndex????????? progressive index
       revealIndex={revealIndex}
       revealAnimating={revealAnimating}
       failed={failed}
-      realtimeResult={realtimeResult} // リアルタイム判定結果を追加
+      realtimeResult={realtimeResult} // ?????????????
     />
   );
 
   // DnD sorting for sort-submit mode
   const activeProposal = useMemo(() => {
-    // finished時は確定順のみ
+    // finished???????
     if (roomStatus === "finished") return orderList || [];
-    // 提案配列は null を空きとして保持（サーバー側でnullパディングするため）
+    // ????? null ???????????????null??????????
     return (proposal ?? []) as (string | null)[];
   }, [proposal?.join(","), orderList?.join(","), roomStatus]);
 
-  // 親から明示されたスロット数（優先）にフォールバック（dragging/static共通）
+  // ??????????????????????????dragging/static???
   const slotCountDragging = useMemo(() => {
     if (typeof slotCount === "number" && slotCount > 0) return slotCount;
     return Math.max(
@@ -336,35 +342,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
     if (!over) {
-      notify({ title: "ここには置けません", type: "info", duration: 900 });
+      playDropInvalid();
+      notify({ title: "???????u???????", type: "info", duration: 900 });
       return;
     }
     if (active.id === over.id) return;
 
-    // Check if this is a WaitingCard being dropped to an empty slot
     const activeId = String(active.id);
     const overId = String(over.id);
-    const alreadyInProposal = (activeProposal as (string | null)[]).includes(
-      activeId
-    );
+    const alreadyInProposal = (activeProposal as (string | null)[]).includes(activeId);
 
-    // Handle WaitingCard -> EmptySlot drops
     if (overId === RETURN_DROP_ZONE_ID) {
       if (!alreadyInProposal) {
+        playDropInvalid();
         return;
       }
       if (activeId !== meId) {
-        notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
+        playDropInvalid();
+        notify({ title: "??????J?[?h??????????", type: "info", duration: 1200 });
         return;
       }
       setPending((prev) => prev.filter((id) => id !== activeId));
       try {
         await removeCardFromProposal(roomId, activeId);
-        notify({ title: "カードを待機エリアに戻しました", type: "info", duration: 900 });
+        playDropSuccess();
+        notify({ title: "?J?[?h???@?G???A?????????", type: "info", duration: 900 });
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
+        playDropInvalid();
         notify({
-          title: "カードを戻せませんでした",
+          title: "?J?[?h?????????????",
           type: "error",
           duration: 1200,
         });
@@ -374,25 +381,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     if (overId.startsWith("slot-")) {
       let slotIndex = parseInt(overId.split("-")[1]);
-      if (!isNaN(slotIndex)) {
-        // Use slotCountDragging instead of eligibleIds for consistent UI/logic alignment
-        // This ensures drop validation matches the actually rendered slot count
+      if (!Number.isNaN(slotIndex)) {
         const maxSlots = Math.max(0, slotCountDragging - 1);
         const originalSlotIndex = slotIndex;
         slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
 
-        // Debug logging for troubleshooting edge slot issues
         if (process.env.NODE_ENV === "development" && originalSlotIndex !== slotIndex) {
-          logWarn("central-card-board", "slot-index-clamped", { originalSlotIndex, slotIndex, maxSlots, slotCountDragging });
+          logWarn("central-card-board", "slot-index-clamped", {
+            originalSlotIndex,
+            slotIndex,
+            maxSlots,
+            slotCountDragging,
+          });
         }
-        // Optimistic: 待機→新規配置のときのみ pending を更新。既存カードの移動では pending を触らない
         if (!alreadyInProposal) {
           setPending((prev) => {
             const next = [...prev];
-            // remove if already exists elsewhere
             const exist = next.indexOf(activeId);
             if (exist >= 0) next.splice(exist, 1);
-            // ensure length
             if (slotIndex >= next.length) {
               next.length = slotIndex + 1;
             }
@@ -406,28 +412,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           } else {
             await addCardToProposalAtPosition(roomId, activeId, slotIndex);
           }
+          playDropSuccess();
           return;
         } catch (error) {
           logError("central-card-board", "add-card-to-proposal", error);
+          playDropInvalid();
           return;
         }
       }
     }
 
-    // Handle card-on-card reordering within proposal using fixed-length (null-padded) indices
-    // Only allow if the active card is already on the board. Waiting cards must drop onto empty slots.
     if (alreadyInProposal) {
       const targetIndex = (activeProposal as (string | null)[]).indexOf(overId);
-      if (targetIndex < 0) return;
+      if (targetIndex < 0) {
+        playDropInvalid();
+        return;
+      }
       try {
         await moveCardInProposalToPosition(roomId, activeId, targetIndex);
+        playDropSuccess();
       } catch {
-        /* ignore */
+        playDropInvalid();
       }
     }
   };
 
-  // DragOverlay 用のアクティブID管理
+  // DragOverlay ???????ID??
   const [activeId, setActiveId] = useState<string | null>(null);
   const onDragStart = (e: DragStartEvent) => {
     setActiveId(String(e.active.id));
@@ -436,8 +446,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const isDraggingOwnPlacedCard =
     activeId === meId && (activeProposal as (string | null)[]).includes(activeId);
 
-  // 安全装置: sort-submit で "reveal" に入ったが何らかの理由でアニメ完了検知が漏れた場合、
-  // 理論上の総所要時間後に finalizeReveal を呼ぶ。
+  // ????: sort-submit ? "reveal" ??????????????????????????
+  // ??????????? finalizeReveal ????
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (resolveMode === "sort-submit" && roomStatus === "reveal") {
@@ -458,7 +468,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         };
       }
     }
-    // 状態が変わったらタイマー破棄
+    // ??????????????
     if (fallbackTimerRef.current) {
       clearTimeout(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
@@ -467,7 +477,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   // Sort-submit mode only - no sequential finalize needed
 
-  // sort-submit: 全員提出で「確定」可能
+  // sort-submit: ???????????
   const proposedCount = Array.isArray(proposal)
     ? (proposal as (string | null)[]).filter(Boolean).length
     : 0;
@@ -497,22 +507,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       border="none"
       borderWidth="0"
       css={{
-        // 背景なしでクリーンな表示
+        // ????????????
         background: "transparent",
         position: "relative",
       }}
     >
-      {/* A11y: reveal進行のライブアナウンス */}
+      {/* A11y: reveal??????????? */}
       <VisuallyHidden aria-live="polite">
         {roomStatus === "reveal"
-          ? `めくり ${revealIndex} / ${(orderList || []).length}`
+          ? `??? ${revealIndex} / ${(orderList || []).length}`
           : roomStatus === "finished"
           ? realtimeResult?.failedAt
-            ? `結果: 失敗（${realtimeResult.failedAt}枚目で降順）`
-            : `結果: 成功`
+            ? `??: ???${realtimeResult.failedAt}??????`
+            : `??: ??`
           : ""}
       </VisuallyHidden>
-      {/* コンパクトヘッダー - DPI125%対応 */}
+      {/* ????????? - DPI125%?? */}
       <Box
         textAlign="center"
         marginBottom={{ base: "0.5rem", md: "0.75rem" }}
@@ -527,7 +537,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }}
       ></Box>
 
-      {/* === 2025年 DPI対応 8人環境最適化 カードボード === */}
+      {/* === 2025? DPI?? 8?????? ?????? === */}
       <Box
         flex="1"
         display="flex"
@@ -537,13 +547,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         overflow="visible"
         position="relative"
         minHeight={0}
-        // 盤面上部に十分な呼吸域を確保（中央お題パネルを廃止したため調整）
-        // モダンカードゲームの視線設計: 盤面の重心は画面中央やや下（40–45%）。
-        // vh基準にして解像度/DPIに依存しない位置を維持。
+        // ????????????????????????????????
+        // ??????????????: ??????????????40?45%??
+        // vh????????/DPI????????????
         pt={{ base: "12vh", md: "14vh" }}
         pb={{ base: 4, md: 6 }}
         css={{
-          // 150DPI専用最適化: 縦方向圧縮
+          // 150DPI?????: ?????
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
             paddingTop: "14vh !important",
             paddingBottom: "1rem !important",
@@ -566,27 +576,27 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               announcements: {
                 onDragStart: ({ active }) => {
                   const player = playerMap.get(active.id as string);
-                  return `カード「${player?.name || active.id}」のドラッグを開始しました。`;
+                  return `????${player?.name || active.id}??????????????`;
                 },
                 onDragOver: ({ active, over }) => {
                   if (over) {
                     const activePlayer = playerMap.get(active.id as string);
                     const overIndex = activeProposal.indexOf(over.id as string);
-                    return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に移動中です。`;
+                    return `????${activePlayer?.name || active.id}????${overIndex + 1}???????`;
                   }
-                  return `カード「${active.id}」を移動中です。`;
+                  return `????${active.id}????????`;
                 },
                 onDragEnd: ({ active, over }) => {
                   const activePlayer = playerMap.get(active.id as string);
                   if (over) {
                     const overIndex = activeProposal.indexOf(over.id as string);
-                    return `カード「${activePlayer?.name || active.id}」を位置${overIndex + 1}に配置しました。`;
+                    return `????${activePlayer?.name || active.id}????${overIndex + 1}????????`;
                   }
-                  return `カード「${activePlayer?.name || active.id}」のドラッグを終了しました。`;
+                  return `????${activePlayer?.name || active.id}??????????????`;
                 },
                 onDragCancel: ({ active }) => {
                   const activePlayer = playerMap.get(active.id as string);
-                  return `カード「${activePlayer?.name || active.id}」のドラッグをキャンセルしました。`;
+                  return `????${activePlayer?.name || active.id}?????????????????`;
                 },
               },
             }}
@@ -597,7 +607,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               border="borders.retrogameThin"
               borderColor={UI_TOKENS.COLORS.whiteAlpha90}
               borderRadius={0}
-              padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
+              padding={{ base: 3, md: 4 }} // DPI100%??????????
               minHeight="auto"
               width="100%"
               maxWidth="var(--board-max-width)"
@@ -612,23 +622,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               data-drop-target={isOver && canDrop ? "true" : "false"}
               css={{
                 containerType: "inline-size",
-                // 統一されたレスポンシブスペーシング
+                // ?????????????????
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                  gap: "8px", // DPI125%用最適化
+                  gap: "8px", // DPI125%????
                   padding: "8px 12px",
-                  // カード配置の最適化
+                  // ?????????
                   "& > *": {
                     minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
                   },
                 },
-                // DPI 150%対応：カードボードエリアの最適化（@layer除去でCSS適用を確実に）
+                // DPI 150%?????????????????@layer???CSS???????
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
-                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // 垂直間隔：28px（重なり防止）
+                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // ?????18px
+                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // ?????28px???????
                   padding: `${UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING} !important`, // 10px
                   minHeight: "auto !important",
-                  alignContent: "flex-start !important", // 上詰めで安定配置
-                  // カードサイズ統一
+                  alignContent: "flex-start !important", // ????????
+                  // ????????
                   "& > *": {
                     minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
                     maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
@@ -644,7 +654,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   gap: "10px",
                   padding: "12px",
                 },
-                // コンテナクエリベースの最適化
+                // ??????????????
                 "@container (max-width: 600px)": {
                   gap: "6px",
                   padding: "8px",
@@ -675,7 +685,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           )
                         : false;
                       if (cardId && ready) {
-                        // proposal 由来のみ sortable。pending 由来は一時表示（ドラッグ不可）
+                        // proposal ???? sortable?pending ???????????????
                         return ap ? (
                           <SortableItem id={cardId} key={cardId}>
                             {renderCard(cardId, idx)}
@@ -703,7 +713,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               </Box>
             </Box>
 
-            {/* DragOverlay: ドラッグ中のカードをポータルでレンダリングし、ポインタに100%追従させる */}
+            {/* DragOverlay: ????????????????????????????100%????? */}
             <DragOverlay
               dropAnimation={{ duration: 200, easing: UI_TOKENS.EASING.standard }}
               modifiers={[restrictToWindowEdges]}
@@ -726,7 +736,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         </div>
                       );
                     }
-                    // 盤上未配置（待機エリア）の場合も見た目を統一
+                    // ??????????????????????
                     return (
                       <div style={ghostStyle}>
                         {renderCard(activeId)}
@@ -736,12 +746,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 : null}
             </DragOverlay>
 
-            {/* 待機エリア（clue/waiting中・未提出者がいる場合）- DndContext内に移動 */}
+            {/* ??????clue/waiting????????????- DndContext???? */}
             {(roomStatus === "clue" || roomStatus === "waiting") && (
               <Box 
                 mt={{ base: 6, md: 8 }}
                 css={{
-                  // 150DPI専用: カード間隔を大幅圧縮
+                  // 150DPI??: ??????????
                   [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
                     marginTop: "1rem !important",
                   },
@@ -765,7 +775,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               border="borders.retrogameThin"
               borderColor={UI_TOKENS.COLORS.whiteAlpha90}
               borderRadius={0}
-              padding={{ base: 3, md: 4 }} // DPI100%基準でパディング縮小
+              padding={{ base: 3, md: 4 }} // DPI100%??????????
               minHeight="auto"
               width="100%"
               maxWidth="var(--board-max-width)"
@@ -780,23 +790,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               data-drop-target={isOver && canDrop ? "true" : "false"}
               css={{
                 containerType: "inline-size",
-                // 統一されたレスポンシブスペーシング
+                // ?????????????????
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                  gap: "8px", // DPI125%用最適化
+                  gap: "8px", // DPI125%????
                   padding: "8px 12px",
-                  // カード配置の最適化
+                  // ?????????
                   "& > *": {
                     minWidth: UNIFIED_LAYOUT.DPI_125.CARD.WIDTH.base,
                   },
                 },
-                // DPI 150%対応：カードボードエリアの最適化（@layer除去でCSS適用を確実に）
+                // DPI 150%?????????????????@layer???CSS???????
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // 水平間隔：18px
-                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // 垂直間隔：28px（重なり防止）
+                  gap: `${UNIFIED_LAYOUT.DPI_150.SPACING.CARD_GAP} !important`, // ?????18px
+                  rowGap: `${UNIFIED_LAYOUT.DPI_150.SPACING.ROW_GAP} !important`, // ?????28px???????
                   padding: `${UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING} !important`, // 10px
                   minHeight: "auto !important",
-                  alignContent: "flex-start !important", // 上詰めで安定配置
-                  // カードサイズ統一
+                  alignContent: "flex-start !important", // ????????
+                  // ????????
                   "& > *": {
                     minWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
                     maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.base,
@@ -812,7 +822,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   gap: "10px",
                   padding: "12px",
                 },
-                // コンテナクエリベースの最適化
+                // ??????????????
                 "@container (max-width: 600px)": {
                   gap: "6px",
                   padding: "8px",
@@ -833,13 +843,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       (pending && pending[idx]) ||
                       null;
                     const isDroppableSlot = canDropAtPosition(idx);
-                    // ゲーム状態での表示条件確認
+                    // ?????????????
                     const isGameActive =
                       roomStatus === "clue" ||
                       roomStatus === "reveal" ||
                       roomStatus === "finished";
 
-                    // カードがある場合はカード表示、ない場合は空きスロット表示
+                    // ????????????????????????????
                     const ready = cardId
                       ? !!(
                           playerMap.get(cardId)?.clue1 &&
@@ -875,7 +885,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     ) : (
                       <Tooltip
                         key={`drop-zone-${idx}`}
-                        content="配札後に有効/この位置には置けません"
+                        content="??????/???????????"
                         openDelay={300}
                         showArrow
                       >
@@ -904,13 +914,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               </Box>
             </Box>
 
-            {/* 待機エリア（clue/waiting中・未提出者がいる場合）- Static mode */}
+            {/* ??????clue/waiting????????????- Static mode */}
             {(roomStatus === "clue" || roomStatus === "waiting") &&
               waitingPlayers.length > 0 && (
                 <Box 
                   mt={{ base: 6, md: 8 }}
                   css={{
-                    // 150DPI専用: カード間隔を大幅圧縮
+                    // 150DPI??: ??????????
                     [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
                       marginTop: "1rem !important",
                     },
@@ -929,7 +939,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       </Box>
 
-      {/* GSAPアニメーション結果オーバーレイ（豪華な演出） */}
+      {/* GSAP?????????????????????? */}
       {roomStatus === "finished" && (
         <GameResultOverlay failed={failed} mode="overlay" />
       )}
@@ -938,3 +948,4 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 };
 
 export default CentralCardBoard;
+

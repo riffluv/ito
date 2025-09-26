@@ -6,6 +6,7 @@ import system from "@/theme";
 import { Box, ChakraProvider } from "@chakra-ui/react";
 import React, { useEffect } from "react";
 import { AnimationProvider } from "@/lib/animation/AnimationContext";
+import { SoundProvider } from "@/lib/audio/SoundProvider";
 
 function DarkModeOnlyBridge() {
   useEffect(() => {
@@ -24,15 +25,17 @@ export default function ClientProviders({
 }) {
   return (
     <ChakraProvider value={system}>
-      <AnimationProvider>
-        <TransitionProvider>
-          <Box bg="canvasBg" color="fgDefault" h="100dvh">
-            <DarkModeOnlyBridge />
-            <AuthClientWrapper>{children}</AuthClientWrapper>
-            <DragonQuestNotifyContainer />
-          </Box>
-        </TransitionProvider>
-      </AnimationProvider>
+      <SoundProvider>
+        <AnimationProvider>
+          <TransitionProvider>
+            <Box bg="canvasBg" color="fgDefault" h="100dvh">
+              <DarkModeOnlyBridge />
+              <AuthClientWrapper>{children}</AuthClientWrapper>
+              <DragonQuestNotifyContainer />
+            </Box>
+          </TransitionProvider>
+        </AnimationProvider>
+      </SoundProvider>
     </ChakraProvider>
   );
 }

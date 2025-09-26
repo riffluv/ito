@@ -3,6 +3,12 @@ import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+
+const VICTORY_TITLE = "✨ 勝利！";
+const FAILURE_TITLE = "⚠ 失敗…";
+const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
+const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -15,280 +21,177 @@ export function GameResultOverlay({
 }: GameResultOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const tlRef = useRef<any>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
+  const playVictory = useSoundEffect("result_victory");
+  const playFailure = useSoundEffect("result_failure");
 
-  // 豪華なGSAPアニメーション（CSS版より遥かに派手で美しい）
   useEffect(() => {
-    if (mode !== "overlay" || !overlayRef.current || !textRef.current) return;
+    if (mode !== "overlay") return;
+    if (failed) {
+      playFailure();
+    } else {
+      playVictory();
+    }
+  }, [failed, mode, playFailure, playVictory]);
 
+  useEffect(() => {
+    if (mode !== "overlay") return;
     const overlay = overlayRef.current;
     const text = textRef.current;
+    if (!overlay || !text) return;
 
-    // 初期状態をリセット（より派手な初期設定）
-    gsap.set(overlay, {
-      scale: 0.3,
-      opacity: 0,
-      rotationY: -180,
-      rotationX: 45,
-      filter: "blur(10px)",
-    });
-    gsap.set(text, {
-      scale: 0.5,
-      y: 50,
-      opacity: 0,
-      rotationZ: -15,
-      filter: "blur(5px)",
-    });
     if (prefersReduced) {
-      // 減らす運動が要請されている場合は最小限の視覚変化にして即時表示
-      gsap.set(overlay, {
-        scale: 1,
-        opacity: 1,
-        rotationY: 0,
-        rotationX: 0,
-        filter: "none",
-      });
-      gsap.set(text, {
-        scale: 1,
-        y: 0,
-        opacity: 1,
-        rotationZ: 0,
-        filter: "none",
-      });
-    } else if (failed) {
-      // 失敗アニメーション: ドラマチックで絶望的な演出
-      const tl = gsap.timeline();
-      tlRef.current = tl;
+      gsap.set(overlay, { opacity: 1, scale: 1, rotationX: 0, rotationY: 0 });
+      gsap.set(text, { opacity: 1, y: 0, scale: 1 });
+      return;
+    }
 
-      // 衝撃的な登場（画面全体が震えるような重厚感）
-      tl.to(overlay, {
-        scale: 1.2,
-        opacity: 1,
-        rotationY: 0,
-        rotationX: 0,
-        filter: "blur(0px)",
-        duration: 0.6,
-        ease: "power4.out",
-      })
-        // テキストの衝撃的登場
-        .to(
+    const tl = gsap.timeline();
+    tlRef.current = tl;
+
+    if (failed) {
+      tl.fromTo(
+        overlay,
+        { opacity: 0, scale: 0.65, rotationX: -25, filter: "blur(6px)" },
+        {
+          opacity: 1,
+          scale: 1.05,
+          rotationX: 0,
+          filter: "blur(0px)",
+          duration: 0.5,
+          ease: "back.out(1.7)",
+        }
+      )
+        .fromTo(
           text,
-          {
-            scale: 1.1,
-            y: 0,
-            opacity: 1,
-            rotationZ: 0,
-            filter: "blur(0px)",
-            duration: 0.4,
-            ease: "elastic.out(1.2, 0.3)",
-          },
-          "-=0.3"
+          { opacity: 0, y: 24 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
+          "-=0.2"
         )
-        // サイズを正常に戻しつつ色彩効果
         .to(overlay, {
-          scale: 1,
-          duration: 0.2,
-          ease: "power2.out",
+          x: () => gsap.utils.random(-12, 12),
+          y: () => gsap.utils.random(-6, 6),
+          duration: 0.12,
+          repeat: 12,
+          yoyo: true,
+          ease: "sine.inOut",
+        })
+        .to(overlay, { x: 0, y: 0, duration: 0.25, ease: "power3.out" });
+    } else {
+      tl.fromTo(
+        overlay,
+        { opacity: 0, scale: 0.7, rotationX: 20, rotationY: -10, filter: "blur(6px)" },
+        {
+          opacity: 1,
+          scale: 1.05,
+          rotationX: 0,
+          rotationY: 0,
+          filter: "blur(0px)",
+          duration: 0.4,
+          ease: "back.out(1.8)",
+        }
+      )
+        .fromTo(
+          text,
+          { opacity: 0, y: 26, scale: 0.9 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.36,
+            ease: "elastic.out(1.2, 0.4)",
+          },
+          "-=0.18"
+        )
+        .to(overlay, {
+          scale: 0.96,
+          duration: 0.16,
+          ease: "power2.inOut",
         })
         .to(
+          overlay,
+          {
+            scale: 1.04,
+            duration: 0.28,
+            ease: "elastic.out(1.4, 0.35)",
+          },
+          "-=0.05"
+        )
+        .to(
           text,
           {
-            scale: 1,
-            duration: 0.2,
+            scale: 1.08,
+            duration: 0.22,
             ease: "power2.out",
           },
           "-=0.2"
         )
-        // 失敗の絶望を表現する激しい振動（より派手に）
-        .to(overlay, {
-          x: () => gsap.utils.random(-15, 15),
-          y: () => gsap.utils.random(-8, 8),
-          rotation: () => gsap.utils.random(-5, 5),
-          scale: () => gsap.utils.random(0.98, 1.02),
-          repeat: 12,
-          duration: 0.06,
-          ease: "power2.inOut",
-          yoyo: true,
-        })
-        // 振動から立ち直りつつ絶望感を演出
-        .to(overlay, {
-          x: 0,
-          y: 0,
-          rotation: 0,
-          scale: 1,
-          duration: 0.4,
-          ease: "elastic.out(1, 0.8)",
-        })
-        // 最後に重苦しい呼吸のような動き
-        .to(overlay, {
-          scale: 1.02,
-          duration: 1.5,
-          ease: "power1.inOut",
-          yoyo: true,
-          repeat: -1,
-        });
-    } else {
-      // 成功アニメーション: 圧倒的な喜びと勝利の演出
-      const tl = gsap.timeline();
-      tlRef.current = tl;
-
-      // 勝利の光が差すような華々しい登場
-      tl.to(overlay, {
-        scale: 1.3,
-        opacity: 1,
-        rotationY: 0,
-        rotationX: 0,
-        filter: "blur(0px)",
-        duration: 0.5,
-        ease: "back.out(3)",
-      })
-        // 勝利テキストの華麗な登場
-        .to(
-          text,
-          {
-            scale: 1.2,
-            y: 0,
-            opacity: 1,
-            rotationZ: 0,
-            filter: "blur(0px)",
-            duration: 0.4,
-            ease: "elastic.out(1.5, 0.4)",
-          },
-          "-=0.3"
-        )
-        // 勝利の余韻：ゆったりとしたサイズ調整
-        .to(overlay, {
-          scale: 1.1,
-          duration: 0.3,
-          ease: "power2.out",
-        })
         .to(
           text,
           {
             scale: 1,
-            duration: 0.3,
-            ease: "power2.out",
+            duration: 0.24,
+            ease: "elastic.out(1.4, 0.4)",
           },
-          "-=0.3"
+          "-=0.1"
         )
-        // 喜びの弾み（より豪華に）
-        .to(overlay, {
-          scale: 1.15,
-          y: -10,
-          duration: 0.2,
-          ease: "power3.out",
-        })
-        .to(overlay, {
-          scale: 1.05,
-          y: 0,
-          duration: 0.3,
-          ease: "bounce.out",
-        })
-        // 勝利を称える華やかな脈動
-        .to(overlay, {
-          scale: 1.08,
-          duration: 0.8,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: 2,
-        })
-        // 永続的な勝利の浮遊感（より美しく）
-        .to(overlay, {
-          y: -5,
-          rotationZ: 1,
-          duration: 2,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-        })
-        // テキストにも微細な動きを追加
         .to(
-          text,
+          overlay,
           {
-            y: -2,
-            duration: 2.5,
+            y: -5,
+            rotationZ: 0.8,
+            duration: 1.6,
             ease: "sine.inOut",
             yoyo: true,
             repeat: -1,
           },
-          "-=2"
+          "-=0.2"
+        )
+        .to(
+          text,
+          {
+            y: -2,
+            duration: 1.6,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+          },
+          "-=1.6"
         );
     }
 
     return () => {
-      // timeline があれば確実に破棄
-      try {
-        if (tlRef.current) {
-          tlRef.current.kill();
-          tlRef.current = null;
-        }
-      } catch {}
-
-      // すべての tweens を停止
-      try {
-        gsap.killTweensOf(overlay);
-        gsap.killTweensOf(text);
-      } catch {}
-
-      // inline style が残らないようにクリア
-      try {
-        gsap.set(overlay, {
-          clearProps: "transform,opacity,filter,x,y,rotation,scale",
-        });
-        gsap.set(text, {
-          clearProps: "transform,opacity,filter,x,y,rotation,scale",
-        });
-      } catch {}
+      tlRef.current?.kill();
+      tlRef.current = null;
+      gsap.set(overlay, {
+        clearProps: "transform,opacity,filter,x,y,rotation,scale",
+      });
+      gsap.set(text, {
+        clearProps: "transform,opacity,filter,x,y,rotation,scale",
+      });
     };
   }, [failed, mode, prefersReduced]);
 
-  // インライン表示: カードと被せず帯として表示
+  const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
+  const subtext = failed ? FAILURE_SUBTEXT : VICTORY_SUBTEXT;
+
   if (mode === "inline") {
-    if (failed) {
-      return (
-        <Box
-          as="span"
-          display="inline-block"
-          px={2}
-          py={1}
-          fontWeight={700}
-          fontSize={{ base: "sm", md: "sm" }}
-          color="white" // ドラクエ風白文字統一
-          letterSpacing={0.5}
-          whiteSpace="nowrap"
-          aria-live="polite"
-          role="status"
-          fontFamily="monospace" // ドラクエ風フォント
-          textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-          bg={UI_TOKENS.COLORS.panelBg80}
-          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0} // 角ばったデザイン
-        >
-          ▲ しっぱい
-        </Box>
-      );
-    }
     return (
       <Box
-        as="span"
-        display="inline-block"
-        px={2}
-        py={1}
-        fontWeight={700}
-        fontSize={{ base: "sm", md: "sm" }}
-        color="white" // ドラクエ風白文字統一
+        color="white"
         letterSpacing={0.5}
         whiteSpace="nowrap"
-        aria-live="polite"
-        role="status"
-        fontFamily="monospace" // ドラクエ風フォント
+        fontFamily="monospace"
         textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
         bg={UI_TOKENS.COLORS.panelBg80}
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-        borderRadius={0} // 角ばったデザイン
+        borderRadius={0}
+        px={4}
+        py={2}
+        fontWeight={700}
       >
-        ◆ クリア!
+        {title}
       </Box>
     );
   }
@@ -303,39 +206,33 @@ export function GameResultOverlay({
     >
       <Box
         ref={overlayRef}
-        px={8}
-        py={5}
+        px={{ base: 6, md: 8 }}
+        py={{ base: 4, md: 5 }}
         borderRadius={0}
         fontWeight={800}
-        fontSize={{ base: "23px", md: "29px" }}
-        color="white" // ドラクエ風統一白文字
-        letterSpacing={1} // やや控えめに
-        // ドラクエ風ボーダー統一
+        fontSize={{ base: "22px", md: "28px" }}
+        color="white"
+        letterSpacing={1}
         border="3px solid"
         borderColor={UI_TOKENS.COLORS.whiteAlpha90}
         css={{
-          // ドラクエ風統一リッチブラック背景
           background: UI_TOKENS.COLORS.panelBg,
-          // ドラクエ風統一シャドウ
-          boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
-          // ガラス効果除去 - ドラクエ風
+          boxShadow:
+            "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
         }}
       >
         <Box ref={textRef} textAlign="center">
-          {failed ? "▲ しっぱい!" : "◆ クリア! ◆"} {/* ドラクエ風日本語 */}
+          {title}
           <Text
             fontSize={{ base: "15px", md: "17px" }}
             mt={2}
             opacity={0.9}
-            fontFamily="monospace" // ドラクエ風フォント統一
+            fontFamily="monospace"
             fontWeight={500}
             letterSpacing="0.5px"
-            textShadow="1px 1px 0px #000" // ドラクエ風テキストシャドウ
+            textShadow="1px 1px 0px #000"
           >
-            {failed
-              ? "もういちど ちょうせんしよう!"
-              : "みごとな じゅんばんでした!"}{" "}
-            {/* ドラクエ風メッセージ */}
+            {subtext}
           </Text>
         </Box>
       </Box>
