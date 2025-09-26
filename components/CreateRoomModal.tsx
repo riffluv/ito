@@ -10,6 +10,7 @@ import { createPasswordEntry } from "@/lib/security/password";
 import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 import { Box, Dialog, Field, HStack, Input, Switch, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
+import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
 import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp, DocumentReference } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
@@ -115,8 +116,8 @@ export function CreateRoomModal({
 
     if (enablePassword) {
       const trimmed = password.trim();
-      if (trimmed.length < 4) {
-        setPasswordError("パスワードは4文字以上で設定してください");
+      if (trimmed.length !== 4 || !/^\d{4}$/.test(trimmed)) {
+        setPasswordError("4桁の数字を入力してください");
         return;
       }
       if (trimmed !== passwordConfirm.trim()) {
@@ -614,77 +615,65 @@ export function CreateRoomModal({
                   </HStack>
                 </Field.Root>
 
-                {enablePassword ? (
-                  <VStack align="stretch" gap={3}>
-                    <input type="text" name="roomKeyDummy" autoComplete="username" style={{ display: "none" }} />
-                    <input type="password" name="roomKeyHidden" autoComplete="new-password" style={{ display: "none" }} />
-                    <Input
-                      type="text"
-                      name="roomKey"
-                      placeholder="パスワード (4文字以上)"
-                      value={password}
-                      autoComplete="new-password"
-                      autoCorrect="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      inputMode="text"
-                      aria-autocomplete="none"
-                      data-lpignore="true"
-                      data-1p-ignore="true"
-                      data-form-type="other"
-                      onChange={(event) => setPassword(event.target.value)}
-                      css={{
-                        WebkitTextSecurity: "disc",
-                        MozTextSecurity: "disc",
-                        height: "44px",
-                        background: "white",
-                        border: "borders.retrogameInput",
-                        borderRadius: 0,
-                        fontFamily: "monospace",
-                        color: "richBlack.900",
-                        letterSpacing: "0.08em",
-                        fontWeight: 600,
-                      }}
-                    />
-                    <Input
-                      type="text"
-                      name="roomKeyConfirm"
-                      placeholder="もう一度入力"
-                      value={passwordConfirm}
-                      autoComplete="new-password"
-                      autoCorrect="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      inputMode="text"
-                      aria-autocomplete="none"
-                      data-lpignore="true"
-                      data-1p-ignore="true"
-                      data-form-type="other"
-                      onChange={(event) => setPasswordConfirm(event.target.value)}
-                      css={{
-                        WebkitTextSecurity: "disc",
-                        MozTextSecurity: "disc",
-                        height: "44px",
-                        background: "white",
-                        border: "borders.retrogameInput",
-                        borderRadius: 0,
-                        fontFamily: "monospace",
-                        color: "richBlack.900",
-                        letterSpacing: "0.08em",
-                        fontWeight: 600,
-                      }}
-                    />
+                {enablePassword && (
+                  <VStack align="stretch" gap={4}>
+                    <VStack gap={2}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                        textAlign="center"
+                      >
+                        ▼ 4桁の ひみつ ばんごう
+                      </Text>
+                      <GamePasswordInput
+                        value={password}
+                        onChange={setPassword}
+                        error={!!passwordError}
+                      />
+                    </VStack>
+
+                    <VStack gap={2}>
+                      <Text
+                        fontSize="sm"
+                        color="white"
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                        textAlign="center"
+                      >
+                        ▼ もういちど にゅうりょく
+                      </Text>
+                      <GamePasswordInput
+                        value={passwordConfirm}
+                        onChange={setPasswordConfirm}
+                        error={!!passwordError}
+                      />
+                    </VStack>
+
                     {passwordError ? (
-                      <Text fontSize="xs" color="dangerSolid" fontFamily="monospace">
+                      <Text
+                        fontSize="xs"
+                        color="dangerSolid"
+                        fontFamily="monospace"
+                        textAlign="center"
+                        textShadow="1px 1px 0px #000"
+                      >
                         {passwordError}
                       </Text>
                     ) : (
-                      <Text fontSize="xs" color="whiteAlpha.70" fontFamily="monospace">
-                        友だちにだけパスワードを共有してください
+                      <Text
+                        fontSize="xs"
+                        color="whiteAlpha.70"
+                        fontFamily="monospace"
+                        textAlign="center"
+                        textShadow="1px 1px 0px #000"
+                      >
+                        なかまにだけ ばんごうを おしえてね
                       </Text>
                     )}
                   </VStack>
-                ) : null}
+                )}
 
                 <Field.Root>
                   <Field.Label

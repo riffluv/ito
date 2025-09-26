@@ -143,7 +143,7 @@ export function RoomPasswordPrompt({
                 variant="outline"
                 borderRadius={0}
                 onClick={onCancel}
-                isDisabled={isLoading}
+                disabled={isLoading}
               >
                 やめる
               </Button>
@@ -155,8 +155,8 @@ export function RoomPasswordPrompt({
                     onSubmit(value);
                   }
                 }}
-                isLoading={isLoading}
-                isDisabled={isLoading || value.trim().length === 0}
+                loading={isLoading}
+                disabled={isLoading || value.trim().length === 0}
               >
                 入室する
               </Button>

@@ -35,7 +35,7 @@ export function Pagination({
       <HStack justify="space-between" align="center" gap={4}>
         <Button
           onClick={onPrev}
-          isDisabled={disablePrev}
+          disabled={disablePrev}
           variant="ghost"
           borderRadius={0}
           border="2px solid rgba(255,255,255,0.8)"
@@ -61,7 +61,7 @@ export function Pagination({
         </Text>
         <Button
           onClick={onNext}
-          isDisabled={disableNext}
+          disabled={disableNext}
           variant="ghost"
           borderRadius={0}
           border="2px solid rgba(255,255,255,0.8)"
