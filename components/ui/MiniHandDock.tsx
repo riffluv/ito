@@ -102,6 +102,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [text, setText] = React.useState<string>(me?.clue1 || "");
   const [isRestarting, setIsRestarting] = React.useState(false);
   const [quickStartPending, setQuickStartPending] = React.useState(false);
+  const [isResetting, setIsResetting] = React.useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
@@ -113,6 +114,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   React.useEffect(() => {
     if (!inlineFeedback) return;
+    if (inlineFeedback.tone === "info") return;
     const timer = setTimeout(() => setInlineFeedback(null), 2000);
     return () => clearTimeout(timer);
   }, [inlineFeedback]);
@@ -391,6 +393,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const resetGame = async () => {
+    setIsResetting(true);
+    setInlineFeedback({ message: "リセット中…", tone: "info" });
     try {
       // 在席者だけでやり直すための keep を決定（presence のオンラインUIDを利用）
       const keep = Array.isArray(roundIds) && Array.isArray(onlineUids)
@@ -430,12 +434,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       }
 
       await resetRoomWithPrune(roomId, keep, { notifyChat: true });
+      setInlineFeedback({ message: "待機状態に戻しました！", tone: "success" });
       notify({ title: "ゲームをリセット！", type: "success" });
       try { postRoundReset(roomId); } catch {}
     } catch (e: any) {
       const msg = String(e?.message || e || "");
       console.error("❌ resetGame: 失敗", e);
       notify({ title: "リセットに失敗しました", description: msg, type: "error" });
+      setInlineFeedback(null);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -474,7 +482,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const quickStartDisabled = autoStartLocked || quickStartPending;
 
   const LOADING_BG = "linear-gradient(135deg, rgba(71,85,105,0.9), rgba(30,41,59,0.98))";
-  const preparing = !!(autoStartLocked || quickStartPending || isRestarting);
+  const preparing = !!(autoStartLocked || quickStartPending || isRestarting || isResetting);
   const canShowStart =
     !!isHost && roomStatus === "waiting" && !autoStartLocked && !quickStartPending && !isRestarting;
   // 短時間の待機では何も出さず、一定時間を超えた場合のみプレースホルダを出す
@@ -854,6 +862,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 <IconButton
                   aria-label="リセット"
                   onClick={async () => {
+                    if (isResetting) return;
                     await resetGame();
                   }}
                   size="sm"
@@ -873,6 +882,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     transform: "translateY(0)",
                     boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
+                  _disabled={{
+                    bg: UI_TOKENS.COLORS.blackAlpha60,
+                    color: UI_TOKENS.COLORS.whiteAlpha40,
+                    borderColor: UI_TOKENS.COLORS.whiteAlpha50,
+                    cursor: "not-allowed",
+                    transform: "none",
+                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                  }}
+                  disabled={isResetting}
                   transition="all 0.15s ease"
                 >
                   <FaRedo />
