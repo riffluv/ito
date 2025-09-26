@@ -446,20 +446,36 @@ export function CreateRoomModal({
                         padding: "8px 12px",
                         cursor: "pointer",
                         textShadow: inviteCopied ? "none" : "1px 1px 0px #000",
-                        transition: "all 0.12s ease",
+                        transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
+                        outline: "none",
                       }}
                       onMouseEnter={(event) => {
-                        event.currentTarget.style.background = "white";
-                        event.currentTarget.style.color = "var(--colors-richBlack-800)";
+                        if (!inviteCopied) {
+                          event.currentTarget.style.background = "white";
+                          event.currentTarget.style.color = "var(--colors-richBlack-800)";
+                          event.currentTarget.style.transform = "translateY(-1px)";
+                          event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                        }
                       }}
                       onMouseLeave={(event) => {
                         if (!inviteCopied) {
                           event.currentTarget.style.background = "transparent";
                           event.currentTarget.style.color = "white";
+                          event.currentTarget.style.transform = "translateY(0)";
+                          event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
                         }
                       }}
+                      onMouseDown={(event) => {
+                        event.currentTarget.style.transform = "translateY(1px)";
+                        event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
+                      }}
+                      onMouseUp={(event) => {
+                        event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-1px)";
+                        event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                      }}
                     >
-                      {inviteCopied ? "◆ コピーできた！" : "◆ コピーする"}
+                      {inviteCopied ? "◆ コピー完了" : "◆ コピーする"}
                     </button>
                   </Box>
                   <Text

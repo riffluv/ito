@@ -39,7 +39,7 @@ export function RoomPasswordPrompt({
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "var(--colors-richBlack-700)",
+            background: "rgba(8,9,15,0.9)",
             border: "3px solid rgba(255,255,255,0.85)",
             borderRadius: 0,
             width: "min(400px, 90vw)",
