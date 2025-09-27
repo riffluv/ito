@@ -261,13 +261,13 @@ export function DragonQuestParty({
                   }}
                   onDoubleClick={onTransfer}
                 >
-                  {/* SSS級RPG風レイアウト */}
+                  {/* 本格RPG風レイアウト - 縦2段構成 */}
                   <Box display="flex" alignItems="center" gap={3}>
                     {/* アバター */}
                     <Box
                       flexShrink={0}
-                      width="36px"
-                      height="36px"
+                      width="42px"
+                      height="42px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
@@ -276,25 +276,25 @@ export function DragonQuestParty({
                         <img
                           src={fresh.avatar}
                           alt="avatar"
-                          width="36"
-                          height="36"
+                          width="42"
+                          height="42"
                           style={{
                             objectFit: 'cover',
-                            borderRadius: '6px',
-                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))'
+                            borderRadius: '8px',
+                            filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.8))'
                           }}
                         />
                       ) : (
-                        <Text fontSize="2xl" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))">
+                        <Text fontSize="2xl" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.9))">
                           {fresh.avatar || "⚔️"}
                         </Text>
                       )}
                     </Box>
 
-                    {/* プレイヤー情報 - ドラクエ風 */}
+                    {/* プレイヤー情報 - 縦2段レイアウト */}
                     <Box flex={1} minW={0}>
-                      {/* 名前行 */}
-                      <Box display="flex" alignItems="center" justify="space-between" mb={2}>
+                      {/* 第1行: 名前 + ホストマーク */}
+                      <Box display="flex" alignItems="center" justify="space-between" mb={1}>
                         <Text
                           fontSize="md"
                           fontWeight="bold"
@@ -313,80 +313,98 @@ export function DragonQuestParty({
                         )}
                       </Box>
 
-                      {/* 連想ワード + ステータス */}
-                      <Box display="flex" alignItems="center" justify="space-between">
+                      {/* 第2行: 連想ワード表示 */}
+                      <Box mb={2}>
                         <Text
                           fontSize="xs"
-                          color="rgba(255,255,255,0.7)"
+                          color="rgba(255,255,255,0.6)"
                           fontFamily="system-ui"
+                          fontStyle="italic"
                           truncate
-                          flex={1}
-                          mr={2}
                           title={
                             isSubmitted && hasClue
-                              ? fresh.clue1.trim()
+                              ? `連想ワード: ${fresh.clue1.trim()}`
                               : hasClue
-                              ? "未提出"
-                              : "未入力"
+                              ? "連想ワード: 未提出"
+                              : "連想ワード: 未入力"
                           }
                         >
-                          {isSubmitted && hasClue ? fresh.clue1.trim() : hasClue ? "未提出" : "---"}
+                          {isSubmitted && hasClue
+                            ? `"${fresh.clue1.trim()}"`
+                            : hasClue
+                            ? "準備中..."
+                            : "---"}
                         </Text>
+                      </Box>
 
-                        {/* HD-2D風ステータス表示 */}
-                        <Box display="flex" alignItems="center" gap={2}>
+                      {/* 第3行: 本格RPG風ロングゲージバー */}
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Box
+                          flex={1}
+                          height="10px"
+                          bg="linear-gradient(180deg, rgba(8,12,20,0.95) 0%, rgba(20,30,45,0.95) 100%)"
+                          borderRadius="3px"
+                          overflow="hidden"
+                          border="2px solid rgba(255,255,255,0.18)"
+                          position="relative"
+                          boxShadow="inset 0 3px 6px rgba(0,0,0,0.9), inset 0 -1px 3px rgba(255,255,255,0.12)"
+                          maxW="140px"
+                        >
                           <Box
-                            width="48px"
-                            height="8px"
-                            bg="linear-gradient(180deg, rgba(10,15,25,0.9) 0%, rgba(25,35,50,0.9) 100%)"
-                            borderRadius="2px"
-                            overflow="hidden"
-                            border="1px solid rgba(255,255,255,0.15)"
-                            position="relative"
-                            boxShadow="inset 0 2px 4px rgba(0,0,0,0.8), inset 0 -1px 2px rgba(255,255,255,0.1)"
-                          >
-                            <Box
-                              height="100%"
-                              width={
-                                isSubmitted
-                                  ? "100%"
-                                  : hasClue
-                                  ? "60%"
-                                  : "0%"
-                              }
-                              bg={isSubmitted
-                                ? "linear-gradient(90deg, #10b981 0%, #059669 50%, #047857 100%)"
+                            height="100%"
+                            width={
+                              isSubmitted
+                                ? "100%"
                                 : hasClue
-                                ? "linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #b45309 100%)"
-                                : "transparent"
-                              }
-                              transition="all 0.4s ease"
-                              position="relative"
-                              css={{
-                                filter: "drop-shadow(0 0 2px currentColor)",
-                              }}
-                            />
-                            <Box
-                              position="absolute"
-                              top="0"
-                              left="0"
-                              right="0"
-                              height="40%"
-                              bg="linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, transparent 100%)"
-                              pointerEvents="none"
-                              borderRadius="2px 2px 0 0"
-                            />
-                            <Box
-                              position="absolute"
-                              bottom="0"
-                              left="0"
-                              right="0"
-                              height="1px"
-                              bg="rgba(0,0,0,0.4)"
-                              pointerEvents="none"
-                            />
-                          </Box>
+                                ? "60%"
+                                : "0%"
+                            }
+                            bg={isSubmitted
+                              ? "linear-gradient(90deg, #10b981 0%, #059669 30%, #047857 70%, #065f46 100%)"
+                              : hasClue
+                              ? "linear-gradient(90deg, #f59e0b 0%, #d97706 30%, #b45309 70%, #92400e 100%)"
+                              : "transparent"
+                            }
+                            transition="all 0.5s ease"
+                            position="relative"
+                            css={{
+                              filter: "drop-shadow(0 0 4px currentColor)",
+                            }}
+                          />
+                          {/* 上部ハイライト - より強く */}
+                          <Box
+                            position="absolute"
+                            top="0"
+                            left="0"
+                            right="0"
+                            height="35%"
+                            bg="linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 70%, transparent 100%)"
+                            pointerEvents="none"
+                            borderRadius="3px 3px 0 0"
+                          />
+                          {/* 底面シャドウ */}
+                          <Box
+                            position="absolute"
+                            bottom="0"
+                            left="0"
+                            right="0"
+                            height="2px"
+                            bg="rgba(0,0,0,0.6)"
+                            pointerEvents="none"
+                          />
                         </Box>
+
+                        {/* ステータステキスト */}
+                        <Text
+                          fontSize="2xs"
+                          color="rgba(255,255,255,0.5)"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          minW="20px"
+                          textAlign="center"
+                        >
+                          {isSubmitted ? "✓" : hasClue ? "•" : ""}
+                        </Text>
                       </Box>
                     </Box>
                   </Box>
