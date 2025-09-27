@@ -620,13 +620,19 @@ export function SettingsModal({
 
                 {(!isHost || roomStatus !== "waiting") && (
                   <Box
-                    p={3}
-                    bg="yellow.900"
-                    borderRadius="md"
-                    border="1px solid"
-                    borderColor="yellow.700"
+                    p={4}
+                    bg={UI_TOKENS.COLORS.whiteAlpha05}
+                    borderRadius={0}
+                    border="2px solid"
+                    borderColor={UI_TOKENS.COLORS.whiteAlpha60}
+                    boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
                   >
-                    <Text fontSize="sm" color="yellow.300" textAlign="center">
+                    <Text
+                      fontSize="sm"
+                      color={UI_TOKENS.COLORS.textMuted}
+                      textAlign="center"
+                      fontFamily="monospace"
+                    >
                       {!isHost
                         ? "せっていは ホストのみ かえられます"
                         : "せっていは たいきちゅうのみ かえられます"}
