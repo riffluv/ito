@@ -127,6 +127,7 @@ export function DragonQuestParty({
   // 実際の参加者数は表示対象の長さと一致させる（UIの一貫性を担保）
   const actualCount = displayedPlayers.length;
   const previousCount = useRef(actualCount);
+  const previousSubmitted = useRef<Set<string>>(new Set());
 
   // メンバー数変化時のアニメーション
   useEffect(() => {
@@ -153,6 +154,41 @@ export function DragonQuestParty({
 
     previousCount.current = actualCount;
   }, [actualCount]);
+
+  // 連想ワード決定時の攻撃エフェクト
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // 新しく提出されたプレイヤーを検出
+    const newSubmitted = Array.from(submittedSet).filter(
+      (id) => !previousSubmitted.current.has(id)
+    );
+
+    newSubmitted.forEach((playerId) => {
+      const playerCard = containerRef.current?.querySelector(
+        `[data-player-id="${playerId}"]`
+      );
+
+      if (playerCard) {
+        // 攻撃エフェクト: 白フラッシュ + スケールパンチ
+        gsap.timeline()
+          .to(playerCard, {
+            duration: 0.1,
+            background: "rgba(255,255,255,0.8)",
+            scale: 1.05,
+            ease: "power2.out",
+          })
+          .to(playerCard, {
+            duration: 0.2,
+            background: "linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)",
+            scale: 1,
+            ease: "power2.out",
+          });
+      }
+    });
+
+    previousSubmitted.current = new Set(submittedSet);
+  }, [submittedSet]);
 
   if (actualCount === 0) return null;
 
