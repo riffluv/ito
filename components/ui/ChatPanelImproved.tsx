@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase/client";
 import type { ChatDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { validateChatMessage } from "@/lib/validation/forms";
-import { Badge, Box, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Input, Stack } from "@chakra-ui/react";
 import ChatMessageRow from "@/components/ui/ChatMessageRow";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import {
@@ -18,7 +18,8 @@ import {
   query,
 } from "firebase/firestore";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PlayerDoc } from "@/lib/types";
 
 /**
  * ドラクエ風チャットパネル (改良版)
@@ -37,14 +38,37 @@ import { useEffect, useRef, useState } from "react";
  */
 export interface ChatPanelProps {
   roomId: string;
+  players?: (PlayerDoc & { id: string })[];
+  hostId?: string | null;
   readOnly?: boolean;
 }
 
-export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
+const PLAYER_ACCENT_COLORS = [
+  UI_TOKENS.COLORS.dqBlue,
+  UI_TOKENS.COLORS.limeGreen,
+  UI_TOKENS.COLORS.violet,
+  UI_TOKENS.COLORS.orangeRed,
+  UI_TOKENS.COLORS.dqPurple,
+  UI_TOKENS.COLORS.skyBlue,
+];
+
+type PlayerChatMeta = {
+  name: string;
+  avatar?: string | null;
+  accentColor: string;
+};
+
+export function ChatPanel({
+  roomId,
+  players = [],
+  hostId = null,
+  readOnly = false,
+}: ChatPanelProps) {
   const { user, displayName } = useAuth() as any;
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
   // 右上トースト（eventsコレクション）重複防止用
   const lastEventSeenRef = useRef<string | null>(null);
@@ -52,7 +76,79 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   const lastSystemMessageRef = useRef<string | null>(null);
   const initializedSystemRef = useRef(false);
 
-  // 時刻表示は不要のため削除（UI簡素化）
+  // 自動スクロール制御
+  const autoScrollRef = useRef(true);
+  const lastMessageCountRef = useRef(0);
+  const pendingScrollFrameRef = useRef<number | null>(null);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    if (pendingScrollFrameRef.current !== null && typeof window !== "undefined") {
+      window.cancelAnimationFrame(pendingScrollFrameRef.current);
+      pendingScrollFrameRef.current = null;
+    }
+
+    if (typeof window === "undefined") {
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+      autoScrollRef.current = true;
+      return;
+    }
+
+    pendingScrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior });
+      pendingScrollFrameRef.current = null;
+      autoScrollRef.current = true;
+    });
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+    const distanceFromBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
+    autoScrollRef.current = distanceFromBottom <= 120;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pendingScrollFrameRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(pendingScrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const current = messages.length;
+    const previous = lastMessageCountRef.current;
+    const hasNewMessages = current > previous;
+    const isInitialLoad = previous === 0 && current > 0;
+    lastMessageCountRef.current = current;
+
+    if (current === 0) return;
+
+    if (isInitialLoad) {
+      scrollToBottom("auto");
+      return;
+    }
+
+    if (hasNewMessages && autoScrollRef.current) {
+      scrollToBottom("smooth");
+    }
+  }, [messages.length, scrollToBottom]);
+
+  const playerMeta = useMemo(() => {
+    const meta = new Map<string, PlayerChatMeta>();
+    players.forEach((player, index) => {
+      const accent = PLAYER_ACCENT_COLORS[index % PLAYER_ACCENT_COLORS.length];
+      meta.set(player.id, {
+        name: player.name,
+        avatar: player.avatar ?? null,
+        accentColor: accent,
+      });
+    });
+    return meta;
+  }, [players]);
 
   useEffect(() => {
     const q = query(
@@ -80,10 +176,6 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
           const list: (ChatDoc & { id: string })[] = [];
           snap.forEach((d) => list.push({ id: d.id, ...(d.data() as ChatDoc) }));
           setMessages(list);
-          setTimeout(
-            () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
-            0
-          );
         },
         (err) => {
           if (isFirebaseQuotaExceeded(err)) {
@@ -167,11 +259,30 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
   return (
     <Box
       h="100%"
+      maxH="300px"
+      w="100%"
+      maxW="400px"
       display="grid"
       gridTemplateRows="minmax(0,1fr) auto"
       overflow="hidden"
       minH={0}
-      css={{}}
+      // ドラクエ風統一デザイン
+      bg="rgba(8,9,15,0.95)"
+      border="3px solid rgba(255,255,255,0.9)"
+      borderRadius={0}
+      boxShadow="0 8px 32px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1)"
+      position="relative"
+      _before={{
+        content: '""',
+        position: "absolute",
+        top: "-3px",
+        left: "-3px",
+        right: "-3px",
+        bottom: "-3px",
+        bg: "linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))",
+        borderRadius: 0,
+        zIndex: -1,
+      }}
     >
       {/* メッセージエリア: 1fr行で安定スクロール、ドラクエ風一行チャット */}
       <Box overflow="hidden" minH={0}>
@@ -179,51 +290,67 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
           label="チャットメッセージ"
           withPadding={true}
           padding={0}
+          ref={scrollAreaRef}
+          onScroll={handleScroll}
         >
           <Stack
-            gap={3}
-            px={4}
-            py={3}
+            gap={1}
+            px={2}
+            py={2}
             css={{
               "@layer dpi-responsive": {
-                // DPI 125%対応：統一定数活用
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                  gap: UNIFIED_LAYOUT.DPI_125.SPACING?.FORM_GAP || "0.4rem",
-                  padding: UNIFIED_LAYOUT.DPI_125.SPACING?.COMPONENT_PADDING || "0.5rem 0.8rem",
+                  gap: "0.2rem",
+                  padding: "0.3rem 0.4rem",
                 },
-                // DPI 150%対応：統一定数活用
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-                  gap: UNIFIED_LAYOUT.DPI_150.SPACING.FORM_GAP,
-                  padding: UNIFIED_LAYOUT.DPI_150.SPACING.COMPONENT_PADDING,
+                  gap: "0.1rem",
+                  padding: "0.2rem 0.3rem",
                 },
               }
             }}
           >
             {messages.map((m) => {
               const isSystem = m.sender === "system";
-              const isMe = m.sender === (displayName || "匿名");
-              // 防御的に、notify|で始まるシステムメッセージはチャットに表示しない
-              if (isSystem && typeof (m as any)?.text === "string" && (m as any).text.startsWith("notify|")) {
-                return null;
+              const uid = typeof m.uid === "string" ? m.uid : "";
+
+              if (isSystem) {
+                const textValue = typeof m.text === "string" ? m.text : "";
+                if (textValue.startsWith("notify|")) return null;
+                return (
+                  <Box
+                    key={m.id}
+                    px={3}
+                    py={2}
+                    border={`2px dashed ${UI_TOKENS.COLORS.whiteAlpha40}`}
+                    borderRadius={0}
+                    bg="rgba(12,14,22,0.75)"
+                    color={UI_TOKENS.COLORS.whiteAlpha80}
+                    fontFamily="monospace"
+                    fontSize="xs"
+                    textAlign="center"
+                    textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
+                  >
+                    {textValue}
+                  </Box>
+                );
               }
+
+              const meta = playerMeta.get(uid);
+              const senderName = meta?.name || m.sender || "Unknown";
+              const isMe = uid && user?.uid ? uid === user.uid : senderName === (displayName || "匿名");
+              const isHost = hostId ? uid === hostId : false;
+
               return (
-                <Box key={m.id}>
-                  {isSystem ? (
-                    <Box w="100%">
-                      <Text
-                        fontSize="xs"
-                        color={UI_TOKENS.COLORS.whiteAlpha80}
-                        fontFamily="monospace"
-                        textAlign="center"
-                        textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-                      >
-                        {m.text}
-                      </Text>
-                    </Box>
-                  ) : (
-                    <ChatMessageRow sender={m.sender} text={m.text} isMe={isMe} />
-                  )}
-                </Box>
+                <ChatMessageRow
+                  key={m.id}
+                  sender={senderName}
+                  text={m.text || ""}
+                  isMe={isMe}
+                  isHost={isHost}
+                  avatar={meta?.avatar}
+                  accentColor={meta?.accentColor}
+                />
               );
             })}
             <div ref={bottomRef} />
@@ -231,28 +358,29 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
         </ScrollableArea>
       </Box>
 
-      {/* 入力フォーム: 固定行、ドラクエ風統一デザイン */}
+      {/* 入力フォーム: ドラクエ風コンパクトデザイン */}
       <Box
-        p={4}
-        bg="gray.800"
-        borderTop="1px solid"
-        borderColor="gray.700"
+        p={2}
+        bg="rgba(8,9,15,0.98)"
+        borderTop="2px solid rgba(255,255,255,0.3)"
         css={{
-          // DPI 150%対応：入力エリアのコンパクト化
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-            {
-              padding: "0.6rem !important", // パディングを更に小さく
-            },
+          "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+            padding: "0.4rem !important",
+          },
+          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+            padding: "0.3rem !important",
+          },
         }}
       >
-        <HStack 
-          gap={3}
+        <HStack
+          gap={2}
           css={{
-            // DPI 125%以上：入力欄をコンパクト化
-            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-              {
-                gap: "0.5rem !important", // ギャップを縮小
-              },
+            "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+              gap: "0.3rem !important",
+            },
+            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+              gap: "0.2rem !important",
+            },
           }}
         >
           <Input
@@ -266,83 +394,88 @@ export function ChatPanel({ roomId, readOnly = false }: ChatPanelProps) {
               if (e.key === "Enter") send();
             }}
             disabled={readOnly}
-            size="md"
-            bg={UI_TOKENS.COLORS.panelBg}
+            size="sm"
+            bg="rgba(12,14,24,0.9)"
             color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-            borderRadius={6} // 軽く角ばったドラクエ風
-            boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-            _placeholder={{ color: UI_TOKENS.COLORS.whiteAlpha50 }}
+            border="2px solid rgba(255,255,255,0.6)"
+            borderRadius={0} // 完全角ばったドラクエ風
+            boxShadow="inset 0 2px 4px rgba(0,0,0,0.3)"
+            fontFamily="monospace"
+            fontSize="sm"
+            _placeholder={{
+              color: "rgba(255,255,255,0.4)",
+              fontFamily: "monospace"
+            }}
             _focus={{
               borderColor: UI_TOKENS.COLORS.dqBlue,
-              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-              bg: UI_TOKENS.COLORS.panelBg,
+              boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
+              bg: "rgba(12,14,24,0.95)",
             }}
             _hover={{
-              borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-              bg: UI_TOKENS.COLORS.panelBg,
+              borderColor: "rgba(255,255,255,0.8)",
+              bg: "rgba(12,14,24,0.95)",
             }}
-            transition={`border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}`}
-            px={4}
-            py={3}
+            transition="all 0.15s ease"
+            px={2}
+            py={1}
             css={{
-              // DPI 125%以上：入力フィールドのコンパクト化
-              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                {
-                  fontSize: "0.8rem !important", // フォントサイズを小さく
-                  padding: "0.4rem 0.7rem !important", // パディングを小さく
-                },
-              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                {
-                  fontSize: "0.75rem !important", // さらに小さく
-                  padding: "0.3rem 0.6rem !important", // より小さく
-                },
+              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+                fontSize: "0.7rem !important",
+                padding: "0.2rem 0.4rem !important",
+              },
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+                fontSize: "0.65rem !important",
+                padding: "0.15rem 0.3rem !important",
+              },
             }}
           />
           <AppButton
             onClick={send}
             disabled={readOnly || !text.trim()}
-            size="md"
-            bg={UI_TOKENS.COLORS.panelBg}
+            size="sm"
+            bg="rgba(12,14,24,0.9)"
             color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-            borderRadius={0} // 完全角ばったドラクエ風
-            px={6}
-            py={3}
+            border="2px solid rgba(255,255,255,0.9)"
+            borderRadius={0}
+            px={3}
+            py={1}
             fontWeight="700"
-            fontFamily="monospace" // ドラクエ風フォント統一
-            textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
+            fontFamily="monospace"
+            fontSize="sm"
+            textShadow="0 1px 2px rgba(0,0,0,0.8)"
+            minW="50px"
             css={{
-              // DPI 125%以上：送信ボタンのコンパクト化
-              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)":
-                {
-                  fontSize: "0.8rem !important", // フォントサイズを小さく
-                  padding: "0.4rem 1rem !important", // パディングを小さく
-                },
-              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                {
-                  fontSize: "0.75rem !important", // さらに小さく
-                  padding: "0.3rem 0.8rem !important", // より小さく
-                },
+              "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
+                fontSize: "0.7rem !important",
+                padding: "0.2rem 0.6rem !important",
+                minWidth: "40px !important",
+              },
+              "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)": {
+                fontSize: "0.65rem !important",
+                padding: "0.15rem 0.5rem !important",
+                minWidth: "35px !important",
+              },
             }}
-            boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+            boxShadow="0 2px 8px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2)"
             _hover={{
-              bg: "white", // ドラクエ王道の白背景反転
-              color: UI_TOKENS.COLORS.panelBg,
+              bg: "white",
+              color: "rgba(8,9,15,0.95)",
               textShadow: "none",
+              borderColor: "white",
             }}
             _active={{
-              bg: UI_TOKENS.COLORS.whiteAlpha90,
-              color: UI_TOKENS.COLORS.panelBg,
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+              bg: "rgba(255,255,255,0.9)",
+              color: "rgba(8,9,15,0.95)",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)",
+              transform: "translateY(1px)",
             }}
             _disabled={{
-              bg: UI_TOKENS.COLORS.blackAlpha60,
-              color: UI_TOKENS.COLORS.whiteAlpha40,
+              bg: "rgba(60,60,60,0.5)",
+              color: "rgba(255,255,255,0.3)",
               cursor: "not-allowed",
-              textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+              borderColor: "rgba(255,255,255,0.3)",
             }}
-            transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+            transition="all 0.15s ease"
           >
             送信
           </AppButton>

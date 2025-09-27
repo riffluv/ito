@@ -1,6 +1,6 @@
 "use client";
 import { Box, BoxProps } from "@chakra-ui/react";
-import { ReactNode } from "react";
+import { ReactNode, forwardRef } from "react";
 
 /**
  * ScrollableArea: 明確な境界を持つスクロール領域
@@ -21,43 +21,42 @@ export interface ScrollableAreaProps extends Omit<BoxProps, "children"> {
   padding?: number | string;
 }
 
-export function ScrollableArea({
-  children,
-  label,
-  withPadding = true,
-  padding = 4,
-  ...boxProps
-}: ScrollableAreaProps) {
-  return (
-    <Box
-      h="100%"
-      minH={0}
-      overflowY="auto"
-      overflowX="hidden"
-      aria-label={label}
-      // スムーズなスクロール
-      css={{
-        scrollBehavior: "smooth",
-        // WebKitスクロールバーのスタイリング
-        "&::-webkit-scrollbar": {
-          width: "8px",
-        },
-        "&::-webkit-scrollbar-track": {
-          background: "var(--chakra-colors-panelSubBg)",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          background: "var(--chakra-colors-borderDefault)",
-          borderRadius: "4px",
-        },
-        "&::-webkit-scrollbar-thumb:hover": {
-          background: "var(--chakra-colors-fgMuted)",
-        },
-      }}
-      {...boxProps}
-    >
-      <Box p={withPadding ? padding : 0}>{children}</Box>
-    </Box>
-  );
-}
+export const ScrollableArea = forwardRef<HTMLDivElement, ScrollableAreaProps>(
+  ({ children, label, withPadding = true, padding = 4, ...boxProps }, ref) => {
+    return (
+      <Box
+        ref={ref}
+        h="100%"
+        minH={0}
+        overflowY="auto"
+        overflowX="hidden"
+        aria-label={label}
+        // スムーズなスクロール
+        css={{
+          scrollBehavior: "smooth",
+          // WebKitスクロールバーのスタイリング
+          "&::-webkit-scrollbar": {
+            width: "8px",
+          },
+          "&::-webkit-scrollbar-track": {
+            background: "var(--chakra-colors-panelSubBg)",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "var(--chakra-colors-borderDefault)",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-thumb:hover": {
+            background: "var(--chakra-colors-fgMuted)",
+          },
+        }}
+        {...boxProps}
+      >
+        <Box p={withPadding ? padding : 0}>{children}</Box>
+      </Box>
+    );
+  }
+);
+
+ScrollableArea.displayName = "ScrollableArea";
 
 export default ScrollableArea;

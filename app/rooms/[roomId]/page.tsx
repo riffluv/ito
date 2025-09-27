@@ -1076,7 +1076,7 @@ export default function RoomPage() {
       />
 
       {/* チャットはトグル式（FABで開閉） */}
-      <MinimalChat roomId={roomId} />
+      <MinimalChat roomId={roomId} players={players} hostId={room?.hostId ?? null} />
 
       <RoomPasswordPrompt
         isOpen={passwordDialogOpen}
