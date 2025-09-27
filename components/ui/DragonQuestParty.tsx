@@ -240,24 +240,24 @@ export function DragonQuestParty({
                 <Box
                   key={player.id}
                   data-player-id={player.id}
-                  bg="rgba(15,25,35,0.6)"
-                  border="1px solid rgba(255,255,255,0.15)"
-                  borderRadius="4px"
+                  bg="linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)"
+                  border="2px solid rgba(255,255,255,0.2)"
+                  borderRadius="6px"
                   px={4}
                   py={3}
                   w="100%"
                   position="relative"
-                  boxShadow="0 1px 4px rgba(0,0,0,0.4)"
+                  boxShadow="0 3px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)"
                   transition="all 0.2s ease"
                   css={{
                     cursor: canTransfer ? "pointer" : "default",
-                    backdropFilter: "blur(4px)",
+                    backdropFilter: "blur(8px)",
                   }}
                   _hover={{
-                    bg: "rgba(25,35,45,0.8)",
-                    borderColor: "rgba(255,255,255,0.3)",
-                    transform: "translateY(-1px)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                    bg: "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)",
+                    borderColor: "rgba(255,255,255,0.4)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2)",
                   }}
                   onDoubleClick={onTransfer}
                 >
