@@ -140,8 +140,8 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
         }
       } else {
         // realtimeResultがない場合のフォールバック（安全側に倒す）
-        isFail = Boolean(p.failed);
-        isSuccess = !Boolean(p.failed);
+        isFail = !!p.failed;
+        isSuccess = !p.failed;
       }
     }
 
@@ -172,7 +172,7 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     p.roomStatus !== "finished" ? clue1 || "(連想待ち)" : clue1 || null;
 
   const waitingInCentral = true; // Dragon Quest style always-on
-  
+
   // 連想ワード確定済みかどうか（空でない文字列があるかチェック）
   const hasClue = !!(clue1 && clue1.trim() !== "");
 
@@ -180,7 +180,13 @@ export function computeCardState(p: ComputeCardStateParams): ComputedCardState {
     showNumber,
     variant,
     flipped,
-    state: isFail ? "fail" : isSuccess ? "success" : hasClue ? "ready" : "default",
+    state: isFail
+      ? "fail"
+      : isSuccess
+        ? "success"
+        : hasClue
+          ? "ready"
+          : "default",
     boundary,
     successLevel,
     clueText,

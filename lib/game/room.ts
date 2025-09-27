@@ -407,7 +407,7 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
   const meRef = doc(db!, "rooms", roomId, "players", playerId);
 
   // 終了判定は配札済みの参加者数（deal.players）に基づくため、presenceは参照しない
-  let presenceCount: number | null = null;
+  const presenceCount: number | null = null;
 
   await runTransaction(db!, async (tx) => {
     const roomSnap = await tx.get(roomRef);

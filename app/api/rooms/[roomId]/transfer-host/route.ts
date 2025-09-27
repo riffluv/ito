@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { transferHostServer } from "@/lib/server/roomActions";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -13,15 +13,21 @@ export async function POST(
     return NextResponse.json({ error: "room_id_required" }, { status: 400 });
   }
 
-  let payload: any;
+  let payload: unknown;
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const targetUid = typeof payload?.targetUid === "string" ? payload.targetUid : null;
-  const token = typeof payload?.token === "string" ? payload.token : null;
+  const body =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : null;
+
+  const targetUid =
+    typeof body?.targetUid === "string" ? (body.targetUid as string) : null;
+  const token = typeof body?.token === "string" ? (body.token as string) : null;
 
   if (!targetUid || !token) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
@@ -37,7 +43,9 @@ export async function POST(
       if (!roomSnap.exists) {
         return NextResponse.json({ error: "room_not_found" }, { status: 404 });
       }
-      const currentHost = (roomSnap.data() as any)?.hostId;
+      const roomData = roomSnap.data() as Record<string, unknown> | undefined;
+      const currentHost =
+        typeof roomData?.hostId === "string" ? roomData.hostId : null;
       if (!currentHost || currentHost !== requesterUid) {
         return NextResponse.json({ error: "not_host" }, { status: 403 });
       }
@@ -45,16 +53,19 @@ export async function POST(
 
     await transferHostServer(roomId, requesterUid, targetUid, { isAdmin });
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
-    const code = typeof error?.message === "string" ? error.message : "transfer_failed";
+  } catch (error) {
+    const code =
+      error instanceof Error && typeof error.message === "string"
+        ? error.message
+        : "transfer_failed";
     const status =
       code === "room-not-found" || code === "room_not_found"
         ? 404
         : code === "target-not-found"
-        ? 404
-        : code === "not-host"
-        ? 403
-        : 500;
+          ? 404
+          : code === "not-host"
+            ? 403
+            : 500;
     return NextResponse.json({ error: code }, { status });
   }
 }

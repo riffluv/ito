@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { leaveRoomServer } from "@/lib/server/roomActions";
+import { logError, logInfo } from "@/lib/utils/log";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -13,17 +14,26 @@ export async function POST(
     return NextResponse.json({ error: "room_id_required" }, { status: 400 });
   }
 
-  let payload: any;
+  let payload: unknown;
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const token = typeof payload?.token === "string" ? payload.token : null;
-  const callerUid = typeof payload?.callerUid === "string" ? payload.callerUid : null;
-  const targets: string[] = Array.isArray(payload?.targets)
-    ? (payload.targets as unknown[]).filter((v): v is string => typeof v === "string" && v.length > 0)
+  const body =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : null;
+
+  const token = typeof body?.token === "string" ? (body.token as string) : null;
+  const callerUid =
+    typeof body?.callerUid === "string" ? (body.callerUid as string) : null;
+  const targets: string[] = Array.isArray(body?.targets)
+    ? (body?.targets as unknown[]).filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0
+      )
     : [];
 
   if (!token || !callerUid || targets.length === 0) {
@@ -36,7 +46,7 @@ export async function POST(
       return NextResponse.json({ error: "unauthorized" }, { status: 403 });
     }
   } catch (error) {
-    console.error("prune-route verify failed", error);
+    logError("rooms", "prune-route verify failed", error);
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -46,12 +56,16 @@ export async function POST(
     if (!roomSnap.exists) {
       return NextResponse.json({ error: "room_not_found" }, { status: 404 });
     }
-    const hostId = (roomSnap.data() as any)?.hostId;
+    const roomData = roomSnap.data() as Record<string, unknown> | undefined;
+    const hostId =
+      typeof roomData?.hostId === "string" ? roomData.hostId : null;
     if (hostId !== callerUid) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
-    const uniqueTargets = Array.from(new Set<string>(targets)).filter((id) => id !== callerUid);
+    const uniqueTargets = Array.from(new Set<string>(targets)).filter(
+      (id) => id !== callerUid
+    );
     if (uniqueTargets.length === 0) {
       return NextResponse.json({ removed: [], skipped: targets, failed: [] });
     }
@@ -66,20 +80,28 @@ export async function POST(
         if (!snap.exists) {
           continue;
         }
-        const data = snap.data() as any;
-        const displayName =
-          typeof data?.name === "string" && data.name.trim() ? data.name.trim() : target;
+        const data = snap.data() as Record<string, unknown> | undefined;
+        const displayNameCandidate =
+          typeof data?.name === "string" && data.name.trim().length > 0
+            ? data.name.trim()
+            : target;
+        const displayName = displayNameCandidate;
         await leaveRoomServer(roomId, target, displayName);
         removed.push(target);
       } catch (error) {
-        console.error("prune-route leave failed", roomId, target, error);
+        logError("rooms", "prune-route leave failed", {
+          roomId,
+          target,
+          error,
+        });
         failed.push(target);
       }
     }
 
+    logInfo("rooms", "prune-route completed", { roomId, removed, failed });
     return NextResponse.json({ removed, failed });
   } catch (error) {
-    console.error("prune-route error", roomId, error);
+    logError("rooms", "prune-route error", { roomId, error });
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

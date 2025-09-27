@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/server/firebaseAdmin";
-import { logDebug, logError } from "@/lib/utils/log";
 import { ensureHostAssignedServer } from "@/lib/server/roomActions";
+import { logDebug, logError } from "@/lib/utils/log";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -14,15 +14,20 @@ export async function POST(
     return NextResponse.json({ error: "room_id_required" }, { status: 400 });
   }
 
-  let payload: any;
+  let payload: unknown;
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const uid = typeof payload?.uid === "string" ? payload.uid : null;
-  const token = typeof payload?.token === "string" ? payload.token : null;
+  const body =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : null;
+
+  const uid = typeof body?.uid === "string" ? (body.uid as string) : null;
+  const token = typeof body?.token === "string" ? (body.token as string) : null;
 
   if (!uid || !token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
