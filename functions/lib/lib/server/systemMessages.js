@@ -5,14 +5,21 @@ exports.systemMessagePlayerJoined = systemMessagePlayerJoined;
 exports.systemMessagePlayerLeft = systemMessagePlayerLeft;
 exports.systemMessageHostTransferred = systemMessageHostTransferred;
 exports.systemMessageRoomBecameEmpty = systemMessageRoomBecameEmpty;
-const sanitize_1 = require("@/lib/utils/sanitize");
 const DEFAULT_PLAYER_NAME = "名もなき冒険者";
 const MAX_NAME_LENGTH = 16;
+function sanitizeText(raw) {
+    return raw
+        .replace(/[\u0000-\u001F\u007F]/g, " ")
+        .replace(/[\u2028\u2029]/g, " ")
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
 function normalizeName(raw) {
     if (!raw)
         return null;
-    const cleaned = (0, sanitize_1.sanitizePlainText)(raw);
-    const normalized = cleaned.replace(/s+/g, " ").trim();
+    const cleaned = sanitizeText(raw);
+    const normalized = cleaned.trim();
     if (!normalized)
         return null;
     if (normalized.length > MAX_NAME_LENGTH) {

@@ -1,12 +1,19 @@
-import { sanitizePlainText } from "@/lib/utils/sanitize";
-
 const DEFAULT_PLAYER_NAME = "名もなき冒険者";
 const MAX_NAME_LENGTH = 16;
 
+function sanitizeText(raw: string): string {
+  return raw
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/[\u2028\u2029]/g, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeName(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const cleaned = sanitizePlainText(raw);
-  const normalized = cleaned.replace(/s+/g, " ").trim();
+  const cleaned = sanitizeText(raw);
+  const normalized = cleaned.trim();
   if (!normalized) return null;
   if (normalized.length > MAX_NAME_LENGTH) {
     return normalized.slice(0, MAX_NAME_LENGTH) + "…";

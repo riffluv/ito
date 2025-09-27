@@ -6,7 +6,6 @@ import { gsap } from "gsap";
 import { useEffect, useMemo, useRef } from "react";
 import { notify } from "@/components/ui/notify";
 import { transferHost } from "@/lib/firebase/rooms";
-import { sendSystemMessage } from "@/lib/firebase/chat";
 
 interface PlayerDoc {
   name: string;
@@ -240,11 +239,13 @@ export function DragonQuestParty({
                 try {
                   await transferHost(roomId!, player.id);
                   notify({ title: `ホストを ${fresh.name} に委譲`, type: "success" });
-                  try {
-                    await sendSystemMessage(roomId!, `👑 ホストが ${fresh.name} さんに委譲されました`);
-                  } catch {}
                 } catch (e: any) {
-                  notify({ title: "委譲に失敗しました", description: String(e?.message || e), type: "error" });
+                  const raw = String(e?.message || e || "");
+                  let description = "ホスト委譲に失敗しました。";
+                  if (raw === "not-host") description = "ホストのみが委譲できます。";
+                  else if (raw === "target-not-found") description = "対象プレイヤーが見つかりません。";
+                  else if (raw === "room-not-found") description = "ルームが存在しません。";
+                  notify({ title: "委譲に失敗しました", description, type: "error" });
                 }
               };
 
