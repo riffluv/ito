@@ -4,7 +4,7 @@ import ScrollableArea from "@/components/ui/ScrollableArea";
 import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
 import { db } from "@/lib/firebase/client";
-import type { ChatDoc } from "@/lib/types";
+import type { ChatDoc, PlayerDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { validateChatMessage } from "@/lib/validation/forms";
 import { Box, HStack, Input, Stack } from "@chakra-ui/react";
@@ -19,7 +19,6 @@ import {
 } from "firebase/firestore";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PlayerDoc } from "@/lib/types";
 
 /**
  * ドラクエ風チャットパネル (改良版)
@@ -58,23 +57,33 @@ type PlayerChatMeta = {
   accentColor: string;
 };
 
+type ZodLikeError = { errors?: Array<{ message?: string }> };
+
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error && typeof error === "object") {
+    const maybeZod = error as ZodLikeError;
+    if (Array.isArray(maybeZod.errors) && maybeZod.errors[0]?.message) {
+      return maybeZod.errors[0]?.message;
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return undefined;
+};
+
 export function ChatPanel({
   roomId,
   players = [],
   hostId = null,
   readOnly = false,
 }: ChatPanelProps) {
-  const { user, displayName } = useAuth() as any;
+  const { user, displayName } = useAuth();
   const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
-  // 右上トースト（eventsコレクション）重複防止用
-  const lastEventSeenRef = useRef<string | null>(null);
-  const initializedEventsRef = useRef(false);
-  const lastSystemMessageRef = useRef<string | null>(null);
-  const initializedSystemRef = useRef(false);
 
   // 自動スクロール制御
   const autoScrollRef = useRef(true);
@@ -162,7 +171,9 @@ export function ChatPanel({
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
 
     const stop = () => {
-      try { unsubRef.current?.(); } catch {}
+      if (unsubRef.current) {
+        unsubRef.current();
+      }
       unsubRef.current = null;
     };
 
@@ -183,7 +194,7 @@ export function ChatPanel({
             backoffUntilRef.current = Date.now() + 5 * 60 * 1000;
             stop();
             if (backoffTimer) {
-              try { clearTimeout(backoffTimer); } catch {}
+              clearTimeout(backoffTimer);
               backoffTimer = null;
             }
             const resume = () => {
@@ -214,7 +225,7 @@ export function ChatPanel({
         document.removeEventListener("visibilitychange", onVis);
       }
       if (backoffTimer) {
-        try { clearTimeout(backoffTimer); } catch {}
+        clearTimeout(backoffTimer);
       }
       stop();
     };
@@ -230,10 +241,11 @@ export function ChatPanel({
     let sanitized: string;
     try {
       sanitized = validateChatMessage(text);
-    } catch (err: any) {
+    } catch (err) {
+      const description = getErrorMessage(err);
       notify({
         title: "メッセージを確認してください",
-        description: err?.errors?.[0]?.message,
+        description,
         type: "warning",
       });
       return;
@@ -249,7 +261,7 @@ export function ChatPanel({
     } catch (err) {
       notify({
         title: "送信に失敗しました",
-        description: (err as any)?.message,
+        description: getErrorMessage(err) ?? "原因不明のエラーが発生しました",
         type: "error",
       });
     }
