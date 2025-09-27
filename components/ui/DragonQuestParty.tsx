@@ -333,16 +333,17 @@ export function DragonQuestParty({
                           {isSubmitted && hasClue ? fresh.clue1.trim() : hasClue ? "未提出" : "---"}
                         </Text>
 
-                        {/* SSS級RPG風ステータス表示 */}
+                        {/* HD-2D風ステータス表示 */}
                         <Box display="flex" alignItems="center" gap={2}>
                           <Box
-                            width="44px"
-                            height="6px"
-                            bg="rgba(20,30,40,0.8)"
-                            borderRadius="1px"
+                            width="48px"
+                            height="8px"
+                            bg="linear-gradient(180deg, rgba(10,15,25,0.9) 0%, rgba(25,35,50,0.9) 100%)"
+                            borderRadius="2px"
                             overflow="hidden"
-                            border="1px solid rgba(255,255,255,0.2)"
+                            border="1px solid rgba(255,255,255,0.15)"
                             position="relative"
+                            boxShadow="inset 0 2px 4px rgba(0,0,0,0.8), inset 0 -1px 2px rgba(255,255,255,0.1)"
                           >
                             <Box
                               height="100%"
@@ -354,26 +355,37 @@ export function DragonQuestParty({
                                   : "0%"
                               }
                               bg={isSubmitted
-                                ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
+                                ? "linear-gradient(90deg, #10b981 0%, #059669 50%, #047857 100%)"
                                 : hasClue
-                                ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
+                                ? "linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #b45309 100%)"
                                 : "transparent"
                               }
-                              transition="all 0.3s ease"
+                              transition="all 0.4s ease"
                               position="relative"
+                              css={{
+                                filter: "drop-shadow(0 0 2px currentColor)",
+                              }}
                             />
-                            {/* RPG風の内側光沢効果 */}
                             <Box
                               position="absolute"
                               top="0"
                               left="0"
                               right="0"
-                              height="50%"
-                              bg="linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%)"
+                              height="40%"
+                              bg="linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, transparent 100%)"
+                              pointerEvents="none"
+                              borderRadius="2px 2px 0 0"
+                            />
+                            <Box
+                              position="absolute"
+                              bottom="0"
+                              left="0"
+                              right="0"
+                              height="1px"
+                              bg="rgba(0,0,0,0.4)"
                               pointerEvents="none"
                             />
                           </Box>
-                          {/* ダサい○記号を削除し、シンプルに */}
                         </Box>
                       </Box>
                     </Box>
