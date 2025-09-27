@@ -241,7 +241,6 @@ export function DragonQuestParty({
                   key={player.id}
                   data-player-id={player.id}
                   bg="linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)"
-                  border="2px solid rgba(255,255,255,0.2)"
                   borderRadius="6px"
                   px={4}
                   py={3}
@@ -255,7 +254,6 @@ export function DragonQuestParty({
                   }}
                   _hover={{
                     bg: "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)",
-                    borderColor: "rgba(255,255,255,0.4)",
                     transform: "translateY(-2px)",
                     boxShadow: "0 6px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2)",
                   }}
