@@ -561,46 +561,33 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           return;
         }
 
-        // === ドラクエ風ファンタジー背景 ===
+        // === Octopath Traveler風HD-2D要素 ===
 
-        // 1. 統一された夜空背景（月があるところと同じ色で全画面統一）
+        // 1. 奥行きのある背景グラデーション（大地のイメージ）
         const bgGradient = new PIXI.Graphics();
         bgGradient.rect(0, 0, app.screen.width, app.screen.height);
         bgGradient.fill({
-          color: 0x1a1a2e, // ドラクエ風濃紺（全画面統一）
+          color: 0x1a1b2e,
           alpha: 1,
         });
         app.stage.addChild(bgGradient);
+        logPixiBackground("info", "background-gradient-created");
 
-        // 上部のグラデーション効果も全画面に適用
-        const bgGradient2 = new PIXI.Graphics();
-        bgGradient2.rect(0, 0, app.screen.width, app.screen.height); // 全画面に変更
-        bgGradient2.fill({
-          color: 0x16213e, // 少し明るい深紫（全画面統一）
-          alpha: 0.7,
-        });
-        app.stage.addChild(bgGradient2);
-
-        // 2. 山岳地帯のシルエット（茶色の謎の物体=城を削除、山のみ残す）
+        // 2. 遠景の山々（シルエット）
         const mountains = new PIXI.Graphics();
-
-        // 山岳地帯のみ（城は削除）
-        mountains.moveTo(0, app.screen.height * 0.8);
-        for (let i = 0; i <= app.screen.width; i += 80) {
-          const height = app.screen.height * (0.75 + Math.sin(i * 0.008) * 0.1 + Math.random() * 0.05);
+        mountains.moveTo(0, app.screen.height * 0.7);
+        for (let i = 0; i <= app.screen.width; i += 100) {
+          const height = app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
           mountains.lineTo(i, height);
         }
         mountains.lineTo(app.screen.width, app.screen.height);
         mountains.lineTo(0, app.screen.height);
-
         mountains.fill({
-          color: 0x2c1810, // 山のシルエット色（濃いブラウン）
+          color: 0x2d1b4e,
           alpha: 0.8,
         });
         app.stage.addChild(mountains);
-
-        // 3. 神秘的な月（重複削除、1個のみ）
-        // 下で作成されるfantasyMoonのみを使用するため、この月は削除
+        logPixiBackground("info", "mountains-created");
 
         // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
         interface ParticleData {
@@ -610,25 +597,24 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           life: number;
         }
 
-        // ドラクエ風神秘的な青白・紫系魔法色彩
-        const magicColors = [
-          0x87ceeb, // スカイブルー
-          0x9370db, // ミディアムパープル
-          0x6495ed, // コーンフラワーブルー
-          0xb19cd9, // ライトパープル
-          0x5f9ea0, // カデットブルー
-          0x9966cc, // アメジスト
-          0x66cdaa, // ミディアムアクアマリン
-          0x7b68ee, // ミディアムスレートブルー
+        const particles: ParticleData[] = [];
+
+        // 安全な色の配列（ドラクエ風の金色系）
+        const safeColors = [
+          0xffd700, // 金色
+          0xffdc00, // 明るい金色
+          0xffc700, // 濃い金色
+          0xffed4a, // 黄金色
+          0xfff176, // ライトゴールド
+          0xffb300, // オレンジゴールド
         ];
 
-        const particles: ParticleData[] = [];
         for (let i = 0; i < 30; i++) {
           const particle = new PIXI.Graphics();
           particle.circle(0, 0, Math.random() * 2 + 1);
           particle.fill({
-            color: magicColors[Math.floor(Math.random() * magicColors.length)], // ドラクエ魔法色から選択
-            alpha: Math.random() * 0.6 + 0.4, // 神秘的な光度
+            color: safeColors[Math.floor(Math.random() * safeColors.length)],
+            alpha: Math.random() * 0.6 + 0.2,
           });
 
           particle.x = Math.random() * app.screen.width;
@@ -644,90 +630,45 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           particles.push(particleData);
           app.stage.addChild(particle);
         }
+        logPixiBackground("info", "gold-particles-created");
 
-        // 4. ファンタジー岩場・丘陵地形（右下まで確実に埋める）
+        // 4. 可愛い前景の草原（なめらかな曲線）
         const foreground = new PIXI.Graphics();
-        const terrainY = app.screen.height * 0.87;
+        const grassY = app.screen.height * 0.87;
 
-        // ドラクエ風の険しい岩場地形（右下まで確実に埋める）
-        foreground.moveTo(0, terrainY);
-        for (let i = 0; i <= app.screen.width + 10; i += 25) { // +10で確実に右端まで
-          const rockiness = Math.sin(i * 0.012) * 18 + Math.cos(i * 0.025) * 8 + terrainY;
-          foreground.lineTo(i, rockiness);
+        // なめらかな波形の草原（直線じゃない、でもボコボコしすぎない）
+        foreground.moveTo(0, grassY);
+        for (let i = 0; i <= app.screen.width; i += 30) {
+          const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
+          foreground.lineTo(i, gentleWave);
         }
-        // 確実に右下角まで埋める
-        foreground.lineTo(app.screen.width + 10, app.screen.height + 10);
-        foreground.lineTo(-10, app.screen.height + 10);
+        foreground.lineTo(app.screen.width, app.screen.height);
+        foreground.lineTo(0, app.screen.height);
         foreground.fill({
-          color: 0x2f2f2f, // ダークグレイ（ファンタジー岩場）
-          alpha: 0.88,
+          color: 0x2d5940, // 落ち着いた深緑
+          alpha: 0.8,
         });
         app.stage.addChild(foreground);
 
-        // 6. 右上の神秘的なファンタジー月
-        const createFantasyMoon = () => {
-          const moonContainer = new PIXI.Container();
-
-          // 月本体（ドラクエ風の青白い神秘的な色）
-          const moon = new PIXI.Graphics();
-          moon.circle(0, 0, 45);
-          moon.fill({
-            color: 0xe6f3ff, // 神秘的な青白色
-            alpha: 0.92,
-          });
-
-          // 月の光輪（青紫の神秘的な光）
-          const glow = new PIXI.Graphics();
-          glow.circle(0, 0, 85);
-          glow.fill({
-            color: 0x9370db, // ミディアムパープルの神秘光
-            alpha: 0.15,
-          });
-
-          // 月のクレーター（より詳細に）
-          const craters = new PIXI.Graphics();
-          craters.circle(-12, -8, 5);
-          craters.circle(10, 3, 7);
-          craters.circle(-3, 15, 4);
-          craters.circle(18, -10, 3);
-          craters.circle(-8, 12, 2);
-          craters.fill({
-            color: 0xc8d9f0, // 少し暗めの青白クレーター
-            alpha: 0.65,
-          });
-
-          // 月の位置（右上）
-          moonContainer.x = app!.screen.width * 0.85;
-          moonContainer.y = app!.screen.height * 0.15;
-
-          moonContainer.addChild(glow);
-          moonContainer.addChild(moon);
-          moonContainer.addChild(craters);
-
-          app!.stage.addChild(moonContainer);
-          return moonContainer;
-        };
-
-        const fantasyMoon = createFantasyMoon();
-
-        // ファンタジー世界の小さな岩石・鉱物アクセント
+        // 可愛い小さな草のアクセント（少なめ）
         for (let i = 0; i < 15; i++) {
-          const rockAccent = new PIXI.Graphics();
+          const grassAccent = new PIXI.Graphics();
           const x = Math.random() * app.screen.width;
           const y = app.screen.height * (0.88 + Math.random() * 0.08);
-          const size = Math.random() * 1.8 + 0.6;
+          const size = Math.random() * 1.5 + 0.8;
 
-          rockAccent.circle(x, y, size);
-          rockAccent.fill({
-            color: 0x4a4a4a, // ファンタジー岩石グレイ
-            alpha: 0.75,
+          grassAccent.circle(x, y, size);
+          grassAccent.fill({
+            color: 0x4a7c59, // 明るめの緑
+            alpha: 0.7,
           });
-          app.stage.addChild(rockAccent);
+          app.stage.addChild(grassAccent);
         }
+        logPixiBackground("info", "grass-foreground-created");
 
-        // 5. 安全なアニメーションループ - Ticker使用を避ける
+        // 5. アニメーションループ - パフォーマンス最適化版
         let lastTime = 0;
-        const targetFPS = isLowPowerDevice ? 30 : 45;
+        const targetFPS = 60;
         const frameInterval = 1000 / targetFPS;
         isAnimating = true; // アニメーション制御フラグを有効化
 
@@ -767,7 +708,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
           // 安全なアニメーション実行
           try {
-            // ドラクエ風魔法光の粒子アニメーション
+            // 光の粒子アニメーション
             particles.forEach(data => {
               const { particle, vx, vy, life } = data;
               if (!particle || !particle.parent) return; // 安全チェック追加
@@ -781,21 +722,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
               if (particle.y > app!.screen.height) particle.y = -10;
               if (particle.y < -10) particle.y = app!.screen.height;
 
-              // ドラクエ風神秘的な明滅効果（より穏やかで魔法的に）
-              particle.alpha = Math.sin(currentTime * 0.0015 * life) * 0.3 + 0.7;
+              // 明滅効果（最適化済み）
+              particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
             });
-
-            // ファンタジー月の微妙な神秘的脈動
-            if (fantasyMoon && fantasyMoon.parent) {
-              const moonPulse = Math.sin(currentTime * 0.0006) * 0.08 + 1;
-              fantasyMoon.scale.set(moonPulse);
-
-              // 月の光輪の色変化（神秘的な青紫の強弱）
-              if (fantasyMoon.children[0]) {
-                const glowAlpha = Math.sin(currentTime * 0.0008) * 0.04 + 0.15;
-                fantasyMoon.children[0].alpha = glowAlpha; // glow部分
-              }
-            }
           } catch (error) {
             // アニメーションエラー時は停止
             logPixiBackground("error", "animation-error", error);
