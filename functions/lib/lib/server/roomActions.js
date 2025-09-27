@@ -492,7 +492,6 @@ async function leaveRoomServer(roomId, userId, displayName) {
     if (hostCleared && remainingCount === 0) {
         try {
             await resetRoomToWaiting(roomId);
-            await sendSystemMessage(roomId, (0, systemMessages_1.systemMessageRoomBecameEmpty)());
             (0, log_1.logDebug)("rooms", "host-leave fallback-reset", {
                 roomId,
                 leavingUid: userId,

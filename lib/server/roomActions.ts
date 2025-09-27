@@ -10,7 +10,6 @@ import {
   resolveSystemPlayerName,
   systemMessageHostTransferred,
   systemMessagePlayerLeft,
-  systemMessageRoomBecameEmpty,
 } from "@/lib/server/systemMessages";
 
 const PRESENCE_STALE_MS = Number(
@@ -547,7 +546,6 @@ export async function leaveRoomServer(
   if (hostCleared && remainingCount === 0) {
     try {
       await resetRoomToWaiting(roomId);
-      await sendSystemMessage(roomId, systemMessageRoomBecameEmpty());
       logDebug("rooms", "host-leave fallback-reset", {
         roomId,
         leavingUid: userId,
