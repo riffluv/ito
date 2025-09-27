@@ -558,5 +558,51 @@ export async function leaveRoomServer(
   }
 }
 
+export async function transferHostServer(
+  roomId: string,
+  currentUid: string,
+  targetUid: string,
+  opts: { isAdmin?: boolean } = {}
+) {
+  const db = getAdminDb();
+
+  let targetName: string | null = null;
+
+  await db.runTransaction(async (tx) => {
+    const roomRef = db.collection("rooms").doc(roomId);
+    const roomSnap = await tx.get(roomRef);
+    if (!roomSnap.exists) {
+      throw new Error("room-not-found");
+    }
+    const room = roomSnap.data() as any;
+    const currentHostId = typeof room?.hostId === "string" ? room.hostId.trim() : "";
+
+    if (!opts.isAdmin && (!currentHostId || currentHostId !== currentUid)) {
+      throw new Error("not-host");
+    }
+
+    const targetRef = roomRef.collection("players").doc(targetUid);
+    const targetSnap = await tx.get(targetRef);
+    if (!targetSnap.exists) {
+      throw new Error("target-not-found");
+    }
+
+    const targetData = targetSnap.data() as any;
+    const rawName = typeof targetData?.name === "string" ? targetData.name : null;
+    const trimmed = rawName && rawName.trim().length > 0 ? rawName.trim() : "";
+    targetName = rawName;
+
+    tx.update(roomRef, {
+      hostId: targetUid,
+      hostName: trimmed ? trimmed : FieldValue.delete(),
+    });
+  });
+
+  await sendSystemMessage(
+    roomId,
+    systemMessageHostTransferred(resolveSystemPlayerName(targetName))
+  );
+}
+
 
 

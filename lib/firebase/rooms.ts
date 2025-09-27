@@ -29,7 +29,32 @@ export async function updateLastActive(roomId: string) {
 }
 
 export async function transferHost(roomId: string, newHostId: string) {
-  await updateDoc(doc(db!, "rooms", roomId), { hostId: newHostId });
+  let token: string | null = null;
+  try {
+    token = (await auth?.currentUser?.getIdToken(true)) ?? null;
+  } catch (error) {
+    logWarn("rooms", "transfer-host-token-failed", error);
+  }
+
+  if (!token) {
+    throw new Error("認証に失敗しました。再ログインしてください。");
+  }
+
+  const response = await fetch(`/api/rooms/${roomId}/transfer-host`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetUid: newHostId, token }),
+    keepalive: true,
+  });
+
+  if (!response.ok) {
+    let detail: any = null;
+    try {
+      detail = await response.json();
+    } catch {}
+    const code = detail?.error ? String(detail.error) : "transfer_failed";
+    throw new Error(code);
+  }
 }
 
 export async function leaveRoom(

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureHostAssignedServer = ensureHostAssignedServer;
 exports.leaveRoomServer = leaveRoomServer;
+exports.transferHostServer = transferHostServer;
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("@/lib/server/firebaseAdmin");
 const log_1 = require("@/lib/utils/log");
@@ -501,4 +502,34 @@ async function leaveRoomServer(roomId, userId, displayName) {
             (0, log_1.logWarn)("rooms", "leave-room-server-reset-failed", error);
         }
     }
+}
+async function transferHostServer(roomId, currentUid, targetUid, opts = {}) {
+    const db = (0, firebaseAdmin_1.getAdminDb)();
+    let targetName = null;
+    await db.runTransaction(async (tx) => {
+        const roomRef = db.collection("rooms").doc(roomId);
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists) {
+            throw new Error("room-not-found");
+        }
+        const room = roomSnap.data();
+        const currentHostId = typeof room?.hostId === "string" ? room.hostId.trim() : "";
+        if (!opts.isAdmin && (!currentHostId || currentHostId !== currentUid)) {
+            throw new Error("not-host");
+        }
+        const targetRef = roomRef.collection("players").doc(targetUid);
+        const targetSnap = await tx.get(targetRef);
+        if (!targetSnap.exists) {
+            throw new Error("target-not-found");
+        }
+        const targetData = targetSnap.data();
+        const rawName = typeof targetData?.name === "string" ? targetData.name : null;
+        const trimmed = rawName && rawName.trim().length > 0 ? rawName.trim() : "";
+        targetName = rawName;
+        tx.update(roomRef, {
+            hostId: targetUid,
+            hostName: trimmed ? trimmed : firestore_1.FieldValue.delete(),
+        });
+    });
+    await sendSystemMessage(roomId, (0, systemMessages_1.systemMessageHostTransferred)((0, systemMessages_1.resolveSystemPlayerName)(targetName)));
 }
