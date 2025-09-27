@@ -7,8 +7,10 @@ import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
+import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { UI_TOKENS } from "@/theme/layout";
 import { useEffect, useState as useLocalState } from "react";
+import SoundSettingsPlaceholder from "@/components/settings/SoundSettingsPlaceholder";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -37,13 +39,25 @@ export function SettingsModal({
     currentOptions?.defaultTopicType || "通常版"
   );
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"game" | "graphics">("game");
+  const [activeTab, setActiveTab] = useState<"game" | "graphics" | "sound">("game");
 
   // 背景設定のstate（localStorageから読み込み）
   const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
   const [hd2dImageIndex, setHd2dImageIndex] = useLocalState<number>(1);
   const [availableHd2dImages, setAvailableHd2dImages] = useState<number[]>([]);
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
+  const soundManager = useSoundManager();
+  const soundSettings = useSoundSettings();
+  const [previewMuted, setPreviewMuted] = useState(soundSettings.muted);
+  const [previewMasterVolume, setPreviewMasterVolume] = useState(soundSettings.masterVolume);
+  const SOUND_FEATURE_LOCKED = true;
+  const soundLockMessage = "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
+
+  useEffect(() => {
+    setPreviewMuted(soundSettings.muted);
+    setPreviewMasterVolume(soundSettings.masterVolume);
+  }, [soundSettings.muted, soundSettings.masterVolume]);
+
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -338,6 +352,7 @@ export function SettingsModal({
               {[
                 { key: "game", label: "Game Settings" },
                 { key: "graphics", label: "Graphics Settings" },
+                { key: "sound", label: "Sound Settings" },
               ].map((t) => {
                 const isActive = activeTab === (t.key as any);
                 return (
@@ -921,6 +936,16 @@ export function SettingsModal({
                 </Box>
               </Stack>
             )}
+            {activeTab === "sound" && (
+              <SoundSettingsPlaceholder
+                locked={SOUND_FEATURE_LOCKED}
+                message={soundLockMessage}
+                masterVolume={previewMasterVolume}
+                muted={previewMuted}
+                soundManagerReady={Boolean(soundManager)}
+              />
+            )}
+
           </Dialog.Body>
 
           {/* Footer - 統一パターン */}
