@@ -1,16 +1,14 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
+import SoundSettingsPlaceholder from "@/components/settings/SoundSettingsPlaceholder";
 import { notify } from "@/components/ui/notify";
-import { db } from "@/lib/firebase/client";
-import type { RoomDoc } from "@/lib/types";
-import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
-import { doc, updateDoc } from "firebase/firestore";
-import { useState } from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
+import { db } from "@/lib/firebase/client";
+import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
-import { useEffect, useState as useLocalState } from "react";
-import SoundSettingsPlaceholder from "@/components/settings/SoundSettingsPlaceholder";
+import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { doc, updateDoc } from "firebase/firestore";
+import { useEffect, useState as useLocalState, useState } from "react";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -29,8 +27,13 @@ export function SettingsModal({
   isHost,
   roomStatus,
 }: SettingsModalProps) {
-  const { animationMode, setAnimationMode, effectiveMode, gpuCapability, supports3D } =
-    useAnimationSettings();
+  const {
+    animationMode,
+    setAnimationMode,
+    effectiveMode,
+    gpuCapability,
+    supports3D,
+  } = useAnimationSettings();
 
   const [resolveMode, setResolveMode] = useState<string>(
     currentOptions?.resolveMode || "sort-submit"
@@ -39,19 +42,28 @@ export function SettingsModal({
     currentOptions?.defaultTopicType || "通常版"
   );
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"game" | "graphics" | "sound">("game");
+  const [activeTab, setActiveTab] = useState<"game" | "graphics" | "sound">(
+    "game"
+  );
 
   // 背景設定のstate（localStorageから読み込み）
-  const [backgroundType, setBackgroundType] = useLocalState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
+  const [backgroundType, setBackgroundType] = useLocalState<
+    "css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d"
+  >("css");
   const [hd2dImageIndex, setHd2dImageIndex] = useLocalState<number>(1);
   const [availableHd2dImages, setAvailableHd2dImages] = useState<number[]>([]);
-  const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">("background");
+  const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">(
+    "background"
+  );
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
   const [previewMuted, setPreviewMuted] = useState(soundSettings.muted);
-  const [previewMasterVolume, setPreviewMasterVolume] = useState(soundSettings.masterVolume);
+  const [previewMasterVolume, setPreviewMasterVolume] = useState(
+    soundSettings.masterVolume
+  );
   const SOUND_FEATURE_LOCKED = true;
-  const soundLockMessage = "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
+  const soundLockMessage =
+    "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
 
   useEffect(() => {
     setPreviewMuted(soundSettings.muted);
@@ -91,13 +103,19 @@ export function SettingsModal({
       for (let i = 1; i <= 1; i++) {
         try {
           // PNG とJPG 両方をチェック
-          const pngResponse = await fetch(`/images/backgrounds/hd2d/bg${i}.png`, { method: 'HEAD' });
+          const pngResponse = await fetch(
+            `/images/backgrounds/hd2d/bg${i}.png`,
+            { method: "HEAD" }
+          );
           if (pngResponse.ok) {
             imageNumbers.push(i);
             continue;
           }
 
-          const jpgResponse = await fetch(`/images/backgrounds/hd2d/bg${i}.jpg`, { method: 'HEAD' });
+          const jpgResponse = await fetch(
+            `/images/backgrounds/hd2d/bg${i}.jpg`,
+            { method: "HEAD" }
+          );
           if (jpgResponse.ok) {
             imageNumbers.push(i);
           }
@@ -121,15 +139,22 @@ export function SettingsModal({
       mq.addEventListener("change", listener);
     } catch {
       // Safari互換
-      // @ts-ignore
-      mq.addListener(listener);
+      // Safari互換: 古いブラウザでは addListener を使用
+      const legacyMq = mq as MediaQueryList & {
+        addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      };
+      legacyMq.addListener?.(listener);
     }
     return () => {
       try {
         mq.removeEventListener("change", listener);
       } catch {
-        // @ts-ignore
-        mq.removeListener(listener);
+        const legacyMq = mq as MediaQueryList & {
+          removeListener?: (
+            listener: (event: MediaQueryListEvent) => void
+          ) => void;
+        };
+        legacyMq.removeListener?.(listener);
       }
     };
   }, []);
@@ -138,7 +163,10 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      if (saved && ["css", "three3d", "three3d_advanced", "pixijs", "hd2d"].includes(saved)) {
+      if (
+        saved &&
+        ["css", "three3d", "three3d_advanced", "pixijs", "hd2d"].includes(saved)
+      ) {
         setBackgroundType(saved as any);
       }
     } catch {
@@ -152,9 +180,11 @@ export function SettingsModal({
     try {
       localStorage.setItem("backgroundType", newType);
       // カスタムイベントで他のコンポーネントに通知
-      window.dispatchEvent(new CustomEvent("backgroundTypeChanged", {
-        detail: { backgroundType: newType }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("backgroundTypeChanged", {
+          detail: { backgroundType: newType },
+        })
+      );
     } catch {
       // エラーは無視
     }
@@ -165,7 +195,10 @@ export function SettingsModal({
     setForceAnimations(next);
     try {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem("force-animations", next ? "true" : "false");
+        window.localStorage.setItem(
+          "force-animations",
+          next ? "true" : "false"
+        );
         window.dispatchEvent(new CustomEvent("forceAnimationsChanged"));
       }
     } catch {}
@@ -174,8 +207,8 @@ export function SettingsModal({
       description: next
         ? "reduce-motion を無視して軽量アニメを有効にします"
         : osReduced
-        ? "OSが動きを減らす=ONのため、アニメは控えめになります"
-        : "OSが動きを減らす=OFFのため、アニメは通常動作します",
+          ? "OSが動きを減らす=ONのため、アニメは控えめになります"
+          : "OSが動きを減らす=OFFのため、アニメは通常動作します",
       type: "info",
       duration: 1800,
     });
@@ -262,7 +295,7 @@ export function SettingsModal({
       open={isOpen}
       onOpenChange={(details) => !details.open && onClose()}
     >
-      <Dialog.Backdrop 
+      <Dialog.Backdrop
         css={{
           background: "overlayStrong",
           backdropFilter: "blur(12px) saturate(1.2)",
@@ -283,63 +316,63 @@ export function SettingsModal({
           }}
         >
           {/* Close button - 統一パターン */}
-          <Dialog.CloseTrigger 
+          <Dialog.CloseTrigger
             css={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
+              position: "absolute",
+              top: "12px",
+              right: "12px",
               zIndex: 10,
               background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0,
-              padding: '0',
+              padding: "0",
               border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-              color: 'white',
-              cursor: 'pointer',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              fontWeight: 'bold',
+              color: "white",
+              cursor: "pointer",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "16px",
+              fontWeight: "bold",
               transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
-              '&:hover': {
-                background: 'white',
-                color: UI_TOKENS.COLORS.panelBg
-              }
+              "&:hover": {
+                background: "white",
+                color: UI_TOKENS.COLORS.panelBg,
+              },
             }}
           >
             ✕
           </Dialog.CloseTrigger>
 
           {/* Header - 統一パターン */}
-          <Box 
-            p={6} 
+          <Box
+            p={6}
             position="relative"
             zIndex={1}
             css={{
               borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
-            <Dialog.Title 
+            <Dialog.Title
               css={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: 'white',
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                color: "white",
                 margin: 0,
-                fontFamily: 'monospace',
+                fontFamily: "monospace",
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                textAlign: 'center',
+                textAlign: "center",
               }}
             >
               せっていを かえる
             </Dialog.Title>
-            <Text 
-              fontSize="sm" 
+            <Text
+              fontSize="sm"
               color={UI_TOKENS.COLORS.textMuted}
               mt={1}
               css={{
-                textAlign: 'center',
+                textAlign: "center",
               }}
             >
               あそびかたを きめてください
@@ -364,8 +397,16 @@ export function SettingsModal({
                     py={2}
                     borderRadius={0}
                     border="2px solid"
-                    borderColor={isActive ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                    bg={isActive ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                    borderColor={
+                      isActive
+                        ? UI_TOKENS.COLORS.whiteAlpha90
+                        : UI_TOKENS.COLORS.whiteAlpha30
+                    }
+                    bg={
+                      isActive
+                        ? UI_TOKENS.COLORS.whiteAlpha10
+                        : UI_TOKENS.COLORS.panelBg
+                    }
                     color="white"
                     fontFamily="monospace"
                     fontWeight="bold"
@@ -379,183 +420,219 @@ export function SettingsModal({
 
             {activeTab === "game" && (
               <Stack gap={6}>
-              {/* クリア方式セクション */}
-              <Box>
-                <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
-                  どうやって あそぶか
-                </Text>
-                <Stack gap={2}>
-                  {modeOptions.map((option) => {
-                    const isSelected = resolveMode === option.value;
-                    return (
-                      <Box
-                        key={option.value}
-                        cursor="pointer"
-                        onClick={() => setResolveMode(option.value)}
-                        p={4}
-                        borderRadius={0}
-                        border="2px solid"
-                        borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                        bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
-                        transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
-                        boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
-                        _hover={{
-                          borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                          bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
-                        }}
-                      >
-                        <HStack justify="space-between" align="start">
-                          <VStack align="start" gap={1} flex="1">
-                            <Text 
-                              fontSize="md" 
-                              fontWeight="bold" 
-                              color="white"
-                              fontFamily="monospace"
-                              textShadow="1px 1px 0px #000"
-                            >
-                              {option.title}
-                            </Text>
-                            <Text
-                              fontSize="sm"
-                              color={UI_TOKENS.COLORS.textMuted}
-                              lineHeight="short"
-                              fontFamily="monospace"
-                            >
-                              {option.description}
-                            </Text>
-                          </VStack>
-                          <Box
-                            w={5}
-                            h={5}
-                            borderRadius={0}
-                            border="2px solid"
-                            borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
-                            bg={isSelected ? "white" : "transparent"}
-                            mt={0.5}
-                            position="relative"
-                            transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
-                          >
-                            {isSelected && (
-                              <Box
-                                position="absolute"
-                                top="50%"
-                                left="50%"
-                                transform="translate(-50%, -50%)"
-                                w="10px"
-                                h="6px"
-                                color="black"
-                                fontWeight="900"
-                                fontSize="12px"
-                                fontFamily="monospace"
-                                lineHeight={1}
-                              >
-                                ✓
-                              </Box>
-                            )}
-                          </Box>
-                        </HStack>
-                      </Box>
-                    );
-                  })}
-                </Stack>
-              </Box>
-
-              {/* お題タイプセクション */}
-              <Box>
-                <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
-                  おだいの しゅるい
-                </Text>
-                <Stack gap={2}>
-                  {topicTypeOptions.map((option) => {
-                    const isSelected = defaultTopicType === option.value;
-                    return (
-                      <Box
-                        key={option.value}
-                        cursor="pointer"
-                        onClick={() => setDefaultTopicType(option.value)}
-                        p={4}
-                        borderRadius={0}
-                        border="2px solid"
-                        borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                        bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
-                        transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
-                        boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
-                        _hover={{
-                          borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                          bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
-                        }}
-                      >
-                        <HStack justify="space-between" align="start">
-                          <VStack align="start" gap={1} flex="1">
-                            <Text 
-                              fontSize="md" 
-                              fontWeight="bold" 
-                              color="white"
-                              fontFamily="monospace"
-                              textShadow="1px 1px 0px #000"
-                            >
-                              {option.title}
-                            </Text>
-                            <Text
-                              fontSize="sm"
-                              color={UI_TOKENS.COLORS.textMuted}
-                              lineHeight="short"
-                              fontFamily="monospace"
-                            >
-                              {option.description}
-                            </Text>
-                          </VStack>
-                          <Box
-                            w={5}
-                            h={5}
-                            borderRadius={0}
-                            border="2px solid"
-                            borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
-                            bg={isSelected ? "white" : "transparent"}
-                            mt={0.5}
-                            position="relative"
-                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
-                          >
-                            {isSelected && (
-                              <Box
-                                position="absolute"
-                                top="50%"
-                                left="50%"
-                                transform="translate(-50%, -50%)"
-                                w="10px"
-                                h="6px"
-                                color="black"
-                                fontWeight="900"
-                                fontSize="12px"
-                                fontFamily="monospace"
-                                lineHeight={1}
-                              >
-                                ✓
-                              </Box>
-                            )}
-                          </Box>
-                        </HStack>
-                      </Box>
-                    );
-                  })}
-                </Stack>
-              </Box>
-
-              {(!isHost || roomStatus !== "waiting") && (
-                <Box
-                  p={3}
-                  bg="yellow.900"
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="yellow.700"
-                >
-                  <Text fontSize="sm" color="yellow.300" textAlign="center">
-                    {!isHost
-                      ? "せっていは ホストのみ かえられます"
-                      : "せっていは たいきちゅうのみ かえられます"}
+                {/* クリア方式セクション */}
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
+                    どうやって あそぶか
                   </Text>
+                  <Stack gap={2}>
+                    {modeOptions.map((option) => {
+                      const isSelected = resolveMode === option.value;
+                      return (
+                        <Box
+                          key={option.value}
+                          cursor="pointer"
+                          onClick={() => setResolveMode(option.value)}
+                          p={4}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha90
+                              : UI_TOKENS.COLORS.whiteAlpha30
+                          }
+                          bg={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha10
+                              : UI_TOKENS.COLORS.panelBg
+                          }
+                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          boxShadow={
+                            isSelected
+                              ? UI_TOKENS.SHADOWS.panelDistinct
+                              : UI_TOKENS.SHADOWS.panelSubtle
+                          }
+                          _hover={{
+                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                            bg: isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha15
+                              : UI_TOKENS.COLORS.panelBg,
+                          }}
+                        >
+                          <HStack justify="space-between" align="start">
+                            <VStack align="start" gap={1} flex="1">
+                              <Text
+                                fontSize="md"
+                                fontWeight="bold"
+                                color="white"
+                                fontFamily="monospace"
+                                textShadow="1px 1px 0px #000"
+                              >
+                                {option.title}
+                              </Text>
+                              <Text
+                                fontSize="sm"
+                                color={UI_TOKENS.COLORS.textMuted}
+                                lineHeight="short"
+                                fontFamily="monospace"
+                              >
+                                {option.description}
+                              </Text>
+                            </VStack>
+                            <Box
+                              w={5}
+                              h={5}
+                              borderRadius={0}
+                              border="2px solid"
+                              borderColor={
+                                isSelected
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha50
+                              }
+                              bg={isSelected ? "white" : "transparent"}
+                              mt={0.5}
+                              position="relative"
+                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+                            >
+                              {isSelected && (
+                                <Box
+                                  position="absolute"
+                                  top="50%"
+                                  left="50%"
+                                  transform="translate(-50%, -50%)"
+                                  w="10px"
+                                  h="6px"
+                                  color="black"
+                                  fontWeight="900"
+                                  fontSize="12px"
+                                  fontFamily="monospace"
+                                  lineHeight={1}
+                                >
+                                  ✓
+                                </Box>
+                              )}
+                            </Box>
+                          </HStack>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
                 </Box>
-              )}
+
+                {/* お題タイプセクション */}
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="gray.300" mb={3}>
+                    おだいの しゅるい
+                  </Text>
+                  <Stack gap={2}>
+                    {topicTypeOptions.map((option) => {
+                      const isSelected = defaultTopicType === option.value;
+                      return (
+                        <Box
+                          key={option.value}
+                          cursor="pointer"
+                          onClick={() => setDefaultTopicType(option.value)}
+                          p={4}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha90
+                              : UI_TOKENS.COLORS.whiteAlpha30
+                          }
+                          bg={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha10
+                              : UI_TOKENS.COLORS.panelBg
+                          }
+                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          boxShadow={
+                            isSelected
+                              ? UI_TOKENS.SHADOWS.panelDistinct
+                              : UI_TOKENS.SHADOWS.panelSubtle
+                          }
+                          _hover={{
+                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                            bg: isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha15
+                              : UI_TOKENS.COLORS.panelBg,
+                          }}
+                        >
+                          <HStack justify="space-between" align="start">
+                            <VStack align="start" gap={1} flex="1">
+                              <Text
+                                fontSize="md"
+                                fontWeight="bold"
+                                color="white"
+                                fontFamily="monospace"
+                                textShadow="1px 1px 0px #000"
+                              >
+                                {option.title}
+                              </Text>
+                              <Text
+                                fontSize="sm"
+                                color={UI_TOKENS.COLORS.textMuted}
+                                lineHeight="short"
+                                fontFamily="monospace"
+                              >
+                                {option.description}
+                              </Text>
+                            </VStack>
+                            <Box
+                              w={5}
+                              h={5}
+                              borderRadius={0}
+                              border="2px solid"
+                              borderColor={
+                                isSelected
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha50
+                              }
+                              bg={isSelected ? "white" : "transparent"}
+                              mt={0.5}
+                              position="relative"
+                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+                            >
+                              {isSelected && (
+                                <Box
+                                  position="absolute"
+                                  top="50%"
+                                  left="50%"
+                                  transform="translate(-50%, -50%)"
+                                  w="10px"
+                                  h="6px"
+                                  color="black"
+                                  fontWeight="900"
+                                  fontSize="12px"
+                                  fontFamily="monospace"
+                                  lineHeight={1}
+                                >
+                                  ✓
+                                </Box>
+                              )}
+                            </Box>
+                          </HStack>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+
+                {(!isHost || roomStatus !== "waiting") && (
+                  <Box
+                    p={3}
+                    bg="yellow.900"
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="yellow.700"
+                  >
+                    <Text fontSize="sm" color="yellow.300" textAlign="center">
+                      {!isHost
+                        ? "せっていは ホストのみ かえられます"
+                        : "せっていは たいきちゅうのみ かえられます"}
+                    </Text>
+                  </Box>
+                )}
               </Stack>
             )}
 
@@ -578,8 +655,16 @@ export function SettingsModal({
                         py={2}
                         borderRadius={0}
                         border="2px solid"
-                        borderColor={isActive ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                        bg={isActive ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                        borderColor={
+                          isActive
+                            ? UI_TOKENS.COLORS.whiteAlpha90
+                            : UI_TOKENS.COLORS.whiteAlpha30
+                        }
+                        bg={
+                          isActive
+                            ? UI_TOKENS.COLORS.whiteAlpha10
+                            : UI_TOKENS.COLORS.panelBg
+                        }
                         color="white"
                         fontFamily="monospace"
                         fontWeight="bold"
@@ -592,24 +677,35 @@ export function SettingsModal({
                 </HStack>
 
                 {/* 背景設定セクション */}
-                <Box hidden={graphicsTab !== 'background'}>
+                <Box hidden={graphicsTab !== "background"}>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundType === "css" ? "シンプル" : backgroundType === "three3d" ? "Three.js" : backgroundType === "three3d_advanced" ? "豪華版" : backgroundType === "hd2d" ? "HD-2D" : "軽量 3D"}
+                    げんざい:{" "}
+                    {backgroundType === "css"
+                      ? "シンプル"
+                      : backgroundType === "three3d"
+                        ? "Three.js"
+                        : backgroundType === "three3d_advanced"
+                          ? "豪華版"
+                          : backgroundType === "hd2d"
+                            ? "HD-2D"
+                            : "軽量 3D"}
                   </Text>
                   <Stack gap={2}>
                     {[
                       {
                         value: "css",
                         title: "シンプル はいけい",
-                        description: "けいりょう CSS はいけい（すべての PC で あんてい）",
+                        description:
+                          "けいりょう CSS はいけい（すべての PC で あんてい）",
                       },
                       {
                         value: "three3d",
                         title: "Three.js はいけい",
-                        description: "うちゅうてき Three.js エフェクト（シンプル版）",
+                        description:
+                          "うちゅうてき Three.js エフェクト（シンプル版）",
                       },
                       {
                         value: "three3d_advanced",
@@ -623,7 +719,8 @@ export function SettingsModal({
                       },
                       {
                         value: "hd2d",
-                        title: "HD-2D はいけい（思ったより微妙なので廃止予定☕）",
+                        title:
+                          "HD-2D はいけい（思ったより微妙なので廃止予定☕）",
                         description: "オクトパストラベラー風の美しい背景画像",
                       },
                     ].map((opt) => {
@@ -632,17 +729,33 @@ export function SettingsModal({
                         <Box
                           key={opt.value}
                           cursor="pointer"
-                          onClick={() => handleBackgroundChange(opt.value as any)}
+                          onClick={() =>
+                            handleBackgroundChange(opt.value as any)
+                          }
                           p={4}
                           borderRadius={0}
                           border="2px solid"
-                          borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                          bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                          borderColor={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha90
+                              : UI_TOKENS.COLORS.whiteAlpha30
+                          }
+                          bg={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha10
+                              : UI_TOKENS.COLORS.panelBg
+                          }
                           transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
-                          boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
+                          boxShadow={
+                            isSelected
+                              ? UI_TOKENS.SHADOWS.panelDistinct
+                              : UI_TOKENS.SHADOWS.panelSubtle
+                          }
                           _hover={{
                             borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                            bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
+                            bg: isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha15
+                              : UI_TOKENS.COLORS.panelBg,
                           }}
                         >
                           <HStack justify="space-between" align="start">
@@ -670,7 +783,11 @@ export function SettingsModal({
                               h={5}
                               borderRadius={0}
                               border="2px solid"
-                              borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
+                              borderColor={
+                                isSelected
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha50
+                              }
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
@@ -702,11 +819,29 @@ export function SettingsModal({
 
                   {/* HD-2D背景の画像番号選択 */}
                   {backgroundType === "hd2d" && (
-                    <Box mt={4} p={4} borderRadius={0} border="2px solid" borderColor={UI_TOKENS.COLORS.whiteAlpha30} bg={UI_TOKENS.COLORS.whiteAlpha05}>
-                      <Text fontSize="sm" fontWeight="600" color="white" mb={2} fontFamily="monospace" textShadow="1px 1px 0px #000">
+                    <Box
+                      mt={4}
+                      p={4}
+                      borderRadius={0}
+                      border="2px solid"
+                      borderColor={UI_TOKENS.COLORS.whiteAlpha30}
+                      bg={UI_TOKENS.COLORS.whiteAlpha05}
+                    >
+                      <Text
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="white"
+                        mb={2}
+                        fontFamily="monospace"
+                        textShadow="1px 1px 0px #000"
+                      >
                         HD-2D がぞう ばんごう
                       </Text>
-                      <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
+                      <Text
+                        fontSize="xs"
+                        color={UI_TOKENS.COLORS.textMuted}
+                        mb={3}
+                      >
                         げんざい: {hd2dImageIndex}ばんめ
                       </Text>
                       <HStack gap={2} wrap="wrap">
@@ -722,9 +857,11 @@ export function SettingsModal({
                                 if (isAvailable) {
                                   setHd2dImageIndex(num);
                                   // 他のコンポーネントにも通知
-                                  window.dispatchEvent(new CustomEvent("hd2dImageChanged", {
-                                    detail: { imageIndex: num }
-                                  }));
+                                  window.dispatchEvent(
+                                    new CustomEvent("hd2dImageChanged", {
+                                      detail: { imageIndex: num },
+                                    })
+                                  );
                                 }
                               }}
                               w={10}
@@ -735,17 +872,21 @@ export function SettingsModal({
                                 !isAvailable
                                   ? UI_TOKENS.COLORS.whiteAlpha30
                                   : isSelected
-                                  ? "white"
-                                  : UI_TOKENS.COLORS.whiteAlpha50
+                                    ? "white"
+                                    : UI_TOKENS.COLORS.whiteAlpha50
                               }
                               bg={
                                 !isAvailable
                                   ? UI_TOKENS.COLORS.whiteAlpha05
                                   : isSelected
-                                  ? UI_TOKENS.COLORS.whiteAlpha15
-                                  : UI_TOKENS.COLORS.panelBg
+                                    ? UI_TOKENS.COLORS.whiteAlpha15
+                                    : UI_TOKENS.COLORS.panelBg
                               }
-                              color={isAvailable ? "white" : UI_TOKENS.COLORS.whiteAlpha40}
+                              color={
+                                isAvailable
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha40
+                              }
                               fontSize="14px"
                               fontFamily="monospace"
                               fontWeight={isAvailable ? "bold" : "normal"}
@@ -755,10 +896,17 @@ export function SettingsModal({
                               cursor={isAvailable ? "pointer" : "not-allowed"}
                               opacity={isAvailable ? 1 : 0.5}
                               transition="background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease"
-                              _hover={isAvailable ? {
-                                borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                                bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha20 : UI_TOKENS.COLORS.whiteAlpha10,
-                              } : {}}
+                              _hover={
+                                isAvailable
+                                  ? {
+                                      borderColor:
+                                        UI_TOKENS.COLORS.whiteAlpha80,
+                                      bg: isSelected
+                                        ? UI_TOKENS.COLORS.whiteAlpha20
+                                        : UI_TOKENS.COLORS.whiteAlpha10,
+                                    }
+                                  : {}
+                              }
                             >
                               {num}
                             </Box>
@@ -769,18 +917,26 @@ export function SettingsModal({
                   )}
                 </Box>
 
-                <Box hidden={graphicsTab !== 'animation'}>
+                <Box hidden={graphicsTab !== "animation"}>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     アニメーション モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={1}>
-                    げんざい: {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}（自動判定: {gpuCapability === "high" ? "高" : "低"}）
+                    げんざい:{" "}
+                    {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}
+                    （自動判定: {gpuCapability === "high" ? "高" : "低"}）
                   </Text>
-                  {effectiveMode === "simple" && animationMode !== "simple" && supports3D === false && (
-                    <Text fontSize="xs" color={UI_TOKENS.COLORS.whiteAlpha60} mb={3}>
-                      注: この端末では3Dが使えないため、シンプルで動作中
-                    </Text>
-                  )}
+                  {effectiveMode === "simple" &&
+                    animationMode !== "simple" &&
+                    supports3D === false && (
+                      <Text
+                        fontSize="xs"
+                        color={UI_TOKENS.COLORS.whiteAlpha60}
+                        mb={3}
+                      >
+                        注: この端末では3Dが使えないため、シンプルで動作中
+                      </Text>
+                    )}
                   <Stack gap={2}>
                     {[
                       {
@@ -808,13 +964,27 @@ export function SettingsModal({
                           p={4}
                           borderRadius={0}
                           border="2px solid"
-                          borderColor={isSelected ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                          bg={isSelected ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                          borderColor={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha90
+                              : UI_TOKENS.COLORS.whiteAlpha30
+                          }
+                          bg={
+                            isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha10
+                              : UI_TOKENS.COLORS.panelBg
+                          }
                           transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
-                          boxShadow={isSelected ? UI_TOKENS.SHADOWS.panelDistinct : UI_TOKENS.SHADOWS.panelSubtle}
+                          boxShadow={
+                            isSelected
+                              ? UI_TOKENS.SHADOWS.panelDistinct
+                              : UI_TOKENS.SHADOWS.panelSubtle
+                          }
                           _hover={{
                             borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                            bg: isSelected ? UI_TOKENS.COLORS.whiteAlpha15 : UI_TOKENS.COLORS.panelBg,
+                            bg: isSelected
+                              ? UI_TOKENS.COLORS.whiteAlpha15
+                              : UI_TOKENS.COLORS.panelBg,
                           }}
                         >
                           <HStack justify="space-between" align="start">
@@ -842,7 +1012,11 @@ export function SettingsModal({
                               h={5}
                               borderRadius={0}
                               border="2px solid"
-                              borderColor={isSelected ? "white" : UI_TOKENS.COLORS.whiteAlpha50}
+                              borderColor={
+                                isSelected
+                                  ? "white"
+                                  : UI_TOKENS.COLORS.whiteAlpha50
+                              }
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
@@ -874,7 +1048,7 @@ export function SettingsModal({
                 </Box>
 
                 {/* アニメーションの動作モード（明示ラジオ） */}
-                <Box hidden={graphicsTab !== 'animation'}>
+                <Box hidden={graphicsTab !== "animation"}>
                   <Text fontSize="sm" fontWeight="600" color="gray.300" mb={1}>
                     アニメの基準（どちらを優先するか）
                   </Text>
@@ -889,19 +1063,49 @@ export function SettingsModal({
                       p={4}
                       borderRadius={0}
                       border="2px solid"
-                      borderColor={!forceAnimations ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                      bg={!forceAnimations ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                      borderColor={
+                        !forceAnimations
+                          ? UI_TOKENS.COLORS.whiteAlpha90
+                          : UI_TOKENS.COLORS.whiteAlpha30
+                      }
+                      bg={
+                        !forceAnimations
+                          ? UI_TOKENS.COLORS.whiteAlpha10
+                          : UI_TOKENS.COLORS.panelBg
+                      }
                     >
                       <HStack justify="space-between" align="center">
                         <VStack align="start" gap={1} flex="1">
-                          <Text fontSize="md" fontWeight="bold" color="white" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight="bold"
+                            color="white"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             自動（端末に合わせる・おすすめ）
                           </Text>
-                          <Text fontSize="sm" color={UI_TOKENS.COLORS.textMuted} lineHeight="short" fontFamily="monospace">
+                          <Text
+                            fontSize="sm"
+                            color={UI_TOKENS.COLORS.textMuted}
+                            lineHeight="short"
+                            fontFamily="monospace"
+                          >
                             端末が「動きを減らす=ON」なら控えめ、「OFF」なら通常のアニメになります
                           </Text>
                         </VStack>
-                        <Box w={5} h={5} borderRadius={0} border="2px solid" borderColor={!forceAnimations ? "white" : UI_TOKENS.COLORS.whiteAlpha50} bg={!forceAnimations ? "white" : "transparent"} />
+                        <Box
+                          w={5}
+                          h={5}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={
+                            !forceAnimations
+                              ? "white"
+                              : UI_TOKENS.COLORS.whiteAlpha50
+                          }
+                          bg={!forceAnimations ? "white" : "transparent"}
+                        />
                       </HStack>
                     </Box>
                     {/* 強制ON */}
@@ -911,27 +1115,67 @@ export function SettingsModal({
                       p={4}
                       borderRadius={0}
                       border="2px solid"
-                      borderColor={forceAnimations ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha30}
-                      bg={forceAnimations ? UI_TOKENS.COLORS.whiteAlpha10 : UI_TOKENS.COLORS.panelBg}
+                      borderColor={
+                        forceAnimations
+                          ? UI_TOKENS.COLORS.whiteAlpha90
+                          : UI_TOKENS.COLORS.whiteAlpha30
+                      }
+                      bg={
+                        forceAnimations
+                          ? UI_TOKENS.COLORS.whiteAlpha10
+                          : UI_TOKENS.COLORS.panelBg
+                      }
                     >
                       <HStack justify="space-between" align="center">
                         <VStack align="start" gap={1} flex="1">
-                          <Text fontSize="md" fontWeight="bold" color="white" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight="bold"
+                            color="white"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             常に動かす（reduce-motionを無視）
                           </Text>
-                          <Text fontSize="sm" color={UI_TOKENS.COLORS.textMuted} lineHeight="short" fontFamily="monospace">
+                          <Text
+                            fontSize="sm"
+                            color={UI_TOKENS.COLORS.textMuted}
+                            lineHeight="short"
+                            fontFamily="monospace"
+                          >
                             アクセシビリティ設定に関わらず、軽量アニメを有効にします
                           </Text>
                         </VStack>
-                        <Box w={5} h={5} borderRadius={0} border="2px solid" borderColor={forceAnimations ? "white" : UI_TOKENS.COLORS.whiteAlpha50} bg={forceAnimations ? "white" : "transparent"} />
+                        <Box
+                          w={5}
+                          h={5}
+                          borderRadius={0}
+                          border="2px solid"
+                          borderColor={
+                            forceAnimations
+                              ? "white"
+                              : UI_TOKENS.COLORS.whiteAlpha50
+                          }
+                          bg={forceAnimations ? "white" : "transparent"}
+                        />
                       </HStack>
                     </Box>
                   </Stack>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mt={2}>
-                    いま適用: {forceAnimations ? "常に動かす（軽量アニメON）" : osReduced ? "自動（控えめアニメ）" : "自動（通常アニメ）"}
+                    いま適用:{" "}
+                    {forceAnimations
+                      ? "常に動かす（軽量アニメON）"
+                      : osReduced
+                        ? "自動（控えめアニメ）"
+                        : "自動（通常アニメ）"}
                   </Text>
-                  <Text fontSize="xs" color={UI_TOKENS.COLORS.whiteAlpha60} mt={1}>
-                    これは? → 「動きを減らす」は端末のアクセシビリティ設定です。目の疲れや酔いが出やすい方向けに、動きを少なくする指示をアプリに伝えます。
+                  <Text
+                    fontSize="xs"
+                    color={UI_TOKENS.COLORS.whiteAlpha60}
+                    mt={1}
+                  >
+                    これは? →
+                    「動きを減らす」は端末のアクセシビリティ設定です。目の疲れや酔いが出やすい方向けに、動きを少なくする指示をアプリに伝えます。
                   </Text>
                 </Box>
               </Stack>
@@ -945,15 +1189,14 @@ export function SettingsModal({
                 soundManagerReady={Boolean(soundManager)}
               />
             )}
-
           </Dialog.Body>
 
           {/* Footer - 統一パターン */}
-          <Box 
-            p={6} 
+          <Box
+            p={6}
             pt={4}
             css={{
-              background: 'transparent',
+              background: "transparent",
               borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
           >
@@ -997,12 +1240,19 @@ export function SettingsModal({
                   fontSize: "1rem",
                   fontFamily: "monospace",
                   border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                  background: saving || !isHost || roomStatus !== "waiting" ? "#666" : UI_TOKENS.COLORS.panelBg,
+                  background:
+                    saving || !isHost || roomStatus !== "waiting"
+                      ? "#666"
+                      : UI_TOKENS.COLORS.panelBg,
                   color: "white",
-                  cursor: saving || !isHost || roomStatus !== "waiting" ? "not-allowed" : "pointer",
+                  cursor:
+                    saving || !isHost || roomStatus !== "waiting"
+                      ? "not-allowed"
+                      : "pointer",
                   textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
                   transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  opacity: saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
+                  opacity:
+                    saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
                   if (!saving && isHost && roomStatus === "waiting") {

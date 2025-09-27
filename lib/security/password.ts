@@ -1,12 +1,66 @@
 const encoder = new TextEncoder();
 
-function getCrypto(): Crypto {
-  if (typeof globalThis !== "undefined" && globalThis.crypto) {
-    return globalThis.crypto as Crypto;
+let cachedWebCrypto: Crypto | null = null;
+
+let cryptoInit: Promise<Crypto> | null = null;
+
+function isUsableCrypto(candidate: Crypto | undefined): candidate is Crypto {
+  if (!candidate) {
+    return false;
   }
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { webcrypto } = require("crypto");
-  return webcrypto as Crypto;
+  const { subtle, getRandomValues } = candidate;
+  return (
+    typeof subtle?.digest === "function" &&
+    typeof getRandomValues === "function"
+  );
+}
+
+async function resolveCrypto(): Promise<Crypto> {
+  if (typeof globalThis !== "undefined") {
+    const existing = globalThis.crypto;
+    if (isUsableCrypto(existing as Crypto | undefined)) {
+      return existing as Crypto;
+    }
+  }
+
+  // Node.js ランタイムではグローバル提供が無い場合があるため、必要に応じて fallback をロード
+  const isNodeRuntime =
+    typeof process !== "undefined" && process.release?.name === "node";
+  if (typeof window === "undefined" || isNodeRuntime) {
+    try {
+      const { webcrypto } = await import("crypto");
+      if (isUsableCrypto(webcrypto as Crypto | undefined)) {
+        if (typeof globalThis !== "undefined" && !globalThis.crypto) {
+          Object.defineProperty(globalThis, "crypto", {
+            value: webcrypto,
+            configurable: true,
+            enumerable: false,
+            writable: false,
+          });
+        }
+        return webcrypto as Crypto;
+      }
+    } catch (error) {
+      // fall through to error below
+    }
+  }
+
+  throw new Error(
+    "Web Crypto API is unavailable in this environment. Please ensure Node.js 19+ (or globalThis.crypto) is available."
+  );
+}
+
+async function getCrypto(): Promise<Crypto> {
+  if (cachedWebCrypto) {
+    return cachedWebCrypto;
+  }
+  if (!cryptoInit) {
+    cryptoInit = resolveCrypto().then((instance) => {
+      cachedWebCrypto = instance;
+      return instance;
+    });
+  }
+  return cryptoInit;
 }
 
 function bufferToBase64(buffer: ArrayBuffer): string {
@@ -35,8 +89,11 @@ function constantTimeCompare(a: string, b: string): boolean {
 
 export const PASSWORD_VERSION = 1;
 
-export async function hashPassword(password: string, salt: string): Promise<string> {
-  const cryptoObj = getCrypto();
+export async function hashPassword(
+  password: string,
+  salt: string
+): Promise<string> {
+  const cryptoObj = await getCrypto();
   const data = encoder.encode(`${salt}:${password}`);
   const digest = await cryptoObj.subtle.digest("SHA-256", data);
   return bufferToBase64(digest);
@@ -47,7 +104,7 @@ export async function createPasswordEntry(password: string): Promise<{
   salt: string;
   version: number;
 }> {
-  const cryptoObj = getCrypto();
+  const cryptoObj = await getCrypto();
   const saltBytes = new Uint8Array(16);
   cryptoObj.getRandomValues(saltBytes);
   const salt = bufferToBase64(saltBytes.buffer);

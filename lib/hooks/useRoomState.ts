@@ -1,10 +1,13 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
-import { joinRoomFully, ensureMember } from "@/lib/services/roomService";
+import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import {
+  handleFirebaseQuotaError,
+  isFirebaseQuotaExceeded,
+} from "@/lib/utils/errorHandling";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -35,7 +38,14 @@ export function useRoomState(
 
   // subscribe room
   useEffect(() => {
-    if (!firebaseEnabled) return;
+    if (!firebaseEnabled) {
+      return;
+    }
+    if (!roomId) {
+      setRoom(null);
+      setLoading(false);
+      return;
+    }
 
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
@@ -67,12 +77,18 @@ export function useRoomState(
             backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分バックオフ
             stop();
             if (backoffTimer) {
-              try { clearTimeout(backoffTimer); } catch {}
+              try {
+                clearTimeout(backoffTimer);
+              } catch {}
               backoffTimer = null;
             }
             // 可視時にのみ自動再開を試みる
             const resume = () => {
-              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+              if (
+                typeof document !== "undefined" &&
+                document.visibilityState !== "visible"
+              )
+                return;
               const remain = backoffUntilRef.current - Date.now();
               if (remain > 0) {
                 backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
@@ -94,7 +110,9 @@ export function useRoomState(
 
     return () => {
       if (backoffTimer) {
-        try { clearTimeout(backoffTimer); } catch {}
+        try {
+          clearTimeout(backoffTimer);
+        } catch {}
       }
       stop();
     };
@@ -119,8 +137,10 @@ export function useRoomState(
     setLoading(partLoading === true);
   }, [fetchedPlayers, partLoading]);
 
-
-  const rejoinSessionKey = useMemo(() => (uid ? `pendingRejoin:${roomId}` : null), [roomId, uid]);
+  const rejoinSessionKey = useMemo(
+    () => (uid ? `pendingRejoin:${roomId}` : null),
+    [roomId, uid]
+  );
   // auto-join (待機中のみ自動参加。ゲーム中の途中参加は禁止)
   // さらに、displayName未設定時は入室を保留して名前入力ダイアログを促す
   useEffect(() => {
@@ -139,7 +159,9 @@ export function useRoomState(
     const clearPending = () => {
       if (!pendingRejoin) return;
       if (rejoinSessionKey && typeof window !== "undefined") {
-        try { window.sessionStorage.removeItem(rejoinSessionKey); } catch {}
+        try {
+          window.sessionStorage.removeItem(rejoinSessionKey);
+        } catch {}
       }
     };
 
@@ -157,15 +179,22 @@ export function useRoomState(
         () => void 0
       );
     }
-  }, [roomId, uid || "", room?.status, displayName || "", rejoinSessionKey, isMember]);
+  }, [
+    roomId,
+    uid || "",
+    room?.status,
+    displayName || "",
+    rejoinSessionKey,
+    isMember,
+  ]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
     if (isMember) {
-      try { window.sessionStorage.removeItem(rejoinSessionKey); } catch {}
+      try {
+        window.sessionStorage.removeItem(rejoinSessionKey);
+      } catch {}
     }
   }, [isMember, rejoinSessionKey]);
-
-
 
   const onlinePlayers = participants;
 

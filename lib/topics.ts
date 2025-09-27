@@ -83,7 +83,7 @@ export function pickTwo<T>(list: T[], seed?: string): T[] {
   if (!list || list.length === 0) return [];
   if (list.length === 1) return [list[0]];
   // 乱数は軽量なハッシュベースで決定可能に（seedがあれば再現性）
-  let a = seed ? hashString(seed) : Math.floor(Math.random() * 2 ** 31);
+  const a = seed ? hashString(seed) : Math.floor(Math.random() * 2 ** 31);
   const rnd = mulberry32(a);
   const i = Math.floor(rnd() * list.length);
   let j = Math.floor(rnd() * (list.length - 1));
@@ -93,7 +93,7 @@ export function pickTwo<T>(list: T[], seed?: string): T[] {
 
 export function pickOne<T>(list: T[], seed?: string): T | null {
   if (!list || list.length === 0) return null;
-  let a = seed ? hashString(seed) : Math.floor(Math.random() * 2 ** 31);
+  const a = seed ? hashString(seed) : Math.floor(Math.random() * 2 ** 31);
   const rnd = mulberry32(a);
   const i = Math.floor(rnd() * list.length);
   return list[i];

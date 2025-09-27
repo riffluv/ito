@@ -1,6 +1,11 @@
 ﻿import { db } from "@/lib/firebase/client";
 import { roomConverter } from "@/lib/firebase/converters";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
+import { toMillis } from "@/lib/time";
+import type { RoomDoc } from "@/lib/types";
+import {
+  handleFirebaseQuotaError,
+  isFirebaseQuotaExceeded,
+} from "@/lib/utils/errorHandling";
 import { logError } from "@/lib/utils/log";
 import {
   collection,
@@ -11,28 +16,17 @@ import {
   startAfter,
   Timestamp,
   where,
-  type QueryDocumentSnapshot,
   type DocumentData,
+  type QueryDocumentSnapshot,
   type QuerySnapshot,
 } from "firebase/firestore";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// 型定義（Room docに直接hostNameが含まれる）
-interface RoomWithHost {
-  id: string;
-  hostId: string;
-  hostName?: string;
-  name: string;
-  status: string;
-  expiresAt?: any;
-  createdAt?: any;
-  lastActiveAt?: any;
-}
-
-
 export const ROOMS_PER_PAGE = 6;
 const PREFETCH_PAGE_PAD = 1;
 const MAX_RECENT_FETCH = 48;
+
+type LobbyRoom = RoomDoc & { id: string };
 
 type UseOptimizedRoomsOptions = {
   enabled: boolean;
@@ -40,34 +34,35 @@ type UseOptimizedRoomsOptions = {
   searchQuery?: string;
 };
 
-function createRoomsSignature(rooms: RoomWithHost[]): string {
-  if (!rooms || rooms.length === 0) return '[]';
+function createRoomsSignature(rooms: LobbyRoom[]): string {
+  if (!rooms || rooms.length === 0) return "[]";
   return rooms
     .map((room) => {
-      const lastActive = typeof (room.lastActiveAt as any)?.toMillis === 'function'
-        ? (room.lastActiveAt as any).toMillis()
-        : room.lastActiveAt ?? '';
-      const expiresAt = typeof (room.expiresAt as any)?.toMillis === 'function'
-        ? (room.expiresAt as any).toMillis()
-        : room.expiresAt ?? '';
-      return [room.id, room.status, room.hostId, lastActive, expiresAt].join(':');
+      const lastActive = toMillis(room.lastActiveAt) || "";
+      const expiresAt = toMillis(room.expiresAt) || "";
+      return [room.id, room.status, room.hostId, lastActive, expiresAt].join(
+        ":"
+      );
     })
-    .join('|');
+    .join("|");
 }
 
 /**
  * 🔧 Firebase読み取り最適化版 - useRooms
  * onSnapshotの常時監視を削減し、アクティブルームのみ取得
  */
-export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimizedRoomsOptions) {
-  const [rooms, setRooms] = useState<RoomWithHost[]>([]);
+export function useOptimizedRooms({
+  enabled,
+  page = 0,
+  searchQuery,
+}: UseOptimizedRoomsOptions) {
+  const [rooms, setRooms] = useState<LobbyRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const lastFetchRef = useRef(0);
   const roomsSignatureRef = useRef<string>(createRoomsSignature([]));
   const pageIndex = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0;
   const normalizedQuery = (searchQuery ?? "").trim().toLowerCase();
-
 
   const setLoadingIfNeeded = useCallback((next: boolean) => {
     setLoading((prev) => (prev === next ? prev : next));
@@ -104,7 +99,12 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
           let snap: QuerySnapshot<DocumentData>;
           if (cursor) {
             snap = await getDocs(
-              query(roomsCol, ...recentConstraints, startAfter(cursor), limit(ROOMS_PER_PAGE))
+              query(
+                roomsCol,
+                ...recentConstraints,
+                startAfter(cursor),
+                limit(ROOMS_PER_PAGE)
+              )
             );
           } else {
             snap = await getDocs(
@@ -125,12 +125,15 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
       };
 
       const recentDocs = await fetchPageBatch();
-      const recentRooms = recentDocs.map((d) => d.data() as any);
+      const recentRooms = recentDocs.map((d) => d.data() as LobbyRoom);
 
       const INPROGRESS_LIMIT = Number(
         (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
       );
-      const inprogLimit = Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0 ? INPROGRESS_LIMIT : 3;
+      const inprogLimit =
+        Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0
+          ? INPROGRESS_LIMIT
+          : 3;
       // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
       // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
       const qInprog = query(
@@ -140,26 +143,22 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
       );
 
       const now = Date.now();
-      const filterValid = (r: any) => {
-        const exp = (r as any).expiresAt;
-        const expMs = typeof exp?.toMillis === "function" ? exp.toMillis() : 0;
+      const filterValid = (room: LobbyRoom) => {
+        const expMs = toMillis(room.expiresAt);
         if (expMs && expMs <= now) return false;
         return true;
       };
       const snapInprog = await getDocs(qInprog);
-      const inprogRooms = snapInprog.docs.map((d) => d.data() as any).filter(filterValid)
-        .sort((a: any, b: any) => {
-          // クライアント側でlastActiveAtソート
-          const aTime = a.lastActiveAt?.toMillis?.() || 0;
-          const bTime = b.lastActiveAt?.toMillis?.() || 0;
-          return bTime - aTime;
-        });
+      const inprogRooms = snapInprog.docs
+        .map((d) => d.data() as LobbyRoom)
+        .filter(filterValid)
+        .sort((a, b) => toMillis(b.lastActiveAt) - toMillis(a.lastActiveAt));
 
       // 結合（重複排除: 同じidがあればinprog優先）
-      const map = new Map<string, any>();
-      for (const r of recentRooms) map.set(r.id, r);
-      for (const r of inprogRooms) map.set(r.id, r);
-      const combinedRooms = Array.from(map.values());
+      const combinedMap = new Map<string, LobbyRoom>();
+      for (const room of recentRooms) combinedMap.set(room.id, room);
+      for (const room of inprogRooms) combinedMap.set(room.id, room);
+      const combinedRooms = Array.from(combinedMap.values());
       const nextSignature = createRoomsSignature(combinedRooms);
       if (nextSignature !== roomsSignatureRef.current) {
         roomsSignatureRef.current = nextSignature;
@@ -223,12 +222,3 @@ export function useOptimizedRooms({ enabled, page = 0, searchQuery }: UseOptimiz
 
   return { rooms, loading, error, refresh, pageSize: ROOMS_PER_PAGE };
 }
-
-
-
-
-
-
-
-
-

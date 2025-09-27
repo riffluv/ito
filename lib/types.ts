@@ -52,6 +52,7 @@ export type RoomDoc = {
     failedAt?: number | null;
     total?: number | null;
     proposal?: string[] | null;
+    numbers?: Record<string, number | null | undefined> | null;
   } | null;
   result?: {
     success: boolean;
@@ -83,4 +84,3 @@ export type ChatDoc = {
   text: string;
   createdAt?: Timestamp | FieldValue;
 };
-

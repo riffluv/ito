@@ -141,8 +141,8 @@ export function useLobbyCounts(
           let n = 0;
           const now = Date.now();
           let hasFresh = false; // 直近JOIN（5s以内）の兆候
-          let includedUids: string[] | undefined = DEBUG_UIDS ? [] : undefined;
-          let presentUids: string[] | undefined = DEBUG_UIDS
+          const includedUids: string[] | undefined = DEBUG_UIDS ? [] : undefined;
+          const presentUids: string[] | undefined = DEBUG_UIDS
             ? Object.keys(users)
             : undefined;
           for (const uid of Object.keys(users)) {

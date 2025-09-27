@@ -1,22 +1,30 @@
 "use client";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
-import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
+import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import { AppButton } from "@/components/ui/AppButton";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { RPGButton } from "@/components/ui/RPGButton";
-import { notify } from "@/components/ui/notify";
-import { verifyPassword } from "@/lib/security/password";
-import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
-import { handleFirebaseQuotaError } from "@/lib/utils/errorHandling";
+import { notify } from "@/components/ui/notify";
+import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
+import { stripMinimalTag } from "@/lib/game/displayMode";
 import { useLobbyCounts } from "@/lib/hooks/useLobbyCounts";
-import { useOptimizedRooms, ROOMS_PER_PAGE } from "@/lib/hooks/useOptimizedRooms";
 import {
-  Badge,
+  ROOMS_PER_PAGE,
+  useOptimizedRooms,
+} from "@/lib/hooks/useOptimizedRooms";
+import { verifyPassword } from "@/lib/security/password";
+import { toMillis } from "@/lib/time";
+import type { RoomDoc } from "@/lib/types";
+import { logDebug, logError, logInfo } from "@/lib/utils/log";
+import {
+  getCachedRoomPasswordHash,
+  storeRoomPasswordHash,
+} from "@/lib/utils/roomPassword";
+import {
   Box,
   Container,
   Grid,
@@ -28,12 +36,11 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react";
+import type { FieldValue, Timestamp } from "firebase/firestore";
 import { gsap } from "gsap";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { stripMinimalTag } from "@/lib/game/displayMode";
-import { getCachedRoomPasswordHash, storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 
 // 固定男性ナイトコンポーネント
 function KnightCharacter() {
@@ -60,11 +67,23 @@ function KnightCharacter() {
         "@container (min-width: 900px)": {
           width: "5rem", // 80px for desktop
           height: "5rem",
-        }
+        },
       }}
     />
   );
 }
+
+type LobbyRoom = (RoomDoc & { id: string }) & {
+  expiresAt?: Timestamp | Date | number | FieldValue | null;
+  lastActiveAt?: Timestamp | Date | number | FieldValue | null;
+  createdAt?: Timestamp | Date | number | FieldValue | null;
+  deal?: RoomDoc["deal"];
+};
+
+type WindowWithIdleCallback = Window & {
+  requestIdleCallback?: (callback: () => void) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
 
 export default function MainMenu() {
   const router = useRouter();
@@ -81,7 +100,9 @@ export default function MainMenu() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
-  const [passwordPrompt, setPasswordPrompt] = useState<{ room: any } | null>(null);
+  const [passwordPrompt, setPasswordPrompt] = useState<{
+    room: LobbyRoom;
+  } | null>(null);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [hideLockedRooms, setHideLockedRooms] = useState(false);
@@ -93,19 +114,17 @@ export default function MainMenu() {
         router.prefetch("/rules");
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.debug("prefetch('/rules') はスキップされました", error);
+          logDebug("main-menu", "prefetch-rules-skipped", error);
         }
       }
     };
 
-    const idleCallback = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined;
+    const idleWindow = window as WindowWithIdleCallback;
+    const idleCallback = idleWindow.requestIdleCallback;
     if (typeof idleCallback === "function") {
       const idleHandle = idleCallback(prefetchRules);
       return () => {
-        const cancelIdle = (window as any).cancelIdleCallback as ((handle: number) => void) | undefined;
-        if (typeof cancelIdle === "function") {
-          cancelIdle(idleHandle);
-        }
+        idleWindow.cancelIdleCallback?.(idleHandle);
       };
     }
 
@@ -141,18 +160,9 @@ export default function MainMenu() {
   });
 
   useEffect(() => {
-    let t: number | undefined;
-    if (roomsLoading) {
-      // スケルトンローディングを完全に無効化
-      // リアルタイムゲームではローディング体験よりも
-      // 瞬時のレスポンスを優先する
-      // t = window.setTimeout(() => setShowSkeletons(true), 150);
-    } else {
+    if (!roomsLoading) {
       setShowSkeletons(false);
     }
-    return () => {
-      if (t) clearTimeout(t);
-    };
   }, [roomsLoading]);
 
   // シンプルなタイトルアニメーション
@@ -183,19 +193,21 @@ export default function MainMenu() {
       if (typeof window === "undefined") return;
       const lr = window.localStorage.getItem("lastRoom");
       setLastRoom(lr && lr.trim() ? lr : null);
-    } catch {}
+    } catch (error) {
+      logDebug("lobby-page", "restore-last-room-failed", error);
+    }
   }, []);
 
   useEffect(() => {
     if (!roomsError) return;
     notify({
       title: "ルーム取得に失敗しました",
-      description: (roomsError as any)?.message,
+      description: roomsError.message,
       type: "error",
     });
-  }, [roomsError?.message]);
+  }, [roomsError]);
 
-  const roomIds = useMemo(() => (rooms || []).map((r: any) => r.id), [rooms]);
+  const roomIds = useMemo(() => rooms.map((room) => room.id), [rooms]);
 
   // 正確な人数表示は RTDB presence を第一に、
   // 未対応環境では Firestore の lastSeen をフォールバックで利用
@@ -207,98 +219,57 @@ export default function MainMenu() {
 
   const filteredRooms = useMemo(() => {
     const now = Date.now();
-    const thirtyMin = 30 * 60 * 1000;
-    return (rooms || []).filter((r: any) => {
-      // 1) 期限切れを除外
-      const expires = (r as any).expiresAt;
-      const expMs =
-        typeof expires?.toMillis === "function" ? expires.toMillis() : 0;
-      if (expMs && expMs <= now) return false;
+    const inProgressDisplayMs = 15 * 60 * 1000; // 15min
+    const recentWindowMs =
+      Number(process.env.NEXT_PUBLIC_LOBBY_RECENT_MS) || 5 * 60 * 1000;
+    const createdWindowMs = 10 * 60 * 1000;
 
-      // 2) 完了済みは非表示
-      if (r.status === "completed") return false;
-
-      // 2.5) ゲーム進行中は常に表示（ベストプラクティス: 観戦/後から参加の導線を確保）
-      // waiting 以外（completed 以外）は進行中として扱う
-      // 先に必要な値を計算（この後の分岐で使用）
-      const activeCount0 = lobbyCounts[r.id] ?? 0;
-      const lastActiveAny0: any = (r as any).lastActiveAt;
-      const createdAny0: any = (r as any).createdAt;
-      const lastActiveMs0 = lastActiveAny0?.toMillis
-        ? lastActiveAny0.toMillis()
-        : lastActiveAny0 instanceof Date
-          ? lastActiveAny0.getTime()
-          : typeof lastActiveAny0 === "number"
-            ? lastActiveAny0
-            : 0;
-      const createdMs0 = createdAny0?.toMillis
-        ? createdAny0.toMillis()
-        : createdAny0 instanceof Date
-          ? createdAny0.getTime()
-          : typeof createdAny0 === "number"
-            ? createdAny0
-            : 0;
-      const newerMs0 = Math.max(lastActiveMs0, createdMs0);
-
-      const isInProgress =
-        r.status && r.status !== "waiting" && r.status !== "completed";
-      if (isInProgress) {
-        // 進行中の部屋でも、誰もオンラインでなく、長時間更新が無ければ非表示
-        const INPROG_DISPLAY_MS = 15 * 60 * 1000; // 15min
-        if (activeCount0 > 0) return true;
-        if (newerMs0 > 0 && now - newerMs0 <= INPROG_DISPLAY_MS) return true;
+    return rooms.filter((room) => {
+      const expiresAtMs = toMillis(room.expiresAt);
+      if (expiresAtMs && expiresAtMs <= now) {
         return false;
       }
 
-      // 3) オンライン人数による表示制御
-      const activeCount = lobbyCounts[r.id] ?? 0;
+      const status = room.status as RoomDoc["status"] | "completed";
+      if (status === "finished" || status === "completed") {
+        return false;
+      }
 
-      // lastActiveAt と createdAt の新しい方を使用
-      const lastActiveAny: any = (r as any).lastActiveAt;
-      const createdAny: any = (r as any).createdAt;
+      const activeCount = lobbyCounts[room.id] ?? 0;
+      const lastActiveMs = toMillis(room.lastActiveAt);
+      const createdMs = toMillis(room.createdAt);
+      const newestMs = Math.max(lastActiveMs, createdMs);
 
-      const lastActiveMs = lastActiveAny?.toMillis
-        ? lastActiveAny.toMillis()
-        : lastActiveAny instanceof Date
-          ? lastActiveAny.getTime()
-          : typeof lastActiveAny === "number"
-            ? lastActiveAny
-            : 0;
+      const inProgress = status !== "waiting";
+      if (inProgress) {
+        if (activeCount > 0) {
+          return true;
+        }
+        return newestMs > 0 && now - newestMs <= inProgressDisplayMs;
+      }
 
-      const createdMs = createdAny?.toMillis
-        ? createdAny.toMillis()
-        : createdAny instanceof Date
-          ? createdAny.getTime()
-          : typeof createdAny === "number"
-            ? createdAny
-            : 0;
+      if (activeCount > 0) {
+        return true;
+      }
 
-      // より新しいタイムスタンプを使用
-      const newerMs = Math.max(lastActiveMs, createdMs);
+      if (newestMs > 0 && now - newestMs <= recentWindowMs) {
+        return true;
+      }
 
-      // 表示ウィンドウ（環境変数で上書き可能）
-      // デフォルト: 最近活動5分以内は表示。作成直後のルームは10分まで表示。
-      const NEWER_DISPLAY_MS =
-        Number(process.env.NEXT_PUBLIC_LOBBY_RECENT_MS) || 5 * 60 * 1000; // 5min
-      const CREATED_DISPLAY_MS = 10 * 60 * 1000; // 10min
+      if (createdMs > 0 && now - createdMs <= createdWindowMs) {
+        return true;
+      }
 
-      // 3.1) 待機中: オンライン1人以上なら常に表示。
-      // それ以外は「最近活動」または「作成直後」を許容して表示する。
-      if (activeCount > 0) return true;
-      if (newerMs > 0 && now - newerMs <= NEWER_DISPLAY_MS) return true;
-      if (createdMs > 0 && now - createdMs <= CREATED_DISPLAY_MS) return true;
       return false;
     });
   }, [rooms, lobbyCounts]);
 
   const optionFilteredRooms = useMemo(() => {
-    return filteredRooms.filter((room: any) => {
-      if (hideLockedRooms && room.requiresPassword) return false;
-      if (
-        showJoinableOnly &&
-        room.status &&
-        room.status !== "waiting"
-      ) {
+    return filteredRooms.filter((room) => {
+      if (hideLockedRooms && room.requiresPassword) {
+        return false;
+      }
+      if (showJoinableOnly && room.status !== "waiting") {
         return false;
       }
       return true;
@@ -308,10 +279,11 @@ export default function MainMenu() {
   const searchFilteredRooms = useMemo(() => {
     if (!debouncedSearch) return optionFilteredRooms;
     const query = debouncedSearch.toLowerCase();
-    return optionFilteredRooms.filter((room: any) => {
-      const baseName = (stripMinimalTag(room.name) || "").toString().toLowerCase();
-      const hostName = typeof room.hostName === "string" ? room.hostName.toLowerCase() : "";
-      const creatorName = typeof room.creatorName === "string" ? room.creatorName.toLowerCase() : "";
+    return optionFilteredRooms.filter((room) => {
+      const baseName =
+        stripMinimalTag(room.name)?.toString().toLowerCase() ?? "";
+      const hostName = room.hostName?.toLowerCase?.() ?? "";
+      const creatorName = room.creatorName?.toLowerCase?.() ?? "";
       return (
         baseName.includes(query) ||
         hostName.includes(query) ||
@@ -320,29 +292,30 @@ export default function MainMenu() {
     });
   }, [optionFilteredRooms, debouncedSearch]);
 
-  // 直感的な並び順: 
+  // 直感的な並び順:
   // 1) オンライン人数が多い順（>0 を優先）
   // 2) createdAt の新しい順（新規作成を優先表示）
   // 3) lastActiveAt の新しい順（最終アクティブ）
   const sortedRooms = useMemo(() => {
-    const getMs = (v: any) =>
-      v?.toMillis ? v.toMillis() : v instanceof Date ? v.getTime() : typeof v === 'number' ? v : 0;
     const list = [...searchFilteredRooms];
-    list.sort((a: any, b: any) => {
-      const ca = lobbyCounts[a.id] ?? 0;
-      const cb = lobbyCounts[b.id] ?? 0;
-      if ((cb > 0 ? 1 : 0) !== (ca > 0 ? 1 : 0)) return (cb > 0 ? 1 : 0) - (ca > 0 ? 1 : 0);
-      const aCreated = getMs(a.createdAt);
-      const bCreated = getMs(b.createdAt);
-      if (aCreated !== bCreated) return bCreated - aCreated;
-      const aActive = getMs(a.lastActiveAt);
-      const bActive = getMs(b.lastActiveAt);
-      return bActive - aActive;
+    list.sort((a, b) => {
+      const countA = lobbyCounts[a.id] ?? 0;
+      const countB = lobbyCounts[b.id] ?? 0;
+      if ((countB > 0 ? 1 : 0) !== (countA > 0 ? 1 : 0)) {
+        return (countB > 0 ? 1 : 0) - (countA > 0 ? 1 : 0);
+      }
+      const createdA = toMillis(a.createdAt);
+      const createdB = toMillis(b.createdAt);
+      if (createdA !== createdB) {
+        return createdB - createdA;
+      }
+      return toMillis(b.lastActiveAt) - toMillis(a.lastActiveAt);
     });
     return list;
   }, [searchFilteredRooms, lobbyCounts]);
 
-  const pageSize = roomsPerPage && roomsPerPage > 0 ? roomsPerPage : ROOMS_PER_PAGE;
+  const pageSize =
+    roomsPerPage && roomsPerPage > 0 ? roomsPerPage : ROOMS_PER_PAGE;
 
   const totalPages = useMemo(() => {
     if (!pageSize || pageSize <= 0) return 1;
@@ -365,94 +338,134 @@ export default function MainMenu() {
   const activeSearch = debouncedSearch.length > 0;
   const displaySearchKeyword = activeSearch ? debouncedSearch.slice(0, 40) : "";
 
-  const goToRoom = useCallback(async (room: any) => {
-    if (!room) return;
-    if (!displayName || !String(displayName).trim()) {
-      setTempName("");
-      setNameDialogMode("create");
-      setLastRoom(room.id);
-      nameDialog.onOpen();
-      return;
-    }
+  const goToRoom = useCallback(
+    async (room: LobbyRoom) => {
+      if (!room) return;
+      if (!displayName || !String(displayName).trim()) {
+        setTempName("");
+        setNameDialogMode("create");
+        setLastRoom(room.id);
+        nameDialog.onOpen();
+        return;
+      }
 
-    try {
-      await transition.navigateWithTransition(
-        `/rooms/${room.id}`,
-        {
-          direction: "fade",
-          duration: 1.2,
-          showLoading: true,
-          loadingSteps: [
-            { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-            { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
-            { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
-            { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
-          ],
-        },
-        async () => {
-          try {
-            (window as any).requestIdleCallback?.(() => {
-              try {
-                router.prefetch(`/rooms/${room.id}`);
-              } catch {}
-            });
-          } catch {}
+      try {
+        await transition.navigateWithTransition(
+          `/rooms/${room.id}`,
+          {
+            direction: "fade",
+            duration: 1.2,
+            showLoading: true,
+            loadingSteps: [
+              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+              {
+                id: "room",
+                message: "ルームの じょうほうを とくていしています...",
+                duration: 2000,
+              },
+              {
+                id: "player",
+                message: "プレイヤーを とうろくしています...",
+                duration: 1800,
+              },
+              {
+                id: "ready",
+                message: "じゅんびが かんりょうしました！",
+                duration: 1000,
+              },
+            ],
+          },
+          async () => {
+            try {
+              (window as WindowWithIdleCallback).requestIdleCallback?.(() => {
+                try {
+                  router.prefetch(`/rooms/${room.id}`);
+                } catch (idleError) {
+                  logDebug("main-menu", "prefetch-room-skipped", idleError);
+                }
+              });
+            } catch (idleScheduleError) {
+              logDebug(
+                "main-menu",
+                "prefetch-room-idle-missing",
+                idleScheduleError
+              );
+            }
+          }
+        );
+      } catch (error) {
+        logError("main-menu", "join-transition-failed", error);
+        router.push(`/rooms/${room.id}`);
+      }
+    },
+    [
+      displayName,
+      nameDialog,
+      router,
+      setLastRoom,
+      setNameDialogMode,
+      setTempName,
+      transition,
+    ]
+  );
+
+  const handleJoinRoom = useCallback(
+    (room: LobbyRoom | null) => {
+      if (!room) return;
+      if (room.status !== "waiting") {
+        notify({
+          title: "ただいま進行中です",
+          description: "ゲームが進行中のため新しい参加を受付できません。",
+          type: "warning",
+        });
+        return;
+      }
+      if (room.requiresPassword) {
+        const cached = getCachedRoomPasswordHash(room.id);
+        if (cached && room.passwordHash && cached === room.passwordHash) {
+          void goToRoom(room);
+          return;
         }
-      );
-    } catch (error) {
-      console.error("Room join transition failed:", error);
-      router.push(`/rooms/${room.id}`);
-    }
-  }, [displayName, nameDialog, router, setLastRoom, setNameDialogMode, setTempName, transition]);
-
-  const handleJoinRoom = useCallback((room: any) => {
-    if (!room) return;
-    if (room.status && room.status !== "waiting" && room.status !== "completed") {
-      notify({
-        title: "ただいま進行中です",
-        description: "ゲームが進行中のため新しい参加を受付できません。",
-        type: "warning",
-      });
-      return;
-    }
-    if (room.requiresPassword) {
-      const cached = getCachedRoomPasswordHash(room.id);
-      if (cached && room.passwordHash && cached === room.passwordHash) {
-        void goToRoom(room);
+        setPasswordPrompt({ room });
+        setPasswordError(null);
         return;
       }
-      setPasswordPrompt({ room });
+      void goToRoom(room);
+    },
+    [goToRoom]
+  );
+
+  const handlePasswordSubmit = useCallback(
+    async (input: string) => {
+      if (!passwordPrompt?.room) return;
+      setPasswordSubmitting(true);
       setPasswordError(null);
-      return;
-    }
-    void goToRoom(room);
-  }, [goToRoom]);
-
-  const handlePasswordSubmit = useCallback(async (input: string) => {
-    if (!passwordPrompt?.room) return;
-    setPasswordSubmitting(true);
-    setPasswordError(null);
-    try {
-      const ok = await verifyPassword(
-        input.trim(),
-        passwordPrompt.room.passwordSalt ?? null,
-        passwordPrompt.room.passwordHash ?? null
-      );
-      if (!ok) {
-        setPasswordError("パスワードが違います");
-        return;
+      try {
+        const ok = await verifyPassword(
+          input.trim(),
+          passwordPrompt.room.passwordSalt ?? null,
+          passwordPrompt.room.passwordHash ?? null
+        );
+        if (!ok) {
+          setPasswordError("パスワードが違います");
+          return;
+        }
+        storeRoomPasswordHash(
+          passwordPrompt.room.id,
+          passwordPrompt.room.passwordHash ?? ""
+        );
+        const targetRoom = passwordPrompt.room;
+        setPasswordPrompt(null);
+        await goToRoom(targetRoom);
+      } catch (error) {
+        logError("main-menu", "verify-password", error);
+        setPasswordError("パスワードの検証に失敗しました");
+      } finally {
+        setPasswordSubmitting(false);
       }
-      storeRoomPasswordHash(passwordPrompt.room.id, passwordPrompt.room.passwordHash ?? "");
-      const targetRoom = passwordPrompt.room;
-      setPasswordPrompt(null);
-      await goToRoom(targetRoom);
-    } catch (error) {
-      console.error("verify password failed", error);
-      setPasswordError("パスワードの検証に失敗しました");
-    } finally {
-      setPasswordSubmitting(false);
-    }
-  }, [goToRoom, passwordPrompt]);
+    },
+    [goToRoom, passwordPrompt]
+  );
 
   const handlePasswordCancel = useCallback(() => {
     if (passwordSubmitting) return;
@@ -482,7 +495,7 @@ export default function MainMenu() {
         position="relative"
         overflow="hidden"
         pt={{ base: 20, md: 24, lg: 32 }}
-        css={{ 
+        css={{
           containerType: "inline-size",
           // DPI scaling optimization
           "@container (max-width: 600px)": {
@@ -493,7 +506,7 @@ export default function MainMenu() {
           },
           "@container (min-width: 900px)": {
             paddingTop: "8rem", // 128px at 100% = 160px at 125%
-          }
+          },
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
@@ -533,7 +546,7 @@ export default function MainMenu() {
                       },
                       "@container (min-width: 900px)": {
                         fontSize: "5rem", // 80px base, scales to 100px at 125%
-                      }
+                      },
                     }}
                   >
                     序の紋章III
@@ -560,7 +573,7 @@ export default function MainMenu() {
                     "@container (min-width: 900px)": {
                       fontSize: "1.75rem", // 28px base for desktop
                       lineHeight: "1.4",
-                    }
+                    },
                   }}
                 >
                   数字カードゲーム
@@ -576,8 +589,8 @@ export default function MainMenu() {
                 </Text>
               </Box>
 
-              <VStack 
-                gap={6} 
+              <VStack
+                gap={6}
                 align="center"
                 css={{
                   // DPI scaling button group optimization
@@ -586,7 +599,7 @@ export default function MainMenu() {
                   },
                   "@container (min-width: 600px)": {
                     gap: "1.5rem", // 24px gap for larger screens
-                  }
+                  },
                 }}
               >
                 <HStack
@@ -601,8 +614,8 @@ export default function MainMenu() {
                       "@container (max-width: 600px)": {
                         minHeight: "3rem", // 48px for better mobile UX
                         fontSize: "0.9rem", // Slightly smaller text on mobile
-                      }
-                    }
+                      },
+                    },
                   }}
                 >
                   <AppButton
@@ -629,24 +642,56 @@ export default function MainMenu() {
                               duration: 1.2,
                               showLoading: true,
                               loadingSteps: [
-                                { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-                                { id: "room", message: "ぜんかいの ルームに もどっています...", duration: 2000 },
-                                { id: "player", message: "プレイヤーじょうほうを かくにんしています...", duration: 1800 },
-                                { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+                                {
+                                  id: "firebase",
+                                  message: "せつぞく中です...",
+                                  duration: 1500,
+                                },
+                                {
+                                  id: "room",
+                                  message:
+                                    "ぜんかいの ルームに もどっています...",
+                                  duration: 2000,
+                                },
+                                {
+                                  id: "player",
+                                  message:
+                                    "プレイヤーじょうほうを かくにんしています...",
+                                  duration: 1800,
+                                },
+                                {
+                                  id: "ready",
+                                  message: "じゅんびが かんりょうしました！",
+                                  duration: 1000,
+                                },
                               ],
                             },
                             async () => {
                               try {
-                                (window as any).requestIdleCallback?.(() => {
+                                (
+                                  window as WindowWithIdleCallback
+                                ).requestIdleCallback?.(() => {
                                   try {
                                     router.prefetch(`/rooms/${lastRoom}`);
-                                  } catch {}
+                                  } catch (prefetchError) {
+                                    logDebug(
+                                      "main-menu",
+                                      "prefetch-last-room-skipped",
+                                      prefetchError
+                                    );
+                                  }
                                 });
-                              } catch {}
+                              } catch (idleError) {
+                                logDebug(
+                                  "main-menu",
+                                  "prefetch-last-room-idle-missing",
+                                  idleError
+                                );
+                              }
                             }
                           );
                         } catch (error) {
-                          console.error("Last room transition failed:", error);
+                          logError("main-menu", "last-room-transition", error);
                           router.push(`/rooms/${lastRoom}`);
                         }
                       }}
@@ -660,21 +705,30 @@ export default function MainMenu() {
                     palette="gray"
                     onClick={async () => {
                       try {
-                        await transition.navigateWithTransition(
-                          "/rules",
-                          {
-                            direction: "fade",
-                            duration: 1.0,
-                            showLoading: true,
-                            loadingSteps: [
-                              { id: "loading", message: "ルールせつめいを よみこんでいます...", duration: 1000 },
-                              { id: "prepare", message: "せつめいを じゅんびしています...", duration: 800 },
-                              { id: "ready", message: "よみこみ かんりょう！", duration: 600 },
-                            ],
-                          }
-                        );
+                        await transition.navigateWithTransition("/rules", {
+                          direction: "fade",
+                          duration: 1.0,
+                          showLoading: true,
+                          loadingSteps: [
+                            {
+                              id: "loading",
+                              message: "ルールせつめいを よみこんでいます...",
+                              duration: 1000,
+                            },
+                            {
+                              id: "prepare",
+                              message: "せつめいを じゅんびしています...",
+                              duration: 800,
+                            },
+                            {
+                              id: "ready",
+                              message: "よみこみ かんりょう！",
+                              duration: 600,
+                            },
+                          ],
+                        });
                       } catch (error) {
-                        console.error("Rules navigation failed:", error);
+                        logError("main-menu", "rules-navigation", error);
                         router.push("/rules");
                       }
                     }}
@@ -691,8 +745,8 @@ export default function MainMenu() {
       </Box>
 
       {/* ルーム一覧 */}
-      <Container 
-        maxW="7xl" 
+      <Container
+        maxW="7xl"
         py={{ base: 12, md: 16 }}
         css={{
           // DPI scaling container optimization
@@ -707,7 +761,7 @@ export default function MainMenu() {
           "@container (min-width: 900px)": {
             paddingTop: "4rem", // 64px base for desktop
             paddingBottom: "4rem",
-          }
+          },
         }}
       >
         <Grid
@@ -721,7 +775,7 @@ export default function MainMenu() {
             },
             "@container (min-width: 600px)": {
               gap: "2rem", // 32px gap for larger screens
-            }
+            },
           }}
         >
           <GridItem>
@@ -853,8 +907,8 @@ export default function MainMenu() {
                         inset 0 -1px 0 rgba(255,255,255,0.1),
                         0 1px 2px rgba(0,0,0,0.2)
                       `,
-                      transform: "translateY(1px)"
-                    })
+                      transform: "translateY(1px)",
+                    }),
                   }}
                 >
                   🔒 ロック部屋を除外
@@ -892,8 +946,8 @@ export default function MainMenu() {
                         inset 0 -1px 0 rgba(255,255,255,0.1),
                         0 1px 2px rgba(0,0,0,0.2)
                       `,
-                      transform: "translateY(1px)"
-                    })
+                      transform: "translateY(1px)",
+                    }),
                   }}
                 >
                   🎮 待機中のみ表示
@@ -957,35 +1011,37 @@ export default function MainMenu() {
             ) : sortedRooms.length > 0 ? (
               <VStack align="stretch" gap={6}>
                 <Grid
-                templateColumns={{
-                  base: "1fr",
-                  sm: "repeat(2, 1fr)",
-                  md: "repeat(2, 1fr)",
-                  lg: "repeat(3, 1fr)",
-                  xl: "repeat(3, 1fr)",
-                }}
-                gap={{ base: 4, md: 5 }}
-                alignItems="stretch"
-              >
-                {paginatedRooms.map((room: any) => (
-                  <RoomCard
-                    key={room.id}
-                    name={stripMinimalTag(room.name) || ""}
-                    status={room.status}
-                    count={lobbyCounts[room.id] ?? 0}
-                    creatorName={room.creatorName || room.hostName || "匿名"}
-                    hostName={room.hostName || null}
-                    requiresPassword={room.requiresPassword}
-                    onJoin={() => handleJoinRoom(room)}
-                  />
-                ))}
-              </Grid>
+                  templateColumns={{
+                    base: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(2, 1fr)",
+                    lg: "repeat(3, 1fr)",
+                    xl: "repeat(3, 1fr)",
+                  }}
+                  gap={{ base: 4, md: 5 }}
+                  alignItems="stretch"
+                >
+                  {paginatedRooms.map((room) => (
+                    <RoomCard
+                      key={room.id}
+                      name={stripMinimalTag(room.name) || ""}
+                      status={room.status}
+                      count={lobbyCounts[room.id] ?? 0}
+                      creatorName={room.creatorName || room.hostName || "匿名"}
+                      hostName={room.hostName || null}
+                      requiresPassword={room.requiresPassword}
+                      onJoin={() => handleJoinRoom(room)}
+                    />
+                  ))}
+                </Grid>
                 {totalPages > 1 && (
                   <Pagination
                     currentPage={pageIndex}
                     totalPages={totalPages}
                     onPrev={() => setPageIndex((prev) => Math.max(prev - 1, 0))}
-                    onNext={() => setPageIndex((prev) => Math.min(prev + 1, totalPages - 1))}
+                    onNext={() =>
+                      setPageIndex((prev) => Math.min(prev + 1, totalPages - 1))
+                    }
                     disablePrev={!hasPrevPage}
                     disableNext={!hasNextPage}
                   />
@@ -1210,7 +1266,11 @@ export default function MainMenu() {
                   </VStack>
 
                   {/* テスト用ローディングアニメーション */}
-                  <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.2)">
+                  <Box
+                    mt={4}
+                    pt={4}
+                    borderTop="1px solid rgba(255,255,255,0.2)"
+                  >
                     <Text
                       fontSize="sm"
                       color="white"
@@ -1232,10 +1292,27 @@ export default function MainMenu() {
                             duration: 0.8,
                             showLoading: true,
                             loadingSteps: [
-                              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-                              { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
-                              { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
-                              { id: "ready", message: "じゅんび かんりょう！", duration: 1000 },
+                              {
+                                id: "firebase",
+                                message: "せつぞく中です...",
+                                duration: 1500,
+                              },
+                              {
+                                id: "room",
+                                message:
+                                  "ルームの じょうほうを とくていしています...",
+                                duration: 2000,
+                              },
+                              {
+                                id: "player",
+                                message: "プレイヤーを とうろくしています...",
+                                duration: 1800,
+                              },
+                              {
+                                id: "ready",
+                                message: "じゅんび かんりょう！",
+                                duration: 1000,
+                              },
                             ],
                           }
                         );
@@ -1282,24 +1359,54 @@ export default function MainMenu() {
                     duration: 1.2,
                     showLoading: true,
                     loadingSteps: [
-                      { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-                      { id: "room", message: "ルームの じょうほうを とくていしています...", duration: 2000 },
-                      { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
-                      { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
+                      {
+                        id: "firebase",
+                        message: "せつぞく中です...",
+                        duration: 1500,
+                      },
+                      {
+                        id: "room",
+                        message: "ルームの じょうほうを とくていしています...",
+                        duration: 2000,
+                      },
+                      {
+                        id: "player",
+                        message: "プレイヤーを とうろくしています...",
+                        duration: 1800,
+                      },
+                      {
+                        id: "ready",
+                        message: "じゅんびが かんりょうしました！",
+                        duration: 1000,
+                      },
                     ],
                   },
                   async () => {
                     try {
-                      (window as any).requestIdleCallback?.(() => {
-                        try {
-                          router.prefetch(`/rooms/${roomToJoin}`);
-                        } catch {}
-                      });
-                    } catch {}
+                      (window as WindowWithIdleCallback).requestIdleCallback?.(
+                        () => {
+                          try {
+                            router.prefetch(`/rooms/${roomToJoin}`);
+                          } catch (prefetchError) {
+                            logDebug(
+                              "main-menu",
+                              "prefetch-rejoin-skipped",
+                              prefetchError
+                            );
+                          }
+                        }
+                      );
+                    } catch (idleError) {
+                      logDebug(
+                        "main-menu",
+                        "prefetch-rejoin-idle-missing",
+                        idleError
+                      );
+                    }
                   }
                 );
               } catch (error) {
-                console.error("Room join after name setup failed:", error);
+                logError("main-menu", "post-name-join", error);
                 router.push(`/rooms/${roomToJoin}`);
               }
             } else {
@@ -1315,12 +1422,16 @@ export default function MainMenu() {
         onCreated={(roomId) => {
           // CreateRoomModal内でtransition.navigateWithTransitionが既に実行済み
           // 二重ナビゲーションを防ぐため、ここでは何もしない
-          console.log(`ルーム作成: ${roomId}`);
+          logInfo("main-menu", "room-created", { roomId });
         }}
       />
       <RoomPasswordPrompt
         isOpen={!!passwordPrompt}
-        roomName={passwordPrompt?.room ? stripMinimalTag(passwordPrompt.room.name) : undefined}
+        roomName={
+          passwordPrompt?.room
+            ? stripMinimalTag(passwordPrompt.room.name)
+            : undefined
+        }
         isLoading={passwordSubmitting}
         error={passwordError}
         onSubmit={handlePasswordSubmit}
@@ -1329,28 +1440,3 @@ export default function MainMenu() {
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
