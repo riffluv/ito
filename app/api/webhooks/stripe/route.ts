@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe/client";
+import { getStripeClient } from "@/lib/stripe/client";
 import { handleStripeEvent } from "@/lib/stripe/webhookHandlers";
 import { recordStripeEvent } from "@/lib/server/stripeEventStore";
 import { logError, logWarn } from "@/lib/utils/log";
@@ -38,10 +38,18 @@ export async function POST(request: NextRequest) {
 
   const rawBody = Buffer.from(await request.arrayBuffer());
 
+  let client: Stripe;
+  try {
+    client = getStripeClient();
+  } catch (error) {
+    logError("stripe", "webhook client init failed", error);
+    return NextResponse.json({ error: "Stripe secret not configured" }, { status: 500 });
+  }
+
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, secret);
+    event = client.webhooks.constructEvent(rawBody, signature, secret);
   } catch (error) {
     return badRequest("Invalid signature", error);
   }
@@ -64,3 +72,5 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true }, { status: 200 });
 }
+
+

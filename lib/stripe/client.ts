@@ -15,17 +15,13 @@ function resolveApiVersion(): Stripe.StripeConfig["apiVersion"] {
   return configured;
 }
 
-function ensureStripeClient(): Stripe {
-  if (globalStripe.__STRIPE_CLIENT__) {
-    return globalStripe.__STRIPE_CLIENT__;
-  }
-
+function createStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey || secretKey.trim().length === 0) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
 
-  const client = new Stripe(secretKey, {
+  return new Stripe(secretKey, {
     apiVersion: resolveApiVersion(),
     appInfo: {
       name: STRIPE_APP_NAME,
@@ -35,13 +31,15 @@ function ensureStripeClient(): Stripe {
     maxNetworkRetries: 2,
     timeout: 20000,
   });
-
-  globalStripe.__STRIPE_CLIENT__ = client;
-  return client;
 }
 
-export const stripe = ensureStripeClient();
+export function isStripeConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.trim().length > 0);
+}
 
 export function getStripeClient(): Stripe {
-  return ensureStripeClient();
+  if (!globalStripe.__STRIPE_CLIENT__) {
+    globalStripe.__STRIPE_CLIENT__ = createStripeClient();
+  }
+  return globalStripe.__STRIPE_CLIENT__;
 }

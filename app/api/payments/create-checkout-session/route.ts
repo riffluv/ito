@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { randomUUID } from "node:crypto";
-import { stripe } from "@/lib/stripe/client";
+import { getStripeClient } from "@/lib/stripe/client";
 import {
   allowPromotionCodes,
   billingAddressCollection,
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
   const idempotencyKey = request.headers.get("Idempotency-Key") || randomUUID();
 
   try {
+    const stripe = getStripeClient();
     const session = await stripe.checkout.sessions.create(sessionParams, {
       idempotencyKey,
     });
@@ -96,3 +97,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 }
+
+
+
+
+
+
