@@ -171,28 +171,26 @@ export function DragonQuestParty({
       }}
     >
       <Box
+        p={4}
+        bg="rgba(0,0,0,0.7)"
+        borderRadius="8px"
+        boxShadow="0 8px 32px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)"
         css={{
-          background: "rgba(0,0,0,0.7)",
           backdropFilter: "blur(8px)",
-          borderRadius: "8px",
-          padding: "16px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)",
           pointerEvents: "auto",
         }}
       >
         {/* パーティーヘッダー */}
-        <Box mb={4}>
-          <Text
-            fontSize="lg"
-            fontWeight="bold"
-            color="white"
-            textShadow="0 2px 4px rgba(0,0,0,0.8)"
-            fontFamily="system-ui"
-            letterSpacing="0.5px"
-          >
-            Party ({actualCount})
-          </Text>
-        </Box>
+        <Text
+          fontSize="lg"
+          fontWeight="bold"
+          color="white"
+          textShadow="0 2px 4px rgba(0,0,0,0.8)"
+          fontFamily="system-ui"
+          letterSpacing="0.5px"
+        >
+          Party ({actualCount})
+        </Text>
 
         {/* メンバーリスト */}
         <Box
@@ -200,6 +198,7 @@ export function DragonQuestParty({
           flexDirection="column"
           gap={2}
           w={{ base: "240px", md: "280px" }}
+          mt={4}
           css={{ pointerEvents: "auto" }}
         >
           {[...displayedPlayers]
@@ -241,22 +240,24 @@ export function DragonQuestParty({
                 <Box
                   key={player.id}
                   data-player-id={player.id}
-                  bg="rgba(0,0,0,0.4)"
-                  borderRadius="6px"
+                  bg="rgba(15,25,35,0.6)"
+                  border="1px solid rgba(255,255,255,0.15)"
+                  borderRadius="4px"
                   px={4}
                   py={3}
                   w="100%"
                   position="relative"
-                  boxShadow="0 2px 8px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)"
+                  boxShadow="0 1px 4px rgba(0,0,0,0.4)"
                   transition="all 0.2s ease"
                   css={{
                     cursor: canTransfer ? "pointer" : "default",
                     backdropFilter: "blur(4px)",
                   }}
                   _hover={{
-                    bg: "rgba(0,0,0,0.6)",
+                    bg: "rgba(25,35,45,0.8)",
+                    borderColor: "rgba(255,255,255,0.3)",
                     transform: "translateY(-1px)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
                   }}
                   onDoubleClick={onTransfer}
                 >
@@ -335,12 +336,13 @@ export function DragonQuestParty({
                         {/* SSS級RPG風ステータス表示 */}
                         <Box display="flex" alignItems="center" gap={2}>
                           <Box
-                            width="40px"
-                            height="4px"
-                            bg="rgba(0,0,0,0.6)"
-                            borderRadius="2px"
+                            width="44px"
+                            height="6px"
+                            bg="rgba(20,30,40,0.8)"
+                            borderRadius="1px"
                             overflow="hidden"
-                            border="1px solid rgba(255,255,255,0.15)"
+                            border="1px solid rgba(255,255,255,0.2)"
+                            position="relative"
                           >
                             <Box
                               height="100%"
@@ -352,17 +354,26 @@ export function DragonQuestParty({
                                   : "0%"
                               }
                               bg={isSubmitted
-                                ? "linear-gradient(90deg, #10b981 0%, #059669 100%)"
+                                ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
                                 : hasClue
-                                ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
+                                ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
                                 : "transparent"
                               }
                               transition="all 0.3s ease"
+                              position="relative"
+                            />
+                            {/* RPG風の内側光沢効果 */}
+                            <Box
+                              position="absolute"
+                              top="0"
+                              left="0"
+                              right="0"
+                              height="50%"
+                              bg="linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%)"
+                              pointerEvents="none"
                             />
                           </Box>
-                          <Text fontSize="xs" color="rgba(255,255,255,0.5)" fontWeight="bold">
-                            {isSubmitted ? "✓" : hasClue ? "•" : "○"}
-                          </Text>
+                          {/* ダサい○記号を削除し、シンプルに */}
                         </Box>
                       </Box>
                     </Box>
