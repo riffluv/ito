@@ -11,13 +11,14 @@ import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 import { Box, Dialog, Field, HStack, Input, Switch, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
-import { addDoc, collection, doc, serverTimestamp, setDoc, Timestamp, DocumentReference } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, Timestamp, DocumentReference, getDoc } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { logError } from "@/lib/utils/log";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
+import { generateRoomId } from "@/lib/utils/roomId";
 
 export function CreateRoomModal({
   isOpen,
@@ -165,16 +166,31 @@ export function CreateRoomModal({
         passwordVersion: passwordEntry?.version ?? null,
       };
 
+      const createRoomDocument = async (
+        payload: Record<string, any>
+      ): Promise<DocumentReference> => {
+        const MAX_ATTEMPTS = 8;
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+          const candidateId = generateRoomId();
+          const candidateRef = doc(db!, "rooms", candidateId);
+          const existing = await getDoc(candidateRef);
+          if (existing.exists()) continue;
+          await setDoc(candidateRef, payload);
+          return candidateRef;
+        }
+        throw new Error("ルームIDを割り当てできませんでした。時間をおいて再度お試しください。");
+      };
+
       let roomRef: DocumentReference | null = null;
       try {
-        roomRef = await addDoc(collection(db!, "rooms"), baseRoomData);
+        roomRef = await createRoomDocument(baseRoomData);
       } catch (error) {
         if (error instanceof FirebaseError && error.code === "permission-denied") {
           console.warn("[rooms] create-room without creator fields (fallback)", error);
           const fallbackPayload: Record<string, any> = { ...baseRoomData };
           delete fallbackPayload.creatorId;
           delete fallbackPayload.creatorName;
-          roomRef = await addDoc(collection(db!, "rooms"), fallbackPayload);
+          roomRef = await createRoomDocument(fallbackPayload);
         } else {
           throw error;
         }

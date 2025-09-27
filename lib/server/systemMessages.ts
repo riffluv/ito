@@ -41,7 +41,7 @@ export function systemMessagePlayerLeft(rawName: string | null | undefined): str
 
 export function systemMessageHostTransferred(rawName: string | null | undefined): string {
   const name = ensureDisplayName(rawName);
-  return "👑 ホストが " + name + " に交代しました。";
+  return "👑 " + name + " さんがホストになりました！";
 }
 
 export function systemMessageRoomBecameEmpty(): string {

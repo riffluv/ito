@@ -43,7 +43,7 @@ function systemMessagePlayerLeft(rawName) {
 }
 function systemMessageHostTransferred(rawName) {
     const name = ensureDisplayName(rawName);
-    return "👑 ホストが " + name + " に交代しました。";
+    return "👑 " + name + " さんがホストになりました！";
 }
 function systemMessageRoomBecameEmpty() {
     return "🌙 だれもいなくなったので部屋を初期化しました。";
