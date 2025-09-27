@@ -272,7 +272,7 @@ export function GameResultOverlay({
         "-=0.4"
       )
 
-      // Phase 4: 派手な跳ね演出
+      // Phase 4: 派手な跳ね演出 + 黄金演出の連動
       .to(text, {
         y: -12,
         scale: 1.25,
@@ -280,6 +280,13 @@ export function GameResultOverlay({
         duration: 0.3,
         ease: "power2.out"
       })
+      // 輝きの予兆（テキストが頂点に達した時）
+      .to(overlay, {
+        boxShadow: "0 0 8px rgba(255,255,255,0.4), inset 0 0 5px rgba(255,255,255,0.1)",
+        duration: 0.15,
+        ease: "power1.out"
+      }, "-=0.15")
+
       .to(text, {
         y: 8,
         scale: 0.9,
@@ -287,6 +294,13 @@ export function GameResultOverlay({
         duration: 0.2,
         ease: "power2.in"
       })
+      // 薄い金色（テキストが下に弾む時）
+      .to(overlay, {
+        boxShadow: "0 0 15px rgba(255,235,100,0.6), 0 0 30px rgba(255,235,100,0.3), inset 0 0 8px rgba(255,255,255,0.2)",
+        duration: 0.2,
+        ease: "power2.out"
+      }, "-=0.2")
+
       .to(text, {
         y: -5,
         scale: 1.05,
@@ -294,13 +308,12 @@ export function GameResultOverlay({
         duration: 0.35,
         ease: "elastic.out(1.5, 0.4)"
       })
-
-      // Phase 5: 光る演出
+      // 濃い黄金（テキストがエラスティックで弾む時）
       .to(overlay, {
-        boxShadow: "0 0 25px rgba(255,215,0,0.8), 0 0 50px rgba(255,215,0,0.4), inset 0 0 15px rgba(255,255,255,0.3)",
-        duration: 0.3,
-        ease: "power2.out"
-      }, "-=0.2")
+        boxShadow: "0 0 22px rgba(255,215,0,0.8), 0 0 45px rgba(255,215,0,0.4), inset 0 0 12px rgba(255,255,255,0.3)",
+        duration: 0.35,
+        ease: "elastic.out(1.5, 0.4)"
+      }, "-=0.35")
 
       // Phase 6: 最終安定 + 永続浮遊
       .to(overlay, {
@@ -318,14 +331,14 @@ export function GameResultOverlay({
         ease: "elastic.out(1.3, 0.5)"
       }, "-=0.2")
 
-      // Phase 7: ドラクエらしい永続浮遊
+      // Phase 7: 自然な永続浮遊（呼吸のような）
       .to(
         overlay,
         {
-          y: -8,
-          rotationZ: 1,
-          scale: 1.05,
-          duration: 2.2,
+          y: -6,
+          rotationZ: 0.7,
+          scale: 1.03,
+          duration: 3.2, // より自然な呼吸周期
           ease: "sine.inOut",
           yoyo: true,
           repeat: -1,
@@ -335,14 +348,27 @@ export function GameResultOverlay({
       .to(
         text,
         {
-          y: -3,
-          rotationZ: -0.5,
-          duration: 2.2,
+          y: -2,
+          rotationZ: -0.3,
+          duration: 3.4, // 少しズレたタイミング
           ease: "sine.inOut",
           yoyo: true,
           repeat: -1,
         },
-        "-=2.2"
+        "-=3.1" // 微妙にずらして自然さを演出
+      )
+
+      // Phase 8: 黄金の呼吸（輝きのゆらぎ）
+      .to(
+        overlay,
+        {
+          boxShadow: "0 0 18px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3), inset 0 0 10px rgba(255,255,255,0.2)",
+          duration: 2.8,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        },
+        "-=3.2"
       )
 
       // パーティクル風演出（キラキラ）
