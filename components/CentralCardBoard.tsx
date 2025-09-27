@@ -245,9 +245,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         finishedToastRef.current = true;
         const failedAt = realtimeResult?.failedAt ?? null;
         if (typeof failedAt === "number") {
-          notify({ title: "失敗！", type: "error", duration: 2000 });
+          notify({ id: `${roomId}-game-result`, title: "失敗！", type: "error", duration: 2000 });
         } else {
-          notify({ title: "勝利！", type: "success", duration: 2000 });
+          notify({ id: `${roomId}-game-result`, title: "勝利！", type: "success", duration: 2000 });
         }
       }
     } else {

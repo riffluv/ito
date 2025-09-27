@@ -16,6 +16,7 @@ export function notify(opts: NotifyOptions | string): void {
   // Defer notification creation to avoid React warnings when called during render/effects
   queueMicrotask(() => {
     dragonQuestNotify({
+      id: o.id != null ? String(o.id) : undefined,
       title: o.title || "通知",
       description: o.description,
       type: o.type || "info",
