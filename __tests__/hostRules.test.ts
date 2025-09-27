@@ -87,6 +87,9 @@ describe("HostManager", () => {
 
     const decision = manager.evaluateClaim("guest-1");
     expect(decision.action).toBe("assign");
+    if (decision.action !== "assign") {
+      throw new Error("expected host reassignment to occur");
+    }
     expect(manager.getPlayerMeta(decision.hostId)).toEqual({ name: " Host " });
   });
 });

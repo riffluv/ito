@@ -25,7 +25,6 @@ import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { UI_TOKENS } from "@/theme/layout";
-import { sendSystemMessage } from "@/lib/firebase/chat";
 import { validateClue } from "@/lib/validation/forms";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { toMillis } from "@/lib/time";
@@ -462,21 +461,6 @@ export default function RoomPage() {
     assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
   }, [room?.deal?.seed, room?.status, uid]);
 
-  // 入室システムメッセージ（1ユーザー1回）
-  useEffect(() => {
-    if (!uid || !displayName) return;
-    if (!room) return;
-    // localStorageフラグで多重送信防止
-    try {
-      const key = `room:${roomId}:joined:${uid}`;
-      if (typeof window !== "undefined" && !window.localStorage.getItem(key)) {
-        window.localStorage.setItem(key, "1");
-        sendSystemMessage(roomId, `${displayName} さんが入室しました`).catch(
-          () => void 0
-        );
-      }
-    } catch {}
-  }, [uid, displayName, roomId, room?.id]);
 
   // 準備完了（ready）はラウンド参加者（deal.players）を対象に判定
   const allCluesReady = useMemo(() => {

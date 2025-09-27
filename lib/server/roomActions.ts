@@ -6,6 +6,12 @@ import {
   HostManager,
   buildHostPlayerInputsFromSnapshots,
 } from "@/lib/host/HostManager";
+import {
+  resolveSystemPlayerName,
+  systemMessageHostTransferred,
+  systemMessagePlayerLeft,
+  systemMessageRoomBecameEmpty,
+} from "@/lib/server/systemMessages";
 
 const PRESENCE_STALE_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
@@ -90,6 +96,9 @@ async function sendSystemMessage(roomId: string, text: string) {
     })
     .catch(() => void 0);
 }
+
+const LEAVE_DEDUPE_WINDOW_MS = 4_000;
+const LEAVE_DEDUPE_PRUNE_MS = 60_000;
 
 async function resetRoomToWaiting(roomId: string) {
   const db = getAdminDb();
@@ -294,12 +303,40 @@ export async function leaveRoomServer(
 
   await forceDetachAll(roomId, userId, rtdb);
 
+  const playersRef = db.collection("rooms").doc(roomId).collection("players");
+  let recordedPlayerName: string | null = null;
+  let hadPlayerSnapshot = false;
+
   try {
-    const playersRef = db.collection("rooms").doc(roomId).collection("players");
-    const dupSnap = await playersRef.where("uid", "==", userId).get();
+    const primarySnap = await playersRef.doc(userId).get();
+    const duplicatesSnap = await playersRef.where("uid", "==", userId).get();
+    const seenIds = new Set<string>();
     const batch = db.batch();
-    dupSnap.forEach((doc) => batch.delete(doc.ref));
-    batch.delete(playersRef.doc(userId));
+
+    const pushDoc = (doc: any) => {
+      if (seenIds.has(doc.id)) return;
+      seenIds.add(doc.id);
+      const value = (doc.data() as any)?.name;
+      if (!recordedPlayerName && typeof value === "string" && value.trim()) {
+        recordedPlayerName = value.trim();
+      }
+      batch.delete(doc.ref);
+    };
+
+    if (primarySnap.exists) {
+      hadPlayerSnapshot = true;
+      pushDoc(primarySnap);
+    }
+
+    duplicatesSnap.forEach((doc) => {
+      hadPlayerSnapshot = true;
+      pushDoc(doc);
+    });
+
+    if (!seenIds.has(userId)) {
+      batch.delete(playersRef.doc(userId));
+    }
+
     await batch.commit();
   } catch {}
 
@@ -434,14 +471,61 @@ export async function leaveRoomServer(
     logWarn("rooms", "leave-room-server-transaction-failed", error);
   }
 
-  const safeDisplayName =
-    typeof displayName === "string" && displayName.trim().length > 0
-      ? displayName.trim()
-      : "Player";
-  await sendSystemMessage(
-    roomId,
-    `[system] ${safeDisplayName} left the room.`
-  );
+  const resolvedDisplayName =
+    resolveSystemPlayerName(displayName) ??
+    resolveSystemPlayerName(recordedPlayerName);
+
+  let skipNotification = false;
+  try {
+    const db = getAdminDb();
+    const dedupeRef = db
+      .collection("rooms")
+      .doc(roomId)
+      .collection("meta")
+      .doc("leaveDedup");
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(dedupeRef);
+      const now = Date.now();
+      const data = (snap.data() as any) || {};
+      const rawEntries =
+        data && typeof data.entries === "object" && data.entries
+          ? (data.entries as Record<string, number>)
+          : {};
+      const entries: Record<string, number> = {};
+
+      for (const key of Object.keys(rawEntries)) {
+        const ts = rawEntries[key];
+        if (typeof ts === "number" && now - ts <= LEAVE_DEDUPE_PRUNE_MS) {
+          entries[key] = ts;
+        }
+      }
+
+      const lastTs = entries?.[userId];
+      if (typeof lastTs === "number" && now - lastTs < LEAVE_DEDUPE_WINDOW_MS) {
+        skipNotification = true;
+      }
+
+      entries[userId] = now;
+      tx.set(dedupeRef, { entries }, { merge: true });
+    });
+  } catch (error) {
+    logWarn("rooms", "leave-room-dedupe-failed", error);
+  }
+
+  if (skipNotification) {
+    logDebug("rooms", "leave-room-skip-duplicate-window", {
+      roomId,
+      userId,
+    });
+  } else if (!resolvedDisplayName && !hadPlayerSnapshot) {
+    logDebug("rooms", "leave-room-skip-duplicate", {
+      roomId,
+      userId,
+    });
+  } else {
+    await sendSystemMessage(roomId, systemMessagePlayerLeft(resolvedDisplayName));
+  }
 
   if (transferredTo) {
     try {
@@ -449,7 +533,7 @@ export async function leaveRoomServer(
         transferredToName || (await getPlayerName(roomId, transferredTo));
       await sendSystemMessage(
         roomId,
-        `[system] Host role moved to ${nextHostName}.`
+        systemMessageHostTransferred(nextHostName)
       );
     } catch {}
     logDebug("rooms", "host-leave transferred-direct", {
@@ -463,10 +547,7 @@ export async function leaveRoomServer(
   if (hostCleared && remainingCount === 0) {
     try {
       await resetRoomToWaiting(roomId);
-      await sendSystemMessage(
-        roomId,
-        "[system] Room is empty. Resetting game state."
-      );
+      await sendSystemMessage(roomId, systemMessageRoomBecameEmpty());
       logDebug("rooms", "host-leave fallback-reset", {
         roomId,
         leavingUid: userId,

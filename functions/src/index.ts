@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { leaveRoomServer } from '@/lib/server/roomActions';
+import { systemMessagePlayerJoined } from '@/lib/server/systemMessages';
 
 // Initialize admin if not already
 if (!admin.apps.length) {
@@ -141,6 +142,16 @@ export const onPresenceWrite = functions.database
       });
 
       try {
+        const playerDoc = await db
+          .collection('rooms')
+          .doc(roomId)
+          .collection('players')
+          .doc(uid)
+          .get();
+        if (!playerDoc.exists) {
+          return null;
+        }
+
         console.log('presence-leaveRoomServer-call', {
           roomId,
           uid,
@@ -458,6 +469,30 @@ export const onPlayerCreated = functions.firestore
         lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       await recalcRoomCounts(ctx.params.roomId as string);
+
+      try {
+        const data = _snap.data() as any;
+        const rawName = typeof data?.name === "string" ? data.name : null;
+        const rawUid = typeof data?.uid === "string" ? data.uid : null;
+
+        const normalizedUid = rawUid ? rawUid.trim() : "";
+        if (!normalizedUid || _snap.id !== normalizedUid) {
+          return null;
+        }
+
+        await roomRef.collection("chat").add({
+          sender: "system",
+          uid: "system",
+          text: systemMessagePlayerJoined(rawName),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn("onPlayerCreated-system-message-failed", {
+          roomId: ctx.params.roomId,
+          playerId: ctx.params.playerId,
+          err,
+        });
+      }
     } catch {}
     return null;
   });

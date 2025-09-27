@@ -21,6 +21,9 @@ test.describe('ホスト移譲ガード', () => {
     });
     const decision = manager.evaluateAfterLeave();
     expect(decision.action).toBe('none');
+    if (decision.action !== 'none') {
+      throw new Error('expected host to remain unchanged');
+    }
     expect(decision.hostId).toBe('host-1');
   });
 
@@ -33,6 +36,9 @@ test.describe('ホスト移譲ガード', () => {
     });
     const decision = manager.evaluateAfterLeave();
     expect(decision.action).toBe('assign');
+    if (decision.action !== 'assign') {
+      throw new Error('expected host transfer');
+    }
     expect(decision.hostId).toBe('guest-1');
     expect(decision.reason).toBe('host-left');
   });
@@ -57,6 +63,9 @@ test.describe('ホスト移譲ガード', () => {
     });
     const decision = manager.evaluateClaim('guest-2');
     expect(decision.action).toBe('none');
+    if (decision.action !== 'none') {
+      throw new Error('host claim should have been rejected');
+    }
     expect(decision.hostId).toBe('host-1');
   });
 
