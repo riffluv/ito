@@ -37,78 +37,51 @@ export function SoundSettingsPlaceholder({
     <Stack gap={6}>
       <Tooltip content={message} showArrow openDelay={200} disabled={!locked}>
         <Box
-          border="3px solid"
-          borderColor={UI_TOKENS.COLORS.whiteAlpha90}
-          bg="rgba(8, 9, 15, 0.95)"
-          p={6}
+          border="2px solid"
+          borderColor={UI_TOKENS.COLORS.whiteAlpha30}
+          bg={UI_TOKENS.COLORS.panelBg}
+          p={4}
           borderRadius={0}
           position="relative"
           textAlign="center"
-          boxShadow={`
-            inset 0 2px 0 rgba(255,255,255,0.1),
-            inset 0 -2px 0 rgba(0,0,0,0.4),
-            0 4px 8px rgba(0,0,0,0.3),
-            1px 1px 0 rgba(0,0,0,0.7),
-            0 2px 0 rgba(0,0,0,0.5)
-          `}
+          boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
           _hover={{
-            borderColor: "rgba(255,215,0,0.8)",
-            boxShadow: `
-              inset 0 2px 0 rgba(255,255,255,0.15),
-              inset 0 -2px 0 rgba(0,0,0,0.5),
-              0 6px 12px rgba(0,0,0,0.4),
-              1px 1px 0 rgba(0,0,0,0.8),
-              0 3px 0 rgba(0,0,0,0.6)
-            `
+            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+            bg: UI_TOKENS.COLORS.whiteAlpha10,
           }}
         >
-          <Box
-            position="absolute"
-            insetX={0}
-            top={0}
-            h="3px"
-            bg="linear-gradient(90deg, rgba(255,215,0,0.9), rgba(255,140,0,0.6))"
-          />
           <Text
-            fontSize="xl"
-            fontWeight="700"
+            fontSize="md"
+            fontWeight="bold"
             color="white"
             fontFamily="monospace"
-            textShadow="2px 2px 0px rgba(0,0,0,0.8)"
-            mb={3}
-            letterSpacing="1px"
+            textShadow="1px 1px 0px #000"
+            mb={2}
           >
             サウンド設定
           </Text>
           <Text
-            fontSize="md"
-            color="rgba(255,215,128,0.95)"
+            fontSize="sm"
+            color={UI_TOKENS.COLORS.textMuted}
             fontFamily="monospace"
-            lineHeight="1.6"
-            fontWeight="600"
-            textShadow="1px 1px 0px rgba(0,0,0,0.7)"
+            lineHeight="short"
           >
             音作ってるから待ってて！
           </Text>
           {locked && (
             <Box
-              mt={4}
+              mt={3}
               display="inline-block"
-              px={4}
-              py={2}
-              border="3px solid"
-              borderColor="rgba(255,215,0,0.8)"
-              bg="rgba(255,215,0,0.1)"
-              color="rgba(255,215,0,0.95)"
+              px={3}
+              py={1}
+              border="2px solid"
+              borderColor={UI_TOKENS.COLORS.whiteAlpha60}
+              bg={UI_TOKENS.COLORS.whiteAlpha10}
+              color="white"
               fontFamily="monospace"
               fontSize="sm"
-              fontWeight="700"
-              letterSpacing="1px"
-              textShadow="1px 1px 0px rgba(0,0,0,0.8)"
-              boxShadow={`
-                inset 0 1px 0 rgba(255,255,255,0.1),
-                0 2px 4px rgba(0,0,0,0.3)
-              `}
+              fontWeight="bold"
             >
               準備中
             </Box>
@@ -164,13 +137,11 @@ export function SoundSettingsPlaceholder({
           </Box>
           <Text
             fontSize="xs"
-            color="rgba(255,215,128,0.8)"
+            color={UI_TOKENS.COLORS.textMuted}
             fontFamily="monospace"
             mt={2}
-            fontWeight="500"
-            textShadow="1px 1px 0px rgba(0,0,0,0.6)"
           >
-            🎭 いずれ効果音や音楽の調整ができるようになるよ！
+            ぜんたいの おとの おおきさ
           </Text>
         </Box>
 
@@ -195,13 +166,11 @@ export function SoundSettingsPlaceholder({
               </Text>
               <Text
                 fontSize="xs"
-                color="rgba(255,215,128,0.8)"
+                color={UI_TOKENS.COLORS.textMuted}
                 fontFamily="monospace"
                 lineHeight="short"
-                fontWeight="500"
-                textShadow="1px 1px 0px rgba(0,0,0,0.6)"
               >
-                🔊 音を鳴らすか鳴らさないかの設定がここに来るよ！
+                サウンド ON/OFF
               </Text>
             </VStack>
             <Box
@@ -264,12 +233,9 @@ export function SoundSettingsPlaceholder({
 
       <Text
         fontSize="xs"
-        color="rgba(255,215,128,0.7)"
+        color={UI_TOKENS.COLORS.textMuted}
         fontFamily="monospace"
         textAlign="center"
-        fontWeight="500"
-        fontStyle="italic"
-        textShadow="1px 1px 0px rgba(0,0,0,0.6)"
       >
         音声準備に苦戦しています ☕
       </Text>
