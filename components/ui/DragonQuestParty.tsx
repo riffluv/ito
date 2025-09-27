@@ -172,45 +172,33 @@ export function DragonQuestParty({
     >
       <Box
         css={{
-          background: "rgba(8,9,15,0.9)",
-          border: "3px solid rgba(255,255,255,0.9)",
-          borderRadius: 0,
-          padding: "8px",
-          boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(8px)",
+          borderRadius: "8px",
+          padding: "16px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)",
           pointerEvents: "auto",
         }}
       >
-        {/* オクトパス風パーティーヘッダー */}
-        <Box
-          bg="rgba(0, 0, 0, 0.6)"
-          border={`1px solid rgba(255,255,255,0.2)`}
-          px={2}
-          py={1}
-          mb={1}
-          css={{
-            borderRadius: 0,
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
-          }}
-        >
+        {/* パーティーヘッダー */}
+        <Box mb={4}>
           <Text
-            fontSize={{ base: "sm", md: "md" }}
-            fontWeight={600}
+            fontSize="lg"
+            fontWeight="bold"
             color="white"
-            textShadow="1px 1px 0px rgba(0,0,0,0.8)"
-            letterSpacing="0.3px"
-            fontFamily="monospace"
-            textAlign="left"
-            pl={1}
+            textShadow="0 2px 4px rgba(0,0,0,0.8)"
+            fontFamily="system-ui"
+            letterSpacing="0.5px"
           >
-            R1 - PARTY ({actualCount})
+            Party ({actualCount})
           </Text>
         </Box>
 
-        {/* 極限コンパクト メンバーリスト */}
+        {/* メンバーリスト */}
         <Box
           display="flex"
           flexDirection="column"
-          gap={0}
+          gap={2}
           w={{ base: "240px", md: "280px" }}
           css={{ pointerEvents: "auto" }}
         >
@@ -253,203 +241,133 @@ export function DragonQuestParty({
                 <Box
                   key={player.id}
                   data-player-id={player.id}
-                  bg="rgba(20, 23, 34, 0.8)"
-                  borderRadius={0}
-                  px={2}
-                  py={0}
+                  bg="rgba(0,0,0,0.4)"
+                  borderRadius="6px"
+                  px={4}
+                  py={3}
                   w="100%"
                   position="relative"
+                  boxShadow="0 2px 8px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)"
+                  transition="all 0.2s ease"
                   css={{
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
                     cursor: canTransfer ? "pointer" : "default",
-                    border: isHost ? "1px solid rgba(255, 215, 0, 0.3)" : "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(4px)",
+                  }}
+                  _hover={{
+                    bg: "rgba(0,0,0,0.6)",
+                    transform: "translateY(-1px)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)",
                   }}
                   onDoubleClick={onTransfer}
                 >
-                  {/* アバター + 情報レイアウト */}
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {/* アバター表示エリア */}
+                  {/* SSS級RPG風レイアウト */}
+                  <Box display="flex" alignItems="center" gap={3}>
+                    {/* アバター */}
                     <Box
                       flexShrink={0}
-                      width="32px"
-                      height="32px"
+                      width="36px"
+                      height="36px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      fontSize="lg"
                     >
                       {fresh.avatar?.startsWith('/avatars/') ? (
                         <img
                           src={fresh.avatar}
                           alt="avatar"
-                          width="32"
-                          height="32"
+                          width="36"
+                          height="36"
                           style={{
                             objectFit: 'cover',
-                            borderRadius: '4px',
-                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))'
+                            borderRadius: '6px',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))'
                           }}
                         />
                       ) : (
-                        <Text
-                          fontSize="xl"
-                          filter="drop-shadow(0 1px 2px rgba(0,0,0,0.6))"
-                        >
+                        <Text fontSize="2xl" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))">
                           {fresh.avatar || "⚔️"}
                         </Text>
                       )}
                     </Box>
 
-                    {/* プレイヤー情報 */}
-                    <Box display="flex" flexDirection="column" gap={0} flex={1} minW={0}>
-                      {/* プレイヤー名（強調） */}
-                      <Text
-                        fontSize={{ base: "lg", md: "xl" }}
-                        fontWeight={800}
-                        color={isHost ? "#ffd700" : "white"}
-                        textShadow={isHost
-                          ? "0 0 8px rgba(255, 215, 0, 0.8), 1px 1px 2px rgba(0,0,0,0.8)"
-                          : "1px 1px 2px rgba(0,0,0,0.8)"
-                        }
-                        fontFamily="monospace"
-                        letterSpacing="0.4px"
-                        truncate
-                        title={`${isHost ? "ホスト: " : ""}${fresh.name}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
-                        css={
-                          isHost
-                            ? {
-                                animation: "hostGlow 4s ease-in-out infinite alternate",
-                              }
-                            : undefined
-                        }
-                      >
-                        {fresh.name}
-                      </Text>
-
-                      {/* 連想ワード + 進捗バー */}
-                      <HStack justify="space-between" align="center" w="100%">
-                        <HStack gap={1} flex={1} minW={0}>
-                          <Text
-                            fontSize="xs"
-                            color="rgba(255, 139, 139, 0.9)"
-                            fontFamily="monospace"
-                            fontWeight={600}
-                            flexShrink={0}
-                          >
-                            💭
-                          </Text>
-                          <Text
-                            fontSize={{ base: "xs", md: "sm" }}
-                            fontWeight={600}
-                            color={
-                              isSubmitted && hasClue
-                                ? "white"
-                                : hasClue
-                                ? "rgba(255,255,255,0.7)"
-                                : "rgba(255,255,255,0.4)"
-                            }
-                            textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                            fontFamily="monospace"
-                            truncate
-                            flex={1}
-                            title={
-                              isSubmitted && hasClue
-                                ? fresh.clue1.trim()
-                                : hasClue
-                                ? "未提出"
-                                : "未入力"
-                            }
-                          >
-                            {isSubmitted && hasClue ? fresh.clue1.trim() : "---"}
-                          </Text>
-                        </HStack>
-
-                        {/* DQ風進捗バー */}
-                        <Box
-                          width="24px"
-                          height="4px"
-                          bg="rgba(0,0,0,0.4)"
-                          border="1px solid rgba(255,255,255,0.2)"
-                          borderRadius={0}
-                          overflow="hidden"
-                          flexShrink={0}
-                          ml={1}
+                    {/* プレイヤー情報 - ドラクエ風 */}
+                    <Box flex={1} minW={0}>
+                      {/* 名前行 */}
+                      <Box display="flex" alignItems="center" justify="space-between" mb={2}>
+                        <Text
+                          fontSize="md"
+                          fontWeight="bold"
+                          color={isHost ? "#ffd700" : "white"}
+                          textShadow="0 1px 3px rgba(0,0,0,0.8)"
+                          fontFamily="system-ui"
+                          truncate
+                          title={`${isHost ? "ホスト: " : ""}${fresh.name}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
                         >
-                          <Box
-                            height="100%"
-                            width={
-                              isSubmitted
-                                ? "100%"
-                                : hasClue
-                                ? "60%"
-                                : "0%"
-                            }
-                            background={isSubmitted
-                              ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
-                              : hasClue
-                              ? "linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)"
-                              : "transparent"
-                            }
-                            transition="all 0.3s ease"
-                            css={{
-                              boxShadow: isSubmitted || hasClue
-                                ? "inset 0 1px 0 rgba(255,255,255,0.3)"
-                                : "none"
-                            }}
-                          />
-                        </Box>
+                          {fresh.name}
+                        </Text>
+                        {isHost && (
+                          <Text fontSize="sm" color="#ffd700" textShadow="0 1px 2px rgba(0,0,0,0.8)">
+                            👑
+                          </Text>
+                        )}
+                      </Box>
 
-                      </HStack>
+                      {/* 連想ワード + ステータス */}
+                      <Box display="flex" alignItems="center" justify="space-between">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.7)"
+                          fontFamily="system-ui"
+                          truncate
+                          flex={1}
+                          mr={2}
+                          title={
+                            isSubmitted && hasClue
+                              ? fresh.clue1.trim()
+                              : hasClue
+                              ? "未提出"
+                              : "未入力"
+                          }
+                        >
+                          {isSubmitted && hasClue ? fresh.clue1.trim() : hasClue ? "未提出" : "---"}
+                        </Text>
+
+                        {/* SSS級RPG風ステータス表示 */}
+                        <Box display="flex" alignItems="center" gap={2}>
+                          <Box
+                            width="40px"
+                            height="4px"
+                            bg="rgba(0,0,0,0.6)"
+                            borderRadius="2px"
+                            overflow="hidden"
+                            border="1px solid rgba(255,255,255,0.15)"
+                          >
+                            <Box
+                              height="100%"
+                              width={
+                                isSubmitted
+                                  ? "100%"
+                                  : hasClue
+                                  ? "60%"
+                                  : "0%"
+                              }
+                              bg={isSubmitted
+                                ? "linear-gradient(90deg, #10b981 0%, #059669 100%)"
+                                : hasClue
+                                ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
+                                : "transparent"
+                              }
+                              transition="all 0.3s ease"
+                            />
+                          </Box>
+                          <Text fontSize="xs" color="rgba(255,255,255,0.5)" fontWeight="bold">
+                            {isSubmitted ? "✓" : hasClue ? "•" : "○"}
+                          </Text>
+                        </Box>
+                      </Box>
                     </Box>
                   </Box>
 
-                  {/* 状態アイコン（右上・位置統一） */}
-                  <Box
-                    position="absolute"
-                    top="4px"
-                    right="6px"
-                    width="16px"
-                    height="16px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    title={status}
-                  >
-                    {isSubmitted ? (
-                      <Box
-                        borderRadius="50%"
-                        css={{
-                          background: "#22c55e",
-                          border: "1px solid #16a34a",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                          width: "100%",
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Text
-                          fontSize="xs"
-                          fontWeight={700}
-                          color="white"
-                          textShadow="0 1px 1px rgba(0,0,0,0.8)"
-                        >
-                          ✓
-                        </Text>
-                      </Box>
-                    ) : (
-                      <Text
-                        fontSize="sm"
-                        style={{ color: hasClue ? color : "rgba(148,163,184,0.9)" }}
-                        filter="drop-shadow(0 1px 2px rgba(0,0,0,0.6))"
-                        textAlign="center"
-                        lineHeight="16px"
-                      >
-                        {icon}
-                      </Text>
-                    )}
-                  </Box>
 
                 </Box>
               );
