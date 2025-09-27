@@ -62,7 +62,7 @@ export function GameResultOverlay({
           scale: 1.8,
           rotationX: 30,
           rotationZ: -10,
-          filter: "blur(8px) brightness(0.4) saturate(0.3)",
+          filter: "blur(8px) brightness(0.5) saturate(0.4)",
           transformOrigin: "50% 50%"
         },
         {
@@ -70,7 +70,7 @@ export function GameResultOverlay({
           scale: 0.7,
           rotationX: 0,
           rotationZ: 0,
-          filter: "blur(0px) brightness(0.8) saturate(0.7)",
+          filter: "blur(0px) brightness(0.7) saturate(0.6)",
           duration: 0.4,
           ease: "power4.out",
         }
@@ -81,7 +81,6 @@ export function GameResultOverlay({
         scale: 1.15,
         duration: 0.35,
         ease: "power2.out",
-        filter: "brightness(0.6) saturate(0.5)"
       })
 
       // Phase 3: テキスト重たい登場
@@ -117,15 +116,7 @@ export function GameResultOverlay({
         ease: "power2.inOut",
       })
 
-      // Phase 5: 暗転効果
-      .to(overlay, {
-        filter: "brightness(0.4) saturate(0.3) contrast(1.3)",
-        boxShadow: "0 0 20px rgba(139,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.8)",
-        duration: 0.3,
-        ease: "power2.out"
-      }, "-=0.5")
-
-      // Phase 6: 重力落下演出
+      // Phase 5: 重力落下演出
       .to(overlay, {
         y: 15,
         scale: 1.05,
@@ -138,13 +129,13 @@ export function GameResultOverlay({
         ease: "bounce.out"
       }, "-=0.6")
 
-      // Phase 7: 最終位置へ重たく安定
+      // Phase 6: 最終位置へ重たく安定（一定の暗さで固定）
       .to(overlay, {
         x: 0,
         y: 0,
         rotation: 0,
         scale: 1,
-        filter: "brightness(0.7) saturate(0.6)",
+        filter: "brightness(0.65) saturate(0.6)",
         boxShadow: "0 0 12px rgba(139,0,0,0.4), inset 0 0 8px rgba(0,0,0,0.6)",
         duration: 0.4,
         ease: "power3.out"
@@ -155,7 +146,7 @@ export function GameResultOverlay({
         ease: "power3.out"
       }, "-=0.4")
 
-      // Phase 8: 時々の苦しみ + 永続浮遊
+      // Phase 7: 自然な永続浮遊（明暗変化なし）
       .to(
         overlay,
         {
@@ -180,45 +171,31 @@ export function GameResultOverlay({
         "-=3.5"
       )
 
-      // Phase 9: 時々の痙攣的な動き（失敗の余韻）
+      // Phase 8: 控えめな痙攣的な動き（失敗の余韻）
       .to(
         overlay,
         {
-          x: () => gsap.utils.random(-3, 3),
-          scale: () => gsap.utils.random(0.98, 1.02),
-          duration: 0.15,
+          x: () => gsap.utils.random(-2, 2),
+          scale: () => gsap.utils.random(0.99, 1.01),
+          duration: 0.12,
           ease: "power2.out",
-          repeat: 2,
+          repeat: 1,
           yoyo: true,
-          repeatDelay: 4.5, // 4.5秒ごとに痙攣
+          repeatDelay: 6, // 6秒ごとに控えめな痙攣
         },
-        3 // 3秒後から開始
+        4 // 4秒後から開始
       )
       .to(
         text,
         {
           x: () => gsap.utils.random(-1, 1),
-          duration: 0.15,
+          duration: 0.12,
           ease: "power2.out",
-          repeat: 2,
-          yoyo: true,
-          repeatDelay: 4.5,
-        },
-        3
-      )
-
-      // Phase 10: ランダムな暗転フラッシュ（絶望感の演出）
-      .to(
-        overlay,
-        {
-          filter: "brightness(0.3) saturate(0.2)",
-          duration: 0.08,
-          ease: "power2.inOut",
-          yoyo: true,
           repeat: 1,
-          repeatDelay: 7.2, // 7.2秒ごとに暗転
+          yoyo: true,
+          repeatDelay: 6,
         },
-        5 // 5秒後から開始
+        4
       );
     } else {
       // ドラクエ風爆発演出！
