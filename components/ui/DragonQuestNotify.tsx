@@ -52,10 +52,14 @@ class NotificationStore {
     this.listeners.forEach((listener) => listener(snapshot));
   }
 
-  add(notification: Omit<DragonQuestNotification, "id" | "timestamp">) {
+  add(notification: Omit<DragonQuestNotification, "id" | "timestamp"> & { id?: string }) {
+    const id = notification.id || `dq-notify-${Date.now()}-${Math.random()}`;
+    // 既存の同一IDがあれば置き換え（重複防止）
+    this.notifications = this.notifications.filter((n) => n.id !== id);
+
     const entry: DragonQuestNotification = {
       ...notification,
-      id: `dq-notify-${Date.now()}-${Math.random()}`,
+      id,
       timestamp: Date.now(),
     };
     this.notifications.push(entry);
@@ -83,12 +87,13 @@ class NotificationStore {
 export const notificationStore = new NotificationStore();
 
 export function dragonQuestNotify(options: {
+  id?: string;
   title: string;
   description?: string;
   type?: "info" | "warning" | "success" | "error";
   duration?: number;
 }) {
-  const payload: Omit<DragonQuestNotification, "id" | "timestamp"> = {
+  const payload: Omit<DragonQuestNotification, "id" | "timestamp"> & { id?: string } = {
     type: options.type ?? "info",
     ...options,
   };
