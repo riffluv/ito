@@ -10,8 +10,19 @@ import { Box } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { UI_TOKENS } from "@/theme/layout";
 import React from "react";
+import type { PlayerDoc } from "@/lib/types";
 
-export default function MinimalChat({ roomId }: { roomId: string }) {
+interface MinimalChatProps {
+  roomId: string;
+  players?: (PlayerDoc & { id: string })[];
+  hostId?: string | null;
+}
+
+export default function MinimalChat({
+  roomId,
+  players = [],
+  hostId = null,
+}: MinimalChatProps) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
@@ -88,7 +99,7 @@ export default function MinimalChat({ roomId }: { roomId: string }) {
         >
           {/* 子要素を親の固定高さいっぱいに伸ばすためのラッパー */}
           <Box flex="1 1 auto" height="100%" minH={0}>
-            <Chat roomId={roomId} />
+            <Chat roomId={roomId} players={players} hostId={hostId} />
           </Box>
         </Box>
       )}
