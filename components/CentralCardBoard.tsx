@@ -245,9 +245,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         finishedToastRef.current = true;
         const failedAt = realtimeResult?.failedAt ?? null;
         if (typeof failedAt === "number") {
-          notify({ title: "?????", description: `${failedAt}?????`, type: "warning", duration: 1800 });
+          notify({ title: "失敗！", type: "error", duration: 2000 });
         } else {
-          notify({ title: "?????", type: "success", duration: 1800 });
+          notify({ title: "勝利！", type: "success", duration: 2000 });
         }
       }
     } else {
@@ -343,7 +343,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     const { active, over } = e;
     if (!over) {
       playDropInvalid();
-      notify({ title: "???????u???????", type: "info", duration: 900 });
+      notify({ title: "この位置には置けません", type: "info", duration: 900 });
       return;
     }
     if (active.id === over.id) return;
@@ -359,19 +359,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
       if (activeId !== meId) {
         playDropInvalid();
-        notify({ title: "??????J?[?h??????????", type: "info", duration: 1200 });
+        notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
         return;
       }
       setPending((prev) => prev.filter((id) => id !== activeId));
       try {
         await removeCardFromProposal(roomId, activeId);
         playDropSuccess();
-        notify({ title: "?J?[?h???@?G???A?????????", type: "info", duration: 900 });
+        notify({ title: "カードを戻しました", type: "info", duration: 900 });
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
         playDropInvalid();
         notify({
-          title: "?J?[?h?????????????",
+          title: "カードを戻せませんでした",
           type: "error",
           duration: 1200,
         });

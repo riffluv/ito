@@ -25,9 +25,9 @@ const NOTIFICATION_SOUND_MAP: Record<DragonQuestNotification["type"], SoundId> =
 
 const NOTIFICATION_ICON_MAP: Record<DragonQuestNotification["type"], string> = {
   success: "✨",
-  error: "✖",
-  warning: "⚠",
-  info: "★",
+  error: "💥",
+  warning: "⚠️",
+  info: "🔔",
 };
 
 const DEFAULT_DURATION_MS = 5500;
