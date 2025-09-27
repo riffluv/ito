@@ -181,16 +181,21 @@ export function DragonQuestParty({
         }}
       >
         {/* パーティーヘッダー */}
-        <Text
-          fontSize="lg"
-          fontWeight="bold"
-          color="white"
-          textShadow="0 2px 4px rgba(0,0,0,0.8)"
-          fontFamily="system-ui"
-          letterSpacing="0.5px"
-        >
-          Party ({actualCount})
-        </Text>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Text fontSize="lg" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))">
+            ⚔️
+          </Text>
+          <Text
+            fontSize="lg"
+            fontWeight="bold"
+            color="white"
+            textShadow="0 2px 4px rgba(0,0,0,0.8)"
+            fontFamily="system-ui"
+            letterSpacing="0.5px"
+          >
+            なかま ({actualCount})
+          </Text>
+        </Box>
 
         {/* メンバーリスト */}
         <Box
@@ -292,7 +297,7 @@ export function DragonQuestParty({
                     {/* プレイヤー情報 - 縦2段レイアウト */}
                     <Box flex={1} minW={0}>
                       {/* 第1行: 名前 + ホストマーク */}
-                      <Box display="flex" alignItems="center" justify="space-between" mb={1}>
+                      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                         <Text
                           fontSize="md"
                           fontWeight="bold"
