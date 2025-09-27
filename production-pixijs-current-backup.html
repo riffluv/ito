@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>本番環境PixiJS背景 - 現在のバックアップ</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  html,body{margin:0;height:100%;background:#0E0F13;overflow:hidden}
+  canvas{display:block}
+  .note{position:fixed;left:10px;bottom:10px;color:#fff;background:rgba(0,0,0,.35);
+        padding:6px 8px;border-radius:8px;font:12px/1.2 system-ui}
+</style>
+</head>
+<body>
+<div class="note">本番環境PixiJS背景 - 現在のバックアップ（3回目）</div>
+
+<script src="https://pixijs.download/release/pixi.min.js"></script>
+<script>
+// === 現在の本番環境PixiJS背景 ===
+// ThreeBackground.tsx の pixijs部分の完全移植
+async function initCurrentProductionBackground() {
+  // デバイス性能判定（本番環境と同じロジック）
+  const isLowPowerDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  let app = null;
+  let frameId;
+  let isAnimating = false;
+
+  try {
+    // PixiJS v8対応: 正しいinit()方法
+    app = new PIXI.Application();
+    await app.init({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: 0x0E0F13, // テーマ統一（16進数で指定）
+      antialias: !isLowPowerDevice,
+      resolution: isLowPowerDevice ? 1 : Math.min(1.3, window.devicePixelRatio || 1),
+      autoDensity: false,
+    });
+
+    document.body.appendChild(app.canvas);
+
+    // === ドラクエ風ファンタジー背景 ===
+
+    // 1. 統一された夜空背景（月があるところと同じ色で全画面統一）
+    const bgGradient = new PIXI.Graphics();
+    bgGradient.rect(0, 0, app.screen.width, app.screen.height);
+    bgGradient.fill({
+      color: 0x1a1a2e, // ドラクエ風濃紺（全画面統一）
+      alpha: 1,
+    });
+    app.stage.addChild(bgGradient);
+
+    // 上部のグラデーション効果も全画面に適用
+    const bgGradient2 = new PIXI.Graphics();
+    bgGradient2.rect(0, 0, app.screen.width, app.screen.height); // 全画面に変更
+    bgGradient2.fill({
+      color: 0x16213e, // 少し明るい深紫（全画面統一）
+      alpha: 0.7,
+    });
+    app.stage.addChild(bgGradient2);
+
+    // 2. 山岳地帯のシルエット（茶色の謎の物体=城を削除、山のみ残す）
+    const mountains = new PIXI.Graphics();
+
+    // 山岳地帯のみ（城は削除）
+    mountains.moveTo(0, app.screen.height * 0.8);
+    for (let i = 0; i <= app.screen.width; i += 80) {
+      const height = app.screen.height * (0.75 + Math.sin(i * 0.008) * 0.1 + Math.random() * 0.05);
+      mountains.lineTo(i, height);
+    }
+    mountains.lineTo(app.screen.width, app.screen.height);
+    mountains.lineTo(0, app.screen.height);
+
+    mountains.fill({
+      color: 0x2c1810, // 山のシルエット色（濃いブラウン）
+      alpha: 0.8,
+    });
+    app.stage.addChild(mountains);
+
+    // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
+    // ドラクエ風神秘的な青白・紫系魔法色彩
+    const magicColors = [
+      0x87ceeb, // スカイブルー
+      0x9370db, // ミディアムパープル
+      0x6495ed, // コーンフラワーブルー
+      0xb19cd9, // ライトパープル
+      0x5f9ea0, // カデットブルー
+      0x9966cc, // アメジスト
+      0x66cdaa, // ミディアムアクアマリン
+      0x7b68ee, // ミディアムスレートブルー
+    ];
+
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+      const particle = new PIXI.Graphics();
+      particle.circle(0, 0, Math.random() * 2 + 1);
+      particle.fill({
+        color: magicColors[Math.floor(Math.random() * magicColors.length)], // ドラクエ魔法色から選択
+        alpha: Math.random() * 0.6 + 0.4, // 神秘的な光度
+      });
+
+      particle.x = Math.random() * app.screen.width;
+      particle.y = Math.random() * app.screen.height;
+
+      const particleData = {
+        particle,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.3,
+        life: Math.random() * 2 + 1,
+      };
+
+      particles.push(particleData);
+      app.stage.addChild(particle);
+    }
+
+    // 4. ファンタジー岩場・丘陵地形（右下まで確実に埋める）
+    const foreground = new PIXI.Graphics();
+    const terrainY = app.screen.height * 0.87;
+
+    // ドラクエ風の険しい岩場地形（右下まで確実に埋める）
+    foreground.moveTo(0, terrainY);
+    for (let i = 0; i <= app.screen.width + 10; i += 25) { // +10で確実に右端まで
+      const rockiness = Math.sin(i * 0.012) * 18 + Math.cos(i * 0.025) * 8 + terrainY;
+      foreground.lineTo(i, rockiness);
+    }
+    // 確実に右下角まで埋める
+    foreground.lineTo(app.screen.width + 10, app.screen.height + 10);
+    foreground.lineTo(-10, app.screen.height + 10);
+    foreground.fill({
+      color: 0x2f2f2f, // ダークグレイ（ファンタジー岩場）
+      alpha: 0.88,
+    });
+    app.stage.addChild(foreground);
+
+    // 5. 右上の神秘的なファンタジー月
+    const createFantasyMoon = () => {
+      const moonContainer = new PIXI.Container();
+
+      // 月本体（ドラクエ風の青白い神秘的な色）
+      const moon = new PIXI.Graphics();
+      moon.circle(0, 0, 45);
+      moon.fill({
+        color: 0xe6f3ff, // 神秘的な青白色
+        alpha: 0.92,
+      });
+
+      // 月の光輪（青紫の神秘的な光）
+      const glow = new PIXI.Graphics();
+      glow.circle(0, 0, 85);
+      glow.fill({
+        color: 0x9370db, // ミディアムパープルの神秘光
+        alpha: 0.15,
+      });
+
+      // 月のクレーター（より詳細に）
+      const craters = new PIXI.Graphics();
+      craters.circle(-12, -8, 5);
+      craters.circle(10, 3, 7);
+      craters.circle(-3, 15, 4);
+      craters.circle(18, -10, 3);
+      craters.circle(-8, 12, 2);
+      craters.fill({
+        color: 0xc8d9f0, // 少し暗めの青白クレーター
+        alpha: 0.65,
+      });
+
+      // 月の位置（右上）
+      moonContainer.x = app.screen.width * 0.85;
+      moonContainer.y = app.screen.height * 0.15;
+
+      moonContainer.addChild(glow);
+      moonContainer.addChild(moon);
+      moonContainer.addChild(craters);
+
+      app.stage.addChild(moonContainer);
+      return moonContainer;
+    };
+
+    const fantasyMoon = createFantasyMoon();
+
+    // ファンタジー世界の小さな岩石・鉱物アクセント
+    for (let i = 0; i < 15; i++) {
+      const rockAccent = new PIXI.Graphics();
+      const x = Math.random() * app.screen.width;
+      const y = app.screen.height * (0.88 + Math.random() * 0.08);
+      const size = Math.random() * 1.8 + 0.6;
+
+      rockAccent.circle(x, y, size);
+      rockAccent.fill({
+        color: 0x4a4a4a, // ファンタジー岩石グレイ
+        alpha: 0.75,
+      });
+      app.stage.addChild(rockAccent);
+    }
+
+    // 6. 安全なアニメーションループ - Ticker使用を避ける
+    let lastTime = 0;
+    const targetFPS = isLowPowerDevice ? 30 : 45;
+    const frameInterval = 1000 / targetFPS;
+    isAnimating = true; // アニメーション制御フラグを有効化
+
+    // Pixi.jsの自動ティッカーを無効化
+    if (app.ticker) {
+      app.ticker.autoStart = false;
+      app.ticker.stop();
+    }
+
+    const animate = (currentTime) => {
+      // アニメーション停止フラグチェック
+      if (!isAnimating) {
+        return;
+      }
+
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        frameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      // フレームレート調整
+      if (currentTime - lastTime < frameInterval) {
+        frameId = requestAnimationFrame(animate);
+        return;
+      }
+      lastTime = currentTime;
+
+      // アプリケーションが破棄されていたら停止
+      if (!app || !app.stage) {
+        isAnimating = false;
+        if (frameId) {
+          cancelAnimationFrame(frameId);
+          frameId = undefined;
+        }
+        return;
+      }
+
+      // 安全なアニメーション実行
+      try {
+        // ドラクエ風魔法光の粒子アニメーション
+        particles.forEach(data => {
+          const { particle, vx, vy, life } = data;
+          if (!particle || !particle.parent) return; // 安全チェック追加
+
+          particle.x += vx;
+          particle.y += vy;
+
+          // 画面外に出たら反対側から再出現
+          if (particle.x > app.screen.width) particle.x = -10;
+          if (particle.x < -10) particle.x = app.screen.width;
+          if (particle.y > app.screen.height) particle.y = -10;
+          if (particle.y < -10) particle.y = app.screen.height;
+
+          // ドラクエ風神秘的な明滅効果（より穏やかで魔法的に）
+          particle.alpha = Math.sin(currentTime * 0.0015 * life) * 0.3 + 0.7;
+        });
+
+        // ファンタジー月の微妙な神秘的脈動
+        if (fantasyMoon && fantasyMoon.parent) {
+          const moonPulse = Math.sin(currentTime * 0.0006) * 0.08 + 1;
+          fantasyMoon.scale.set(moonPulse);
+
+          // 月の光輪の色変化（神秘的な青紫の強弱）
+          if (fantasyMoon.children[0]) {
+            const glowAlpha = Math.sin(currentTime * 0.0008) * 0.04 + 0.15;
+            fantasyMoon.children[0].alpha = glowAlpha; // glow部分
+          }
+        }
+      } catch (error) {
+        // アニメーションエラー時は停止
+        console.warn('Animation error:', error);
+        isAnimating = false;
+        if (frameId) {
+          cancelAnimationFrame(frameId);
+          frameId = undefined;
+        }
+        return;
+      }
+
+      // 手動レンダリング（Tickerを使わない）
+      try {
+        if (app && app.renderer && app.stage) {
+          app.renderer.render(app.stage);
+        }
+      } catch (renderError) {
+        console.warn('Render error:', renderError);
+        isAnimating = false;
+        return;
+      }
+
+      frameId = requestAnimationFrame(animate);
+    };
+
+    // 既存のアニメーションがあれば停止
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      frameId = undefined;
+    }
+
+    animate(performance.now());
+
+  } catch (error) {
+    console.error('❌ 本番環境PixiJS初期化エラー:', error);
+    // 初期化失敗時は app を null に設定
+    if (app && app.stage) {
+      try {
+        app.destroy();
+      } catch (e) {
+        // 破棄エラーは無視
+      }
+    }
+    app = null;
+
+    // エラー時はフォールバック背景を表示（テキストなし）
+    document.body.style.backgroundColor = '#0E0F13';
+  }
+
+  // リサイズ対応 - PixiJS v8対応
+  const handleResize = () => {
+    try {
+      if (app && app.stage && app.renderer) {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+      }
+    } catch (error) {
+      console.warn('Resize error:', error);
+    }
+  };
+
+  window.addEventListener('resize', handleResize);
+
+  // 強化されたクリーンアップ - Runtime Error対策
+  const cleanup = () => {
+    window.removeEventListener('resize', handleResize);
+
+    // アニメーション完全停止
+    isAnimating = false; // アニメーションフラグを無効化
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      frameId = undefined;
+    }
+
+    // Pixi.jsアプリケーション安全破棄
+    if (app) {
+      try {
+        // アプリケーションが既に破棄されていないかチェック
+        if (app.stage) {
+          // ティッカー完全停止
+          if (app.ticker) {
+            app.ticker.stop();
+            app.ticker.autoStart = false;
+          }
+          // ステージクリア
+          if (app.stage) {
+            app.stage.removeChildren();
+          }
+          // アプリケーション破棄（シンプルに）
+          app.destroy(true);
+        }
+      } catch (e) {
+        console.warn('Destroy error:', e);
+      } finally {
+        app = null; // 確実にnullに設定
+      }
+    }
+  };
+
+  // ページアンロード時のクリーンアップ
+  window.addEventListener('beforeunload', cleanup);
+}
+
+// 初期化実行
+initCurrentProductionBackground().catch(console.error);
+</script>
+</body>
+</html>
