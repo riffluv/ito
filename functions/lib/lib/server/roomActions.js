@@ -6,17 +6,20 @@ const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("@/lib/server/firebaseAdmin");
 const log_1 = require("@/lib/utils/log");
 const HostManager_1 = require("@/lib/host/HostManager");
+const systemMessages_1 = require("@/lib/server/systemMessages");
 const PRESENCE_STALE_MS = Number(process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
     process.env.PRESENCE_STALE_MS ||
-    45000);
+    300000);
 const MAX_CLOCK_SKEW_MS = Number(process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
     process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
-    30000);
+    120000);
 function sanitizeServerText(input, maxLength = 500) {
     if (typeof input !== "string")
         return "";
+    // eslint-disable-next-line no-control-regex -- 制御文字を明示的に除去するためのパターン
+    const controlCharsPattern = /[\u0000-\u001F\u007F]/g;
     const normalized = input
-        .replace(/[\u0000-\u001F\u007F]/g, " ")
+        .replace(controlCharsPattern, " ")
         .replace(/[<>]/g, "")
         .replace(/\s+/g, " ")
         .trim();
@@ -82,6 +85,8 @@ async function sendSystemMessage(roomId, text) {
     })
         .catch(() => void 0);
 }
+const LEAVE_DEDUPE_WINDOW_MS = 4000;
+const LEAVE_DEDUPE_PRUNE_MS = 60000;
 async function resetRoomToWaiting(roomId) {
     const db = (0, firebaseAdmin_1.getAdminDb)();
     const roomRef = db.collection("rooms").doc(roomId);
@@ -269,12 +274,35 @@ async function leaveRoomServer(roomId, userId, displayName) {
     const db = (0, firebaseAdmin_1.getAdminDb)();
     const rtdb = (0, firebaseAdmin_1.getAdminRtdb)();
     await forceDetachAll(roomId, userId, rtdb);
+    const playersRef = db.collection("rooms").doc(roomId).collection("players");
+    let recordedPlayerName = null;
+    let hadPlayerSnapshot = false;
     try {
-        const playersRef = db.collection("rooms").doc(roomId).collection("players");
-        const dupSnap = await playersRef.where("uid", "==", userId).get();
+        const primarySnap = await playersRef.doc(userId).get();
+        const duplicatesSnap = await playersRef.where("uid", "==", userId).get();
+        const seenIds = new Set();
         const batch = db.batch();
-        dupSnap.forEach((doc) => batch.delete(doc.ref));
-        batch.delete(playersRef.doc(userId));
+        const pushDoc = (doc) => {
+            if (seenIds.has(doc.id))
+                return;
+            seenIds.add(doc.id);
+            const value = doc.data()?.name;
+            if (!recordedPlayerName && typeof value === "string" && value.trim()) {
+                recordedPlayerName = value.trim();
+            }
+            batch.delete(doc.ref);
+        };
+        if (primarySnap.exists) {
+            hadPlayerSnapshot = true;
+            pushDoc(primarySnap);
+        }
+        duplicatesSnap.forEach((doc) => {
+            hadPlayerSnapshot = true;
+            pushDoc(doc);
+        });
+        if (!seenIds.has(userId)) {
+            batch.delete(playersRef.doc(userId));
+        }
         await batch.commit();
     }
     catch { }
@@ -397,14 +425,60 @@ async function leaveRoomServer(roomId, userId, displayName) {
     catch (error) {
         (0, log_1.logWarn)("rooms", "leave-room-server-transaction-failed", error);
     }
-    const safeDisplayName = typeof displayName === "string" && displayName.trim().length > 0
-        ? displayName.trim()
-        : "Player";
-    await sendSystemMessage(roomId, `[system] ${safeDisplayName} left the room.`);
+    const resolvedDisplayName = (0, systemMessages_1.resolveSystemPlayerName)(displayName) ??
+        (0, systemMessages_1.resolveSystemPlayerName)(recordedPlayerName);
+    let skipNotification = false;
+    try {
+        const db = (0, firebaseAdmin_1.getAdminDb)();
+        const dedupeRef = db
+            .collection("rooms")
+            .doc(roomId)
+            .collection("meta")
+            .doc("leaveDedup");
+        await db.runTransaction(async (tx) => {
+            const snap = await tx.get(dedupeRef);
+            const now = Date.now();
+            const data = snap.data() || {};
+            const rawEntries = data && typeof data.entries === "object" && data.entries
+                ? data.entries
+                : {};
+            const entries = {};
+            for (const key of Object.keys(rawEntries)) {
+                const ts = rawEntries[key];
+                if (typeof ts === "number" && now - ts <= LEAVE_DEDUPE_PRUNE_MS) {
+                    entries[key] = ts;
+                }
+            }
+            const lastTs = entries?.[userId];
+            if (typeof lastTs === "number" && now - lastTs < LEAVE_DEDUPE_WINDOW_MS) {
+                skipNotification = true;
+            }
+            entries[userId] = now;
+            tx.set(dedupeRef, { entries }, { merge: true });
+        });
+    }
+    catch (error) {
+        (0, log_1.logWarn)("rooms", "leave-room-dedupe-failed", error);
+    }
+    if (skipNotification) {
+        (0, log_1.logDebug)("rooms", "leave-room-skip-duplicate-window", {
+            roomId,
+            userId,
+        });
+    }
+    else if (!resolvedDisplayName && !hadPlayerSnapshot) {
+        (0, log_1.logDebug)("rooms", "leave-room-skip-duplicate", {
+            roomId,
+            userId,
+        });
+    }
+    else {
+        await sendSystemMessage(roomId, (0, systemMessages_1.systemMessagePlayerLeft)(resolvedDisplayName));
+    }
     if (transferredTo) {
         try {
             const nextHostName = transferredToName || (await getPlayerName(roomId, transferredTo));
-            await sendSystemMessage(roomId, `[system] Host role moved to ${nextHostName}.`);
+            await sendSystemMessage(roomId, (0, systemMessages_1.systemMessageHostTransferred)(nextHostName));
         }
         catch { }
         (0, log_1.logDebug)("rooms", "host-leave transferred-direct", {
@@ -417,7 +491,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
     if (hostCleared && remainingCount === 0) {
         try {
             await resetRoomToWaiting(roomId);
-            await sendSystemMessage(roomId, "[system] Room is empty. Resetting game state.");
+            await sendSystemMessage(roomId, (0, systemMessages_1.systemMessageRoomBecameEmpty)());
             (0, log_1.logDebug)("rooms", "host-leave fallback-reset", {
                 roomId,
                 leavingUid: userId,

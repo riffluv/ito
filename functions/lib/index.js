@@ -37,6 +37,7 @@ exports.pruneOldEvents = exports.onPlayerCreated = exports.purgeOrphanRooms = ex
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const roomActions_1 = require("@/lib/server/roomActions");
+const systemMessages_1 = require("@/lib/server/systemMessages");
 // Initialize admin if not already
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -162,6 +163,15 @@ exports.onPresenceWrite = functions.database
             console.warn('presence-user-remove-failed', { roomId, uid, err });
         });
         try {
+            const playerDoc = await db
+                .collection('rooms')
+                .doc(roomId)
+                .collection('players')
+                .doc(uid)
+                .get();
+            if (!playerDoc.exists) {
+                return null;
+            }
             console.log('presence-leaveRoomServer-call', {
                 roomId,
                 uid,
@@ -495,6 +505,28 @@ exports.onPlayerCreated = functions.firestore
             lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         await recalcRoomCounts(ctx.params.roomId);
+        try {
+            const data = _snap.data();
+            const rawName = typeof data?.name === "string" ? data.name : null;
+            const rawUid = typeof data?.uid === "string" ? data.uid : null;
+            const normalizedUid = rawUid ? rawUid.trim() : "";
+            if (!normalizedUid || _snap.id !== normalizedUid) {
+                return null;
+            }
+            await roomRef.collection("chat").add({
+                sender: "system",
+                uid: "system",
+                text: (0, systemMessages_1.systemMessagePlayerJoined)(rawName),
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+        catch (err) {
+            console.warn("onPlayerCreated-system-message-failed", {
+                roomId: ctx.params.roomId,
+                playerId: ctx.params.playerId,
+                err,
+            });
+        }
     }
     catch { }
     return null;
