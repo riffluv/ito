@@ -1,9 +1,8 @@
 "use client";
 
-import { Box, HStack, Text } from "@chakra-ui/react";
-import { UI_TOKENS } from "@/theme/layout";
+import { Box, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { notify } from "@/components/ui/notify";
 import { transferHost } from "@/lib/firebase/rooms";
 
@@ -67,6 +66,16 @@ const getPlayerStatus = (
   return { icon: "🎲", color: "#3b82f6", status: "参加中" };
 };
 
+const CARD_BACKGROUND = "linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)";
+const CARD_HOVER_BACKGROUND = "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)";
+const CARD_BOX_SHADOW = "0 3px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)";
+const CARD_HOVER_BOX_SHADOW = "0 6px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2)";
+const CARD_FLASH_SHADOW = "0 8px 24px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.25)";
+const CLUE_FLASH_BRIGHTNESS = 1.25;
+const SUBMIT_FLASH_BRIGHTNESS = 1.45;
+const GAUGE_ROW_HEIGHT = "14px";
+const GAUGE_HEIGHT = "10px";
+
 export function DragonQuestParty({
   players,
   roomStatus,
@@ -81,6 +90,15 @@ export function DragonQuestParty({
   fallbackNames,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const registerCardRef = useCallback((playerId: string, node: HTMLDivElement | null) => {
+    const map = cardRefs.current;
+    if (node) {
+      map.set(playerId, node);
+    } else {
+      map.delete(playerId);
+    }
+  }, []);
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
@@ -128,6 +146,7 @@ export function DragonQuestParty({
   const actualCount = displayedPlayers.length;
   const previousCount = useRef(actualCount);
   const previousSubmitted = useRef<Set<string>>(new Set());
+  const previousClues = useRef<Map<string, string>>(new Map());
 
   // メンバー数変化時のアニメーション
   useEffect(() => {
@@ -155,34 +174,66 @@ export function DragonQuestParty({
     previousCount.current = actualCount;
   }, [actualCount]);
 
-  // 連想ワード決定時の攻撃エフェクト
+  // 段階1: 連想ワード入力決定時の軽い白フラッシュ
   useEffect(() => {
-    if (!containerRef.current) return;
+    displayedPlayers.forEach((player) => {
+      const currentClue = player.clue1?.trim() || "";
+      const previousClue = previousClues.current.get(player.id) || "";
 
-    // 新しく提出されたプレイヤーを検出
+      if (!previousClue && currentClue) {
+        const playerCard = cardRefs.current.get(player.id);
+
+        if (playerCard) {
+          gsap
+            .timeline({ defaults: { overwrite: "auto" } })
+            .to(playerCard, {
+              duration: 0.18,
+              filter: `brightness(${CLUE_FLASH_BRIGHTNESS})`,
+              boxShadow: CARD_FLASH_SHADOW,
+              ease: "power2.out",
+            })
+            .to(playerCard, {
+              duration: 0.28,
+              filter: "brightness(1)",
+              boxShadow: CARD_BOX_SHADOW,
+              ease: "power3.out",
+              onComplete: () => {
+                gsap.set(playerCard, { clearProps: "filter" });
+              },
+            });
+        }
+      }
+
+      previousClues.current.set(player.id, currentClue);
+    });
+  }, [displayedPlayers.map(p => `${p.id}:${p.clue1}`).join(',')]);
+
+  // 段階2: 上のスロット提出時の攻撃エフェクト
+  useEffect(() => {
     const newSubmitted = Array.from(submittedSet).filter(
       (id) => !previousSubmitted.current.has(id)
     );
 
     newSubmitted.forEach((playerId) => {
-      const playerCard = containerRef.current?.querySelector(
-        `[data-player-id="${playerId}"]`
-      );
+      const playerCard = cardRefs.current.get(playerId);
 
       if (playerCard) {
-        // 攻撃エフェクト: 白フラッシュ + スケールパンチ
-        gsap.timeline()
-          .to(playerCard, {
-            duration: 0.1,
-            background: "rgba(255,255,255,0.8)",
-            scale: 1.05,
-            ease: "power2.out",
-          })
+        gsap
+          .timeline({ defaults: { overwrite: "auto" } })
           .to(playerCard, {
             duration: 0.2,
-            background: "linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)",
-            scale: 1,
+            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS})`,
+            boxShadow: CARD_FLASH_SHADOW,
+            ease: "power3.out",
+          })
+          .to(playerCard, {
+            duration: 0.4,
+            filter: "brightness(1)",
+            boxShadow: CARD_BOX_SHADOW,
             ease: "power2.out",
+            onComplete: () => {
+              gsap.set(playerCard, { clearProps: "filter" });
+            },
           });
       }
     });
@@ -280,28 +331,35 @@ export function DragonQuestParty({
               return (
                 <Box
                   key={player.id}
+                  ref={(node) => registerCardRef(player.id, node)}
                   data-player-id={player.id}
-                  bg="linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)"
                   borderRadius="6px"
-                  px={4}
-                  py={3}
                   w="100%"
+                  h="72px"
                   position="relative"
-                  boxShadow="0 3px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)"
+                  overflow="hidden"
+                  boxShadow={CARD_BOX_SHADOW}
                   transition="all 0.2s ease"
+                  px="16px"
+                  py="12px"
+                  bg={CARD_BACKGROUND}
                   css={{
                     cursor: canTransfer ? "pointer" : "default",
                     backdropFilter: "blur(8px)",
                   }}
                   _hover={{
-                    bg: "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)",
+                    bg: CARD_HOVER_BACKGROUND,
                     transform: "translateY(-2px)",
-                    boxShadow: "0 6px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    boxShadow: CARD_HOVER_BOX_SHADOW,
                   }}
                   onDoubleClick={onTransfer}
                 >
                   {/* 本格RPG風レイアウト - 縦2段構成 */}
-                  <Box display="flex" alignItems="center" gap={3}>
+                  <Box
+                    display="flex"
+                    alignItems="flex-start"
+                    gap={3}
+                  >
                     {/* アバター */}
                     <Box
                       flexShrink={0}
@@ -310,6 +368,7 @@ export function DragonQuestParty({
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
+                      alignSelf="flex-start"
                     >
                       {fresh.avatar?.startsWith('/avatars/') ? (
                         <img
@@ -320,7 +379,7 @@ export function DragonQuestParty({
                           style={{
                             objectFit: 'cover',
                             borderRadius: '8px',
-                            filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.8))'
+                            filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.8))',
                           }}
                         />
                       ) : (
@@ -330,10 +389,22 @@ export function DragonQuestParty({
                       )}
                     </Box>
 
-                    {/* プレイヤー情報 - 縦2段レイアウト */}
-                    <Box flex={1} minW={0}>
-                      {/* 第1行: 名前 + ホストマーク */}
-                      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                    {/* プレイヤー情報 - 縦固定レイアウト */}
+                    <Box
+                      flex={1}
+                      minW={0}
+                      display="flex"
+                      flexDirection="column"
+                      gap="4px"
+                    >
+                      {/* 第1行: 名前 + ホストマーク（固定高さ） */}
+                      <Box
+                        h="18px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        overflow="hidden"
+                      >
                         <Text
                           fontSize="md"
                           fontWeight="bold"
@@ -341,25 +412,39 @@ export function DragonQuestParty({
                           textShadow="0 1px 3px rgba(0,0,0,0.8)"
                           fontFamily="system-ui"
                           truncate
+                          lineHeight="18px"
+                          whiteSpace="nowrap"
                           title={`${isHost ? "ホスト: " : ""}${fresh.name}${canTransfer ? "（ダブルクリックでホスト委譲）" : ""}`}
                         >
                           {fresh.name}
                         </Text>
                         {isHost && (
-                          <Text fontSize="sm" color="#ffd700" textShadow="0 1px 2px rgba(0,0,0,0.8)">
+                          <Text
+                            fontSize="sm"
+                            color="#ffd700"
+                            textShadow="0 1px 2px rgba(0,0,0,0.8)"
+                            lineHeight="18px"
+                          >
                             👑
                           </Text>
                         )}
                       </Box>
 
-                      {/* 第2行: 連想ワード表示 */}
-                      <Box mb={2}>
+                      {/* 第2行: 連想ワード表示（完全固定高さ） */}
+                      <Box
+                        h="14px"
+                        display="flex"
+                        alignItems="center"
+                        overflow="hidden"
+                      >
                         <Text
                           fontSize="xs"
                           color="rgba(255,255,255,0.6)"
                           fontFamily="system-ui"
                           fontStyle="italic"
                           truncate
+                          lineHeight="14px"
+                          whiteSpace="nowrap"
                           title={
                             isSubmitted && hasClue
                               ? `連想ワード: ${fresh.clue1.trim()}`
@@ -377,10 +462,12 @@ export function DragonQuestParty({
                       </Box>
 
                       {/* 第3行: 本格RPG風ロングゲージバー */}
-                      <Box display="flex" alignItems="center" gap={2}>
+                      <Box display="flex" alignItems="center" gap={2} h={GAUGE_ROW_HEIGHT} minH={GAUGE_ROW_HEIGHT}>
                         <Box
                           flex={1}
-                          height="10px"
+                          h={GAUGE_HEIGHT}
+                          minH={GAUGE_HEIGHT}
+                          maxH={GAUGE_HEIGHT}
                           bg="linear-gradient(180deg, rgba(8,12,20,0.95) 0%, rgba(20,30,45,0.95) 100%)"
                           borderRadius="3px"
                           overflow="hidden"
@@ -407,7 +494,7 @@ export function DragonQuestParty({
                             transition="all 0.5s ease"
                             position="relative"
                             css={{
-                              filter: "drop-shadow(0 0 4px currentColor)",
+                              boxShadow: "0 0 4px currentColor",
                             }}
                           />
                           {/* 上部ハイライト - より強く */}
@@ -441,13 +528,13 @@ export function DragonQuestParty({
                           fontWeight="bold"
                           minW="20px"
                           textAlign="center"
+                          lineHeight={GAUGE_HEIGHT}
                         >
                           {isSubmitted ? "✓" : hasClue ? "•" : ""}
                         </Text>
                       </Box>
                     </Box>
                   </Box>
-
 
                 </Box>
               );
