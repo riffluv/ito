@@ -7,8 +7,8 @@ export const AVATAR_LIST = [
   "/avatars/mahou.webp",
   "/avatars/siifu.webp",
   "/avatars/arrow.webp",
-  "/avatars/arrow2.webp",
-  "/avatars/guitar.webp"
+  "/avatars/guitar.webp",
+  "/avatars/ankoku.webp"
 ];
 
 // 参加順でアバターを取得（重複なし）
