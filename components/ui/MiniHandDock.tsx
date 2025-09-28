@@ -466,10 +466,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
     try {
       // 在席者だけでやり直すための keep を決定（presence のオンラインUIDを利用）
-      const keep =
-        Array.isArray(roundIds) && Array.isArray(onlineUids)
-          ? roundIds.filter((id) => onlineUids.includes(id))
-          : onlineUids || [];
+      // 観戦者も復帰対象に含める改善
+      const keepSet = new Set<string>();
+
+      // ラウンド参加者を追加
+      if (Array.isArray(roundIds)) {
+        roundIds.forEach((id) => {
+          if (typeof id === "string" && id.trim().length > 0) {
+            keepSet.add(id);
+          }
+        });
+      }
+
+      // オンラインユーザーを追加
+      if (Array.isArray(onlineUids)) {
+        onlineUids.forEach((id) => {
+          if (typeof id === "string" && id.trim().length > 0) {
+            keepSet.add(id);
+          }
+        });
+      }
+
+      const keep = Array.from(keepSet);
 
       // オプション: リセット前に不在者を一括追い出し（prune）
       // NEXT_PUBLIC_RESET_PRUNE=0 / false で無効化可能

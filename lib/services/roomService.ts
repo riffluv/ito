@@ -1,7 +1,6 @@
 import { db } from "@/lib/firebase/client";
-import { hashString } from "@/lib/game/random";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
+import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import {
   collection,
   deleteDoc,
@@ -14,6 +13,51 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+
+export type RoomServiceErrorCode = "ROOM_NOT_FOUND" | "ROOM_IN_PROGRESS";
+
+const ROOM_ERROR_MESSAGES: Record<RoomServiceErrorCode, string> = {
+  ROOM_NOT_FOUND: "部屋が見つかりませんでした。",
+  ROOM_IN_PROGRESS: "ゲーム進行中のため席に戻れません。",
+};
+
+export class RoomServiceError extends Error {
+  readonly code: RoomServiceErrorCode;
+
+  constructor(code: RoomServiceErrorCode) {
+    super(ROOM_ERROR_MESSAGES[code]);
+    this.name = "RoomServiceError";
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+const ROOM_ERROR_CODES: RoomServiceErrorCode[] = [
+  "ROOM_NOT_FOUND",
+  "ROOM_IN_PROGRESS",
+];
+
+const isRoomServiceErrorCode = (
+  value: unknown
+): value is RoomServiceErrorCode =>
+  typeof value === "string" && ROOM_ERROR_CODES.includes(value as any);
+
+export const getRoomServiceErrorCode = (
+  error: unknown
+): RoomServiceErrorCode | null => {
+  if (error instanceof RoomServiceError) {
+    return error.code;
+  }
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    isRoomServiceErrorCode((error as any).code)
+  ) {
+    return (error as { code: RoomServiceErrorCode }).code;
+  }
+  return null;
+};
 
 type EnsureMemberResult =
   | { joined: true }
@@ -38,11 +82,13 @@ export async function ensureMember({
     const roomRef = doc(db!, "rooms", roomId);
     const roomSnap = await getDoc(roomRef);
     if (!roomSnap.exists()) {
-      throw new Error("ROOM_NOT_FOUND");
+      throw new RoomServiceError("ROOM_NOT_FOUND");
     }
-    const room = roomSnap.data() as RoomDoc & Partial<{ hostId: string; status: string }>;
+    const room = roomSnap.data() as RoomDoc &
+      Partial<{ hostId: string; status: string }>;
     const status = room?.status;
-    const isHost = typeof room?.hostId === "string" && room.hostId.trim() === uid;
+    const isHost =
+      typeof room?.hostId === "string" && room.hostId.trim() === uid;
     if (!isHost && status && status !== "waiting") {
       return { joined: false, reason: "inProgress" } as const;
     }
@@ -53,7 +99,7 @@ export async function ensureMember({
 
     // 既に使用されているアバターを収集
     const usedAvatars = new Set<string>();
-    playersSnap.docs.forEach(doc => {
+    playersSnap.docs.forEach((doc) => {
       const player = doc.data();
       if (player.avatar) {
         usedAvatars.add(player.avatar);
@@ -61,7 +107,9 @@ export async function ensureMember({
     });
 
     // 使用されていないアバターをランダムに選択
-    const availableAvatars = AVATAR_LIST.filter(avatar => !usedAvatars.has(avatar));
+    const availableAvatars = AVATAR_LIST.filter(
+      (avatar) => !usedAvatars.has(avatar)
+    );
     let selectedAvatar = getAvatarByOrder(0); // フォールバック
 
     if (availableAvatars.length > 0) {
@@ -87,10 +135,10 @@ export async function ensureMember({
 }
 
 export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
-    const dupQ = query(
-      collection(db!, "rooms", roomId, "players"),
-      where("uid", "==", uid)
-    );
+  const dupQ = query(
+    collection(db!, "rooms", roomId, "players"),
+    where("uid", "==", uid)
+  );
   const dupSnap = await getDocs(dupQ);
   for (const d of dupSnap.docs) {
     if (d.id !== uid) {
@@ -131,7 +179,8 @@ export async function assignNumberIfNeeded(
   const roomRef = doc(db!, "rooms", roomId);
   const [roomData, meSnap] = await Promise.all([
     (async () => {
-      if (roomFromState && (roomFromState as any).deal) return roomFromState as any;
+      if (roomFromState && (roomFromState as any).deal)
+        return roomFromState as any;
       const s = await getDoc(roomRef);
       return s.exists() ? (s.data() as any) : null;
     })(),
@@ -189,7 +238,7 @@ export async function joinRoomFully({
 }): Promise<EnsureMemberResult> {
   const created = await ensureMember({ roomId, uid, displayName });
   if ((created as any)?.reason === "inProgress") {
-    throw new Error("ROOM_IN_PROGRESS");
+    throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
   if (created.joined) {
     await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
