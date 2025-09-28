@@ -478,10 +478,6 @@ export function DragonQuestParty({
               }
             };
             const trimmedClue = fresh.clue1?.trim() ?? "";
-            const clueDisplay =
-              trimmedClue.length > 0
-                ? `「${trimmedClue}」`
-                : "連想ワード未入力";
             const gaugeFillWidth = isSubmitted
               ? "100%"
               : hasClue
@@ -491,6 +487,19 @@ export function DragonQuestParty({
               typeof fresh.number === "number" ? fresh.number : null;
             const revealNumber =
               shouldRevealNumbers && playerNumberValue !== null;
+            const clueRevealed = isSubmitted || revealNumber;
+            const clueDisplay = clueRevealed
+              ? trimmedClue.length > 0
+                ? `「${trimmedClue}」`
+                : "連想ワード未入力"
+              : hasClue
+                ? "準備中..."
+                : "連想ワード未入力";
+            const clueTitle = clueRevealed
+              ? trimmedClue || "連想ワード未入力"
+              : hasClue
+                ? "準備中..."
+                : "連想ワード未入力";
             const passiveHoverStyle = {
               bg: CARD_HOVER_BACKGROUND,
               transform: "translateY(-1px)",
@@ -679,10 +688,12 @@ export function DragonQuestParty({
                   <Text
                     fontSize="2xs"
                     color="textMuted"
-                    fontStyle={trimmedClue ? "italic" : "normal"}
+                    fontStyle={
+                      clueRevealed && trimmedClue ? "italic" : "normal"
+                    }
                     lineHeight="1.1"
                     truncate
-                    title={trimmedClue || "連想ワード未入力"}
+                    title={clueTitle}
                   >
                     {clueDisplay}
                   </Text>
