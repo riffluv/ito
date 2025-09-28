@@ -301,7 +301,7 @@ export function CreateRoomModal({
 
   const canSubmit = name.trim().length > 0 && !submitting;
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onClose()}>
+    <Dialog.Root open={isOpen} closeOnInteractOutside={false} onOpenChange={(d) => !d.open && onClose()}>
       {/* Sophisticated backdrop */}
       <Dialog.Backdrop
         css={{
@@ -967,6 +967,7 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
+
 
 
 
