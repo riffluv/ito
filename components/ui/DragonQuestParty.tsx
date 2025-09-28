@@ -71,8 +71,8 @@ const CARD_HOVER_BACKGROUND = "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, r
 const CARD_BOX_SHADOW = "0 4px 16px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.15)";
 const CARD_HOVER_BOX_SHADOW = "0 8px 24px rgba(0,0,0,0.85), inset 0 2px 0 rgba(255,255,255,0.25)";
 const CARD_FLASH_SHADOW = "0 12px 32px rgba(0,0,0,0.9), inset 0 3px 0 rgba(255,255,255,0.3)";
-const CLUE_FLASH_BRIGHTNESS = 1.35;
-const SUBMIT_FLASH_BRIGHTNESS = 1.65;
+const CLUE_FLASH_BRIGHTNESS = 1.4;
+const SUBMIT_FLASH_BRIGHTNESS = 1.8;
 const GAUGE_ROW_HEIGHT = "14px";
 const GAUGE_HEIGHT = "10px";
 
@@ -221,18 +221,38 @@ export function DragonQuestParty({
         gsap
           .timeline({ defaults: { overwrite: "auto" } })
           .to(playerCard, {
-            duration: 0.15,
-            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS}) saturate(1.2)`,
+            duration: 0.05,
+            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS}) saturate(1.6) contrast(1.4)`,
             boxShadow: CARD_FLASH_SHADOW,
-            ease: "power4.out",
+            transform: "scale(1.03)",
+            ease: "none",
           })
           .to(playerCard, {
-            duration: 0.35,
-            filter: "brightness(1) saturate(1)",
+            duration: 0.03,
+            filter: `brightness(1.1) saturate(0.9)`,
+            transform: "scale(0.99)",
+            ease: "none",
+          })
+          .to(playerCard, {
+            duration: 0.06,
+            filter: `brightness(1.6) saturate(1.4) contrast(1.2)`,
+            transform: "scale(1.02)",
+            ease: "none",
+          })
+          .to(playerCard, {
+            duration: 0.04,
+            filter: `brightness(1) saturate(1)`,
+            transform: "scale(0.995)",
+            ease: "none",
+          })
+          .to(playerCard, {
+            duration: 0.15,
+            filter: "brightness(1) saturate(1) contrast(1)",
             boxShadow: CARD_BOX_SHADOW,
-            ease: "power3.out",
+            transform: "scale(1)",
+            ease: "power2.out",
             onComplete: () => {
-              gsap.set(playerCard, { clearProps: "filter" });
+              gsap.set(playerCard, { clearProps: "filter,transform" });
             },
           });
       }
