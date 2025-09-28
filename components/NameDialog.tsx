@@ -25,7 +25,7 @@ export function NameDialog({
   React.useEffect(() => setValue(defaultValue), [defaultValue]);
   
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(d) => !d.open && onCancel()}>
+    <Dialog.Root open={isOpen} closeOnInteractOutside={false} onOpenChange={(d) => !d.open && onCancel()}>
       <Dialog.Backdrop 
         css={{
           background: 'overlayStrong',
