@@ -927,6 +927,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       roundIds={baseIds}
       submittedPlayerIds={submittedPlayerIds}
       fallbackNames={fallbackNames}
+      displayRoomName={displayRoomName}
     />
   );
 

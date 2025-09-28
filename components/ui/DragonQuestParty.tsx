@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Text } from "@chakra-ui/react";
+import Tooltip from "@/components/ui/Tooltip";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { notify } from "@/components/ui/notify";
@@ -28,6 +29,7 @@ interface DragonQuestPartyProps {
   roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
   submittedPlayerIds?: string[]; // 「提出済み」扱いにするプレイヤーID
   fallbackNames?: Record<string, string>;
+  displayRoomName?: string; // ルーム名表示用
 }
 
 // ドラクエ風プレイヤー状態表示
@@ -88,6 +90,7 @@ export function DragonQuestParty({
   roundIds,
   submittedPlayerIds,
   fallbackNames,
+  displayRoomName,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -292,16 +295,20 @@ export function DragonQuestParty({
           <Text fontSize="lg" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))">
             ⚔️
           </Text>
-          <Text
-            fontSize="lg"
-            fontWeight="bold"
-            color="white"
-            textShadow="0 2px 4px rgba(0,0,0,0.8)"
-            fontFamily="system-ui"
-            letterSpacing="0.5px"
-          >
-            なかま ({actualCount})
-          </Text>
+          <Tooltip content={displayRoomName || ""} openDelay={300} disabled={!displayRoomName}>
+            <Text
+              fontSize="lg"
+              fontWeight="bold"
+              color="white"
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
+              fontFamily="system-ui"
+              letterSpacing="0.5px"
+              maxW="200px"
+              truncate
+            >
+              {(displayRoomName && displayRoomName.trim().length > 0) ? displayRoomName : "なかま"} ({actualCount})
+            </Text>
+          </Tooltip>
         </Box>
 
         {/* メンバーリスト */}
@@ -580,3 +587,8 @@ export function DragonQuestParty({
 }
 
 export default DragonQuestParty;
+
+
+
+
+
