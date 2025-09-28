@@ -29,34 +29,70 @@ export async function updateLastActive(roomId: string) {
 }
 
 export async function transferHost(roomId: string, newHostId: string) {
-  let token: string | null = null;
-  try {
-    token = (await auth?.currentUser?.getIdToken(true)) ?? null;
-  } catch (error) {
-    logWarn("rooms", "transfer-host-token-failed", error);
+  const currentUser = auth?.currentUser;
+  if (!currentUser) {
+    throw new Error("認証に失敗しました。ログインしなおしてください。");
+  }
+
+  const obtainToken = async (forceRefresh: boolean): Promise<string | null> => {
+    try {
+      const raw = await currentUser.getIdToken(forceRefresh);
+      return raw ?? null;
+    } catch (error) {
+      logWarn(
+        "rooms",
+        forceRefresh
+          ? "transfer-host-token-refresh-failed"
+          : "transfer-host-token-fetch-failed",
+        error
+      );
+      return null;
+    }
+  };
+
+  let token = await obtainToken(false);
+  if (!token) {
+    token = await obtainToken(true);
   }
 
   if (!token) {
-    throw new Error("認証に失敗しました。再ログインしてください。");
+    throw new Error("認証に失敗しました。ログインしなおしてください。");
   }
 
-  const response = await fetch(`/api/rooms/${roomId}/transfer-host`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ targetUid: newHostId, token }),
-    keepalive: true,
-  });
+  type TransferResult = { ok: true } | { ok: false; code: string };
 
-  if (!response.ok) {
+  const postTransfer = async (tok: string): Promise<TransferResult> => {
+    const response = await fetch(`/api/rooms/${roomId}/transfer-host`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUid: newHostId, token: tok }),
+      keepalive: true,
+    });
+
+    if (response.ok) {
+      return { ok: true };
+    }
+
     let detail: any = null;
     try {
       detail = await response.json();
     } catch {}
     const code = detail?.error ? String(detail.error) : "transfer_failed";
-    throw new Error(code);
+    return { ok: false, code };
+  };
+
+  let result = await postTransfer(token);
+  if (!result.ok && result.code.startsWith("auth/")) {
+    const refreshed = await obtainToken(true);
+    if (refreshed) {
+      result = await postTransfer(refreshed);
+    }
+  }
+
+  if (!result.ok) {
+    throw new Error(result.code);
   }
 }
-
 export async function leaveRoom(
   roomId: string,
   userId: string,
@@ -236,5 +272,4 @@ export async function resetRoomWithPrune(
     } catch {}
   }
 }
-
 
