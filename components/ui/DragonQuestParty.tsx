@@ -85,10 +85,10 @@ const CARD_FLASH_SHADOW =
   "0 12px 32px rgba(0,0,0,0.9), inset 0 3px 0 rgba(255,255,255,0.3)";
 const CLUE_FLASH_BRIGHTNESS = 1.4;
 const SUBMIT_FLASH_BRIGHTNESS = 1.8;
-const GAUGE_HEIGHT = "10px";
+const GAUGE_HEIGHT = "8px";
 const PANEL_WIDTH = { base: "232px", md: "268px" };
 const LIST_MAX_HEIGHT = "calc(100vh - 224px)";
-const CARD_HEIGHT = "60px";
+const CARD_HEIGHT = "54px";
 const CARD_AVATAR_SIZE = "42px";
 const CARD_RADIUS = "6px";
 const LIST_GAP = 2;
@@ -517,8 +517,8 @@ export function DragonQuestParty({
                 data-player-id={player.id}
                 display="grid"
                 gridTemplateColumns="auto 1fr auto"
-                columnGap="10px"
-                rowGap="4px"
+                columnGap="8px"
+                rowGap="2px"
                 alignItems="center"
                 borderRadius={CARD_RADIUS}
                 minH={CARD_HEIGHT}
@@ -527,7 +527,7 @@ export function DragonQuestParty({
                 bg={CARD_BACKGROUND}
                 boxShadow="card"
                 px="12px"
-                py="7px"
+                py="5px"
                 transition="transform 0.2s var(--chakra-easings-stateInOut, cubic-bezier(0.25, 0.46, 0.45, 0.94)), box-shadow 0.2s var(--chakra-easings-stateInOut, cubic-bezier(0.25, 0.46, 0.45, 0.94)), background 0.2s ease"
                 css={{
                   cursor: canTransfer ? "pointer" : "default",
@@ -619,7 +619,7 @@ export function DragonQuestParty({
                 <Box
                   display="flex"
                   alignItems="center"
-                  gap={2}
+                  gap={1}
                   minW={0}
                   lineHeight="1"
                 >
@@ -658,7 +658,7 @@ export function DragonQuestParty({
                   fontSize="2xs"
                   fontWeight="semibold"
                   px="6px"
-                  py="2px"
+                  py="1px"
                   borderRadius="sm"
                   textTransform="none"
                   letterSpacing="0.3px"
@@ -673,19 +673,20 @@ export function DragonQuestParty({
                   gridColumn="2 / span 2"
                   display="flex"
                   flexDirection="column"
-                  gap="4px"
+                  gap="2px"
                   minW={0}
                 >
                   <Text
-                    fontSize="xs"
+                    fontSize="2xs"
                     color="textMuted"
                     fontStyle={trimmedClue ? "italic" : "normal"}
+                    lineHeight="1.1"
                     truncate
                     title={trimmedClue || "連想ワード未入力"}
                   >
                     {clueDisplay}
                   </Text>
-                  <Box display="flex" alignItems="center" gap={2}>
+                  <Box display="flex" alignItems="center" gap={1}>
                     <Box
                       flex={1}
                       h={GAUGE_HEIGHT}
@@ -696,7 +697,7 @@ export function DragonQuestParty({
                       border="1px solid"
                       borderColor="rgba(255,255,255,0.18)"
                       position="relative"
-                      maxW="156px"
+                      maxW="148px"
                     >
                       <Box
                         height="100%"
@@ -739,14 +740,14 @@ export function DragonQuestParty({
                     </Box>
 
                     <Box
-                      minW="32px"
-                      h="20px"
+                      minW="30px"
+                      h="18px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
                     >
                       <Text
-                        fontSize="xs"
+                        fontSize="2xs"
                         color="highlight"
                         textShadow="0 2px 4px rgba(0,0,0,0.7)"
                         fontFamily="mono"
