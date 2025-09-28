@@ -340,8 +340,9 @@ export function DragonQuestParty({
                   overflow="hidden"
                   boxShadow={CARD_BOX_SHADOW}
                   transition="all 0.2s ease"
-                  px="16px"
-                  py="10px"
+                  px="12px"
+                  pt="6px"
+                  pb="10px"
                   bg={CARD_BACKGROUND}
                   css={{
                     cursor: canTransfer ? "pointer" : "default",
@@ -357,7 +358,7 @@ export function DragonQuestParty({
                   {/* 本格RPG風レイアウト - 縦2段構成 */}
                   <Box
                     display="flex"
-                    alignItems="flex-start"
+                    alignItems="center"
                     gap={2}
                   >
                     {/* アバター */}
@@ -405,9 +406,9 @@ export function DragonQuestParty({
                     <Box
                       flex={1}
                       minW={0}
-                      display="flex"
-                      flexDirection="column"
-                      gap="2px"
+                      display="grid"
+                      gridTemplateRows="18px 14px 14px"
+                      rowGap="5px"
                     >
                       {/* 第1行: 名前 + ホストマーク（固定高さ） */}
                       <Box
@@ -474,7 +475,7 @@ export function DragonQuestParty({
                       </Box>
 
                       {/* 第3行: 本格RPG風ロングゲージバー */}
-                      <Box display="flex" alignItems="center" gap={2} h={GAUGE_ROW_HEIGHT} minH={GAUGE_ROW_HEIGHT}>
+                      <Box display="flex" alignItems="flex-end" gap={2} h={GAUGE_ROW_HEIGHT} minH={GAUGE_ROW_HEIGHT}>
                         <Box
                           flex={1}
                           h={GAUGE_HEIGHT}
