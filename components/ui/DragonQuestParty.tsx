@@ -569,10 +569,12 @@ export function DragonQuestParty({
                   },
                 }}
                 _hover={hoverStyle}
-                _focusWithin={{
+                _focus={{ outline: "none" }}
+                _focusVisible={{
                   outline: "2px solid",
                   outlineColor: "focusRing",
                   outlineOffset: "2px",
+                  boxShadow: "0 0 0 3px rgba(124, 185, 255, 0.35)",
                 }}
                 tabIndex={canTransfer ? 0 : undefined}
                 role={canTransfer ? "button" : undefined}
