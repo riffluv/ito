@@ -491,14 +491,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <Box
       display="flex"
-      alignItems="center"
-      justifyContent={hasHostButtons ? "flex-start" : "center"}
+      flexWrap="wrap"
+      alignItems={{ base: "stretch", md: "center" }}
+      justifyContent={hasHostButtons ? { base: "center", md: "flex-start" } : "center"}
       w="100%"
       maxW="1280px"
       mx="auto"
       px={{ base: 4, md: 6 }}
       py={{ base: 3, md: 4 }}
-      gap={{ base: 3, md: 5 }}
+      columnGap={{ base: 3, md: 5 }}
+      rowGap={{ base: 3, md: 4 }}
       css={{
         background: "rgba(8,9,15,0.95)",
         border: "1px solid rgba(255,255,255,0.3)",
@@ -517,7 +519,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       }}
     >
       {/* Left cluster */}
-      <HStack gap={{ base: 3, md: 4 }} align="center">
+      <HStack
+        gap={{ base: 3, md: 4 }}
+        align="center"
+        flexWrap={{ base: "wrap", md: "nowrap" }}
+        rowGap={{ base: 2, md: 0 }}
+        flex={{ base: "1 1 100%", md: "0 0 auto" }}
+      >
         <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
         <Input
         placeholder="連想ワード"
@@ -543,8 +551,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           borderColor: UI_TOKENS.COLORS.whiteAlpha80,
           bg: UI_TOKENS.COLORS.panelBg,
         }}
-        w={{ base: "48vw", md: "420px" }}
-        maxW="560px"
+        w={{ base: "100%", md: "420px" }}
+        maxW={{ base: "100%", md: "560px" }}
+        flex={{ base: "1 1 100%", md: "0 0 auto" }}
+        minW={0}
       />
       <Tooltip content={decideTooltip} showArrow openDelay={300}>
         <AppButton
@@ -641,7 +651,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {inlineFeedback && (
         <Text
-          mt={2}
+          flexBasis={{ base: "100%", md: "auto" }}
+          mt={{ base: 1, md: 0 }}
+          textAlign={{ base: "center", md: "left" }}
           fontSize="0.75rem"
           color={inlineFeedback.tone === "success" ? UI_TOKENS.COLORS.whiteAlpha90 : UI_TOKENS.COLORS.whiteAlpha60}
           fontFamily="monospace"
@@ -651,10 +663,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       )}
 
       {/* Spacer */}
-      <Box flex="1" />
+      <Box flex={{ base: "0 0 100%", md: 1 }} display={{ base: "none", md: "block" }} />
 
       {/* Right cluster */}
-      <HStack gap={3} align="center">
+      <HStack
+        gap={3}
+        align="center"
+        flexWrap={{ base: "wrap", md: "nowrap" }}
+        rowGap={{ base: 2, md: 0 }}
+        flex={{ base: "1 1 100%", md: "0 0 auto" }}
+        justifyContent={{ base: "center", md: "flex-end" }}
+      >
         {isHost && roomStatus === "waiting" && (
           <Tooltip
             content={preparing ? "準備中です" : "ゲームを開始する"}
@@ -1090,8 +1109,3 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </Box>
   );
 }
-
-
-
-
-

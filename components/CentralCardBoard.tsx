@@ -885,7 +885,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     ) : (
                       <Tooltip
                         key={`drop-zone-${idx}`}
-                        content="??????/???????????"
+                        content="このスロットはまだ使用できません"
                         openDelay={300}
                         showArrow
                       >
