@@ -363,7 +363,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           notify({
             title: "ゲーム進行中です",
             description:
-              "今回は観戦として残ることができません。ホストがリセットすると再参加できます。",
+              "今回はプレイヤーとして残ることができません。ホストがリセットすると再参加できます。",
             type: "info",
           });
         } catch (error) {
