@@ -164,3 +164,75 @@ Stripe ダッシュボードで寄付プランや Webhook シークレットを�
 lib/stripe/webhookHandlers.ts に寄付完了時の処理（メール通知や特典付与など）を実装。
 Stripe CLI で npm run stripe:listen → npm run stripe:trigger-checkout を実行し、ローカルでの動作確認とテストを整備。
 ひとまず今の状態で待機して問題ありません。方向性が固まった際は上記ドキュメントを参照しながら次の作業を進めてもらえればスムーズです。
+
+
+
+音響MVPの設計とソロローンチ戦略をまとめます—まずは段階的な計画を整理しました。
+
+進め方メモ
+ メモ内容と現状タスク（8音MVP／12音拡張／25音仕上げ）の精査
+ 高品質SFXリソースの最新情報を収集し、ライセンス条件を確認
+ 必要音ごとにソース候補と制作ガイドラインを整理
+ ソロ運営でのリリース前段取りと次アクションを提案
+🎧 推薦SFXソースとライセンス
+用途	サイト & 特徴	ライセンス要点	コメント
+汎用UI〜アニメ調	Mixkit Free Game SFX	無料ダウンロード可、Mixkit License準拠（商用利用も可能な無料ライセンス。SFXはMixkit Licenseページに明記）¹²	軽やかなベル／木琴系が豊富。Quick positive video game notification interfaceなど通知系にマッチ。
+多彩な効果音（要クレジット）	ZapSplat Standard License	商用・非商用利用可／埋め込み前提、無料アカウントは「ZapSplat」クレジット必須。プレミアムなら無期限でクレジット不要³	UI button click menuなどクリック音のバリエーション確保に便利。
+ハイエンドパック（大容量）	Sonniss GameAudioGDC	ロイヤリティフリー、商用可、無制限利用、クレジット不要⁴	年次アーカイブ内に木琴／ベル／ジングル素材多数。0.5-0.8秒の勝利ジングル候補が見つかる。
+追加ライトウェイト素材	Pixabay Audio	商用利用可・クレジット不要（単体再配布は禁止）。改変も自由⁵	木琴・シロフォン素材やドロップ効果などMVP不足分の穴埋め用に最適。
+MVP 8音の候補設計（例）
+ファイル名	推奨ソース	備考
+public/sfx/ui/ui_click.wav	Mixkit “Game Button”系 or ZapSplat “Game UI button click”	60–80ms、木琴主体。EQで120Hz以下を軽くカット。
+card_flip	ZapSplat “Card flip flick”またはSonniss内 Foley	onsetを鋭く。開始位相1–2msずらした複製でバリエーション。
+drag_pickup	Mixkit “Retro video game bubble laser”（前半だけ使用）	ピッチを-2〜-4stで柔らかさ調整。
+drop_success	Mixkit “Winning a coin, video game”	tailを80msでフェードアウトし短尺化。
+drop_invalid	Pixabay “Soft error notification”	ハイパス180Hz＋ボリューム-3dBで控えめに。
+notify_success	Mixkit “Quick positive video game notification interface”	120ms程度に編集し、リバーブを浅く。
+notify_error	Mixkit “Player losing or failing”冒頭 or ZapSplat “UI negative blip”	低域を残し、下降グリッサンドで失敗感。
+result_victory.ogg	Sonniss GDC 2024 “Fantasy WINS_Stinger_01”系	0.7s前後に編集。OGG 160kbps、ピーク-3dBFS。
+余力＋4音の追加タスク
+result_failure: SonnissのFail_Stinger類を短縮（0.5s）
+notify_warning: Pixabay “Alert chime soft”に軽いトリルを加える
+round_start: Sonnissファンファーレ短縮、32ndノートで切る
+order_confirm: Mixkit “Game bonus reached”を80msでクロップ
+実装レイヤーの小技
+AudioBufferSourceNode.playbackRate = randomFloat(0.95, 1.05);
+gainNode.gain.value *= randomDb(-1, +1);
+ランタイム側で複製せず、AudioBufferをキャッシュしてランダム位相ズラしを適用
+Web Audio API使用時はChromeモバイル対応のためresume()呼び出し忘れずに
+制作フロー提案
+素材ピックアップ
+Mixkit/ZapSplatでUI系、Sonnissでジングル。足りなければPixabayで補完。
+編集テンプレート
+DAWテンポ120bpm、60〜150ms尺テンプレートを作り、HPF120Hz/LPF12kHzプリセットで統一。
+メタデータ管理
+public/sfx/{カテゴリ}配下に.wav/.ogg保存＋metadata.jsonでgain, baseRate, tagsを記録するとランダム化パラメータが一元化。
+QA
+スピーカー/イヤホン両方でノイズ確認。Loudnessは-16 LUFS付近を目安に、ピークは-3dBFS。
+ソロローンチの進め方（Phase 1中心）
+ブランド整備
+独自ドメイン＋OGP整備は最優先（メモ記載どおり）。ローンチLPを/launchで仮公開→SNSでテストシェア。
+規約セット
+最低限の利用規約/プライバシーポリシー/問合せ先をNotion or GitHub Pagesで整備し、サービスフッターへリンク。
+寄付（Ko-fi/Stripe）準備
+Stripeダッシュボードでテストモードの寄付プラン作成→webhookHandlers.tsにTodoコメントで処理設計書き出し。Webhook secretは.env.localに保持。
+ローンチ前にnpm run stripe:listen→npm run stripe:trigger-checkoutでサンドボックス検証。
+アクセス解析
+Firebase Analyticsをlayout.tsxで遅延挿入。カスタムイベントaudio_playなどを仕込んでSFX導入効果を測定。
+コミュニティ導線
+当初はDiscord招待リンク or Xでのハッシュタグを用意。アナウンス時に「お題募集フォーム」も設置。
+なぜソロ継続が◎？
+メモ記載の通り、現状コスト（月額$3.20）で完結し、機能完成度95%。追加開発は音響＋課金で独力完結可能。
+コミュニティ主導ゲームは開発者の即応性が価値になる。買収よりもソロ運営でブランドを育ててから交渉余地を持つ方が有利。
+Phase 1の90日でサウンド＋課金を固め、Phase 2でデータを提示できれば、将来の企業提携交渉も強気で臨める。
+品質ゲート
+コード変更なしのためビルド・Lint・テスト実行は未実施（影響範囲なし）。
+Requirements Coverage
+音響MVPセットとライセンス整理 ✅
+8音/12音ロードマップと制作ガイド ✅
+ソロローンチ前段取りと推奨アクション ✅
+次の一歩
+リスト化したSFX候補を実際に試聴し、差し替えリストを確定。
+sfxディレクトリを作成し、命名規則に沿って配置。
+Web Audio再生レイヤーへランダム化ロジックを導入し、操作レスポンスの回帰テストを実施。
+おしゃれなジングルが揃ったらぜひ教えてください—ドラクエ風の世界に「音のごちそう」を盛り付けるの、ワクワクしますね！
