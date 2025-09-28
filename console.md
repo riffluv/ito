@@ -1,27 +1,70 @@
-PS C:\Users\hr-hm\Desktop\codex> npm run build
+DragonQuestParty-layout-fix-instructions.md を見てなかまパネルの問題を解決してください。　どうしても決定ボタンを押すとアバターとゲージバーが下にきます。　おそらく仲間パネルじたい何かと競合してる気がします。
+CSS設計も疑ってください。
 
-> online-ito@0.1.0 build
-> next build
 
-  ▲ Next.js 14.2.5
-  - Environments: .env.local, .env
-  - Experiments (use with caution):
-    · instrumentationHook
+変更内容
 
-   Creating an optimized production build ...
- ✓ Compiled successfully
-   Skipping linting
-   Checking validity of types  .Failed to compile.
+gsap の提出時ハイライトで使っていた scale アニメーションを廃止し、背景色とシャドウだけで強調するよう変更してレイアウトの上下ズレを防ぎました。citecomponents/ui/DragonQuestParty.tsx:213
+元の質感を維持するため、ハイライトから復帰する際にカードのシャドウを既定値へ戻す処理を追加しました。citecomponents/ui/DragonQuestParty.tsx:219
+テスト
 
-./components/ui/DragonQuestParty.tsx:295:63
-Type error: Type '{ children: (false | "" | Element | undefined)[]; display: "flex"; alignItems: "center"; justify: string; mb: number; }' is not assignable to type 'IntrinsicAttributes & Omit<PatchHtmlProps<Omit<DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>, "ref">>, "filter" | ... 835 more ... | keyof PolymorphicProps> & Omit<...> & PolymorphicProps & { ...; }'.
-  Property 'justify' does not exist on type 'IntrinsicAttributes & Omit<PatchHtmlProps<Omit<DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>, "ref">>, "filter" | ... 835 more ... | keyof PolymorphicProps> & Omit<...> & PolymorphicProps & { ...; }'.
+未実行（UIでの表示確認をお願いします）
+次のステップ:
 
-  293 |                     <Box flex={1} minW={0}>
-  294 |                       {/* 第1行: 名前 + ホストマーク */}
-> 295 |                       <Box display="flex" alignItems="center" justify="space-between" mb={1}>
-      |                                                               ^
-  296 |                         <Text
-  297 |                           fontSize="md"
-  298 |                           fontWeight="bold"
-PS C:\Users\hr-hm\Desktop\codex> 
+ローカルで決定ボタン操作時の視覚挙動を確認し、ズレが解消されているかご確認ください。
+先ほどよりマシという程度ですね。
+これもしかして　連想ワードがPARTYのとこに入力されてるから高さが変わって　ゲージバーとアバターが下にずれてるんじゃないですか？
+---　←これのときから　日本語のフォントが入り込んだら高さが変わりませんか？
+
+
+ご指摘の通り、これまではコメント欄（連想ワード）に和文フォントが入ると行ボックスの高さが僅かに変わり、alignItems="center" によってカード全体のセンター位置が押し下げられていました。その対策として、パネル内部をグリッド化し、各行を固定高さで切り分けるように変更しました。これでフォント差異に左右されずに高さが揃います。citecomponents/ui/DragonQuestParty.tsx:326components/ui/DragonQuestParty.tsx:346components/ui/DragonQuestParty.tsx:385
+一列目・二列目のテキスト行には whiteSpace="nowrap" を追加し、日本語でも１行固定で収まるようにしてあります。これにより高さが拡張されず、ゲージやアバターの位置が動きません。citecomponents/ui/DragonQuestParty.tsx:405components/ui/DragonQuestParty.tsx:436
+外枠は alignItems="start" で上寄せに変更しつつ、アバターだけ alignSelf="center" で縦位置を維持するようバランスを取っています。これで文章量が増えてもカード全体の重心が下がらず、見た目が安定します。citecomponents/ui/DragonQuestParty.tsx:348components/ui/DragonQuestParty.tsx:360
+テスト: 未実行（ブラウザで決定操作時の見え方をご確認ください）。
+
+まだ、ゲージバーとアバターが移動しますね。
+実は直近でこの症状になりました。
+おそらくゲージバーをこのようなリッチな感じにしたらなりました
+
+後昔からゲージバーのバグがたまにあって
+
+全然関係ないところにゲージバーの残骸みたいなやつがでるときもありました。　何かヒントになりますか？
+
+gsapで決定時にパーティメンバーが光る演出も実装しました。
+
+画像を貼っておきます。　分かりづらいと思いますが
+左より右のメンバー表示のほうが　下にありますよね。
+
+
+外枠のレイアウトを display="flex" ＋ alignItems="flex-start" に切り替え、アバター側は alignSelf="flex-start" で固定しました。これでテキスト行の高さが変わってもアバターの基準位置は上端のまま維持され、ゲージ列との相対位置がブレなくなります。citecomponents/ui/DragonQuestParty.tsx:346components/ui/DragonQuestParty.tsx:359
+情報ブロックは縦方向の flex カラムに揃えて gap を明示し、各行を固定高さ（18px / 14px / 10px）＋ whiteSpace="nowrap" で管理しています。連想ワードに全角文字や括弧が入っても折り返しが発生せず、高さが変わらないためアニメーション後でもゲージが沈まずに済みます。citecomponents/ui/DragonQuestParty.tsx:382components/ui/DragonQuestParty.tsx:389components/ui/DragonQuestParty.tsx:421
+依然としてズレが残る場合は、決定アニメーション後に GSAP が残すインライン background / boxShadow を clearProps でクリーンアップするか、DevTools でアニメーション実行中の要素に追加されるスタイルを確認してみてください。過去に報告のあった「ゲージバー残骸」は、このインラインスタイルが別カードへ複製されるケースで発生することが多く、timeline().to(..., { ..., clearProps: \"background,boxShadow\" }) のような後処理で解消できる可能性があります。
+テストは未実行なので、決定ボタン操作を繰り返しながらブラウザで見え方をご確認ください。
+
+おおお！！！かなりよくなりました！アバターは一切動かなくなりました
+しかしゲージバーとそのそれを包むボックスのheightが若干高くなります
+なぜでしょう。
+他は固定という感じですね。　これはもう見た目はこのままで
+最初からあなたがこのパーティーの設計を作り直すことは可能ですか？
+デザインはこのままで。
+
+
+アバター位置が安定しているとのこと、安心しました。残っているゲージ行の微妙な伸びは、提出時アニメーションで card 全体に付与している boxShadow がアウトラインを広げ、Chakra の内部計算（line-height と gap の組み合わせ）で縦寸法が再計算されるのが原因と見ています。gsap.timeline() の後段に clearProps: "boxShadow" を入れてインラインスタイルを戻すか、ゲージ周辺ラッパーに minHeight="10px" maxHeight="10px"（塗り本体）と minHeight="14px"（枠ボックス）を設定して物理的に固定してしまうと、ハイライト後も高さが増えません。citecomponents/ui/DragonQuestParty.tsx:207components/ui/DragonQuestParty.tsx:454
+
+パーティーパネル全体をデザインそのままで「ゼロから」組み直すことも可能です。方針としては以下を想定しています。
+
+レイアウト再構成: Chakra の組み合わせを整理し、外枠→アバター→情報ブロック→ステータスの階層を CSS Grid ベースで定義。各行をコンポーネント化し、タイポグラフィや余白のトークンを file-scope にまとめます。
+アニメーション統合: GSAP のタイムラインを useTimeline 的なフックに分離し、ハイライト終了時は clearProps でクリーンアップ。履歴用の previousClues / previousSubmitted もこのフックに移し、見た目ロジックと分離します。
+テーマ化: 背景グラデーションやシャドウを theme/semantic に置き、将来的なライト/ダーク切り替えに備えたトークン設計へ寄せます。
+テスト/Storybook: 状態別（ホスト強調・提出済み・未入力など）を Story として追加し、視覚リグレッションや a11y チェックを回せるようにします。
+この方向で作り直してよければ、上記ステップに沿って着手しますのでご希望あればお知らせください。
+
+ありがとうございます。gsapと干渉しないようにするという理解でよろしいですかね？
+
+
+はい、その理解で合っています。GSAP のアニメーションは見た目を動的に演出する一方で、background や boxShadow などのスタイルをインラインで上書きします。これがレイアウト計算（高さや行間）に影響してしまうと、アニメ後にカード全体がわずかに膨らんだり位置がずれたりします。
+
+対策としては、演出が終わったフレームで clearProps を使って不要なプロパティをリセットする、あるいは CSS 側で高さを minHeight/maxHeight で固定しておき、アニメが書き換えても実寸が変わらないようにする、という方針です。こうして GSAP の残留スタイルが最終レイアウトに干渉しないようにしておけば、アニメーションの華やかさを維持しつつ配置の安定性も担保できます。
+
+ではそのように作り直してください！！見た目は気に入ってるんですよね　決定時に光る　出したときもちょっと多めに光る！
+これはgsapでしか表現できないですよね。cssでやってもらったら微妙でした
