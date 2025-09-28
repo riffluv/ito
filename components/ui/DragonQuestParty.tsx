@@ -68,11 +68,11 @@ const getPlayerStatus = (
 
 const CARD_BACKGROUND = "linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)";
 const CARD_HOVER_BACKGROUND = "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)";
-const CARD_BOX_SHADOW = "0 3px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)";
-const CARD_HOVER_BOX_SHADOW = "0 6px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2)";
-const CARD_FLASH_SHADOW = "0 8px 24px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.25)";
-const CLUE_FLASH_BRIGHTNESS = 1.25;
-const SUBMIT_FLASH_BRIGHTNESS = 1.45;
+const CARD_BOX_SHADOW = "0 4px 16px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.15)";
+const CARD_HOVER_BOX_SHADOW = "0 8px 24px rgba(0,0,0,0.85), inset 0 2px 0 rgba(255,255,255,0.25)";
+const CARD_FLASH_SHADOW = "0 12px 32px rgba(0,0,0,0.9), inset 0 3px 0 rgba(255,255,255,0.3)";
+const CLUE_FLASH_BRIGHTNESS = 1.35;
+const SUBMIT_FLASH_BRIGHTNESS = 1.65;
 const GAUGE_ROW_HEIGHT = "14px";
 const GAUGE_HEIGHT = "10px";
 
@@ -221,16 +221,16 @@ export function DragonQuestParty({
         gsap
           .timeline({ defaults: { overwrite: "auto" } })
           .to(playerCard, {
-            duration: 0.2,
-            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS})`,
+            duration: 0.15,
+            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS}) saturate(1.2)`,
             boxShadow: CARD_FLASH_SHADOW,
-            ease: "power3.out",
+            ease: "power4.out",
           })
           .to(playerCard, {
-            duration: 0.4,
-            filter: "brightness(1)",
+            duration: 0.35,
+            filter: "brightness(1) saturate(1)",
             boxShadow: CARD_BOX_SHADOW,
-            ease: "power2.out",
+            ease: "power3.out",
             onComplete: () => {
               gsap.set(playerCard, { clearProps: "filter" });
             },
@@ -331,7 +331,7 @@ export function DragonQuestParty({
               return (
                 <Box
                   key={player.id}
-                  ref={(node) => registerCardRef(player.id, node)}
+                  ref={(node: HTMLDivElement | null) => registerCardRef(player.id, node)}
                   data-player-id={player.id}
                   borderRadius="6px"
                   w="100%"
@@ -341,7 +341,7 @@ export function DragonQuestParty({
                   boxShadow={CARD_BOX_SHADOW}
                   transition="all 0.2s ease"
                   px="16px"
-                  py="12px"
+                  py="10px"
                   bg={CARD_BACKGROUND}
                   css={{
                     cursor: canTransfer ? "pointer" : "default",
@@ -358,32 +358,44 @@ export function DragonQuestParty({
                   <Box
                     display="flex"
                     alignItems="flex-start"
-                    gap={3}
+                    gap={1}
                   >
                     {/* アバター */}
                     <Box
                       flexShrink={0}
-                      width="42px"
-                      height="42px"
+                      width="46px"
+                      height="46px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      alignSelf="flex-start"
+                      alignSelf="center"
+                      position="relative"
                     >
                       {fresh.avatar?.startsWith('/avatars/') ? (
                         <img
                           src={fresh.avatar}
                           alt="avatar"
-                          width="42"
-                          height="42"
                           style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '42px',
+                            height: '42px',
                             objectFit: 'cover',
                             borderRadius: '8px',
-                            filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.8))',
+                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.9)) contrast(1.1)',
                           }}
                         />
                       ) : (
-                        <Text fontSize="2xl" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.9))">
+                        <Text
+                          fontSize="2xl"
+                          filter="drop-shadow(0 4px 8px rgba(0,0,0,0.95))"
+                          position="absolute"
+                          top="50%"
+                          left="50%"
+                          transform="translate(-50%, -50%)"
+                        >
                           {fresh.avatar || "⚔️"}
                         </Text>
                       )}
@@ -395,7 +407,7 @@ export function DragonQuestParty({
                       minW={0}
                       display="flex"
                       flexDirection="column"
-                      gap="4px"
+                      gap="2px"
                     >
                       {/* 第1行: 名前 + ホストマーク（固定高さ） */}
                       <Box
@@ -409,7 +421,7 @@ export function DragonQuestParty({
                           fontSize="md"
                           fontWeight="bold"
                           color={isHost ? "#ffd700" : "white"}
-                          textShadow="0 1px 3px rgba(0,0,0,0.8)"
+                          textShadow="0 2px 4px rgba(0,0,0,0.9)"
                           fontFamily="system-ui"
                           truncate
                           lineHeight="18px"
@@ -422,7 +434,7 @@ export function DragonQuestParty({
                           <Text
                             fontSize="sm"
                             color="#ffd700"
-                            textShadow="0 1px 2px rgba(0,0,0,0.8)"
+                            textShadow="0 2px 4px rgba(0,0,0,0.9)"
                             lineHeight="18px"
                           >
                             👑
