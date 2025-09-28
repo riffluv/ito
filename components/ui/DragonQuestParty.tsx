@@ -222,37 +222,37 @@ export function DragonQuestParty({
           .timeline({ defaults: { overwrite: "auto" } })
           .to(playerCard, {
             duration: 0.05,
-            filter: `brightness(${SUBMIT_FLASH_BRIGHTNESS}) saturate(1.6) contrast(1.4)`,
+            background: "rgba(255,255,255,0.95)",
             boxShadow: CARD_FLASH_SHADOW,
             transform: "scale(1.03)",
             ease: "none",
           })
           .to(playerCard, {
             duration: 0.03,
-            filter: `brightness(1.1) saturate(0.9)`,
+            background: "rgba(200,220,240,0.8)",
             transform: "scale(0.99)",
             ease: "none",
           })
           .to(playerCard, {
             duration: 0.06,
-            filter: `brightness(1.6) saturate(1.4) contrast(1.2)`,
+            background: "rgba(255,245,200,0.9)",
             transform: "scale(1.02)",
             ease: "none",
           })
           .to(playerCard, {
             duration: 0.04,
-            filter: `brightness(1) saturate(1)`,
+            background: "rgba(180,200,220,0.7)",
             transform: "scale(0.995)",
             ease: "none",
           })
           .to(playerCard, {
             duration: 0.15,
-            filter: "brightness(1) saturate(1) contrast(1)",
+            background: CARD_BACKGROUND,
             boxShadow: CARD_BOX_SHADOW,
             transform: "scale(1)",
             ease: "power2.out",
             onComplete: () => {
-              gsap.set(playerCard, { clearProps: "filter,transform" });
+              gsap.set(playerCard, { clearProps: "background,transform" });
             },
           });
       }
