@@ -33,7 +33,11 @@ import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { selectHostCandidate } from "@/lib/host/HostManager";
 import { verifyPassword } from "@/lib/security/password";
-import { assignNumberIfNeeded } from "@/lib/services/roomService";
+import {
+  assignNumberIfNeeded,
+  getRoomServiceErrorCode,
+  joinRoomFully,
+} from "@/lib/services/roomService";
 import { toMillis } from "@/lib/time";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
@@ -41,6 +45,7 @@ import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
 } from "@/lib/utils/roomPassword";
+import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
@@ -194,6 +199,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // 配布演出: 数字が来た瞬間に軽くポップ（DiamondNumberCard用）
   const [pop, setPop] = useState(false);
   const [redirectGuard, setRedirectGuard] = useState(true);
+  const [forcedExitReason, setForcedExitReason] = useState<
+    "game-in-progress" | null
+  >(null);
   const hostClaimAttemptRef = useRef(0);
   const hostClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pruneRef = useRef<{
@@ -202,6 +210,67 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     inflight: boolean;
   } | null>(null);
   const offlineSinceRef = useRef<Map<string, number>>(new Map());
+  const forcedExitScheduledRef = useRef(false);
+  const forcedExitRecoveryPendingRef = useRef(false);
+  const rejoinSessionKey = useMemo(
+    () => (uid ? `pendingRejoin:${roomId}` : null),
+    [uid, roomId]
+  );
+  const setPendingRejoinFlag = useCallback(() => {
+    if (!uid || !rejoinSessionKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(rejoinSessionKey, uid);
+    } catch (error) {
+      logDebug("room-page", "session-storage-write-failed", error);
+    }
+  }, [rejoinSessionKey, uid]);
+
+  const executeForcedExit = useCallback(async () => {
+    if (!uid) return;
+
+    forcedExitRecoveryPendingRef.current = false;
+    setPendingRejoinFlag();
+
+    if (!leavingRef.current) {
+      leavingRef.current = true;
+    }
+
+    try {
+      await detachNow();
+    } catch (error) {
+      logError("room-page", "forced-exit-detach-now", error);
+    }
+
+    try {
+      await forceDetachAll(roomId, uid);
+    } catch (error) {
+      logError("room-page", "forced-exit-force-detach-all", error);
+    }
+
+    try {
+      await leaveRoomAction(roomId, uid, displayName);
+    } catch (error) {
+      logError("room-page", "forced-exit-leave-room-action", error);
+    }
+
+    try {
+      router.replace("/");
+    } catch (error) {
+      logError("room-page", "forced-exit-router-replace", error);
+    } finally {
+      forcedExitScheduledRef.current = false;
+      setForcedExitReason(null);
+    }
+  }, [
+    uid,
+    leavingRef,
+    detachNow,
+    roomId,
+    displayName,
+    router,
+    setPendingRejoinFlag,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => setRedirectGuard(false), 1200);
@@ -263,17 +332,18 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // ただし、ホストは常にアクセス可能
   const isMember = !!(uid && players.some((p) => p.id === uid));
   const canAccess = isMember || isHost;
-  const rejoinSessionKey = useMemo(
-    () => (uid ? `pendingRejoin:${roomId}` : null),
-    [uid, roomId]
-  );
+  const isSpectatorMode =
+    (!canAccess && room?.status !== "waiting") ||
+    forcedExitReason === "game-in-progress";
   useEffect(() => {
     if (!room || !uid) return;
+    if (leavingRef.current) return;
     if (lastKnownHostId === uid) return;
     // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
     // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
     if (loading || authLoading) return;
     if (redirectGuard) return;
+
     let pendingRejoin = false;
     if (rejoinSessionKey && typeof window !== "undefined") {
       try {
@@ -283,48 +353,27 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     }
     if (pendingRejoin) return;
-    // ゲーム中(waiting以外)では外部へ退室させる
-    if (!canAccess && room.status !== "waiting") {
-      (async () => {
-        if (!leavingRef.current) {
-          leavingRef.current = true;
-        }
 
+    if (!canAccess && room.status !== "waiting") {
+      if (!forcedExitScheduledRef.current) {
+        forcedExitScheduledRef.current = true;
+        forcedExitRecoveryPendingRef.current = true;
+        setPendingRejoinFlag();
         try {
           notify({
-            title: "参加できません",
+            title: "ゲーム進行中です",
             description:
-              "ゲーム進行中です。ホストがリセットすると参加可能になります。",
+              "今回は観戦として残ることができません。ホストがリセットすると再参加できます。",
             type: "info",
           });
         } catch (error) {
-          logDebug("room-page", "notify-force-exit-failed", error);
+          logDebug("room-page", "notify-force-exit-init-failed", error);
         }
-
-        try {
-          await detachNow();
-        } catch (error) {
-          logError("room-page", "detach-now", error);
-        }
-
-        try {
-          await forceDetachAll(roomId, uid);
-        } catch (error) {
-          logError("room-page", "force-detach-all", error);
-        }
-
-        try {
-          await leaveRoomAction(roomId, uid, displayName);
-        } catch (error) {
-          logError("room-page", "leave-room-action", error);
-        }
-
-        router.replace("/");
-      })();
+        setForcedExitReason("game-in-progress");
+      }
     }
   }, [
     room?.status,
-    room,
     uid,
     canAccess,
     loading,
@@ -332,11 +381,101 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     rejoinSessionKey,
     redirectGuard,
     lastKnownHostId,
-    detachNow,
-    displayName,
-    roomId,
-    router,
     leavingRef,
+    setPendingRejoinFlag,
+  ]);
+
+  const handleForcedExitLeaveNow = useCallback(() => {
+    void executeForcedExit();
+  }, [executeForcedExit]);
+
+  const handleRetryJoin = useCallback(async () => {
+    if (!uid) return;
+
+    setPendingRejoinFlag();
+
+    try {
+      await joinRoomFully({
+        roomId,
+        uid,
+        displayName: displayName ?? null,
+        notifyChat: false,
+      });
+
+      forcedExitScheduledRef.current = false;
+      forcedExitRecoveryPendingRef.current = false;
+      setForcedExitReason(null);
+
+      try {
+        notify({
+          title: "席を取り直しました",
+          description: "みんなのカードが配り直されるのを待ちましょう",
+          type: "success",
+        });
+      } catch (notifyError) {
+        logDebug("room-page", "notify-force-exit-retry-success", notifyError);
+      }
+    } catch (error) {
+      forcedExitRecoveryPendingRef.current = true;
+      const code = getRoomServiceErrorCode(error);
+      const isInProgress = code === "ROOM_IN_PROGRESS";
+
+      if (!isInProgress) {
+        logError("room-page", "forced-exit-retry-join", error);
+      }
+
+      const fallbackDescription =
+        code && error instanceof Error && error.message
+          ? error.message
+          : "少し待ってからもう一度お試しください";
+
+      try {
+        notify({
+          title: isInProgress
+            ? "まだゲームが進行中です"
+            : "参加リトライに失敗しました",
+          description: isInProgress
+            ? "ホストがリセットしたらもう一度お試しください"
+            : fallbackDescription,
+          type: isInProgress ? "info" : "error",
+        });
+      } catch (notifyError) {
+        logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
+      }
+    }
+  }, [uid, roomId, displayName, setPendingRejoinFlag]);
+
+  useEffect(() => {
+    if (!forcedExitReason) return;
+    if (!canAccess && room?.status !== "waiting") return;
+
+    forcedExitScheduledRef.current = false;
+    setForcedExitReason(null);
+
+    if (room?.status === "waiting" && forcedExitRecoveryPendingRef.current) {
+      forcedExitRecoveryPendingRef.current = false;
+      setPendingRejoinFlag();
+      if (uid) {
+        void joinRoomFully({
+          roomId,
+          uid,
+          displayName: displayName ?? null,
+          notifyChat: false,
+        }).catch((error) => {
+          logDebug("room-page", "forced-exit-auto-rejoin", error);
+        });
+      }
+    } else {
+      forcedExitRecoveryPendingRef.current = false;
+    }
+  }, [
+    forcedExitReason,
+    canAccess,
+    room?.status,
+    setPendingRejoinFlag,
+    uid,
+    roomId,
+    displayName,
   ]);
 
   useEffect(() => {
@@ -883,6 +1022,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 表示用部屋名（[自分の手札]を除去）
   const displayRoomName = stripMinimalTag(room?.name) || "";
+  const waitingToRejoin = room?.status === "waiting";
 
   if (!room) {
     return (
@@ -1003,30 +1143,107 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </Box>
   );
 
-  const handAreaNode = me ? (
-    <MiniHandDock
-      roomId={roomId}
-      me={me}
-      resolveMode={room.options?.resolveMode}
-      proposal={room.order?.proposal || []}
-      eligibleIds={eligibleIds}
-      cluesReady={allCluesReady}
-      isHost={isHost}
-      roomStatus={room.status}
-      defaultTopicType={room.options?.defaultTopicType || "通常版"}
-      topicBox={room.topicBox ?? null}
-      allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
-      // ヘッダー機能統合
-      roomName={displayRoomName}
-      currentTopic={room.topic || null}
-      onlineUids={onlineUids}
-      roundIds={players.map((p) => p.id)}
-      onOpenSettings={() => setIsSettingsOpen(true)}
-      onLeaveRoom={leaveRoom}
-      pop={pop}
-    />
-  ) : (
-    <Box h="1px" />
+  const spectatorNotice = isSpectatorMode ? (
+    <Box
+      position="relative"
+      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+      borderRadius={0}
+      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+      bg={UI_TOKENS.GRADIENTS.dqPanel}
+      color={UI_TOKENS.COLORS.textBase}
+      px={{ base: 5, md: 6 }}
+      py={{ base: 5, md: 5 }}
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      maxW={{ base: "100%", md: "520px" }}
+      mx="auto"
+      _before={{
+        content: '""',
+        position: "absolute",
+        inset: "8px",
+        border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+        pointerEvents: "none",
+      }}
+    >
+      <Box display="flex" flexDir="column" gap={3} alignItems="center">
+        <Text
+          fontSize={{ base: "sm", md: "md" }}
+          fontWeight={800}
+          letterSpacing="0.2em"
+          textTransform="uppercase"
+          fontFamily="monospace"
+        >
+          ▼ 観戦中 ▼
+        </Text>
+        <Box textAlign="center">
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            fontWeight={700}
+            textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+          >
+            席は埋まっています
+          </Text>
+          <Text
+            fontSize={{ base: "sm", md: "md" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={1}
+          >
+            ホストがリセットすれば再び席に戻れるよ！それまではゲームの様子を観戦しよう！
+          </Text>
+        </Box>
+      </Box>
+      <Box
+        display="flex"
+        flexDir={{ base: "column", md: "row" }}
+        gap={3}
+        justifyContent="center"
+      >
+        <AppButton
+          palette="gray"
+          visual="outline"
+          size="md"
+          onClick={handleRetryJoin}
+          disabled={!waitingToRejoin}
+        >
+          席に戻れるか試す
+        </AppButton>
+        <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
+          ロビーへ戻る
+        </AppButton>
+      </Box>
+    </Box>
+  ) : null;
+
+  const handAreaNode = (
+    <Box display="flex" flexDirection="column" gap={spectatorNotice ? 4 : 0}>
+      {spectatorNotice}
+      {me ? (
+        <MiniHandDock
+          roomId={roomId}
+          me={me}
+          resolveMode={room.options?.resolveMode}
+          proposal={room.order?.proposal || []}
+          eligibleIds={eligibleIds}
+          cluesReady={allCluesReady}
+          isHost={isHost}
+          roomStatus={room.status}
+          defaultTopicType={room.options?.defaultTopicType || "通常版"}
+          topicBox={room.topicBox ?? null}
+          allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
+          roomName={displayRoomName}
+          currentTopic={room.topic || null}
+          onlineUids={onlineUids}
+          roundIds={players.map((p) => p.id)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onLeaveRoom={leaveRoom}
+          pop={pop}
+        />
+      ) : spectatorNotice ? null : (
+        <Box h="1px" />
+      )}
+    </Box>
   );
 
   return (

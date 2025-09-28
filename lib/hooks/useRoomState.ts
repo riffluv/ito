@@ -166,6 +166,7 @@ export function useRoomState(
     };
 
     if (room.status === "waiting") {
+      // 観戦状態からの復帰も含めて強制的に再参加
       joinRoomFully({
         roomId,
         uid,
