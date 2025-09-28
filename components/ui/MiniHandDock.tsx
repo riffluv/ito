@@ -500,10 +500,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       py={{ base: 3, md: 4 }}
       gap={{ base: 3, md: 5 }}
       css={{
-        background: "rgba(8,9,15,0.9)",
-        border: "3px solid rgba(255,255,255,0.9)",
+        background: "rgba(8,9,15,0.95)",
+        border: "1px solid rgba(255,255,255,0.3)",
         borderRadius: 0,
-        boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.4)",
+        boxShadow: "0 6px 24px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.5)",
       }}
       position="relative"
       _before={{
