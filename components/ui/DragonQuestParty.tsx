@@ -358,13 +358,13 @@ export function DragonQuestParty({
                   <Box
                     display="flex"
                     alignItems="flex-start"
-                    gap={1}
+                    gap={2}
                   >
                     {/* アバター */}
                     <Box
                       flexShrink={0}
-                      width="46px"
-                      height="46px"
+                      width="44px"
+                      height="44px"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
@@ -380,8 +380,8 @@ export function DragonQuestParty({
                             top: '50%',
                             left: '50%',
                             transform: 'translate(-50%, -50%)',
-                            width: '42px',
-                            height: '42px',
+                            width: '44px',
+                            height: '44px',
                             objectFit: 'cover',
                             borderRadius: '8px',
                             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.9)) contrast(1.1)',
