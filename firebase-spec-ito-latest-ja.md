@@ -1,4 +1,5 @@
 # Firebase 仕様書（itoゲーム / Next.js + Chakra UI）
+
 最終更新: 2025-08-21 (Asia/Tokyo)
 
 > **狙い**: `codex cli` が**検索なし**でも実装を進められるよう、**Firestore + Realtime Database（RTDB）**の設計・スキーマ・ルール・実装パターンを一枚にまとめた“最新版”仕様書。  
@@ -7,6 +8,7 @@
 ---
 
 ## 1. コンポーネント分担（推奨アーキテクチャ）
+
 - **Firestore**（永続・参照/検索が多い）
   - ルーム情報、プレイヤー情報、ゲーム状態（waiting/playing/reveal/done など）、チャットログ。
   - 履歴や集計に使う情報、クエリ/ソート/ページングするデータ。
@@ -22,6 +24,7 @@
 ## 2. データモデル（推奨スキーマ）
 
 ### 2.1 Firestore（Native モード）
+
 ```
 rooms/{{roomId}}: {{
   name: string,
@@ -59,17 +62,63 @@ rooms/{{roomId}}/chat/{{messageId}}: {{
   text: string,
   createdAt: Timestamp    // serverTimestamp()
 }}
+
+stripe_checkout_sessions/{{sessionId}}: {{
+  amountTotal?: number,
+  currency?: string,
+  customerEmail?: string,
+  clientReferenceId?: string,
+  paymentStatus: string,
+  status: string,
+  fulfillment?: {{
+    status: "pending" | "fulfilled" | "failed",
+    completedAt?: Timestamp,
+    beneficiary?: {{ type: string, key: string }},
+  }},
+  lineItems: Array<{{
+    priceId?: string,
+    productId?: string,
+    quantity: number,
+    amountTotal?: number,
+  }}>,
+  lastEvent: {{ id: string, type: string, createdAt?: Timestamp }},
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+}}
+
+stripe_checkout_entitlements/{{sessionId}}: {{
+  sessionId: string,
+  status: "granted" | "revoked",
+  grantedAt?: Timestamp,
+  revokedAt?: Timestamp,
+  beneficiary: {{ type: string, key: string }},
+  tierId?: string,
+  amountTotal?: number,
+  currency?: string,
+  quantity: number,
+  metadata: map<string,string>,
+}}
+
+stripe_events/{{eventId}}: {{
+  type: string,
+  processedAt: Timestamp,
+  createdAt: Timestamp,
+  expiresAt: Timestamp, // TTL ポリシー対象（デフォルト30日）
+}}
 ```
 
 #### インデックス例（コンソール or `firestore.indexes.json`）
+
 - `rooms` : `visibility ASC, lastActiveAt DESC`（ロビー表示）
 - `rooms/{roomId}/players` : `ready ASC, name ASC`（任意）
 
 #### TTL（自動削除）
+
 - 古い `chat` や終了後の `rooms` を **TTL ポリシー**で自動削除可能（例: `ttlAt` フィールドを追加してポリシー対象に）。citeturn6search0turn6search15
 - TTL フィールドは **Timestamp**。該当フィールドのインデックスは **除外**推奨（高トラフィック時の負荷回避）。citeturn6search5
 
 ### 2.2 Realtime Database
+
 ```
 /presence/{{roomId}}/{{uid}}: {{
   state: "online" | "offline",
@@ -84,7 +133,9 @@ rooms/{{roomId}}/chat/{{messageId}}: {{
 ---
 
 ## 3. クライアント初期化（Web Modular SDK）
+
 `src/lib/firebase.ts`
+
 ```ts
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
@@ -104,6 +155,7 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const rtdb = getDatabase(app)
 ```
+
 > Modular API の標準初期化。Next.js では **Client Component 内**で利用する。citeturn6search3turn6search18
 
 ---
@@ -111,6 +163,7 @@ export const rtdb = getDatabase(app)
 ## 4. 典型操作パターン
 
 ### 4.1 Firestore 読み取り/購読
+
 ```ts
 import {{ doc, collection, onSnapshot, query, where, orderBy, limit }} from "firebase/firestore"
 // ルーム購読
@@ -126,6 +179,7 @@ return () => {{ unsubRoom(); unsubList(); }}
 ```
 
 ### 4.2 Firestore 書き込み（serverTimestamp, transaction）
+
 ```ts
 import {{ serverTimestamp, addDoc, collection, updateDoc, runTransaction, doc }} from "firebase/firestore"
 
@@ -147,6 +201,7 @@ await runTransaction(db, async (tx) => {{
 ```
 
 ### 4.3 RTDB プレゼンス
+
 ```ts
 import {{ ref, onValue, onDisconnect, serverTimestamp, update }} from "firebase/database"
 
@@ -167,7 +222,9 @@ onValue(ref(rtdb, ".info/connected"), (snap) => {{
 ## 5. セキュリティルール（ドラフト）
 
 ### 5.1 Firestore ルール（v2）
+
 `firestore.rules`
+
 ```rules
 rules_version = '2';
 service cloud.firestore {
@@ -213,10 +270,13 @@ service cloud.firestore {
   }
 }
 ```
+
 > ルール v2 とその構造の基本は公式ガイドを参照（`rules_version = '2'`、`match`、`diff().changedKeys()` など）。citeturn6search2turn6search12
 
 ### 5.2 Realtime Database ルール
+
 `database.rules.json`
+
 ```json
 {
   "rules": {
@@ -241,11 +301,13 @@ service cloud.firestore {
   }
 }
 ```
+
 > RTDB ルールは**上位パスの許可が下位を包括**する点に注意（細分化は親の権限設計から）。citeturn6search4turn6search9
 
 ---
 
 ## 6. インデックス / パフォーマンス
+
 - **rooms ロビー一覧**: `visibility == "public"` かつ `orderBy(lastActiveAt desc)`。
 - **players**: 並べ替え/検索の要件に応じて単一/複合インデックスを追加。
 - **TTL**: `ttlAt` を使って古い `chat`/`rooms` の削除を自動化（コスト最適化）。citeturn6search0turn6search15
@@ -254,6 +316,7 @@ service cloud.firestore {
 ---
 
 ## 7. Next.js 実装上の注意
+
 - **クライアント側で購読**（`onSnapshot`/`onValue`）。`useEffect` で **unsubscribe / off** を必ず実装。
 - **初期化の一意性**（`getApps().length ? getApp() : initializeApp()`）。citeturn6search3
 - **SSR と水和**: ルーム/チャットは CSR 後に購読開始。SEO は必要最小限に。
@@ -264,14 +327,16 @@ service cloud.firestore {
 ## 8. よくあるユースケース実装
 
 ### 8.1 退出でプレイヤーを確実に消す
+
 ```ts
 // UI 側: leave API 実行 → Firestore players/{{uid}} を削除 or ready=false
-await deleteDoc(doc(db, "rooms", roomId, "players", uid))
+await deleteDoc(doc(db, "rooms", roomId, "players", uid));
 // RTDB 側: presence を onDisconnect で自動削除
-onDisconnect(ref(rtdb, `/presence/${{roomId}}/${{uid}}`)).remove()
+onDisconnect(ref(rtdb, `/presence/${{ roomId }}/${{ uid }}`)).remove();
 ```
 
 ### 8.2 ロビー表示（50件）
+
 ```ts
 const q = query(collection(db, "rooms"),
   where("visibility", "==", "public"),
@@ -281,12 +346,14 @@ onSnapshot(q, ...)
 ```
 
 ### 8.3 権限ガード（開始ボタン）
+
 - **UI**: `hostId === uid` かつ `players >= 2` で有効化。
 - **サーバ**: Firestore トランザクション内で再検証（`status == 'waiting' && count(players) >= 2`）。
 
 ---
 
 ## 9. デプロイ運用
+
 - ルールは **リポジトリ管理**し、CI で `firebase deploy --only firestore:rules,database`。
 - バックアップ: ルールのバックアップファイルを残す（`firebase.rules.backup.txt` など）。
 - インデックス/TTL は **コンソール or gcloud** で管理（`firestore.indexes.json` を併用）。
@@ -294,6 +361,7 @@ onSnapshot(q, ...)
 ---
 
 ## 10. 付録：最小 .env.local
+
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
@@ -304,11 +372,12 @@ NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://<your-db>.firebaseio.com
 ---
 
 ## 参考（一次情報）
-- Modular SDK セットアップ: https://firebase.google.com/docs/web/setup  
-- Firestore ルール入門 / v2: https://firebase.google.com/docs/firestore/security/get-started  
-- ルール言語リファレンス（v2）: https://firebase.google.com/docs/rules/rules-language  
-- Firestore TTL: https://firebase.google.com/docs/firestore/ttl  
-- Firestore ベストプラクティス（TTLのインデックス除外など）: https://cloud.google.com/firestore/native/docs/best-practices  
-- RTDB ルール: https://firebase.google.com/docs/database/security  
-- RTDB オフライン/`onDisconnect`/接続検知: https://firebase.google.com/docs/database/web/offline-capabilities  
+
+- Modular SDK セットアップ: https://firebase.google.com/docs/web/setup
+- Firestore ルール入門 / v2: https://firebase.google.com/docs/firestore/security/get-started
+- ルール言語リファレンス（v2）: https://firebase.google.com/docs/rules/rules-language
+- Firestore TTL: https://firebase.google.com/docs/firestore/ttl
+- Firestore ベストプラクティス（TTLのインデックス除外など）: https://cloud.google.com/firestore/native/docs/best-practices
+- RTDB ルール: https://firebase.google.com/docs/database/security
+- RTDB オフライン/`onDisconnect`/接続検知: https://firebase.google.com/docs/database/web/offline-capabilities
 - Firestore でプレゼンス（RTDB 連携の考え方）: https://firebase.google.com/docs/firestore/solutions/presence

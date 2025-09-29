@@ -1,0 +1,42 @@
+了解、ここからはオペレーション系の作業なので、実際のコンソール操作や CLI 実行はユーザーさん自身で進めてもらう必要があります。手順はすべて日本語で整理したので、この通り進めれば OK です。
+
+1. Firestore で stripe_events の TTL を有効化する
+Firebase コンソールで対象プロジェクトを開く
+左メニューの Firestore Database → TTL ポリシー（または「TTL」タブ）へ
+「ポリシーを作成」→ コレクション（またはコレクショングループ）に stripe_events を指定
+フィールド名に expiresAt を入力し、保存
+既にポリシーがある場合は編集で expiresAt を設定
+反映に最大 24 時間程度かかることがあります
+2. Firestore インデックスをデプロイする
+作業端末で firebase-tools が入っていることを確認（npm install -g firebase-tools）
+firebase login でプロジェクトにログイン（まだなら）
+リポジトリのルートで以下を実行
+
+firebase deploy --only firestore:indexes
+CLI の出力で成功を確認。失敗時はエラーメッセージを参考に再実行
+3. 本番で Stripe シークレットを安全に設定する
+.env.local や Vercel の Environment Variables に以下を入力（本番は Analytics > Project Settings > Environment Variables）
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+必要なら STRIPE_PRICE_* などもテスト／本番で使い分け
+シークレット値はローカルに plaintext で残さない。共有には 1Password や Secret Manager を利用
+本番ビルド時に設定漏れがないか 2 度チェックすること
+4. Stripe CLI で Webhook を実地テストする
+Stripe CLI をインストール（公式: https://stripe.com/docs/stripe-cli ）
+ローカルで Next.js を起動（npm run dev）
+Stripe CLI でリッスン＆転送
+
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+表示された whsec_... を .env.local の STRIPE_WEBHOOK_SECRET に設定する
+別タブでテストイベントを送信
+
+stripe trigger checkout.session.completed
+Next.js 側のログで checkout session fulfilled などが出力され、Firestore に stripe_checkout_sessions／stripe_checkout_entitlements が作成されるか確認
+async_payment_failed など他イベントも必要に応じてトリガーして挙動をチェック
+5. フロントエンドのメタデータ送信を再確認（必要ならテスト追加）
+route.ts の payload に、ユーザー ID などのメタデータが確実に含まれているか確認
+例: metadata: { userId: currentUser.uid, tierId: selectedTierId, ... }
+認証無しでも clientReferenceId やメールで紐付けられるように fallback を入れる
+テストを追加する場合
+Zod スキーマで metadata.userId が入っているケース/いないケースを網羅
+Jest で API Route のユニットテストを用意し、fetch モックで Stripe 呼び出しを検証

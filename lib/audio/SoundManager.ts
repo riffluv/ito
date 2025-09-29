@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { AUDIO_EXTENSIONS, SOUND_INDEX, SFX_BASE_PATH } from "./registry";
+import { logDebug } from "@/lib/utils/log";
+import { AUDIO_EXTENSIONS, SFX_BASE_PATH, SOUND_INDEX } from "./registry";
 import {
   DEFAULT_SOUND_SETTINGS,
   PlaybackOverrides,
@@ -27,7 +28,8 @@ type PendingLoad = Promise<{ buffer: AudioBuffer; url: string } | null>;
 
 const isBrowser = () => typeof window !== "undefined";
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
 const pickInRange = (range: Range | undefined, fallback: number) => {
   if (!range) return fallback;
@@ -55,14 +57,19 @@ const pickVariant = (variants: SoundVariant[]) => {
 
 const dbToLinear = (db: number) => 10 ** (db / 20);
 
-const ensureLeadingSlash = (path: string) => (path.startsWith("/") ? path : `/${path}`);
+const ensureLeadingSlash = (path: string) =>
+  path.startsWith("/") ? path : `/${path}`;
 
 const buildCandidateUrls = (src: string) => {
-  const base = src.startsWith("/") ? src : `${SFX_BASE_PATH.replace(/\/$/, "")}/${src.replace(/^\//, "")}`;
+  const base = src.startsWith("/")
+    ? src
+    : `${SFX_BASE_PATH.replace(/\/$/, "")}/${src.replace(/^\//, "")}`;
   if (/\.[a-zA-Z0-9]+$/.test(base)) {
     return [ensureLeadingSlash(base)];
   }
-  return AUDIO_EXTENSIONS.map((extension) => ensureLeadingSlash(`${base}.${extension}`));
+  return AUDIO_EXTENSIONS.map((extension) =>
+    ensureLeadingSlash(`${base}.${extension}`)
+  );
 };
 
 const cloneSettings = (settings: SoundSettings): SoundSettings => ({
@@ -87,7 +94,9 @@ export class SoundManager {
   constructor() {
     if (!isBrowser()) return;
     this.settings = this.restoreSettings();
-    document.addEventListener("visibilitychange", this.handleVisibilityChange, { passive: true });
+    document.addEventListener("visibilitychange", this.handleVisibilityChange, {
+      passive: true,
+    });
     this.attachUnlockHandlers();
   }
 
@@ -135,14 +144,22 @@ export class SoundManager {
     source.playbackRate.value = playbackRate;
     source.loop = definition.loop ?? false;
 
-    const { gainNode, disconnect } = this.createOutputChain(definition, variant, overrides);
+    const { gainNode, disconnect } = this.createOutputChain(
+      definition,
+      variant,
+      overrides
+    );
     source.connect(gainNode);
 
-    const delayRange: Range | undefined = definition.maxDelaySeconds !== undefined
-      ? { min: definition.minDelaySeconds ?? 0, max: definition.maxDelaySeconds }
-      : definition.minDelaySeconds !== undefined
-        ? { min: definition.minDelaySeconds, max: definition.minDelaySeconds }
-        : undefined;
+    const delayRange: Range | undefined =
+      definition.maxDelaySeconds !== undefined
+        ? {
+            min: definition.minDelaySeconds ?? 0,
+            max: definition.maxDelaySeconds,
+          }
+        : definition.minDelaySeconds !== undefined
+          ? { min: definition.minDelaySeconds, max: definition.minDelaySeconds }
+          : undefined;
 
     const delaySeconds = pickInRange(delayRange, 0);
     const offsetSeconds = clamp(
@@ -159,7 +176,7 @@ export class SoundManager {
         source.removeEventListener("ended", onEnded);
         source.disconnect();
       } catch (error) {
-        console.debug("[SoundManager] source cleanup failed", error);
+        logDebug("sound", "source cleanup failed", error);
       }
       disconnect();
     };
@@ -187,7 +204,9 @@ export class SoundManager {
     }
 
     if (!buffer.duration) {
-      console.warn(`[SoundManager] ${soundId} loaded from ${url} has zero duration.`);
+      console.warn(
+        `[SoundManager] ${soundId} loaded from ${url} has zero duration.`
+      );
     }
   }
 
@@ -222,7 +241,10 @@ export class SoundManager {
 
   destroy() {
     if (!isBrowser()) return;
-    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    document.removeEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange
+    );
     this.detachUnlockHandlers();
     this.stopHandles.forEach((stop) => stop());
     this.stopHandles.clear();
@@ -312,7 +334,7 @@ export class SoundManager {
       try {
         gainNode.disconnect();
       } catch (error) {
-        console.debug("[SoundManager] gain disconnect failed", error);
+        logDebug("sound", "gain disconnect failed", error);
       }
     };
 
@@ -333,7 +355,9 @@ export class SoundManager {
       this.missingAssets.add(url);
       this.emit({ type: "missing", soundId: definition.id, attemptedUrl: url });
     }
-    console.warn(`[SoundManager] No audio file resolved for ${definition.id}. Tried: ${candidates.join(", ")}`);
+    console.warn(
+      `[SoundManager] No audio file resolved for ${definition.id}. Tried: ${candidates.join(", ")}`
+    );
     return null;
   }
 
@@ -361,7 +385,10 @@ export class SoundManager {
         this.buffers.set(url, decoded);
         return { buffer: decoded, url };
       } catch (error) {
-        console.warn(`[_SoundManager] Failed to load sound asset at ${url}`, error);
+        console.warn(
+          `[_SoundManager] Failed to load sound asset at ${url}`,
+          error
+        );
         return null;
       } finally {
         this.pendingLoads.delete(url);
@@ -393,7 +420,10 @@ export class SoundManager {
       });
       return merged;
     } catch (error) {
-      console.warn("[SoundManager] Failed to parse stored sound settings", error);
+      console.warn(
+        "[SoundManager] Failed to parse stored sound settings",
+        error
+      );
       return cloneSettings(DEFAULT_SOUND_SETTINGS);
     }
   }
@@ -401,7 +431,10 @@ export class SoundManager {
   private persistAndNotify() {
     if (isBrowser()) {
       try {
-        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.settings));
+        window.localStorage.setItem(
+          SETTINGS_STORAGE_KEY,
+          JSON.stringify(this.settings)
+        );
       } catch (error) {
         console.warn("[SoundManager] Failed to persist sound settings", error);
       }
@@ -424,18 +457,28 @@ export class SoundManager {
 
   private handleVisibilityChange = () => {
     if (!this.context) return;
-    if (document.visibilityState === "hidden" && this.context.state === "running") {
+    if (
+      document.visibilityState === "hidden" &&
+      this.context.state === "running"
+    ) {
       this.context.suspend().catch(() => undefined);
-    } else if (document.visibilityState === "visible" && this.context.state === "suspended") {
+    } else if (
+      document.visibilityState === "visible" &&
+      this.context.state === "suspended"
+    ) {
       this.context.resume().catch(() => undefined);
     }
   };
 
   private attachUnlockHandlers() {
     if (this.unlockAttached || !isBrowser()) return;
-    window.addEventListener("pointerdown", this.unlockHandler, { passive: true });
+    window.addEventListener("pointerdown", this.unlockHandler, {
+      passive: true,
+    });
     window.addEventListener("keydown", this.unlockHandler, { passive: true });
-    window.addEventListener("touchstart", this.unlockHandler, { passive: true });
+    window.addEventListener("touchstart", this.unlockHandler, {
+      passive: true,
+    });
     this.unlockAttached = true;
   }
 
