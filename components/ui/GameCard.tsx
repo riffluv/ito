@@ -133,6 +133,9 @@ export function GameCard({
     const { effectiveMode, reducedMotion } = useAnimationSettings();
     // ?????????????????????auto?????????DOM???????
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
+    useEffect(() => {
+      stableModeRef.current = effectiveMode;
+    }, [effectiveMode]);
     const stableMode = stableModeRef.current;
 
     useLayoutEffect(() => {
@@ -472,5 +475,4 @@ export function GameCard({
 }
 
 export default memo(GameCard);
-
 
