@@ -25,6 +25,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export const ROOMS_PER_PAGE = 6;
 const PREFETCH_PAGE_PAD = 1;
 const MAX_RECENT_FETCH = 48;
+const DEFAULT_RECENT_WINDOW_MS = 3 * 60 * 1000;
+const ENV_RECENT_WINDOW_MS = Number(
+  (process.env.NEXT_PUBLIC_LOBBY_RECENT_WINDOW_MS || "").toString()
+);
+const RECENT_WINDOW_MS =
+  Number.isFinite(ENV_RECENT_WINDOW_MS) && ENV_RECENT_WINDOW_MS > 0
+    ? ENV_RECENT_WINDOW_MS
+    : DEFAULT_RECENT_WINDOW_MS;
 
 type LobbyRoom = RoomDoc & { id: string };
 
@@ -85,9 +93,9 @@ export function useOptimizedRooms({
         Math.ceil(MAX_RECENT_FETCH / ROOMS_PER_PAGE)
       );
 
-      const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
+      const recentCutoff = new Date(Date.now() - RECENT_WINDOW_MS);
       const recentConstraints = [
-        where("lastActiveAt", ">=", Timestamp.fromDate(threeMinAgo)),
+        where("lastActiveAt", ">=", Timestamp.fromDate(recentCutoff)),
         orderBy("lastActiveAt", "desc"),
       ] as const;
 
@@ -133,7 +141,7 @@ export function useOptimizedRooms({
       const inprogLimit =
         Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0
           ? INPROGRESS_LIMIT
-          : 3;
+          : 6;
       // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
       // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
       const qInprog = query(
