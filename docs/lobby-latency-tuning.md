@@ -12,6 +12,8 @@
 | `NEXT_PUBLIC_LOBBY_RECENT_WINDOW_MS`                                 | `180_000` ms (3分)                                                                                                                 | 「最近のルーム」判定に使う `lastActiveAt` ウィンドウ | ウィンドウを広げると古いルームも並ぶが、初回 fetch が重くなる                       |
 | `NEXT_PUBLIC_LOBBY_VERIFY_SINGLE` / `NEXT_PUBLIC_LOBBY_VERIFY_MULTI` | `false`                                                                                                                            | presence ゴーストを Firestore で検証するオプション   | 単一 UID / 複数 UID の両方を個別にオンオフ可能                                      |
 | `NEXT_PUBLIC_DISABLE_FS_FALLBACK`                                    | `false`                                                                                                                            | Firestore fallback を完全停止                        | 緊急時のみ使用。fallback のポーリング自体が止まる                                   |
+| `NEXT_PUBLIC_LOBBY_DEBUG_FALLBACK`                                   | `false`                                                                                                                            | Firestore fallback のバックオフ/キャッシュログを出力 | `verify-*` 系ログ・クールダウン計算をブラウザコンソールに出力                       |
+| `NEXT_PUBLIC_LOBBY_FETCH_DEBUG`                                      | `false`                                                                                                                            | ルーム一覧フェッチのクールダウンログを出力           | `fetch-*` 系ログと `performance.measure("rooms_fetch")` の結果を確認できる          |
 
 ## ゼロフリーズの挙動
 
@@ -20,12 +22,28 @@
 
 ## 監視とメトリクス
 
-`useLobbyCounts` から以下のログイベントが発火します。Axiom / Datadog などで集計し、freeze が過剰に続いていないか監視してください。
+`useLobbyCounts` と `useOptimizedRooms` から以下のログ・メトリクスが発火します。Axiom / Datadog などで集計し、freeze が過剰に続いていないか監視してください。
 
 - `zero-freeze-start`：`{ roomId, source: "presence" | "fallback", freezeMs }`
 - `zero-freeze-end`：`{ roomId, source, durationMs }`
+- `fallback_single` / `fallback_multi`：`performance.measure` から収集された fallback 時間。`window.__ITO_METRICS__` にバッファされます。
+- `rooms_fetch`：ルーム一覧フェッチの総時間。`window.__ITO_METRICS__` に収集され、クールダウン調整の根拠となります。
 
 `source` で presence / fallback を判別できます。duration が freezeMs を大きく超える場合は解除ロジックが機能していない可能性があります。
+
+## バックオフとキャッシュのポイント
+
+- Firestore fallback の検証はルーム単位にヘルススコアと指数バックオフを持ち、連続で失敗したルームは最大 5 分間クールダウンします。`verify-*-skip` ログでスキップ理由（`cooldown` / `backoff` / `health-zero`）を確認できます。
+- fallback の検証結果は 30 秒間共有キャッシュされ、presence が 0 → N に振れても最新値がキャッシュ内なら Firestore を叩かずに凍結解除されます。
+- ルーム一覧フェッチは前回所要時間の 10 倍を目安にクールダウンを再計算し、検索モードでは半分のクールダウンに短縮します。`NEXT_PUBLIC_LOBBY_FETCH_DEBUG` を有効化するとブラウザコンソールで計算結果を確認できます。
+
+## `window.__ITO_METRICS__` の利用
+
+ブラウザコンソールで `window.__ITO_METRICS__` を参照すると直近 200 件のメトリクスイベント（`fallback_single` / `fallback_multi` / `rooms_fetch` など）を確認できます。QA 時は以下をチェックしてください。
+
+1. `fallback_*` の duration が連続して 1,000ms を超えるルームが無いか。
+2. `rooms_fetch` の duration と `extra.cooldownMs` の比率が 1:10 前後になっているか（過小だとフェッチ頻度が不足、過大だと負荷が高い）。
+3. キャッシュヒット時には `verify-*-cache` ログが出ているか。
 
 ## 推奨運用の目安
 
