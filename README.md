@@ -11,6 +11,7 @@
 ## ✨ 主な特徴
 
 ### ゲーム機能
+
 - 🎮 リアルタイムマルチプレイヤー対戦（2-6人）
 - 🎯 協力型数字推理ゲーム
 - 💬 リアルタイムチャット
@@ -18,12 +19,14 @@
 - 🎭 匿名ログイン（Firebase Authentication）
 
 ### デザイン特徴
+
 - 🐉 **ドラゴンクエスト風UI**（レトロなゲーム感）
 - 🌙 **ダークモード専用**（目に優しいゲーミング環境）
 - ✨ カード風3Dエフェクト
 - 🎨 リッチなグラデーションと影効果
 
 ### 技術スタック
+
 - **Frontend**: Next.js 15 + React 18 + TypeScript
 - **UI**: Chakra UI v3 (Headless + Panda CSS)
 - **Backend**: Firebase Firestore + Authentication
@@ -34,6 +37,7 @@
 ## 🎯 ゲーム仕様
 
 ### ゲーム流れ
+
 1. **ロビー**: ルーム作成・参加
 2. **ヒント入力**: 割り当てられた数字にヒントを設定
 3. **順序決定**: ドラッグ＆ドロップで順番を決める
@@ -41,17 +45,20 @@
 5. **成功/失敗判定**: 協力して正解を目指す
 
 ### 解決モード
+
 - **sequential**: 順出し（ドロップしたら即反映）
 - **sort-submit**: 並べ提出（並べ終えてから一括提出）
 
 ## 🚀 セットアップ
 
 ### 1. 依存関係インストール
+
 ```bash
 npm install
 ```
 
 ### 2. 環境変数設定
+
 `.env.local.example` を `.env.local` にコピーし、Firebase設定を記入：
 
 ```env
@@ -64,6 +71,17 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebasedatabase.app
 # 推奨: RTDB プレゼンスが利用できる環境ではフォールバックを無効化
 NEXT_PUBLIC_DISABLE_FS_FALLBACK=1
+# Stripe Checkout（サーバー側鍵は厳重に管理してください）
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_API_VERSION=2025-08-27.basil
+STRIPE_DONATION_CURRENCY=jpy
+STRIPE_PRICE_DONATION_SUPPORTER=price_xxx
+STRIPE_PRICE_DONATION_CHAMPION=price_xxx
+STRIPE_PRICE_DONATION_LEGEND=price_xxx
+STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:3000/support/thanks
+STRIPE_CHECKOUT_CANCEL_URL=http://localhost:3000/support/cancelled
+STRIPE_EVENT_TTL_DAYS=30
 SENTRY_DSN=your_sentry_dsn
 NEXT_PUBLIC_SENTRY_DSN=your_public_dsn
 SENTRY_ENVIRONMENT=production
@@ -75,12 +93,14 @@ NEXT_PUBLIC_ENABLE_PWA=1
 ```
 
 ### 3. Firebase設定
+
 1. [Firebase Console](https://console.firebase.google.com/) でプロジェクト作成
 2. **Authentication** で匿名認証を有効化
 3. **Firestore** データベースを有効化
 4. 開発用に `localhost` を承認済みドメインに追加
 
 ### 4. 開発サーバー起動
+
 ```bash
 npm run dev
 ```
@@ -90,6 +110,7 @@ http://localhost:3000 でアクセス可能
 ## 🏗️ アーキテクチャ
 
 ### ディレクトリ構造
+
 ```
 ├── app/                 # Next.js App Router
 ├── components/          # Reactコンポーネント
@@ -103,22 +124,35 @@ http://localhost:3000 でアクセス可能
 ```
 
 ### Firestore構造
+
 ```
 rooms/{roomId}
 ├── 基本情報: name, hostId, status, options
 ├── players/{playerId}: name, number, clue1, clue2, ready
 └── chat/{messageId}: sender, text, createdAt
+
+stripe_checkout_sessions/{sessionId}
+├── 決済サマリ: amountTotal, currency, customerEmail, paymentStatus
+├── fulfillment: status, completedAt, beneficiary
+└── lineItems[]: priceId, quantity, amountTotal
+
+stripe_checkout_entitlements/{sessionId}
+├── beneficiary: { type, key }
+├── status: granted | revoked
+└── grantedAt / revokedAt: serverTimestamp()
 ```
 
 ## 🎨 開発情報
 
 ### コード品質
+
 - TypeScript完全対応
 - ESLint設定済み
 - Firebase Security Rules適用済み
 - レスポンシブデザイン対応
 
 ### パフォーマンス最適化
+
 - リアルタイムデータ同期（Firestore）
 - 効率的なレンダリング（React 18 Concurrent Features）
 - モバイル最適化済み

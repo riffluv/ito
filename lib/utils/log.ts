@@ -6,6 +6,9 @@ const LEVEL_RANK = new Map<Level, number>(
 );
 const DEFAULT_LEVEL: Level = "info";
 
+const isProdBuild = process.env.NODE_ENV === "production";
+const isVercel = process.env.VERCEL === "1";
+
 function parseLevel(raw: string | undefined): Level | null {
   if (!raw) return null;
   const normalized = raw.toLowerCase();
@@ -15,16 +18,20 @@ function parseLevel(raw: string | undefined): Level | null {
 }
 
 // 環境変数を評価（サーバー側: LOG_LEVEL 優先 / クライアント側: NEXT_PUBLIC_LOG_LEVEL）
-const SERVER_LEVEL =
+const SERVER_ENV_LEVEL =
   parseLevel(process.env.LOG_LEVEL) ??
   parseLevel(process.env.NEXT_PUBLIC_LOG_LEVEL);
-const CLIENT_LEVEL = parseLevel(process.env.NEXT_PUBLIC_LOG_LEVEL);
+const CLIENT_ENV_LEVEL = parseLevel(process.env.NEXT_PUBLIC_LOG_LEVEL);
+
+const DEFAULT_SERVER_LEVEL: Level =
+  isVercel || isProdBuild ? "warn" : DEFAULT_LEVEL;
+const DEFAULT_CLIENT_LEVEL: Level = isProdBuild ? "warn" : DEFAULT_LEVEL;
 
 function currentLevel(): Level {
   if (typeof window === "undefined") {
-    return SERVER_LEVEL ?? DEFAULT_LEVEL;
+    return SERVER_ENV_LEVEL ?? DEFAULT_SERVER_LEVEL;
   }
-  return CLIENT_LEVEL ?? DEFAULT_LEVEL;
+  return CLIENT_ENV_LEVEL ?? DEFAULT_CLIENT_LEVEL;
 }
 
 function enabled(level: Level) {

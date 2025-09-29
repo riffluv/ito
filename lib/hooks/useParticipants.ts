@@ -1,16 +1,20 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { playerConverter } from "@/lib/firebase/converters";
 import {
   attachPresence,
   presenceSupported,
   subscribePresence,
 } from "@/lib/firebase/presence";
-import { playerConverter } from "@/lib/firebase/converters";
+import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
 import type { PlayerDoc } from "@/lib/types";
+import {
+  handleFirebaseQuotaError,
+  isFirebaseQuotaExceeded,
+} from "@/lib/utils/errorHandling";
+import { logDebug } from "@/lib/utils/log";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { isActive, ACTIVE_WINDOW_MS } from "@/lib/time";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
@@ -51,7 +55,9 @@ export function useParticipants(
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
 
     const stop = () => {
-      try { unsubRef.current?.(); } catch {}
+      try {
+        unsubRef.current?.();
+      } catch {}
       unsubRef.current = null;
     };
 
@@ -61,7 +67,9 @@ export function useParticipants(
       if (now < backoffUntilRef.current) return;
       unsubRef.current = onSnapshot(
         query(
-          collection(db!, "rooms", roomId, "players").withConverter(playerConverter),
+          collection(db!, "rooms", roomId, "players").withConverter(
+            playerConverter
+          ),
           orderBy("uid", "asc")
         ),
         (snap) => {
@@ -78,13 +86,20 @@ export function useParticipants(
             backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分停止
             stop();
             if (backoffTimer) {
-              try { clearTimeout(backoffTimer); } catch {}
+              try {
+                clearTimeout(backoffTimer);
+              } catch {}
               backoffTimer = null;
             }
             const resume = () => {
-              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+              if (
+                typeof document !== "undefined" &&
+                document.visibilityState !== "visible"
+              )
+                return;
               const remain = backoffUntilRef.current - Date.now();
-              if (remain > 0) backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
+              if (remain > 0)
+                backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
               else maybeStart();
             };
             resume();
@@ -98,7 +113,9 @@ export function useParticipants(
 
     return () => {
       if (backoffTimer) {
-        try { clearTimeout(backoffTimer); } catch {}
+        try {
+          clearTimeout(backoffTimer);
+        } catch {}
       }
       stop();
     };
@@ -112,7 +129,7 @@ export function useParticipants(
     }
     if (!roomId) return;
     const off = subscribePresence(roomId, (uids) => {
-      console.info("[presence] update", { roomId, uids });
+      logDebug("presence", "update", { roomId, uids });
       setOnlineUids(uids);
     });
     return () => off();
@@ -158,14 +175,13 @@ export function useParticipants(
         return players;
       }
       const now = Date.now();
-      return players.filter((p) => isActive((p as any).lastSeen, now, ACTIVE_WINDOW_MS));
+      return players.filter((p) =>
+        isActive((p as any).lastSeen, now, ACTIVE_WINDOW_MS)
+      );
     }
     const set = new Set(onlineUids);
     return players.filter((p) => set.has(p.id));
-  }, [
-    players,
-    Array.isArray(onlineUids) ? onlineUids.join(",") : "_",
-  ]);
+  }, [players, Array.isArray(onlineUids) ? onlineUids.join(",") : "_"]);
 
   const detach = async () => {
     try {

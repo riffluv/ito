@@ -27,6 +27,7 @@ import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
+import { logInfo } from "@/lib/utils/log";
 import { UI_TOKENS } from "@/theme/layout";
 import {
   Box,
@@ -512,7 +513,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             const user = auth.currentUser;
             const token = await user?.getIdToken();
             if (token && user?.uid) {
-              console.log("[ゲームリセット] 削除リクエスト", {
+              logInfo("rooms", "reset prune request", {
                 roomId,
                 targetsCount: targets.length,
               });
