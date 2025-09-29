@@ -1,7 +1,7 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import { leaveRoomServer } from '@/lib/server/roomActions';
-import { systemMessagePlayerJoined } from '@/lib/server/systemMessages';
+import { leaveRoomServer } from "@/lib/server/roomActions";
+import { systemMessagePlayerJoined } from "@/lib/server/systemMessages";
+import * as admin from "firebase-admin";
+import * as functions from "firebase-functions";
 
 // Initialize admin if not already
 if (!admin.apps.length) {
@@ -14,7 +14,7 @@ const rtdb = admin.database ? admin.database() : (null as any);
 // 緊急停止フラグ（READ 増加時の一時対策）
 // 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
 // 以降の定期ジョブ/トリガは早期 return して何もしない
-const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === '1';
+const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 
 const PRESENCE_STALE_THRESHOLD_MS = Number(
   process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
@@ -28,13 +28,31 @@ const MAX_CLOCK_SKEW_MS = Number(
     30_000
 );
 
+function toMillis(value: any): number {
+  if (!value) return 0;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value?.toMillis === "function") {
+    try {
+      return value.toMillis();
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
 /**
  * Recalculates playersCount and lastActive for a room.
  * Called after onCreate/onDelete/onUpdate of players docs.
  */
 async function recalcRoomCounts(roomId: string) {
   if (!roomId) return;
-  const playersColl = db.collection('rooms').doc(roomId).collection('players');
+  const playersColl = db.collection("rooms").doc(roomId).collection("players");
 
   // Count active players and compute lastSeen timestamp
   const snapshot = await playersColl.get();
@@ -49,7 +67,7 @@ async function recalcRoomCounts(roomId: string) {
     }
   });
 
-  const roomRef = db.collection('rooms').doc(roomId);
+  const roomRef = db.collection("rooms").doc(roomId);
   const updates: any = { playersCount: count };
   if (lastSeen) updates.playersLastActive = lastSeen;
 
@@ -65,35 +83,37 @@ async function recalcRoomCounts(roomId: string) {
 
 // Trigger on player update (e.g., lastSeen updates)
 export const onPlayerUpdate = functions.firestore
-  .document('rooms/{roomId}/players/{playerId}')
+  .document("rooms/{roomId}/players/{playerId}")
   .onUpdate(async (change, ctx) => {
     const roomId = ctx.params.roomId as string;
     const before = change.before.data() || {};
     const after = change.after.data() || {};
     // Only recalc when relevant fields change to reduce cost
-    if (before.lastSeen?.toMillis?.() === after.lastSeen?.toMillis?.() &&
-        before.lastActive === after.lastActive) {
+    if (
+      before.lastSeen?.toMillis?.() === after.lastSeen?.toMillis?.() &&
+      before.lastActive === after.lastActive
+    ) {
       return;
     }
     try {
       await recalcRoomCounts(roomId);
     } catch (err) {
-      console.error('onPlayerUpdate error', err);
+      console.error("onPlayerUpdate error", err);
     }
   });
 
 function isPresenceConnActive(conn: any, now: number): boolean {
   if (!conn) return false;
   if (conn.online === false) return false;
-  if (conn.online === true && typeof conn.ts !== 'number') return true;
-  const ts = typeof conn.ts === 'number' ? conn.ts : 0;
+  if (conn.online === true && typeof conn.ts !== "number") return true;
+  const ts = typeof conn.ts === "number" ? conn.ts : 0;
   if (!ts) return false;
   if (ts - now > MAX_CLOCK_SKEW_MS) return false;
   return now - ts <= PRESENCE_STALE_THRESHOLD_MS;
 }
 
 export const onPresenceWrite = functions.database
-  .ref('presence/{roomId}/{uid}/{connId}')
+  .ref("presence/{roomId}/{uid}/{connId}")
   .onWrite(async (change, ctx) => {
     if (EMERGENCY_STOP) return null;
     const { roomId, uid } = ctx.params as { roomId: string; uid: string };
@@ -138,32 +158,32 @@ export const onPresenceWrite = functions.database
 
       // 完全に切断されたのでノードを掃除し、部屋から退室させる
       await userRef.remove().catch((err) => {
-        console.warn('presence-user-remove-failed', { roomId, uid, err });
+        console.warn("presence-user-remove-failed", { roomId, uid, err });
       });
 
       try {
         const playerDoc = await db
-          .collection('rooms')
+          .collection("rooms")
           .doc(roomId)
-          .collection('players')
+          .collection("players")
           .doc(uid)
           .get();
         if (!playerDoc.exists) {
           return null;
         }
 
-        console.log('presence-leaveRoomServer-call', {
+        console.log("presence-leaveRoomServer-call", {
           roomId,
           uid,
           flags: { wentOffline, removed, markedOffline },
         });
         await leaveRoomServer(roomId, uid, null);
-        console.log('presence-leaveRoomServer-success', { roomId, uid });
+        console.log("presence-leaveRoomServer-success", { roomId, uid });
       } catch (err) {
-        console.error('presence-leaveRoomServer-failed', { roomId, uid, err });
+        console.error("presence-leaveRoomServer-failed", { roomId, uid, err });
       }
     } catch (err) {
-      console.error('onPresenceWrite error', { roomId, uid, err });
+      console.error("onPresenceWrite error", { roomId, uid, err });
     }
     return null;
   });
@@ -246,8 +266,10 @@ export const cleanupGhostRooms = functions.pubsub
 
     // Tunables
     const NOW = Date.now();
-    const STALE_LASTSEEN_MS = Number(process.env.GHOST_STALE_LASTSEEN_MS) || 10 * 60 * 1000; // 10min
-    const ROOM_MIN_AGE_MS = Number(process.env.GHOST_ROOM_MIN_AGE_MS) || 30 * 60 * 1000; // 30min
+    const STALE_LASTSEEN_MS =
+      Number(process.env.GHOST_STALE_LASTSEEN_MS) || 10 * 60 * 1000; // 10min
+    const ROOM_MIN_AGE_MS =
+      Number(process.env.GHOST_ROOM_MIN_AGE_MS) || 30 * 60 * 1000; // 30min
     const PRESENCE_STALE_MS = Number(process.env.PRESENCE_STALE_MS) || 90_000; // 90s
 
     // Process in small chunks to limit costs
@@ -262,20 +284,15 @@ export const cleanupGhostRooms = functions.pubsub
         // Quick age gate: only consider sufficiently old rooms
         const lastActive = room?.lastActiveAt;
         const createdAt = room?.createdAt;
-        const toMillis = (v: any) =>
-          v && typeof v.toMillis === 'function'
-            ? v.toMillis()
-            : v instanceof Date
-              ? v.getTime()
-              : typeof v === 'number'
-                ? v
-                : 0;
         const newerMs = Math.max(toMillis(lastActive), toMillis(createdAt));
         const ageMs = newerMs ? NOW - newerMs : Number.POSITIVE_INFINITY;
         if (ageMs < ROOM_MIN_AGE_MS) continue;
 
         // Skip actively playing rooms (clue/reveal), unless clearly stale
-        const isInProgress = room?.status && room.status !== 'waiting' && room.status !== 'completed';
+        const isInProgress =
+          room?.status &&
+          room.status !== "waiting" &&
+          room.status !== "completed";
 
         // Presence count from RTDB
         let presenceCount = 0;
@@ -288,8 +305,9 @@ export const cleanupGhostRooms = functions.pubsub
               const conns = val[uid] || {};
               const online = Object.values(conns).some((c: any) => {
                 if (c?.online === false) return false;
-                if (c?.online === true && typeof c?.ts !== 'number') return true;
-                const ts = typeof c?.ts === 'number' ? c.ts : 0;
+                if (c?.online === true && typeof c?.ts !== "number")
+                  return true;
+                const ts = typeof c?.ts === "number" ? c.ts : 0;
                 if (!ts) return false;
                 if (ts - nowLocal > PRESENCE_STALE_MS) return false;
                 return nowLocal - ts <= PRESENCE_STALE_MS;
@@ -302,7 +320,7 @@ export const cleanupGhostRooms = functions.pubsub
         if (presenceCount > 0) continue; // someone is online; skip
 
         // Count "recent" players by lastSeen
-        const playersCol = roomDoc.ref.collection('players');
+        const playersCol = roomDoc.ref.collection("players");
         const playersSnap = await playersCol.get();
         const nowTs = Date.now();
         let recentPlayers = 0;
@@ -318,13 +336,13 @@ export const cleanupGhostRooms = functions.pubsub
         // At this point, no presence and players are stale. If still marked in-progress, relax to waiting.
         if (isInProgress) {
           try {
-            await roomDoc.ref.update({ status: 'waiting' });
+            await roomDoc.ref.update({ status: "waiting" });
           } catch {}
         }
 
         // Delete chat docs first (best effort)
         try {
-          const chatRefs = await roomDoc.ref.collection('chat').listDocuments();
+          const chatRefs = await roomDoc.ref.collection("chat").listDocuments();
           if (chatRefs.length) {
             const batch = dbi.batch();
             for (const c of chatRefs) batch.delete(c);
@@ -334,7 +352,9 @@ export const cleanupGhostRooms = functions.pubsub
 
         // Delete all players (best effort)
         try {
-          const playerRefs = await roomDoc.ref.collection('players').listDocuments();
+          const playerRefs = await roomDoc.ref
+            .collection("players")
+            .listDocuments();
           if (playerRefs.length) {
             const batch = dbi.batch();
             for (const p of playerRefs) batch.delete(p);
@@ -347,9 +367,149 @@ export const cleanupGhostRooms = functions.pubsub
           await roomDoc.ref.delete();
         } catch {}
       } catch (err) {
-        console.error('cleanupGhostRooms error', err);
+        console.error("cleanupGhostRooms error", err);
       }
     }
+    return null;
+  });
+
+export const pruneIdleRooms = functions.pubsub
+  .schedule("every 5 minutes")
+  .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
+
+    const dbi = admin.firestore();
+    const rt = admin.database ? admin.database() : null;
+
+    const now = Date.now();
+    const envThreshold = Number(process.env.IDLE_ROOM_THRESHOLD_MS);
+    const idleThresholdMs =
+      Number.isFinite(envThreshold) && envThreshold > 0
+        ? envThreshold
+        : 5 * 60 * 1000;
+
+    const cutoffMs = now - idleThresholdMs;
+    if (cutoffMs <= 0) return null;
+
+    const cutoffTs = admin.firestore.Timestamp.fromMillis(cutoffMs);
+
+    const roomQuery = await dbi
+      .collection("rooms")
+      .where("lastActiveAt", "<", cutoffTs)
+      .limit(30)
+      .get();
+
+    if (roomQuery.empty) {
+      return null;
+    }
+
+    let processedRooms = 0;
+    let prunedPlayers = 0;
+
+    for (const roomDoc of roomQuery.docs) {
+      const roomId = roomDoc.id;
+      const roomData = roomDoc.data() as any;
+
+      const playersCount = Number.isFinite(roomData?.playersCount)
+        ? Math.max(0, Number(roomData.playersCount))
+        : 0;
+      if (!playersCount) {
+        continue;
+      }
+
+      // Presence check
+      let presenceActive = false;
+      if (rt) {
+        try {
+          const presSnap = await rt.ref(`presence/${roomId}`).get();
+          if (presSnap.exists()) {
+            const val = presSnap.val() as Record<string, any>;
+            const nowLocal = Date.now();
+            presenceActive = Object.values(val || {}).some((connMap: any) => {
+              return Object.values(connMap || {}).some((conn) =>
+                isPresenceConnActive(conn, nowLocal)
+              );
+            });
+          }
+        } catch (err) {
+          console.warn("pruneIdleRooms-presence-check-failed", { roomId, err });
+        }
+      }
+
+      if (presenceActive) {
+        continue;
+      }
+
+      // Skip if any player has been seen recently
+      try {
+        const recentSnap = await roomDoc.ref
+          .collection("players")
+          .where("lastSeen", ">=", cutoffTs)
+          .limit(1)
+          .get();
+        if (!recentSnap.empty) {
+          continue;
+        }
+      } catch (err) {
+        console.warn("pruneIdleRooms-recent-query-failed", { roomId, err });
+        continue;
+      }
+
+      let playersSnap;
+      try {
+        playersSnap = await roomDoc.ref.collection("players").get();
+      } catch (err) {
+        console.warn("pruneIdleRooms-players-fetch-failed", { roomId, err });
+        continue;
+      }
+
+      if (playersSnap.empty) {
+        continue;
+      }
+
+      const stalePlayerIds: string[] = [];
+      let hasRecent = false;
+
+      playersSnap.forEach((playerDoc) => {
+        if (hasRecent) return;
+        const data = playerDoc.data() as any;
+        const lastSeenMs = toMillis(data?.lastSeen);
+        if (lastSeenMs && now - lastSeenMs < idleThresholdMs) {
+          hasRecent = true;
+          return;
+        }
+        stalePlayerIds.push(playerDoc.id);
+      });
+
+      if (hasRecent || stalePlayerIds.length === 0) {
+        continue;
+      }
+
+      processedRooms += 1;
+
+      const cappedIds = stalePlayerIds.slice(0, 10);
+      for (const playerId of cappedIds) {
+        try {
+          await leaveRoomServer(roomId, playerId, null);
+          prunedPlayers += 1;
+        } catch (err) {
+          console.error("pruneIdleRooms-leave-failed", {
+            roomId,
+            playerId,
+            err,
+          });
+        }
+      }
+    }
+
+    if (processedRooms || prunedPlayers) {
+      console.info("pruneIdleRooms-summary", {
+        processedRooms,
+        prunedPlayers,
+        thresholdMs: idleThresholdMs,
+      });
+    }
+
     return null;
   });
 
@@ -419,7 +579,10 @@ export const onPlayerDeleted = functions.firestore
           const next = await roomRef.collection("players").limit(1).get();
           const nextId = next.empty ? null : next.docs[0].id;
           if (nextId) {
-            console.warn('onPlayerDeleted-host-reassign', { roomId: ctx.params.roomId, nextId });
+            console.warn("onPlayerDeleted-host-reassign", {
+              roomId: ctx.params.roomId,
+              nextId,
+            });
             await roomRef.update({ hostId: nextId });
           }
         }
@@ -428,7 +591,7 @@ export const onPlayerDeleted = functions.firestore
     try {
       await recalcRoomCounts(ctx.params.roomId as string);
     } catch (err) {
-      console.error('onPlayerDeleted recalc error', err);
+      console.error("onPlayerDeleted recalc error", err);
     }
     return null;
   });
