@@ -4,7 +4,9 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef } from "react";
+import type { MouseEventHandler } from "react";
+import { gsap } from "gsap";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 import { CardFaceFront, CardFaceBack } from "./CardFaces";
@@ -24,6 +26,9 @@ export type GameCardProps = {
   variant?: "flat" | "flip";
   flipped?: boolean;
   waitingInCentral?: boolean; // Dragon Quest style white borders/numbers for central waiting cards
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  isInteractive?: boolean;
+  flipPreset?: "reveal" | "result";
 };
 
 // Import the unified card system
@@ -56,6 +61,9 @@ export function GameCard({
   variant = "flat",
   flipped = false,
   waitingInCentral = true,
+  onClick,
+  isInteractive = false,
+  flipPreset = "reveal",
 }: GameCardProps) {
   // hover?CSS???????????????????
 
@@ -66,6 +74,26 @@ export function GameCard({
 
   const playCardFlip = useSoundEffect("card_flip");
   const previousFlipRef = useRef<boolean>(flipped);
+  const threeDContainerRef = useRef<HTMLDivElement | null>(null);
+  const gsapInitialisedRef = useRef<boolean>(false);
+  const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
+    isInteractive && onClick ? onClick : undefined;
+  const isResultPreset = flipPreset === "result";
+
+  useEffect(() => {
+    if (!isResultPreset) {
+      gsapInitialisedRef.current = false;
+    }
+  }, [isResultPreset]);
+
+  useEffect(() => {
+    return () => {
+      const el = threeDContainerRef.current;
+      if (el) {
+        gsap.killTweensOf(el);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (variant !== "flip") {
@@ -106,6 +134,33 @@ export function GameCard({
     // ?????????????????????auto?????????DOM???????
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
     const stableMode = stableModeRef.current;
+
+    useLayoutEffect(() => {
+      if (!isResultPreset || stableMode !== "3d") return;
+      const el = threeDContainerRef.current;
+      if (!el) return;
+      if (!gsapInitialisedRef.current) {
+        gsap.set(el, {
+          rotateY: flipped ? 180 : 0,
+          transformPerspective: 1000,
+          transformOrigin: "center center",
+        });
+        gsapInitialisedRef.current = true;
+        return;
+      }
+      gsap.to(el, {
+        duration: 0.28,
+        rotateY: flipped ? 180 : 0,
+        ease: "back.out(1.65)",
+        overwrite: "auto",
+        transformPerspective: 1000,
+        transformOrigin: "center center",
+      });
+      return () => {
+        gsap.killTweensOf(el);
+      };
+    }, [flipped, isResultPreset, stableMode]);
+
     if (stableMode === "simple") {
       // ???????: ????????????????????????
       const backNumberFontSize = getNumberFontSize(
@@ -124,11 +179,15 @@ export function GameCard({
           border="none"
           bg="transparent"
           color={textColors.text}
+          onClick={clickHandler}
+          cursor={isInteractive ? "pointer" : undefined}
+          role={isInteractive ? "button" : undefined}
+          tabIndex={isInteractive ? 0 : undefined}
         >
           <Box position="relative" width="100%" height="100%">
             {/* FRONT LAYER */}
             <Box aria-hidden={flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 0 : 1, transition: `opacity ${reducedMotion ? 10 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
+              style={{ opacity: flipped ? 0 : 1, transition: `opacity ${reducedMotion ? 10 : isResultPreset ? 220 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
               <CardFaceFront
                 index={typeof index === "number" ? index : null}
                 name={name}
@@ -149,7 +208,7 @@ export function GameCard({
 
             {/* BACK LAYER */}
             <Box aria-hidden={!flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 1 : 0, transition: `opacity ${reducedMotion ? 10 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
+              style={{ opacity: flipped ? 1 : 0, transition: `opacity ${reducedMotion ? 10 : isResultPreset ? 220 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
               <CardFaceBack
                 index={typeof index === "number" ? index : null}
                 name={name}
@@ -188,16 +247,24 @@ export function GameCard({
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={{
           ...cardSizeCss(),
-          // ?????3D???????Y???????transform?????????????
-          "&:hover .gc3d": {
-            transform: `${flipTransform} translateY(-4px) translateZ(0)`,
-          },
+          ...(isResultPreset
+            ? {}
+            : {
+                "&:hover .gc3d": {
+                  transform: `${flipTransform} translateY(-4px) translateZ(0)`,
+                },
+              }),
         }}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
+        onClick={clickHandler}
+        cursor={isInteractive ? "pointer" : undefined}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
       >
         <div
           className="gc3d"
+          ref={threeDContainerRef}
           style={{
             position: "relative",
             width: "100%",
@@ -205,7 +272,10 @@ export function GameCard({
             transformStyle: "preserve-3d",
             transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
             willChange: "transform",
-            transition: `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
+            transition:
+              isResultPreset || stableMode !== "3d"
+                ? "none"
+                : `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
           }}
         >
           {/* FRONT SIDE - ?????? */}
@@ -266,6 +336,8 @@ export function GameCard({
       display="grid"
       gridTemplateRows="16px minmax(0, 1fr) 16px"
       cursor="pointer"
+      onClick={clickHandler}
+      role={isInteractive ? "button" : undefined}
       transform={baseTransform}
       style={{
         transformStyle: "preserve-3d",
@@ -400,3 +472,5 @@ export function GameCard({
 }
 
 export default memo(GameCard);
+
+
