@@ -6,7 +6,7 @@ import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
-import { logError } from "@/lib/utils/log";
+import { logDebug, logError } from "@/lib/utils/log";
 import {
   collection,
   getDocs,
@@ -33,6 +33,39 @@ const RECENT_WINDOW_MS =
   Number.isFinite(ENV_RECENT_WINDOW_MS) && ENV_RECENT_WINDOW_MS > 0
     ? ENV_RECENT_WINDOW_MS
     : DEFAULT_RECENT_WINDOW_MS;
+const MIN_RECENT_WINDOW_MS = 60 * 1000;
+const MAX_RECENT_WINDOW_MS = 15 * 60 * 1000;
+const MIN_FETCH_COOLDOWN_MS = 30 * 1000;
+const MAX_FETCH_COOLDOWN_MS = 5 * 60 * 1000;
+const DEFAULT_FETCH_COOLDOWN_MS = 120 * 1000;
+
+function recordRoomsMetric(
+  name: string,
+  durationMs: number,
+  extra?: Record<string, unknown>
+) {
+  if (typeof window === "undefined") return;
+  const w = window as typeof window & {
+    __ITO_METRICS__?: Array<{
+      name: string;
+      duration: number;
+      ts: number;
+      extra?: Record<string, unknown>;
+    }>;
+  };
+  if (!Array.isArray(w.__ITO_METRICS__)) {
+    w.__ITO_METRICS__ = [];
+  }
+  w.__ITO_METRICS__!.push({
+    name,
+    duration: durationMs,
+    ts: Date.now(),
+    extra,
+  });
+  if (w.__ITO_METRICS__!.length > 200) {
+    w.__ITO_METRICS__!.splice(0, w.__ITO_METRICS__!.length - 200);
+  }
+}
 
 type LobbyRoom = RoomDoc & { id: string };
 
@@ -67,128 +100,240 @@ export function useOptimizedRooms({
   const [rooms, setRooms] = useState<LobbyRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [recentWindowMs, setRecentWindowMs] = useState(RECENT_WINDOW_MS);
   const lastFetchRef = useRef(0);
   const roomsSignatureRef = useRef<string>(createRoomsSignature([]));
+  const fetchControlRef = useRef({
+    cooldownMs: DEFAULT_FETCH_COOLDOWN_MS,
+    retryCount: 0,
+    inFlight: false,
+    lastDurationMs: 0,
+  });
   const pageIndex = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0;
   const normalizedQuery = (searchQuery ?? "").trim().toLowerCase();
+  const DEBUG_FETCH =
+    typeof process !== "undefined" &&
+    ((process.env.NEXT_PUBLIC_LOBBY_FETCH_DEBUG || "")
+      .toString()
+      .toLowerCase() === "true" ||
+      (process.env.NEXT_PUBLIC_LOBBY_FETCH_DEBUG || "").toString().trim() ===
+        "1");
 
   const setLoadingIfNeeded = useCallback((next: boolean) => {
     setLoading((prev) => (prev === next ? prev : next));
   }, []);
 
   // fetchActiveRooms を useEffect 外で定義して refresh で使えるように
-  const fetchActiveRooms = useCallback(async () => {
-    if (!enabled || !db) return;
+  const fetchActiveRooms = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!enabled || !db) return;
 
-    setLoadingIfNeeded(true);
-    setError((prev) => (prev ? null : prev));
+      const control = fetchControlRef.current;
+      const force = options?.force ?? false;
+      const now = Date.now();
+      if (control.inFlight) {
+        if (DEBUG_FETCH) {
+          logDebug("useOptimizedRooms", "fetch-skipped-inflight", {
+            force,
+          });
+        }
+        return;
+      }
+      if (!force) {
+        if (now - lastFetchRef.current < control.cooldownMs) {
+          if (DEBUG_FETCH) {
+            logDebug("useOptimizedRooms", "fetch-skipped-cooldown", {
+              remainingMs: control.cooldownMs - (now - lastFetchRef.current),
+            });
+          }
+          return;
+        }
+      }
 
-    try {
-      const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
+      control.inFlight = true;
+      const perf =
+        typeof window !== "undefined" &&
+        typeof window.performance !== "undefined"
+          ? window.performance
+          : null;
+      perf?.mark("rooms_fetch_start");
+      setLoadingIfNeeded(true);
+      setError(null);
 
-      const targetPageCount = Math.max(pageIndex + 1 + PREFETCH_PAGE_PAD, 1);
-      const additionalPagesForSearch = normalizedQuery ? 4 : 0;
-      const maxPageFetch = Math.min(
-        targetPageCount + additionalPagesForSearch,
-        Math.ceil(MAX_RECENT_FETCH / ROOMS_PER_PAGE)
-      );
+      const fetchStart = now;
 
-      const recentCutoff = new Date(Date.now() - RECENT_WINDOW_MS);
-      const recentConstraints = [
-        where("lastActiveAt", ">=", Timestamp.fromDate(recentCutoff)),
-        orderBy("lastActiveAt", "desc"),
-      ] as const;
+      try {
+        const roomsCol = collection(db!, "rooms").withConverter(roomConverter);
 
-      const fetchPageBatch = async () => {
-        const collected: QueryDocumentSnapshot<DocumentData>[] = [];
-        let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
+        const targetPageCount = Math.max(pageIndex + 1 + PREFETCH_PAGE_PAD, 1);
+        const additionalPagesForSearch = normalizedQuery ? 4 : 0;
+        const maxPageFetch = Math.min(
+          targetPageCount + additionalPagesForSearch,
+          Math.ceil(MAX_RECENT_FETCH / ROOMS_PER_PAGE)
+        );
 
-        for (let page = 0; page < maxPageFetch; page += 1) {
-          let snap: QuerySnapshot<DocumentData>;
-          if (cursor) {
-            snap = await getDocs(
-              query(
-                roomsCol,
-                ...recentConstraints,
-                startAfter(cursor),
-                limit(ROOMS_PER_PAGE)
-              )
+        const recentCutoff = new Date(Date.now() - recentWindowMs);
+        const recentConstraints = [
+          where("lastActiveAt", ">=", Timestamp.fromDate(recentCutoff)),
+          orderBy("lastActiveAt", "desc"),
+        ] as const;
+
+        const fetchPageBatch = async () => {
+          const collected: QueryDocumentSnapshot<DocumentData>[] = [];
+          let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
+
+          for (let page = 0; page < maxPageFetch; page += 1) {
+            let snap: QuerySnapshot<DocumentData>;
+            if (cursor) {
+              snap = await getDocs(
+                query(
+                  roomsCol,
+                  ...recentConstraints,
+                  startAfter(cursor),
+                  limit(ROOMS_PER_PAGE)
+                )
+              );
+            } else {
+              snap = await getDocs(
+                query(roomsCol, ...recentConstraints, limit(ROOMS_PER_PAGE))
+              );
+            }
+            if (snap.empty) break;
+
+            collected.push(...snap.docs);
+            cursor = snap.docs[snap.docs.length - 1];
+
+            if (snap.docs.length < ROOMS_PER_PAGE) {
+              break;
+            }
+          }
+
+          return collected;
+        };
+
+        const recentDocs = await fetchPageBatch();
+        const recentRooms = recentDocs.map((d) => d.data() as LobbyRoom);
+
+        const INPROGRESS_LIMIT = Number(
+          (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
+        );
+        const inprogLimit =
+          Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0
+            ? INPROGRESS_LIMIT
+            : 6;
+        // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
+        // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
+        const qInprog = query(
+          roomsCol,
+          where("status", "in", ["clue", "reveal"] as any),
+          limit(Math.max(inprogLimit, ROOMS_PER_PAGE))
+        );
+
+        const nowMs = Date.now();
+        const filterValid = (room: LobbyRoom) => {
+          const expMs = toMillis(room.expiresAt);
+          if (expMs && expMs <= nowMs) return false;
+          return true;
+        };
+        const snapInprog = await getDocs(qInprog);
+        const inprogRooms = snapInprog.docs
+          .map((d) => d.data() as LobbyRoom)
+          .filter(filterValid)
+          .sort((a, b) => toMillis(b.lastActiveAt) - toMillis(a.lastActiveAt));
+
+        // 結合（重複排除: 同じidがあればinprog優先）
+        const combinedMap = new Map<string, LobbyRoom>();
+        for (const room of recentRooms) combinedMap.set(room.id, room);
+        for (const room of inprogRooms) combinedMap.set(room.id, room);
+        const combinedRooms = Array.from(combinedMap.values());
+        const nextSignature = createRoomsSignature(combinedRooms);
+        if (nextSignature !== roomsSignatureRef.current) {
+          roomsSignatureRef.current = nextSignature;
+          setRooms(combinedRooms);
+        }
+
+        const totalCount = combinedRooms.length;
+        if (!normalizedQuery) {
+          let targetWindow = recentWindowMs;
+          if (totalCount < ROOMS_PER_PAGE / 2) {
+            targetWindow = Math.min(
+              MAX_RECENT_WINDOW_MS,
+              Math.round(recentWindowMs * 1.5)
             );
-          } else {
-            snap = await getDocs(
-              query(roomsCol, ...recentConstraints, limit(ROOMS_PER_PAGE))
+          } else if (totalCount > MAX_RECENT_FETCH * 0.8) {
+            targetWindow = Math.max(
+              MIN_RECENT_WINDOW_MS,
+              Math.round(recentWindowMs * 0.75)
             );
           }
-          if (snap.empty) break;
-
-          collected.push(...snap.docs);
-          cursor = snap.docs[snap.docs.length - 1];
-
-          if (snap.docs.length < ROOMS_PER_PAGE) {
-            break;
+          if (targetWindow !== recentWindowMs) {
+            setRecentWindowMs(targetWindow);
           }
         }
 
-        return collected;
-      };
-
-      const recentDocs = await fetchPageBatch();
-      const recentRooms = recentDocs.map((d) => d.data() as LobbyRoom);
-
-      const INPROGRESS_LIMIT = Number(
-        (process.env.NEXT_PUBLIC_LOBBY_INPROGRESS_LIMIT || "").toString()
-      );
-      const inprogLimit =
-        Number.isFinite(INPROGRESS_LIMIT) && INPROGRESS_LIMIT > 0
-          ? INPROGRESS_LIMIT
-          : 6;
-      // 進行中（clue/reveal）は時間に関わらず上位N件のみ取得
-      // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
-      const qInprog = query(
-        roomsCol,
-        where("status", "in", ["clue", "reveal"] as any),
-        limit(Math.max(inprogLimit, ROOMS_PER_PAGE))
-      );
-
-      const now = Date.now();
-      const filterValid = (room: LobbyRoom) => {
-        const expMs = toMillis(room.expiresAt);
-        if (expMs && expMs <= now) return false;
-        return true;
-      };
-      const snapInprog = await getDocs(qInprog);
-      const inprogRooms = snapInprog.docs
-        .map((d) => d.data() as LobbyRoom)
-        .filter(filterValid)
-        .sort((a, b) => toMillis(b.lastActiveAt) - toMillis(a.lastActiveAt));
-
-      // 結合（重複排除: 同じidがあればinprog優先）
-      const combinedMap = new Map<string, LobbyRoom>();
-      for (const room of recentRooms) combinedMap.set(room.id, room);
-      for (const room of inprogRooms) combinedMap.set(room.id, room);
-      const combinedRooms = Array.from(combinedMap.values());
-      const nextSignature = createRoomsSignature(combinedRooms);
-      if (nextSignature !== roomsSignatureRef.current) {
-        roomsSignatureRef.current = nextSignature;
-        setRooms(combinedRooms);
+        control.retryCount = 0;
+        const duration = Date.now() - fetchStart;
+        control.lastDurationMs = duration;
+        const nextCooldown = Math.min(
+          MAX_FETCH_COOLDOWN_MS,
+          Math.max(MIN_FETCH_COOLDOWN_MS, duration * 10)
+        );
+        control.cooldownMs = normalizedQuery
+          ? Math.max(MIN_FETCH_COOLDOWN_MS, nextCooldown / 2)
+          : nextCooldown;
+        lastFetchRef.current = Date.now();
+        if (DEBUG_FETCH) {
+          logDebug("useOptimizedRooms", "fetch-success", {
+            duration,
+            nextCooldown: control.cooldownMs,
+            recentWindowMs,
+            totalCount,
+          });
+        }
+      } catch (err: any) {
+        control.retryCount += 1;
+        control.cooldownMs = Math.min(
+          MAX_FETCH_COOLDOWN_MS,
+          control.cooldownMs * 2
+        );
+        if (isFirebaseQuotaExceeded(err)) {
+          handleFirebaseQuotaError("ルーム一覧取得");
+        } else {
+          logError("useOptimizedRooms", "fetch-failed", err);
+        }
+        setError(err);
+        if (roomsSignatureRef.current !== "[]") {
+          roomsSignatureRef.current = "[]";
+          setRooms([]); // フォールバック
+        }
+      } finally {
+        control.inFlight = false;
+        setLoadingIfNeeded(false);
+        try {
+          perf?.measure("rooms_fetch", "rooms_fetch_start");
+          const entry = perf?.getEntriesByName("rooms_fetch").pop();
+          if (entry) {
+            recordRoomsMetric("rooms_fetch", entry.duration, {
+              cooldownMs: fetchControlRef.current.cooldownMs,
+              windowMs: recentWindowMs,
+            });
+          }
+        } catch {}
+        perf?.clearMarks("rooms_fetch_start");
+        perf?.clearMeasures?.("rooms_fetch");
       }
-      lastFetchRef.current = Date.now();
-    } catch (err: any) {
-      // Firebase制限エラー専用処理
-      if (isFirebaseQuotaExceeded(err)) {
-        handleFirebaseQuotaError("ルーム一覧取得");
-      } else {
-        logError("useOptimizedRooms", "fetch-failed", err);
-      }
-      setError(err);
-      if (roomsSignatureRef.current !== "[]") {
-        roomsSignatureRef.current = "[]";
-        setRooms([]); // フォールバック
-      }
-    } finally {
-      setLoadingIfNeeded(false);
-    }
-  }, [enabled, db, setLoadingIfNeeded, pageIndex, normalizedQuery]);
+    },
+    [
+      enabled,
+      db,
+      setLoadingIfNeeded,
+      pageIndex,
+      normalizedQuery,
+      recentWindowMs,
+      setRecentWindowMs,
+      DEBUG_FETCH,
+    ]
+  );
 
   useEffect(() => {
     if (!enabled || !db) {
@@ -200,19 +345,17 @@ export function useOptimizedRooms({
 
     let mounted = true;
 
-    const wrappedFetch = async () => {
+    const wrappedFetch = async (force = false) => {
       if (!mounted) return;
-      await fetchActiveRooms();
+      await fetchActiveRooms(force ? { force: true } : undefined);
     };
 
     // 初回取得
-    wrappedFetch();
+    wrappedFetch(true);
 
     // 読み取り削減: タブ非表示時は停止、表示時に単発fetchのみ（ポーリングなし）
     const visibilityHandler = () => {
       if (document.visibilityState !== "visible") return;
-      const now = Date.now();
-      if (now - lastFetchRef.current < 120 * 1000) return; // 🚨 60秒 → 120秒に延長
       wrappedFetch();
     };
     document.addEventListener("visibilitychange", visibilityHandler);
@@ -225,7 +368,7 @@ export function useOptimizedRooms({
   }, [enabled, db, fetchActiveRooms, setLoadingIfNeeded]);
 
   const refresh = useCallback(() => {
-    fetchActiveRooms();
+    fetchActiveRooms({ force: true });
   }, [fetchActiveRooms]);
 
   return { rooms, loading, error, refresh, pageSize: ROOMS_PER_PAGE };

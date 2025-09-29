@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
+import { logWarn } from "@/lib/utils/log";
 import {
   collection,
   deleteDoc,
@@ -13,6 +14,45 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+
+const AVATAR_CACHE_TTL_MS = 30_000;
+type AvatarCacheEntry = {
+  used: Set<string>;
+  expiresAt: number;
+};
+
+const avatarCache = new Map<string, AvatarCacheEntry>();
+
+function getAvatarCache(roomId: string): AvatarCacheEntry | null {
+  const entry = avatarCache.get(roomId);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    avatarCache.delete(roomId);
+    return null;
+  }
+  return entry;
+}
+
+function setAvatarCache(roomId: string, avatars: Iterable<string>) {
+  avatarCache.set(roomId, {
+    used: new Set(avatars),
+    expiresAt: Date.now() + AVATAR_CACHE_TTL_MS,
+  });
+}
+
+function registerAvatarUsage(roomId: string, avatar: string) {
+  const entry = getAvatarCache(roomId);
+  if (!entry) {
+    setAvatarCache(roomId, [avatar]);
+    return;
+  }
+  entry.used.add(avatar);
+  entry.expiresAt = Date.now() + AVATAR_CACHE_TTL_MS;
+}
+
+function invalidateAvatarCache(roomId: string) {
+  avatarCache.delete(roomId);
+}
 
 export type RoomServiceErrorCode = "ROOM_NOT_FOUND" | "ROOM_IN_PROGRESS";
 
@@ -95,16 +135,45 @@ export async function ensureMember({
 
     // クリーンアップ後の正確なプレイヤー数を取得
     const playersCollectionRef = collection(db!, "rooms", roomId, "players");
-    const playersSnap = await getDocs(playersCollectionRef);
-
-    // 既に使用されているアバターを収集
-    const usedAvatars = new Set<string>();
-    playersSnap.docs.forEach((doc) => {
-      const player = doc.data();
-      if (player.avatar) {
-        usedAvatars.add(player.avatar);
+    let usedAvatars: Set<string> | null = null;
+    const cached = getAvatarCache(roomId);
+    if (cached) {
+      usedAvatars = new Set(cached.used);
+      const perf =
+        typeof window !== "undefined" &&
+        typeof window.performance !== "undefined"
+          ? window.performance
+          : null;
+      perf?.mark(`avatar_cache_hit:${roomId}`);
+    } else {
+      try {
+        const snapshot = await getDocs(playersCollectionRef);
+        usedAvatars = new Set<string>();
+        snapshot.docs.forEach((playerDoc) => {
+          const player = playerDoc.data();
+          if (player?.avatar) {
+            usedAvatars!.add(String(player.avatar));
+          }
+        });
+        setAvatarCache(roomId, usedAvatars);
+        const perf =
+          typeof window !== "undefined" &&
+          typeof window.performance !== "undefined"
+            ? window.performance
+            : null;
+        perf?.mark(`avatar_cache_miss:${roomId}`);
+      } catch (error) {
+        usedAvatars = new Set<string>();
+        invalidateAvatarCache(roomId);
+        logWarn("roomService", "avatar-cache-fetch-failed", {
+          roomId,
+          error,
+        });
       }
-    });
+    }
+    if (!usedAvatars) {
+      usedAvatars = new Set<string>();
+    }
 
     // 使用されていないアバターをランダムに選択
     const availableAvatars = AVATAR_LIST.filter(
@@ -129,6 +198,7 @@ export async function ensureMember({
       lastSeen: serverTimestamp(),
     };
     await setDoc(meRef, p);
+    registerAvatarUsage(roomId, selectedAvatar);
     return { joined: true } as const;
   }
   return { joined: false } as const;
@@ -146,6 +216,9 @@ export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
         await deleteDoc(doc(db!, "rooms", roomId, "players", d.id));
       } catch {}
     }
+  }
+  if (dupSnap.size > 1) {
+    invalidateAvatarCache(roomId);
   }
 }
 
