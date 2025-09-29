@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useGPUPerformance } from "@/lib/hooks/useGPUPerformance";
 
 export type AnimationSettings = {
@@ -10,7 +10,12 @@ export type AnimationSettings = {
   gpuCapability?: "high" | "low";
   setAnimationMode: (m: "auto" | "3d" | "simple") => void;
   supports3D?: boolean; // CSS 3D/環境での3Dサポート
+  force3DTransforms: boolean;
+  setForce3DTransforms: (value: boolean) => void;
 };
+
+const FORCE_3D_STORAGE_KEY = "force-3d-transforms";
+const FORCE_3D_EVENT = "force3DTransformsChanged";
 
 const AnimationContext = createContext<AnimationSettings | null>(null);
 
@@ -31,6 +36,47 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  const [force3DTransforms, setForce3DTransformsState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(FORCE_3D_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const setForce3DTransforms = useCallback((value: boolean) => {
+    setForce3DTransformsState(value);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(FORCE_3D_STORAGE_KEY, value ? "true" : "false");
+        window.dispatchEvent(new CustomEvent(FORCE_3D_EVENT, { detail: value }));
+      } catch {}
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleForce3DChange = () => {
+      try {
+        setForce3DTransformsState(window.localStorage.getItem(FORCE_3D_STORAGE_KEY) === "true");
+      } catch {}
+    };
+    handleForce3DChange();
+    window.addEventListener(FORCE_3D_EVENT, handleForce3DChange);
+    const storageHandler = (event: StorageEvent) => {
+      if (event.key && event.key !== FORCE_3D_STORAGE_KEY) return;
+      handleForce3DChange();
+    };
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      window.removeEventListener(FORCE_3D_EVENT, handleForce3DChange);
+      window.removeEventListener("storage", storageHandler);
+    };
+  }, []);
+
+
   // 設定変更イベントを購読（SettingsModalから発火）
   useEffect(() => {
     const handler = () => {
@@ -49,29 +95,46 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    let params: URLSearchParams | null = null;
+    let params: URLSearchParams;
     try {
       params = new URLSearchParams(window.location.search || "");
     } catch {
-      params = null;
+      return;
     }
-    if (!params) return;
+    let mutated = false;
+
     const animParam = params.get("anim");
-    if (animParam !== "on" && animParam !== "off") return;
-    const nextForce = animParam === "on";
-    setForceAnimations(nextForce);
-    try {
-      window.localStorage.setItem("force-animations", nextForce ? "true" : "false");
-      window.dispatchEvent(new CustomEvent("forceAnimationsChanged"));
-    } catch {}
-    params.delete("anim");
+    if (animParam === "on" || animParam === "off") {
+      const nextForce = animParam === "on";
+      setForceAnimations(nextForce);
+      try {
+        window.localStorage.setItem("force-animations", nextForce ? "true" : "false");
+        window.dispatchEvent(new CustomEvent("forceAnimationsChanged"));
+      } catch {}
+      params.delete("anim");
+      mutated = true;
+    }
+
+    const force3dParam = params.get("force3d");
+    if (force3dParam) {
+      const normalized = force3dParam.toLowerCase();
+      if (["1", "true", "on", "yes", "enable"].includes(normalized)) {
+        setForce3DTransforms(true);
+      } else if (["0", "false", "off", "no", "disable", "2d"].includes(normalized)) {
+        setForce3DTransforms(false);
+      }
+      params.delete("force3d");
+      mutated = true;
+    }
+
+    if (!mutated) return;
     const query = params.toString();
     const hash = window.location.hash || "";
     const nextUrl = window.location.pathname + (query ? "?" + query : "") + hash;
     try {
       window.history.replaceState(null, "", nextUrl);
     } catch {}
-  }, []);
+  }, [setForce3DTransforms]);
 
   const reducedMotion = useMemo(() => {
     const base =
@@ -106,18 +169,34 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
       setSupports3D(false);
     }
   }, []);
+  useEffect(() => {
+    if (force3DTransforms) return;
+    if (typeof window === "undefined") return;
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(FORCE_3D_STORAGE_KEY);
+    } catch {
+      stored = null;
+    }
+    if (stored !== null) return;
+    if (!supports3D) return;
+    if (effectiveMode === "3d") return;
+    setForce3DTransforms(true);
+  }, [effectiveMode, force3DTransforms, setForce3DTransforms, supports3D]);
+
 
   // 機能ガード後の適用モード
   const appliedMode: "3d" | "simple" = useMemo(() => {
+    if (force3DTransforms) return "3d";
     if (reducedMotion) return "simple";
-    const base = effectiveMode; // auto→highなら3d, lowならsimple
+    const base = effectiveMode; // auto��high�Ȃ�3d, low�Ȃ�simple
     if (base === "3d" && supports3D === false) return "simple";
     return base;
-  }, [effectiveMode, reducedMotion, supports3D]);
+  }, [effectiveMode, force3DTransforms, reducedMotion, supports3D]);
 
   return (
     <AnimationContext.Provider
-      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, forceAnimations, gpuCapability, setAnimationMode, supports3D }}
+      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, forceAnimations, gpuCapability, setAnimationMode, supports3D, force3DTransforms, setForce3DTransforms }}
     >
       {children}
     </AnimationContext.Provider>
@@ -133,7 +212,20 @@ export function useAnimationSettings(): AnimationSettings {
     typeof window !== "undefined" &&
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  return { animationMode, effectiveMode, reducedMotion, forceAnimations: true, setAnimationMode } as AnimationSettings;
+  return {
+    animationMode,
+    effectiveMode,
+    reducedMotion,
+    forceAnimations: true,
+    gpuCapability: undefined,
+    setAnimationMode,
+    supports3D: true,
+    force3DTransforms: false,
+    setForce3DTransforms: () => {},
+  } as AnimationSettings;
 }
+
+
+
 
 
