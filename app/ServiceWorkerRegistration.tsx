@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 const SW_PATH = "/sw.js";
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "dev";
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
 const shouldRegister = () => {
@@ -17,9 +18,18 @@ const registerServiceWorker = async () => {
     return;
   }
 
+  const versionedPath = `${SW_PATH}?v=${APP_VERSION}`;
+
   try {
-    const registration = await navigator.serviceWorker.register(SW_PATH, {
+    const registration = await navigator.serviceWorker.register(versionedPath, {
       scope: "/",
+    });
+
+    let hasRefreshed = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hasRefreshed) return;
+      hasRefreshed = true;
+      window.location.reload();
     });
 
     registration.addEventListener("updatefound", () => {
@@ -28,9 +38,15 @@ const registerServiceWorker = async () => {
         return;
       }
       installingWorker.addEventListener("statechange", () => {
-        if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+        if (installingWorker.state !== "installed") {
+          return;
+        }
+        if (navigator.serviceWorker.controller) {
+          installingWorker.postMessage({ type: "SKIP_WAITING" });
           // eslint-disable-next-line no-console
-          console.info("新しいバージョンのコンテンツを取得しました。次回リロードで反映されます。");
+          console.info("新しいバージョンを適用中です。まもなく再読み込みします。");
+        } else {
+          registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
         }
       });
     });

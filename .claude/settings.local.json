@@ -128,7 +128,8 @@
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\app\\rooms\\[roomId]\\loading.tsx\")",
       "WebFetch(domain:www.gameuidatabase.com)",
       "WebFetch(domain:interfaceingame.com)",
-      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")"
+      "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")",
+      "Read(//c/**)"
     ],
     "deny": [],
     "ask": []
