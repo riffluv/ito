@@ -1,4 +1,14 @@
-const CACHE_NAME = "ito-app-cache-v1";
+const SCRIPT_URL = typeof self !== "undefined" ? (self.registration?.scriptURL || self.location?.href || "") : "";
+const SW_VERSION = (() => {
+  try {
+    const url = new URL(SCRIPT_URL);
+    return url.searchParams.get("v") || "default";
+  } catch (error) {
+    return "default";
+  }
+})();
+const CACHE_PREFIX = "ito-app-cache";
+const CACHE_NAME = `${CACHE_PREFIX}-${SW_VERSION}`;
 const CORE_ASSETS = [
   "/",
   "/manifest.webmanifest",
@@ -7,8 +17,22 @@ const CORE_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)).catch(() => undefined)
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(CORE_ASSETS))
+      .finally(() => self.skipWaiting())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (!event.data) return;
+  const { type } = event.data;
+  if (type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+  if (type === "CLIENTS_CLAIM") {
+    self.clients.claim().catch(() => undefined);
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -17,7 +41,9 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+          keys
+            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
         )
       )
       .then(() => self.clients.claim())
@@ -25,7 +51,6 @@ self.addEventListener("activate", (event) => {
 });
 
 const isNavigationRequest = (request) => request.mode === "navigate";
-
 const isSameOrigin = (request) => new URL(request.url).origin === self.location.origin;
 
 self.addEventListener("fetch", (event) => {
@@ -69,3 +94,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+

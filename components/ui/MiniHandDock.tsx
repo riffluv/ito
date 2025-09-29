@@ -846,7 +846,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           </Tooltip>
         )}
         {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
-          <Tooltip content="みんなで一齐に提出" showArrow openDelay={300}>
+          <Tooltip content="みんなで一斉に提出" showArrow openDelay={300}>
             <AppButton
               size="md"
               visual="solid"
@@ -1275,3 +1275,4 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </Box>
   );
 }
+

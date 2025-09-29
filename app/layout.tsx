@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import React from "react";
 import ClientFrame from "./ClientFrame";
 import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
+import StorageSchemaGuard from "./StorageSchemaGuard";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <StorageSchemaGuard />
           <ServiceWorkerRegistration />
           <ClientFrame>{children}</ClientFrame>
         </Providers>
@@ -41,3 +43,4 @@ export default function RootLayout({
     </html>
   );
 }
+
