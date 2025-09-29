@@ -1,6 +1,5 @@
 "use client";
 import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import {
   MAX_CLOCK_SKEW_MS,
   PRESENCE_HEARTBEAT_MS,
@@ -8,8 +7,12 @@ import {
   presenceSupported,
 } from "@/lib/firebase/presence";
 import { ACTIVE_WINDOW_MS } from "@/lib/time";
-import { off, onValue, ref } from "firebase/database";
+import {
+  handleFirebaseQuotaError,
+  isFirebaseQuotaExceeded,
+} from "@/lib/utils/errorHandling";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
+import { off, onValue, ref } from "firebase/database";
 import {
   Timestamp,
   collection,
@@ -24,6 +27,43 @@ export type UseLobbyCountsOptions = {
   // 退出直後の自身ゴースト対策として有効）
   excludeUid?: string | string[];
 };
+
+type FreezeTrackerSource = "presence" | "fallback";
+type FreezeTracker = {
+  start: (
+    roomId: string,
+    now: number,
+    freezeUntil: number,
+    freezeMs: number
+  ) => void;
+  end: (roomId: string, now: number) => void;
+};
+
+function createFreezeTracker(source: FreezeTrackerSource): FreezeTracker {
+  const startedAt: Record<string, number> = {};
+  return {
+    start(roomId, now, _freezeUntil, freezeMs) {
+      if (startedAt[roomId]) return;
+      startedAt[roomId] = now;
+      logInfo("useLobbyCounts", "zero-freeze-start", {
+        roomId,
+        source,
+        freezeMs,
+      });
+    },
+    end(roomId, now) {
+      const started = startedAt[roomId];
+      if (started === undefined) return;
+      const durationMs = Math.max(now - started, 0);
+      delete startedAt[roomId];
+      logInfo("useLobbyCounts", "zero-freeze-end", {
+        roomId,
+        source,
+        durationMs,
+      });
+    },
+  };
+}
 
 export function useLobbyCounts(
   roomIds: string[],
@@ -63,6 +103,7 @@ export function useLobbyCounts(
 
     // RTDB presence を部屋ごとに購読（ルール互換性のため /presence/$roomId を読む）
     if (presenceSupported()) {
+      const freezeTracker = createFreezeTracker("presence");
       const DEBUG_UIDS =
         typeof process !== "undefined" &&
         ((process.env.NEXT_PUBLIC_LOBBY_DEBUG_UIDS || "").toString() === "1" ||
@@ -72,13 +113,17 @@ export function useLobbyCounts(
       // 既定値は OFF（読み取り節約）。必要時のみ .env で有効化
       const VERIFY_SINGLE = (() => {
         if (typeof process === "undefined") return false;
-        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "").toString().toLowerCase();
+        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "")
+          .toString()
+          .toLowerCase();
         if (!raw) return false; // default OFF
         return raw === "1" || raw === "true";
       })();
       const VERIFY_MULTI = (() => {
         if (typeof process === "undefined") return false;
-        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "").toString().toLowerCase();
+        const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "")
+          .toString()
+          .toLowerCase();
         if (!raw) return false; // default OFF
         return raw === "1" || raw === "true";
       })();
@@ -141,7 +186,9 @@ export function useLobbyCounts(
           let n = 0;
           const now = Date.now();
           let hasFresh = false; // 直近JOIN（5s以内）の兆候
-          const includedUids: string[] | undefined = DEBUG_UIDS ? [] : undefined;
+          const includedUids: string[] | undefined = DEBUG_UIDS
+            ? []
+            : undefined;
           const presentUids: string[] | undefined = DEBUG_UIDS
             ? Object.keys(users)
             : undefined;
@@ -183,13 +230,14 @@ export function useLobbyCounts(
             }
           }
           if (DEBUG_UIDS) {
-            try {            logDebug("useLobbyCounts", "presence-room", {
-              roomId: id,
-              present: presentUids?.join(",") || "-",
-              excluded: excludeSet.size,
-              included: includedUids?.join(",") || "-",
-              count: n,
-            });
+            try {
+              logDebug("useLobbyCounts", "presence-room", {
+                roomId: id,
+                present: presentUids?.join(",") || "-",
+                excluded: excludeSet.size,
+                included: includedUids?.join(",") || "-",
+                count: n,
+              });
             } catch {}
           }
           // 特殊対策: n===1 の場合だけ、players コレクションのサーバカウントで検証（任意有効化）。
@@ -214,6 +262,12 @@ export function useLobbyCounts(
                     // 残骸と判断し 0 に矯正 + ゼロフリーズ
                     const freezeUntil = now2 + ZERO_FREEZE_MS_DEFAULT;
                     zeroFreeze[id] = freezeUntil;
+                    freezeTracker.start(
+                      id,
+                      now2,
+                      freezeUntil,
+                      ZERO_FREEZE_MS_DEFAULT
+                    );
                     setCounts((prev) => ({ ...prev, [id]: 0 }));
                     // 単独で数えられていたUIDを一定時間クオランティン
                     const suspect =
@@ -223,7 +277,8 @@ export function useLobbyCounts(
                       quarantine[id][suspect] = now2 + ZERO_FREEZE_MS_DEFAULT;
                     }
                     if (DEBUG_UIDS) {
-                      try {                        logDebug("useLobbyCounts", "verify-single-zero", {
+                      try {
+                        logDebug("useLobbyCounts", "verify-single-zero", {
                           roomId: id,
                           freezeMs: ZERO_FREEZE_MS_DEFAULT,
                           suspect: suspect || "-",
@@ -251,7 +306,8 @@ export function useLobbyCounts(
                   );
                   const q = query(coll, where("lastSeen", ">=", since));
                   const snap = await getCountFromServer(q);
-                  const verified = Number((snap.data() as any)?.count ?? 0) || 0;
+                  const verified =
+                    Number((snap.data() as any)?.count ?? 0) || 0;
                   const now2 = Date.now();
                   multiCheckCooldown[id] = now2 + 10_000; // 10s cooldown
                   if (verified === 0) {
@@ -265,8 +321,8 @@ export function useLobbyCounts(
                       }
                     }
                   }
-                } catch {}
-                finally {
+                } catch {
+                } finally {
                   multiCheckInflight[id] = false;
                 }
               })();
@@ -276,11 +332,18 @@ export function useLobbyCounts(
           const freezeUntil = zeroFreeze[id] || 0;
           if (n === 0) {
             zeroFreeze[id] = now + ZERO_FREEZE_MS_DEFAULT; // 0表示を据え置き
+            freezeTracker.start(
+              id,
+              now,
+              zeroFreeze[id],
+              ZERO_FREEZE_MS_DEFAULT
+            );
             setCounts((prev) => ({ ...prev, [id]: 0 }));
           } else if (now < freezeUntil) {
-            if (!hasFresh) {
-              // 新鮮なJOIN兆候がなければ0固定
-              setCounts((prev) => ({ ...prev, [id]: 0 }));
+            if (hasFresh && !VERIFY_MULTI) {
+              zeroFreeze[id] = 0;
+              freezeTracker.end(id, now);
+              setCounts((prev) => ({ ...prev, [id]: n }));
             } else if (VERIFY_MULTI) {
               // 新鮮なJOIN兆候があっても、検証で players>0 が確認できるまでは0固定（読み取りはCD内で抑制）
               const cd2 = multiCheckCooldown[id] || 0;
@@ -289,15 +352,19 @@ export function useLobbyCounts(
                 (async () => {
                   try {
                     const coll = collection(db!, "rooms", id, "players");
-                    const since = Timestamp.fromMillis(Date.now() - ACTIVE_WINDOW_MS);
+                    const since = Timestamp.fromMillis(
+                      Date.now() - ACTIVE_WINDOW_MS
+                    );
                     const q = query(coll, where("lastSeen", ">=", since));
                     const snap = await getCountFromServer(q);
-                    const verified = Number((snap.data() as any)?.count ?? 0) || 0;
+                    const verified =
+                      Number((snap.data() as any)?.count ?? 0) || 0;
                     const now2 = Date.now();
                     multiCheckCooldown[id] = now2 + 10_000; // 10s cooldown
                     if (verified > 0) {
                       // 本当の復帰。0固定を解除し、即時反映
                       zeroFreeze[id] = 0;
+                      freezeTracker.end(id, now2);
                       setCounts((prev) => ({ ...prev, [id]: n }));
                     } else {
                       // 残骸。0固定継続
@@ -323,10 +390,14 @@ export function useLobbyCounts(
                 setCounts((prev) => ({ ...prev, [id]: 0 }));
               }
             } else {
-              // VERIFY_MULTIを使わない場合は、freeze期間中は常に0固定（読み取り節約・揺れ抑止）
+              // JOIN兆候も検証も無い場合は freeze を維持
               setCounts((prev) => ({ ...prev, [id]: 0 }));
             }
           } else {
+            if (freezeUntil > 0) {
+              zeroFreeze[id] = 0;
+              freezeTracker.end(id, now);
+            }
             setCounts((prev) => ({ ...prev, [id]: n }));
           }
         };
@@ -353,13 +424,15 @@ export function useLobbyCounts(
     // 0人からの反跳ね（lastSeenで近似カウントするため起こりやすい）を防ぐ
     // フォールバック時は ACTIVE_WINDOW_MS 中は 0 を維持する方が UX 的に合理的
     const zeroFreeze: Record<string, number> = {};
-    const FALLBACK_ZERO_FREEZE_MS = Math.max(
-      // 任意オーバーライド（あれば使用）
-      Number((process.env.NEXT_PUBLIC_LOBBY_ZERO_FREEZE_MS || "").toString()) ||
-        0,
-      // 最低でも lastSeen の活動窓 + 10s は 0 を維持
-      ACTIVE_WINDOW_MS + 10_000
+    const freezeTracker = createFreezeTracker("fallback");
+    const envFallbackFreeze = Number(
+      (process.env.NEXT_PUBLIC_LOBBY_ZERO_FREEZE_MS || "").toString()
     );
+    const fallbackZeroBase =
+      Number.isFinite(envFallbackFreeze) && envFallbackFreeze > 0
+        ? envFallbackFreeze
+        : ACTIVE_WINDOW_MS + 10_000;
+    const FALLBACK_ZERO_FREEZE_MS = Math.min(fallbackZeroBase, 30_000);
     // デバッグ補助: 本来は presence を使う想定なので、フォールバック使用時に一度だけ警告
     if (typeof window !== "undefined") {
       logWarn("useLobbyCounts", "firestore-fallback", {});
@@ -393,11 +466,18 @@ export function useLobbyCounts(
           const freezeUntil = zeroFreeze[id] || 0;
           if (raw === 0) {
             zeroFreeze[id] = now + FALLBACK_ZERO_FREEZE_MS;
-            next[id] = 0;
-          } else if (now < freezeUntil) {
-            // クールダウン中は 0 を維持
+            freezeTracker.start(
+              id,
+              now,
+              zeroFreeze[id],
+              FALLBACK_ZERO_FREEZE_MS
+            );
             next[id] = 0;
           } else {
+            if (freezeUntil > 0) {
+              zeroFreeze[id] = 0;
+              freezeTracker.end(id, now);
+            }
             next[id] = raw;
           }
         }
