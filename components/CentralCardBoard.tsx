@@ -39,7 +39,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
@@ -222,6 +222,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   // ??????????????????
   const [showResult, setShowResult] = useState(false);
+  const [resultFlipMap, setResultFlipMap] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (roomStatus === "finished") {
       const appear = setTimeout(() => setShowResult(true), REVEAL_LINGER); // ??????
@@ -236,6 +237,43 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
     setShowResult(false);
   }, [roomStatus]);
+
+  useEffect(() => {
+    if (roomStatus !== "finished") {
+      setResultFlipMap({});
+      return;
+    }
+
+    setResultFlipMap((prev) => {
+      const next: Record<string, boolean> = {};
+      let changed = false;
+      (orderList ?? []).forEach((cardId) => {
+        if (!cardId) {
+          return;
+        }
+        const existing = prev[cardId];
+        if (existing === undefined) {
+          changed = true;
+        }
+        next[cardId] = existing ?? true;
+      });
+      if (Object.keys(prev).length !== Object.keys(next).length) {
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [orderList, roomStatus]);
+
+  const handleResultCardFlip = useCallback(
+    (cardId: string) => {
+      if (roomStatus !== "finished") return;
+      setResultFlipMap((prev) => {
+        const current = prev[cardId] ?? true;
+        return { ...prev, [cardId]: !current };
+      });
+    },
+    [roomStatus]
+  );
 
   // ??????: ?????????????????/???
   const finishedToastRef = useRef(false);
@@ -293,24 +331,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     };
   }, [setPending]);
 
-  const renderCard = (id: string, idx?: number) => (
-    <CardRenderer
-      key={id}
-      id={id}
-      player={playerMap.get(id)}
-      idx={idx}
-      orderList={orderList}
-      pending={pending}
-      proposal={proposal}
-      resolveMode={(resolveMode || undefined) as any}
-      roomStatus={roomStatus}
-      // sort-submit ???????? revealIndex????????? progressive index
-      revealIndex={revealIndex}
-      revealAnimating={revealAnimating}
-      failed={failed}
-      realtimeResult={realtimeResult} // ?????????????
-    />
-  );
+  const renderCard = (id: string, idx?: number) => {
+    const interactiveFlip =
+      roomStatus === "finished"
+        ? {
+            flipped: resultFlipMap[id] ?? true,
+            onToggle: () => handleResultCardFlip(id),
+            preset: "result" as const,
+          }
+        : undefined;
+
+    return (
+      <CardRenderer
+        key={id}
+        id={id}
+        player={playerMap.get(id)}
+        idx={idx}
+        orderList={orderList}
+        pending={pending}
+        proposal={proposal}
+        resolveMode={(resolveMode || undefined) as any}
+        roomStatus={roomStatus}
+        // sort-submit ???????? revealIndex????????? progressive index
+        revealIndex={revealIndex}
+        revealAnimating={revealAnimating}
+        failed={failed}
+        realtimeResult={realtimeResult} // ?????????????
+        interactiveFlip={interactiveFlip}
+      />
+    );
+  };
 
   // DnD sorting for sort-submit mode
   const activeProposal = useMemo(() => {

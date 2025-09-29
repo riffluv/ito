@@ -19,6 +19,11 @@ interface CardRendererProps {
     failedAt: number | null;
     currentIndex: number;
   } | null;
+  interactiveFlip?: {
+    flipped: boolean;
+    onToggle: () => void;
+    preset?: "result";
+  };
 }
 
 export function CardRenderer(props: CardRendererProps) {
@@ -38,11 +43,16 @@ export function CardRenderer(props: CardRendererProps) {
     realtimeResult: props.realtimeResult ?? null,
   });
 
+  const interactive = props.interactiveFlip;
+  const variant = interactive ? "flip" : state.variant;
+  const flipped = interactive ? interactive.flipped : state.flipped;
+  const flipPreset = interactive?.preset ?? "reveal";
+
   return (
     <GameCard
       key={id}
-      variant={state.variant}
-      flipped={state.flipped}
+      variant={variant}
+      flipped={flipped}
       index={typeof props.idx === "number" ? props.idx : null}
       name={player?.name}
       clue={state.clueText || undefined}
@@ -51,7 +61,11 @@ export function CardRenderer(props: CardRendererProps) {
       successLevel={state.successLevel}
       boundary={state.boundary}
       waitingInCentral={state.waitingInCentral}
+      isInteractive={!!interactive}
+      onClick={interactive ? interactive.onToggle : undefined}
+      flipPreset={flipPreset}
       // boundary styling hint via name prop aria? (Could be extended)
     />
   );
 }
+
