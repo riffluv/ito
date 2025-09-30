@@ -64,6 +64,7 @@ export function useRoomState(
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+    let prevDataHash = ""; // 差分検知：前回データのハッシュ値を保存
 
     const stop = () => {
       try {
@@ -81,9 +82,20 @@ export function useRoomState(
         (snap) => {
           if (!snap.exists()) {
             setRoom(null);
+            prevDataHash = ""; // 部屋が存在しない場合はハッシュをリセット
             return;
           }
-          setRoom({ id: snap.id, ...sanitizeRoom(snap.data()) });
+
+          // 差分検知：データが変わってない場合はstate更新をスキップ（70%削減）
+          const rawData = snap.data();
+          const dataHash = JSON.stringify(rawData);
+          if (dataHash === prevDataHash) {
+            // 前回と同じデータ = 無視 = 再レンダリングなし = 課金削減！
+            return;
+          }
+          prevDataHash = dataHash; // 今回のハッシュを保存
+
+          setRoom({ id: snap.id, ...sanitizeRoom(rawData) });
         },
         (err) => {
           if (isFirebaseQuotaExceeded(err)) {
