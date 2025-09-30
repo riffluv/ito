@@ -567,17 +567,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastKnownHostId,
     hostClaimCandidateId,
   ]);
-  // 保存: 自分がその部屋のメンバーである場合、最後に居た部屋として localStorage に記録
-  useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      if (uid && isMember) {
-        window.localStorage.setItem("lastRoom", roomId);
-      }
-    } catch (error) {
-      logDebug("room-page", "persist-last-room-failed", error);
-    }
-  }, [uid, isMember, roomId]);
 
   // 数字配布後（またはplayingで未割当の場合）、自分の番号を割当（決定的）
   useEffect(() => {
@@ -800,14 +789,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
       } catch (error) {
         logDebug("room-page", "clear-session-storage-failed", error);
-      }
-      try {
-        if (typeof window !== "undefined") {
-          const lr = window.localStorage.getItem("lastRoom");
-          if (lr === roomId) window.localStorage.removeItem("lastRoom");
-        }
-      } catch (error) {
-        logDebug("room-page", "clear-last-room-failed", error);
       }
     };
 
