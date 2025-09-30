@@ -50,9 +50,25 @@ function classifyCapability(rendererRaw: string | null): GPUCapability {
 export function useGPUPerformance(): GPUPerformanceHook {
   const [gpuCapability, setGpuCapability] = useState<GPUCapability>("low");
   const [animationMode, setAnimationModeState] = useState<AnimationMode>(() => {
-    if (typeof window === "undefined") return "auto";
-    const v = window.localStorage.getItem(STORAGE_KEY) as AnimationMode | null;
-    return v || "auto";
+    if (typeof window === "undefined") return "3d";
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY) as AnimationMode | null;
+      if (stored === null) {
+        window.localStorage.setItem(STORAGE_KEY, "3d");
+        return "3d";
+      }
+      if (stored === "auto") {
+        window.localStorage.setItem(STORAGE_KEY, "3d");
+        return "3d";
+      }
+      if (stored === "3d" || stored === "simple") {
+        return stored;
+      }
+      window.localStorage.setItem(STORAGE_KEY, "3d");
+      return "3d";
+    } catch {
+      return "3d";
+    }
   });
 
   useEffect(() => {
@@ -62,9 +78,10 @@ export function useGPUPerformance(): GPUPerformanceHook {
   }, []);
 
   const setAnimationMode = (mode: AnimationMode) => {
-    setAnimationModeState(mode);
+    const normalized: AnimationMode = mode === "auto" ? "3d" : mode;
+    setAnimationModeState(normalized);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, mode);
+      window.localStorage.setItem(STORAGE_KEY, normalized);
     }
   };
 

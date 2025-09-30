@@ -37,11 +37,16 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [force3DTransforms, setForce3DTransformsState] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
-      return window.localStorage.getItem(FORCE_3D_STORAGE_KEY) === "true";
+      const stored = window.localStorage.getItem(FORCE_3D_STORAGE_KEY);
+      if (stored === null) {
+        window.localStorage.setItem(FORCE_3D_STORAGE_KEY, "true");
+        return true;
+      }
+      return stored === "true";
     } catch {
-      return false;
+      return true;
     }
   });
 
