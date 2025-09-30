@@ -264,7 +264,7 @@ export function CreateRoomModal({
           showLoading: true,
           loadingSteps: [
             { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-            { id: "room", message: "ルームに じゅんびしています...", duration: 2000 },
+            { id: "room", message: "へやに じゅんびしています...", duration: 2000 },
             { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
             { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
           ],
@@ -368,7 +368,7 @@ export function CreateRoomModal({
                   // NameDialogと同じ通常フォント（monospace削除）
                 }}
               >
-                {isSuccess ? "ルームができました！" : "ルームを作成"}
+                {isSuccess ? "へやが できました！" : "へやを つくる"}
               </Dialog.Title>
               <Text
                 fontSize="sm"
@@ -387,117 +387,103 @@ export function CreateRoomModal({
           {isSuccess ? (
             <Box px={6} py={6} position="relative" zIndex={1}>
               <VStack gap={5} align="stretch">
-                <Box
-                  p={4}
-                  border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-                  borderRadius={0}
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-                >
-                  <VStack align="start" gap={2}>
-                    <Text
-                      fontSize="lg"
-                      fontWeight="bold"
-                      color="white"
-                      fontFamily="monospace"
-                      textShadow="1px 1px 0px #000"
-                    >
-                      ▼ ルームが かんせい しました！
-                    </Text>
-                    <Text
-                      fontSize="sm"
-                      color="whiteAlpha.80"
-                      fontFamily="monospace"
-                      textShadow="1px 1px 0px #000"
-                    >
-                      なかまに このリンクを おくって いっしょに あそぼう！
-                    </Text>
-                  </VStack>
-                </Box>
-
                 <VStack align="stretch" gap={3}>
                   <Text
-                    fontSize="sm"
-                    color="white"
+                    fontSize="md"
+                    color="rgba(255,255,255,0.95)"
                     fontFamily="monospace"
-                    textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                    fontWeight="bold"
+                    textShadow="0 2px 4px rgba(0,0,0,0.8)"
+                    pb={2}
+                    css={{
+                      borderBottom: "2px solid rgba(255,255,255,0.2)",
+                    }}
                   >
-                    ▼ なかま しょうたい リンク
+                    なかまを しょうたい
                   </Text>
                   <Box
-                    border="borders.retrogameThin"
-                    borderColor="whiteAlpha.70"
-                    bg="var(--colors-richBlack-700)"
-                    p={3}
-                    display="flex"
-                    flexDirection={{ base: "column", md: "row" }}
-                    gap={3}
-                    alignItems={{ base: "stretch", md: "center" }}
+                    border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+                    borderRadius={0}
+                    p={4}
+                    css={{
+                      background: "linear-gradient(135deg, rgba(18,20,28,0.85) 0%, rgba(12,14,20,0.9) 100%)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    }}
                   >
-                    <Text
-                      flex={1}
-                      fontSize="sm"
-                      color="white"
-                      fontFamily="monospace"
-                      wordBreak="break-all"
-                    >
-                      {inviteUrl}
-                    </Text>
-                    <button
-                      type="button"
-                      onClick={handleCopyInvite}
-                      style={{
-                        minWidth: "130px",
-                        borderRadius: 0,
-                        border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                        background: inviteCopied ? "white" : "transparent",
-                        color: inviteCopied ? "var(--colors-richBlack-800)" : "white",
-                        fontFamily: "monospace",
-                        fontWeight: "bold",
-                        padding: "8px 12px",
-                        cursor: "pointer",
-                        textShadow: inviteCopied ? "none" : "1px 1px 0px #000",
-                        transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-                        boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
-                        outline: "none",
-                      }}
-                      onMouseEnter={(event) => {
-                        if (!inviteCopied) {
-                          event.currentTarget.style.background = "white";
-                          event.currentTarget.style.color = "var(--colors-richBlack-800)";
-                          event.currentTarget.style.transform = "translateY(-1px)";
+                    <VStack gap={3} align="stretch">
+                      <Text
+                        fontSize="xs"
+                        color="rgba(255,255,255,0.7)"
+                        fontFamily="monospace"
+                        textShadow="0 1px 2px rgba(0,0,0,0.6)"
+                      >
+                        このリンクを おくって なかまを よぼう！
+                      </Text>
+                      <Box
+                        p={3}
+                        bg="rgba(8,9,15,0.6)"
+                        border="2px solid rgba(255,255,255,0.3)"
+                        borderRadius={0}
+                      >
+                        <Text
+                          fontSize="sm"
+                          color="rgba(255,255,255,0.95)"
+                          fontFamily="monospace"
+                          wordBreak="break-all"
+                          lineHeight="1.6"
+                        >
+                          {inviteUrl}
+                        </Text>
+                      </Box>
+                      <button
+                        type="button"
+                        onClick={handleCopyInvite}
+                        style={{
+                          width: "100%",
+                          height: "44px",
+                          borderRadius: 0,
+                          border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+                          background: inviteCopied ? "white" : "transparent",
+                          color: inviteCopied ? "var(--colors-richBlack-800)" : "white",
+                          fontFamily: "monospace",
+                          fontWeight: "bold",
+                          fontSize: "1rem",
+                          padding: "0 16px",
+                          cursor: "pointer",
+                          textShadow: inviteCopied ? "none" : "0 2px 4px rgba(0,0,0,0.8)",
+                          transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+                          boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
+                          outline: "none",
+                        }}
+                        onMouseEnter={(event) => {
+                          if (!inviteCopied) {
+                            event.currentTarget.style.background = "white";
+                            event.currentTarget.style.color = "var(--colors-richBlack-800)";
+                            event.currentTarget.style.transform = "translateY(-2px)";
+                            event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                          }
+                        }}
+                        onMouseLeave={(event) => {
+                          if (!inviteCopied) {
+                            event.currentTarget.style.background = "transparent";
+                            event.currentTarget.style.color = "white";
+                            event.currentTarget.style.transform = "translateY(0)";
+                            event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
+                          }
+                        }}
+                        onMouseDown={(event) => {
+                          event.currentTarget.style.transform = "translateY(1px)";
+                          event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
+                        }}
+                        onMouseUp={(event) => {
+                          event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-2px)";
                           event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
-                        }
-                      }}
-                      onMouseLeave={(event) => {
-                        if (!inviteCopied) {
-                          event.currentTarget.style.background = "transparent";
-                          event.currentTarget.style.color = "white";
-                          event.currentTarget.style.transform = "translateY(0)";
-                          event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
-                        }
-                      }}
-                      onMouseDown={(event) => {
-                        event.currentTarget.style.transform = "translateY(1px)";
-                        event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
-                      }}
-                      onMouseUp={(event) => {
-                        event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-1px)";
-                        event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
-                      }}
-                    >
-                      {inviteCopied ? "◆ コピー完了" : "◆ コピーする"}
-                    </button>
+                        }}
+                      >
+                        {inviteCopied ? "✓ コピーしました！" : "◆ リンクを コピー"}
+                      </button>
+                    </VStack>
                   </Box>
-                  <Text
-                    fontSize="xs"
-                    color="whiteAlpha.70"
-                    fontFamily="monospace"
-                    textShadow="1px 1px 0px #000"
-                    textAlign="center"
-                  >
-                    このリンクで なかまが かんたんに さんか できるよ！
-                  </Text>
                 </VStack>
               </VStack>
             </Box>
@@ -519,12 +505,12 @@ export function CreateRoomModal({
                     <VStack align="start" gap={2}>
                       <Text
                         fontSize="sm"
-                        color="white"
+                        color="rgba(255,255,255,0.95)"
                         fontFamily="monospace"
                         fontWeight="bold"
-                        textShadow="1px 1px 0px #000"
+                        textShadow="0 2px 4px rgba(0,0,0,0.8)"
                       >
-                        ▼ おしらせ
+                        ⚠ おしらせ
                       </Text>
                       <Text
                         fontSize="sm"
@@ -542,15 +528,15 @@ export function CreateRoomModal({
                 <Field.Root>
                   <Field.Label
                     css={{
-                      fontSize: "1rem",
+                      fontSize: "0.95rem",
                       fontWeight: "bold",
-                      color: "white",
+                      color: "rgba(255,255,255,0.95)",
                       marginBottom: "8px",
                       fontFamily: "monospace",
-                      textShadow: "1px 1px 0px #000",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                     }}
                   >
-                    ▼ ルームの なまえ
+                    へやの なまえ
                   </Field.Label>
                   <Input
                     placeholder="れい: 友達とあそぶ"
@@ -588,15 +574,15 @@ export function CreateRoomModal({
                 <Field.Root>
                   <Field.Label
                     css={{
-                      fontSize: "1rem",
+                      fontSize: "0.95rem",
                       fontWeight: "bold",
-                      color: "white",
+                      color: "rgba(255,255,255,0.95)",
                       marginBottom: "8px",
                       fontFamily: "monospace",
-                      textShadow: "1px 1px 0px #000",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                     }}
                   >
-                    ▼ 鍵をかける
+                    🔒 かぎを かける
                   </Field.Label>
                   <HStack align="center" gap={3}>
                     <Switch.Root
@@ -647,12 +633,13 @@ export function CreateRoomModal({
                     <VStack gap={2}>
                       <Text
                         fontSize="sm"
-                        color="white"
+                        color="rgba(255,255,255,0.95)"
                         fontFamily="monospace"
-                        textShadow="1px 1px 0px #000"
+                        fontWeight="bold"
+                        textShadow="0 2px 4px rgba(0,0,0,0.8)"
                         textAlign="center"
                       >
-                        ▼ 4桁の ひみつ ばんごう
+                        4けたの ひみつ ばんごう
                       </Text>
                       <GamePasswordInput
                         value={password}
@@ -688,15 +675,15 @@ export function CreateRoomModal({
                 <Field.Root>
                   <Field.Label
                     css={{
-                      fontSize: "1rem",
+                      fontSize: "0.95rem",
                       fontWeight: "bold",
-                      color: "white",
+                      color: "rgba(255,255,255,0.95)",
                       marginBottom: "8px",
                       fontFamily: "monospace",
-                      textShadow: "1px 1px 0px #000",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                     }}
                   >
-                    ▼ カード表示モード
+                    カード ひょうじ モード
                   </Field.Label>
                   <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
                     <button
@@ -806,11 +793,13 @@ export function CreateRoomModal({
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    e.currentTarget.style.color = "black";
+                    e.currentTarget.style.textShadow = "none";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
                   }}
                 >
                   もどる
@@ -834,11 +823,13 @@ export function CreateRoomModal({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                      e.currentTarget.style.color = "black";
+                      e.currentTarget.style.textShadow = "none";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = "transparent";
                       e.currentTarget.style.color = "white";
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
                     }}
                   >
                     とじる
@@ -861,14 +852,16 @@ export function CreateRoomModal({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                      e.currentTarget.style.color = "black";
+                      e.currentTarget.style.textShadow = "none";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = "var(--colors-richBlack-600)";
                       e.currentTarget.style.color = "white";
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
                     }}
                   >
-                    ルームへ すすむ
+                    へやへ すすむ
                   </button>
                 </HStack>
               </HStack>
@@ -892,11 +885,13 @@ export function CreateRoomModal({
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                    e.currentTarget.style.color = "black";
+                    e.currentTarget.style.textShadow = "none";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
                   }}
                 >
                   やめる
@@ -925,13 +920,15 @@ export function CreateRoomModal({
                   onMouseEnter={(e) => {
                     if (canSubmit) {
                       e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "var(--colors-richBlack-800)";
+                      e.currentTarget.style.color = "black";
+                      e.currentTarget.style.textShadow = "none";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (canSubmit) {
                       e.currentTarget.style.background = "var(--colors-richBlack-600)";
                       e.currentTarget.style.color = "white";
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
                     }
                   }}
                 >
