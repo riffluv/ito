@@ -96,10 +96,10 @@ export function GameCard({
       return;
     }
     if (flipped && !previousFlipRef.current) {
-      playCardFlip();
+      playCardSlide();
     }
     previousFlipRef.current = flipped;
-  }, [flipped, variant, playCardFlip]);
+  }, [flipped, variant, playCardSlide]);
 
   // Shared semantic colors
   const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
