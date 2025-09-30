@@ -46,16 +46,14 @@ export function GameResultOverlay({
     const container = containerRef.current;
     if (!overlay || !text || !container) return;
 
-    // containerを初期状態で中央に固定
-    gsap.set(container, {
-      xPercent: -50,
-      yPercent: -50,
-      x: 0,
-      y: 0,
-      rotation: 0,
-    });
-
     if (prefersReduced) {
+      gsap.set(container, {
+        xPercent: -50,
+        yPercent: -50,
+        x: 0,
+        y: 0,
+        rotation: 0,
+      });
       gsap.set(overlay, { opacity: 1, scale: 1, rotationX: 0, rotationY: 0 });
       gsap.set(text, { opacity: 1, y: 0, scale: 1 });
       return;
@@ -65,32 +63,124 @@ export function GameResultOverlay({
     tlRef.current = tl;
 
     if (failed) {
-      // ドラクエ風劇的失敗演出！
+      // ドラクエ風劇的失敗演出！ + 落下演出
 
-      // Phase 1: 衝撃的登場
+      // 失敗時の初期位置設定（container全体を完全に画面上外に）
+      gsap.set(container, {
+        xPercent: -50,
+        yPercent: -50,
+        y: -1000, // より高い位置から（完全に見えない位置）
+        x: 0,
+        rotation: 0,
+        opacity: 0, // container ごと透明
+      });
+
+      gsap.set(overlay, {
+        opacity: 0,
+        scale: 0.6,
+        rotation: -8,
+        filter: "blur(12px) brightness(0.3) saturate(0.4)",
+      });
+
+      gsap.set(text, {
+        opacity: 0,
+      });
+
+      gsap.set(flashRef.current, {
+        opacity: 0,
+        backgroundColor: "black",
+      });
+
+      // ====================================================
+      // Phase 0: 黒フラッシュ（画面が暗くなる）
+      // ====================================================
       tl.fromTo(
-        overlay,
+        flashRef.current,
+        { opacity: 0, backgroundColor: "black" },
         {
-          opacity: 0,
-          scale: 1.8,
-          rotationX: 30,
-          rotationZ: -10,
-          filter: "blur(8px) brightness(0.5) saturate(0.4)",
-          transformOrigin: "50% 50%"
-        },
-        {
-          opacity: 1,
-          scale: 0.7,
-          rotationX: 0,
-          rotationZ: 0,
-          filter: "blur(0px) brightness(0.7) saturate(0.6)",
-          duration: 0.4,
-          ease: "power4.out",
+          opacity: 0.7, // 少し暗く
+          duration: 0.15,
+          ease: "power2.in",
         }
       )
+      .to(flashRef.current, {
+        opacity: 0.3, // 完全に消さず、暗いまま
+        duration: 0.3,
+        ease: "power2.out"
+      });
+
+      // ====================================================
+      // Phase 0.5: 失敗BOXが上から落ちてくる！
+      // ====================================================
+      tl.to(
+        container,
+        {
+          opacity: 1, // container を表示
+          y: -50, // 少し上から落ちる
+          duration: 0.5,
+          ease: "power2.in", // 重力で加速
+        },
+        0.2 // 黒フラッシュの後
+      )
+      .to(
+        overlay,
+        {
+          opacity: 1,
+          scale: 0.9,
+          rotation: 3,
+          filter: "blur(2px) brightness(0.6) saturate(0.5)",
+          duration: 0.5,
+          ease: "power2.in",
+        },
+        0.2 // container と同時
+      )
+
+      // ====================================================
+      // Phase 1: ドスン！着地
+      // ====================================================
+      .to(container, {
+        y: 0, // 中央に着地
+        duration: 0.15,
+        ease: "power4.out",
+      })
+      .to(overlay, {
+        scale: 1.1, // 着地の衝撃で広がる
+        rotation: 0,
+        filter: "blur(0px) brightness(0.7) saturate(0.6)",
+        duration: 0.15,
+        ease: "power4.out",
+      }, "-=0.15")
+
+      // 着地の反動（潰れる）
+      .to(overlay, {
+        scale: 0.95,
+        duration: 0.1,
+        ease: "power2.in"
+      });
+
+      // ====================================================
+      // Phase 1.5: 着地時のシェイク（ドスン！）
+      // ====================================================
+      tl.to(
+        container,
+        {
+          y: 6,
+          duration: 0.05,
+          repeat: 6,
+          yoyo: true,
+          ease: "power2.inOut",
+        },
+        0.85 // 着地と同時
+      )
+      // シェイク後、中央に戻す
+      .to(container, {
+        y: 0,
+        duration: 0.15,
+        ease: "power2.out"
+      });
 
       // Phase 2: 重苦しい膨張
-      .to(overlay, {
+      tl.to(overlay, {
         scale: 1.15,
         duration: 0.35,
         ease: "power2.out",
@@ -212,6 +302,16 @@ export function GameResultOverlay({
       );
     } else {
       // ドラクエ風爆発演出！ + オクトパストラベラーBOOST風！
+
+      // 勝利時の初期位置設定（中央に固定）
+      gsap.set(container, {
+        xPercent: -50,
+        yPercent: -50,
+        x: 0,
+        y: 0,
+        rotation: 0,
+        opacity: 1, // 勝利時は即座に表示
+      });
 
       // ====================================================
       // BOOST Phase 0: ホワイトフラッシュ（衝撃的開幕）
@@ -566,6 +666,8 @@ export function GameResultOverlay({
       top="50%"
       left="50%"
       zIndex={10}
+      opacity={failed ? 0 : undefined}
+      style={failed ? { opacity: 0 } : undefined}
     >
       {/* ホワイトフラッシュ（全画面） */}
       <Box
