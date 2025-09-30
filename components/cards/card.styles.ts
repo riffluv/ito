@@ -104,32 +104,55 @@ export const CARD_STYLES = {
     },
   },
 
-  // ドラクエ風ゲームカード用スタイル（GameCard統合用）
+  // ドラクエ風ゲームカード用スタイル（GameCard統合用 - HD-2D風）
   dragonQuest: {
-    bg: "#0f0f23", // 深い青黒（デフォルト）
+    // シンプルなグラデーション背景（控えめな立体感）
+    background: "linear-gradient(152deg, rgba(18, 22, 38, 0.96) 0%, rgba(10, 13, 25, 0.98) 100%)",
     borderWidth: "1px",
     borderStyle: "solid" as const,
     borderColor: UI_TOKENS.COLORS.whiteAlpha60,
     borderRadius: "1rem",
     color: UI_TOKENS.COLORS.textBase,
-    boxShadow: UI_TOKENS.SHADOWS.cardRaised,
+    // 控えめな3層シャドウ
+    boxShadow: `
+      0 4px 12px rgba(0, 0, 0, 0.6),
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12)
+    `,
     display: "flex" as const,
     flexDirection: "column" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     aspectRatio: "5/7",
-    fontFamily: "monospace", // ドラクエ風フォント
+    fontFamily: "monospace",
     fontWeight: "bold" as const,
-    textShadow: "1px 1px 2px rgba(0,0,0,0.8)", // ドラクエ風テキストシャドウ
+    textShadow: "0 2px 8px rgba(0, 0, 0, 0.9), 1px 1px 0 rgba(0, 0, 0, 0.8)",
     letterSpacing: "0.5px",
     userSelect: "none" as const,
     cursor: "pointer",
     position: "relative" as const,
     overflow: "hidden" as const,
-    transition: `background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.3s ${UI_TOKENS.EASING.standard}`,
+    transition: `background 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.3s ${UI_TOKENS.EASING.standard}`,
+    // 微妙な光沢（控えめに）
+    _before: {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: "42%",
+      background: "linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%)",
+      borderRadius: "1rem 1rem 0 0",
+      pointerEvents: "none",
+    },
     _hover: {
-      transform: "translateY(-2px) scale(1.02)",
-      boxShadow: UI_TOKENS.SHADOWS.cardHover,
+      transform: "translateY(-3px) scale(1.02)",
+      boxShadow: `
+        0 6px 18px rgba(0, 0, 0, 0.7),
+        0 12px 36px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15)
+      `,
+      borderColor: UI_TOKENS.COLORS.whiteAlpha80,
     },
   },
 } as const;
@@ -163,25 +186,48 @@ export const getDragonQuestStyleOverrides = (
     border: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha30 : UI_TOKENS.COLORS.whiteAlpha20,
   };
 
-  // 状態別のスタイルオーバーライド
+  // 状態別のスタイルオーバーライド（シンプル版）
   const stateOverrides: Record<string, any> = {
     success: {
       borderColor: UI_TOKENS.COLORS.dqGold,
-      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+      borderWidth: "2px",
+      boxShadow: `
+        0 6px 18px rgba(255, 215, 0, 0.25),
+        0 12px 36px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(255, 215, 0, 0.2)
+      `,
     },
     fail: {
       borderColor: UI_TOKENS.COLORS.dqRed,
-      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+      borderWidth: "2px",
+      boxShadow: `
+        0 6px 18px rgba(220, 38, 38, 0.25),
+        0 12px 36px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(220, 38, 38, 0.2)
+      `,
     },
     ready: {
       borderColor: UI_TOKENS.COLORS.dqSilver,
-      boxShadow: UI_TOKENS.SHADOWS.cardFloating,
+      borderWidth: "2px",
+      boxShadow: `
+        0 6px 18px rgba(192, 192, 192, 0.25),
+        0 12px 36px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(192, 192, 192, 0.15)
+      `,
     },
     default: {
       borderColor: baseColors.border,
       boxShadow: waitingInCentral
-        ? UI_TOKENS.SHADOWS.panelDistinct
-        : UI_TOKENS.SHADOWS.cardRaised,
+        ? `
+          0 4px 16px rgba(0, 0, 0, 0.5),
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1)
+        `
+        : `
+          0 4px 12px rgba(0, 0, 0, 0.6),
+          0 8px 24px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12)
+        `,
     },
   };
 
