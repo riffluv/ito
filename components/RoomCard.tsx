@@ -81,31 +81,6 @@ export function RoomCard({
           }
         }}
       >
-        {locked && (
-          <Box
-            position="absolute"
-            top={4}
-            left={4}
-            zIndex={2}
-          >
-            <Badge
-              variant="solid"
-              colorPalette="purple"
-              display="flex"
-              alignItems="center"
-              gap={1.5}
-              borderRadius="2px"
-              fontSize="xs"
-              fontWeight={600}
-              px={3}
-              py={1}
-            >
-              <Lock size={12} />
-              ロック中
-            </Badge>
-          </Box>
-        )}
-
         {/* Status indicator */}
         <Box position="absolute" top={4} right={4} zIndex={2}>
           <Badge
@@ -226,7 +201,7 @@ export function RoomCard({
             <AppButton
               size="sm"
               visual="solid"
-              palette="brand"
+              palette={locked ? "purple" : "brand"}
               css={{ width: "100%" }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -238,7 +213,7 @@ export function RoomCard({
               ) : (
                 <Play size={16} style={{ marginRight: "8px" }} />
               )}
-              {locked ? "パスワード入室" : "参加する"}
+              {locked ? "🔒 パスワード入室" : "参加する"}
             </AppButton>
           ) : (
             <Box

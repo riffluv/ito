@@ -19,7 +19,7 @@ type ButtonVariants = {
     | "surface"
     | "plain"
     | "link";
-  palette?: "brand" | "gray" | "danger" | "success" | "teal";
+  palette?: "brand" | "gray" | "danger" | "success" | "teal" | "purple";
 };
 
 type AppButtonProps = Omit<ButtonProps, "variant" | "colorScheme"> &
@@ -154,6 +154,12 @@ export function AppButton({
     teal: {
       baseBg: "rgba(20, 184, 166, 0.9)",
       hoverBg: "rgba(45, 212, 191, 0.95)",
+      borderColor: "rgba(255,255,255,0.8)",
+      textColor: "white",
+    },
+    purple: {
+      baseBg: "rgba(126, 34, 206, 0.9)",
+      hoverBg: "rgba(147, 51, 234, 0.95)",
       borderColor: "rgba(255,255,255,0.8)",
       textColor: "white",
     },
