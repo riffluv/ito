@@ -38,7 +38,6 @@ export function DragonQuestLoading({
 }: DragonQuestLoadingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const shouldReduceMotion = false;
   const [furthestStepIndex, setFurthestStepIndex] = useState(-1);
 
   const resolvedSteps = useMemo<TransitionLoadingStep[]>(() => {
@@ -53,7 +52,7 @@ export function DragonQuestLoading({
     return resolvedSteps.length > 0 ? 0 : -1;
   }, [resolvedSteps, currentStep, progress]);
 
-  // 画面のスクロール制御と即時オーバーレイ表示
+  // 画面のスクロール制御とGSAPフェードイン
   useEffect(() => {
     const container = containerRef.current;
 
@@ -68,46 +67,39 @@ export function DragonQuestLoading({
 
     if (!container) return;
 
-    if (shouldReduceMotion) {
-      container.style.opacity = "1";
-      container.style.transform = "none";
-      return () => {
-        document.body.style.overflow = "";
-        document.documentElement.style.overflow = "";
-      };
-    }
-
-    container.style.opacity = "1";
-    container.style.transform = "none";
+    // 純粋なGSAP制御に統一
+    gsap.set(container, { opacity: 0 });
+    gsap.to(container, {
+      opacity: 1,
+      duration: 0.2,
+      ease: "none",
+    });
 
     return () => {
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
+      gsap.killTweensOf(container);
     };
-  }, [isVisible, shouldReduceMotion]);
+  }, [isVisible]);
 
-  // プログレスバーアニメーション
+  // プログレスバーアニメーション - 純粋なGSAP制御
   useEffect(() => {
     const bar = progressBarRef.current;
     if (!bar) return;
 
     const clamped = Math.min(Math.max(progress, 0), 100);
 
-    if (shouldReduceMotion) {
-      bar.style.width = `${clamped}%`;
-      return;
-    }
-
     gsap.to(bar, {
       width: `${clamped}%`,
       duration: 0.35,
       ease: "power1.out",
+      overwrite: "auto",
     });
 
     return () => {
       gsap.killTweensOf(bar);
     };
-  }, [progress, shouldReduceMotion]);
+  }, [progress]);
 
   // ステップ進行を記録してハイライト制御
   useEffect(() => {
@@ -124,15 +116,10 @@ export function DragonQuestLoading({
     }
   }, [isVisible]);
 
-  // 完了時のフェードアウト
+  // 完了時のフェードアウト - 純粋なGSAP制御
   useEffect(() => {
     if (!isVisible || !onComplete) return;
     if (progress < 100) return;
-
-    if (shouldReduceMotion) {
-      onComplete();
-      return;
-    }
 
     const timer = window.setTimeout(() => {
       const container = containerRef.current;
@@ -147,13 +134,14 @@ export function DragonQuestLoading({
         duration: 0.3,
         ease: "none",
         onComplete,
+        overwrite: "auto",
       });
     }, 300); // ドラクエ風：キビキビした反応
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [progress, isVisible, onComplete, shouldReduceMotion]);
+  }, [progress, isVisible, onComplete]);
 
   if (!isVisible) return null;
 
