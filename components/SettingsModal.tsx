@@ -33,6 +33,8 @@ export function SettingsModal({
     effectiveMode,
     gpuCapability,
     supports3D,
+    force3DTransforms,
+    setForce3DTransforms,
   } = useAnimationSettings();
 
   const [resolveMode, setResolveMode] = useState<string>(
@@ -928,9 +930,9 @@ export function SettingsModal({
                     アニメーション モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={1}>
-                    げんざい:{" "}
-                    {effectiveMode === "3d" ? "高品質 3D" : "シンプル"}
-                    （自動判定: {gpuCapability === "high" ? "高" : "低"}）
+                    現在:{" "}
+                    {force3DTransforms ? "3D回転" : "シンプル"}
+                    （推定GPU: {gpuCapability === "high" ? "高" : "低"}）
                   </Text>
                   {effectiveMode === "simple" &&
                     animationMode !== "simple" &&
@@ -946,27 +948,31 @@ export function SettingsModal({
                   <Stack gap={2}>
                     {[
                       {
-                        value: "auto",
-                        title: "自動おすすめ設定",
-                        description: "PCの せいのうに あわせて さいてき",
-                      },
-                      {
                         value: "3d",
-                        title: "高品質 3D",
-                        description: "3D回転アニメーション",
+                        title: "3D回転",
+                        description: "カードが立体的に回転します（おすすめ）",
                       },
                       {
                         value: "simple",
                         title: "シンプル",
-                        description: "軽量表示切り替え",
+                        description: "回転を省いて軽量表示にします",
                       },
                     ].map((opt) => {
-                      const isSelected = animationMode === (opt.value as any);
+                      const isAvailable = !(opt.value === "3d" && supports3D === false);
+                      const isSelected =
+                        opt.value === "3d"
+                          ? force3DTransforms
+                          : !force3DTransforms && animationMode === "simple";
+                      const handleClick = () => {
+                        setAnimationMode(opt.value as any);
+                        setForce3DTransforms(opt.value === "3d");
+                      };
                       return (
                         <Box
                           key={opt.value}
-                          cursor="pointer"
-                          onClick={() => setAnimationMode(opt.value as any)}
+                          cursor={isAvailable ? "pointer" : "not-allowed"}
+                          onClick={isAvailable ? handleClick : undefined}
+                          opacity={isAvailable ? 1 : 0.5}
                           p={4}
                           borderRadius={0}
                           border="2px solid"
@@ -986,12 +992,16 @@ export function SettingsModal({
                               ? UI_TOKENS.SHADOWS.panelDistinct
                               : UI_TOKENS.SHADOWS.panelSubtle
                           }
-                          _hover={{
-                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                            bg: isSelected
-                              ? UI_TOKENS.COLORS.whiteAlpha15
-                              : UI_TOKENS.COLORS.panelBg,
-                          }}
+                          _hover={
+                            isAvailable
+                              ? {
+                                  borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                                  bg: isSelected
+                                    ? UI_TOKENS.COLORS.whiteAlpha15
+                                    : UI_TOKENS.COLORS.panelBg,
+                                }
+                              : {}
+                          }
                         >
                           <HStack justify="space-between" align="start">
                             <VStack align="start" gap={1} flex="1">
