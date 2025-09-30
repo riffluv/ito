@@ -38,6 +38,10 @@ export function DragonQuestLoading({
 }: DragonQuestLoadingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const dot1Ref = useRef<HTMLDivElement>(null);
+  const dot2Ref = useRef<HTMLDivElement>(null);
+  const dot3Ref = useRef<HTMLDivElement>(null);
   const [furthestStepIndex, setFurthestStepIndex] = useState(-1);
 
   const resolvedSteps = useMemo<TransitionLoadingStep[]>(() => {
@@ -116,6 +120,88 @@ export function DragonQuestLoading({
     }
   }, [isVisible]);
 
+  // パルス・シマー・ドットアニメーション - 純粋なGSAP制御
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const box = boxRef.current;
+    const bar = progressBarRef.current;
+    const dot1 = dot1Ref.current;
+    const dot2 = dot2Ref.current;
+    const dot3 = dot3Ref.current;
+
+    // ボックスのパルス効果
+    if (box) {
+      gsap.to(box, {
+        boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 30px rgba(255,255,255,0.25)",
+        duration: 1,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+      });
+    }
+
+    // プログレスバーのシマー効果
+    if (bar) {
+      gsap.to(bar, {
+        filter: "brightness(1.2)",
+        duration: 0.75,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+      });
+    }
+
+    // ドット1
+    if (dot1) {
+      gsap.to(dot1, {
+        opacity: 1,
+        scale: 1.2,
+        duration: 0.47,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: false,
+        repeatDelay: 0.93,
+      });
+    }
+
+    // ドット2（0.47秒遅延）
+    if (dot2) {
+      gsap.to(dot2, {
+        opacity: 1,
+        scale: 1.2,
+        duration: 0.47,
+        ease: "sine.inOut",
+        delay: 0.47,
+        repeat: -1,
+        yoyo: false,
+        repeatDelay: 0.93,
+      });
+    }
+
+    // ドット3（0.93秒遅延）
+    if (dot3) {
+      gsap.to(dot3, {
+        opacity: 1,
+        scale: 1.2,
+        duration: 0.47,
+        ease: "sine.inOut",
+        delay: 0.93,
+        repeat: -1,
+        yoyo: false,
+        repeatDelay: 0.93,
+      });
+    }
+
+    return () => {
+      if (box) gsap.killTweensOf(box);
+      if (bar) gsap.killTweensOf(bar);
+      if (dot1) gsap.killTweensOf(dot1);
+      if (dot2) gsap.killTweensOf(dot2);
+      if (dot3) gsap.killTweensOf(dot3);
+    };
+  }, [isVisible]);
+
   // 完了時のフェードアウト - 純粋なGSAP制御
   useEffect(() => {
     if (!isVisible || !onComplete) return;
@@ -169,6 +255,7 @@ export function DragonQuestLoading({
       }}
     >
       <Box
+        ref={boxRef}
         bg="#000000"
         border="4px solid #ffffff"
         borderRadius={0}
@@ -182,7 +269,6 @@ export function DragonQuestLoading({
           borderBottomColor: "#888888",
           borderRightColor: "#888888",
           boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15)",
-          animation: "hd2dPulse 2s ease-in-out infinite",
         }}
       >
         {/* HD-2D風：洗練されたローディング */}
@@ -225,7 +311,7 @@ export function DragonQuestLoading({
                 bg="linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)"
                 css={{
                   boxShadow: "0 0 12px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
-                  animation: "hd2dShimmer 1.5s ease-in-out infinite",
+                  filter: "brightness(1)",
                 }}
               />
             </Box>
@@ -245,91 +331,42 @@ export function DragonQuestLoading({
           {/* オクトパス風装飾ドット */}
           <HStack gap={2} justify="center">
             <Box
+              ref={dot1Ref}
               w="6px"
               h="6px"
               bg="#ffffff"
               css={{
                 boxShadow: "0 0 8px rgba(255,255,255,0.8)",
-                animation: "hd2dDot1 1.4s ease-in-out infinite",
+                opacity: 0.3,
+                transform: "scale(0.8)",
               }}
             />
             <Box
+              ref={dot2Ref}
               w="6px"
               h="6px"
               bg="#ffffff"
               css={{
                 boxShadow: "0 0 8px rgba(255,255,255,0.8)",
-                animation: "hd2dDot2 1.4s ease-in-out infinite",
+                opacity: 0.3,
+                transform: "scale(0.8)",
               }}
             />
             <Box
+              ref={dot3Ref}
               w="6px"
               h="6px"
               bg="#ffffff"
               css={{
                 boxShadow: "0 0 8px rgba(255,255,255,0.8)",
-                animation: "hd2dDot3 1.4s ease-in-out infinite",
+                opacity: 0.3,
+                transform: "scale(0.8)",
               }}
             />
           </HStack>
         </VStack>
       </Box>
 
-      <style jsx>{`
-        @keyframes hd2dPulse {
-          0%, 100% {
-            box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15);
-          }
-          50% {
-            box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 30px rgba(255,255,255,0.25);
-          }
-        }
-
-        @keyframes hd2dShimmer {
-          0% {
-            filter: brightness(1);
-          }
-          50% {
-            filter: brightness(1.2);
-          }
-          100% {
-            filter: brightness(1);
-          }
-        }
-
-        @keyframes hd2dDot1 {
-          0%, 100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-          33% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-
-        @keyframes hd2dDot2 {
-          0%, 100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-          66% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-
-        @keyframes hd2dDot3 {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-          33% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-        }
-      `}</style>
     </Box>
   );
 }
