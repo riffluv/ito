@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, Text, VStack, HStack, Button } from "@chakra-ui/react";
+import { Dialog, Text, VStack, HStack, Button, Box } from "@chakra-ui/react";
 import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
+import { UI_TOKENS } from "@/theme/layout";
+import IconButtonDQ from "@/components/ui/IconButtonDQ";
 
 export type RoomPasswordPromptProps = {
   isOpen: boolean;
@@ -42,65 +44,111 @@ export function RoomPasswordPrompt({
     <Dialog.Root open={isOpen} onOpenChange={(details) => !details.open && onCancel()}>
       <Dialog.Backdrop
         css={{
-          backdropFilter: "blur(6px)",
-          background: "rgba(0,0,0,0.5)",
+          background: "overlayStrong",
+          backdropFilter: "blur(12px) saturate(1.2)",
         }}
       />
       <Dialog.Positioner>
         <Dialog.Content
           css={{
-            background: "rgba(8,9,15,0.9)",
-            border: "3px solid rgba(255,255,255,0.85)",
+            background: UI_TOKENS.COLORS.panelBg,
+            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             borderRadius: 0,
-            width: "min(400px, 90vw)",
-            boxShadow: "4px 4px 0 rgba(0,0,0,0.6)",
+            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+            maxWidth: "480px",
+            width: "90vw",
+            padding: 0,
+            overflow: "hidden",
+            position: "relative",
           }}
         >
-          <Dialog.Header px={6} py={4} borderBottom="1px solid rgba(255,255,255,0.25)">
-            <Dialog.Title
-              css={{
-                fontFamily: "monospace",
-                fontSize: "1.1rem",
-                fontWeight: 700,
-                color: "white",
-                textShadow: "1px 1px 0 rgba(0,0,0,0.6)",
-              }}
-            >
-              鍵付きルーム
-            </Dialog.Title>
-            <Dialog.CloseTrigger
-              css={{
-                border: "1px solid rgba(255,255,255,0.5)",
-                borderRadius: 0,
-                background: "transparent",
-                color: "white",
-                fontFamily: "monospace",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </Dialog.CloseTrigger>
-          </Dialog.Header>
-          <Dialog.Body px={6} py={5}>
+          {/* Close button - ドラクエ風 */}
+          <IconButtonDQ
+            aria-label="閉じる"
+            onClick={onCancel}
+            size="sm"
+            css={{
+              position: "absolute",
+              top: "12px",
+              right: "12px",
+              zIndex: 10,
+              borderRadius: 0,
+              padding: "0",
+              cursor: "pointer",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "16px",
+              fontWeight: "bold",
+              "&:hover": {
+                background: "white",
+                color: UI_TOKENS.COLORS.panelBg,
+              },
+            }}
+          >
+            ✕
+          </IconButtonDQ>
+
+          {/* Header - ドラクエ風 */}
+          <Box
+            p={6}
+            position="relative"
+            zIndex={1}
+            css={{
+              borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            }}
+          >
+            <VStack gap={2} align="center">
+              <Dialog.Title
+                css={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "white",
+                  margin: 0,
+                  textAlign: "center",
+                }}
+              >
+                🔒 かぎつき へや
+              </Dialog.Title>
+              <Text
+                fontSize="sm"
+                color="white"
+                fontWeight="normal"
+                textAlign="center"
+                fontFamily="monospace"
+                textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
+              >
+                ひみつの ばんごうを いれてね
+              </Text>
+            </VStack>
+          </Box>
+          <Box px={6} py={6} position="relative" zIndex={1}>
             <VStack align="stretch" gap={4}>
               <input type="text" name="roomKeyPromptDummy" autoComplete="username" style={{ display: "none" }} />
               <input type="password" name="roomKeyPromptHidden" autoComplete="new-password" style={{ display: "none" }} />
-              <Text fontSize="sm" color="white" fontFamily="monospace">
-                {roomName ? `「${roomName}」に入室するにはパスワードが必要です。` : "この部屋は鍵がかかっています。"}
-              </Text>
+              {roomName && (
+                <Text
+                  fontSize="sm"
+                  color="rgba(255,255,255,0.85)"
+                  fontFamily="monospace"
+                  textAlign="center"
+                  lineHeight="1.6"
+                >
+                  「{roomName}」へ ようこそ！
+                </Text>
+              )}
               <VStack gap={2} align="stretch">
                 <Text
                   fontSize="sm"
-                  color="white"
+                  color="rgba(255,255,255,0.95)"
                   fontFamily="monospace"
-                  textShadow="1px 1px 0px #000"
+                  fontWeight="bold"
+                  textShadow="0 2px 4px rgba(0,0,0,0.8)"
+                  textAlign="center"
                 >
-                  ▼ 4桁の ひみつ ばんごう
+                  4けたの ひみつ ばんごう
                 </Text>
                 <GamePasswordInput
                   value={value}
@@ -113,37 +161,113 @@ export function RoomPasswordPrompt({
               </VStack>
 
               {error ? (
-                <Text fontSize="xs" color="var(--colors-dangerSolid)" fontFamily="monospace">
+                <Text
+                  fontSize="xs"
+                  color="var(--colors-dangerSolid)"
+                  fontFamily="monospace"
+                  textAlign="center"
+                  textShadow="1px 1px 0px #000"
+                >
                   {error}
                 </Text>
               ) : (
-                <Text fontSize="xs" color="whiteAlpha.70" fontFamily="monospace">
-                  ※ ホストに確認した 4桁の番号を入力してください
+                <Text
+                  fontSize="xs"
+                  color="rgba(255,255,255,0.7)"
+                  fontFamily="monospace"
+                  textAlign="center"
+                  textShadow="0 1px 2px rgba(0,0,0,0.6)"
+                >
+                  ※ ホストに かくにんした ばんごうを いれてね
                 </Text>
               )}
-              </VStack>
-          </Dialog.Body>
-          <Dialog.Footer px={6} py={4} borderTop="1px solid rgba(255,255,255,0.25)">
-            <HStack justify="flex-end" gap={3}>
-              <Button
-                variant="outline"
-                borderRadius={0}
+            </VStack>
+          </Box>
+
+          {/* Footer - ドラクエ風 */}
+          <Box
+            p={4}
+            pt={0}
+            position="relative"
+            zIndex={1}
+            css={{
+              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            }}
+          >
+            <HStack justify="space-between" gap={3} mt={4}>
+              <button
                 onClick={onCancel}
                 disabled={isLoading}
+                style={{
+                  minWidth: "120px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "borders.retrogameThin",
+                  background: "transparent",
+                  color: "white",
+                  cursor: isLoading ? "not-allowed" : "pointer",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}`,
+                  opacity: isLoading ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "black";
+                    e.currentTarget.style.textShadow = "none";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isLoading) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                  }
+                }}
               >
                 やめる
-              </Button>
-              <Button
-                colorScheme="purple"
-                borderRadius={0}
+              </button>
+
+              <button
                 onClick={handleSubmit}
-                loading={isLoading}
                 disabled={!canSubmit}
+                style={{
+                  minWidth: "140px",
+                  height: "40px",
+                  borderRadius: 0,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  fontFamily: "monospace",
+                  border: "borders.retrogameThin",
+                  background: !canSubmit ? "#666" : "rgba(126, 34, 206, 0.9)",
+                  color: "white",
+                  cursor: !canSubmit ? "not-allowed" : "pointer",
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}`,
+                  opacity: !canSubmit ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (canSubmit) {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.color = "black";
+                    e.currentTarget.style.textShadow = "none";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (canSubmit) {
+                    e.currentTarget.style.background = "rgba(126, 34, 206, 0.9)";
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                  }
+                }}
               >
-                入室する
-              </Button>
+                {isLoading ? "かくにん中..." : "にゅうしつ"}
+              </button>
             </HStack>
-          </Dialog.Footer>
+          </Box>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
