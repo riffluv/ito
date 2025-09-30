@@ -3,7 +3,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
-import { logDebug } from "@/lib/utils/log";
+import { logDebug, logError } from "@/lib/utils/log";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -22,6 +22,11 @@ export type RoomState = {
   isHost: boolean;
 };
 
+const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
+const BASE_JOIN_RETRY_DELAY_MS = 500;
+const MAX_JOIN_RETRY_DELAY_MS = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRY_MAX_DELAY_MS ?? 5000);
+const JOIN_RETRY_BACKOFF_FACTOR = 2;
+
 export function useRoomState(
   roomId: string,
   uid: string | null,
@@ -31,6 +36,7 @@ export function useRoomState(
   const joinCompletedRef = useRef(false);
   const joinInFlightRef = useRef<Promise<unknown> | null>(null);
   const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const joinAttemptRef = useRef(0);
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +47,11 @@ export function useRoomState(
     leavingRef.current = false;
     joinCompletedRef.current = false;
     joinInFlightRef.current = null;
+    joinAttemptRef.current = 0;
+    if (joinRetryTimerRef.current) {
+      clearTimeout(joinRetryTimerRef.current);
+      joinRetryTimerRef.current = null;
+    }
   }, [roomId, uid || ""]);
 
   useEffect(() => () => {
@@ -153,12 +164,12 @@ export function useRoomState(
   useEffect(() => {
     if (!isMember) {
       joinCompletedRef.current = false;
-    }
-  }, [isMember]);
-
-  useEffect(() => {
-    if (!isMember) {
-      joinCompletedRef.current = false;
+    } else {
+      joinAttemptRef.current = 0;
+      if (joinRetryTimerRef.current) {
+        clearTimeout(joinRetryTimerRef.current);
+        joinRetryTimerRef.current = null;
+      }
     }
   }, [isMember]);
 
@@ -203,14 +214,23 @@ export function useRoomState(
       }
     };
 
+    const clearRetryTimer = () => {
+      if (joinRetryTimerRef.current) {
+        clearTimeout(joinRetryTimerRef.current);
+        joinRetryTimerRef.current = null;
+      }
+    };
+
     if (room.status === "waiting") {
       if (pendingRejoin) {
         joinCompletedRef.current = false;
+        joinAttemptRef.current = 0;
       }
 
       const alreadyJoined = joinCompletedRef.current && isMember;
       if (!pendingRejoin) {
         if (alreadyJoined) {
+          clearRetryTimer();
           return;
         }
         if (joinInFlightRef.current) {
@@ -218,6 +238,8 @@ export function useRoomState(
         }
       }
 
+      clearRetryTimer();
+      const attemptBeforeCall = joinAttemptRef.current;
       const joinTask = joinRoomFully({
         roomId,
         uid,
@@ -226,19 +248,31 @@ export function useRoomState(
       })
         .then(() => {
           joinCompletedRef.current = true;
+          joinAttemptRef.current = 0;
+          clearRetryTimer();
         })
         .catch((error) => {
           joinCompletedRef.current = false;
           if (!pendingRejoin) {
-            if (joinRetryTimerRef.current) {
-              clearTimeout(joinRetryTimerRef.current);
+            const nextAttempt = attemptBeforeCall + 1;
+            joinAttemptRef.current = nextAttempt;
+            if (nextAttempt <= MAX_JOIN_RETRIES) {
+              const delay = Math.min(
+                BASE_JOIN_RETRY_DELAY_MS * Math.pow(JOIN_RETRY_BACKOFF_FACTOR, Math.max(nextAttempt - 1, 0)),
+                MAX_JOIN_RETRY_DELAY_MS
+              );
+              logDebug("room-state", "joinRoomFully-retry", { attempt: nextAttempt, delay });
+              clearRetryTimer();
+              joinRetryTimerRef.current = setTimeout(() => {
+                joinRetryTimerRef.current = null;
+                setJoinAttemptToken((value) => value + 1);
+              }, delay);
+            } else {
+              logError("room-state", "joinRoomFully-max-retries", error);
             }
-            joinRetryTimerRef.current = setTimeout(() => {
-              joinRetryTimerRef.current = null;
-              setJoinAttemptToken((value) => value + 1);
-            }, 500);
+          } else {
+            joinAttemptRef.current = 0;
           }
-          logDebug("room-state", "joinRoomFully-failed", error);
         })
         .finally(() => {
           joinInFlightRef.current = null;
@@ -248,9 +282,14 @@ export function useRoomState(
       joinInFlightRef.current = joinTask;
       joinTask.catch(() => void 0);
     } else if (isMember) {
+      joinAttemptRef.current = 0;
+      clearRetryTimer();
       ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
+    } else {
+      joinAttemptRef.current = 0;
+      clearRetryTimer();
     }
   }, [
     roomId,
@@ -259,6 +298,7 @@ export function useRoomState(
     displayName || "",
     rejoinSessionKey,
     isMember,
+    joinAttemptToken,
   ]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
