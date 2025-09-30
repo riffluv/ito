@@ -95,7 +95,8 @@ export function GameCard({
       previousFlipRef.current = flipped;
       return;
     }
-    if (flipped && !previousFlipRef.current) {
+    // 両方向の回転で音を鳴らす（連想→数字、数字→連想）
+    if (flipped !== previousFlipRef.current) {
       playCardSlide();
     }
     previousFlipRef.current = flipped;
