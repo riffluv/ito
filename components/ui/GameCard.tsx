@@ -73,6 +73,7 @@ export function GameCard({
   const textColors = getDragonQuestTextColors(waitingInCentral);
 
   const playCardFlip = useSoundEffect("card_flip");
+  const playCardSlide = useSoundEffect("card_slide");
   const previousFlipRef = useRef<boolean>(flipped);
   const threeDContainerRef = useRef<HTMLDivElement | null>(null);
   const gsapInitialisedRef = useRef<boolean>(false);
@@ -145,6 +146,11 @@ export function GameCard({
         gsapInitialisedRef.current = true;
         return;
       }
+      // 判定中の回転開始時に音を鳴らす（クリック時は別処理）
+      if (!isResultPreset && flipped) {
+        playCardSlide();
+      }
+
       gsap.to(el, {
         duration: isResultPreset ? 0.28 : 0.35,
         rotateY: flipped ? 180 : 0,
@@ -156,7 +162,7 @@ export function GameCard({
       return () => {
         gsap.killTweensOf(el);
       };
-    }, [flipped, isResultPreset]);
+    }, [flipped, isResultPreset, playCardSlide]);
 
     // 常に3Dモード（GSAP制御）を使用
     // GPU判定に関係なく、GSAPが内部で最適化するため低スペックでも動作する

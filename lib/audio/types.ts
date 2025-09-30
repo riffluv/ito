@@ -1,8 +1,9 @@
-export type SoundCategory = "ui" | "notify" | "drag" | "result" | "ambient" | "system";
+export type SoundCategory = "ui" | "notify" | "drag" | "result" | "ambient" | "system" | "card";
 
 export type SoundId =
   | "ui_click"
   | "card_flip"
+  | "card_slide"
   | "drag_pickup"
   | "drop_success"
   | "drop_invalid"
@@ -72,6 +73,7 @@ export const SOUND_CATEGORIES: SoundCategory[] = [
   "result",
   "ambient",
   "system",
+  "card",
 ];
 
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
@@ -84,5 +86,6 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     result: 1,
     ambient: 1,
     system: 1,
+    card: 1,
   },
 };
