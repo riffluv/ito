@@ -313,30 +313,37 @@ export function GameResultOverlay({
         }
       );
 
-      // Phase 1: ドラマチック登場（ライン爆発と同時）
+      // ====================================================
+      // Phase 1: 画面左外から超高速で飛んでくる！！
+      // ====================================================
       tl.fromTo(
         overlay,
         {
+          x: -window.innerWidth - 500, // 画面左外
           opacity: 0,
-          scale: 0.3,
-          rotationX: -45,
-          rotationY: 25,
-          rotationZ: -15,
-          filter: "blur(12px) brightness(5)", // 超明るくスタート
-          transformOrigin: "50% 50%"
+          scale: 0.5,
+          rotation: -25,
+          filter: "blur(20px) brightness(5)", // 超明るくブレながら
         },
         {
+          x: 0, // 中央に到着！
           opacity: 1,
-          scale: 1.25,
-          rotationX: 0,
-          rotationY: 0,
-          rotationZ: 0,
-          filter: "blur(0px) brightness(1.3)",
-          duration: 0.6,
-          ease: "back.out(2.5)",
+          scale: 1.3,
+          rotation: 5, // 少し回転しながら
+          filter: "blur(0px) brightness(1.5)",
+          duration: 0.5,
+          ease: "power3.out",
         },
-        0.15 // ライン爆発と重ねる
+        0.15 // ライン爆発と同時
       )
+      // 到着時の反動（ビシッ！）
+      .to(overlay, {
+        scale: 1.1,
+        rotation: 0,
+        filter: "brightness(1.3)",
+        duration: 0.2,
+        ease: "back.out(3)",
+      })
 
       // Phase 2: 強烈なバウンス（ドラクエのレベルアップ感）
       .to(overlay, {
