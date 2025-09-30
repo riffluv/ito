@@ -331,7 +331,7 @@ export function GameResultOverlay({
           scale: 1.3,
           rotation: 5, // 少し回転しながら
           filter: "blur(0px) brightness(1.5)",
-          duration: 0.5,
+          duration: 0.4, // 0.5 → 0.4 に短縮！
           ease: "power3.out",
         },
         0.15 // ライン爆発と同時
@@ -341,7 +341,7 @@ export function GameResultOverlay({
         scale: 1.1,
         rotation: 0,
         filter: "brightness(1.3)",
-        duration: 0.2,
+        duration: 0.15, // 0.2 → 0.15 に短縮！
         ease: "back.out(3)",
       })
 
@@ -371,26 +371,26 @@ export function GameResultOverlay({
         filter: "brightness(1.5) saturate(1.3)"
       })
 
-      // Phase 3: テキスト躍動
+      // Phase 3: テキスト躍動（枠とほぼ同時に登場！）
       .fromTo(
         text,
         {
           opacity: 0,
-          y: 50,
-          scale: 0.6,
-          rotationX: 45,
-          filter: "blur(4px)"
+          y: 30,
+          scale: 0.8,
+          rotationX: 30,
+          filter: "blur(8px) brightness(5)" // 明るくスタート
         },
         {
           opacity: 1,
           y: 0,
           scale: 1.1,
           rotationX: 0,
-          filter: "blur(0px)",
-          duration: 0.45,
-          ease: "back.out(2.2)",
+          filter: "blur(0px) brightness(1)",
+          duration: 0.35, // 0.45 → 0.35 に短縮！
+          ease: "back.out(2.5)",
         },
-        "-=0.4"
+        0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
       )
 
       // Phase 4: 派手な跳ね演出 + 黄金演出の連動
