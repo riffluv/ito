@@ -23,11 +23,12 @@ const NOTIFICATION_SOUND_MAP: Record<DragonQuestNotification["type"], SoundId> =
   error: "notify_error",
 };
 
+// Octopath Traveler-style: simple symbols, no emojis
 const NOTIFICATION_ICON_MAP: Record<DragonQuestNotification["type"], string> = {
-  success: "✨",
-  error: "💥",
-  warning: "⚠️",
-  info: "🔔",
+  success: "▶",
+  error: "▶",
+  warning: "▶",
+  info: "▶",
 };
 
 const DEFAULT_DURATION_MS = 5500;
@@ -202,34 +203,34 @@ function NotificationItem({
       <Box
         ref={contentRef}
         position="relative"
-        bg={UI_TOKENS.COLORS.panelBg}
-        border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+        bg="rgba(12,14,20,0.92)"
+        border="2px solid rgba(255,255,255,0.85)"
         borderRadius={0}
         minW="320px"
         maxW="400px"
         px={5}
-        py={4}
+        py={3.5}
         css={{
           boxShadow:
-            "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.5)",
-          backgroundImage:
-            "radial-gradient(circle at 20% 80%, rgba(255,255,255,0.02) 1px, transparent 1px), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.02) 1px, transparent 1px)",
-          backgroundSize: "8px 8px, 12px 12px",
+            "0 4px 16px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)",
+          backdropFilter: "blur(8px)",
+          background:
+            "linear-gradient(135deg, rgba(12,14,20,0.95) 0%, rgba(18,20,28,0.92) 100%)",
         }}
       >
-        <Box display="flex" alignItems="flex-start" gap={4}>
+        <Box display="flex" alignItems="flex-start" gap={3}>
           <Box
-            fontSize="lg"
+            fontSize="sm"
             flexShrink={0}
-            color={getNotificationColor(notification.type)}
-            textShadow="2px 2px 0px #000, 0 0 4px rgba(0,0,0,0.8)"
+            color="rgba(255,255,255,0.9)"
             fontFamily="monospace"
-            fontWeight="bold"
+            fontWeight="normal"
             display="flex"
             alignItems="center"
             justifyContent="center"
-            w="24px"
-            h="24px"
+            w="16px"
+            h="20px"
+            mt="2px"
           >
             {getNotificationIcon(notification.type)}
           </Box>
@@ -237,13 +238,13 @@ function NotificationItem({
           <Box flex={1} minW={0}>
             <Text
               fontSize="md"
-              fontWeight={700}
-              color="white"
-              textShadow="2px 2px 0px #000, 0 0 6px rgba(0,0,0,0.9)"
-              letterSpacing="1px"
-              fontFamily="monospace"
-              lineHeight={1.4}
-              mb={notification.description ? 2 : 0}
+              fontWeight={600}
+              color="rgba(255,255,255,0.95)"
+              textShadow="0 1px 2px rgba(0,0,0,0.5)"
+              letterSpacing="0.3px"
+              fontFamily="system-ui, -apple-system, sans-serif"
+              lineHeight={1.5}
+              mb={notification.description ? 1.5 : 0}
             >
               {notification.title}
             </Text>
@@ -251,11 +252,11 @@ function NotificationItem({
             {notification.description && (
               <Text
                 fontSize="sm"
-                color={UI_TOKENS.COLORS.whiteAlpha90}
-                textShadow="1px 1px 0px #000, 0 0 4px rgba(0,0,0,0.7)"
-                fontFamily="monospace"
-                lineHeight={1.5}
-                letterSpacing="0.5px"
+                color="rgba(255,255,255,0.7)"
+                textShadow="0 1px 2px rgba(0,0,0,0.4)"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                lineHeight={1.6}
+                letterSpacing="0.2px"
               >
                 {notification.description}
               </Text>
@@ -263,18 +264,19 @@ function NotificationItem({
           </Box>
 
           <Box
-            fontSize="md"
-            color={UI_TOKENS.COLORS.whiteAlpha60}
-            fontFamily="monospace"
+            fontSize="lg"
+            color="rgba(255,255,255,0.5)"
+            fontFamily="system-ui, sans-serif"
             cursor="pointer"
-            _hover={{ color: "white", textShadow: "1px 1px 0px #000" }}
-            fontWeight={700}
+            _hover={{ color: "rgba(255,255,255,0.9)" }}
+            fontWeight={300}
             w="20px"
             h="20px"
             display="flex"
             alignItems="center"
             justifyContent="center"
             aria-label="通知を閉じる"
+            transition="color 0.2s ease"
           >
             ×
           </Box>
