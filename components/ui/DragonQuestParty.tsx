@@ -380,23 +380,30 @@ export function DragonQuestParty({
         maxW={PANEL_WIDTH}
         css={{ pointerEvents: "auto" }}
       >
-        {/* シンプルなパーティ名ヘッダー */}
+        {/* Octopath Traveler-style party header */}
         <Box
           display="flex"
           alignItems="center"
           gap={2}
           minW={0}
-          px={2}
-          py={0.5}
+          px={2.5}
+          py={1.5}
+          bg="rgba(12,14,20,0.85)"
+          border="1px solid rgba(255,255,255,0.15)"
+          borderRadius="2px"
+          css={{
+            boxShadow: "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
+            backdropFilter: "blur(4px)",
+          }}
         >
           {/* フラッグエンブレム */}
           <Box
             position="relative"
-            w="26px"
-            h="26px"
+            w="24px"
+            h="24px"
             flexShrink={0}
             css={{
-              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))",
+              filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.8))",
             }}
           >
             <img
@@ -410,7 +417,7 @@ export function DragonQuestParty({
             />
           </Box>
 
-          {/* パーティ名（シンプルに） */}
+          {/* パーティ名 */}
           <Tooltip
             content={displayRoomName || ""}
             openDelay={300}
@@ -418,12 +425,13 @@ export function DragonQuestParty({
           >
             <Text
               fontSize="sm"
-              fontWeight="bold"
-              color="textPrimary"
-              letterSpacing="0.5px"
+              fontWeight={600}
+              color="rgba(255,255,255,0.95)"
+              letterSpacing="0.3px"
               maxW="160px"
               truncate
-              textShadow="0 2px 4px rgba(0,0,0,0.8)"
+              textShadow="0 1px 2px rgba(0,0,0,0.6)"
+              fontFamily="system-ui, -apple-system, sans-serif"
             >
               {displayRoomName && displayRoomName.trim().length > 0
                 ? displayRoomName
@@ -431,16 +439,22 @@ export function DragonQuestParty({
             </Text>
           </Tooltip>
 
-          {/* 人数（括弧付きでシンプルに） */}
-          <Text
-            fontSize="sm"
-            color="textPrimary"
-            fontWeight="bold"
+          {/* 人数バッジ */}
+          <Box
+            fontSize="xs"
+            color="rgba(255,255,255,0.8)"
+            fontWeight={600}
             flexShrink={0}
-            textShadow="0 2px 4px rgba(0,0,0,0.8)"
+            px={1.5}
+            py={0.5}
+            bg="rgba(255,255,255,0.08)"
+            border="1px solid rgba(255,255,255,0.15)"
+            borderRadius="2px"
+            textShadow="0 1px 2px rgba(0,0,0,0.5)"
+            fontFamily="system-ui, sans-serif"
           >
-            ({actualCount})
-          </Text>
+            {actualCount}
+          </Box>
         </Box>
 
         <Box
