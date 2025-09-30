@@ -28,6 +28,12 @@ const MAX_CLOCK_SKEW_MS = Number(
     30_000
 );
 
+const DEBUG_LOGGING_ENABLED =
+  process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
+  process.env.NODE_ENV !== "production";
+
+const logDebug: (...args: Parameters<typeof console.debug>) => void =
+  DEBUG_LOGGING_ENABLED ? (...args) => console.debug(...args) : () => {};
 function toMillis(value: any): number {
   if (!value) return 0;
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -98,7 +104,7 @@ export const onPlayerUpdate = functions.firestore
     try {
       await recalcRoomCounts(roomId);
     } catch (err) {
-      console.error("onPlayerUpdate error", err);
+      console.error("Failed to refresh room statistics after player update", err);
     }
   });
 
@@ -158,7 +164,7 @@ export const onPresenceWrite = functions.database
 
       // 完全に切断されたのでノードを掃除し、部屋から退室させる
       await userRef.remove().catch((err) => {
-        console.warn("presence-user-remove-failed", { roomId, uid, err });
+        console.warn("Failed to remove user from room presence", { roomId, uid, err });
       });
 
       try {
@@ -172,18 +178,18 @@ export const onPresenceWrite = functions.database
           return null;
         }
 
-        console.log("presence-leaveRoomServer-call", {
+        logDebug("leaveRoomServer cleanup invoked", {
           roomId,
           uid,
           flags: { wentOffline, removed, markedOffline },
         });
         await leaveRoomServer(roomId, uid, null);
-        console.log("presence-leaveRoomServer-success", { roomId, uid });
+        logDebug("leaveRoomServer cleanup succeeded", { roomId, uid });
       } catch (err) {
-        console.error("presence-leaveRoomServer-failed", { roomId, uid, err });
+        console.error("leaveRoomServer cleanup failed", { roomId, uid, err });
       }
     } catch (err) {
-      console.error("onPresenceWrite error", { roomId, uid, err });
+      console.error("Presence write handler failed", { roomId, uid, err });
     }
     return null;
   });
@@ -367,7 +373,7 @@ export const cleanupGhostRooms = functions.pubsub
           await roomDoc.ref.delete();
         } catch {}
       } catch (err) {
-        console.error("cleanupGhostRooms error", err);
+        console.error("Failed to clean up ghost rooms", err);
       }
     }
     return null;
@@ -432,7 +438,7 @@ export const pruneIdleRooms = functions.pubsub
             });
           }
         } catch (err) {
-          console.warn("pruneIdleRooms-presence-check-failed", { roomId, err });
+          console.warn("Failed to check presence activity for room", { roomId, err });
         }
       }
 
@@ -451,7 +457,7 @@ export const pruneIdleRooms = functions.pubsub
           continue;
         }
       } catch (err) {
-        console.warn("pruneIdleRooms-recent-query-failed", { roomId, err });
+        console.warn("Failed to query recent players for room", { roomId, err });
         continue;
       }
 
@@ -459,7 +465,7 @@ export const pruneIdleRooms = functions.pubsub
       try {
         playersSnap = await roomDoc.ref.collection("players").get();
       } catch (err) {
-        console.warn("pruneIdleRooms-players-fetch-failed", { roomId, err });
+        console.warn("Failed to read players while pruning idle room", { roomId, err });
         continue;
       }
 
@@ -493,7 +499,7 @@ export const pruneIdleRooms = functions.pubsub
           await leaveRoomServer(roomId, playerId, null);
           prunedPlayers += 1;
         } catch (err) {
-          console.error("pruneIdleRooms-leave-failed", {
+          console.error("Failed to remove idle player during prune", {
             roomId,
             playerId,
             err,
@@ -503,7 +509,7 @@ export const pruneIdleRooms = functions.pubsub
     }
 
     if (processedRooms || prunedPlayers) {
-      console.info("pruneIdleRooms-summary", {
+      logDebug("Idle room prune summary", {
         processedRooms,
         prunedPlayers,
         thresholdMs: idleThresholdMs,
@@ -579,7 +585,7 @@ export const onPlayerDeleted = functions.firestore
           const next = await roomRef.collection("players").limit(1).get();
           const nextId = next.empty ? null : next.docs[0].id;
           if (nextId) {
-            console.warn("onPlayerDeleted-host-reassign", {
+            console.warn("Promoted next player to host after host left", {
               roomId: ctx.params.roomId,
               nextId,
             });
@@ -591,7 +597,7 @@ export const onPlayerDeleted = functions.firestore
     try {
       await recalcRoomCounts(ctx.params.roomId as string);
     } catch (err) {
-      console.error("onPlayerDeleted recalc error", err);
+      console.error("Failed to recalculate room counts after player deletion", err);
     }
     return null;
   });
@@ -650,7 +656,7 @@ export const onPlayerCreated = functions.firestore
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       } catch (err) {
-        console.warn("onPlayerCreated-system-message-failed", {
+        console.warn("Could not send system join message", {
           roomId: ctx.params.roomId,
           playerId: ctx.params.playerId,
           err,
@@ -688,7 +694,7 @@ export const pruneOldEvents = functions.pubsub
         for (const d of snap.docs) batch.delete(d.ref);
         await batch.commit();
       } catch (err) {
-        console.error("pruneOldEvents error", room.id, err);
+        console.error("Failed to prune old events", { roomId: room.id, err });
       }
     }
     return null;
