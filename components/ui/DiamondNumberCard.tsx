@@ -16,11 +16,15 @@ export function DiamondNumberCard({ number, isAnimating = false }: DiamondNumber
   useEffect(() => {
     if (!textRef.current) return;
 
-    // 数字が新しく配られた瞬間（null → numberへの変化）
+    // 数字が変わった瞬間を検出
     const isNewNumber = previousNumber.current === null && typeof number === "number";
+    const isNumberChanged =
+      previousNumber.current !== null &&
+      typeof number === "number" &&
+      previousNumber.current !== number;
 
-    if (isNewNumber) {
-      // 派手な登場演出
+    if (isNewNumber || isNumberChanged) {
+      // 派手な登場・変更演出
       const tl = gsap.timeline({ defaults: { ease: "back.out(2)" } });
 
       tl.fromTo(
