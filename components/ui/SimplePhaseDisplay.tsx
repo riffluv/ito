@@ -277,7 +277,7 @@ export function SimplePhaseDisplay({
         </Text>
       </Box>
 
-      {/* お題バッジ（シームレス・大きく・ゴールドグロー強化） */}
+      {/* お題バッジ（控えめゴールド・影あり） */}
       {topicText ? (
         <Tooltip content={topicText} openDelay={200} showArrow>
           <Box
@@ -289,17 +289,14 @@ export function SimplePhaseDisplay({
             py={{ base: 1.5, md: 2 }}
             position="relative"
             css={{
-              background: "linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.25) 100%)",
-              backdropFilter: "blur(12px) saturate(1.3)",
+              background: "linear-gradient(142deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
+              backdropFilter: "blur(10px) saturate(1.2)",
               borderRadius: "4px",
-              border: "1px solid rgba(255, 215, 0, 0.4)",
+              border: "1px solid rgba(255, 215, 0, 0.35)",
               boxShadow: `
-                0 4px 20px rgba(0, 0, 0, 0.8),
-                0 8px 40px rgba(0, 0, 0, 0.6),
-                inset 0 1px 0 rgba(255, 215, 0, 0.35),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.6),
-                0 0 30px rgba(255, 215, 0, 0.45),
-                0 0 60px rgba(255, 215, 0, 0.25)
+                0 4px 16px rgba(0, 0, 0, 0.7),
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                0 0 24px rgba(255, 215, 0, 0.2)
               `,
             }}
           >
@@ -313,32 +310,25 @@ export function SimplePhaseDisplay({
               flexShrink={0}
               css={{
                 textShadow: `
-                  0 0 14px rgba(255, 215, 0, 1),
-                  0 0 28px rgba(255, 215, 0, 0.6),
-                  0 3px 8px rgba(0, 0, 0, 0.95),
-                  1px 1px 0 rgba(0, 0, 0, 0.9),
-                  2px 2px 0 rgba(0, 0, 0, 0.7)
+                  0 0 12px rgba(255, 215, 0, 0.8),
+                  0 2px 6px rgba(0, 0, 0, 0.9),
+                  1px 1px 0 rgba(0, 0, 0, 0.85)
                 `,
-                filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))",
               }}
             >
               【お題】
             </Text>
             <Text
               fontSize={{ base: "md", md: "lg" }}
-              fontWeight={900}
+              fontWeight={800}
               color="rgb(255, 248, 220)"
               letterSpacing="0.6px"
               fontFamily="monospace"
               css={{
                 textShadow: `
-                  0 0 16px rgba(255, 215, 0, 0.9),
-                  0 0 32px rgba(255, 215, 0, 0.6),
-                  0 0 48px rgba(255, 215, 0, 0.3),
-                  0 4px 12px rgba(0, 0, 0, 0.95),
-                  1px 1px 0 rgba(0, 0, 0, 0.95),
-                  2px 2px 0 rgba(0, 0, 0, 0.9),
-                  3px 3px 0 rgba(0, 0, 0, 0.7)
+                  0 0 14px rgba(255, 215, 0, 0.7),
+                  0 3px 10px rgba(0, 0, 0, 0.95),
+                  1px 1px 0 rgba(0, 0, 0, 0.9)
                 `,
                 lineHeight: "1.3",
                 wordBreak: "break-word",
