@@ -96,7 +96,6 @@ export default function MainMenu() {
   const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
     "create"
   );
-  const [lastRoom, setLastRoom] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
@@ -187,16 +186,6 @@ export default function MainMenu() {
     }
   }, []);
 
-  // 前回の部屋への導線（任意復帰）
-  useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      const lr = window.localStorage.getItem("lastRoom");
-      setLastRoom(lr && lr.trim() ? lr : null);
-    } catch (error) {
-      logDebug("lobby-page", "restore-last-room-failed", error);
-    }
-  }, []);
 
   useEffect(() => {
     if (!roomsError) return;
@@ -344,7 +333,6 @@ export default function MainMenu() {
       if (!displayName || !String(displayName).trim()) {
         setTempName("");
         setNameDialogMode("create");
-        setLastRoom(room.id);
         nameDialog.onOpen();
         return;
       }
@@ -402,7 +390,6 @@ export default function MainMenu() {
       displayName,
       nameDialog,
       router,
-      setLastRoom,
       setNameDialogMode,
       setTempName,
       transition,
@@ -627,78 +614,6 @@ export default function MainMenu() {
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
-                  {lastRoom ? (
-                    <AppButton
-                      size="lg"
-                      visual="outline"
-                      palette="gray"
-                      onClick={async () => {
-                        if (!lastRoom) return;
-                        try {
-                          await transition.navigateWithTransition(
-                            `/rooms/${lastRoom}`,
-                            {
-                              direction: "fade",
-                              duration: 1.2,
-                              showLoading: true,
-                              loadingSteps: [
-                                {
-                                  id: "firebase",
-                                  message: "せつぞく中です...",
-                                  duration: 1500,
-                                },
-                                {
-                                  id: "room",
-                                  message:
-                                    "ぜんかいの ルームに もどっています...",
-                                  duration: 2000,
-                                },
-                                {
-                                  id: "player",
-                                  message:
-                                    "プレイヤーじょうほうを かくにんしています...",
-                                  duration: 1800,
-                                },
-                                {
-                                  id: "ready",
-                                  message: "じゅんびが かんりょうしました！",
-                                  duration: 1000,
-                                },
-                              ],
-                            },
-                            async () => {
-                              try {
-                                (
-                                  window as WindowWithIdleCallback
-                                ).requestIdleCallback?.(() => {
-                                  try {
-                                    router.prefetch(`/rooms/${lastRoom}`);
-                                  } catch (prefetchError) {
-                                    logDebug(
-                                      "main-menu",
-                                      "prefetch-last-room-skipped",
-                                      prefetchError
-                                    );
-                                  }
-                                });
-                              } catch (idleError) {
-                                logDebug(
-                                  "main-menu",
-                                  "prefetch-last-room-idle-missing",
-                                  idleError
-                                );
-                              }
-                            }
-                          );
-                        } catch (error) {
-                          logError("main-menu", "last-room-transition", error);
-                          router.push(`/rooms/${lastRoom}`);
-                        }
-                      }}
-                    >
-                      戻る: 前回のルーム
-                    </AppButton>
-                  ) : null}
                   <AppButton
                     size="lg"
                     visual="outline"
@@ -1346,73 +1261,8 @@ export default function MainMenu() {
 
           // 名前設定後のアクション判定
           if (nameDialogMode === "create") {
-            // lastRoomがある場合（参加待ちルーム）は自動参加
-            if (lastRoom) {
-              const roomToJoin = lastRoom;
-              setLastRoom(null); // 一時保存をクリア
-
-              try {
-                await transition.navigateWithTransition(
-                  `/rooms/${roomToJoin}`,
-                  {
-                    direction: "fade",
-                    duration: 1.2,
-                    showLoading: true,
-                    loadingSteps: [
-                      {
-                        id: "firebase",
-                        message: "せつぞく中です...",
-                        duration: 1500,
-                      },
-                      {
-                        id: "room",
-                        message: "ルームの じょうほうを とくていしています...",
-                        duration: 2000,
-                      },
-                      {
-                        id: "player",
-                        message: "プレイヤーを とうろくしています...",
-                        duration: 1800,
-                      },
-                      {
-                        id: "ready",
-                        message: "じゅんびが かんりょうしました！",
-                        duration: 1000,
-                      },
-                    ],
-                  },
-                  async () => {
-                    try {
-                      (window as WindowWithIdleCallback).requestIdleCallback?.(
-                        () => {
-                          try {
-                            router.prefetch(`/rooms/${roomToJoin}`);
-                          } catch (prefetchError) {
-                            logDebug(
-                              "main-menu",
-                              "prefetch-rejoin-skipped",
-                              prefetchError
-                            );
-                          }
-                        }
-                      );
-                    } catch (idleError) {
-                      logDebug(
-                        "main-menu",
-                        "prefetch-rejoin-idle-missing",
-                        idleError
-                      );
-                    }
-                  }
-                );
-              } catch (error) {
-                logError("main-menu", "post-name-join", error);
-                router.push(`/rooms/${roomToJoin}`);
-              }
-            } else {
-              // 通常のルーム作成フロー
-              createDialog.onOpen();
-            }
+            // 通常のルーム作成フロー
+            createDialog.onOpen();
           }
         }}
       />

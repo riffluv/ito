@@ -1,46 +1,218 @@
-react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
 content.js:85 [VSC] Content script initialized
-log.ts:69 [presence] connection-offline Object
-log.ts:67 [three-background-pixi] init-start
-log.ts:69 [presence] connected Object
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=YO2uvrnU58goydvL6qK9LHekSKRHFra9wdLbrLTg7r4&SID=CfamXImiChzRTJKNG_czpw&RID=2916&TYPE=terminate&zx=qgkgyyjn7tp2:1  Failed to load resource: the server responded with a status of 400 ()
-log.ts:69 [presence] ondisconnect-armed Object
-log.ts:67 [three-background-pixi] canvas-mounted
-log.ts:67 [three-background-pixi] background-gradient-created
-log.ts:67 [three-background-pixi] mountains-created
-log.ts:67 [three-background-pixi] gold-particles-created
-log.ts:67 [three-background-pixi] grass-foreground-created
-log.ts:67 [three-background-pixi] animation-started
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=6PfVsegdj5rxUWsn8zaAZqzlVOTAAVVoQFPiH0QTrgM&SID=zIAee2ZHJSpcn2vwKXDcAg&RID=49186&TYPE=terminate&zx=cp78rk9ma4m6:1  Failed to load resource: the server responded with a status of 400 ()
-:3000/sfx/sfx/ui/ui_click.webm:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/ui/ui_click.ogg:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/ui/ui_click.mp3:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/ui/ui_click.wav:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-SoundManager.ts:358 [SoundManager] No audio file resolved for ui_click. Tried: /sfx/sfx/ui/ui_click.webm, /sfx/sfx/ui/ui_click.ogg, /sfx/sfx/ui/ui_click.mp3, /sfx/sfx/ui/ui_click.wav
-loadVariant @ SoundManager.ts:358
-SoundManager.ts:358 [SoundManager] No audio file resolved for ui_click. Tried: /sfx/sfx/ui/ui_click.webm, /sfx/sfx/ui/ui_click.ogg, /sfx/sfx/ui/ui_click.mp3, /sfx/sfx/ui/ui_click.wav
-loadVariant @ SoundManager.ts:358
-SoundManager.ts:358 [SoundManager] No audio file resolved for ui_click. Tried: /sfx/sfx/ui/ui_click.webm, /sfx/sfx/ui/ui_click.ogg, /sfx/sfx/ui/ui_click.mp3, /sfx/sfx/ui/ui_click.wav
-loadVariant @ SoundManager.ts:358
-SoundManager.ts:358 [SoundManager] No audio file resolved for ui_click. Tried: /sfx/sfx/ui/ui_click.webm, /sfx/sfx/ui/ui_click.ogg, /sfx/sfx/ui/ui_click.mp3, /sfx/sfx/ui/ui_click.wav
-loadVariant @ SoundManager.ts:358
-:3000/sfx/sfx/card/card-slide-8.webm:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card_flip.webm:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card-slide-8.ogg:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card_flip.ogg:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card-slide-8.mp3:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card_flip.mp3:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/card/card-slide-8.wav:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-SoundManager.ts:358 [SoundManager] No audio file resolved for card_slide. Tried: /sfx/sfx/card/card-slide-8.webm, /sfx/sfx/card/card-slide-8.ogg, /sfx/sfx/card/card-slide-8.mp3, /sfx/sfx/card/card-slide-8.wav
-loadVariant @ SoundManager.ts:358
-:3000/sfx/sfx/card/card_flip.wav:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-SoundManager.ts:358 [SoundManager] No audio file resolved for card_flip. Tried: /sfx/sfx/card/card_flip.webm, /sfx/sfx/card/card_flip.ogg, /sfx/sfx/card/card_flip.mp3, /sfx/sfx/card/card_flip.wav
-loadVariant @ SoundManager.ts:358
-:3000/sfx/sfx/result/result_victory.webm:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/result/result_victory.ogg:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/result/result_victory.mp3:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-:3000/sfx/sfx/result/result_victory.wav:1  Failed to load resource: the server responded with a status of 404 (Not Found)
-SoundManager.ts:358 [SoundManager] No audio file resolved for result_victory. Tried: /sfx/sfx/result/result_victory.webm, /sfx/sfx/result/result_victory.ogg, /sfx/sfx/result/result_victory.mp3, /sfx/sfx/result/result_victory.wav
-loadVariant @ SoundManager.ts:358
-SoundManager.ts:358 [SoundManager] No audio file resolved for result_victory. Tried: /sfx/sfx/result/result_victory.webm, /sfx/sfx/result/result_victory.ogg, /sfx/sfx/result/result_victory.mp3, /sfx/sfx/result/result_victory.wav
-loadVariant @ SoundManager.ts:358
+react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`MainMenu`). To locate the bad setState() call inside `MainMenu`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at MainMenu (webpack-internal:///(app-pages-browser)/./app/page.tsx:107:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:18:11)
+    at SoundProvider (webpack-internal:///(app-pages-browser)/./lib/audio/SoundProvider.tsx:25:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:39:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+window.console.error @ app-index.js:33
+page.tsx:394 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+redirect-boundary.js:57 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+not-found-boundary.js:37 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+page.tsx:394 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
+    at invokeGuardedCallback (react-dom.development.js:20689:29)
+    at beginWork (react-dom.development.js:26949:7)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+redirect-boundary.js:57 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+not-found-boundary.js:37 Uncaught ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+app-index.js:33 The above error occurred in the <NotFoundErrorBoundary> component:
+
+    at MainMenu (webpack-internal:///(app-pages-browser)/./app/page.tsx:107:79)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at main
+    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:19:11)
+    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
+    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
+    at div
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
+    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
+    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:18:11)
+    at SoundProvider (webpack-internal:///(app-pages-browser)/./lib/audio/SoundProvider.tsx:25:11)
+    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
+    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:39:11)
+    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
+    at Suspense
+    at LoadableComponent (Server)
+    at Providers (Server)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
+window.console.error @ app-index.js:33
+app-index.js:33 [app] route-error ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+window.console.error @ app-index.js:33
+app-index.js:33 [app] route-error ReferenceError: setLastRoom is not defined
+    at MainMenu (page.tsx:394:7)
+    at renderWithHooks (react-dom.development.js:11121:18)
+    at mountIndeterminateComponent (react-dom.development.js:16869:13)
+    at beginWork$1 (react-dom.development.js:18458:16)
+    at beginWork (react-dom.development.js:26927:14)
+    at performUnitOfWork (react-dom.development.js:25748:12)
+    at workLoopSync (react-dom.development.js:25464:5)
+    at renderRootSync (react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
+    at workLoop (scheduler.development.js:256:34)
+    at flushWork (scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
+window.console.error @ app-index.js:33
+hot-reloader-client.js:187 [Fast Refresh] rebuilding
+hot-reloader-client.js:44 [Fast Refresh] done in 97ms
