@@ -686,7 +686,7 @@ export function GameResultOverlay({
         return (
           <Box
             key={i}
-            ref={(el) => {
+            ref={(el: HTMLDivElement | null) => {
               linesRef.current[i] = el;
             }}
             position="fixed"
