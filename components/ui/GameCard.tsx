@@ -81,12 +81,6 @@ export function GameCard({
   const isResultPreset = flipPreset === "result";
 
   useEffect(() => {
-    if (!isResultPreset) {
-      gsapInitialisedRef.current = false;
-    }
-  }, [isResultPreset]);
-
-  useEffect(() => {
     return () => {
       const el = threeDContainerRef.current;
       if (el) {
@@ -139,7 +133,7 @@ export function GameCard({
     const stableMode = stableModeRef.current;
 
     useLayoutEffect(() => {
-      if (!isResultPreset || stableMode !== "3d") return;
+      // GSAP使用時はGPU判定を無視して常に3D回転を試みる（GSAPが内部で最適化）
       const el = threeDContainerRef.current;
       if (!el) return;
       if (!gsapInitialisedRef.current) {
@@ -152,9 +146,9 @@ export function GameCard({
         return;
       }
       gsap.to(el, {
-        duration: 0.28,
+        duration: isResultPreset ? 0.28 : 0.35,
         rotateY: flipped ? 180 : 0,
-        ease: "back.out(1.65)",
+        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
         overwrite: "auto",
         transformPerspective: 1000,
         transformOrigin: "center center",
@@ -162,78 +156,10 @@ export function GameCard({
       return () => {
         gsap.killTweensOf(el);
       };
-    }, [flipped, isResultPreset, stableMode]);
+    }, [flipped, isResultPreset]);
 
-    if (stableMode === "simple") {
-      // ???????: ????????????????????????
-      const backNumberFontSize = getNumberFontSize(
-        typeof number === "number" ? number : null
-      );
-      return (
-        <Box
-          className={styles.root}
-          width={UNIFIED_LAYOUT.CARD.WIDTH}
-          height={UNIFIED_LAYOUT.CARD.HEIGHT}
-          minW={UNIFIED_LAYOUT.CARD.WIDTH}
-          minH={UNIFIED_LAYOUT.CARD.HEIGHT}
-          css={cardSizeCss()}
-          p={0}
-          borderRadius="8px"
-          border="none"
-          bg="transparent"
-          color={textColors.text}
-          onClick={clickHandler}
-          cursor={isInteractive ? "pointer" : undefined}
-          role={isInteractive ? "button" : undefined}
-          tabIndex={isInteractive ? 0 : undefined}
-        >
-          <Box position="relative" width="100%" height="100%">
-            {/* FRONT LAYER */}
-            <Box aria-hidden={flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 0 : 1, transition: `opacity ${reducedMotion ? 10 : isResultPreset ? 220 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
-              <CardFaceFront
-                index={typeof index === "number" ? index : null}
-                name={name}
-                clue={clue}
-                metaColor={textColors.meta}
-                clueColor={textColors.clue}
-                bg={styleOverrides.bg}
-                border={`${styleOverrides.borderWidth} solid`}
-                borderColor={successBorder}
-                boxShadow={
-                  successShadow
-                    ? mergeShadow(styleOverrides.boxShadow)
-                    : styleOverrides.boxShadow
-                }
-                waitingInCentral={waitingInCentral}
-              />
-            </Box>
-
-            {/* BACK LAYER */}
-            <Box aria-hidden={!flipped} position="absolute" inset={0} p={{ base: 0, md: 0 }}
-              style={{ opacity: flipped ? 1 : 0, transition: `opacity ${reducedMotion ? 10 : isResultPreset ? 220 : 200}ms ${UI_TOKENS.EASING.standard}` }}>
-              <CardFaceBack
-                index={typeof index === "number" ? index : null}
-                name={name}
-                number={typeof number === "number" ? number : null}
-                metaColor={textColors.meta}
-                numberColor={textColors.number}
-                bg={styleOverrides.bg}
-                border={`${styleOverrides.borderWidth} solid`}
-                borderColor={successBorder}
-                boxShadow={
-                  successShadow
-                    ? mergeShadow(styleOverrides.boxShadow)
-                    : styleOverrides.boxShadow
-                }
-                waitingInCentral={waitingInCentral}
-              />
-            </Box>
-          </Box>
-        </Box>
-      );
-    }
-    // 3D???????
+    // 常に3Dモード（GSAP制御）を使用
+    // GPU判定に関係なく、GSAPが内部で最適化するため低スペックでも動作する
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
@@ -275,10 +201,6 @@ export function GameCard({
             transformStyle: "preserve-3d",
             transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
             willChange: "transform",
-            transition:
-              isResultPreset || stableMode !== "3d"
-                ? "none"
-                : `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
           }}
         >
           {/* FRONT SIDE - ?????? */}
