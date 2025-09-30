@@ -571,7 +571,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // 数字配布後（またはplayingで未割当の場合）、自分の番号を割当（決定的）
   useEffect(() => {
     if (!room || !uid || !me) return;
-    if (typeof me.number === "number") return;
     if (room.status !== "clue") return;
     if (!room.deal || !room.deal.seed) return;
     if (!Array.isArray(room.deal.players) || !room.deal.players.includes(uid)) return;
@@ -584,7 +583,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
     roomId,
     me?.id,
-    me?.number,
   ]);
 
   // 準備完了（ready）はラウンド参加者（deal.players）を対象に判定
