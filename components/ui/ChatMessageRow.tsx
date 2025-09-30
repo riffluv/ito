@@ -52,8 +52,8 @@ function ChatMessageRowBase({
       <HStack align="center" gap={2} flexWrap="nowrap">
         <Box
           borderRadius={0}
-          width="20px"
-          height="20px"
+          width="24px"
+          height="24px"
           flexShrink={0}
           display="flex"
           alignItems="center"
@@ -72,7 +72,7 @@ function ChatMessageRowBase({
           ) : (
             <Text
               fontFamily="monospace"
-              fontSize="xs"
+              fontSize="sm"
               color={accent}
               textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
             >
@@ -85,11 +85,11 @@ function ChatMessageRowBase({
           <HStack gap={1} align="center" flexWrap="nowrap">
             <Text
               fontFamily="monospace"
-              fontSize="xs"
+              fontSize="sm"
               fontWeight="bold"
               color={accent}
               textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-              maxW="80px"
+              maxW="90px"
               overflow="hidden"
               whiteSpace="nowrap"
               title={sender}
@@ -100,7 +100,7 @@ function ChatMessageRowBase({
             </Text>
             {isHost && (
               <Text
-                fontSize="xs"
+                fontSize="sm"
                 fontFamily="monospace"
                 color={UI_TOKENS.COLORS.whiteAlpha80}
                 flexShrink={0}
@@ -109,7 +109,7 @@ function ChatMessageRowBase({
               </Text>
             )}
             <Text
-              fontSize="xs"
+              fontSize="sm"
               color="rgba(255,255,255,0.4)"
               fontFamily="monospace"
               flexShrink={0}
@@ -118,11 +118,11 @@ function ChatMessageRowBase({
               :
             </Text>
             <Text
-              fontSize="xs"
+              fontSize="sm"
               color={UI_TOKENS.COLORS.whiteAlpha90}
               fontFamily="monospace"
               textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-              lineHeight={1.4}
+              lineHeight={1.5}
               whiteSpace="pre-wrap"
               wordBreak="break-word"
               flex={1}

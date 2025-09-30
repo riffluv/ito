@@ -307,17 +307,24 @@ export function ChatPanel({
         >
           <Stack
             gap={1}
-            px={2}
+            pl={2}
+            pr={1}
             py={2}
             css={{
               "@layer dpi-responsive": {
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
                   gap: "0.2rem",
-                  padding: "0.3rem 0.4rem",
+                  paddingLeft: "0.4rem",
+                  paddingRight: "0.2rem",
+                  paddingTop: "0.3rem",
+                  paddingBottom: "0.3rem",
                 },
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
                   gap: "0.1rem",
-                  padding: "0.2rem 0.3rem",
+                  paddingLeft: "0.3rem",
+                  paddingRight: "0.15rem",
+                  paddingTop: "0.2rem",
+                  paddingBottom: "0.2rem",
                 },
               }
             }}

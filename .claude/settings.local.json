@@ -129,7 +129,8 @@
       "WebFetch(domain:www.gameuidatabase.com)",
       "WebFetch(domain:interfaceingame.com)",
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")",
-      "Read(//c/**)"
+      "Read(//c/**)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []
