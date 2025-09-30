@@ -130,27 +130,16 @@ export function GameCard({
     boundaryRing ? `${boundaryRing}, ${core}` : core;
   // 3D FLIP CARD IMPLEMENTATION - ?????????????????
   if (variant === "flip") {
-    const { effectiveMode, reducedMotion, force3DTransforms } = useAnimationSettings();
+    const { effectiveMode, reducedMotion } = useAnimationSettings();
     // ?????????????????????auto?????????DOM???????
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
     useEffect(() => {
       stableModeRef.current = effectiveMode;
     }, [effectiveMode]);
     const stableMode = stableModeRef.current;
-    const shouldForceGsap = stableMode === "3d" && (isResultPreset || force3DTransforms);
-
-    useEffect(() => {
-      if (!shouldForceGsap) {
-        const el = threeDContainerRef.current;
-        if (el) {
-          gsap.killTweensOf(el);
-        }
-        gsapInitialisedRef.current = false;
-      }
-    }, [shouldForceGsap]);
 
     useLayoutEffect(() => {
-      if (!shouldForceGsap) return;
+      if (!isResultPreset || stableMode !== "3d") return;
       const el = threeDContainerRef.current;
       if (!el) return;
       if (!gsapInitialisedRef.current) {
@@ -162,12 +151,10 @@ export function GameCard({
         gsapInitialisedRef.current = true;
         return;
       }
-      const duration = isResultPreset ? 0.28 : (reducedMotion ? 0.12 : 0.38);
-      const ease = isResultPreset ? "back.out(1.65)" : "power2.out";
       gsap.to(el, {
-        duration,
+        duration: 0.28,
         rotateY: flipped ? 180 : 0,
-        ease,
+        ease: "back.out(1.65)",
         overwrite: "auto",
         transformPerspective: 1000,
         transformOrigin: "center center",
@@ -175,7 +162,7 @@ export function GameCard({
       return () => {
         gsap.killTweensOf(el);
       };
-    }, [flipped, shouldForceGsap, isResultPreset, reducedMotion]);
+    }, [flipped, isResultPreset, stableMode]);
 
     if (stableMode === "simple") {
       // ???????: ????????????????????????
@@ -289,9 +276,9 @@ export function GameCard({
             transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
             willChange: "transform",
             transition:
-              !shouldForceGsap && stableMode === "3d"
-                ? `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`
-                : "none",
+              isResultPreset || stableMode !== "3d"
+                ? "none"
+                : `transform ${reducedMotion ? 10 : 600}ms ${CARD_FLIP_EASING}`,
           }}
         >
           {/* FRONT SIDE - ?????? */}

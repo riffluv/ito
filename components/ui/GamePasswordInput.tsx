@@ -14,9 +14,11 @@ interface GamePasswordInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   error?: boolean;
+  autoFocus?: boolean;
+  onEnter?: (value: string) => void;
 }
 
-export function GamePasswordInput({ value, onChange, disabled = false, error = false }: GamePasswordInputProps) {
+export function GamePasswordInput({ value, onChange, disabled = false, error = false, autoFocus = false, onEnter }: GamePasswordInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const digitsRef = useRef<string[]>(["", "", "", ""]);
 
@@ -41,6 +43,12 @@ export function GamePasswordInput({ value, onChange, disabled = false, error = f
     requestAnimationFrame(() => target.focus());
   }, []);
 
+  useEffect(() => {
+    if (autoFocus) {
+      focusAt(0);
+    }
+  }, [autoFocus, focusAt]);
+
   const commitDigits = useCallback((nextDigits: string[]) => {
     digitsRef.current = nextDigits;
     onChange(nextDigits.join(""));
@@ -63,6 +71,15 @@ export function GamePasswordInput({ value, onChange, disabled = false, error = f
   const handleKeyDown = useCallback((index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const currentValue = digitsRef.current.join("");
+      if (currentValue.length === 4) {
+        onEnter?.(currentValue);
+      }
+      return;
+    }
+
     if (event.key === "Backspace" && !digitsRef.current[index]) {
       event.preventDefault();
       if (index > 0) {
@@ -84,7 +101,7 @@ export function GamePasswordInput({ value, onChange, disabled = false, error = f
       event.preventDefault();
       if (index < 3) focusAt(index + 1);
     }
-  }, [commitDigits, disabled, focusAt]);
+  }, [commitDigits, disabled, focusAt, onEnter]);
 
   const handlePaste = useCallback((event: React.ClipboardEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -144,3 +161,4 @@ export function GamePasswordInput({ value, onChange, disabled = false, error = f
     </HStack>
   );
 }
+

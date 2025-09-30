@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Dialog, Field, Input, Text, VStack, HStack, Button } from "@chakra-ui/react";
+import { useState, useEffect, useCallback } from "react";
+import { Dialog, Text, VStack, HStack, Button } from "@chakra-ui/react";
+import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
 
 export type RoomPasswordPromptProps = {
   isOpen: boolean;
@@ -27,6 +28,15 @@ export function RoomPasswordPrompt({
       setValue("");
     }
   }, [isOpen]);
+
+  const handleSubmit = useCallback(() => {
+    if (isLoading) return;
+    const trimmed = value.trim();
+    if (trimmed.length !== 4) return;
+    onSubmit(trimmed);
+  }, [isLoading, onSubmit, value]);
+
+  const canSubmit = value.trim().length === 4 && !isLoading;
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(details) => !details.open && onCancel()}>
@@ -83,56 +93,32 @@ export function RoomPasswordPrompt({
               <Text fontSize="sm" color="white" fontFamily="monospace">
                 {roomName ? `「${roomName}」に入室するにはパスワードが必要です。` : "この部屋は鍵がかかっています。"}
               </Text>
-              <Field.Root>
-                <Field.Label
-                  css={{
-                    fontFamily: "monospace",
-                    color: "white",
-                    marginBottom: "6px",
-                  }}
+              <VStack gap={2} align="stretch">
+                <Text
+                  fontSize="sm"
+                  color="white"
+                  fontFamily="monospace"
+                  textShadow="1px 1px 0px #000"
                 >
-                  パスワード
-                </Field.Label>
-                <Input
-                  type="text"
+                  ▼ 4桁の ひみつ ばんごう
+                </Text>
+                <GamePasswordInput
                   value={value}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  inputMode="text"
-                  aria-autocomplete="none"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  data-form-type="other"
-                  autoFocus
-                  onChange={(event) => setValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !isLoading) {
-                      event.preventDefault();
-                      onSubmit(value);
-                    }
-                  }}
+                  onChange={setValue}
                   disabled={isLoading}
-                  css={{
-                    WebkitTextSecurity: "disc",
-                    MozTextSecurity: "disc",
-                    background: "white",
-                    borderRadius: 0,
-                    fontFamily: "monospace",
-                    color: "richBlack.900",
-                    letterSpacing: "0.08em",
-                    fontWeight: 600,
-                  }}
+                  error={!!error}
+                  autoFocus
+                  onEnter={handleSubmit}
                 />
-              </Field.Root>
+              </VStack>
+
               {error ? (
                 <Text fontSize="xs" color="var(--colors-dangerSolid)" fontFamily="monospace">
                   {error}
                 </Text>
               ) : (
                 <Text fontSize="xs" color="whiteAlpha.70" fontFamily="monospace">
-                  パスワードはホストに確認してください。
+                  ※ ホストに確認した 4桁の番号を入力してください
                 </Text>
               )}
               </VStack>
@@ -150,13 +136,9 @@ export function RoomPasswordPrompt({
               <Button
                 colorScheme="purple"
                 borderRadius={0}
-                onClick={() => {
-                  if (!isLoading && value.trim()) {
-                    onSubmit(value);
-                  }
-                }}
+                onClick={handleSubmit}
                 loading={isLoading}
-                disabled={isLoading || value.trim().length === 0}
+                disabled={!canSubmit}
               >
                 入室する
               </Button>
@@ -167,3 +149,5 @@ export function RoomPasswordPrompt({
     </Dialog.Root>
   );
 }
+
+

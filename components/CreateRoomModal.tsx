@@ -39,13 +39,11 @@ export function CreateRoomModal({
   const [submitting, setSubmitting] = useState(false);
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enablePassword) {
       setPassword("");
-      setPasswordConfirm("");
       setPasswordError(null);
     }
   }, [enablePassword]);
@@ -59,7 +57,6 @@ export function CreateRoomModal({
       setSubmitting(false);
       setEnablePassword(false);
       setPassword("");
-      setPasswordConfirm("");
       setPasswordError(null);
     }
   }, [isOpen]);
@@ -118,12 +115,11 @@ export function CreateRoomModal({
     if (enablePassword) {
       const trimmed = password.trim();
       if (trimmed.length !== 4 || !/^\d{4}$/.test(trimmed)) {
-        setPasswordError("4桁の数字を入力してください");
+        setPasswordError("4桁の ひみつ ばんごう を入力してください");
         return;
       }
-      if (trimmed !== passwordConfirm.trim()) {
-        setPasswordError("確認用のパスワードが一致しません");
-        return;
+      if (trimmed !== password) {
+        setPassword(trimmed);
       }
       setPasswordError(null);
     } else if (passwordError) {
@@ -217,7 +213,6 @@ export function CreateRoomModal({
       setCreatedRoomId(roomRef.id);
       setInviteCopied(false);
       setPassword("");
-      setPasswordConfirm("");
       onCreated?.(roomRef.id);
     } catch (e: any) {
       logError("rooms", "create-room", e);
@@ -666,23 +661,6 @@ export function CreateRoomModal({
                       />
                     </VStack>
 
-                    <VStack gap={2}>
-                      <Text
-                        fontSize="sm"
-                        color="white"
-                        fontFamily="monospace"
-                        textShadow="1px 1px 0px #000"
-                        textAlign="center"
-                      >
-                        ▼ もういちど にゅうりょく
-                      </Text>
-                      <GamePasswordInput
-                        value={passwordConfirm}
-                        onChange={setPasswordConfirm}
-                        error={!!passwordError}
-                      />
-                    </VStack>
-
                     {passwordError ? (
                       <Text
                         fontSize="xs"
@@ -701,7 +679,7 @@ export function CreateRoomModal({
                         textAlign="center"
                         textShadow="1px 1px 0px #000"
                       >
-                        なかまにだけ ばんごうを おしえてね
+                      ※ 4桁の数字で設定されます
                       </Text>
                     )}
                   </VStack>
@@ -967,6 +945,7 @@ export function CreateRoomModal({
     </Dialog.Root>
   );
 }
+
 
 
 
