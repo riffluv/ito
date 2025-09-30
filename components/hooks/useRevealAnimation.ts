@@ -87,34 +87,33 @@ export function useRevealAnimation({
       // 次にめくる枚数（この時点ではまだ state 更新前）
       const nextIndex = Math.min(revealIndex + 1, orderListLength);
 
-      // インデックスを進めると同時にリアルタイム判定・色付与（遅延なし）
+      // インデックスを進める（めくり開始）
       setRevealIndex((i) => (i >= orderListLength ? i : i + 1));
 
-      
-      // めくり完了と同時に色付与（遅延削除）
-      try {
-        if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
-          const currentList = orderData.list.slice(0, nextIndex);
-          const result = evaluateSorted(currentList, orderData.numbers);
-          logDebug("reveal", "step", { nextIndex, result });
-          
-          // 失敗 or 成功をめくり完了と同時にUIへ反映
-          // 失敗時も currentIndex は毎回更新（カードの色変化のため）
-          if (!result.success && result.failedAt !== null) {
-            // 失敗状態だが currentIndex は更新（軽量な更新）
-            setRealtimeResult({
-              success: false,
-              failedAt: result.failedAt,
-              currentIndex: nextIndex, // これは毎回更新が必要
-            });
-          } else {
-            // 成功継続時は毎回更新
-            setRealtimeResult({
-              success: result.success,
-              failedAt: result.failedAt,
-              currentIndex: nextIndex,
-            });
-          }
+
+      // めくり完了後に色付与（350ms後 = めくりアニメーション完了後）
+      setTimeout(() => {
+        try {
+          if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
+            const currentList = orderData.list.slice(0, nextIndex);
+            const result = evaluateSorted(currentList, orderData.numbers);
+            logDebug("reveal", "step", { nextIndex, result });
+
+            // 失敗 or 成功をめくり完了後にUIへ反映
+            if (!result.success && result.failedAt !== null) {
+              setRealtimeResult({
+                success: false,
+                failedAt: result.failedAt,
+                currentIndex: nextIndex,
+              });
+            } else {
+              // 成功継続時
+              setRealtimeResult({
+                success: result.success,
+                failedAt: result.failedAt,
+                currentIndex: nextIndex,
+              });
+            }
           
 
           // 【テスト用】サーバー保存を一時的に無効化
@@ -155,6 +154,7 @@ export function useRevealAnimation({
       } catch (e) {
         logDebug("reveal", "realtime-eval-error", e);
       }
+      }, 350); // めくり完了後に色付与（350ms = GSAPアニメーション時間）
     }, delay);
 
     return () => clearTimeout(timer);
