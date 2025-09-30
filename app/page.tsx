@@ -977,13 +977,13 @@ export default function MainMenu() {
               >
                 <Heading size="md" color="text" mb={3} fontWeight={600}>
                   {activeSearch
-                    ? `「${displaySearchKeyword}」に ぴったりの ルームは ありません`
-                    : "まだアクティブなルームがありません"}
+                    ? `「${displaySearchKeyword}」に一致する部屋はありません`
+                    : "アクティブな部屋がまだありません"}
                 </Heading>
                 <Text color="fgMuted" mb={6} maxW="400px" mx="auto">
                   {activeSearch
-                    ? "ことばを かえて さがすか、新しいルームを つくって みんなを まねきましょう"
-                    : "新しいルームを作成して、友だちを招待しましょう"}
+                    ? "別のキーワードで検索するか、新しい部屋を作成してみましょう"
+                    : "新しい部屋を作成して、友だちを招待してみましょう"}
                 </Text>
                 {activeSearch ? (
                   <AppButton
@@ -991,9 +991,10 @@ export default function MainMenu() {
                       setSearchInput("");
                       setPageIndex(0);
                     }}
-                    visual="outline"
+                    visual="solid"
                     palette="gray"
                   >
+                    <Plus size={18} style={{ marginRight: "8px" }} />
                     検索をクリア
                   </AppButton>
                 ) : (
@@ -1003,7 +1004,7 @@ export default function MainMenu() {
                     palette="brand"
                   >
                     <Plus size={18} style={{ marginRight: "8px" }} />
-                    新しいルームを作成
+                    新しい部屋を作成
                   </AppButton>
                 )}
               </Box>
