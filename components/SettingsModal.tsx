@@ -1,5 +1,6 @@
 "use client";
 import SoundSettingsPlaceholder from "@/components/settings/SoundSettingsPlaceholder";
+import SoundSettingsPanel from "@/components/settings/SoundSettingsPanel";
 import { notify } from "@/components/ui/notify";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
@@ -63,7 +64,7 @@ export function SettingsModal({
   const [previewMasterVolume, setPreviewMasterVolume] = useState(
     soundSettings.masterVolume
   );
-  const SOUND_FEATURE_LOCKED = true;
+  const SOUND_FEATURE_LOCKED = false;
   const soundLockMessage =
     "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
 
@@ -1197,13 +1198,22 @@ export function SettingsModal({
               </Stack>
             )}
             {activeTab === "sound" && (
-              <SoundSettingsPlaceholder
-                locked={SOUND_FEATURE_LOCKED}
-                message={soundLockMessage}
-                masterVolume={previewMasterVolume}
-                muted={previewMuted}
-                soundManagerReady={Boolean(soundManager)}
-              />
+              SOUND_FEATURE_LOCKED ? (
+                <SoundSettingsPlaceholder
+                  locked={SOUND_FEATURE_LOCKED}
+                  message={soundLockMessage}
+                  masterVolume={previewMasterVolume}
+                  muted={previewMuted}
+                  soundManagerReady={Boolean(soundManager)}
+                />
+              ) : (
+                <SoundSettingsPanel
+                  previewMuted={previewMuted}
+                  previewMasterVolume={previewMasterVolume}
+                  onMutedChange={setPreviewMuted}
+                  onMasterVolumeChange={setPreviewMasterVolume}
+                />
+              )
             )}
           </Dialog.Body>
 
