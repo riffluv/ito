@@ -136,29 +136,31 @@ function NotificationItem({
     const content = contentRef.current;
 
     if (prefersReduced) {
-      gsap.set(container, { opacity: 1, y: 0 });
-      gsap.set(content, { opacity: 1, y: 0 });
+      gsap.set(container, { opacity: 1, x: 0, scale: 1 });
+      gsap.set(content, { opacity: 1 });
       return;
     }
 
-    gsap.set(container, { opacity: 0, y: -16 });
+    // Octopath Traveler-style HD-2D entrance
+    gsap.set(container, { opacity: 0, x: 80, scale: 1.08 });
     gsap.set(content, { opacity: 0.3 });
 
     const tl = gsap.timeline();
     tlRef.current = tl;
     tl.to(container, {
       opacity: 1,
-      y: 0,
-      duration: 0.2,
+      x: 0,
+      scale: 1,
+      duration: 0.5,
       ease: "power2.out",
     }).to(
       content,
       {
         opacity: 1,
-        duration: 0.14,
-        ease: "none",
+        duration: 0.18,
+        ease: "power1.out",
       },
-      "-=0.08"
+      "-=0.32"
     );
 
     return () => {
@@ -166,7 +168,7 @@ function NotificationItem({
       tlRef.current = null;
       gsap.killTweensOf(container);
       gsap.killTweensOf(content);
-      gsap.set(container, { clearProps: "transform,opacity,y" });
+      gsap.set(container, { clearProps: "transform,opacity,x,scale" });
       gsap.set(content, { clearProps: "opacity" });
     };
   }, [prefersReduced]);
@@ -177,7 +179,23 @@ function NotificationItem({
     return () => window.clearTimeout(timer);
   }, [notification.duration, notification.id, onRemove]);
 
-  const handleRemove = () => onRemove(notification.id);
+  const handleRemove = () => {
+    if (!containerRef.current) {
+      onRemove(notification.id);
+      return;
+    }
+
+    // Octopath Traveler-style HD-2D exit: float up + fade out
+    const container = containerRef.current;
+    gsap.to(container, {
+      y: -30,
+      opacity: 0,
+      scale: 0.95,
+      duration: 0.35,
+      ease: "power2.in",
+      onComplete: () => onRemove(notification.id),
+    });
+  };
 
   return (
     <Box ref={containerRef} mb={3} css={{ cursor: "pointer" }} onClick={handleRemove}>
