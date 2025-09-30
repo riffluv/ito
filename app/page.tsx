@@ -722,38 +722,26 @@ export default function MainMenu() {
                   >
                     <Users size={20} />
                   </Box>
-                  <VStack align="start" gap={1}>
-                    <HStack gap={2} align="center">
-                      <Heading
-                        size="xl"
-                        fontWeight={700}
-                        color="white"
-                        fontFamily="monospace"
-                        textShadow="1px 1px 0px #000"
-                        letterSpacing="0.5px"
-                      >
-                        アクティブルーム
-                      </Heading>
-                      <Text
-                        fontSize="sm"
-                        fontWeight={700}
-                        color="green.300"
-                        fontFamily="monospace"
-                        textShadow="1px 1px 0px rgba(0,0,0,0.8)"
-                        letterSpacing="0.5px"
-                      >
-                        {searchFilteredRooms.length}件
-                      </Text>
-                    </HStack>
+                  <HStack align="baseline" gap={3}>
+                    <Heading
+                      size="xl"
+                      fontWeight={700}
+                      color="white"
+                      fontFamily="monospace"
+                      textShadow="1px 1px 0px #000"
+                      letterSpacing="0.5px"
+                    >
+                      アクティブな部屋
+                    </Heading>
                     <Text
                       fontSize="sm"
-                      color="whiteAlpha.80"
+                      fontWeight={600}
+                      color="rgba(255,255,255,0.6)"
                       fontFamily="monospace"
-                      textShadow="1px 1px 0px rgba(0,0,0,0.6)"
                     >
-                      進行中のルームも表示します（参加は待機中のみ）
+                      {searchFilteredRooms.length}件
                     </Text>
-                  </VStack>
+                  </HStack>
                 </HStack>
 
                 <HStack gap={2}>
