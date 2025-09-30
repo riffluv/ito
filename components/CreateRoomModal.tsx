@@ -444,7 +444,7 @@ export function CreateRoomModal({
                           borderRadius: 0,
                           border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
                           background: inviteCopied ? "white" : "transparent",
-                          color: inviteCopied ? "var(--colors-richBlack-800)" : "white",
+                          color: inviteCopied ? "black" : "white",
                           fontFamily: "monospace",
                           fontWeight: "bold",
                           fontSize: "1rem",
@@ -458,7 +458,7 @@ export function CreateRoomModal({
                         onMouseEnter={(event) => {
                           if (!inviteCopied) {
                             event.currentTarget.style.background = "white";
-                            event.currentTarget.style.color = "var(--colors-richBlack-800)";
+                            event.currentTarget.style.color = "black";
                             event.currentTarget.style.transform = "translateY(-2px)";
                             event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
                           }
