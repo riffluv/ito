@@ -3,6 +3,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
+import { logDebug } from "@/lib/utils/log";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -27,14 +28,27 @@ export function useRoomState(
   displayName?: string | null
 ) {
   const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
+  const joinCompletedRef = useRef(false);
+  const joinInFlightRef = useRef<Promise<unknown> | null>(null);
+  const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const leavingRef = useRef(false);
 
-  // reset leaving flag when room/user changes
+  // reset leaving flag & join state when room/user changes
   useEffect(() => {
     leavingRef.current = false;
+    joinCompletedRef.current = false;
+    joinInFlightRef.current = null;
   }, [roomId, uid || ""]);
+
+  useEffect(() => () => {
+    if (joinRetryTimerRef.current) {
+      clearTimeout(joinRetryTimerRef.current);
+      joinRetryTimerRef.current = null;
+    }
+  }, []);
 
   // subscribe room
   useEffect(() => {
@@ -124,6 +138,18 @@ export function useRoomState(
     [uid, players]
   );
 
+  useEffect(() => {
+    if (!isMember) {
+      joinCompletedRef.current = false;
+    }
+  }, [isMember]);
+
+  useEffect(() => {
+    if (!isMember) {
+      joinCompletedRef.current = false;
+    }
+  }, [isMember]);
+
   // participants: Firestore players + RTDB presence
   const {
     players: fetchedPlayers,
@@ -166,15 +192,49 @@ export function useRoomState(
     };
 
     if (room.status === "waiting") {
-      // 観戦状態からの復帰も含めて強制的に再参加
-      joinRoomFully({
+      if (pendingRejoin) {
+        joinCompletedRef.current = false;
+      }
+
+      const alreadyJoined = joinCompletedRef.current && isMember;
+      if (!pendingRejoin) {
+        if (alreadyJoined) {
+          return;
+        }
+        if (joinInFlightRef.current) {
+          return;
+        }
+      }
+
+      const joinTask = joinRoomFully({
         roomId,
         uid,
         displayName: displayName,
         notifyChat: !pendingRejoin,
       })
-        .catch(() => void 0)
-        .finally(clearPending);
+        .then(() => {
+          joinCompletedRef.current = true;
+        })
+        .catch((error) => {
+          joinCompletedRef.current = false;
+          if (!pendingRejoin) {
+            if (joinRetryTimerRef.current) {
+              clearTimeout(joinRetryTimerRef.current);
+            }
+            joinRetryTimerRef.current = setTimeout(() => {
+              joinRetryTimerRef.current = null;
+              setJoinAttemptToken((value) => value + 1);
+            }, 500);
+          }
+          logDebug("room-state", "joinRoomFully-failed", error);
+        })
+        .finally(() => {
+          joinInFlightRef.current = null;
+          clearPending();
+        });
+
+      joinInFlightRef.current = joinTask;
+      joinTask.catch(() => void 0);
     } else if (isMember) {
       ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
