@@ -73,26 +73,27 @@ const getPlayerStatus = (
   return { icon: "🎲", status: "参加中", tone: "default" };
 };
 
+// 一流デザイナー風スタイリング: 多層・非対称・質感重視
 const CARD_BACKGROUND =
-  "linear-gradient(135deg, rgba(25,35,50,0.9) 0%, rgba(15,25,40,0.9) 100%)";
+  "linear-gradient(145deg, rgba(18,28,42,0.92) 0%, rgba(12,20,35,0.94) 35%, rgba(8,15,28,0.96) 75%, rgba(5,12,22,0.98) 100%)";
 const CARD_HOVER_BACKGROUND =
-  "linear-gradient(135deg, rgba(35,45,65,0.95) 0%, rgba(25,35,55,0.95) 100%)";
+  "linear-gradient(145deg, rgba(28,38,55,0.96) 0%, rgba(22,32,48,0.97) 35%, rgba(18,28,42,0.98) 75%, rgba(15,25,38,0.99) 100%)";
 const CARD_BOX_SHADOW =
-  "0 4px 16px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.15)";
+  "0 2px 4px rgba(0,0,0,0.3), 0 6px 12px rgba(0,0,0,0.5), 0 12px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.8)";
 const CARD_HOVER_BOX_SHADOW =
-  "0 8px 24px rgba(0,0,0,0.85), inset 0 2px 0 rgba(255,255,255,0.25)";
+  "0 4px 8px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.6), 0 16px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.9)";
 const CARD_FLASH_SHADOW =
-  "0 12px 32px rgba(0,0,0,0.9), inset 0 3px 0 rgba(255,255,255,0.3)";
+  "0 6px 12px rgba(255,255,255,0.3), 0 12px 24px rgba(255,255,255,0.2), 0 18px 36px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.4)";
 const CLUE_FLASH_BRIGHTNESS = 1.4;
 const SUBMIT_FLASH_BRIGHTNESS = 1.8;
-const GAUGE_HEIGHT = "8px";
+const GAUGE_HEIGHT = "10px";
 const PANEL_WIDTH = { base: "232px", md: "268px" };
 const LIST_MAX_HEIGHT = "calc(100vh - 224px)";
-const CARD_HEIGHT = "54px";
-const CARD_AVATAR_SIZE = "42px";
-const CARD_RADIUS = "6px";
+const CARD_HEIGHT = "56px";
+const CARD_AVATAR_SIZE = "44px";
+const CARD_RADIUS = "4px";
 const LIST_GAP = 2;
-const CARD_HOVER_LIFT = "-2px";
+const CARD_HOVER_LIFT = "-3px";
 
 const STATUS_STYLE_MAP: Record<
   PlayerStatusTone,
@@ -379,29 +380,67 @@ export function DragonQuestParty({
         maxW={PANEL_WIDTH}
         css={{ pointerEvents: "auto" }}
       >
-        <Box display="flex" alignItems="center" gap={2} minW={0}>
-          <Text fontSize="lg" textShadow="0 2px 4px rgba(0,0,0,0.8)">
-            ⚔️
-          </Text>
+        {/* シンプルなパーティ名ヘッダー */}
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={2}
+          minW={0}
+          px={2}
+          py={0.5}
+        >
+          {/* フラッグエンブレム */}
+          <Box
+            position="relative"
+            w="26px"
+            h="26px"
+            flexShrink={0}
+            css={{
+              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))",
+            }}
+          >
+            <img
+              src="/images/flag.webp"
+              alt="party emblem"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </Box>
+
+          {/* パーティ名（シンプルに） */}
           <Tooltip
             content={displayRoomName || ""}
             openDelay={300}
             disabled={!displayRoomName}
           >
             <Text
-              fontSize="md"
+              fontSize="sm"
               fontWeight="bold"
               color="textPrimary"
-              textShadow="0 2px 4px rgba(0,0,0,0.8)"
               letterSpacing="0.5px"
-              maxW="196px"
+              maxW="160px"
               truncate
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
             >
-              {(displayRoomName && displayRoomName.trim().length > 0
+              {displayRoomName && displayRoomName.trim().length > 0
                 ? displayRoomName
-                : "なかま") + `（${actualCount}）`}
+                : "なかま"}
             </Text>
           </Tooltip>
+
+          {/* 人数（括弧付きでシンプルに） */}
+          <Text
+            fontSize="sm"
+            color="textPrimary"
+            fontWeight="bold"
+            flexShrink={0}
+            textShadow="0 2px 4px rgba(0,0,0,0.8)"
+          >
+            ({actualCount})
+          </Text>
         </Box>
 
         <Box
@@ -541,30 +580,33 @@ export function DragonQuestParty({
                 css={{
                   cursor: canTransfer ? "pointer" : "default",
                   pointerEvents: "auto",
-                  backdropFilter: "blur(6px)",
+                  backdropFilter: "blur(8px) saturate(1.2)",
                   position: "relative",
+                  // 金属フレーム風の上部ハイライト
                   "&::before": {
                     content: "''",
                     position: "absolute",
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: "1px",
+                    height: "2px",
                     background:
-                      "linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.55) 35%, rgba(255,255,255,0.18) 100%)",
+                      "linear-gradient(90deg, rgba(120,160,200,0.15) 0%, rgba(180,200,220,0.4) 15%, rgba(220,240,255,0.7) 35%, rgba(180,200,220,0.4) 65%, rgba(120,160,200,0.15) 100%)",
                     pointerEvents: "none",
+                    filter: "blur(0.5px)",
                   },
+                  // 立体感を出す底部シャドウ（強化版）
                   "&::after": {
                     content: "''",
                     position: "absolute",
-                    bottom: -2,
-                    left: "4px",
-                    right: "4px",
-                    height: "3px",
+                    bottom: -3,
+                    left: "2px",
+                    right: "2px",
+                    height: "5px",
                     background:
-                      "linear-gradient(90deg, rgba(0,0,0,0.65) 15%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.5) 85%)",
-                    opacity: 0.75,
-                    filter: "blur(0.5px)",
+                      "linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.5) 100%)",
+                    opacity: 0.9,
+                    filter: "blur(1.5px)",
                     pointerEvents: "none",
                   },
                 }}
@@ -595,6 +637,19 @@ export function DragonQuestParty({
                   alignItems="center"
                   justifyContent="center"
                   position="relative"
+                  css={{
+                    // 六角形風の斜めフレーム（SSRPG感）
+                    clipPath: "polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)",
+                    "&::before": {
+                      content: "''",
+                      position: "absolute",
+                      inset: "-2px",
+                      background: "linear-gradient(135deg, rgba(100,150,220,0.6) 0%, rgba(60,90,140,0.4) 50%, rgba(30,50,80,0.6) 100%)",
+                      clipPath: "polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)",
+                      zIndex: -1,
+                      filter: "blur(1px)",
+                    }
+                  }}
                 >
                   {fresh.avatar?.startsWith("/avatars/") ? (
                     <img
@@ -608,15 +663,14 @@ export function DragonQuestParty({
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        borderRadius: "8px",
                         filter:
-                          "drop-shadow(0 4px 8px rgba(0,0,0,0.9)) contrast(1.1)",
+                          "drop-shadow(0 2px 4px rgba(0,0,0,0.8)) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) contrast(1.15) saturate(1.1)",
                       }}
                     />
                   ) : (
                     <Text
                       fontSize="2xl"
-                      filter="drop-shadow(0 4px 8px rgba(0,0,0,0.95))"
+                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.7))"
                       position="absolute"
                       top="50%"
                       left="50%"
@@ -645,40 +699,95 @@ export function DragonQuestParty({
                   >
                     {fresh.name}
                   </Text>
-                  {isHost && (
-                    <Text
-                      fontSize="sm"
-                      color="highlight"
-                      textShadow="0 2px 4px rgba(0,0,0,0.9)"
-                    >
-                      👑
-                    </Text>
-                  )}
                 </Box>
 
-                <Badge
+                {/* SSS級RPG風のステータスバッジ */}
+                <Box
                   justifySelf="end"
                   alignSelf="start"
                   display="inline-flex"
                   alignItems="center"
                   gap="1"
-                  bg={toneStyle.badgeBg}
-                  border="1px solid"
-                  borderColor={toneStyle.badgeBorder}
-                  color={toneStyle.badgeColor}
-                  fontSize="2xs"
-                  fontWeight="semibold"
-                  px="6px"
-                  py="1px"
-                  borderRadius="sm"
-                  textTransform="none"
-                  letterSpacing="0.3px"
+                  px="7px"
+                  py="2px"
+                  position="relative"
+                  css={{
+                    background: `linear-gradient(135deg, ${
+                      statusMeta.tone === "submitted"
+                        ? "rgba(22, 163, 74, 0.25) 0%, rgba(21, 128, 61, 0.35) 100%"
+                        : statusMeta.tone === "clue-entered"
+                        ? "rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.35) 100%"
+                        : "rgba(60, 60, 80, 0.25) 0%, rgba(40, 40, 60, 0.35) 100%"
+                    })`,
+                    border: "1px solid",
+                    borderColor:
+                      statusMeta.tone === "submitted"
+                        ? "rgba(34, 197, 94, 0.5)"
+                        : statusMeta.tone === "clue-entered"
+                        ? "rgba(245, 158, 11, 0.5)"
+                        : "rgba(100, 116, 139, 0.4)",
+                    borderRadius: "2px",
+                    clipPath: "polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px)",
+                    boxShadow: `
+                      0 2px 4px rgba(0, 0, 0, 0.4),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                      inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+                    `,
+                    "&::before": {
+                      content: "''",
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: "1px",
+                      background:
+                        statusMeta.tone === "submitted"
+                          ? "linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.8) 50%, transparent 100%)"
+                          : statusMeta.tone === "clue-entered"
+                          ? "linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.8) 50%, transparent 100%)"
+                          : "linear-gradient(90deg, transparent 0%, rgba(150, 160, 180, 0.6) 50%, transparent 100%)",
+                      pointerEvents: "none",
+                    },
+                  }}
                 >
-                  <Box as="span" fontSize="xs" lineHeight="1">
+                  <Box
+                    as="span"
+                    fontSize="xs"
+                    lineHeight="1"
+                    css={{
+                      filter:
+                        statusMeta.tone === "submitted"
+                          ? "drop-shadow(0 0 3px rgba(34, 197, 94, 0.8))"
+                          : statusMeta.tone === "clue-entered"
+                          ? "drop-shadow(0 0 3px rgba(245, 158, 11, 0.8))"
+                          : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6))",
+                    }}
+                  >
                     {statusMeta.icon}
                   </Box>
-                  {statusMeta.status}
-                </Badge>
+                  <Text
+                    fontSize="2xs"
+                    fontWeight="bold"
+                    letterSpacing="0.5px"
+                    textTransform="uppercase"
+                    css={{
+                      color:
+                        statusMeta.tone === "submitted"
+                          ? "#86EFAC"
+                          : statusMeta.tone === "clue-entered"
+                          ? "#FCD34D"
+                          : "#CBD5E1",
+                      textShadow:
+                        statusMeta.tone === "submitted"
+                          ? "0 0 8px rgba(34, 197, 94, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8)"
+                          : statusMeta.tone === "clue-entered"
+                          ? "0 0 8px rgba(245, 158, 11, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8)"
+                          : "0 1px 2px rgba(0, 0, 0, 0.8)",
+                    }}
+                  >
+                    {statusMeta.status}
+                  </Text>
+                </Box>
 
                 <Box
                   gridColumn="2 / span 2"
@@ -704,50 +813,75 @@ export function DragonQuestParty({
                       flex={1}
                       h={GAUGE_HEIGHT}
                       minH={GAUGE_HEIGHT}
-                      bg="linear-gradient(180deg, rgba(8,12,20,0.95) 0%, rgba(20,30,45,0.95) 100%)"
-                      borderRadius="3px"
+                      bg="linear-gradient(180deg, rgba(5,8,15,0.98) 0%, rgba(10,15,25,0.96) 35%, rgba(18,25,38,0.94) 100%)"
+                      borderRadius="2px"
                       overflow="hidden"
                       border="1px solid"
-                      borderColor="rgba(255,255,255,0.18)"
+                      borderColor="rgba(80,110,150,0.35)"
                       position="relative"
                       maxW="148px"
+                      css={{
+                        boxShadow: "inset 0 2px 4px rgba(0,0,0,0.8), inset 0 -1px 2px rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.6)"
+                      }}
                     >
                       <Box
                         height="100%"
                         width={gaugeFillWidth}
                         bg={
                           isSubmitted
-                            ? "linear-gradient(90deg, #22C55E 0%, #16A34A 90%)"
+                            ? "linear-gradient(90deg, #16A34A 0%, #22C55E 45%, #15803D 90%)"
                             : hasClue
-                              ? "linear-gradient(90deg, #F59E0B 0%, #D97706 90%)"
+                              ? "linear-gradient(90deg, #D97706 0%, #F59E0B 45%, #B45309 90%)"
                               : "transparent"
                         }
-                        transition="all 0.4s ease"
+                        transition="all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)"
                         position="relative"
                         css={{
                           boxShadow: isSubmitted
-                            ? "0 0 6px rgba(34,197,94,0.6)"
+                            ? "0 0 8px rgba(34,197,94,0.7), 0 0 16px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.3)"
                             : hasClue
-                              ? "0 0 6px rgba(217,180,74,0.4)"
+                              ? "0 0 8px rgba(245,158,11,0.6), 0 0 16px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.25)"
                               : "none",
                         }}
                       />
+                      {/* クリスタル質感のハイライト */}
                       <Box
                         position="absolute"
                         top="0"
                         left="0"
                         right="0"
-                        height="35%"
-                        bg="linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.12) 70%, transparent 100%)"
+                        height="40%"
+                        bg="linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.18) 60%, transparent 100%)"
                         pointerEvents="none"
                       />
+                      {/* パルス効果（提出時） */}
+                      {isSubmitted && (
+                        <Box
+                          position="absolute"
+                          top="0"
+                          left="0"
+                          right="0"
+                          bottom="0"
+                          bg="linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)"
+                          css={{
+                            animation: "pulse-sweep 2s ease-in-out infinite",
+                            "@keyframes pulse-sweep": {
+                              "0%": { transform: "translateX(-100%)" },
+                              "50%": { transform: "translateX(100%)" },
+                              "100%": { transform: "translateX(-100%)" }
+                            }
+                          }}
+                          pointerEvents="none"
+                        />
+                      )}
+                      {/* 底部の深み */}
                       <Box
                         position="absolute"
                         bottom="0"
                         left="0"
                         right="0"
                         height="2px"
-                        bg="rgba(0,0,0,0.6)"
+                        bg="linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0.4) 100%)"
                         pointerEvents="none"
                       />
                     </Box>
