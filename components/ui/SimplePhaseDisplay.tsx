@@ -14,8 +14,7 @@ const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
     case "clue":
       if (canStartSorting) {
         return {
-          text: "みんなで相談してカードを並び替えよう！",
-          subText: "（ドラッグでできるよ）",
+          text: "みんなで相談してカードを並び替えよう！（ドラッグ可）",
           icon: "◇",
         };
       }
@@ -50,7 +49,7 @@ export function SimplePhaseDisplay({
   const previousCanStart = useRef<boolean>(canStartSorting);
   const previousTopicText = useRef<string | null>(topicText);
 
-  const { text, subText, icon } = getPhaseInfo(roomStatus, canStartSorting);
+  const { text, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
   const tlRef = useRef<any>(null);
   const prefersReduced = useReducedMotionPreference();
@@ -246,8 +245,9 @@ export function SimplePhaseDisplay({
     >
       <Box
         display="flex"
+        flexDirection="column"
         alignItems="flex-start"
-        gap={{ base: 2, md: 3 }}
+        gap={{ base: 1.5, md: 2 }}
         px={{ base: 3, md: 4 }}
         py={{ base: 2, md: 3 }}
         bg="rgba(20,23,34,0.9)"
@@ -256,17 +256,15 @@ export function SimplePhaseDisplay({
         css={{
           boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
           backdropFilter: "blur(8px) saturate(1.1)",
-          maxWidth: "min(92vw, 380px)", // 幅を少し狭めて余裕を持たせる
-          transition: "width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)", // スムーズな幅変更
-          ["@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)" as any]: {
-            maxWidth: "min(92vw, 420px)", // 高解像度でも適度な幅
-          },
+          maxWidth: "min(92vw, 520px)",
+          width: "auto",
+          transition: "width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
         }}
       >
-        <Text as="span" ref={iconRef} fontSize="lg" display="inline-block">
-          {icon}
-        </Text>
-        <Box display="flex" flexDirection="column" gap={{ base: 0.5, md: 1 }}>
+        <Box display="flex" alignItems="center" gap={{ base: 2, md: 3 }} w="full">
+          <Text as="span" ref={iconRef} fontSize="lg" display="inline-block" flexShrink={0}>
+            {icon}
+          </Text>
           <Text
             ref={textRef}
             fontSize={{ base: "sm", md: "md" }}
@@ -275,57 +273,84 @@ export function SimplePhaseDisplay({
             textShadow="1px 1px 0px rgba(0,0,0,0.6)"
             letterSpacing="0.5px"
             fontFamily="monospace"
-            css={{
-              display: "-webkit-box",
-              WebkitLineClamp: 1,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "min(88vw, 350px)", // メインテキストも幅調整
-            }}
+            flex={1}
           >
             {text}
           </Text>
-          {subText && (
-            <Text
-              fontSize={{ base: "xs", md: "sm" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-              letterSpacing="0.3px"
-              fontFamily="monospace"
-              fontWeight={600}
-              mt={{ base: 0.5, md: 1 }}
-            >
-              {subText}
-            </Text>
-          )}
-          {topicText ? (
+        </Box>
+        {topicText ? (
             <Tooltip content={topicText} openDelay={200} showArrow>
-              <Text
+              <Box
                 ref={topicRef}
-                fontSize={{ base: "xs", md: "sm" }}
-                color="#FFD700" // ゴールド色で目立たせる
-                letterSpacing="0.3px"
-                fontFamily="monospace"
-                fontWeight={700} // 太字で強調
-                textShadow="1px 1px 2px rgba(0,0,0,0.8)" // 輪郭を強く
+                display="flex"
+                alignItems="center"
+                gap={1.5}
+                px={{ base: 2, md: 2.5 }}
+                py={{ base: 1, md: 1.5 }}
+                position="relative"
+                w="full"
                 css={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  maxWidth: "min(82vw, 480px)",
+                  background: "linear-gradient(135deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
+                  border: "1.5px solid rgba(255, 215, 0, 0.5)",
+                  borderRadius: "2px",
+                  clipPath: "polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px)",
+                  boxShadow: `
+                    0 2px 6px rgba(0, 0, 0, 0.6),
+                    inset 0 1px 0 rgba(255, 215, 0, 0.2),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+                    0 0 12px rgba(255, 215, 0, 0.25)
+                  `,
+                  "&::before": {
+                    content: "''",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "1px",
+                    background: "linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.9) 50%, transparent 100%)",
+                    pointerEvents: "none",
+                  },
                 }}
               >
-                <Text as="span" fontWeight={800} color="white" mr={2}>
+                <Text
+                  as="span"
+                  fontSize={{ base: "xs", md: "sm" }}
+                  fontWeight={900}
+                  color="white"
+                  letterSpacing="0.8px"
+                  fontFamily="monospace"
+                  flexShrink={0}
+                  css={{
+                    textShadow: "0 0 8px rgba(255, 215, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.9), 1px 1px 0 rgba(0, 0, 0, 0.8)",
+                    filter: "drop-shadow(0 0 4px rgba(255, 215, 0, 0.6))",
+                  }}
+                >
                   【お題】
                 </Text>
-                {topicText}
-              </Text>
+                <Text
+                  fontSize={{ base: "sm", md: "md" }}
+                  fontWeight={800}
+                  color="#FFF8DC"
+                  letterSpacing="0.5px"
+                  fontFamily="monospace"
+                  flex={1}
+                  css={{
+                    textShadow: `
+                      0 0 10px rgba(255, 215, 0, 0.7),
+                      0 0 20px rgba(255, 215, 0, 0.4),
+                      0 2px 6px rgba(0, 0, 0, 0.95),
+                      1px 1px 0 rgba(0, 0, 0, 0.9),
+                      2px 2px 0 rgba(0, 0, 0, 0.7)
+                    `,
+                    lineHeight: "1.3",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {topicText}
+                </Text>
+              </Box>
             </Tooltip>
           ) : null}
-        </Box>
       </Box>
     </Box>
   );
