@@ -1047,124 +1047,98 @@ export default function MainMenu() {
                     </Text>
                   </HStack>
 
-                  <VStack gap={3} align="start" pl={2}>
-                    <Box>
-                      <Text
-                        fontSize="sm"
-                        color="white"
-                        fontFamily="monospace"
-                        fontWeight={600}
-                        mb={1}
-                      >
-                        ★ 技術的更新
-                      </Text>
-                      <VStack gap={1} align="start" pl={4}>
+                  <VStack gap={4} align="stretch">
+                    <Box
+                      p={3}
+                      bg="rgba(12,14,20,0.6)"
+                      border="2px solid rgba(34,197,94,0.3)"
+                      borderRadius={0}
+                      borderLeft="4px solid rgba(34,197,94,0.8)"
+                    >
+                      <HStack gap={2} mb={2}>
                         <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
+                          fontSize="sm"
+                          color="rgba(34,197,94,0.95)"
                           fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                          fontWeight={700}
+                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
                         >
-                          ・DPIスケール対応
+                          ★ 技術的更新
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
+                      </HStack>
+                      <VStack gap={1.5} align="start" pl={2}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
+                          ・GSAPアニメーション最適化
+                        </Text>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・Firebase最適化
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
-                          ・ロビーリフレッシュ機能
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
+                          ・パスワード実装
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・パフォーマンス向上
                         </Text>
                       </VStack>
                     </Box>
 
-                    <Box>
-                      <Text
-                        fontSize="sm"
-                        color="white"
-                        fontFamily="monospace"
-                        fontWeight={600}
-                        mb={1}
-                      >
-                        ▲ 調整中
-                      </Text>
-                      <VStack gap={1} align="start" pl={4}>
+                    <Box
+                      p={3}
+                      bg="rgba(12,14,20,0.6)"
+                      border="2px solid rgba(251,191,36,0.3)"
+                      borderRadius={0}
+                      borderLeft="4px solid rgba(251,191,36,0.8)"
+                    >
+                      <HStack gap={2} mb={2}>
                         <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
+                          fontSize="sm"
+                          color="rgba(251,191,36,0.95)"
                           fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                          fontWeight={700}
+                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
                         >
+                          ▲ 調整中
+                        </Text>
+                      </HStack>
+                      <VStack gap={1.5} align="start" pl={2}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・UI細部ブラッシュアップ
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
-                          ・アニメーション最適化
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
+                          ・サウンド関係
                         </Text>
                       </VStack>
                     </Box>
 
-                    <Box>
-                      <Text
-                        fontSize="sm"
-                        color="white"
-                        fontFamily="monospace"
-                        fontWeight={600}
-                        mb={1}
-                      >
-                        ◆ 今後の予定
-                      </Text>
-                      <VStack gap={1} align="start" pl={4}>
+                    <Box
+                      p={3}
+                      bg="rgba(12,14,20,0.6)"
+                      border="2px solid rgba(147,51,234,0.3)"
+                      borderRadius={0}
+                      borderLeft="4px solid rgba(147,51,234,0.8)"
+                    >
+                      <HStack gap={2} mb={2}>
                         <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
+                          fontSize="sm"
+                          color="rgba(147,51,234,0.95)"
                           fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
+                          fontWeight={700}
+                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
                         >
+                          ◆ 今後の予定
+                        </Text>
+                      </HStack>
+                      <VStack gap={1.5} align="start" pl={2}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・新機能検討
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
-                          ・ユーザビリティ向上
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
+                          ・ちゃんと寝る
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・コーヒーを辞める（最重要）
                         </Text>
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.80"
-                          fontFamily="monospace"
-                          textShadow="1px 1px 0px rgba(0,0,0,0.6)"
-                        >
+                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
                           ・音響システム実装
                         </Text>
                       </VStack>
