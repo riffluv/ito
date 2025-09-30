@@ -439,22 +439,19 @@ export function DragonQuestParty({
             </Text>
           </Tooltip>
 
-          {/* 人数バッジ */}
-          <Box
+          {/* 人数表示 */}
+          <Text
             fontSize="xs"
-            color="rgba(255,255,255,0.8)"
-            fontWeight={600}
+            color="rgba(255,255,255,0.65)"
+            fontWeight={500}
             flexShrink={0}
-            px={1.5}
-            py={0.5}
-            bg="rgba(255,255,255,0.08)"
-            border="1px solid rgba(255,255,255,0.15)"
-            borderRadius="2px"
-            textShadow="0 1px 2px rgba(0,0,0,0.5)"
-            fontFamily="system-ui, sans-serif"
+            fontFamily="monospace"
+            letterSpacing="0.5px"
+            lineHeight="1"
+            alignSelf="center"
           >
-            {actualCount}
-          </Box>
+            ({actualCount})
+          </Text>
         </Box>
 
         <Box
