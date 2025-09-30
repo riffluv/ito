@@ -181,47 +181,152 @@ export function DragonQuestLoading({
           borderLeftColor: "#ffffff",
           borderBottomColor: "#888888",
           borderRightColor: "#888888",
-          boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333",
+          boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15)",
+          animation: "hd2dPulse 2s ease-in-out infinite",
         }}
       >
-        {/* シンプルなドラクエ風：黒と白だけで勝負 */}
-        <VStack align="center" gap={8}>
-          {/* メインメッセージ */}
+        {/* HD-2D風：洗練されたローディング */}
+        <VStack align="center" gap={6}>
+          {/* メインメッセージ - 1文字ずつ表示風 */}
           <Text
             fontSize="xl"
             color="#ffffff"
             fontFamily="monospace"
             textAlign="center"
             lineHeight={1.8}
-            letterSpacing="0.1em"
+            letterSpacing="0.12em"
             fontWeight="normal"
+            css={{
+              textShadow: "0 0 8px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.8)",
+            }}
           >
-            {customMessage || activeStep?.message || "よみこみ中です..."}
+            {customMessage || activeStep?.message || "よみこみ中です"}
           </Text>
 
-          {/* シンプルなドット */}
-          <Text
-            fontSize="xl"
-            color="#ffffff"
-            fontFamily="monospace"
-            css={{ animation: "dqSimpleDots 1.2s ease-in-out infinite" }}
-            textAlign="center"
-          >
-            ・・・
-          </Text>
+          {/* HD-2D風プログレスバー */}
+          <Box width="100%" position="relative">
+            <Box
+              width="100%"
+              height="12px"
+              border="2px solid #ffffff"
+              bg="rgba(0,0,0,0.8)"
+              position="relative"
+              css={{
+                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.6), 0 0 10px rgba(255,255,255,0.2)",
+              }}
+            >
+              <Box
+                ref={progressBarRef}
+                position="absolute"
+                left={0}
+                top={0}
+                height="100%"
+                width="0%"
+                bg="linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)"
+                css={{
+                  boxShadow: "0 0 12px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
+                  animation: "hd2dShimmer 1.5s ease-in-out infinite",
+                }}
+              />
+            </Box>
+            {/* プログレス％表示 */}
+            <Text
+              fontSize="xs"
+              color="rgba(255,255,255,0.7)"
+              fontFamily="monospace"
+              textAlign="center"
+              mt={2}
+              letterSpacing="0.1em"
+            >
+              {Math.round(progress)}%
+            </Text>
+          </Box>
+
+          {/* オクトパス風装飾ドット */}
+          <HStack gap={2} justify="center">
+            <Box
+              w="6px"
+              h="6px"
+              bg="#ffffff"
+              css={{
+                boxShadow: "0 0 8px rgba(255,255,255,0.8)",
+                animation: "hd2dDot1 1.4s ease-in-out infinite",
+              }}
+            />
+            <Box
+              w="6px"
+              h="6px"
+              bg="#ffffff"
+              css={{
+                boxShadow: "0 0 8px rgba(255,255,255,0.8)",
+                animation: "hd2dDot2 1.4s ease-in-out infinite",
+              }}
+            />
+            <Box
+              w="6px"
+              h="6px"
+              bg="#ffffff"
+              css={{
+                boxShadow: "0 0 8px rgba(255,255,255,0.8)",
+                animation: "hd2dDot3 1.4s ease-in-out infinite",
+              }}
+            />
+          </HStack>
         </VStack>
       </Box>
 
       <style jsx>{`
-        @keyframes dqSimpleDots {
-          0% {
-            opacity: 0.3;
+        @keyframes hd2dPulse {
+          0%, 100% {
+            box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15);
           }
           50% {
-            opacity: 1;
+            box-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 30px rgba(255,255,255,0.25);
+          }
+        }
+
+        @keyframes hd2dShimmer {
+          0% {
+            filter: brightness(1);
+          }
+          50% {
+            filter: brightness(1.2);
           }
           100% {
+            filter: brightness(1);
+          }
+        }
+
+        @keyframes hd2dDot1 {
+          0%, 100% {
             opacity: 0.3;
+            transform: scale(0.8);
+          }
+          33% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+        }
+
+        @keyframes hd2dDot2 {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+          66% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+        }
+
+        @keyframes hd2dDot3 {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          33% {
+            opacity: 0.3;
+            transform: scale(0.8);
           }
         }
       `}</style>
