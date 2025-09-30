@@ -53,20 +53,21 @@ function KnightCharacter() {
       alt={knightAlt}
       boxSize={{ base: "16", md: "20", lg: "24" }}
       objectFit="contain"
-      filter="drop-shadow(0 4px 12px rgba(0,0,0,0.4))"
+      filter="drop-shadow(0 6px 16px rgba(0,0,0,0.6))"
       css={{
-        // DPI scaling knight size optimization
+        // Dragon Quest-style: pixel art friendly size
+        imageRendering: "pixelated", // Keep crisp pixel art
         "@container (max-width: 600px)": {
-          width: "3rem", // 48px for mobile
-          height: "3rem",
+          width: "3.5rem", // 56px for mobile
+          height: "3.5rem",
         },
         "@container (min-width: 600px) and (max-width: 900px)": {
-          width: "4rem", // 64px for tablet
-          height: "4rem",
+          width: "4.5rem", // 72px for tablet
+          height: "4.5rem",
         },
         "@container (min-width: 900px)": {
-          width: "5rem", // 80px for desktop
-          height: "5rem",
+          width: "6rem", // 96px for desktop
+          height: "6rem",
         },
       }}
     />
@@ -511,13 +512,13 @@ export default function MainMenu() {
                   <KnightCharacter />
                   <Heading
                     ref={titleRef}
-                    fontSize={{ base: "4xl", md: "6xl", lg: "7xl" }}
+                    fontSize={{ base: "3xl", md: "5xl", lg: "6xl" }}
                     fontWeight={900}
                     lineHeight={0.9}
                     letterSpacing="0.05em"
                     color="fgEmphasized"
-                    textShadow="3px 3px 0 rgba(0,0,0,0.8), 
-                               6px 6px 12px rgba(0,0,0,0.5), 
+                    textShadow="3px 3px 0 rgba(0,0,0,0.8),
+                               6px 6px 12px rgba(0,0,0,0.5),
                                0 0 20px rgba(255,215,0,0.3)"
                     fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
                     css={{
@@ -526,13 +527,13 @@ export default function MainMenu() {
                       filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
                       // DPI scaling font optimization
                       "@container (max-width: 600px)": {
-                        fontSize: "2.5rem", // 40px base, scales to 50px at 125%
+                        fontSize: "2rem", // 32px base
                       },
                       "@container (min-width: 600px) and (max-width: 900px)": {
-                        fontSize: "4rem", // 64px base, scales to 80px at 125%
+                        fontSize: "3.5rem", // 56px base
                       },
                       "@container (min-width: 900px)": {
-                        fontSize: "5rem", // 80px base, scales to 100px at 125%
+                        fontSize: "4.5rem", // 72px base
                       },
                     }}
                   >
@@ -541,12 +542,13 @@ export default function MainMenu() {
                 </HStack>
                 <Text
                   fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}
-                  color="fgMuted"
+                  color="rgba(255,255,255,0.85)"
                   fontWeight={500}
                   lineHeight={1.4}
-                  letterSpacing="-0.02em"
+                  letterSpacing="0.02em"
                   maxW="3xl"
                   mx="auto"
+                  textShadow="0 2px 4px rgba(0,0,0,0.6)"
                   css={{
                     // DPI scaling subtitle optimization
                     "@container (max-width: 600px)": {
@@ -567,7 +569,7 @@ export default function MainMenu() {
                   <Box
                     as="span"
                     display={{ base: "block", md: "inline" }}
-                    color="text"
+                    color="rgba(255,255,255,0.95)"
                     fontWeight={600}
                     ml={{ md: 3 }}
                   >
