@@ -623,11 +623,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       columnGap={{ base: 3, md: 5 }}
       rowGap={{ base: 3, md: 4 }}
       css={{
-        background: "rgba(8,9,15,0.95)",
-        border: "1px solid rgba(255,255,255,0.3)",
+        background: "linear-gradient(180deg, rgba(10, 15, 25, 0.85) 0%, rgba(8, 12, 20, 0.9) 100%)",
+        backdropFilter: "blur(12px) saturate(1.2)",
+        border: "1px solid rgba(255, 255, 255, 0.15)",
         borderRadius: 0,
-        boxShadow:
-          "0 6px 24px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.5)",
+        boxShadow: `
+          0 -4px 24px rgba(0, 0, 0, 0.7),
+          0 -8px 48px rgba(0, 0, 0, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1)
+        `,
       }}
       position="relative"
       _before={{
@@ -636,8 +640,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         top: 0,
         left: 0,
         right: 0,
-        height: "2px",
-        background: UI_TOKENS.COLORS.whiteAlpha20, // 上フチだけを薄く出して“固定感”を演出
+        height: "1px",
+        background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)",
       }}
     >
       {/* Left cluster */}
