@@ -34,19 +34,19 @@ export const ScrollableArea = forwardRef<HTMLDivElement, ScrollableAreaProps>(
         // スムーズなスクロール
         css={{
           scrollBehavior: "smooth",
-          // WebKitスクロールバーのスタイリング
+          // Octopath Traveler-style: minimal, elegant scrollbar
           "&::-webkit-scrollbar": {
-            width: "8px",
+            width: "4px",
           },
           "&::-webkit-scrollbar-track": {
-            background: "var(--chakra-colors-panelSubBg)",
+            background: "transparent",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: "var(--chakra-colors-borderDefault)",
-            borderRadius: "4px",
+            background: "rgba(255,255,255,0.2)",
+            borderRadius: "2px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            background: "var(--chakra-colors-fgMuted)",
+            background: "rgba(255,255,255,0.35)",
           },
         }}
         {...boxProps}
