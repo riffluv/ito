@@ -10,7 +10,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "ui_click",
     category: "ui",
-    variants: [{ src: "sfx/ui/ui_click" }],
+    variants: [{ src: "ui/ui_click" }],
     playbackRateRange: { min: 0.96, max: 1.04 },
     gainDbRange: { min: -1.5, max: 1.5 },
     startOffsetMsRange: { min: 0, max: 12 },
@@ -19,16 +19,24 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "card_flip",
     category: "drag",
-    variants: [{ src: "sfx/card/card_flip" }],
+    variants: [{ src: "card/card_flip" }],
     playbackRateRange: { min: 0.92, max: 1.03 },
     gainDbRange: { min: -1, max: 1 },
     startOffsetMsRange: { min: 0, max: 20 },
     note: "Card reveal or flip",
   }),
   createDefinition({
+    id: "card_slide",
+    category: "card",
+    variants: [{ src: "card/card-slide-8" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -1, max: 1 },
+    note: "Card sliding/reveal sound",
+  }),
+  createDefinition({
     id: "drag_pickup",
     category: "drag",
-    variants: [{ src: "sfx/dnd/drag_pickup" }],
+    variants: [{ src: "dnd/drag_pickup" }],
     playbackRateRange: { min: 0.94, max: 1.02 },
     gainDbRange: { min: -1, max: 1 },
     note: "User starts dragging a card",
@@ -36,7 +44,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "drop_success",
     category: "drag",
-    variants: [{ src: "sfx/dnd/drop_success" }],
+    variants: [{ src: "dnd/drop_success" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -0.5, max: 1.5 },
     note: "Valid drop interaction",
@@ -44,7 +52,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "drop_invalid",
     category: "drag",
-    variants: [{ src: "sfx/dnd/drop_invalid" }],
+    variants: [{ src: "dnd/drop_invalid" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -3, max: -1 },
     note: "Invalid drop feedback",
@@ -53,7 +61,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_success",
     category: "notify",
-    variants: [{ src: "sfx/notify/notify_success" }],
+    variants: [{ src: "notify/notify_success" }],
     playbackRateRange: { min: 0.97, max: 1.02 },
     gainDbRange: { min: -1.5, max: 1 },
     note: "Toast success",
@@ -61,7 +69,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_error",
     category: "notify",
-    variants: [{ src: "sfx/notify/notify_error" }],
+    variants: [{ src: "notify/notify_error" }],
     playbackRateRange: { min: 0.9, max: 1.02 },
     gainDbRange: { min: -1, max: 2 },
     note: "Toast failure",
@@ -70,7 +78,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "result_victory",
     category: "result",
-    variants: [{ src: "sfx/result/result_victory" }],
+    variants: [{ src: "result/result_victory" }],
     playbackRateRange: { min: 0.98, max: 1.02 },
     gainDbRange: { min: -0.5, max: 1.5 },
     minDelaySeconds: 0.05,
@@ -79,7 +87,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "result_failure",
     category: "result",
-    variants: [{ src: "sfx/result/result_failure" }],
+    variants: [{ src: "result/result_failure" }],
     playbackRateRange: { min: 0.95, max: 1.02 },
     gainDbRange: { min: -0.5, max: 0.5 },
     minDelaySeconds: 0.05,
@@ -88,7 +96,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_warning",
     category: "notify",
-    variants: [{ src: "sfx/notify/notify_warning" }],
+    variants: [{ src: "notify/notify_warning" }],
     playbackRateRange: { min: 0.96, max: 1.04 },
     gainDbRange: { min: -1.5, max: 1 },
     note: "Toast warning",
@@ -96,7 +104,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "round_start",
     category: "system",
-    variants: [{ src: "sfx/system/round_start" }],
+    variants: [{ src: "system/round_start" }],
     playbackRateRange: { min: 0.99, max: 1.01 },
     gainDbRange: { min: -0.5, max: 1.5 },
     note: "Round intro fanfare",
@@ -105,7 +113,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "order_confirm",
     category: "system",
-    variants: [{ src: "sfx/system/order_confirm" }],
+    variants: [{ src: "system/order_confirm" }],
     playbackRateRange: { min: 0.97, max: 1.03 },
     gainDbRange: { min: -1, max: 1 },
     note: "Confirm ordering",
