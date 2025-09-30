@@ -77,14 +77,18 @@ export default function RulesPage() {
             <Heading
               size="4xl"
               fontWeight="bold"
-              color="white"
+              color="rgba(255,255,255,0.95)"
               fontFamily="monospace"
-              textShadow="2px 2px 0px #000"
-              letterSpacing="0.1em"
+              textShadow="0 2px 4px rgba(0,0,0,0.8), 0 0 12px rgba(255,215,0,0.2)"
+              letterSpacing="0.08em"
               textAlign="center"
               mb={4}
+              pb={3}
+              css={{
+                borderBottom: "2px solid rgba(255,255,255,0.2)",
+              }}
             >
-              ▼ 序の紋章III の きまり ▼
+              序の紋章III の きまり
             </Heading>
             <HStack
               align="center"
@@ -164,15 +168,17 @@ export default function RulesPage() {
           >
             <Heading
               size="lg"
-              color="white"
+              color="rgba(255,255,255,0.95)"
               fontFamily="monospace"
-              textShadow="1px 1px 0px #000"
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
               mb={6}
-              borderBottom="borders.retrogameThin"
-              pb={4}
+              pb={3}
+              css={{
+                borderBottom: "2px solid rgba(255,255,255,0.15)",
+              }}
             >
-              ▼ ゲームの ながれ ▼
+              ゲームの ながれ
             </Heading>
 
             <List.Root
@@ -182,52 +188,61 @@ export default function RulesPage() {
             >
               {[
                 {
-                  title: "１．カード くばり",
+                  title: "▶ １．カード くばり",
                   desc: "かくプレイヤーに １〜１００の カードを １まいずつ くばります。じぶんの すうじは ほかの プレイヤーに おしえては いけません。",
                 },
                 {
-                  title: "２．おだいを きめる",
+                  title: "▶ ２．おだいを きめる",
                   desc: "１まいの おだいカードを ひいて テーマを きめます（れい：「こわいもの」「すきな たべもの」など）。すうじの だいしょうを ひょうげんしやすい テーマが よいです。",
                 },
                 {
-                  title: "３．ひょうげん（ヒント）",
+                  title: "▶ ３．ひょうげん（ヒント）",
                   desc: "かくプレイヤーは じぶんの すうじを ちょくせつ いわず、テーマに そった「たとえ」や「イメージ」で ひょうげんします。",
                 },
                 {
-                  title: "４．カードを だす",
+                  title: "▶ ４．カードを だす",
                   desc: "ひょうげんを きいて、じぶんの カードが ちいさいと おもう じゅんに カードを ばに だして いきます。",
                 },
                 {
-                  title: "５．はんてい",
+                  title: "▶ ５．はんてい",
                   desc: "すべての カードを ばに だし、ちいさい じゅんに ならんで いれば せいこう です。じゅんじょが いれかわって いたら しっぱい です。",
                 },
               ].map((step, index) => (
                 <List.Item key={index}>
                   <Box
-                    p={4}
-                    mb={3}
-                    bg="bgSubtle"
+                    p={5}
+                    mb={4}
                     border="borders.retrogameThin"
                     borderColor="whiteAlpha.60"
                     borderRadius={0}
-                    boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                    boxShadow="2px 2px 0 rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.4)"
+                    transition="all 0.2s ease"
+                    _hover={{
+                      transform: "translateY(-2px)",
+                      boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 0 6px 16px rgba(0,0,0,0.6)",
+                      borderColor: "whiteAlpha.75",
+                    }}
+                    css={{
+                      background: "linear-gradient(135deg, rgba(18,20,28,0.85) 0%, rgba(12,14,20,0.9) 100%)",
+                    }}
                   >
                     <VStack align="start" gap={2} flex={1}>
                       <Text
                         fontWeight="bold"
-                        color="white"
+                        color="rgba(255,255,255,0.95)"
                         fontFamily="monospace"
-                        textShadow="1px 1px 0px #000"
+                        textShadow="0 2px 4px rgba(0,0,0,0.8)"
                         fontSize="md"
+                        letterSpacing="0.02em"
                       >
                         {step.title}
                       </Text>
                       <Text
-                        color="white"
+                        color="rgba(255,255,255,0.85)"
                         fontSize="sm"
-                        lineHeight="1.6"
+                        lineHeight="1.8"
                         fontFamily="monospace"
-                        textShadow="1px 1px 0px #000"
+                        textShadow="0 1px 2px rgba(0,0,0,0.6)"
                       >
                         {step.desc}
                       </Text>
@@ -249,15 +264,17 @@ export default function RulesPage() {
           >
             <Heading
               size="lg"
-              color="white"
+              color="rgba(255,255,255,0.95)"
               fontFamily="monospace"
-              textShadow="1px 1px 0px #000"
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
               mb={6}
-              borderBottom="borders.retrogameThin"
-              pb={4}
+              pb={3}
+              css={{
+                borderBottom: "2px solid rgba(255,255,255,0.15)",
+              }}
             >
-              ▼ Online版の とくちょう ▼
+              Online版の とくちょう
             </Heading>
 
             <List.Root as="ul" gap="4" style={{ listStyleType: "none" }}>
@@ -303,15 +320,17 @@ export default function RulesPage() {
           >
             <Heading
               size="lg"
-              color="white"
+              color="rgba(255,255,255,0.95)"
               fontFamily="monospace"
-              textShadow="1px 1px 0px #000"
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
               mb={6}
-              borderBottom="borders.retrogameThin"
-              pb={4}
+              pb={3}
+              css={{
+                borderBottom: "2px solid rgba(255,255,255,0.15)",
+              }}
             >
-              ▼ こうりゃくの ポイント ▼
+              こうりゃくの ポイント
             </Heading>
 
             <VStack gap={{ base: 8, md: 10 }} align="stretch">
