@@ -22,6 +22,9 @@ export function GameResultOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
+  const linesRef = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
   const playVictory = useSoundEffect("result_victory");
@@ -40,7 +43,17 @@ export function GameResultOverlay({
     if (mode !== "overlay") return;
     const overlay = overlayRef.current;
     const text = textRef.current;
-    if (!overlay || !text) return;
+    const container = containerRef.current;
+    if (!overlay || !text || !container) return;
+
+    // containerを初期状態で中央に固定
+    gsap.set(container, {
+      xPercent: -50,
+      yPercent: -50,
+      x: 0,
+      y: 0,
+      rotation: 0,
+    });
 
     if (prefersReduced) {
       gsap.set(overlay, { opacity: 1, scale: 1, rotationX: 0, rotationY: 0 });
@@ -198,9 +211,109 @@ export function GameResultOverlay({
         4
       );
     } else {
-      // ドラクエ風爆発演出！
+      // ドラクエ風爆発演出！ + オクトパストラベラーBOOST風！
 
-      // Phase 1: ドラマチック登場
+      // ====================================================
+      // BOOST Phase 0: ホワイトフラッシュ（衝撃的開幕）
+      // ====================================================
+      tl.fromTo(
+        flashRef.current,
+        { opacity: 0 },
+        {
+          opacity: 1,
+          duration: 0.05,
+          ease: "power4.in",
+        }
+      )
+      .to(flashRef.current, {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.out"
+      });
+
+      // ====================================================
+      // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
+      // LEFT → RIGHT → CENTER！！
+      // ====================================================
+
+      // 【第1波】LEFT から爆発（0.05s）
+      [0, 1, 7].forEach((index) => {
+        const line = linesRef.current[index];
+        if (!line) return;
+        tl.fromTo(
+          line,
+          { scaleX: 0, opacity: 1 },
+          {
+            scaleX: 3.5,
+            opacity: 0,
+            duration: 0.6,
+            ease: "power3.out",
+          },
+          0.05
+        );
+      });
+
+      // 【第2波】RIGHT から爆発（0.15s）
+      [3, 4, 5].forEach((index) => {
+        const line = linesRef.current[index];
+        if (!line) return;
+        tl.fromTo(
+          line,
+          { scaleX: 0, opacity: 1 },
+          {
+            scaleX: 3.5,
+            opacity: 0,
+            duration: 0.6,
+            ease: "power3.out",
+          },
+          0.15
+        );
+      });
+
+      // 【第3波】CENTER（上下）から爆発（0.25s）
+      [2, 6].forEach((index) => {
+        const line = linesRef.current[index];
+        if (!line) return;
+        tl.fromTo(
+          line,
+          { scaleX: 0, opacity: 1 },
+          {
+            scaleX: 4,
+            opacity: 0,
+            duration: 0.8,
+            ease: "power4.out",
+          },
+          0.25
+        );
+      });
+
+      // ====================================================
+      // BOOST Phase 0.7: コンテナシェイク（衝撃波）
+      // ====================================================
+      tl.to(
+        container,
+        {
+          x: 8,
+          duration: 0.04,
+          repeat: 8,
+          yoyo: true,
+          ease: "power1.inOut",
+        },
+        0.1
+      )
+      // シェイク後、確実に中央に戻す（xPercent維持）
+      .to(
+        container,
+        {
+          x: 0,
+          y: 0,
+          rotation: 0,
+          duration: 0.1,
+          ease: "power2.out",
+        }
+      );
+
+      // Phase 1: ドラマチック登場（ライン爆発と同時）
       tl.fromTo(
         overlay,
         {
@@ -209,7 +322,7 @@ export function GameResultOverlay({
           rotationX: -45,
           rotationY: 25,
           rotationZ: -15,
-          filter: "blur(12px) brightness(0.3)",
+          filter: "blur(12px) brightness(5)", // 超明るくスタート
           transformOrigin: "50% 50%"
         },
         {
@@ -221,7 +334,8 @@ export function GameResultOverlay({
           filter: "blur(0px) brightness(1.3)",
           duration: 0.6,
           ease: "back.out(2.5)",
-        }
+        },
+        0.15 // ライン爆発と重ねる
       )
 
       // Phase 2: 強烈なバウンス（ドラクエのレベルアップ感）
@@ -330,6 +444,14 @@ export function GameResultOverlay({
         duration: 0.3,
         ease: "elastic.out(1.3, 0.5)"
       }, "-=0.2")
+      // containerを完全に中央にリセット（念押し・xPercentは維持）
+      .to(container, {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        duration: 0.2,
+        ease: "power2.out"
+      }, "-=0.2")
 
       // Phase 7: 自然な永続浮遊（呼吸のような）
       .to(
@@ -380,11 +502,29 @@ export function GameResultOverlay({
       tlRef.current?.kill();
       tlRef.current = null;
       // より確実なクリーンアップ
-      gsap.set(overlay, {
-        clearProps: "all"
-      });
-      gsap.set(text, {
-        clearProps: "all"
+      if (overlay) {
+        gsap.set(overlay, { clearProps: "all" });
+      }
+      if (text) {
+        gsap.set(text, { clearProps: "all" });
+      }
+      if (flashRef.current) {
+        gsap.set(flashRef.current, { clearProps: "all" });
+      }
+      if (container) {
+        // 中央位置は保持しつつ、アニメーションプロパティのみクリア
+        gsap.set(container, {
+          xPercent: -50,
+          yPercent: -50,
+          x: 0,
+          y: 0,
+          rotation: 0,
+        });
+      }
+      linesRef.current.forEach((line) => {
+        if (line) {
+          gsap.set(line, { clearProps: "all" });
+        }
       });
     };
   }, [failed, mode, prefersReduced]);
@@ -414,12 +554,47 @@ export function GameResultOverlay({
 
   return (
     <Box
+      ref={containerRef}
       position="absolute"
       top="50%"
       left="50%"
-      transform="translate(-50%, -50%)"
       zIndex={10}
     >
+      {/* ホワイトフラッシュ（全画面） */}
+      <Box
+        ref={flashRef}
+        position="fixed"
+        inset={0}
+        bg="white"
+        opacity={0}
+        pointerEvents="none"
+        zIndex={9999}
+      />
+
+      {/* 放射状ライン（8本）*/}
+      {[...Array(8)].map((_, i) => {
+        const angle = (360 / 8) * i;
+        return (
+          <Box
+            key={i}
+            ref={(el) => {
+              linesRef.current[i] = el;
+            }}
+            position="fixed"
+            top="50%"
+            left="50%"
+            width="200vw"
+            height="6px"
+            bg="linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, transparent)"
+            transformOrigin="left center"
+            transform={`rotate(${angle}deg)`}
+            opacity={0}
+            zIndex={9998}
+            pointerEvents="none"
+          />
+        );
+      })}
+
       <Box
         ref={overlayRef}
         px={{ base: 6, md: 8 }}
