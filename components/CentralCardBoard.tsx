@@ -331,36 +331,53 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     };
   }, [setPending]);
 
-  const renderCard = (id: string, idx?: number) => {
-    const interactiveFlip =
-      roomStatus === "finished"
-        ? {
-            flipped: resultFlipMap[id] ?? true,
-            onToggle: () => handleResultCardFlip(id),
-            preset: "result" as const,
-          }
-        : undefined;
+  // ⚡ PERFORMANCE: renderCard をuseCallback化
+  const renderCard = useCallback(
+    (id: string, idx?: number) => {
+      const interactiveFlip =
+        roomStatus === "finished"
+          ? {
+              flipped: resultFlipMap[id] ?? true,
+              onToggle: () => handleResultCardFlip(id),
+              preset: "result" as const,
+            }
+          : undefined;
 
-    return (
-      <CardRenderer
-        key={id}
-        id={id}
-        player={playerMap.get(id)}
-        idx={idx}
-        orderList={orderList}
-        pending={pending}
-        proposal={proposal}
-        resolveMode={(resolveMode || undefined) as any}
-        roomStatus={roomStatus}
-        // sort-submit ???????? revealIndex????????? progressive index
-        revealIndex={revealIndex}
-        revealAnimating={revealAnimating}
-        failed={failed}
-        realtimeResult={realtimeResult} // ?????????????
-        interactiveFlip={interactiveFlip}
-      />
-    );
-  };
+      return (
+        <CardRenderer
+          key={id}
+          id={id}
+          player={playerMap.get(id)}
+          idx={idx}
+          orderList={orderList}
+          pending={pending}
+          proposal={proposal}
+          resolveMode={(resolveMode || undefined) as any}
+          roomStatus={roomStatus}
+          // sort-submit ???????? revealIndex????????? progressive index
+          revealIndex={revealIndex}
+          revealAnimating={revealAnimating}
+          failed={failed}
+          realtimeResult={realtimeResult} // ?????????????
+          interactiveFlip={interactiveFlip}
+        />
+      );
+    },
+    [
+      roomStatus,
+      resultFlipMap,
+      handleResultCardFlip,
+      playerMap,
+      orderList,
+      pending,
+      proposal,
+      resolveMode,
+      revealIndex,
+      revealAnimating,
+      failed,
+      realtimeResult,
+    ]
+  );
 
   // DnD sorting for sort-submit mode
   const activeProposal = useMemo(() => {
@@ -388,7 +405,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     );
   }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, eligibleIds.length]);
 
-  const onDragEnd = async (e: DragEndEvent) => {
+  // ⚡ PERFORMANCE: onDragEnd をuseCallback化
+  const onDragEnd = useCallback(async (e: DragEndEvent) => {
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
     if (!over) {
@@ -485,14 +503,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         playDropInvalid();
       }
     }
-  };
+  }, [
+    resolveMode,
+    roomStatus,
+    playDropInvalid,
+    playDropSuccess,
+    activeProposal,
+    meId,
+    setPending,
+    roomId,
+    slotCountDragging,
+  ]);
 
   // DragOverlay ???????ID??
   const [activeId, setActiveId] = useState<string | null>(null);
-  const onDragStart = (e: DragStartEvent) => {
+  // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
+  const onDragStart = useCallback((e: DragStartEvent) => {
     setActiveId(String(e.active.id));
-  };
-  const clearActive = () => setActiveId(null);
+  }, []);
+  const clearActive = useCallback(() => setActiveId(null), []);
   const isDraggingOwnPlacedCard =
     activeId === meId && (activeProposal as (string | null)[]).includes(activeId);
 
@@ -538,7 +567,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     proposedCount === proposalLength &&
     proposalLength > 0 &&
     !!isHost;
-  const onConfirm = async () => {
+  // ⚡ PERFORMANCE: onConfirm をuseCallback化
+  const onConfirm = useCallback(async () => {
     if (!canConfirm) return;
     try {
       await submitSortedOrder(
@@ -546,7 +576,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         (proposal as (string | null)[]).filter(Boolean) as string[]
       );
     } catch {}
-  };
+  }, [canConfirm, roomId, proposal]);
 
   return (
     <Box
