@@ -1135,7 +1135,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }}
         >
           <Dialog.Backdrop />
-          <Dialog.Positioner>
+          <Dialog.Positioner
+            position="fixed"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            zIndex={9999}
+          >
             <Dialog.Content
               css={{
                 background: UI_TOKENS.COLORS.panelBg,
