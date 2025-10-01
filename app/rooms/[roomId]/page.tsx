@@ -9,7 +9,9 @@ import CentralCardBoard from "@/components/CentralCardBoard";
 import NameDialog from "@/components/NameDialog";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
-import SettingsModal from "@/components/SettingsModal";
+// ⚡ PERFORMANCE: React.lazy で遅延ロード
+import { lazy, Suspense } from "react";
+const SettingsModal = lazy(() => import("@/components/SettingsModal"));
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
@@ -756,6 +758,29 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return [hostId, ...baseIds.filter((id) => id !== hostId)];
   }, [hostId, baseIds]);
 
+  // ⚡ PERFORMANCE: slotCount計算をuseMemo化
+  const slotCount = useMemo(() => {
+    if (!room || !room.status) return 0;
+    if (room.status === "reveal" || room.status === "finished") {
+      return (room.order?.list || []).length;
+    }
+    const dealPlayers = Array.isArray(room?.deal?.players)
+      ? (room.deal?.players ?? [])
+      : [];
+    const proposalList = Array.isArray(room?.order?.proposal)
+      ? (room.order?.proposal ?? [])
+      : [];
+    const dealLen = dealPlayers.length;
+    const propLen = proposalList.length;
+    return Math.max(dealLen, propLen, eligibleIds.length);
+  }, [
+    room?.status,
+    room?.order?.list,
+    room?.deal?.players,
+    room?.order?.proposal,
+    eligibleIds.length,
+  ]);
+
   // 並び替えフェーズの判定（CentralCardBoardと同じロジック）
   const canStartSorting = useMemo(() => {
     const resolveMode = room?.options?.resolveMode;
@@ -943,20 +968,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           displayMode={getDisplayMode(room)}
           isHost={isHost}
           orderNumbers={room.order?.numbers ?? {}}
-          slotCount={(() => {
-            if (room.status === "reveal" || room.status === "finished") {
-              return (room.order?.list || []).length;
-            }
-            const dealPlayers = Array.isArray(room?.deal?.players)
-              ? (room.deal?.players ?? [])
-              : [];
-            const proposalList = Array.isArray(room?.order?.proposal)
-              ? (room.order?.proposal ?? [])
-              : [];
-            const dealLen = dealPlayers.length;
-            const propLen = proposalList.length;
-            return Math.max(dealLen, propLen, eligibleIds.length);
-          })()}
+          slotCount={slotCount}
         />
       </Box>
     </Box>
@@ -1114,14 +1126,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
       {/* ホスト操作はフッターの同一行に統合済み（モック準拠） */}
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        roomId={roomId}
-        currentOptions={room.options || {}}
-        isHost={isHost}
-        roomStatus={room.status}
-      />
+      <Suspense fallback={null}>
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          roomId={roomId}
+          currentOptions={room.options || {}}
+          isHost={isHost}
+          roomStatus={room.status}
+        />
+      </Suspense>
     </>
   );
 }

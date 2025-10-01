@@ -1,9 +1,12 @@
 "use client";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
-import React, { ReactNode } from "react";
+import React, { ReactNode, lazy, Suspense } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
-import { ThreeBackground } from "./ThreeBackground";
+// ⚡ PERFORMANCE: Three.js を遅延ロード
+const ThreeBackground = lazy(() =>
+  import("./ThreeBackground").then((mod) => ({ default: mod.ThreeBackground }))
+);
 
 /**
  * GameLayout: 予測可能で安定したゲーム画面レイアウト
@@ -58,7 +61,9 @@ export function GameLayout({
     return (
       <>
         {/* Three.js 3D背景 */}
-        <ThreeBackground />
+        <Suspense fallback={null}>
+          <ThreeBackground />
+        </Suspense>
 
         <Box
           h="100dvh"
