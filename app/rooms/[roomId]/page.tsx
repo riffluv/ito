@@ -31,6 +31,9 @@ import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
+import { useHostClaim } from "@/lib/hooks/useHostClaim";
+import { useHostPruning } from "@/lib/hooks/useHostPruning";
+import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { selectHostCandidate } from "@/lib/host/HostManager";
 import { verifyPassword } from "@/lib/security/password";
 import {
@@ -94,20 +97,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     [onlineUids]
   );
 
+  // ⚡ PERFORMANCE: room全体ではなく必要なプロパティだけ監視
   useEffect(() => {
+    const requiresPassword = room?.requiresPassword;
+    const passwordHash = room?.passwordHash;
+
     if (!room) {
       setPasswordDialogOpen(false);
       setPasswordVerified(false);
       return;
     }
-    if (!room.requiresPassword) {
+    if (!requiresPassword) {
       setPasswordVerified(true);
       setPasswordDialogOpen(false);
       setPasswordDialogError(null);
       return;
     }
     const cached = getCachedRoomPasswordHash(roomId);
-    if (cached && room.passwordHash && cached === room.passwordHash) {
+    if (cached && passwordHash && cached === passwordHash) {
       setPasswordVerified(true);
       setPasswordDialogOpen(false);
       setPasswordDialogError(null);
@@ -116,7 +123,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     setPasswordVerified(false);
     setPasswordDialogOpen(true);
     setPasswordDialogError(null);
-  }, [roomId, room, room?.requiresPassword, room?.passwordHash]);
+  }, [roomId, room?.requiresPassword, room?.passwordHash]);
 
   const handleRoomPasswordSubmit = useCallback(
     async (input: string) => {
@@ -202,15 +209,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [forcedExitReason, setForcedExitReason] = useState<
     "game-in-progress" | null
   >(null);
-  const hostClaimAttemptRef = useRef(0);
-  const hostClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pruneRef = useRef<{
-    key: string;
-    ts: number;
-    inflight: boolean;
-  } | null>(null);
-  const offlineSinceRef = useRef<Map<string, number>>(new Map());
-  const forcedExitScheduledRef = useRef(false);
+  // hostClaimAttemptRef, hostClaimTimerRef は useHostClaim 内に移動
+  // pruneRef, offlineSinceRef は useHostPruning 内に移動
+  const forcedExitScheduledRef = useRef(false); // 他の場所でも使われているため残す
   const forcedExitRecoveryPendingRef = useRef(false);
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
@@ -336,46 +337,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const isSpectatorMode =
     (!canAccess && room?.status !== "waiting") ||
     forcedExitReason === "game-in-progress";
-  useEffect(() => {
-    if (!room || !uid) return;
-    if (leavingRef.current) return;
-    if (lastKnownHostId === uid) return;
-    // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
-    // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
-    if (loading || authLoading) return;
-    if (redirectGuard) return;
-
-    let pendingRejoin = false;
-    if (rejoinSessionKey && typeof window !== "undefined") {
-      try {
-        pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
-      } catch (error) {
-        logDebug("room-page", "session-storage-read-failed", error);
-      }
-    }
-    if (pendingRejoin) return;
-
-    if (!canAccess && room.status !== "waiting") {
-      if (!forcedExitScheduledRef.current) {
-        forcedExitScheduledRef.current = true;
-        forcedExitRecoveryPendingRef.current = true;
-        setPendingRejoinFlag();
-        try {
-          notify({
-            title: "ゲーム進行中です",
-            description:
-              "今回はプレイヤーとして残ることができません。ホストがリセットすると再参加できます。",
-            type: "info",
-          });
-        } catch (error) {
-          logDebug("room-page", "notify-force-exit-init-failed", error);
-        }
-        setForcedExitReason("game-in-progress");
-      }
-    }
-  }, [
-    room?.status,
+  // ⚡ PERFORMANCE: 37行の強制退出処理をカスタムフック化
+  useForcedExit({
     uid,
+    roomStatus: room?.status,
     canAccess,
     loading,
     authLoading,
@@ -384,7 +349,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastKnownHostId,
     leavingRef,
     setPendingRejoinFlag,
-  ]);
+    setForcedExitReason,
+  });
 
   const handleForcedExitLeaveNow = useCallback(() => {
     void executeForcedExit();
@@ -479,95 +445,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     displayName,
   ]);
 
-  useEffect(() => {
-    const clearTimer = () => {
-      if (hostClaimTimerRef.current) {
-        clearTimeout(hostClaimTimerRef.current);
-        hostClaimTimerRef.current = null;
-      }
-    };
+  // ⚡ PERFORMANCE: 88行の巨大useEffectをカスタムフック化
+  // 前のホストがまだメンバーかどうかを計算
+  const previousHostStillMember = useMemo(() => {
+    return lastKnownHostId ? players.some((p) => p.id === lastKnownHostId) : false;
+  }, [lastKnownHostId, players]);
 
-    if (!room || !uid || !user) {
-      clearTimer();
-      return clearTimer;
-    }
-
-    if (leavingRef.current) {
-      clearTimer();
-      return clearTimer;
-    }
-
-    const hostId = typeof room.hostId === "string" ? room.hostId.trim() : "";
-    if (hostId) {
-      hostClaimAttemptRef.current = 0;
-      clearTimer();
-      return clearTimer;
-    }
-
-    const previousHostId = lastKnownHostId;
-    const previousHostStillMember =
-      previousHostId && players.some((p) => p.id === previousHostId);
-
-    const shouldAttemptClaim =
-      hostClaimCandidateId === uid &&
-      (!previousHostId || previousHostId === uid || !previousHostStillMember);
-
-    if (!shouldAttemptClaim) {
-      clearTimer();
-      return clearTimer;
-    }
-
-    let cancelled = false;
-
-    const attemptClaim = async () => {
-      try {
-        const token = await user.getIdToken();
-        if (!token || cancelled) {
-          return;
-        }
-
-        await fetch(`/api/rooms/${roomId}/claim-host`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid, token }),
-          keepalive: true,
-        });
-        hostClaimAttemptRef.current = 0;
-      } catch (error) {
-        logError("room-page", "claim-host", error);
-        if (!cancelled) {
-          const attempt = hostClaimAttemptRef.current + 1;
-          if (attempt <= 3) {
-            hostClaimAttemptRef.current = attempt;
-            const delay = 800 * Math.pow(2, attempt - 1);
-            clearTimer();
-            hostClaimTimerRef.current = setTimeout(() => {
-              hostClaimTimerRef.current = null;
-              if (!cancelled) {
-                void attemptClaim();
-              }
-            }, delay);
-          }
-        }
-      }
-    };
-
-    attemptClaim();
-
-    return () => {
-      cancelled = true;
-      clearTimer();
-    };
-  }, [
-    room,
-    players,
+  useHostClaim({
+    roomId,
     uid,
     user,
-    roomId,
-    leavingRef,
+    hostId: room?.hostId || null,
+    candidateId: hostClaimCandidateId,
     lastKnownHostId,
-    hostClaimCandidateId,
-  ]);
+    previousHostStillMember,
+    leavingRef,
+  });
 
   // 数字配布後（またはplayingで未割当の場合）、自分の番号を割当（決定的）
   useEffect(() => {
@@ -603,15 +496,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // ラウンドが進んだら自分のreadyをリセット
   const [seenRound, setSeenRound] = useState<number>(0);
+  // ⚡ PERFORMANCE: room全体ではなくroom.roundだけ監視して無駄な再実行を防止
   useEffect(() => {
-    if (!room || !uid) return;
-    const r = room.round || 0;
+    if (!uid) return;
+    const r = room?.round || 0;
     if (r !== seenRound) {
       setSeenRound(r);
       const meRef = doc(db!, "rooms", roomId, "players", uid);
       updateDoc(meRef, { ready: false }).catch(() => void 0);
     }
-  }, [room?.round, room, uid, roomId, seenRound]);
+  }, [room?.round, uid, roomId, seenRound]);
 
   // プレゼンス: ハートビートでlastSeen更新（presence未対応環境のみ）
   useEffect(() => {
@@ -664,101 +558,35 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
   ]);
 
+  // ⚡ PERFORMANCE: room全体ではなくroom.statusだけ監視
   // waitingに戻ったら自分のフィールドを初期化
-  useEffect(() => {
-    if (!room || room.status !== "waiting" || !uid) return;
-    const myPlayer = players.find((p) => p.id === uid);
-    if (!myPlayer) return;
-    if (
+  const myPlayer = useMemo(() => players.find((p) => p.id === uid), [players, uid]);
+  const shouldResetPlayer = useMemo(() => {
+    if (!myPlayer) return false;
+    return (
       myPlayer.number !== null ||
-      myPlayer.clue1 ||
+      !!myPlayer.clue1 ||
       myPlayer.ready ||
       myPlayer.orderIndex !== 0
-    ) {
-      resetPlayerState(roomId, uid).catch(() => void 0);
-    }
-  }, [room?.status, room, uid, players, roomId]);
+    );
+  }, [myPlayer]);
 
   useEffect(() => {
-    if (!isHost) return;
-    if (!uid || !user) return;
-    if (!Array.isArray(onlineUids)) return;
-    if (onlineUids.length === 0) return;
-    if (!players.length) return;
-    const OFFLINE_GRACE_MS = 8_000;
-    const LAST_SEEN_THRESHOLD_MS = 30_000;
-    const now = Date.now();
-    const onlineSet = new Set(onlineUids);
-
-    for (const id of Array.from(offlineSinceRef.current.keys())) {
-      if (id === uid) {
-        offlineSinceRef.current.delete(id);
-        continue;
-      }
-      if (onlineSet.has(id)) {
-        offlineSinceRef.current.delete(id);
-        continue;
-      }
-      if (!players.some((p) => p.id === id)) {
-        offlineSinceRef.current.delete(id);
-      }
+    if (!uid || room?.status !== "waiting") return;
+    if (shouldResetPlayer) {
+      resetPlayerState(roomId, uid).catch(() => void 0);
     }
+  }, [room?.status, uid, roomId, shouldResetPlayer]);
 
-    const candidates = players.filter(
-      (p) => p.id !== uid && !onlineSet.has(p.id)
-    );
-    if (candidates.length === 0) return;
-
-    const readyIds: string[] = [];
-    for (const p of candidates) {
-      const last = toMillis(p.lastSeen);
-      const existing = offlineSinceRef.current.get(p.id);
-      if (!existing) {
-        offlineSinceRef.current.set(p.id, now);
-        continue;
-      }
-      const offlineDuration = now - existing;
-      if (offlineDuration < OFFLINE_GRACE_MS) continue;
-      const staleByLastSeen =
-        last > 0 ? now - last >= LAST_SEEN_THRESHOLD_MS : false;
-      if (!staleByLastSeen && offlineDuration < LAST_SEEN_THRESHOLD_MS) {
-        continue;
-      }
-      readyIds.push(p.id);
-    }
-
-    if (readyIds.length === 0) return;
-    readyIds.sort();
-    const key = readyIds.join(",");
-    const entry = pruneRef.current;
-    if (entry && entry.inflight) return;
-    if (entry && entry.key === key && now - entry.ts < 30_000) return;
-    pruneRef.current = { key, ts: now, inflight: true };
-    (async () => {
-      try {
-        const token = await user.getIdToken().catch(() => null);
-        if (!token) return;
-        logInfo("room-page", "prune-request", {
-          roomId,
-          targets: readyIds,
-          offlineSince: readyIds.map(
-            (id) => offlineSinceRef.current.get(id) ?? null
-          ),
-        });
-        await fetch(`/api/rooms/${roomId}/prune`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, callerUid: uid, targets: readyIds }),
-        });
-      } catch (error) {
-        logError("room-page", "prune-offline", error);
-      } finally {
-        pruneRef.current = { key, ts: Date.now(), inflight: false };
-        logInfo("room-page", "prune-complete", { roomId, targets: readyIds });
-        readyIds.forEach((id) => offlineSinceRef.current.delete(id));
-      }
-    })();
-  }, [isHost, uid, user, onlineUidSignature, onlineUids, players, roomId]);
+  // ⚡ PERFORMANCE: 80行のホストプルーニング処理をカスタムフック化
+  useHostPruning({
+    isHost,
+    uid,
+    user,
+    roomId,
+    players,
+    onlineUids,
+  });
 
   // 表示名が変わったら、入室中の自分のプレイヤーDocにも反映
   useEffect(() => {
