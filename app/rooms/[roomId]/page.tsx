@@ -239,26 +239,44 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       leavingRef.current = true;
     }
 
-    try {
-      await detachNow();
-    } catch (error) {
-      logError("room-page", "forced-exit-detach-now", error);
-    }
+    const performExit = async () => {
+      try {
+        await detachNow();
+      } catch (error) {
+        logError("room-page", "forced-exit-detach-now", error);
+      }
+
+      try {
+        await forceDetachAll(roomId, uid);
+      } catch (error) {
+        logError("room-page", "forced-exit-force-detach-all", error);
+      }
+
+      try {
+        await leaveRoomAction(roomId, uid, displayName);
+      } catch (error) {
+        logError("room-page", "forced-exit-leave-room-action", error);
+      }
+    };
 
     try {
-      await forceDetachAll(roomId, uid);
-    } catch (error) {
-      logError("room-page", "forced-exit-force-detach-all", error);
-    }
-
-    try {
-      await leaveRoomAction(roomId, uid, displayName);
-    } catch (error) {
-      logError("room-page", "forced-exit-leave-room-action", error);
-    }
-
-    try {
-      router.replace("/");
+      if (transition) {
+        await transition.navigateWithTransition(
+          "/",
+          {
+            direction: "fade",
+            duration: 1.0,
+            showLoading: true,
+            loadingSteps: [
+              { id: "exit", message: "ロビーへ戻ります...", duration: 1200 },
+            ],
+          },
+          performExit
+        );
+      } else {
+        await performExit();
+        router.replace("/");
+      }
     } catch (error) {
       logError("room-page", "forced-exit-router-replace", error);
     } finally {
@@ -272,6 +290,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
     displayName,
     router,
+    transition,
     setPendingRejoinFlag,
   ]);
 

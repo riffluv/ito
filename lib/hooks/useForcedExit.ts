@@ -55,6 +55,7 @@ export function useForcedExit({
     if (pendingRejoin) return;
 
     if (!canAccess && roomStatus !== "waiting") {
+      // ゲーム進行中 → 観戦モード
       if (!forcedExitScheduledRef.current) {
         forcedExitScheduledRef.current = true;
         setPendingRejoinFlag();
@@ -70,6 +71,12 @@ export function useForcedExit({
         }
         setForcedExitReason("game-in-progress");
       }
+    }
+
+    // waiting状態に戻った、またはアクセス可能になった → 観戦パネルをクリア
+    if ((canAccess || roomStatus === "waiting") && forcedExitScheduledRef.current) {
+      forcedExitScheduledRef.current = false;
+      // 注意: forcedExitReasonはクリアしない（page.tsxの自動再参加ロジックが動作するため）
     }
   }, [
     roomStatus,

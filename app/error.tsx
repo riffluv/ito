@@ -1,9 +1,9 @@
 "use client";
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { logError } from "@/lib/utils/log";
 import { Box, Container, Heading, Stack, Text } from "@chakra-ui/react";
+import { useTransition } from "@/components/ui/TransitionProvider";
 
 export default function RouteError({
   error,
@@ -12,9 +12,34 @@ export default function RouteError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const transition = useTransition();
+  const [isNavigating, setIsNavigating] = useState(false);
+
   useEffect(() => {
     logError("app", "route-error", error);
   }, [error]);
+
+  const handleBackToLobby = async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+
+    try {
+      await transition.navigateWithTransition(
+        "/",
+        {
+          direction: "fade",
+          duration: 1.0,
+          showLoading: true,
+          loadingSteps: [
+            { id: "exit", message: "ロビーへ戻ります...", duration: 1200 },
+          ],
+        }
+      );
+    } catch (error) {
+      console.error("Navigation error:", error);
+      setIsNavigating(false);
+    }
+  };
 
   return (
     <Container maxW="container.sm" py={16}>
@@ -80,15 +105,15 @@ export default function RouteError({
             >
               もういちど やりなおす
             </AppButton>
-            <Link href="/">
-              <AppButton
-                visual="outline"
-                palette="gray"
-                w="full"
-              >
-                メインメニューに もどる
-              </AppButton>
-            </Link>
+            <AppButton
+              onClick={handleBackToLobby}
+              disabled={isNavigating}
+              visual="outline"
+              palette="gray"
+              w={{ base: "full", sm: "auto" }}
+            >
+              メインメニューに もどる
+            </AppButton>
           </Stack>
         </Stack>
       </Box>

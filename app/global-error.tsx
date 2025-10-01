@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from "react";
-import Link from "next/link";
 import { logError } from "@/lib/utils/log";
 
 export default function GlobalError({
@@ -14,72 +13,107 @@ export default function GlobalError({
     logError("app", "global-error", error);
   }, [error]);
 
+  const handleBackToLobby = () => {
+    window.location.href = "/";
+  };
+
   return (
     <html lang="ja">
       <body
         style={{
-          background: "#05070d",
+          background: "rgba(8,9,15,0.95)",
           color: "#fff",
           minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "var(--chakra-fonts-heading, system-ui)",
+          fontFamily: "monospace",
         }}
       >
         <div
           style={{
             maxWidth: "520px",
             padding: "32px",
-            borderRadius: "18px",
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "linear-gradient(135deg, rgba(11,16,31,0.92), rgba(4,6,12,0.92))",
-            boxShadow: "0 24px 60px rgba(3,6,12,0.55)",
+            borderRadius: "0",
+            border: "3px solid rgba(255,255,255,0.9)",
+            background: "rgba(8,9,15,0.9)",
+            boxShadow: "2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)",
           }}
         >
-          <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>
-            サービスで問題が発生しました
+          <h1 style={{
+            margin: 0,
+            fontSize: "1.5rem",
+            fontWeight: 700,
+            textShadow: "1px 1px 0px #000",
+            letterSpacing: "0.5px"
+          }}>
+            じゅうだいな エラーが はっせいしました
           </h1>
-          <p style={{ marginTop: "12px", lineHeight: 1.6, color: "rgba(255,255,255,0.78)" }}>
-            ページを再読み込みしても問題が続く場合は、ロビーに戻ってください。
+          <p style={{
+            marginTop: "16px",
+            lineHeight: 1.8,
+            color: "rgba(255,255,255,0.9)",
+            textShadow: "1px 1px 0px rgba(0,0,0,0.6)"
+          }}>
+            システムに ふぐあいが はっせいしています。<br />
+            さいどくこみを しても もんだいが つづくばあいは、<br />
+            メインメニューに もどってください。
           </p>
           {error.digest && (
-            <p style={{ marginTop: "8px", fontSize: "0.75rem", color: "rgba(255,255,255,0.55)" }}>
-              エラーID: {error.digest}
-            </p>
+            <div style={{
+              marginTop: "12px",
+              padding: "12px",
+              background: "rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              borderRadius: "0"
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: "0.75rem",
+                color: "rgba(255,255,255,0.7)",
+                textShadow: "1px 1px 0px rgba(0,0,0,0.6)"
+              }}>
+                エラーばんごう: {error.digest}
+              </p>
+            </div>
           )}
-          <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
+          <div style={{ marginTop: "24px", display: "flex", gap: "12px", flexDirection: "column" }}>
             <button
               onClick={() => reset()}
               style={{
-                flex: 1,
                 padding: "12px 16px",
-                borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.25)",
-                background: "rgba(36,123,255,0.18)",
+                borderRadius: "0",
+                border: "3px solid rgba(255,255,255,0.9)",
+                background: "rgba(60,80,180,0.7)",
                 color: "#fff",
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: "pointer",
+                fontFamily: "monospace",
+                fontSize: "1rem",
+                textShadow: "1px 1px 0px #000",
+                boxShadow: "2px 2px 0 rgba(0,0,0,0.6)",
               }}
             >
-              ページを再読み込み
+              もういちど やりなおす
             </button>
-            <Link
-              href="/"
+            <button
+              onClick={handleBackToLobby}
               style={{
-                flex: 1,
                 padding: "12px 16px",
-                borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.25)",
-                background: "rgba(255,255,255,0.08)",
+                borderRadius: "0",
+                border: "3px solid rgba(255,255,255,0.9)",
+                background: "rgba(40,40,40,0.7)",
                 color: "#fff",
-                fontWeight: 600,
-                textAlign: "center",
-                textDecoration: "none",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "monospace",
+                fontSize: "1rem",
+                textShadow: "1px 1px 0px #000",
+                boxShadow: "2px 2px 0 rgba(0,0,0,0.6)",
               }}
             >
-              ロビーに戻る
-            </Link>
+              メインメニューに もどる
+            </button>
           </div>
         </div>
       </body>
