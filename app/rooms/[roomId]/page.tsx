@@ -322,9 +322,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [me?.number]);
   // 名前未設定時はダイアログを表示。auto-joinはuseRoomState側で抑止済み
   const needName = !displayName || !String(displayName).trim();
-  const handleSubmitName = async (name: string) => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
+  const handleSubmitName = useCallback(async (name: string) => {
     setDisplayName(name);
-  };
+  }, [setDisplayName]);
 
   // ラウンド対象は上部で計算済み（eligibleIds）
 

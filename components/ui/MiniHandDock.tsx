@@ -231,7 +231,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     ? "判定中は操作できません"
     : baseActionTooltip;
 
-  const handleDecide = async () => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
+  const handleDecide = React.useCallback(async () => {
     if (!canDecide || !me?.id) return;
 
     try {
@@ -257,9 +258,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       }
     }
-  };
+  }, [canDecide, me?.id, roomId, trimmedText]);
 
-  const handleClear = async () => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化
+  const handleClear = React.useCallback(async () => {
     if (!clueEditable || !me?.id) return;
     try {
       await updateClue1(roomId, me.id, "");
@@ -275,9 +277,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         type: "error",
       });
     }
-  };
+  }, [clueEditable, me?.id, roomId]);
 
-  const handleSubmit = async () => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化
+  const handleSubmit = React.useCallback(async () => {
     if (!me?.id || !clueEditable) return;
 
     const isRemoving = isSortMode && placed;
@@ -324,13 +327,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       }
     }
-  };
+  }, [me?.id, clueEditable, isSortMode, placed, canSubmit, cluesReady, roomId]);
 
   // カスタムお題モーダル制御
   const [customOpen, setCustomOpen] = React.useState(false);
   const [customStartPending, setCustomStartPending] = React.useState(false);
   const [customText, setCustomText] = React.useState<string>("");
-  const handleSubmitCustom = async (val: string) => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化
+  const handleSubmitCustom = React.useCallback(async (val: string) => {
     const v = (val || "").trim();
     if (!v) return;
     await topicControls.setCustomTopic(roomId, v);
@@ -364,7 +368,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setCustomStartPending(false);
     }
-  };
+  }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode]);
 
   const quickStart = async (opts?: { broadcast?: boolean }) => {
     if (quickStartPending) return false;
@@ -559,7 +563,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     return quickStart({ broadcast: false });
   };
 
-  const handleNextGame = async () => {
+  // ⚡ PERFORMANCE: useCallbackでメモ化
+  const handleNextGame = React.useCallback(async () => {
     if (!isHost) return;
     if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
@@ -577,7 +582,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setIsRestarting(false);
     }
-  };
+  }, [isHost, autoStartLocked, quickStartPending, roomStatus, isRevealAnimating, beginAutoStartLock, restartGame, clearAutoStartLock]);
 
   // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ
   const hasHostButtons =
