@@ -996,7 +996,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     );
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <Box
         h="100dvh"
