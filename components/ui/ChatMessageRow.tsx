@@ -136,6 +136,17 @@ function ChatMessageRowBase({
   );
 }
 
-export const ChatMessageRow = memo(ChatMessageRowBase);
+// ⚡ PERFORMANCE: カスタム比較関数で不要な再レンダリングを防止
+export const ChatMessageRow = memo(ChatMessageRowBase, (prev, next) => {
+  // プリミティブ値とオプショナル値の比較
+  if (prev.sender !== next.sender) return false;
+  if (prev.text !== next.text) return false;
+  if (prev.isMe !== next.isMe) return false;
+  if (prev.isHost !== next.isHost) return false;
+  if (prev.avatar !== next.avatar) return false;
+  if (prev.accentColor !== next.accentColor) return false;
+
+  return true; // 全て同じなら再レンダリングしない
+});
 
 export default ChatMessageRow;

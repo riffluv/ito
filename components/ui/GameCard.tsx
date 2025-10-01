@@ -403,5 +403,25 @@ export function GameCard({
   );
 }
 
-export default memo(GameCard);
+// ⚡ PERFORMANCE: カスタム比較関数で不要な再レンダリングを防止
+export default memo(GameCard, (prev, next) => {
+  // プリミティブ値の比較
+  if (prev.index !== next.index) return false;
+  if (prev.name !== next.name) return false;
+  if (prev.clue !== next.clue) return false;
+  if (prev.number !== next.number) return false;
+  if (prev.state !== next.state) return false;
+  if (prev.successLevel !== next.successLevel) return false;
+  if (prev.boundary !== next.boundary) return false;
+  if (prev.variant !== next.variant) return false;
+  if (prev.flipped !== next.flipped) return false;
+  if (prev.waitingInCentral !== next.waitingInCentral) return false;
+  if (prev.isInteractive !== next.isInteractive) return false;
+  if (prev.flipPreset !== next.flipPreset) return false;
+
+  // onClick関数は常に新しいインスタンスの可能性があるので無視
+  // (親コンポーネントでuseCallbackを使うべき)
+
+  return true; // 全て同じなら再レンダリングしない
+});
 
