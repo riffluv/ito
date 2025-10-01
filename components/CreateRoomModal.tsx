@@ -264,7 +264,7 @@ export function CreateRoomModal({
           showLoading: true,
           loadingSteps: [
             { id: "firebase", message: "せつぞく中です...", duration: 1500 },
-            { id: "room", message: "へやに じゅんびしています...", duration: 2000 },
+            { id: "room", message: "へやを じゅんびしています...", duration: 2000 },
             { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800 },
             { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000 },
           ],
