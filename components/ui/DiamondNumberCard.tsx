@@ -1,6 +1,6 @@
 "use client";
 import { Text } from "@chakra-ui/react";
-import React, { useEffect, useRef } from "react";
+import React, { memo, useEffect, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 
@@ -9,7 +9,8 @@ interface DiamondNumberCardProps {
   isAnimating?: boolean;
 }
 
-export function DiamondNumberCard({ number, isAnimating = false }: DiamondNumberCardProps) {
+// ⚡ PERFORMANCE: 数字が変わった時のみ再レンダリング
+export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAnimating = false }: DiamondNumberCardProps) {
   const textRef = useRef<HTMLDivElement>(null);
   const previousNumber = useRef<number | null>(null);
 
@@ -96,4 +97,7 @@ export function DiamondNumberCard({ number, isAnimating = false }: DiamondNumber
       {typeof number === "number" ? number : "?"}
     </Text>
   );
-}
+}, (prev, next) => {
+  // 数字とアニメーション状態が同じなら再レンダリングしない
+  return prev.number === next.number && prev.isAnimating === next.isAnimating;
+});
