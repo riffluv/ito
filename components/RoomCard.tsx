@@ -208,11 +208,7 @@ export function RoomCard({
                 onJoin();
               }}
             >
-              {locked ? (
-                <Lock size={16} style={{ marginRight: "8px" }} />
-              ) : (
-                <Play size={16} style={{ marginRight: "8px" }} />
-              )}
+              {!locked && <Play size={16} style={{ marginRight: "8px" }} />}
               {locked ? "🔒 パスワード入室" : "参加する"}
             </AppButton>
           ) : (
