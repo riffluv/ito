@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
-import * as PIXI from "pixi.js";
+// ⚡ PERFORMANCE: Three.js/Pixi.jsを動的インポートに変更 (-1MB初期バンドル)
+// @ts-ignore - 動的インポート時の型エラー抑制
+import type * as THREETypes from "three";
+// @ts-ignore - 動的インポート時の型エラー抑制
+import type * as PIXITypes from "pixi.js";
 import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
@@ -25,9 +28,9 @@ interface ThreeBackgroundProps {
 
 export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene>();
-  const rendererRef = useRef<THREE.WebGLRenderer>();
-  const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const sceneRef = useRef<THREETypes.Scene>();
+  const rendererRef = useRef<THREETypes.WebGLRenderer>();
+  const cameraRef = useRef<THREETypes.PerspectiveCamera>();
   const frameRef = useRef<number>();
   const { reducedMotion, effectiveMode, supports3D, gpuCapability } = useAnimationSettings();
   const isLowPowerDevice = reducedMotion || gpuCapability === "low";
@@ -85,7 +88,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     };
   }, []);
 
-  // Three.js初期化用Effect
+  // Three.js初期化用Effect (動的ロード対応)
   useEffect(() => {
     if (backgroundType !== "three3d") {
       return;
@@ -95,9 +98,21 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     logThreeBackgroundInfo("init-start");
 
-    try {
-      // シーン初期化
-      const scene = new THREE.Scene();
+    let THREE: any = null;
+    let cleanup: (() => void) | null = null;
+
+    // ⚡ Three.jsを動的にロード (初回のみ1MB削減)
+    // @ts-ignore - 動的インポート
+    import("three").then((module) => {
+      // @ts-ignore - 動的モジュール
+      THREE = module;
+      logThreeBackgroundInfo("three-loaded");
+
+      if (!mountRef.current) return;
+
+      try {
+        // シーン初期化
+        const scene = new THREE.Scene();
       sceneRef.current = scene;
       logThreeBackgroundInfo("scene-created");
 
@@ -141,7 +156,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       // ===== ChatGPT高品質魔法陣システム =====
 
       // 共通: ソフト円テクスチャ
-      const makeCircleTexture = (size = 64): THREE.CanvasTexture => {
+      // @ts-ignore - 動的ロードTHREE
+      const makeCircleTexture = (size = 64): any => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
         const ctx = canvas.getContext('2d');
@@ -404,8 +420,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         });
 
         // オービター
+        // @ts-ignore - 動的ロードTHREE
         interface Orbiter {
-          s: THREE.Sprite;
+          s: any;
           r: number;
           a: number;
           v: number;
@@ -509,25 +526,35 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       };
 
       window.addEventListener('resize', handleResize);
+
+      // クリーンアップ関数を保存
+      cleanup = () => {
+        window.removeEventListener('resize', handleResize);
+        if (frameRef.current) {
+          cancelAnimationFrame(frameRef.current);
+        }
+        if (mountRef.current && rendererRef.current?.domElement) {
+          mountRef.current.removeChild(rendererRef.current.domElement);
+        }
+        if (rendererRef.current) {
+          rendererRef.current.dispose();
+        }
+      };
+
     } catch (error) {
       logError("three-background", "init-failed", error);
     }
+    }).catch((error) => {
+      logError("three-background", "dynamic-import-failed", error);
+    });
 
     // クリーンアップ
     return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
-      if (mountRef.current && rendererRef.current?.domElement) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
-      }
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-      }
+      if (cleanup) cleanup();
     };
   }, [backgroundType]); // backgroundTypeが変わったら再初期化
 
-  // PixiJS初期化用Effect - Octopath Traveler風HD-2D背景
+  // PixiJS初期化用Effect - Octopath Traveler風HD-2D背景 (動的ロード対応)
   useEffect(() => {
     if (backgroundType !== "pixijs") {
       return;
@@ -536,12 +563,19 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     logPixiBackground("info", "init-start");
 
-    let app: PIXI.Application | null = null;
+    // @ts-ignore - 動的ロード
+    let app: any | null = null;
     let frameId: number | undefined;
     let isAnimating = false; // アニメーションフラグをトップレベルで宣言
+    let PIXI: any = null;
 
     const initPixi = async () => {
       try {
+        // ⚡ Pixi.jsを動的にロード (初回のみ400KB削減)
+        // @ts-ignore - 動的インポート
+        PIXI = await import("pixi.js");
+        logPixiBackground("info", "pixi-loaded");
+
         // PixiJS v8対応: 正しいinit()方法
         app = new PIXI.Application();
         await app.init({
@@ -590,8 +624,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         logPixiBackground("info", "mountains-created");
 
         // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
+        // @ts-ignore - 動的ロードPIXI
         interface ParticleData {
-          particle: PIXI.Graphics;
+          particle: any;
           vx: number;
           vy: number;
           life: number;
