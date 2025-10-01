@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useRef } from "react";
-import * as THREE from "three";
+// ⚡ PERFORMANCE: Three.jsを動的インポートに変更
+// @ts-ignore - 動的インポート時の型エラー抑制
+import type * as THREETypes from "three";
 import { logError, logInfo } from "@/lib/utils/log";
 
 interface ThreeBackgroundAdvancedProps {
@@ -9,9 +11,9 @@ interface ThreeBackgroundAdvancedProps {
 
 export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene>();
-  const rendererRef = useRef<THREE.WebGLRenderer>();
-  const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const sceneRef = useRef<THREETypes.Scene>();
+  const rendererRef = useRef<THREETypes.WebGLRenderer>();
+  const cameraRef = useRef<THREETypes.PerspectiveCamera>();
   const frameRef = useRef<number>();
   const composerRef = useRef<any>();
   const isAnimatingRef = useRef(true);
@@ -21,10 +23,17 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
     if (!mountRef.current) return;
     logInfo("three-background-advanced", "init-start");
 
+    // @ts-ignore - 動的ロード
+    let THREE: any = null;
     let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any, FXAAShader: any;
 
     const initAdvancedBackground = async () => {
       try {
+        // ⚡ Three.jsを動的にロード
+        // @ts-ignore - 動的インポート
+        THREE = await import("three");
+        logInfo("three-background-advanced", "three-loaded");
+
         // 動的にポストプロセッシングをインポート
         const [
           { EffectComposer: EC },
@@ -70,7 +79,8 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         }
 
         // 共通テクスチャ関数
-        const makeCircleTexture = (size = 64): THREE.CanvasTexture => {
+        // @ts-ignore - 動的ロード
+        const makeCircleTexture = (size = 64): any => {
           const canvas = document.createElement('canvas');
           canvas.width = canvas.height = size;
           const ctx = canvas.getContext('2d');
@@ -258,8 +268,9 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         });
 
         // オービター
+        // @ts-ignore - 動的ロード
         interface Orbiter {
-          s: THREE.Sprite;
+          s: any;
           r: number;
           a: number;
           v: number;
