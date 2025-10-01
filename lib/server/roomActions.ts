@@ -543,17 +543,19 @@ export async function leaveRoomServer(
     return;
   }
 
-  if (hostCleared && remainingCount === 0) {
-    try {
-      await resetRoomToWaiting(roomId);
-      logDebug("rooms", "host-leave fallback-reset", {
-        roomId,
-        leavingUid: userId,
-      });
-    } catch (error) {
-      logWarn("rooms", "leave-room-server-reset-failed", error);
-    }
-  }
+  // 自動リセット機能を削除: 全員がpruneされた時に勝手にリセットすると混乱を招く
+  // ホストが復帰すれば手動でリセットできる
+  // if (hostCleared && remainingCount === 0) {
+  //   try {
+  //     await resetRoomToWaiting(roomId);
+  //     logDebug("rooms", "host-leave fallback-reset", {
+  //       roomId,
+  //       leavingUid: userId,
+  //     });
+  //   } catch (error) {
+  //     logWarn("rooms", "leave-room-server-reset-failed", error);
+  //   }
+  // }
 }
 
 export async function transferHostServer(
