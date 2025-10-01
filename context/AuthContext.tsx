@@ -47,7 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!firebaseEnabled || !auth) return;
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      setLoading(false);
+      // 認証中（user=null）でも匿名ログイン試行中なら loading を継続
+      if (u !== null) {
+        setLoading(false);
+      }
     });
     return () => unsub();
   }, [auth]);
@@ -55,7 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!firebaseEnabled || !auth) return;
     if (!user) {
-      signInAnonymously(auth).catch(() => void 0);
+      signInAnonymously(auth)
+        .then(() => {
+          // 匿名ログイン成功後、onAuthStateChanged が発火して loading=false になる
+        })
+        .catch(() => {
+          // 失敗しても loading を解除（無限ローディング防止）
+          setLoading(false);
+        });
     }
   }, [auth, user]);
 
