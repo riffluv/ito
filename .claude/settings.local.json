@@ -131,7 +131,8 @@
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")",
       "Read(//c/**)",
       "Bash(timeout:*)",
-      "WebFetch(domain:chakra-ui.com)"
+      "WebFetch(domain:chakra-ui.com)",
+      "mcp__serena__write_memory"
     ],
     "deny": [],
     "ask": []
