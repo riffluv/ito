@@ -697,7 +697,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             transform="translateY(-51%) rotate(43deg)"
             w="13px"
             h="13px"
-            bg="rgba(42,157,143,0.92)"
+            bg="rgba(255,128,45,0.91)"
             border="2.5px solid rgba(255,255,255,0.88)"
             boxShadow="0 1px 3px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(0,0,0,0.3)"
           />
@@ -709,7 +709,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             transform="translateY(-49%) rotate(46deg)"
             w="11px"
             h="11px"
-            bg="rgba(38,143,130,0.89)"
+            bg="rgba(248,115,30,0.88)"
             border="2.5px solid rgba(255,255,255,0.91)"
             boxShadow="0 1px 4px rgba(0,0,0,0.48), inset -1px -1px 2px rgba(0,0,0,0.28)"
           />
@@ -723,7 +723,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             px="34px"
             py="19px"
             position="relative"
-            bg="rgba(42,157,143,0.94)"
+            bg="rgba(255,128,45,0.93)"
             color="white"
             border="3px solid rgba(255,255,255,0.92)"
             borderRadius={0}
@@ -732,7 +732,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             fontSize="26px"
             letterSpacing="0.023em"
             textShadow="2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)"
-            boxShadow="0 0 0 2px rgba(38,143,130,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)"
+            boxShadow="0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)"
             _before={{
               content: '""',
               position: "absolute",
@@ -744,17 +744,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               pointerEvents: "none",
             }}
             _hover={{
-              bg: "rgba(48,172,158,0.97)",
+              bg: "rgba(255,145,65,0.96)",
               color: "white",
               textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
               borderColor: "rgba(255,255,255,0.95)",
               transform: "translateY(-3px)",
-              boxShadow: "0 0 0 2px rgba(42,157,143,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
+              boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
             }}
             _active={{
-              bg: "rgba(35,138,126,0.96)",
+              bg: "rgba(235,110,30,0.95)",
               color: "rgba(255,255,255,0.91)",
-              boxShadow: "0 0 0 2px rgba(30,120,110,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
+              boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
               transform: "translateY(1px)",
             }}
             _disabled={{
