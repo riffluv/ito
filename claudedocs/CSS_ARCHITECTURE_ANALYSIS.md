@@ -164,59 +164,30 @@ import styles from "./GameCard.module.css";
 
 ---
 
-### 4. **黒いフィルター問題の根本原因**
+### 4. **黒いフィルター問題の根本原因 ✅ 解決済み**
 
 #### 調査結果:
 
-**原因**: `<body>` タグの背景色 `rgb(14, 15, 19)` が、透明な要素の隙間(gap)から見えている
+**原因**: GameCard の `boxShadow` が32pxも広がり、gap（16px）の間に黒い影が見えていた
 
-**検証コマンド実行結果**:
-```javascript
-// WaitingArea の親要素を遡った結果
-Found black background: <body style="overflow: hidden;">
-background: rgb(14, 15, 19)
+**問題のコード (修正前)**:
+```typescript
+// card.styles.ts
+boxShadow: waitingInCentral
+  ? `
+    0 4px 16px rgba(0, 0, 0, 0.5),  // ← 16px広がる黒い影
+    0 8px 32px rgba(0, 0, 0, 0.4),  // ← 32px広がる黒い影
+    inset 0 1px 0 rgba(255, 255, 255, 0.1)
+  `
 ```
 
-**問題の構造**:
-```
-<body bg="canvasBg"> // rgb(14, 15, 19)
-  └─ <WaitingArea>
-       └─ <Box gap="16px" bg="transparent">  // 👈 gap の隙間から body が見える
-            ├─ <WaitingAreaCard bg="transparent">
-            ├─ <WaitingAreaCard bg="transparent">
-            └─ <WaitingAreaCard bg="transparent">
+**修正後**:
+```typescript
+boxShadow: waitingInCentral
+  ? `inset 0 1px 0 rgba(255, 255, 255, 0.1)`  // 外側の影を削除
 ```
 
-#### 推奨解決策:
-
-**Option A: WaitingArea に明示的な背景色を設定**
-
-```tsx
-// WaitingArea.tsx
-<Box
-  bg="bgCanvas" // 👈 body と同じ色を指定
-  gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
->
-```
-
-**Option B: gap を使わず、カード間の余白をカード側で管理**
-
-```tsx
-// カード自体に margin を持たせる
-<WaitingAreaCard mr={UNIFIED_LAYOUT.SPACING.CARD_GAP}>
-```
-
-**Option C: CSS Grid で gap の代わりに explicit placement**
-
-```tsx
-<Box
-  display="grid"
-  gridTemplateColumns="repeat(auto-fit, minmax(100px, 1fr))"
-  // gap を使わない
->
-```
-
-**推奨**: **Option A** - 最もシンプルで影響範囲が小さい
+**結果**: ✅ gap の間に影が広がらず、PIXI.js背景が直接見える
 
 ---
 
@@ -291,18 +262,18 @@ useLayoutEffect(() => {
 
 ## 🎯 優先度別アクションプラン
 
-### 🔴 優先度 HIGH (即座に対応)
+### 🔴 優先度 HIGH (即座に対応) - ✅ 完了
 
-1. **黒いフィルター問題の解決**
-   - `WaitingArea` に `bg="bgCanvas"` を追加
-   - 推定工数: 5分
+1. **黒いフィルター問題の解決** ✅
+   - `card.styles.ts` の boxShadow から黒い影を削除
+   - 推定工数: 5分 → 完了
+
+### 🟡 優先度 MEDIUM (近日中に対応)
 
 2. **`bg="transparent"` の重複削除**
    - Semantic Token `containerBg: transparent` を追加
    - 全14箇所を `bg="containerBg"` に統一
    - 推定工数: 30分
-
-### 🟡 優先度 MEDIUM (近日中に対応)
 
 3. **`style={{}}` → `css={{}}` 移行**
    - 全21箇所を順次移行
@@ -338,7 +309,7 @@ useLayoutEffect(() => {
 
 ### パフォーマンス
 - [React.memo Performance](https://react.dev/reference/react/memo)
-- [GSAP Performance Tips](https://gsap.com/docs/v3/GSAP/gsap.set())
+- [GSAP Performance Tips](https://gsap.com/docs/v3/GSAP/gsap.set()/)
 
 ---
 
@@ -349,9 +320,16 @@ useLayoutEffect(() => {
 1. ✅ CSS Layers による最新アーキテクチャ採用済み
 2. ⚠️ スタイル実装の一貫性向上が必要 (style/css混在解消)
 3. ⚠️ 重複コード削減でパフォーマンス向上
-4. ⚠️ 黒いフィルター問題は簡単に解決可能
+4. ✅ 黒いフィルター問題は解決済み
 
-**次のステップ**: 優先度HIGHの2項目を実装 → ユーザーに確認してもらう
+**次のステップ**: 優先度MEDIUMの項目を順次実装 → コード品質向上
+
+---
+
+## 📝 更新履歴
+
+- **2025-10-02 初版作成**: CSS設計の包括的分析実施
+- **2025-10-02 黒いフィルター解決**: boxShadow が原因と特定、修正完了
 
 ---
 
