@@ -50,8 +50,8 @@ export function PlayerList({
         top={0}
         zIndex={1}
         bg={UI_TOKENS.COLORS.panelBg}
-        py={2}
-        mb={2}
+        py="7px"
+        mb="9px"
         border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
         borderRadius={0}
         boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
@@ -59,8 +59,8 @@ export function PlayerList({
         <Text
           fontSize="xs"
           color="white"
-          px={2}
-          letterSpacing="0.08em"
+          px="8px"
+          letterSpacing="0.073em"
           textTransform="uppercase"
           fontWeight="600"
           fontFamily="monospace"
@@ -74,7 +74,7 @@ export function PlayerList({
         return (
           <Box
             key={p.id}
-            p={3}
+            p="11px"
             borderRadius={0}
             bg={isMe ? UI_TOKENS.COLORS.dqBlue : UI_TOKENS.COLORS.panelBg}
             color="white"
@@ -85,20 +85,20 @@ export function PlayerList({
               transform: "translateY(-1px)",
               boxShadow: UI_TOKENS.SHADOWS.panelDistinct
             }}
-            transition="all 0.15s ease"
+            transition="172ms cubic-bezier(.2,1,.3,1)"
           >
-            <HStack gap={3} minH="48px" align="center">
+            <HStack gap="14px" minH="48px" align="center">
               <Avatar.Root size="sm">
                 <Avatar.Fallback name={p.name} />
               </Avatar.Root>
-              <HStack gap={2} flex={1} minW={0} align="center">
+              <HStack gap="9px" flex={1} minW={0} align="center">
                 <Text fontWeight="semibold" lineClamp={1} minW={0} color="white">
                   {p.name}
                 </Text>
                 {isMe && typeof p.number === "number" && (
                   <Box
-                    px={2}
-                    py={1}
+                    px="7px"
+                    py="4px"
                     bg={UI_TOKENS.COLORS.accentGold}
                     color="black"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
@@ -115,58 +115,58 @@ export function PlayerList({
               <HStack>
                 {Array.isArray(online) && online.includes(p.id) ? (
                   <Box
-                    px={2}
-                    py={1}
+                    px="9px"
+                    py="5px"
                     bg={UI_TOKENS.COLORS.limeGreen}
                     color="white"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
                     boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
                   >
-                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">オンライン</Text>
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace" letterSpacing="0.015em">オンライン</Text>
                   </Box>
                 ) : p.ready ? (
                   <Box
-                    px={2}
-                    py={1}
+                    px="8px"
+                    py="4px"
                     bg={UI_TOKENS.COLORS.dqBlue}
                     color="white"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
                     boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
                   >
-                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">準備OK</Text>
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace" letterSpacing="0.018em">準備OK</Text>
                   </Box>
                 ) : p.clue1 ? (
                   <Box
-                    px={2}
-                    py={1}
+                    px="7px"
+                    py="5px"
                     bg={UI_TOKENS.COLORS.accentGold}
                     color="black"
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
                     borderRadius={0}
                     boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
                   >
-                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">入力中</Text>
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace" letterSpacing="0.021em">入力中</Text>
                   </Box>
                 ) : (
                   <Box
-                    px={2}
-                    py={1}
+                    px="8px"
+                    py="4px"
                     bg={UI_TOKENS.COLORS.blackAlpha60}
                     color={UI_TOKENS.COLORS.whiteAlpha80}
                     border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha50}`}
                     borderRadius={0}
                     boxShadow="1px 1px 0px rgba(0,0,0,0.6)"
                   >
-                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace">未入力</Text>
+                    <Text fontSize="xs" fontWeight="600" fontFamily="monospace" letterSpacing="0.012em">未入力</Text>
                   </Box>
                 )}
               </HStack>
             </HStack>
             <Box
-              mt={2}
-              pt={2}
+              mt="9px"
+              pt="8px"
               bg={UI_TOKENS.COLORS.blackAlpha40}
               border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
               borderRadius={0}
@@ -179,6 +179,7 @@ export function PlayerList({
                 overflowWrap="anywhere"
                 title={p.clue1 || "（未設定）"}
                 fontFamily="monospace"
+                letterSpacing="0.008em"
               >
                 連想ワード: {p.clue1 ? p.clue1 : "（未設定）"}
               </Text>
@@ -198,7 +199,7 @@ export function PlayerList({
     );
   }
   return (
-    <Stack gap={2}>
+    <Stack gap="11px">
       {groups.empty.length > 0 && (
         <Section title="未入力" list={groups.empty} />
       )}
