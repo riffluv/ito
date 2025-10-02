@@ -1,27 +1,21 @@
 import { defineRecipe } from "@chakra-ui/react";
 
-/**
- * DQ Button Recipe - HUMAN-LIKE UI/UX ガイドライン準拠
- * 設計原則:
- * - 既定値禁止: すべてtokens経由でスタイル適用
- * - ピクセル風質感: blur最小、段積み影でレトロ感
- * - レトロ角丸: xs=2, sm=4, md=6, lg=8 で統一
- * - 状態差強化: hover/active/disabled の明確なフィードバック
- * - 意味のあるアニメ: 120-240ms中心、中断可能
- */
+// DQボタン - ドラクエ風のレトロな質感
+// blur禁止、段積み影でピクセル風にする
+// アニメは120-240msくらいでサクサク動かす
 export const buttonRecipe = defineRecipe({
   className: "dq-btn", // Dragon Quest Button
   base: {
-    // === TYPOGRAPHY - ガイドライン準拠 ===
-    fontWeight: "bold", // tokens経由
-    fontFamily: "heading", // DQ風フォント
-    letterSpacing: "normal", // 既定値なし
-    lineHeight: "normal", // tokens経由
+    // フォント設定
+    fontWeight: "bold",
+    fontFamily: "heading",
+    letterSpacing: "normal",
+    lineHeight: "normal",
     textTransform: "none",
 
-    // === LAYOUT - tokens経由のみ ===
-    borderRadius: "sm", // レトロ: 4px固定
-    border: "1px solid", // ピクセル風: 細めボーダー
+    // レイアウト
+    borderRadius: "sm", // 4px固定でレトロ感
+    border: "1px solid",
     cursor: "pointer",
     position: "relative",
     display: "inline-flex",
@@ -30,16 +24,16 @@ export const buttonRecipe = defineRecipe({
     whiteSpace: "nowrap",
     userSelect: "none",
 
-    // === MOTION - ガイドライン準拠（意味中心）===
-    transition: "all 120ms cubic-bezier(0, 0, 0.3, 1)", // microFeedback
+    // アニメーション
+    transition: "all 120ms cubic-bezier(0, 0, 0.3, 1)",
     willChange: "transform, box-shadow",
 
-    // === ACCESSIBILITY - WCAG AAA準拠 ===
+    // フォーカス時のリング
     _focusVisible: {
       outline: "2px solid",
-      outlineColor: "focusRing", // slimeBlue.500 @ 80% opacity
+      outlineColor: "focusRing",
       outlineOffset: "2px",
-      boxShadow: "0 0 0 4px rgba(58,176,255,0.15)", // accentRing弱め
+      boxShadow: "0 0 0 4px rgba(58,176,255,0.15)",
     },
     _disabled: {
       opacity: 0.5,
@@ -48,142 +42,141 @@ export const buttonRecipe = defineRecipe({
       boxShadow: "none !important",
     },
 
-    // === INTERACTION - 状態差強化 ===
+    // クリック時の押し込み
     _active: {
-      transform: "translateY(0)", // 押し込み (ガイドライン準拠)
-      boxShadow: "px1", // 影弱化
+      transform: "translateY(0)",
+      boxShadow: "px1",
     },
   },
   variants: {
     size: {
-      // === SIZE SYSTEM - tokens経由のみ ===
+      // サイズバリエーション
       xs: {
-        px: 3, // humanSpacing: 6px
-        py: 2, // humanSpacing: 4px
-        fontSize: "xs", // tokens: 12px
+        px: 3,
+        py: 2,
+        fontSize: "xs",
         minW: "auto",
-        height: "auto", // 自動高さ
-        gap: 2, // humanSpacing: 4px
+        height: "auto",
+        gap: 2,
       },
       sm: {
-        px: 4, // humanSpacing: 8px
-        py: 2, // humanSpacing: 4px
-        fontSize: "sm", // tokens: 14px
+        px: 4,
+        py: 2,
+        fontSize: "sm",
         minW: "auto",
         height: "auto",
-        gap: 2, // humanSpacing: 4px
+        gap: 2,
       },
       md: {
-        px: 5, // humanSpacing: 12px
-        py: 3, // humanSpacing: 6px
-        fontSize: "md", // tokens: 16px
+        px: 5,
+        py: 3,
+        fontSize: "md",
         minW: "auto",
         height: "auto",
-        gap: 3, // humanSpacing: 6px
+        gap: 3,
       },
       lg: {
-        px: 6, // humanSpacing: 16px
-        py: 4, // humanSpacing: 8px
-        fontSize: "lg", // tokens: 18px
+        px: 6,
+        py: 4,
+        fontSize: "lg",
         minW: "auto",
         height: "auto",
-        gap: 3, // humanSpacing: 6px
+        gap: 3,
       },
       xl: {
-        px: 8, // humanSpacing: 24px
-        py: 5, // humanSpacing: 12px
-        fontSize: "xl", // tokens: 20px
+        px: 8,
+        py: 5,
+        fontSize: "xl",
         minW: "auto",
         height: "auto",
-        gap: 4, // humanSpacing: 8px
+        gap: 4,
       },
     },
 
     variant: {
-      // === DQ VARIANT - ガイドライン準拠 ===
+      // DQボタン（デフォルト）
       dq: {
-        bg: "bgPanel", // obsidian.800 - パネル背景と統一
-        color: "textPrimary", // obsidian.50 - 最大コントラスト
-        borderColor: "borderStrong", // 24% 可視性
-        boxShadow: "px2", // 段積み影 (ピクセル風)
+        bg: "bgPanel",
+        color: "textPrimary",
+        borderColor: "borderStrong",
+        boxShadow: "px2",
 
-        // === 状態差強化 ===
         _hover: {
-          transform: "translateY(-1px)", // 浮き上がり
-          bg: "rgba(20,23,34,0.94)", // ink.800 微変化
-          boxShadow: "lg", // 影強化 (段積み)
+          transform: "translateY(-1px)",
+          bg: "rgba(20,23,34,0.94)",
+          boxShadow: "lg",
         },
 
         _active: {
-          transform: "translateY(0)", // 押し込み
-          boxShadow: "px1", // 影弱化
+          transform: "translateY(0)",
+          boxShadow: "px1",
         },
       },
 
-      // === SOLID VARIANT - slimeBlue ベース ===
+      // ソリッド（青ボタン）
       solid: {
-        bg: "accent", // slimeBlue.500
-        color: "white", // 最大コントラスト
-        borderColor: "accentActive", // slimeBlue.600
-        boxShadow: "px2", // 段積み影
+        bg: "accent",
+        color: "white",
+        borderColor: "accentActive",
+        boxShadow: "px2",
 
         _hover: {
-          bg: "accentHover", // slimeBlue.400
-          transform: "translateY(-1px)", // 浮き上がり
-          boxShadow: "lg", // 影強化
+          bg: "accentHover",
+          transform: "translateY(-1px)",
+          boxShadow: "lg",
         },
 
         _active: {
-          bg: "accentActive", // slimeBlue.600
-          transform: "translateY(0)", // 押し込み
-          boxShadow: "px1", // 影弱化
+          bg: "accentActive",
+          transform: "translateY(0)",
+          boxShadow: "px1",
         },
       },
 
-      // === OUTLINE VARIANT - ボーダー強調 ===
+      // アウトライン（枠線強調）
       outline: {
         bg: "transparent",
-        color: "accent", // slimeBlue.500
-        borderColor: "accent", // slimeBlue.500
+        color: "accent",
+        borderColor: "accent",
         boxShadow: "none",
 
         _hover: {
-          bg: "accentSubtle", // slimeBlue @ 10%
-          borderColor: "accentHover", // slimeBlue.400
+          bg: "accentSubtle",
+          borderColor: "accentHover",
           transform: "translateY(-1px)",
-          boxShadow: "sm", // 小さめ段積み影
+          boxShadow: "sm",
         },
 
         _active: {
-          bg: "rgba(58,176,255,0.15)", // より濃い背景
+          bg: "rgba(58,176,255,0.15)",
           transform: "translateY(0)",
           boxShadow: "none",
         },
       },
 
-      // === GHOST VARIANT - 最小限 ===
+      // ゴースト（透明ボタン）
       ghost: {
         bg: "transparent",
-        color: "textMuted", // obsidian.300
+        color: "textMuted",
         borderColor: "transparent",
         boxShadow: "none",
 
         _hover: {
-          color: "textPrimary", // obsidian.50
-          bg: "hoverOverlay", // 8% white overlay
-          borderColor: "borderDefault", // 12% white
+          color: "textPrimary",
+          bg: "hoverOverlay",
+          borderColor: "borderDefault",
           transform: "translateY(-1px)",
         },
 
         _active: {
-          bg: "activeOverlay", // 12% white overlay
+          bg: "activeOverlay",
           transform: "translateY(0)",
         },
       },
 
-      // === DANGER VARIANT - berryRed ===
+      // 危険（赤ボタン）
       danger: {
-        bg: "danger", // berryRed.400
+        bg: "danger",
         color: "white",
         borderColor: "berryRed.500",
         boxShadow: "px2",
@@ -201,9 +194,9 @@ export const buttonRecipe = defineRecipe({
         },
       },
 
-      // === SUCCESS VARIANT - 成功時 ===
+      // 成功（緑ボタン）
       success: {
-        bg: "successSolid", // success.500
+        bg: "successSolid",
         color: "white",
         borderColor: "success.600",
         boxShadow: "px2",
@@ -221,10 +214,10 @@ export const buttonRecipe = defineRecipe({
         },
       },
 
-      // === HIGHLIGHT VARIANT - heroGold ===
+      // ハイライト（金色ボタン）
       highlight: {
-        bg: "highlight", // heroGold.400
-        color: "obsidian.900", // 暗いテキストで高コントラスト
+        bg: "highlight",
+        color: "obsidian.900",
         borderColor: "heroGold.500",
         boxShadow: "px2",
 

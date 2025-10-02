@@ -39,7 +39,7 @@ import {
   type GameCardState
 } from "../cards/card.styles";
 
-// ?? ????????????????CSS ??????????
+// テキスト統一スタイル
 const getUnifiedTextStyle = (): React.CSSProperties => ({
   fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif`,
   fontWeight: 400,
@@ -65,10 +65,7 @@ export function GameCard({
   isInteractive = false,
   flipPreset = "reveal",
 }: GameCardProps) {
-  // hover?CSS???????????????????
-
-  // ?????????????
-  // ?? ????????????????????
+  // スタイル取得
   const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
   const textColors = getDragonQuestTextColors(waitingInCentral);
 
@@ -124,10 +121,10 @@ export function GameCard({
 
   const mergeShadow = (core: string) =>
     boundaryRing ? `${boundaryRing}, ${core}` : core;
-  // 3D FLIP CARD IMPLEMENTATION - ?????????????????
+  // 3Dフリップカード実装
   if (variant === "flip") {
     const { effectiveMode, reducedMotion } = useAnimationSettings();
-    // ?????????????????????auto?????????DOM???????
+    // モード変更時の再レンダリング防止
     const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
     useEffect(() => {
       stableModeRef.current = effectiveMode;
@@ -247,7 +244,7 @@ export function GameCard({
     );
   }
 
-  // FLAT VARIANT - ?????????CSS????????????
+  // フラットバリアント（2D表示）
   const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
   const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
   const hoveredBoxShadow = UI_TOKENS.SHADOWS.cardHover;
@@ -275,7 +272,7 @@ export function GameCard({
       style={{
         transformStyle: "preserve-3d",
         willChange: "transform",
-        // ????????: ?????????????????????????????
+        // GPU加速用
         transform: "translateZ(0)",
         WebkitFontSmoothing: "antialiased",
         MozOsxFontSmoothing: "grayscale",
@@ -311,9 +308,9 @@ export function GameCard({
           fontSize={
             typeof number === "number"
               ? getNumberFontSize(number)
-              : getClueFontSize(clue) // ????????????????
+              : getClueFontSize(clue)
           }
-          color={UI_TOKENS.COLORS.textBase} // ????????
+          color={UI_TOKENS.COLORS.textBase}
           lineHeight={typeof number === "number" ? 1.3 : 1.3}
           textShadow={
             waitingInCentral
@@ -341,27 +338,26 @@ export function GameCard({
           letterSpacing={
             typeof number === "number"
               ? String(number).length >= 3
-                ? "-0.8px" // 3???????????
-                : "-0.3px" // 2???????????
+                ? "-0.8px"
+                : "-0.3px"
               : undefined
           }
           style={{
             wordWrap: typeof number === "number" ? "normal" : "break-word",
             hyphens: typeof number === "number" ? "none" : "auto",
-            // ??????????????transform????
+            // アンチエイリアス
             WebkitFontSmoothing: "antialiased",
             MozOsxFontSmoothing: "grayscale",
           }}
           css={
             typeof number === "number"
               ? {
-                  // CSS?????????????
+                  // 数字用スタイル
                   width: "100%",
                   minWidth: "0",
                   maxWidth: "100%",
                   fontVariantNumeric: "normal",
                   fontFamily: "inherit",
-                  // ???????????
                   "& > *": {
                     width: "100%",
                     minWidth: "0",
@@ -404,9 +400,8 @@ export function GameCard({
   );
 }
 
-// ⚡ PERFORMANCE: カスタム比較関数で不要な再レンダリングを防止
+// パフォーマンス最適化（再レンダリング防止）
 export default memo(GameCard, (prev, next) => {
-  // プリミティブ値の比較
   if (prev.index !== next.index) return false;
   if (prev.name !== next.name) return false;
   if (prev.clue !== next.clue) return false;
@@ -420,9 +415,6 @@ export default memo(GameCard, (prev, next) => {
   if (prev.isInteractive !== next.isInteractive) return false;
   if (prev.flipPreset !== next.flipPreset) return false;
 
-  // onClick関数は常に新しいインスタンスの可能性があるので無視
-  // (親コンポーネントでuseCallbackを使うべき)
-
-  return true; // 全て同じなら再レンダリングしない
+  return true;
 });
 
