@@ -90,7 +90,7 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
       display="flex"
       alignItems="center"
       justifyContent="center"
-      minW="44px"
+      w="64px"
       h="44px"
       letterSpacing="-0.02em"
     >
