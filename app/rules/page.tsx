@@ -57,20 +57,32 @@ export default function RulesPage() {
               <ArrowLeft size={20} style={{ marginRight: "8px" }} />
               メインメニューに戻る
             </AppButton>
-            <Badge
-              colorScheme="blue"
+            <Box
+              border="2px solid rgba(255,255,255,0.9)"
               borderRadius={0}
               px={3}
               py={1}
-              fontSize="sm"
-              fontWeight="medium"
+              bg="rgba(12,14,20,0.7)"
+              css={{
+                boxShadow: "1px 1px 0 rgba(0,0,0,0.8), 2px 2px 0 rgba(0,0,0,0.6)"
+              }}
             >
-              <BookOpen
-                size={14}
-                style={{ marginRight: "6px", display: "inline" }}
-              />
-              ゲームルール
-            </Badge>
+              <HStack gap={1.5}>
+                <BookOpen
+                  size={14}
+                  color="rgba(255,255,255,0.95)"
+                />
+                <Text
+                  fontSize="sm"
+                  fontWeight={700}
+                  color="rgba(255,255,255,0.95)"
+                  fontFamily="monospace"
+                  textShadow="1px 1px 0px #000"
+                >
+                  ゲームルール
+                </Text>
+              </HStack>
+            </Box>
           </Flex>
 
           <VStack align="start" gap={6}>
@@ -216,9 +228,9 @@ export default function RulesPage() {
                     borderColor="whiteAlpha.60"
                     borderRadius={0}
                     boxShadow="2px 2px 0 rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.4)"
-                    transition="all 0.2s ease"
+                    transition="all 0.18s ease"
                     _hover={{
-                      transform: "translateY(-2px)",
+                      transform: `translateY(-${index % 2 === 0 ? '2' : '3'}px)`,
                       boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 0 6px 16px rgba(0,0,0,0.6)",
                       borderColor: "whiteAlpha.75",
                     }}
@@ -416,7 +428,7 @@ export default function RulesPage() {
                       fontFamily="monospace"
                       textShadow="1px 1px 0px #000"
                     >
-                      <Text as="span" fontWeight="bold" color="yellow.300">
+                      <Text as="span" fontWeight="bold" color="rgba(251,191,36,0.9)">
                         テーマ: ラスボスの風格を感じさせる攻撃手段
                       </Text>
                     </Text>
