@@ -835,10 +835,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           boxShadow="inset 1px 1px 2px rgba(0,0,0,0.4), 0 1px 2px rgba(255,255,255,0.1)"
           _placeholder={{ color: UI_TOKENS.COLORS.whiteAlpha50 }}
           _focus={{
-            borderColor: UI_TOKENS.COLORS.dqBlue,
-            boxShadow:
-              "inset 1px 1px 2px rgba(0,0,0,0.4), 0 0 0 2px rgba(58,176,255,0.4)",
+            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+            boxShadow: "inset 1px 1px 2px rgba(0,0,0,0.4), 0 1px 2px rgba(255,255,255,0.1)",
             bg: UI_TOKENS.COLORS.panelBg,
+            outline: "none",
           }}
           _hover={{
             borderColor: UI_TOKENS.COLORS.whiteAlpha80,
