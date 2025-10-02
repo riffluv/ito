@@ -837,7 +837,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               onClick={() => quickStart()}
               disabled={preparing}
-              minW="117px"
+              minW="140px"
               px="22px"
               py="13px"
               position="relative"
@@ -891,7 +891,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               onClick={evalSorted}
               disabled={!allSubmitted}
-              minW="114px"
+              minW="135px"
               px="20px"
               py="13px"
               position="relative"
@@ -954,7 +954,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 isRestarting ||
                 (roomStatus === "reveal" && isRevealAnimating)
               }
-              minW="119px"
+              minW="145px"
               px="21px"
               py="13px"
               position="relative"
@@ -1031,26 +1031,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     }
                   }}
                   size="sm"
-                  w="36px"
-                  h="36px"
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  color="white"
-                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  w="40px"
+                  h="40px"
+                  bg="transparent"
+                  color="rgba(255,255,255,0.85)"
+                  borderWidth="0"
                   borderRadius={0}
-                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  boxShadow="none"
                   _hover={{
                     bg:
                       effectiveDefaultTopicType === "カスタム"
-                        ? UI_TOKENS.COLORS.purpleAlpha80
-                        : UI_TOKENS.COLORS.dqBlue,
-                    borderColor: "white",
-                    transform: "translateY(-1px)",
+                        ? "rgba(147, 51, 234, 0.3)"
+                        : "rgba(58, 176, 255, 0.3)",
+                    color: "white",
+                    transform: "translateY(-2px)",
                   }}
                   _active={{
                     transform: "translateY(0)",
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
-                  transition="all 0.15s ease"
+                  transition="175ms cubic-bezier(.2,1,.3,1)"
                 >
                   {effectiveDefaultTopicType === "カスタム" ? (
                     <FiEdit2 />
@@ -1064,23 +1063,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   aria-label="数字配布"
                   onClick={() => topicControls.dealNumbers(roomId)}
                   size="sm"
-                  w="36px"
-                  h="36px"
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  color="white"
-                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  w="40px"
+                  h="40px"
+                  bg="transparent"
+                  color="rgba(255,255,255,0.85)"
+                  borderWidth="0"
                   borderRadius={0}
-                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  boxShadow="none"
                   _hover={{
-                    bg: UI_TOKENS.COLORS.limeGreen,
-                    borderColor: "white",
-                    transform: "translateY(-1px)",
+                    bg: "rgba(132, 204, 22, 0.3)",
+                    color: "white",
+                    transform: "translateY(-2px)",
                   }}
                   _active={{
                     transform: "translateY(0)",
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
-                  transition="all 0.15s ease"
+                  transition="178ms cubic-bezier(.2,1,.3,1)"
                 >
                   <FaDice />
                 </IconButton>
@@ -1093,32 +1091,29 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     await resetGame();
                   }}
                   size="sm"
-                  w="36px"
-                  h="36px"
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  color="white"
-                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  w="40px"
+                  h="40px"
+                  bg="transparent"
+                  color="rgba(255,255,255,0.85)"
+                  borderWidth="0"
                   borderRadius={0}
-                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  boxShadow="none"
                   _hover={{
-                    bg: UI_TOKENS.COLORS.dqRed,
-                    borderColor: "white",
-                    transform: "translateY(-1px)",
+                    bg: "rgba(220, 38, 38, 0.3)",
+                    color: "white",
+                    transform: "translateY(-2px)",
                   }}
                   _active={{
                     transform: "translateY(0)",
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
                   _disabled={{
-                    bg: UI_TOKENS.COLORS.blackAlpha60,
-                    color: UI_TOKENS.COLORS.whiteAlpha40,
-                    borderColor: UI_TOKENS.COLORS.whiteAlpha50,
+                    bg: "transparent",
+                    color: "rgba(255,255,255,0.3)",
                     cursor: "not-allowed",
                     transform: "none",
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
                   disabled={isResetting}
-                  transition="all 0.15s ease"
+                  transition="172ms cubic-bezier(.2,1,.3,1)"
                 >
                   <FaRedo />
                 </IconButton>
@@ -1137,23 +1132,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     setCustomOpen(true);
                   }}
                   size="sm"
-                  w="36px"
-                  h="36px"
-                  bg={UI_TOKENS.COLORS.panelBg}
-                  color="white"
-                  border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
+                  w="40px"
+                  h="40px"
+                  bg="transparent"
+                  color="rgba(255,255,255,0.85)"
+                  borderWidth="0"
                   borderRadius={0}
-                  boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+                  boxShadow="none"
                   _hover={{
-                    bg: UI_TOKENS.COLORS.purpleAlpha80,
-                    borderColor: "white",
-                    transform: "translateY(-1px)",
+                    bg: "rgba(147, 51, 234, 0.3)",
+                    color: "white",
+                    transform: "translateY(-2px)",
                   }}
                   _active={{
                     transform: "translateY(0)",
-                    boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
                   }}
-                  transition="all 0.15s ease"
+                  transition="175ms cubic-bezier(.2,1,.3,1)"
                 >
                   <FiEdit2 />
                 </IconButton>
