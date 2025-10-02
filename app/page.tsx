@@ -178,9 +178,9 @@ export default function MainMenu() {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 1.2,
-          ease: "power2.out",
-          delay: 0.3,
+          duration: 0.9,
+          ease: "back.out(1.15)",
+          delay: 0.25,
         }
       );
     }
@@ -479,6 +479,7 @@ export default function MainMenu() {
         overflow="hidden"
         pt={{ base: 20, md: 24, lg: 32 }}
         css={{
+          background: "linear-gradient(to bottom, rgba(8,9,15,0.95) 0%, rgba(8,9,15,0.9) 100%)",
           containerType: "inline-size",
           // DPI scaling optimization
           "@container (max-width: 600px)": {
@@ -1048,7 +1049,10 @@ export default function MainMenu() {
                       bg="rgba(12,14,20,0.6)"
                       border="2px solid rgba(34,197,94,0.3)"
                       borderRadius={0}
-                      borderLeft="4px solid rgba(34,197,94,0.8)"
+                      css={{
+                        borderLeft: "3px solid transparent",
+                        borderImage: "linear-gradient(to bottom, rgba(34,197,94,0.95), rgba(34,197,94,0.5)) 1"
+                      }}
                     >
                       <HStack gap={2} mb={2}>
                         <Text
@@ -1082,7 +1086,10 @@ export default function MainMenu() {
                       bg="rgba(12,14,20,0.6)"
                       border="2px solid rgba(251,191,36,0.3)"
                       borderRadius={0}
-                      borderLeft="4px solid rgba(251,191,36,0.8)"
+                      css={{
+                        borderLeft: "3px solid transparent",
+                        borderImage: "linear-gradient(to bottom, rgba(251,191,36,0.95), rgba(251,191,36,0.5)) 1"
+                      }}
                     >
                       <HStack gap={2} mb={2}>
                         <Text
@@ -1110,7 +1117,10 @@ export default function MainMenu() {
                       bg="rgba(12,14,20,0.6)"
                       border="2px solid rgba(147,51,234,0.3)"
                       borderRadius={0}
-                      borderLeft="4px solid rgba(147,51,234,0.8)"
+                      css={{
+                        borderLeft: "3px solid transparent",
+                        borderImage: "linear-gradient(to bottom, rgba(147,51,234,0.95), rgba(147,51,234,0.5)) 1"
+                      }}
                     >
                       <HStack gap={2} mb={2}>
                         <Text
