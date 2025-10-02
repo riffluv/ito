@@ -42,7 +42,7 @@ import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// 固定男性ナイトコンポーネント
+// ナイトキャラ
 function KnightCharacter() {
   const knightImage = "/images/knight1.webp";
   const knightAlt = "序の紋章III Male Knight";
@@ -145,8 +145,7 @@ export default function MainMenu() {
   // タイトルアニメーション用のref
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  // 2020年代以降のロビーベストプラクティスに合わせ、
-  // 常時 onSnapshot を避け、周期的な取得に最適化されたフックを使用
+  // onSnapshotは重いから定期取得に変更
   const {
     rooms,
     loading: roomsLoading,
@@ -165,7 +164,7 @@ export default function MainMenu() {
     }
   }, [roomsLoading]);
 
-  // シンプルなタイトルアニメーション
+  // タイトルアニメーション
   useEffect(() => {
     if (titleRef.current) {
       gsap.fromTo(
@@ -199,8 +198,7 @@ export default function MainMenu() {
 
   const roomIds = useMemo(() => rooms.map((room) => room.id), [rooms]);
 
-  // 正確な人数表示は RTDB presence を第一に、
-  // 未対応環境では Firestore の lastSeen をフォールバックで利用
+  // 人数カウント（RTDB優先、ない時はFirestore使う）
   const { counts: lobbyCounts, refresh: refreshLobbyCounts } = useLobbyCounts(
     roomIds,
     !!(firebaseEnabled && user && roomIds.length > 0),
@@ -282,10 +280,7 @@ export default function MainMenu() {
     });
   }, [optionFilteredRooms, debouncedSearch]);
 
-  // 直感的な並び順:
-  // 1) オンライン人数が多い順（>0 を優先）
-  // 2) createdAt の新しい順（新規作成を優先表示）
-  // 3) lastActiveAt の新しい順（最終アクティブ）
+  // ソート順: 人数多い → 新規作成 → 最終アクティブ
   const sortedRooms = useMemo(() => {
     const list = [...searchFilteredRooms];
     list.sort((a, b) => {
