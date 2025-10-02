@@ -176,6 +176,7 @@ export function GameCard({
     return (
       <Box
         className={styles.root}
+        bg="transparent"
         style={{
           perspective: "1000px",
         }}
@@ -211,7 +212,7 @@ export function GameCard({
           }}
         >
           {/* FRONT SIDE - ?????? */}
-          <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(0)", willChange: "auto" }}>
+          <Box position="absolute" width="100%" height="100%" bg="transparent" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(0)", willChange: "auto" }}>
             <CardFaceFront
               index={typeof index === "number" ? index : null}
               name={name}
@@ -227,7 +228,7 @@ export function GameCard({
           </Box>
 
           {/* BACK SIDE - ??? */}
-          <Box position="absolute" width="100%" height="100%" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(0)", willChange: "auto" }}>
+          <Box position="absolute" width="100%" height="100%" bg="transparent" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(0)", willChange: "auto" }}>
             <CardFaceBack
               index={typeof index === "number" ? index : null}
               name={name}

@@ -828,7 +828,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             {/* ??????clue/waiting????????????- DndContext???? */}
             {(roomStatus === "clue" || roomStatus === "waiting") && (
-              <Box 
+              <Box
                 mt={{ base: 6, md: 8 }}
                 css={{
                   // 150DPI??: ??????????
@@ -997,7 +997,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             {/* ??????clue/waiting????????????- Static mode */}
             {(roomStatus === "clue" || roomStatus === "waiting") &&
               waitingPlayers.length > 0 && (
-                <Box 
+                <Box
                   mt={{ base: 6, md: 8 }}
                   css={{
                     // 150DPI??: ??????????
