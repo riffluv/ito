@@ -21,6 +21,7 @@ import {
   where,
 } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 type VerificationCacheEntry = {
   count: number;
@@ -148,6 +149,25 @@ type FreezeTracker = {
   end: (roomId: string, now: number) => void;
 };
 
+function applyCountUpdates(
+  setCounts: Dispatch<SetStateAction<Record<string, number>>>,
+  updates: Record<string, number>
+) {
+  const entries = Object.entries(updates);
+  if (entries.length === 0) return;
+  setCounts((prev) => {
+    let changed = false;
+    const next: Record<string, number> = { ...prev };
+    for (const [id, value] of entries) {
+      if (next[id] !== value) {
+        next[id] = value;
+        changed = true;
+      }
+    }
+    return changed ? next : prev;
+  });
+}
+
 function createFreezeTracker(source: FreezeTrackerSource): FreezeTracker {
   const startedAt: Record<string, number> = {};
   return {
@@ -189,6 +209,21 @@ export function useLobbyCounts(
     single: {} as Record<string, number>,
     multi: {} as Record<string, number>,
   });
+
+  const normalizedExcludeUids = useMemo(() => {
+    if (!options?.excludeUid) return [];
+    const source = Array.isArray(options.excludeUid)
+      ? options.excludeUid
+      : [options.excludeUid];
+    return Array.from(
+      new Set(
+        source.filter((uid): uid is string =>
+          typeof uid === "string" && uid.length > 0
+        )
+      )
+    );
+  }, [options?.excludeUid]);
+  const excludeKey = normalizedExcludeUids.join(",");
   // 緊急時に Firestore フォールバックを完全停止するフラグ（.env から）
   const DISABLE_FS_FALLBACK =
     typeof process !== "undefined" &&
@@ -251,13 +286,7 @@ export function useLobbyCounts(
         if (!raw) return false; // default OFF
         return raw === "1" || raw === "true";
       })();
-      const excludeSet = new Set(
-        Array.isArray(options?.excludeUid)
-          ? options!.excludeUid
-          : options?.excludeUid
-            ? [options.excludeUid]
-            : []
-      );
+      const excludeSet = new Set(normalizedExcludeUids);
       // ロビー表示はゴースト抑制のため、presenceの鮮度しきい値をさらに短めに（既定8s）
       const ENV_STALE = Number(
         (process.env.NEXT_PUBLIC_LOBBY_STALE_MS || "").toString()
@@ -323,6 +352,10 @@ export function useLobbyCounts(
       const offs = roomIds.map((id) => {
         const roomRef = ref(rtdb!, `presence/${id}`);
         const handler = (snap: any) => {
+          const queuedUpdates: Record<string, number> = {};
+          const queueCountUpdate = (value: number) => {
+            queuedUpdates[id] = value;
+          };
           const users = (snap.val() || {}) as Record<
             string,
             Record<string, any>
@@ -400,7 +433,7 @@ export function useLobbyCounts(
                   freezeUntil,
                   ZERO_FREEZE_MS_DEFAULT
                 );
-                setCounts((prev) => ({ ...prev, [id]: 0 }));
+                queueCountUpdate(0);
               }
               updateHealthOnSuccess(healthEntry);
               verificationLastCheckRef.current.single[id] = now;
@@ -475,7 +508,7 @@ export function useLobbyCounts(
                         freezeUntil,
                         ZERO_FREEZE_MS_DEFAULT
                       );
-                      setCounts((prev) => ({ ...prev, [id]: 0 }));
+                      applyCountUpdates(setCounts, { [id]: 0 });
                       const suspect =
                         (includedUids && includedUids[0]) || undefined;
                       if (suspect) {
@@ -554,7 +587,7 @@ export function useLobbyCounts(
             const cached = cache.get(id);
             if (cached && cached.expiresAt > now) {
               if (cached.count === 0) {
-                setCounts((prev) => ({ ...prev, [id]: 0 }));
+                queueCountUpdate(0);
                 const present = presentUids || [];
                 if (present.length) {
                   if (!quarantine[id]) quarantine[id] = {};
@@ -627,7 +660,7 @@ export function useLobbyCounts(
                     updateHealthOnSuccess(healthEntry);
                     multiCheckCooldown[id] = now2 + healthEntry.backoffMs;
                     if (verified === 0) {
-                      setCounts((prev) => ({ ...prev, [id]: 0 }));
+                      applyCountUpdates(setCounts, { [id]: 0 });
                       const present = presentUids || [];
                       if (present.length) {
                         if (!quarantine[id]) quarantine[id] = {};
@@ -697,12 +730,12 @@ export function useLobbyCounts(
               zeroFreeze[id],
               ZERO_FREEZE_MS_DEFAULT
             );
-            setCounts((prev) => ({ ...prev, [id]: 0 }));
+            queueCountUpdate(0);
           } else if (now < freezeUntil) {
             if (hasFresh && !VERIFY_MULTI) {
               zeroFreeze[id] = 0;
               freezeTracker.end(id, now);
-              setCounts((prev) => ({ ...prev, [id]: n }));
+              queueCountUpdate(n);
             } else if (VERIFY_MULTI) {
               // 新鮮なJOIN兆候があっても、検証で players>0 が確認できるまでは0固定（読み取りはCD内で抑制）
               const cd2 = multiCheckCooldown[id] || 0;
@@ -724,10 +757,10 @@ export function useLobbyCounts(
                       // 本当の復帰。0固定を解除し、即時反映
                       zeroFreeze[id] = 0;
                       freezeTracker.end(id, now2);
-                      setCounts((prev) => ({ ...prev, [id]: n }));
+                      applyCountUpdates(setCounts, { [id]: n });
                     } else {
                       // 残骸。0固定継続
-                      setCounts((prev) => ({ ...prev, [id]: 0 }));
+                      applyCountUpdates(setCounts, { [id]: 0 });
                       // 現在のUID群をクオランティン
                       const present = presentUids || [];
                       if (present.length) {
@@ -739,28 +772,29 @@ export function useLobbyCounts(
                     }
                   } catch {
                     // 検証失敗時は0固定継続
-                    setCounts((prev) => ({ ...prev, [id]: 0 }));
+                    applyCountUpdates(setCounts, { [id]: 0 });
                   } finally {
                     multiCheckInflight[id] = false;
                   }
                 })();
               } else {
                 // クールダウン中は0固定
-                setCounts((prev) => ({ ...prev, [id]: 0 }));
+                queueCountUpdate(0);
               }
             } else {
               // JOIN兆候も検証も無い場合は freeze を維持
-              setCounts((prev) => ({ ...prev, [id]: 0 }));
+              queueCountUpdate(0);
             }
           } else {
             if (freezeUntil > 0) {
               zeroFreeze[id] = 0;
               freezeTracker.end(id, now);
             }
-            setCounts((prev) => ({ ...prev, [id]: n }));
+            queueCountUpdate(n);
           }
+        applyCountUpdates(setCounts, queuedUpdates);
         };
-        const onErr = () => setCounts((prev) => ({ ...prev, [id]: 0 }));
+        const onErr = () => applyCountUpdates(setCounts, { [id]: 0 });
         onValue(roomRef, handler, onErr as any);
         return () => off(roomRef, "value", handler);
       });
@@ -798,58 +832,107 @@ export function useLobbyCounts(
     }
 
     const fetchCounts = async () => {
+
       if (cancelled) return;
+
       try {
+
         const entries = await Promise.all(
+
           roomIds.map(async (id) => {
+
             try {
+
               const coll = collection(db!, "rooms", id, "players");
+
               // lastSeen が直近 ACTIVE_WINDOW_MS 以内のプレイヤーをカウント
+
               const since = Timestamp.fromMillis(Date.now() - ACTIVE_WINDOW_MS);
+
               const q = query(coll, where("lastSeen", ">=", since));
+
               const snap = await getCountFromServer(q);
-              // count は number | Long 相当だが、Web SDK は number を返す
+
+              // count は number | Long の可能性があるが、Web SDK は number を返す
+
               const n = (snap.data() as any)?.count ?? 0;
+
               return [id, Number(n) || 0] as const;
+
             } catch (err) {
+
               if (isFirebaseQuotaExceeded(err)) {
-                handleFirebaseQuotaError("ルーム人数カウント");
+
+                handleFirebaseQuotaError("ルームカウント更新");
+
               }
+
               return [id, 0] as const;
+
             }
+
           })
+
         );
+
         const now = Date.now();
+
         const next: Record<string, number> = {};
+
         for (const [id, raw] of entries) {
+
           const freezeUntil = zeroFreeze[id] || 0;
+
           if (raw === 0) {
+
             zeroFreeze[id] = now + FALLBACK_ZERO_FREEZE_MS;
+
             freezeTracker.start(
+
               id,
+
               now,
+
               zeroFreeze[id],
+
               FALLBACK_ZERO_FREEZE_MS
+
             );
+
             next[id] = 0;
+
           } else {
+
             if (freezeUntil > 0) {
+
               zeroFreeze[id] = 0;
+
               freezeTracker.end(id, now);
+
             }
+
             next[id] = raw;
+
           }
+
         }
-        if (!cancelled) setCounts((prev) => ({ ...prev, ...next }));
+
+        if (!cancelled) applyCountUpdates(setCounts, next);
+
       } catch (err) {
+
         if (isFirebaseQuotaExceeded(err)) {
+
           handleFirebaseQuotaError("ルームカウント更新");
+
         }
+
         // noop
+
       }
+
     };
 
-    // 初回 + 2分間隔で更新（ロビーの人数表示は近似で十分）
     const tick = () => {
       if (
         typeof document !== "undefined" &&
@@ -874,7 +957,7 @@ export function useLobbyCounts(
           clearInterval(timer);
         } catch {}
     };
-  }, [firebaseEnabled, enabled, roomKey, refreshTrigger, options?.excludeUid]);
+  }, [firebaseEnabled, enabled, roomKey, refreshTrigger, excludeKey]);
 
   // refresh関数：手動でpresenceデータを再取得
   const refresh = () => setRefreshTrigger((prev) => prev + 1);
