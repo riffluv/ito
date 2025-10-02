@@ -25,7 +25,7 @@ type ButtonVariants = {
 type AppButtonProps = Omit<ButtonProps, "variant" | "colorScheme"> &
   ButtonVariants & { href?: string; variant?: ButtonVariants["visual"] };
 
-// ? ????????????? (????????)
+// ボタンアニメーションのフック
 export const useButtonAnimation = () => {
   const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.transform = "translateY(0px)";
@@ -125,7 +125,7 @@ export function AppButton({
     [onKeyDown, playPress]
   );
 
-  // ??????????: ????????????? + ????
+  // カラーパレット定義
   const palettes = {
     brand: {
       baseBg: "rgba(20, 23, 34, 0.95)",
@@ -166,7 +166,7 @@ export function AppButton({
   } as const;
   const p = palettes[finalPalette] ?? palettes.brand;
 
-  // ? ??????????: ??????????? + ??????
+  // DQソリッド（立体感ある太枠）
   const dqSolid: SystemStyleObject =
     visual === "solid"
       ? {
@@ -223,7 +223,7 @@ export function AppButton({
       "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
     transition: `transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}`,
     ...(css ?? {}),
-    // ????????????????
+    // ホバー・アクティブ時の動き
     ...(visual === "solid"
       ? {
           "&:hover": {
