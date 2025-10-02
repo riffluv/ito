@@ -469,8 +469,19 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // ⚡ PERFORMANCE: 88行の巨大useEffectをカスタムフック化
   // 前のホストがまだメンバーかどうかを計算
   const previousHostStillMember = useMemo(() => {
-    return lastKnownHostId ? players.some((p) => p.id === lastKnownHostId) : false;
-  }, [lastKnownHostId, players]);
+    if (!lastKnownHostId) return false;
+    if (Array.isArray(onlinePlayers) && onlinePlayers.some((p) => p.id === lastKnownHostId)) {
+      return true;
+    }
+    if (Array.isArray(onlineUids) && onlineUids.includes(lastKnownHostId)) {
+      return true;
+    }
+    const hostPlayer = players.find((p) => p.id === lastKnownHostId);
+    if (!hostPlayer) return false;
+    const lastSeenMs = toMillis(hostPlayer.lastSeen);
+    if (lastSeenMs <= 0) return false;
+    return Date.now() - lastSeenMs < 120000;
+  }, [lastKnownHostId, players, onlinePlayers, onlineUids]);
 
   useHostClaim({
     roomId,
@@ -1167,3 +1178,4 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
