@@ -689,29 +689,29 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         pointerEvents={allSubmitted ? "auto" : "none"}
       >
         <Box position="relative" transform="translateX(-50%)">
-          {/* 左の装飾（非対称） */}
+          {/* 左の装飾 */}
           <Box
             position="absolute"
-            left="-17px"
+            left="-19px"
             top="50%"
-            transform="translateY(-51%) rotate(43deg)"
+            transform="translateY(-50%) rotate(45deg)"
             w="13px"
             h="13px"
-            bg="rgba(42,157,143,0.92)"
-            border="2.5px solid rgba(255,255,255,0.88)"
-            boxShadow="0 1px 3px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(0,0,0,0.3)"
+            bg="linear-gradient(135deg, rgba(147,51,234,0.9), rgba(107,33,168,0.95))"
+            border="2px solid rgba(255,255,255,0.9)"
+            boxShadow="0 0 8px rgba(147,51,234,0.6)"
           />
-          {/* 右の装飾（非対称） */}
+          {/* 右の装飾 */}
           <Box
             position="absolute"
-            right="-18px"
+            right="-19px"
             top="50%"
-            transform="translateY(-49%) rotate(46deg)"
-            w="11px"
-            h="11px"
-            bg="rgba(38,143,130,0.89)"
-            border="2.5px solid rgba(255,255,255,0.91)"
-            boxShadow="0 1px 4px rgba(0,0,0,0.48), inset -1px -1px 2px rgba(0,0,0,0.28)"
+            transform="translateY(-50%) rotate(45deg)"
+            w="13px"
+            h="13px"
+            bg="linear-gradient(135deg, rgba(147,51,234,0.9), rgba(107,33,168,0.95))"
+            border="2px solid rgba(255,255,255,0.9)"
+            boxShadow="0 0 8px rgba(147,51,234,0.6)"
           />
 
           <AppButton
@@ -723,38 +723,38 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             px="34px"
             py="19px"
             position="relative"
-            bg="rgba(42,157,143,0.94)"
+            bg="linear-gradient(180deg, rgba(147,51,234,0.95) 0%, rgba(107,33,168,0.98) 100%)"
             color="white"
-            border="3px solid rgba(255,255,255,0.92)"
+            border="3px solid rgba(255,255,255,0.95)"
             borderRadius={0}
             fontWeight="800"
             fontFamily="monospace"
             fontSize="26px"
-            letterSpacing="0.023em"
-            textShadow="2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)"
-            boxShadow="0 0 0 2px rgba(38,143,130,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)"
+            letterSpacing="0.035em"
+            textShadow="2px 3px 0px rgba(0,0,0,0.8), 0 0 12px rgba(255,255,255,0.5)"
+            boxShadow="0 0 0 2px rgba(107,33,168,0.8), 5px 6px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.3)"
             _before={{
               content: '""',
               position: "absolute",
               top: "3px",
-              left: "4px",
+              left: "3px",
               right: "3px",
               bottom: "3px",
-              background: "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)",
               pointerEvents: "none",
             }}
             _hover={{
-              bg: "rgba(48,172,158,0.97)",
+              bg: "linear-gradient(180deg, rgba(167,71,254,0.98) 0%, rgba(127,53,188,1) 100%)",
               color: "white",
-              textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
-              borderColor: "rgba(255,255,255,0.95)",
+              textShadow: "2px 3px 0px rgba(0,0,0,0.9), 0 0 18px rgba(255,255,255,0.8)",
+              borderColor: "white",
               transform: "translateY(-3px)",
-              boxShadow: "0 0 0 2px rgba(42,157,143,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
+              boxShadow: "0 0 0 2px rgba(127,53,188,0.9), 6px 8px 0 rgba(0,0,0,.5), 0 0 25px rgba(147,51,234,0.7), inset 0 2px 0 rgba(255,255,255,.35)",
             }}
             _active={{
-              bg: "rgba(35,138,126,0.96)",
-              color: "rgba(255,255,255,0.91)",
-              boxShadow: "0 0 0 2px rgba(30,120,110,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
+              bg: "linear-gradient(180deg, rgba(107,33,168,1) 0%, rgba(87,13,148,1) 100%)",
+              color: "rgba(255,255,255,0.9)",
+              boxShadow: "0 0 0 2px rgba(87,13,148,0.9), 2px 3px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.15)",
               transform: "translateY(1px)",
             }}
             _disabled={{
@@ -766,7 +766,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               boxShadow: "0 0 0 2px rgba(40,40,40,0.8), 2px 3px 0 rgba(0,0,0,.3)",
               transform: "none",
             }}
-            transition="178ms cubic-bezier(.2,1,.3,1)"
+            transition="175ms cubic-bezier(.2,1,.3,1)"
           >
             せーの！
           </AppButton>
