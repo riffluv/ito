@@ -130,7 +130,8 @@
       "WebFetch(domain:interfaceingame.com)",
       "Bash(del \"C:\\Users\\hr-hm\\Desktop\\codex\\lib\\host\\hostReturningManager.ts\")",
       "Read(//c/**)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "WebFetch(domain:chakra-ui.com)"
     ],
     "deny": [],
     "ask": []

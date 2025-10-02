@@ -56,8 +56,8 @@ export default function WaitingArea({
       p={{ base: 3, md: 4 }}
       gap={4}
       borderRadius="lg"
+      bg="transparent"
       css={{
-        background: "transparent",
         boxShadow: "none",
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
           marginTop: "0.5rem !important",
@@ -89,6 +89,7 @@ export default function WaitingArea({
         alignItems={players.length === 0 ? "center" : "flex-start"}
         gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
         overflowX="auto"
+        bg="transparent"
         data-drop-enabled={dropZoneEnabled ? "true" : undefined}
         data-drop-over={dropZoneEnabled ? "true" : undefined}
         css={dropZoneCss}

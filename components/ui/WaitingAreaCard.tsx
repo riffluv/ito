@@ -50,6 +50,7 @@ export default function WaitingAreaCard({
     <Box
       ref={setNodeRef}
       style={style}
+      bg="transparent"
       data-dragging={isDragging ? "true" : undefined}
       {...(isDraggingEnabled && ready ? listeners : {})}
       {...(isDraggingEnabled && ready ? attributes : {})}
