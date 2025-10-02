@@ -623,19 +623,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       w="100%"
       maxW="1280px"
       mx="auto"
-      px={{ base: 4, md: 6 }}
-      py={{ base: 3, md: 4 }}
-      columnGap={{ base: 3, md: 5 }}
-      rowGap={{ base: 3, md: 4 }}
+      px={{ base: "17px", md: "22px" }}
+      py={{ base: "14px", md: "17px" }}
+      columnGap={{ base: "14px", md: "19px" }}
+      rowGap={{ base: "11px", md: "14px" }}
       css={{
-        background: "linear-gradient(180deg, rgba(10, 15, 25, 0.85) 0%, rgba(8, 12, 20, 0.9) 100%)",
+        background: "linear-gradient(180deg, rgba(10, 15, 25, 0.83) 0%, rgba(8, 12, 20, 0.92) 65%, rgba(6, 9, 16, 0.95) 100%)",
         backdropFilter: "blur(12px) saturate(1.2)",
-        border: "1px solid rgba(255, 255, 255, 0.15)",
+        border: "1px solid rgba(255, 255, 255, 0.14)",
         borderRadius: 0,
         boxShadow: `
-          0 -4px 24px rgba(0, 0, 0, 0.7),
-          0 -8px 48px rgba(0, 0, 0, 0.5),
-          inset 0 1px 0 rgba(255, 255, 255, 0.1)
+          0 -3px 18px rgba(0, 0, 0, 0.65),
+          0 -7px 42px rgba(0, 0, 0, 0.48),
+          inset 0 1px 0 rgba(255, 255, 255, 0.09),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.25)
         `,
       }}
       position="relative"
@@ -651,7 +652,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     >
       {/* Left cluster */}
       <HStack
-        gap={{ base: 3, md: 4 }}
+        gap={{ base: "14px", md: "11px" }}
         align="center"
         flexWrap={{ base: "wrap", md: "nowrap" }}
         rowGap={{ base: 2, md: 0 }}
@@ -683,116 +684,105 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             borderColor: UI_TOKENS.COLORS.whiteAlpha80,
             bg: UI_TOKENS.COLORS.panelBg,
           }}
-          w={{ base: "100%", md: "420px" }}
-          maxW={{ base: "100%", md: "560px" }}
-          flex={{ base: "1 1 100%", md: "0 0 auto" }}
+          w={{ base: "100%", md: "280px" }}
+          maxW={{ base: "100%", md: "380px" }}
+          flex={{ base: "1 1 100%", md: "1 1 auto" }}
           minW={0}
         />
-        <Tooltip content={decideTooltip} showArrow openDelay={300}>
+        <Tooltip content={decideTooltip} showArrow openDelay={180}>
           <AppButton
             size="sm"
             visual="solid"
             palette="brand"
             onClick={handleDecide}
             disabled={!canDecide}
-            px={4}
-            py={2}
+            px="17px"
+            py="11px"
             bg="rgba(71, 85, 105, 0.9)"
             color="white"
             border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-            borderRadius={0}
+            borderRadius="3px"
             fontWeight="600"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+            letterSpacing="0.015em"
+            boxShadow="2px 3px 0 rgba(0,0,0,.28), 0 1px 0 rgba(255,255,255,.08)"
             _hover={{
               bg: "rgba(100, 116, 139, 0.9)",
               borderColor: "white",
               transform: "translateY(-1px)",
+              boxShadow: "3px 4px 0 rgba(0,0,0,.28), 0 1px 0 rgba(255,255,255,.12)",
             }}
             _active={{
-              transform: "translateY(0)",
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+              transform: "translateY(1px)",
+              boxShadow: "1px 2px 0 rgba(0,0,0,.35)",
             }}
-            transition="all 0.15s ease"
+            transition="180ms cubic-bezier(.2,1,.3,1)"
           >
             決定
           </AppButton>
         </Tooltip>
-        <Tooltip content={clearTooltip} showArrow openDelay={300}>
+        <Tooltip content={clearTooltip} showArrow openDelay={180}>
           <AppButton
             size="sm"
             visual="outline"
             palette="gray"
             onClick={handleClear}
             disabled={clearButtonDisabled}
-            px={3}
-            py={2}
+            px="14px"
+            py="9px"
             bg="rgba(55, 65, 81, 0.7)"
             color="white"
             border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-            borderRadius={0}
+            borderRadius="5px"
             fontWeight="600"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+            letterSpacing="0.01em"
+            boxShadow="1px 2px 0 rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.05)"
             _hover={{
               bg: "rgba(75, 85, 99, 0.8)",
               borderColor: UI_TOKENS.COLORS.whiteAlpha90,
               transform: "translateY(-1px)",
+              boxShadow: "2px 3px 0 rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.08)",
             }}
             _active={{
-              transform: "translateY(0)",
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+              transform: "translateY(1px)",
+              boxShadow: "0 1px 0 rgba(0,0,0,.28)",
             }}
-            transition="all 0.15s ease"
+            transition="175ms cubic-bezier(.2,1,.3,1)"
           >
             クリア
           </AppButton>
         </Tooltip>
-        <Tooltip content={submitTooltip} showArrow openDelay={300}>
+        <Tooltip content={submitTooltip} showArrow openDelay={180}>
           <AppButton
             size="sm"
             visual="solid"
             palette="brand"
             onClick={handleSubmit}
             disabled={!canClickProposalButton}
-            px={4}
-            py={2}
+            px="19px"
+            py="11px"
             bg="rgba(75, 85, 99, 0.9)"
             color="white"
             border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-            borderRadius={0}
+            borderRadius="3px"
             fontWeight="600"
-            boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+            letterSpacing="0.018em"
+            boxShadow="2px 3px 0 rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.07)"
             _hover={{
               bg: "rgba(107, 114, 128, 0.9)",
               borderColor: "white",
               transform: "translateY(-1px)",
+              boxShadow: "3px 4px 0 rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.1)",
             }}
             _active={{
-              transform: "translateY(0)",
-              boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+              transform: "translateY(1px)",
+              boxShadow: "1px 2px 0 rgba(0,0,0,.38)",
             }}
-            transition="all 0.15s ease"
+            transition="182ms cubic-bezier(.2,1,.3,1)"
           >
             {actionLabel}
           </AppButton>
         </Tooltip>
       </HStack>
-
-      {inlineFeedback && (
-        <Text
-          flexBasis={{ base: "100%", md: "auto" }}
-          mt={{ base: 1, md: 0 }}
-          textAlign={{ base: "center", md: "left" }}
-          fontSize="0.75rem"
-          color={
-            inlineFeedback.tone === "success"
-              ? UI_TOKENS.COLORS.whiteAlpha90
-              : UI_TOKENS.COLORS.whiteAlpha60
-          }
-          fontFamily="monospace"
-        >
-          {inlineFeedback.message}
-        </Text>
-      )}
 
       {/* Spacer */}
       <Box
@@ -800,9 +790,36 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         display={{ base: "none", md: "block" }}
       />
 
+      {inlineFeedback && (
+        <Text
+          position="absolute"
+          bottom="calc(100% + 7px)"
+          left="50%"
+          transform="translateX(-50%)"
+          fontSize="0.75rem"
+          color={
+            inlineFeedback.tone === "success"
+              ? UI_TOKENS.COLORS.whiteAlpha90
+              : UI_TOKENS.COLORS.whiteAlpha60
+          }
+          fontFamily="monospace"
+          bg="rgba(10, 15, 25, 0.95)"
+          px="14px"
+          py="7px"
+          borderRadius="3px"
+          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+          boxShadow="0 2px 8px rgba(0,0,0,0.4)"
+          whiteSpace="nowrap"
+          pointerEvents="none"
+          zIndex={10}
+        >
+          {inlineFeedback.message}
+        </Text>
+      )}
+
       {/* Right cluster */}
       <HStack
-        gap={3}
+        gap="14px"
         align="center"
         flexWrap={{ base: "wrap", md: "nowrap" }}
         rowGap={{ base: 2, md: 0 }}
@@ -813,24 +830,36 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           <Tooltip
             content={preparing ? "準備中です" : "ゲームを開始する"}
             showArrow
-            openDelay={300}
+            openDelay={180}
           >
             <AppButton
               size="md"
               visual="solid"
               onClick={() => quickStart()}
               disabled={preparing}
-              minW="110px"
-              px={4}
-              py={2}
+              minW="117px"
+              px="22px"
+              py="13px"
+              position="relative"
               bg={preparing ? LOADING_BG : UI_TOKENS.GRADIENTS.forestGreen}
               color="white"
               border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius={0}
+              borderRadius="3px"
               fontWeight="700"
               fontFamily="monospace"
+              letterSpacing="0.02em"
               textShadow="1px 1px 0px #000"
-              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+              boxShadow="3px 4px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15)"
+              _before={{
+                content: '""',
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                height: "2px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent)",
+                borderRadius: "3px 3px 0 0",
+              }}
               _hover={{
                 bg: preparing
                   ? LOADING_BG
@@ -838,52 +867,66 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 color: UI_TOKENS.COLORS.whiteAlpha95,
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "white",
-                transform: "translateY(-1px)",
+                transform: "translateY(-1.5px)",
+                boxShadow: "4px 5px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.2)",
               }}
               _active={{
                 bg: preparing
                   ? LOADING_BG
                   : UI_TOKENS.GRADIENTS.forestGreenActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                transform: "translateY(0)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1)",
+                transform: "translateY(1px)",
               }}
-              transition="all 0.15s ease"
+              transition="185ms cubic-bezier(.2,1,.3,1)"
             >
               {preparing ? "準備中..." : "ゲーム開始"}
             </AppButton>
           </Tooltip>
         )}
         {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
-          <Tooltip content="みんなで一斉に提出" showArrow openDelay={300}>
+          <Tooltip content="みんなで一斉に提出" showArrow openDelay={180}>
             <AppButton
               size="md"
               visual="solid"
               onClick={evalSorted}
               disabled={!allSubmitted}
-              minW="110px"
-              px={4}
-              py={2}
+              minW="114px"
+              px="20px"
+              py="13px"
+              position="relative"
               bg={UI_TOKENS.GRADIENTS.royalPurple}
               color="white"
               border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius={0}
+              borderRadius="3px"
               fontWeight="700"
               fontFamily="monospace"
+              letterSpacing="0.025em"
               textShadow="1px 1px 0px #000"
-              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+              boxShadow="3px 4px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14)"
+              _before={{
+                content: '""',
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                height: "2px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent)",
+                borderRadius: "3px 3px 0 0",
+              }}
               _hover={{
                 bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
                 color: UI_TOKENS.COLORS.whiteAlpha95,
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "white",
-                transform: "translateY(-1px)",
+                transform: "translateY(-1.5px)",
+                boxShadow: "4px 5px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18)",
               }}
               _active={{
                 bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                transform: "translateY(0)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08)",
+                transform: "translateY(1px)",
               }}
               _disabled={{
                 bg: UI_TOKENS.COLORS.blackAlpha60,
@@ -891,8 +934,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 borderColor: UI_TOKENS.COLORS.whiteAlpha50,
                 cursor: "not-allowed",
                 textShadow: "1px 1px 0px #000",
+                boxShadow: "1px 1px 0 rgba(0,0,0,.2)",
               }}
-              transition="all 0.15s ease"
+              transition="188ms cubic-bezier(.2,1,.3,1)"
             >
               せーの！
             </AppButton>
@@ -910,37 +954,50 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 isRestarting ||
                 (roomStatus === "reveal" && isRevealAnimating)
               }
-              minW="110px"
-              px={4}
-              py={2}
+              minW="119px"
+              px="21px"
+              py="13px"
+              position="relative"
               bg={UI_TOKENS.GRADIENTS.orangeSunset}
               color="white"
               border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius={0}
+              borderRadius="3px"
               fontWeight="700"
               fontFamily="monospace"
+              letterSpacing="0.022em"
               textShadow="1px 1px 0px #000"
-              boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+              boxShadow="3px 4px 0 rgba(0,0,0,.33), inset 0 1px 0 rgba(255,255,255,.16)"
+              _before={{
+                content: '""',
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                height: "2px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent)",
+                borderRadius: "3px 3px 0 0",
+              }}
               _hover={{
                 bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
                 color: UI_TOKENS.COLORS.whiteAlpha95,
                 textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                 borderColor: "white",
-                transform: "translateY(-1px)",
+                transform: "translateY(-1.5px)",
+                boxShadow: "4px 5px 0 rgba(0,0,0,.33), inset 0 1px 0 rgba(255,255,255,.19)",
               }}
               _active={{
                 bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
                 color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                transform: "translateY(0)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.09)",
+                transform: "translateY(1px)",
               }}
-              transition="all 0.15s ease"
+              transition="187ms cubic-bezier(.2,1,.3,1)"
             >
               {showAutoStartIndicator ? "準備中..." : "次のゲーム"}
             </AppButton>
           )}
 
-        <HStack gap={2}>
+        <HStack gap="11px">
           {isHost && (
             <>
               <Tooltip
@@ -1103,28 +1160,56 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               </Tooltip>
             )}
           {onOpenSettings && (
-            <Tooltip content="設定を開く" showArrow openDelay={300}>
+            <Tooltip content="設定を開く" showArrow openDelay={180}>
               <IconButton
                 aria-label="設定"
                 onClick={onOpenSettings}
                 size="xs"
-                bg="transparent"
-                color="gray.400"
-                borderWidth={0}
+                w="32px"
+                h="32px"
+                bg="rgba(55, 65, 81, 0.5)"
+                color="rgba(156, 163, 175, 0.85)"
+                borderWidth="1px"
+                borderColor="rgba(75, 85, 99, 0.4)"
+                borderRadius="7px"
+                _hover={{
+                  bg: "rgba(75, 85, 99, 0.7)",
+                  color: "rgba(209, 213, 219, 0.95)",
+                  borderColor: "rgba(107, 114, 128, 0.6)",
+                  transform: "translateY(-1px)",
+                }}
+                _active={{
+                  transform: "translateY(0.5px)",
+                }}
+                transition="170ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiSettings />
               </IconButton>
             </Tooltip>
           )}
           {onLeaveRoom && (
-            <Tooltip content="ロビーに戻る" showArrow openDelay={300}>
+            <Tooltip content="ロビーに戻る" showArrow openDelay={180}>
               <IconButton
                 aria-label="退出"
                 onClick={onLeaveRoom}
                 size="xs"
-                bg="transparent"
-                color="gray.400"
-                borderWidth={0}
+                w="32px"
+                h="32px"
+                bg="rgba(55, 65, 81, 0.5)"
+                color="rgba(156, 163, 175, 0.85)"
+                borderWidth="1px"
+                borderColor="rgba(75, 85, 99, 0.4)"
+                borderRadius="7px"
+                _hover={{
+                  bg: "rgba(127, 29, 29, 0.7)",
+                  color: "rgba(254, 202, 202, 0.95)",
+                  borderColor: "rgba(185, 28, 28, 0.6)",
+                  transform: "translateY(-1px)",
+                }}
+                _active={{
+                  transform: "translateY(0.5px)",
+                }}
+                transition="172ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiLogOut />
               </IconButton>
