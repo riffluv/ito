@@ -33,6 +33,11 @@ export default function WaitingArea({
 
   const dropZoneCss = useMemo(() => ({
     minHeight: dropZoneEnabled && players.length === 0 ? "72px" : undefined,
+    ...(dropZoneEnabled && players.length === 0 ? {
+      flex: "1 1 100%",
+      minWidth: "100%",
+      width: "100%"
+    } : {}),
     [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
       gap: "8px",
     },
@@ -50,10 +55,8 @@ export default function WaitingArea({
   return (
     <VStack
       width="100%"
-      maxWidth="var(--board-max-width)"
       mx="auto"
       mt={{ base: 4, md: 6 }}
-      p={{ base: 3, md: 4 }}
       gap={4}
       borderRadius="lg"
       bg="transparent"
@@ -61,7 +64,6 @@ export default function WaitingArea({
         boxShadow: "none",
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
           marginTop: "0.5rem !important",
-          padding: "0.5rem !important",
         },
       }}
     >
@@ -83,6 +85,7 @@ export default function WaitingArea({
         ref={dropZoneEnabled ? setReturnZoneRef : undefined}
         position="relative"
         width="100%"
+        minW={dropZoneEnabled && players.length === 0 ? "100%" : undefined}
         display="flex"
         flexWrap="nowrap"
         justifyContent="center"
