@@ -563,11 +563,8 @@ export function DragonQuestParty({
             const hoverStyle = canTransfer
               ? actionableHoverStyle
               : passiveHoverStyle;
-            const cardTitle = canTransfer
-              ? `${fresh.name}（ダブルクリックでホスト委譲）`
-              : fresh.name;
 
-            return (
+            const cardContent = (
               <Box
                 key={player.id}
                 ref={(node: HTMLDivElement | null) =>
@@ -636,7 +633,6 @@ export function DragonQuestParty({
                     ? `${fresh.name} にホストを委譲`
                     : `${fresh.name} のステータス`
                 }
-                title={cardTitle}
                 onDoubleClick={onTransfer}
                 onKeyDown={handleKeyDown}
               >
@@ -815,7 +811,6 @@ export function DragonQuestParty({
                     }
                     lineHeight="1.1"
                     truncate
-                    title={clueTitle}
                   >
                     {clueDisplay}
                   </Text>
@@ -922,6 +917,19 @@ export function DragonQuestParty({
                   </Box>
                 </Box>
               </Box>
+            );
+
+            return canTransfer ? (
+              <Tooltip
+                key={player.id}
+                content={`${fresh.name} にホスト権限を譲渡`}
+                openDelay={200}
+                showArrow
+              >
+                {cardContent}
+              </Tooltip>
+            ) : (
+              cardContent
             );
           })}
         </Box>
