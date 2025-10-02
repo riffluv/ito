@@ -282,9 +282,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     : !hasText
       ? "連想ワードを入力してください"
       : "連想ワードを決定";
-  const submitTooltip = !clueEditable
-    ? "判定中は操作できません"
-    : baseActionTooltip;
+  const submitDisabledReason = !clueEditable
+    ? "このタイミングではカードを出せません"
+    : !me?.id
+      ? "参加処理が終わるまで待ってください"
+      : typeof me?.number !== "number"
+        ? "番号が配られるまで待ってください"
+        : !hasText
+          ? "連想ワードを入力するとカードを出せます"
+          : !ready
+            ? "「決定」を押すとカードを出せます"
+            : "カードを場に出せません";
+  const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
 
   // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
   const handleDecide = React.useCallback(async () => {
@@ -1463,4 +1472,5 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
 
