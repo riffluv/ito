@@ -109,12 +109,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const me = useMemo(() => playerMap.get(meId), [playerMap, meId]);
   const hasNumber = useMemo(() => !!me?.number, [me?.number]);
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   // Optimize waiting players calculation for 8+ players
   const waitingPlayers = useMemo(() => {
     return (eligibleIds || [])
       .map((id) => playerMap.get(id)!)
-      .filter((p) => p && !placedIds.has(p.id));
-  }, [eligibleIds, playerMap, placedIds]);
+      .filter((p) => p && !placedIds.has(p.id) && p.id !== activeId);
+  }, [eligibleIds, playerMap, placedIds, activeId]);
 
   // Accessibility sensors for keyboard and pointer interactions
   // Sensors: mouse uses small distance threshold; touch uses hold delay with tolerance
@@ -515,8 +517,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     slotCountDragging,
   ]);
 
-  // DragOverlay ???????ID??
-  const [activeId, setActiveId] = useState<string | null>(null);
   // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
   const onDragStart = useCallback((e: DragStartEvent) => {
     setActiveId(String(e.active.id));
