@@ -44,6 +44,7 @@ import React from "react";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
+import { gsap } from "gsap";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -126,6 +127,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     message: string;
     tone: "info" | "success";
   } | null>(null);
+  const seinoButtonRef = React.useRef<HTMLDivElement>(null);
 
   const {
     autoStartLocked,
@@ -210,6 +212,59 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       setInlineFeedback(null);
     }
   }, [clueEditable]);
+
+  // せーの！ボタンのGSAPアニメーション（全員提出完了時のみ登場）
+  React.useEffect(() => {
+    if (!seinoButtonRef.current) return;
+
+    const shouldShow = isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && allSubmitted;
+
+    if (shouldShow) {
+      // 表示状態にしてから左からシャキン！登場
+      gsap.set(seinoButtonRef.current, { display: "block" });
+      gsap.fromTo(
+        seinoButtonRef.current,
+        {
+          x: -250,
+          opacity: 0,
+          rotation: -8,
+          scale: 0.9,
+        },
+        {
+          x: 0,
+          opacity: 1,
+          rotation: 0,
+          scale: 1,
+          duration: 0.45,
+          ease: "back.out(2.5)",
+        }
+      );
+
+      // 光のフラッシュ（より強烈に）
+      gsap.fromTo(
+        seinoButtonRef.current,
+        {
+          filter: "brightness(1)",
+        },
+        {
+          filter: "brightness(1.4)",
+          duration: 0.15,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.inOut",
+        }
+      );
+    } else {
+      // 即座に非表示（ゴースト防止）
+      gsap.set(seinoButtonRef.current, {
+        display: "none",
+        x: 0,
+        opacity: 0,
+        rotation: 0,
+        scale: 1,
+      });
+    }
+  }, [isHost, actualResolveMode, roomStatus, allSubmitted]);
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
   const baseActionTooltip =
@@ -613,43 +668,139 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     !!isHost && roomStatus === "waiting" && !!showAutoStartIndicator;
 
   return (
-    <Box
-      display="flex"
-      flexWrap="wrap"
-      alignItems={{ base: "stretch", md: "center" }}
-      justifyContent={
-        hasHostButtons ? { base: "center", md: "flex-start" } : "center"
-      }
-      w="100%"
-      maxW="1280px"
-      mx="auto"
-      px={{ base: "17px", md: "22px" }}
-      py={{ base: "14px", md: "17px" }}
-      columnGap={{ base: "14px", md: "19px" }}
-      rowGap={{ base: "11px", md: "14px" }}
-      css={{
-        background: "linear-gradient(180deg, rgba(10, 15, 25, 0.83) 0%, rgba(8, 12, 20, 0.92) 65%, rgba(6, 9, 16, 0.95) 100%)",
-        backdropFilter: "blur(12px) saturate(1.2)",
-        border: "1px solid rgba(255, 255, 255, 0.14)",
-        borderRadius: 0,
-        boxShadow: `
+    <>
+      {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
+      <Box
+        ref={seinoButtonRef}
+        position="fixed"
+        bottom="310px"
+        left="50%"
+        zIndex={100}
+        display="none"
+        pointerEvents={allSubmitted ? "auto" : "none"}
+      >
+        <Box position="relative" transform="translateX(-50%)">
+          {/* 左の装飾 */}
+          <Box
+            position="absolute"
+            left="-19px"
+            top="50%"
+            transform="translateY(-50%) rotate(45deg)"
+            w="13px"
+            h="13px"
+            bg="linear-gradient(135deg, rgba(147,51,234,0.9), rgba(107,33,168,0.95))"
+            border="2px solid rgba(255,255,255,0.9)"
+            boxShadow="0 0 8px rgba(147,51,234,0.6)"
+          />
+          {/* 右の装飾 */}
+          <Box
+            position="absolute"
+            right="-19px"
+            top="50%"
+            transform="translateY(-50%) rotate(45deg)"
+            w="13px"
+            h="13px"
+            bg="linear-gradient(135deg, rgba(147,51,234,0.9), rgba(107,33,168,0.95))"
+            border="2px solid rgba(255,255,255,0.9)"
+            boxShadow="0 0 8px rgba(147,51,234,0.6)"
+          />
+
+          <AppButton
+            size="lg"
+            visual="solid"
+            onClick={evalSorted}
+            disabled={!allSubmitted}
+            minW="211px"
+            px="34px"
+            py="19px"
+            position="relative"
+            bg="linear-gradient(180deg, rgba(147,51,234,0.95) 0%, rgba(107,33,168,0.98) 100%)"
+            color="white"
+            border="3px solid rgba(255,255,255,0.95)"
+            borderRadius={0}
+            fontWeight="800"
+            fontFamily="monospace"
+            fontSize="26px"
+            letterSpacing="0.035em"
+            textShadow="2px 3px 0px rgba(0,0,0,0.8), 0 0 12px rgba(255,255,255,0.5)"
+            boxShadow="0 0 0 2px rgba(107,33,168,0.8), 5px 6px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.3)"
+            _before={{
+              content: '""',
+              position: "absolute",
+              top: "3px",
+              left: "3px",
+              right: "3px",
+              bottom: "3px",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)",
+              pointerEvents: "none",
+            }}
+            _hover={{
+              bg: "linear-gradient(180deg, rgba(167,71,254,0.98) 0%, rgba(127,53,188,1) 100%)",
+              color: "white",
+              textShadow: "2px 3px 0px rgba(0,0,0,0.9), 0 0 18px rgba(255,255,255,0.8)",
+              borderColor: "white",
+              transform: "translateY(-3px)",
+              boxShadow: "0 0 0 2px rgba(127,53,188,0.9), 6px 8px 0 rgba(0,0,0,.5), 0 0 25px rgba(147,51,234,0.7), inset 0 2px 0 rgba(255,255,255,.35)",
+            }}
+            _active={{
+              bg: "linear-gradient(180deg, rgba(107,33,168,1) 0%, rgba(87,13,148,1) 100%)",
+              color: "rgba(255,255,255,0.9)",
+              boxShadow: "0 0 0 2px rgba(87,13,148,0.9), 2px 3px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.15)",
+              transform: "translateY(1px)",
+            }}
+            _disabled={{
+              bg: "rgba(60,60,60,0.8)",
+              color: "rgba(255,255,255,0.3)",
+              borderColor: "rgba(255,255,255,0.4)",
+              cursor: "not-allowed",
+              textShadow: "1px 1px 0px #000",
+              boxShadow: "0 0 0 2px rgba(40,40,40,0.8), 2px 3px 0 rgba(0,0,0,.3)",
+              transform: "none",
+            }}
+            transition="175ms cubic-bezier(.2,1,.3,1)"
+          >
+            せーの！
+          </AppButton>
+        </Box>
+      </Box>
+
+      <Box
+        display="flex"
+        flexWrap="wrap"
+        alignItems={{ base: "stretch", md: "center" }}
+        justifyContent={
+          hasHostButtons ? { base: "center", md: "flex-start" } : "center"
+        }
+        w="100%"
+        maxW="1280px"
+        mx="auto"
+        px={{ base: "17px", md: "22px" }}
+        py={{ base: "14px", md: "17px" }}
+        columnGap={{ base: "14px", md: "19px" }}
+        rowGap={{ base: "11px", md: "14px" }}
+        css={{
+          background: "linear-gradient(180deg, rgba(10, 15, 25, 0.83) 0%, rgba(8, 12, 20, 0.92) 65%, rgba(6, 9, 16, 0.95) 100%)",
+          backdropFilter: "blur(12px) saturate(1.2)",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
+          borderRadius: 0,
+          boxShadow: `
           0 -3px 18px rgba(0, 0, 0, 0.65),
           0 -7px 42px rgba(0, 0, 0, 0.48),
           inset 0 1px 0 rgba(255, 255, 255, 0.09),
           inset 0 -1px 0 rgba(0, 0, 0, 0.25)
         `,
-      }}
-      position="relative"
-      _before={{
-        content: '""',
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: "1px",
-        background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)",
-      }}
-    >
+        }}
+        position="relative"
+        _before={{
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "1px",
+          background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)",
+        }}
+      >
       {/* Left cluster */}
       <HStack
         gap={{ base: "14px", md: "11px" }}
@@ -884,64 +1035,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </AppButton>
           </Tooltip>
         )}
-        {isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && (
-          <Tooltip content="みんなで一斉に提出" showArrow openDelay={180}>
-            <AppButton
-              size="md"
-              visual="solid"
-              onClick={evalSorted}
-              disabled={!allSubmitted}
-              minW="135px"
-              px="20px"
-              py="13px"
-              position="relative"
-              bg={UI_TOKENS.GRADIENTS.royalPurple}
-              color="white"
-              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius="3px"
-              fontWeight="700"
-              fontFamily="monospace"
-              letterSpacing="0.025em"
-              textShadow="1px 1px 0px #000"
-              boxShadow="3px 4px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14)"
-              _before={{
-                content: '""',
-                position: "absolute",
-                top: "0",
-                left: "0",
-                right: "0",
-                height: "2px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent)",
-                borderRadius: "3px 3px 0 0",
-              }}
-              _hover={{
-                bg: UI_TOKENS.GRADIENTS.royalPurpleHover,
-                color: UI_TOKENS.COLORS.whiteAlpha95,
-                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                borderColor: "white",
-                transform: "translateY(-1.5px)",
-                boxShadow: "4px 5px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18)",
-              }}
-              _active={{
-                bg: UI_TOKENS.GRADIENTS.royalPurpleActive,
-                color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: "2px 2px 0 rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08)",
-                transform: "translateY(1px)",
-              }}
-              _disabled={{
-                bg: UI_TOKENS.COLORS.blackAlpha60,
-                color: UI_TOKENS.COLORS.whiteAlpha40,
-                borderColor: UI_TOKENS.COLORS.whiteAlpha50,
-                cursor: "not-allowed",
-                textShadow: "1px 1px 0px #000",
-                boxShadow: "1px 1px 0 rgba(0,0,0,.2)",
-              }}
-              transition="188ms cubic-bezier(.2,1,.3,1)"
-            >
-              せーの！
-            </AppButton>
-          </Tooltip>
-        )}
         {isHost &&
           ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
             roomStatus === "finished") && (
@@ -954,8 +1047,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 isRestarting ||
                 (roomStatus === "reveal" && isRevealAnimating)
               }
-              minW="145px"
-              px="21px"
+              minW="140px"
+              px="22px"
               py="13px"
               position="relative"
               bg={UI_TOKENS.GRADIENTS.orangeSunset}
@@ -964,7 +1057,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               borderRadius="3px"
               fontWeight="700"
               fontFamily="monospace"
-              letterSpacing="0.022em"
+              letterSpacing="0.02em"
               textShadow="1px 1px 0px #000"
               boxShadow="3px 4px 0 rgba(0,0,0,.33), inset 0 1px 0 rgba(255,255,255,.16)"
               _before={{
@@ -1367,6 +1460,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Dialog.Root>
       </HStack>
     </Box>
+    </>
   );
 }
 
