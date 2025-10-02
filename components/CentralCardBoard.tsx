@@ -829,6 +829,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             {/* ??????clue/waiting????????????- DndContext???? */}
             {(roomStatus === "clue" || roomStatus === "waiting") && (
               <Box
+                width="100%"
+                maxWidth="var(--board-max-width)"
+                marginInline="auto"
                 mt={{ base: 6, md: 8 }}
                 css={{
                   // 150DPI??: ??????????
@@ -998,6 +1001,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             {(roomStatus === "clue" || roomStatus === "waiting") &&
               waitingPlayers.length > 0 && (
                 <Box
+                  width="100%"
+                  maxWidth="var(--board-max-width)"
+                  marginInline="auto"
                   mt={{ base: 6, md: 8 }}
                   css={{
                     // 150DPI??: ??????????
