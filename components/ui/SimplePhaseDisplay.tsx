@@ -84,16 +84,16 @@ export function SimplePhaseDisplay({
           scale: 1,
           opacity: 1,
           y: 0,
-          duration: 0.6,
+          duration: 0.58,
           ease: "back.out(1.7)",
-          delay: 0.2,
+          delay: 0.19,
         });
 
         tl.to(iconEl, {
-          rotation: 360,
-          duration: 0.8,
+          rotation: 357,
+          duration: 0.76,
           ease: "elastic.out(1, 0.5)",
-          delay: 0.4,
+          delay: 0.38,
         });
       }
     } else {
@@ -106,29 +106,29 @@ export function SimplePhaseDisplay({
         opacity: 0,
         y: -10,
         scale: 0.9,
-        duration: 0.2,
+        duration: 0.17,
         ease: "power2.in",
       })
         .to(
           iconEl,
           {
             opacity: 0,
-            rotation: "-=180",
+            rotation: "-=173",
             scale: 0.5,
-            duration: 0.2,
+            duration: 0.18,
             ease: "power2.in",
           },
-          "-=0.2"
+          "-=0.17"
         )
         // ボックス全体を軽くパルス
         .to(container, {
           scale: 1.05,
-          duration: 0.1,
+          duration: 0.09,
           ease: "power2.out",
         })
         .to(container, {
           scale: 1,
-          duration: 0.1,
+          duration: 0.11,
           ease: "power2.out",
         })
         // 新しいコンテンツをフェードイン
@@ -136,29 +136,29 @@ export function SimplePhaseDisplay({
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.3,
+          duration: 0.28,
           ease: "back.out(1.5)",
         })
         .to(
           iconEl,
           {
             opacity: 1,
-            rotation: "+=360",
+            rotation: "+=354",
             scale: 1,
-            duration: 0.4,
+            duration: 0.37,
             ease: "elastic.out(1, 0.6)",
           },
-          "-=0.2"
+          "-=0.19"
         )
         // 完了時の軽やかなバウンス
         .to(container, {
           y: -3,
-          duration: 0.15,
+          duration: 0.14,
           ease: "power2.out",
         })
         .to(container, {
           y: 0,
-          duration: 0.2,
+          duration: 0.18,
           ease: "bounce.out",
         });
     }
@@ -211,19 +211,19 @@ export function SimplePhaseDisplay({
         tl.to(topicEl, {
           scale: 0.85,
           y: 2,
-          duration: 0.1,
+          duration: 0.08,
           ease: "power2.in",
         })
         .to(topicEl, {
           scale: 1.15,
           y: -6,
-          duration: 0.3,
+          duration: 0.27,
           ease: "back.out(1.8)",
         })
         .to(topicEl, {
           scale: 1,
           y: 0,
-          duration: 0.4,
+          duration: 0.36,
           ease: "elastic.out(1, 0.5)",
         });
       }
@@ -241,14 +241,14 @@ export function SimplePhaseDisplay({
       zIndex={70}
       display="flex"
       flexDirection="column"
-      gap={{ base: 1.5, md: 2 }}
+      gap={{ base: "7px", md: "9px" }}
       maxWidth="min(92vw, 520px)"
       css={{
         pointerEvents: "none",
       }}
     >
       {/* フェーズアナウンス（シームレス・大きく・真っ白） */}
-      <Box display="flex" alignItems="center" gap={{ base: 2, md: 2.5 }}>
+      <Box display="flex" alignItems="center" gap={{ base: "9px", md: "11px" }}>
         <Text as="span" ref={iconRef} fontSize={{ base: "lg", md: "xl" }} display="inline-block" flexShrink={0}
           css={{
             filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.9)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7))",
@@ -261,7 +261,7 @@ export function SimplePhaseDisplay({
           fontSize={{ base: "sm", md: "md" }}
           fontWeight={700}
           color="rgb(255, 255, 255)"
-          letterSpacing="0.4px"
+          letterSpacing="0.38px"
           fontFamily="monospace"
           css={{
             textShadow: `
@@ -284,14 +284,14 @@ export function SimplePhaseDisplay({
             ref={topicRef}
             display="inline-flex"
             alignItems="center"
-            gap={{ base: 2, md: 2.5 }}
-            px={{ base: 2.5, md: 3 }}
-            py={{ base: 1.5, md: 2 }}
+            gap={{ base: "9px", md: "11px" }}
+            px={{ base: "11px", md: "13px" }}
+            py={{ base: "7px", md: "9px" }}
             position="relative"
             css={{
-              background: "linear-gradient(142deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
+              background: "linear-gradient(137deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
               backdropFilter: "blur(10px) saturate(1.2)",
-              borderRadius: "4px",
+              borderRadius: "3px",
               border: "1px solid rgba(255, 215, 0, 0.35)",
               boxShadow: `
                 0 4px 16px rgba(0, 0, 0, 0.7),
@@ -305,7 +305,7 @@ export function SimplePhaseDisplay({
               fontSize={{ base: "sm", md: "md" }}
               fontWeight={900}
               color="rgb(255, 255, 255)"
-              letterSpacing="1px"
+              letterSpacing="0.93px"
               fontFamily="monospace"
               flexShrink={0}
               css={{
@@ -322,7 +322,7 @@ export function SimplePhaseDisplay({
               fontSize={{ base: "md", md: "lg" }}
               fontWeight={800}
               color="rgb(255, 248, 220)"
-              letterSpacing="0.6px"
+              letterSpacing="0.57px"
               fontFamily="monospace"
               css={{
                 textShadow: `
