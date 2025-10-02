@@ -129,9 +129,9 @@ export default function LobbyRightRail() {
             lineHeight={1.6}
             fontFamily="monospace"
           >
-            AIっぽさを除去してドラクエ風に統一。
+            ドラクエ風のUIに統一したよ。
             <br />
-            一流ゲームUI/UXデザイナー品質を実現しました。
+            細部までこだわって作った！
           </Text>
 
           <Box
