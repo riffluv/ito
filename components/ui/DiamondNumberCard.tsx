@@ -25,49 +25,47 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
       previousNumber.current !== number;
 
     if (isNewNumber || isNumberChanged) {
-      // 派手な登場・変更演出
-      const tl = gsap.timeline({ defaults: { ease: "back.out(2)" } });
+      // 派手な登場・変更演出（軽量化：1つのtimelineに統合）
+      const tl = gsap.timeline({ defaults: { ease: "back.out(1.85)" } });
 
       tl.fromTo(
         textRef.current,
         {
           scale: 0,
-          rotation: -180,
+          rotation: -173,
           opacity: 0,
         },
         {
-          scale: 1.3,
+          scale: 1.28,
           rotation: 0,
           opacity: 1,
-          duration: 0.5,
+          duration: 0.43,
         }
-      ).to(textRef.current, {
+      )
+      .to(textRef.current, {
         scale: 1,
-        duration: 0.2,
+        duration: 0.17,
         ease: "power2.out",
+      }, "-=0.08")
+      // 光のフラッシュ演出（同一timeline内で実行）
+      .to(textRef.current, {
+        textShadow: "0 0 19px rgba(255,255,255,0.9), 0 0 37px rgba(58,176,255,0.8), 0 3px 7px rgba(0,0,0,0.6)",
+        duration: 0.12,
+        ease: "power2.out",
+      }, "-=0.17")
+      .to(textRef.current, {
+        textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6)",
+        duration: 0.34,
+        ease: "power2.in",
       });
-
-      // 光のフラッシュ演出
-      gsap
-        .timeline()
-        .to(textRef.current, {
-          textShadow: "0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(58,176,255,0.8), 0 4px 8px rgba(0,0,0,0.6)",
-          duration: 0.15,
-          ease: "power2.out",
-        })
-        .to(textRef.current, {
-          textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6)",
-          duration: 0.4,
-          ease: "power2.in",
-        });
 
       previousNumber.current = number;
     } else if (isAnimating && previousNumber.current !== null) {
       // 通常のポップアニメーション
       gsap.to(textRef.current, {
-        scale: 1.15,
-        duration: 0.15,
-        ease: "back.out(1.5)",
+        scale: 1.14,
+        duration: 0.13,
+        ease: "back.out(1.4)",
         yoyo: true,
         repeat: 1,
       });
