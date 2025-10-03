@@ -4,11 +4,12 @@
  */
 
 "use client";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useDroppable } from "@dnd-kit/core";
 import { BaseCard } from "./BaseCard";
 import type { EmptyCardProps } from "./card.types";
+import { gsap } from "gsap";
 
 // EmptyCardPropsを拡張してidプロパティを追加
 interface ExtendedEmptyCardProps extends EmptyCardProps {
@@ -18,6 +19,7 @@ interface ExtendedEmptyCardProps extends EmptyCardProps {
 
 export function EmptyCard({
   slotNumber,
+  totalSlots,
   isDroppable = true,
   onDragOver,
   onDragLeave,
@@ -128,16 +130,7 @@ export function EmptyCard({
       {...props}
     >
       {children || (slotNumber !== undefined ? (
-        <span style={{
-          color: "rgba(255, 255, 255, 0.7)", // ドラクエ風白文字
-          fontSize: "16px", // 少し大きく
-          fontWeight: "bold", // 太字でドラクエ風
-          fontFamily: "monospace", // ドラクエ風フォント統一
-          textShadow: "1px 1px 0px #000", // ドラクエ風テキストシャドウ
-          letterSpacing: "1px" // 文字間隔
-        }}>
-          {slotNumber}
-        </span>
+        <SlotLabel slotNumber={slotNumber} totalSlots={totalSlots} />
       ) : "?")}
 
       {/* オーバーレイ: isOver 時の視覚強調（リング + ✓） */}
@@ -199,6 +192,137 @@ export function EmptyCard({
         }
       `}</style>
     </BaseCard>
+  );
+}
+
+// LOW/HIGHラベルコンポーネント（Octopath風）
+function SlotLabel({ slotNumber, totalSlots }: { slotNumber: number; totalSlots?: number }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const diamondTopRef = useRef<HTMLDivElement>(null);
+  const diamondBottomRef = useRef<HTMLDivElement>(null);
+
+  // LOW/HIGH判定（1がLOW、最後がHIGH）
+  const isLow = slotNumber === 1;
+  const isHigh = totalSlots ? slotNumber === totalSlots : false;
+  const showLabel = isLow || isHigh;
+
+  useEffect(() => {
+    if (!showLabel || !boxRef.current || !diamondTopRef.current || !diamondBottomRef.current) return;
+
+    // 枠の脈打ちアニメ（非定型値）
+    const tl = gsap.timeline({ repeat: -1 });
+    tl.to(boxRef.current, {
+      opacity: 0.96,
+      duration: 0.87,
+      ease: "sine.inOut",
+    })
+    .to(boxRef.current, {
+      opacity: 0.58,
+      duration: 0.93,
+      ease: "sine.inOut",
+    });
+
+    // ダイヤモンド装飾の回転アニメ（左右非対称）
+    gsap.to(diamondTopRef.current, {
+      rotation: 359,
+      duration: 4.2,
+      repeat: -1,
+      ease: "none",
+    });
+
+    gsap.to(diamondBottomRef.current, {
+      rotation: -362,
+      duration: 3.8,
+      repeat: -1,
+      ease: "none",
+    });
+
+    return () => {
+      tl.kill();
+      gsap.killTweensOf([boxRef.current, diamondTopRef.current, diamondBottomRef.current]);
+    };
+  }, [showLabel]);
+
+  if (showLabel) {
+    return (
+      <div ref={boxRef} style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "3px",
+        position: "relative",
+      }}>
+        {/* 上部のダイヤモンド装飾 */}
+        <div
+          ref={diamondTopRef}
+          style={{
+            position: "absolute",
+            top: "-28px",
+            left: "50%",
+            transform: "translateX(-50%) rotate(45deg)",
+            width: "13px",
+            height: "13px",
+            background: "rgba(255,255,255,0.88)",
+            border: "2px solid rgba(255,255,255,0.95)",
+            boxShadow: "0 0 9px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.3)",
+          }}
+        />
+
+        {/* LOWまたはHIGH */}
+        <span style={{
+          color: "rgba(255,255,255,0.92)",
+          fontSize: "18px",
+          fontWeight: "800",
+          fontFamily: "monospace",
+          textShadow: "0 0 8px rgba(255,255,255,0.8), 0 2px 4px rgba(0,0,0,0.9), 1px 1px 0px #000",
+          letterSpacing: "0.083em",
+        }}>
+          {isLow ? "LOW" : "HIGH"}
+        </span>
+
+        {/* (小) または (大) */}
+        <span style={{
+          color: "rgba(255,255,255,0.58)",
+          fontSize: "11px",
+          fontWeight: "600",
+          fontFamily: "monospace",
+          textShadow: "1px 1px 0px #000",
+          letterSpacing: "0.021em",
+        }}>
+          {isLow ? "(小)" : "(大)"}
+        </span>
+
+        {/* 下部のダイヤモンド装飾 */}
+        <div
+          ref={diamondBottomRef}
+          style={{
+            position: "absolute",
+            bottom: "-26px",
+            left: "50%",
+            transform: "translateX(-50%) rotate(45deg)",
+            width: "11px",
+            height: "11px",
+            background: "rgba(255,255,255,0.85)",
+            border: "2px solid rgba(255,255,255,0.92)",
+            boxShadow: "0 0 7px rgba(255,255,255,0.65), inset -1px -1px 2px rgba(0,0,0,0.28)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  // 通常のスロット番号
+  return (
+    <span style={{
+      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: "16px",
+      fontWeight: "bold",
+      fontFamily: "monospace",
+      textShadow: "1px 1px 0px #000",
+      letterSpacing: "0.93px",
+    }}>
+      {slotNumber}
+    </span>
   );
 }
 

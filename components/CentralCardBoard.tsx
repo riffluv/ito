@@ -781,6 +781,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         <EmptyCard
                           key={`slot-${idx}`}
                           slotNumber={idx + 1}
+                          totalSlots={slotCountDragging}
                           alignSelf="flex-start"
                           id={`slot-${idx}`}
                           isDroppable={true}
@@ -947,6 +948,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       <EmptyCard
                         key={`drop-zone-${idx}`}
                         slotNumber={idx + 1}
+                        totalSlots={slotCountStatic}
                         isDroppable={isDroppableSlot}
                         onDragOver={(e) => {
                           if (isDroppableSlot && !isOver) {
@@ -975,6 +977,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                         <Box display="inline-flex">
                           <EmptyCard
                             slotNumber={idx + 1}
+                            totalSlots={slotCountStatic}
                             isDroppable={false}
                             onDragOver={() => {}}
                             onDragLeave={() => setIsOver(false)}
