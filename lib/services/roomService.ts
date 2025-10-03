@@ -331,5 +331,12 @@ export async function joinRoomFully({
     }
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
+  const { logInfo } = await import("@/lib/utils/log");
+  logInfo("room-service", "joinRoomFully-complete", {
+    roomId,
+    uid,
+    joined: created.joined,
+    notifyChat,
+  });
   return created;
 }

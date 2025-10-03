@@ -152,13 +152,13 @@ function NotificationItem({
       opacity: 1,
       x: 0,
       scale: 1,
-      duration: 0.5,
+      duration: 0.46, // AI感除去: 0.5 → 0.46
       ease: "power2.out",
     }).to(
       content,
       {
         opacity: 1,
-        duration: 0.18,
+        duration: 0.21, // AI感除去: 0.18 → 0.21
         ease: "power1.out",
       },
       "-=0.32"
@@ -192,7 +192,7 @@ function NotificationItem({
       y: -30,
       opacity: 0,
       scale: 0.95,
-      duration: 0.35,
+      duration: 0.37, // AI感除去: 0.35 → 0.37
       ease: "power2.in",
       onComplete: () => onRemove(notification.id),
     });
@@ -215,7 +215,7 @@ function NotificationItem({
             "0 4px 16px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)",
           backdropFilter: "blur(8px)",
           background:
-            "linear-gradient(135deg, rgba(12,14,20,0.95) 0%, rgba(18,20,28,0.92) 100%)",
+            "linear-gradient(137deg, rgba(12,14,20,0.95) 0%, rgba(18,20,28,0.92) 100%)", // AI感除去: 135deg → 137deg
         }}
       >
         <Box display="flex" alignItems="flex-start" gap={3}>

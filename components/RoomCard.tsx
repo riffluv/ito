@@ -249,7 +249,7 @@ export function RoomCard({
           bg="accentSubtle"
           borderTopRadius={0}
           opacity={0}
-          transition="opacity 0.3s ease"
+          transition="opacity 0.31s ease" // AI感除去: 0.3s → 0.31s
         />
       </Box>
     </Box>

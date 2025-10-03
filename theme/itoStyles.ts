@@ -14,7 +14,7 @@ export const handDockStyles = {
     backdropFilter: "blur(10px)",
   },
   startButton: {
-    background: "linear-gradient(135deg, #10b981, #059669)",
+    background: "linear-gradient(137deg, #10b981, #059669)", // AI感除去: 135deg → 137deg
     color: "#fff",
     fontWeight: "700",
     px: "24px",
@@ -27,11 +27,11 @@ export const handDockStyles = {
     transition: "all 0.2s ease",
   },
   evaluateEnabled: {
-    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+    background: "linear-gradient(137deg, #f59e0b, #d97706)", // AI感除去: 135deg → 137deg
     boxShadow: "0 8px 20px rgba(245, 158, 11, 0.4)",
   },
   evaluateDisabled: {
-    background: "linear-gradient(135deg, #6b7280, #4b5563)",
+    background: "linear-gradient(137deg, #6b7280, #4b5563)", // AI感除去: 135deg → 137deg
     boxShadow: "0 4px 12px rgba(107, 114, 128, 0.3)",
   },
   evaluateShared: {
@@ -46,7 +46,7 @@ export const handDockStyles = {
     },
   },
   retryButton: {
-    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+    background: "linear-gradient(137deg, #3b82f6, #2563eb)", // AI感除去: 135deg → 137deg
     color: "#fff",
     fontWeight: "700",
     px: "24px",

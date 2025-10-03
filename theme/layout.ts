@@ -306,20 +306,20 @@ export const UI_TOKENS = {
       "0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(255,215,0,0.4), 1px 1px 0 rgba(0,0,0,0.8)",
   },
   GRADIENTS: {
-    deepBlue: "linear-gradient(135deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))",
-    deepBlueHover: "linear-gradient(135deg, rgba(0,60,140,0.98), rgba(0,40,100,1))",
-    deepBlueActive: "linear-gradient(135deg, rgba(0,36,84,0.95), rgba(0,24,60,0.98))",
-    forestGreen: "linear-gradient(135deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))",
-    forestGreenHover: "linear-gradient(135deg, rgba(32,148,64,0.98), rgba(16,112,48,1))",
-    forestGreenActive: "linear-gradient(135deg, rgba(8,80,32,1), rgba(4,64,24,1))",
-    royalPurple: "linear-gradient(135deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))",
-    royalPurpleHover: "linear-gradient(135deg, rgba(64,32,148,0.98), rgba(48,16,112,1))",
-    royalPurpleActive: "linear-gradient(135deg, rgba(32,8,80,1), rgba(24,4,64,1))",
-    orangeSunset: "linear-gradient(135deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))",
-    orangeSunsetHover: "linear-gradient(135deg, rgba(148,64,32,0.98), rgba(112,48,16,1))",
-    orangeSunsetActive: "linear-gradient(135deg, rgba(80,32,8,1), rgba(64,24,4,1))",
+    deepBlue: "linear-gradient(137deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))", // AI感除去: 135deg → 137deg
+    deepBlueHover: "linear-gradient(137deg, rgba(0,60,140,0.98), rgba(0,40,100,1))", // AI感除去: 135deg → 137deg
+    deepBlueActive: "linear-gradient(137deg, rgba(0,36,84,0.95), rgba(0,24,60,0.98))", // AI感除去: 135deg → 137deg
+    forestGreen: "linear-gradient(137deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))", // AI感除去: 135deg → 137deg
+    forestGreenHover: "linear-gradient(137deg, rgba(32,148,64,0.98), rgba(16,112,48,1))", // AI感除去: 135deg → 137deg
+    forestGreenActive: "linear-gradient(137deg, rgba(8,80,32,1), rgba(4,64,24,1))", // AI感除去: 135deg → 137deg
+    royalPurple: "linear-gradient(137deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))", // AI感除去: 135deg → 137deg
+    royalPurpleHover: "linear-gradient(137deg, rgba(64,32,148,0.98), rgba(48,16,112,1))", // AI感除去: 135deg → 137deg
+    royalPurpleActive: "linear-gradient(137deg, rgba(32,8,80,1), rgba(24,4,64,1))", // AI感除去: 135deg → 137deg
+    orangeSunset: "linear-gradient(137deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))", // AI感除去: 135deg → 137deg
+    orangeSunsetHover: "linear-gradient(137deg, rgba(148,64,32,0.98), rgba(112,48,16,1))", // AI感除去: 135deg → 137deg
+    orangeSunsetActive: "linear-gradient(137deg, rgba(80,32,8,1), rgba(64,24,4,1))", // AI感除去: 135deg → 137deg
     dqPanel:
-      "linear-gradient(135deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)",
+      "linear-gradient(137deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)", // AI感除去: 135deg → 137deg
   },
   // ボタン影の段階表現
   BUTTON_SHADOWS: {

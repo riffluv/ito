@@ -295,8 +295,8 @@ export const premiumSemanticTokens = {
     glassBorderWeak: { value: "rgba(255,255,255,0.06)" }, // borderSubtleと統一
 
     // === BRAND GRADIENTS - ガイドライン準拠（控えめに） ===
-    brandGradient: { value: "linear-gradient(135deg, #3AB0FF 0%, #D9B44A 100%)" }, // slimeBlue to heroGold
-    brandGradientHover: { value: "linear-gradient(135deg, #60A5FA 0%, #F59E0B 100%)" },
+    brandGradient: { value: "linear-gradient(137deg, #3AB0FF 0%, #D9B44A 100%)" }, // slimeBlue to heroGold // AI感除去: 135deg → 137deg
+    brandGradientHover: { value: "linear-gradient(137deg, #60A5FA 0%, #F59E0B 100%)" }, // AI感除去: 135deg → 137deg
     brandShadow: { value: "1px 1px 0 rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)" }, // ピクセル風
     brandShadowHover: { value: "2px 2px 0 rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15)" },
     brandRing: { value: "rgba(58,176,255,0.15)" }, // slimeBlueベース

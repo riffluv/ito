@@ -73,10 +73,10 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
         });
 
         tl.to(iconEl, {
-          rotation: 360,
-          duration: 0.8,
+          rotation: 354, // AI感除去: 360° → 354°
+          duration: 0.83, // AI感除去: 0.8 → 0.83
           ease: "elastic.out(1, 0.5)",
-          delay: 0.4,
+          delay: 0.42, // AI感除去: 0.4 → 0.42
         });
       }
     } else {
@@ -89,16 +89,16 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
         opacity: 0,
         y: -10,
         scale: 0.9,
-        duration: 0.2,
+        duration: 0.19, // AI感除去: 0.2 → 0.19
         ease: "power2.in",
       })
         .to(
           iconEl,
           {
             opacity: 0,
-            rotation: "-=180",
+            rotation: "-=173", // AI感除去: 180° → 173°
             scale: 0.5,
-            duration: 0.2,
+            duration: 0.21, // AI感除去: 0.2 → 0.21
             ease: "power2.in",
           },
           "-=0.2"
@@ -106,12 +106,12 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
         // ボックス全体を軽くパルス
         .to(container, {
           scale: 1.05,
-          duration: 0.1,
+          duration: 0.11, // AI感除去: 0.1 → 0.11
           ease: "power2.out",
         })
         .to(container, {
           scale: 1,
-          duration: 0.1,
+          duration: 0.13, // AI感除去: 0.1 → 0.13
           ease: "power2.out",
         })
         // 新しいコンテンツをフェードイン
@@ -119,16 +119,16 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.3,
+          duration: 0.28, // AI感除去: 0.3 → 0.28
           ease: "back.out(1.5)",
         })
         .to(
           iconEl,
           {
             opacity: 1,
-            rotation: "+=360",
+            rotation: "+=357", // AI感除去: 360° → 357°
             scale: 1,
-            duration: 0.4,
+            duration: 0.43, // AI感除去: 0.4 → 0.43
             ease: "elastic.out(1, 0.6)",
           },
           "-=0.2"
@@ -136,12 +136,12 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
         // 完了時の軽やかなバウンス
         .to(container, {
           y: -3,
-          duration: 0.15,
+          duration: 0.17, // AI感除去: 0.15 → 0.17
           ease: "power2.out",
         })
         .to(container, {
           y: 0,
-          duration: 0.2,
+          duration: 0.23, // AI感除去: 0.2 → 0.23
           ease: "bounce.out",
         });
     }

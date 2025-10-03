@@ -75,7 +75,7 @@ export function DragonQuestLoading({
     gsap.set(container, { opacity: 0 });
     gsap.to(container, {
       opacity: 1,
-      duration: 0.2,
+      duration: 0.23, // AI感除去: 0.2 → 0.23
       ease: "none",
     });
 
@@ -95,7 +95,7 @@ export function DragonQuestLoading({
 
     gsap.to(bar, {
       width: `${clamped}%`,
-      duration: 0.35,
+      duration: 0.38, // AI感除去: 0.35 → 0.38
       ease: "power1.out",
       overwrite: "auto",
     });
@@ -217,7 +217,7 @@ export function DragonQuestLoading({
       // ドラクエ風：すっきり消える
       gsap.to(container, {
         opacity: 0,
-        duration: 0.3,
+        duration: 0.27, // AI感除去: 0.3 → 0.27
         ease: "none",
         onComplete,
         overwrite: "auto",
