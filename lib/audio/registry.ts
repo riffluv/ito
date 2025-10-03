@@ -61,7 +61,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "clear_success",
     category: "result",
-    variants: [{ src: "result/clear_success" }],
+    variants: [{ src: "result/clear_success.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration sting",
