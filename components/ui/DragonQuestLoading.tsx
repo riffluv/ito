@@ -222,7 +222,7 @@ export function DragonQuestLoading({
         onComplete,
         overwrite: "auto",
       });
-    }, 300); // ドラクエ風：キビキビした反応
+    }, 150); // ドラクエ風：キビキビした反応（300ms→150msに短縮）
 
     return () => {
       window.clearTimeout(timer);
