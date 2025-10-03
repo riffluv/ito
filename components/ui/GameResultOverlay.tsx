@@ -99,13 +99,13 @@ export function GameResultOverlay({
         { opacity: 0, backgroundColor: "black" },
         {
           opacity: 0.7, // 少し暗く
-          duration: 0.15,
+          duration: 0.17,
           ease: "power2.in",
         }
       )
       .to(flashRef.current, {
         opacity: 0.3, // 完全に消さず、暗いまま
-        duration: 0.3,
+        duration: 0.28,
         ease: "power2.out"
       });
 
@@ -117,7 +117,7 @@ export function GameResultOverlay({
         {
           opacity: 1, // container を表示
           y: -50, // 少し上から落ちる
-          duration: 0.5,
+          duration: 0.48,
           ease: "power2.in", // 重力で加速
         },
         0.2 // 黒フラッシュの後
@@ -129,7 +129,7 @@ export function GameResultOverlay({
           scale: 0.9,
           rotation: 3,
           filter: "blur(2px) brightness(0.6) saturate(0.5)",
-          duration: 0.5,
+          duration: 0.48,
           ease: "power2.in",
         },
         0.2 // container と同時
@@ -140,21 +140,21 @@ export function GameResultOverlay({
       // ====================================================
       .to(container, {
         y: 0, // 中央に着地
-        duration: 0.15,
+        duration: 0.14,
         ease: "power4.out",
       })
       .to(overlay, {
         scale: 1.1, // 着地の衝撃で広がる
         rotation: 0,
         filter: "blur(0px) brightness(0.7) saturate(0.6)",
-        duration: 0.15,
+        duration: 0.14,
         ease: "power4.out",
-      }, "-=0.15")
+      }, "-=0.14")
 
       // 着地の反動（潰れる）
       .to(overlay, {
         scale: 0.95,
-        duration: 0.1,
+        duration: 0.11,
         ease: "power2.in"
       });
 
@@ -175,14 +175,14 @@ export function GameResultOverlay({
       // シェイク後、中央に戻す
       .to(container, {
         y: 0,
-        duration: 0.15,
+        duration: 0.17,
         ease: "power2.out"
       });
 
       // Phase 2: 重苦しい膨張
       tl.to(overlay, {
         scale: 1.15,
-        duration: 0.35,
+        duration: 0.37,
         ease: "power2.out",
       })
 
@@ -202,7 +202,7 @@ export function GameResultOverlay({
           scale: 1,
           rotationX: 0,
           filter: "blur(0px)",
-          duration: 0.5,
+          duration: 0.52,
           ease: "power3.out",
         },
         "-=0.2"
@@ -321,13 +321,13 @@ export function GameResultOverlay({
         { opacity: 0 },
         {
           opacity: 1,
-          duration: 0.05,
+          duration: 0.06,
           ease: "power4.in",
         }
       )
       .to(flashRef.current, {
         opacity: 0,
-        duration: 0.25,
+        duration: 0.23,
         ease: "power2.out"
       });
 
@@ -346,7 +346,7 @@ export function GameResultOverlay({
           {
             scaleX: 3.5,
             opacity: 0,
-            duration: 0.6,
+            duration: 0.58,
             ease: "power3.out",
           },
           0.05
@@ -363,7 +363,7 @@ export function GameResultOverlay({
           {
             scaleX: 3.5,
             opacity: 0,
-            duration: 0.6,
+            duration: 0.58,
             ease: "power3.out",
           },
           0.15
@@ -380,7 +380,7 @@ export function GameResultOverlay({
           {
             scaleX: 4,
             opacity: 0,
-            duration: 0.8,
+            duration: 0.83,
             ease: "power4.out",
           },
           0.25
@@ -408,7 +408,7 @@ export function GameResultOverlay({
           x: 0,
           y: 0,
           rotation: 0,
-          duration: 0.1,
+          duration: 0.11,
           ease: "power2.out",
         }
       );
@@ -431,7 +431,7 @@ export function GameResultOverlay({
           scale: 1.3,
           rotation: 5, // 少し回転しながら
           filter: "blur(0px) brightness(1.5)",
-          duration: 0.4, // 0.5 → 0.4 に短縮！
+          duration: 0.42, // 0.5 → 0.4 → 0.42 に微調整！
           ease: "power3.out",
         },
         0.15 // ライン爆発と同時
@@ -441,32 +441,32 @@ export function GameResultOverlay({
         scale: 1.1,
         rotation: 0,
         filter: "brightness(1.3)",
-        duration: 0.15, // 0.2 → 0.15 に短縮！
+        duration: 0.17, // 0.2 → 0.15 → 0.17 に微調整！
         ease: "back.out(3)",
       })
 
       // Phase 2: 強烈なバウンス（ドラクエのレベルアップ感）
       .to(overlay, {
         scale: 0.8,
-        duration: 0.12,
+        duration: 0.13,
         ease: "power4.in"
       })
       .to(overlay, {
         scale: 1.4,
         rotation: 3,
-        duration: 0.25,
+        duration: 0.27,
         ease: "elastic.out(1.8, 0.3)"
       })
       .to(overlay, {
         scale: 0.95,
         rotation: -2,
-        duration: 0.15,
+        duration: 0.14,
         ease: "power3.in"
       })
       .to(overlay, {
         scale: 1.15,
         rotation: 1,
-        duration: 0.2,
+        duration: 0.19,
         ease: "back.out(2)",
         filter: "brightness(1.5) saturate(1.3)"
       })
@@ -487,7 +487,7 @@ export function GameResultOverlay({
           scale: 1.1,
           rotationX: 0,
           filter: "blur(0px) brightness(1)",
-          duration: 0.35, // 0.45 → 0.35 に短縮！
+          duration: 0.37, // 0.45 → 0.35 → 0.37 に微調整！
           ease: "back.out(2.5)",
         },
         0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
@@ -498,43 +498,43 @@ export function GameResultOverlay({
         y: -12,
         scale: 1.25,
         rotation: -1,
-        duration: 0.3,
+        duration: 0.31,
         ease: "power2.out"
       })
       // 輝きの予兆（テキストが頂点に達した時）
       .to(overlay, {
         boxShadow: "0 0 8px rgba(255,255,255,0.4), inset 0 0 5px rgba(255,255,255,0.1)",
-        duration: 0.15,
+        duration: 0.14,
         ease: "power1.out"
-      }, "-=0.15")
+      }, "-=0.14")
 
       .to(text, {
         y: 8,
         scale: 0.9,
         rotation: 1,
-        duration: 0.2,
+        duration: 0.21,
         ease: "power2.in"
       })
       // 薄い金色（テキストが下に弾む時）
       .to(overlay, {
         boxShadow: "0 0 15px rgba(255,235,100,0.6), 0 0 30px rgba(255,235,100,0.3), inset 0 0 8px rgba(255,255,255,0.2)",
-        duration: 0.2,
+        duration: 0.21,
         ease: "power2.out"
-      }, "-=0.2")
+      }, "-=0.21")
 
       .to(text, {
         y: -5,
         scale: 1.05,
         rotation: 0,
-        duration: 0.35,
+        duration: 0.38,
         ease: "elastic.out(1.5, 0.4)"
       })
       // 濃い黄金（テキストがエラスティックで弾む時）
       .to(overlay, {
         boxShadow: "0 0 22px rgba(255,215,0,0.8), 0 0 45px rgba(255,215,0,0.4), inset 0 0 12px rgba(255,255,255,0.3)",
-        duration: 0.35,
+        duration: 0.38,
         ease: "elastic.out(1.5, 0.4)"
-      }, "-=0.35")
+      }, "-=0.38")
 
       // Phase 6: 最終安定 + 永続浮遊
       .to(overlay, {
@@ -542,13 +542,13 @@ export function GameResultOverlay({
         rotation: 0,
         filter: "brightness(1.2)",
         boxShadow: "0 0 15px rgba(255,215,0,0.6), inset 0 0 8px rgba(255,255,255,0.2)",
-        duration: 0.4,
+        duration: 0.43,
         ease: "power3.out"
       })
       .to(text, {
         y: 0,
         scale: 1,
-        duration: 0.3,
+        duration: 0.32,
         ease: "elastic.out(1.3, 0.5)"
       }, "-=0.2")
       // containerを完全に中央にリセット（念押し・xPercentは維持）
@@ -556,9 +556,9 @@ export function GameResultOverlay({
         x: 0,
         y: 0,
         rotation: 0,
-        duration: 0.2,
+        duration: 0.19,
         ease: "power2.out"
-      }, "-=0.2")
+      }, "-=0.19")
 
       // Phase 7: 自然な永続浮遊（呼吸のような）
       .to(
@@ -682,7 +682,9 @@ export function GameResultOverlay({
 
       {/* 放射状ライン（8本）*/}
       {[...Array(8)].map((_, i) => {
-        const angle = (360 / 8) * i;
+        // 完璧な45度刻みを避け、微妙にずらす（AI感駆除）
+        const baseAngles = [0, 43, 88, 137, 178, 223, 271, 316];
+        const angle = baseAngles[i];
         return (
           <Box
             key={i}
