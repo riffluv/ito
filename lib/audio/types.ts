@@ -3,6 +3,8 @@ export type SoundCategory = "ui" | "notify" | "drag" | "result" | "ambient" | "s
 export type SoundId =
   | "ui_click"
   | "card_flip"
+  | "card_place"
+  | "card_deal"
   | "drag_pickup"
   | "drop_success"
   | "drop_invalid"

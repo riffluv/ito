@@ -184,6 +184,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const playPickup = useSoundEffect("drag_pickup");
   const playDropSuccess = useSoundEffect("drop_success");
   const playDropInvalid = useSoundEffect("drop_invalid");
+  const playCardPlace = useSoundEffect("card_place");
 
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
@@ -481,7 +482,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           } else {
             await addCardToProposalAtPosition(roomId, activeId, slotIndex);
           }
-          playDropSuccess();
+          playCardPlace();
           return;
         } catch (error) {
           logError("central-card-board", "add-card-to-proposal", error);
@@ -499,7 +500,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
       try {
         await moveCardInProposalToPosition(roomId, activeId, targetIndex);
-        playDropSuccess();
+        playCardPlace();
       } catch {
         playDropInvalid();
       }
@@ -509,6 +510,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     roomStatus,
     playDropInvalid,
     playDropSuccess,
+    playCardPlace,
     activeProposal,
     meId,
     setPending,

@@ -2,6 +2,7 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { topicControls } from "@/lib/game/topicControls";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Shuffle, AlertTriangle } from "lucide-react";
 import { useState } from "react";
@@ -33,6 +34,8 @@ export function QuickNumberRedeal({
   
   const canRedeal = topicSelected && !tooFewPlayers;
 
+  const playCardDeal = useSoundEffect("card_deal");
+
   const handleRedeal = async () => {
     if (isLoading || !canRedeal) return;
     
@@ -54,6 +57,7 @@ export function QuickNumberRedeal({
 
     setIsLoading(true);
     try {
+      playCardDeal();
       await topicControls.dealNumbers(roomId);
       notify({ 
         title: numbersDealt ? "数字を配り直しました" : "数字を配布しました", 

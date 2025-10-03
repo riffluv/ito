@@ -26,6 +26,22 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     note: "Card reveal or flip",
   }),
   createDefinition({
+    id: "card_place",
+    category: "card",
+    variants: [{ src: "card/card_place" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -1.5, max: 0.5 },
+    note: "Place card into slot",
+  }),
+  createDefinition({
+    id: "card_deal",
+    category: "card",
+    variants: [{ src: "card/card_deal" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -3, max: -0.5 },
+    note: "Deal cards to players",
+  }),
+  createDefinition({
     id: "drag_pickup",
     category: "drag",
     variants: [{ src: "dnd/drag_pickup" }],
