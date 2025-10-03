@@ -652,17 +652,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
 
     const performLeave = async (token: string | null) => {
-      // 🔥 NEW: ホストが退室する場合、復帰情報を記録
+      // 🚀 OPTIMIZED: 並列処理でクリーンアップを高速化
       try {
-        await detachNow();
+        // 1. リスナー解除を並列実行（Promise.allで高速化）
+        await Promise.all([
+          Promise.resolve(detachNow()).catch((error: unknown) => {
+            logError("room-page", "leave-detach-now", error);
+          }),
+          Promise.resolve(forceDetachAll(roomId, uid)).catch((error: unknown) => {
+            logError("room-page", "leave-force-detach", error);
+          })
+        ]);
       } catch (error) {
-        logError("room-page", "leave-detach-now", error);
+        logError("room-page", "leave-parallel-cleanup", error);
       }
-      try {
-        await forceDetachAll(roomId, uid);
-      } catch (error) {
-        logError("room-page", "leave-force-detach", error);
-      }
+
+      // 2. API呼び出し（フォールバック付き）
       let viaApi = false;
       if (token) {
         try {
@@ -684,6 +689,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           logError("room-page", "leave-api-call", error);
         }
       }
+
+      // 3. フォールバック（API失敗時）
       if (!viaApi) {
         try {
           await leaveRoomAction(roomId, uid, displayName);
@@ -691,6 +698,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           logError("room-page", "leave-room-action", error);
         }
       }
+
+      // 4. セッションフラグクリア
       clearSessionFlags();
     };
 
@@ -705,7 +714,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "leave", message: "ロビーへ戻ります...", duration: 1200 },
+              { id: "leave", message: "ロビーへ戻ります...", duration: 600 }, // 1200ms → 600ms に短縮
             ],
           },
           async () => {

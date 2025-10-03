@@ -12,15 +12,15 @@ export interface TransitionLoadingStep {
 }
 
 export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
-  { id: "firebase", message: "せつぞく中です...", duration: 1500, icon: "🔥" },
+  { id: "firebase", message: "せつぞく中です...", duration: 700, icon: "🔥" },
   {
     id: "room",
     message: "ルームの じょうほうを とくていしています...",
-    duration: 2000,
+    duration: 900,
     icon: "⚔️",
   },
-  { id: "player", message: "プレイヤーを とうろくしています...", duration: 1800, icon: "👥" },
-  { id: "ready", message: "じゅんびが かんりょうしました！", duration: 1000, icon: "🎮" },
+  { id: "player", message: "プレイヤーを とうろくしています...", duration: 800, icon: "👥" },
+  { id: "ready", message: "じゅんびが かんりょうしました！", duration: 500, icon: "🎮" },
 ];
 
 interface TransitionOptions {
@@ -206,10 +206,10 @@ export function usePageTransition() {
   const navigateToRoom = useCallback(
     async (roomId: string, joinRoomOperation: () => Promise<void>) => {
       const loadingSteps = [
-        { id: "firebase", message: "🔥 Firebase接続中...", duration: 800, icon: "🔥" },
-        { id: "room", message: "⚔️ ルーム情報取得中...", duration: 1200, icon: "⚔️" },
-        { id: "player", message: "👥 プレイヤー登録中...", duration: 600, icon: "👥" },
-        { id: "ready", message: "🎮 ゲーム準備完了！", duration: 400, icon: "🎮" },
+        { id: "firebase", message: "🔥 Firebase接続中...", duration: 400, icon: "🔥" },
+        { id: "room", message: "⚔️ ルーム情報取得中...", duration: 600, icon: "⚔️" },
+        { id: "player", message: "👥 プレイヤー登録中...", duration: 300, icon: "👥" },
+        { id: "ready", message: "🎮 ゲーム準備完了！", duration: 200, icon: "🎮" },
       ];
 
       await navigateWithTransition(
