@@ -143,23 +143,18 @@ export function GameCard({
         gsapInitialisedRef.current = true;
         return;
       }
-      // 判定中の回転開始時に音を鳴らす（クリック時は別処理）
-        if (!isResultPreset && flipped) {
-          playCardFlip();
-        }
-
-      gsap.to(el, {
-        duration: isResultPreset ? 0.28 : 0.35,
-        rotateY: flipped ? 180 : 0,
-        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-        overwrite: "auto",
+        gsap.to(el, {
+          duration: isResultPreset ? 0.28 : 0.35,
+          rotateY: flipped ? 180 : 0,
+          ease: isResultPreset ? "back.out(1.65)" : "power2.out",
+          overwrite: "auto",
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
       return () => {
         gsap.killTweensOf(el);
       };
-      }, [flipped, isResultPreset, playCardFlip]);
+      }, [flipped, isResultPreset]);
 
     // 常に3Dモード（GSAP制御）を使用
     // GPU判定に関係なく、GSAPが内部で最適化するため低スペックでも動作する
