@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { User } from "firebase/auth";
-import { logError } from "@/lib/utils/log";
+import { logInfo, logError } from "@/lib/utils/log";
 
 interface UseHostClaimParams {
   roomId: string;
@@ -45,11 +45,23 @@ export function useHostClaim({
     }
 
     // 自分が候補者でない、または前のホストがまだメンバー
+    const isDesignatedCandidate = candidateId === uid;
+    const isRecoveringHost =
+      lastKnownHostId === uid && !previousHostStillMember;
+    const hasNoRecordedHost = !candidateId && !lastKnownHostId;
     const shouldAttemptClaim =
-      candidateId === uid &&
+      (isDesignatedCandidate || isRecoveringHost || hasNoRecordedHost) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
 
     if (!shouldAttemptClaim) {
+      logInfo("room-page", "claim-host skipped", {
+        roomId,
+        uid,
+        candidateId,
+        lastKnownHostId,
+        previousHostStillMember,
+        leaving: leavingRef.current,
+      });
       clearTimer();
       return clearTimer;
     }
@@ -63,13 +75,39 @@ export function useHostClaim({
           return;
         }
 
-        await fetch(`/api/rooms/${roomId}/claim-host`, {
+        const response = await fetch(`/api/rooms/${roomId}/claim-host`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid, token }),
           keepalive: true,
         });
+
+        let detail: unknown = null;
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          detail = await response.json().catch(() => null);
+        }
+
+        const payload =
+          typeof detail === "object" && detail !== null
+            ? (detail as Record<string, unknown>)
+            : null;
+        const bodyOk = payload && "ok" in payload ? Boolean(payload.ok) : true;
+
+        if (!response.ok || !bodyOk) {
+          const error = new Error(
+            `claim-host failed: status=${response.status}`
+          );
+          (error as any).status = response.status;
+          (error as any).detail = detail;
+          throw error;
+        }
         hostClaimAttemptRef.current = 0;
+        logInfo("room-page", "claim-host success", {
+          roomId,
+          uid,
+          attempts: hostClaimAttemptRef.current,
+        });
       } catch (error) {
         logError("room-page", "claim-host", error);
         if (!cancelled) {

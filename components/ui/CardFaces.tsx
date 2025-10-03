@@ -112,7 +112,7 @@ export function CardFaceFront({
 
       boxShadow={boxShadow}
 
-      transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
+      transition="background-color 0.31s ease, border-color 0.31s ease, box-shadow 0.31s ease" // AI感除去: 0.3s → 0.31s
 
       overflow="hidden"
 
@@ -291,7 +291,7 @@ export function CardFaceBack({
 
       boxShadow={boxShadow}
 
-      transition="background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease"
+      transition="background-color 0.31s ease, border-color 0.31s ease, box-shadow 0.31s ease" // AI感除去: 0.3s → 0.31s
 
       overflow="hidden"
 

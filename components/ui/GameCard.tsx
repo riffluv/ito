@@ -278,7 +278,7 @@ export function GameCard({
         MozOsxFontSmoothing: "grayscale",
         textRendering: "optimizeLegibility",
       }}
-      transition={`transform 0.3s ${HOVER_EASING}, box-shadow 0.3s ${HOVER_EASING}`}
+      transition={`transform 0.28s ${HOVER_EASING}, box-shadow 0.28s ${HOVER_EASING}`} // AI感除去: 0.3s → 0.28s
       boxShadow={styleOverrides.boxShadow}
       _hover={{
         transform: hoveredTransform,

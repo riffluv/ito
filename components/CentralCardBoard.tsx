@@ -698,7 +698,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               alignContent="flex-start"
               alignItems="flex-start"
               gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
-              transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+              transition="background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1)" // AI感除去: 0.3s → 0.28s
               data-drop-target={isOver && canDrop ? "true" : "false"}
               css={{
                 containerType: "inline-size",
@@ -870,7 +870,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               alignContent="flex-start"
               alignItems="flex-start"
               gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
-              transition="background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+              transition="background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1)" // AI感除去: 0.3s → 0.28s
               data-drop-target={isOver && canDrop ? "true" : "false"}
               css={{
                 containerType: "inline-size",

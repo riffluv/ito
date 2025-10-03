@@ -43,7 +43,7 @@ export function CardBoardContainer({
         gap={4}
         bg={UNIFIED_LAYOUT.SURFACE.BOARD_AREA}
         boxShadow="none"
-        transition={`background-color 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}`}
+        transition={`background-color 0.31s ${UI_TOKENS.EASING.standard}, border-color 0.31s ${UI_TOKENS.EASING.standard}, box-shadow 0.31s ${UI_TOKENS.EASING.standard}`} // AI感除去: 0.3s → 0.31s
         data-drop-target={isOver && canDrop ? "true" : "false"}
         css={{
           containerType: "inline-size",
