@@ -3,6 +3,7 @@ import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
 import { updateClue1 } from "@/lib/firebase/players";
 import { resetRoomWithPrune } from "@/lib/firebase/rooms";
@@ -348,6 +349,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [customOpen, setCustomOpen] = React.useState(false);
   const [customStartPending, setCustomStartPending] = React.useState(false);
   const [customText, setCustomText] = React.useState<string>("");
+  const playRoundStart = useSoundEffect("round_start");
+  const playOrderConfirm = useSoundEffect("order_confirm");
   // ⚡ PERFORMANCE: useCallbackでメモ化
   const handleSubmitCustom = React.useCallback(async (val: string) => {
     const v = (val || "").trim();
@@ -372,6 +375,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         (roomStatus === "waiting" || customStartPending) &&
         isSortSubmit(actualResolveMode)
       ) {
+        playRoundStart();
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
         notify({
@@ -383,9 +387,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setCustomStartPending(false);
     }
-  }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode]);
+  }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode, playRoundStart]);
 
-  const quickStart = async (opts?: { broadcast?: boolean }) => {
+  const quickStart = async (opts?: { broadcast?: boolean; playSound?: boolean }) => {
     if (quickStartPending) return false;
 
     setQuickStartPending(true);
@@ -420,11 +424,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
 
     const shouldBroadcast = opts?.broadcast ?? true;
+    const shouldPlaySound = opts?.playSound ?? true;
     beginAutoStartLock(4500, { broadcast: shouldBroadcast });
 
     let success = false;
     try {
       if (effectiveType === "カスタム") {
+        if (shouldPlaySound) {
+          playRoundStart();
+        }
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
         notify({
@@ -436,6 +444,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           postRoundReset(roomId);
         } catch {}
       } else {
+        if (shouldPlaySound) {
+          playRoundStart();
+        }
         await startGameAction(roomId);
         try {
           delete (window as any).__ITO_LAST_RESET;
@@ -473,6 +484,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     const list = (proposal || []).filter(
       (v): v is string => typeof v === "string" && v.length > 0
     );
+    playOrderConfirm();
     await submitSortedOrder(roomId, list);
   };
 
@@ -573,9 +585,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   };
 
-  const restartGame = async () => {
+  const restartGame = async (opts?: { playSound?: boolean }) => {
     await resetGame({ showFeedback: false });
-    return quickStart({ broadcast: false });
+    return quickStart({ broadcast: false, playSound: opts?.playSound ?? true });
   };
 
   // ⚡ PERFORMANCE: useCallbackでメモ化
@@ -587,7 +599,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     beginAutoStartLock(5000, { broadcast: true });
     setIsRestarting(true);
     try {
-      const ok = await restartGame();
+      playRoundStart();
+      const ok = await restartGame({ playSound: false });
       if (!ok) {
         clearAutoStartLock();
       }
@@ -597,7 +610,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setIsRestarting(false);
     }
-  }, [isHost, autoStartLocked, quickStartPending, roomStatus, isRevealAnimating, beginAutoStartLock, restartGame, clearAutoStartLock]);
+  }, [
+    isHost,
+    autoStartLocked,
+    quickStartPending,
+    roomStatus,
+    isRevealAnimating,
+    beginAutoStartLock,
+    restartGame,
+    clearAutoStartLock,
+    playRoundStart,
+  ]);
 
   // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ
   const hasHostButtons =
