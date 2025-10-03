@@ -42,6 +42,23 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     note: "Deal cards to players",
   }),
   createDefinition({
+    id: "topic_shuffle",
+    category: "system",
+    variants: [{ src: "system/topic_shuffle" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -2, max: 0 },
+    note: "Shuffle topic selection",
+  }),
+  createDefinition({
+    id: "reset_game",
+    category: "system",
+    variants: [{ src: "system/reset_game" }],
+    playbackRateRange: { min: 0.9, max: 1.05 },
+    gainDbRange: { min: -3, max: -0.5 },
+    note: "Game reset action",
+    stopPrevious: true,
+  }),
+  createDefinition({
     id: "drag_pickup",
     category: "drag",
     variants: [{ src: "dnd/drag_pickup" }],

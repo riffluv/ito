@@ -251,6 +251,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     const playOrderConfirm = useSoundEffect("order_confirm");
     const playCardPlace = useSoundEffect("card_place");
     const playCardDeal = useSoundEffect("card_deal");
+    const playTopicShuffle = useSoundEffect("topic_shuffle");
+    const playResetGame = useSoundEffect("reset_game");
 
     // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
     const handleDecide = React.useCallback(async () => {
@@ -401,7 +403,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setCustomStartPending(false);
     }
-    }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode, playRoundStart]);
+    }, [
+      roomId,
+      isHost,
+      roomStatus,
+      customStartPending,
+      actualResolveMode,
+      playRoundStart,
+      playTopicShuffle,
+    ]);
 
   const quickStart = async (opts?: { broadcast?: boolean; playSound?: boolean }) => {
     if (quickStartPending) return false;
@@ -502,9 +512,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     await submitSortedOrder(roomId, list);
   };
 
-  const resetGame = async (options?: { showFeedback?: boolean }) => {
+  const resetGame = async (options?: { showFeedback?: boolean; playSound?: boolean }) => {
     const showFeedback = options?.showFeedback ?? true;
+    const shouldPlaySound = options?.playSound ?? true;
     setIsResetting(true);
+    if (shouldPlaySound) {
+      playResetGame();
+    }
     if (showFeedback) {
       setInlineFeedback({ message: "リセット中…", tone: "info" });
     } else {
@@ -600,7 +614,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const restartGame = async (opts?: { playSound?: boolean }) => {
-    await resetGame({ showFeedback: false });
+    await resetGame({ showFeedback: false, playSound: opts?.playSound ?? true });
     return quickStart({ broadcast: false, playSound: opts?.playSound ?? true });
   };
 
@@ -1029,6 +1043,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                       setCustomText(currentTopic || "");
                       setCustomOpen(true);
                     } else {
+                      playTopicShuffle();
                       await topicControls.shuffleTopic(roomId, mode as any);
                     }
                   }}

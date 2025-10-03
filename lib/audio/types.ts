@@ -5,6 +5,8 @@ export type SoundId =
   | "card_flip"
   | "card_place"
   | "card_deal"
+  | "topic_shuffle"
+  | "reset_game"
   | "drag_pickup"
   | "drop_success"
   | "drop_invalid"
