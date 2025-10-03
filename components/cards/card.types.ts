@@ -14,10 +14,11 @@ export interface BaseCardProps extends Omit<BoxProps, "variant" | "size"> {
   "data-testid"?: string;
 }
 
-// 空きスロットカードプロパティ  
+// 空きスロットカードプロパティ
 export interface EmptyCardProps extends BaseCardProps {
   variant?: "empty";
   slotNumber?: number;
+  totalSlots?: number; // 全スロット数（LOW/HIGH判定用）
   isDroppable?: boolean;
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: (e: React.DragEvent) => void;
