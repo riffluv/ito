@@ -245,10 +245,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           : !ready
             ? "「決定」を押すとカードを出せます"
             : "カードを場に出せません";
-  const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
+    const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
 
-  // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
-  const handleDecide = React.useCallback(async () => {
+    const playRoundStart = useSoundEffect("round_start");
+    const playOrderConfirm = useSoundEffect("order_confirm");
+    const playCardPlace = useSoundEffect("card_place");
+    const playCardDeal = useSoundEffect("card_deal");
+
+    // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
+    const handleDecide = React.useCallback(async () => {
     if (!canDecide || !me?.id) return;
 
     try {
@@ -307,24 +312,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
 
     try {
-      if (isSortMode) {
-        if (isRemoving) {
-          await removeCardFromProposal(roomId, me.id);
-          setInlineFeedback({
-            message: "カードを待機エリアに戻しました",
-            tone: "info",
-          });
+        if (isSortMode) {
+          if (isRemoving) {
+            await removeCardFromProposal(roomId, me.id);
+            setInlineFeedback({
+              message: "カードを待機エリアに戻しました",
+              tone: "info",
+            });
+          } else {
+            await addCardToProposal(roomId, me.id);
+            playCardPlace();
+            setInlineFeedback({
+              message: "カードを提出しました",
+              tone: "success",
+            });
+          }
         } else {
-          await addCardToProposal(roomId, me.id);
-          setInlineFeedback({
-            message: "カードを提出しました",
-            tone: "success",
-          });
+          await commitPlayFromClue(roomId, me.id);
+          playCardPlace();
+          setInlineFeedback({ message: "カードを提出しました", tone: "success" });
         }
-      } else {
-        await commitPlayFromClue(roomId, me.id);
-        setInlineFeedback({ message: "カードを提出しました", tone: "success" });
-      }
     } catch (e: any) {
       const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(e)) {
@@ -343,14 +350,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       }
     }
-  }, [me?.id, clueEditable, isSortMode, placed, canSubmit, cluesReady, roomId]);
+    }, [
+      me?.id,
+      clueEditable,
+      isSortMode,
+      placed,
+      canSubmit,
+      cluesReady,
+      roomId,
+      playCardPlace,
+    ]);
 
   // カスタムお題モーダル制御
-  const [customOpen, setCustomOpen] = React.useState(false);
-  const [customStartPending, setCustomStartPending] = React.useState(false);
-  const [customText, setCustomText] = React.useState<string>("");
-  const playRoundStart = useSoundEffect("round_start");
-  const playOrderConfirm = useSoundEffect("order_confirm");
+    const [customOpen, setCustomOpen] = React.useState(false);
+    const [customStartPending, setCustomStartPending] = React.useState(false);
+    const [customText, setCustomText] = React.useState<string>("");
   // ⚡ PERFORMANCE: useCallbackでメモ化
   const handleSubmitCustom = React.useCallback(async (val: string) => {
     const v = (val || "").trim();
@@ -387,7 +401,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     } finally {
       setCustomStartPending(false);
     }
-  }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode, playRoundStart]);
+    }, [roomId, isHost, roomStatus, customStartPending, actualResolveMode, playRoundStart]);
 
   const quickStart = async (opts?: { broadcast?: boolean; playSound?: boolean }) => {
     if (quickStartPending) return false;
@@ -423,8 +437,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       return false;
     }
 
-    const shouldBroadcast = opts?.broadcast ?? true;
-    const shouldPlaySound = opts?.playSound ?? true;
+      const shouldBroadcast = opts?.broadcast ?? true;
+      const shouldPlaySound = opts?.playSound ?? true;
     beginAutoStartLock(4500, { broadcast: shouldBroadcast });
 
     let success = false;
@@ -1049,7 +1063,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               <Tooltip content="数字を配り直す" showArrow openDelay={300}>
                 <IconButton
                   aria-label="数字配布"
-                  onClick={() => topicControls.dealNumbers(roomId)}
+                  onClick={() => {
+                    playCardDeal();
+                    void topicControls.dealNumbers(roomId);
+                  }}
                   size="sm"
                   w="40px"
                   h="40px"
