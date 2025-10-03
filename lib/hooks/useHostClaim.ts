@@ -50,8 +50,10 @@ export function useHostClaim({
       lastKnownHostId === uid && !previousHostStillMember;
     const hasNoRecordedHost = !candidateId && !lastKnownHostId;
     const shouldAttemptClaim =
-      (isDesignatedCandidate || isRecoveringHost || hasNoRecordedHost) &&
-      (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
+      isDesignatedCandidate ||
+      isRecoveringHost ||
+      hasNoRecordedHost ||
+      (!previousHostStillMember && !!candidateId);
 
     if (!shouldAttemptClaim) {
       logInfo("room-page", "claim-host skipped", {

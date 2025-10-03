@@ -27,18 +27,15 @@ export function GameResultOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
-  const playVictory = useSoundEffect("result_victory");
   const playClearSuccess = useSoundEffect("clear_success");
   const playFailure = useSoundEffect("clear_failure");
 
   useEffect(() => {
-    if (mode === "overlay") return;
-    if (failed) {
-      playFailure();
-    } else {
+    if (mode !== "overlay") return;
+    if (!failed) {
       playClearSuccess();
     }
-  }, [failed, mode, playFailure, playClearSuccess]);
+  }, [failed, mode, playClearSuccess]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
@@ -532,9 +529,6 @@ export function GameResultOverlay({
         rotation: 0,
         duration: 0.38,
         ease: "elastic.out(1.5, 0.4)",
-        onStart: () => {
-          playClearSuccess();
-        },
       })
       // 濃い黄金（テキストがエラスティックで弾む時）
       .to(overlay, {
