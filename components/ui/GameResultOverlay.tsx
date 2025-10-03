@@ -28,16 +28,14 @@ export function GameResultOverlay({
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
   const playVictory = useSoundEffect("result_victory");
-  const playFailure = useSoundEffect("result_failure");
+  const playFailure = useSoundEffect("clear_failure");
 
   useEffect(() => {
     if (mode !== "overlay") return;
-    if (failed) {
-      playFailure();
-    } else {
+    if (!failed) {
       playVictory();
     }
-  }, [failed, mode, playFailure, playVictory]);
+  }, [failed, mode, playVictory]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
@@ -169,6 +167,9 @@ export function GameResultOverlay({
           repeat: 6,
           yoyo: true,
           ease: "power2.inOut",
+          onStart: () => {
+            playFailure();
+          },
         },
         0.85 // 着地と同時
       )

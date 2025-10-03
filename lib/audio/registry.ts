@@ -59,6 +59,15 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     stopPrevious: true,
   }),
   createDefinition({
+    id: "clear_failure",
+    category: "result",
+    variants: [{ src: "result/clear_failure" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -2.5, max: -0.5 },
+    note: "Failure animation sting",
+    stopPrevious: true,
+  }),
+  createDefinition({
     id: "drag_pickup",
     category: "drag",
     variants: [{ src: "dnd/drag_pickup" }],
