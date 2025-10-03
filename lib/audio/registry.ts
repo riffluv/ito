@@ -59,6 +59,15 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     stopPrevious: true,
   }),
   createDefinition({
+    id: "clear_success",
+    category: "result",
+    variants: [{ src: "result/clear_success" }],
+    playbackRateRange: { min: 0.95, max: 1.05 },
+    gainDbRange: { min: -2, max: 0 },
+    note: "Success celebration sting",
+    stopPrevious: true,
+  }),
+  createDefinition({
     id: "clear_failure",
     category: "result",
     variants: [{ src: "result/clear_failure" }],

@@ -7,6 +7,7 @@ export type SoundId =
   | "card_deal"
   | "topic_shuffle"
   | "reset_game"
+  | "clear_success"
   | "clear_failure"
   | "drag_pickup"
   | "drop_success"
