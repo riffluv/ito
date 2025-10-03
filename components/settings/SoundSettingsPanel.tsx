@@ -78,7 +78,7 @@ export function SoundSettingsPanel({
       // Test sounds for each category
       const testSounds: Partial<Record<SoundCategory, string>> = {
         ui: "ui_click",
-        card: "card_slide",
+        card: "card_flip",
         notify: "notify_success",
         result: "result_victory",
         drag: "drag_pickup",

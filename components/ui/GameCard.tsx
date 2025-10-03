@@ -70,7 +70,6 @@ export function GameCard({
   const textColors = getDragonQuestTextColors(waitingInCentral);
 
   const playCardFlip = useSoundEffect("card_flip");
-  const playCardSlide = useSoundEffect("card_slide");
   const previousFlipRef = useRef<boolean>(flipped);
   const threeDContainerRef = useRef<HTMLDivElement | null>(null);
   const gsapInitialisedRef = useRef<boolean>(false);
@@ -94,10 +93,10 @@ export function GameCard({
     }
     // 両方向の回転で音を鳴らす（連想→数字、数字→連想）
     if (flipped !== previousFlipRef.current) {
-      playCardSlide();
+      playCardFlip();
     }
     previousFlipRef.current = flipped;
-  }, [flipped, variant, playCardSlide]);
+  }, [flipped, variant, playCardFlip]);
 
   // Shared semantic colors
   const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
@@ -145,9 +144,9 @@ export function GameCard({
         return;
       }
       // 判定中の回転開始時に音を鳴らす（クリック時は別処理）
-      if (!isResultPreset && flipped) {
-        playCardSlide();
-      }
+        if (!isResultPreset && flipped) {
+          playCardFlip();
+        }
 
       gsap.to(el, {
         duration: isResultPreset ? 0.28 : 0.35,
@@ -160,7 +159,7 @@ export function GameCard({
       return () => {
         gsap.killTweensOf(el);
       };
-    }, [flipped, isResultPreset, playCardSlide]);
+      }, [flipped, isResultPreset, playCardFlip]);
 
     // 常に3Dモード（GSAP制御）を使用
     // GPU判定に関係なく、GSAPが内部で最適化するため低スペックでも動作する

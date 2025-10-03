@@ -184,7 +184,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const playPickup = useSoundEffect("drag_pickup");
   const playDropSuccess = useSoundEffect("drop_success");
   const playDropInvalid = useSoundEffect("drop_invalid");
-  const playOrderConfirm = useSoundEffect("order_confirm");
 
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,

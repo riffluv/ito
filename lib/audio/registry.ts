@@ -18,20 +18,12 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "card_flip",
-    category: "drag",
+    category: "card",
     variants: [{ src: "card/card_flip" }],
     playbackRateRange: { min: 0.92, max: 1.03 },
     gainDbRange: { min: -1, max: 1 },
     startOffsetMsRange: { min: 0, max: 20 },
     note: "Card reveal or flip",
-  }),
-  createDefinition({
-    id: "card_slide",
-    category: "card",
-    variants: [{ src: "card/card-slide-8" }],
-    playbackRateRange: { min: 0.95, max: 1.05 },
-    gainDbRange: { min: -1, max: 1 },
-    note: "Card sliding/reveal sound",
   }),
   createDefinition({
     id: "drag_pickup",
