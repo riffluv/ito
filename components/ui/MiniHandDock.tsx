@@ -44,7 +44,7 @@ import React from "react";
 import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
-import { gsap } from "gsap";
+import { SeinoButton } from "./SeinoButton";
 
 interface MiniHandDockProps {
   roomId: string;
@@ -127,7 +127,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     message: string;
     tone: "info" | "success";
   } | null>(null);
-  const seinoButtonRef = React.useRef<HTMLDivElement>(null);
 
   const {
     autoStartLocked,
@@ -207,64 +206,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     ? !!me?.id && clueEditable && (placed || canSubmitBase)
     : !!me?.id && canSubmit;
 
+  // ホスト視点でソート中かつ全員提出済みの場合のみ「せーの！」を出す
+  const shouldShowSeinoButton =
+    !!isHost && isSortMode && roomStatus === "clue" && allSubmitted;
+
   React.useEffect(() => {
     if (!clueEditable) {
       setInlineFeedback(null);
     }
   }, [clueEditable]);
 
-  // せーの！ボタンのGSAPアニメーション（全員提出完了時のみ登場）
-  React.useEffect(() => {
-    if (!seinoButtonRef.current) return;
-
-    const shouldShow = isHost && isSortSubmit(actualResolveMode) && roomStatus === "clue" && allSubmitted;
-
-    if (shouldShow) {
-      // 表示状態にしてから左からシャキン！登場
-      gsap.set(seinoButtonRef.current, { display: "block" });
-      gsap.fromTo(
-        seinoButtonRef.current,
-        {
-          x: -250,
-          opacity: 0,
-          rotation: -8,
-          scale: 0.9,
-        },
-        {
-          x: 0,
-          opacity: 1,
-          rotation: 0,
-          scale: 1,
-          duration: 0.45,
-          ease: "back.out(2.5)",
-        }
-      );
-
-      // 光のフラッシュ（より強烈に）
-      gsap.fromTo(
-        seinoButtonRef.current,
-        {
-          filter: "brightness(1)",
-        },
-        {
-          filter: "brightness(1.4)",
-          duration: 0.15,
-          yoyo: true,
-          repeat: 1,
-          ease: "power2.inOut",
-        }
-      );
-    } else {
-      // 即座に非表示（ゴースト防止）
-      gsap.set(seinoButtonRef.current, {
-        display: "none",
-        x: 0,
-        opacity: 0,
-        rotation: 0,
-        scale: 1,
-      });
-    }
-  }, [isHost, actualResolveMode, roomStatus, allSubmitted]);
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
   const baseActionTooltip =
@@ -679,99 +630,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <>
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
-      <Box
-        ref={seinoButtonRef}
-        position="fixed"
-        bottom="310px"
-        left="50%"
-        zIndex={100}
-        display="none"
-        pointerEvents={allSubmitted ? "auto" : "none"}
-      >
-        <Box position="relative" transform="translateX(-50%)">
-          {/* 左の装飾（非対称） */}
-          <Box
-            position="absolute"
-            left="-17px"
-            top="50%"
-            transform="translateY(-51%) rotate(43deg)"
-            w="13px"
-            h="13px"
-            bg="rgba(255,128,45,0.91)"
-            border="2.5px solid rgba(255,255,255,0.88)"
-            boxShadow="0 1px 3px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(0,0,0,0.3)"
-          />
-          {/* 右の装飾（非対称） */}
-          <Box
-            position="absolute"
-            right="-18px"
-            top="50%"
-            transform="translateY(-49%) rotate(46deg)"
-            w="11px"
-            h="11px"
-            bg="rgba(248,115,30,0.88)"
-            border="2.5px solid rgba(255,255,255,0.91)"
-            boxShadow="0 1px 4px rgba(0,0,0,0.48), inset -1px -1px 2px rgba(0,0,0,0.28)"
-          />
-
-          <AppButton
-            size="lg"
-            visual="solid"
-            onClick={evalSorted}
-            disabled={!allSubmitted}
-            minW="211px"
-            px="34px"
-            py="19px"
-            position="relative"
-            bg="rgba(255,128,45,0.93)"
-            color="white"
-            border="3px solid rgba(255,255,255,0.92)"
-            borderRadius={0}
-            fontWeight="800"
-            fontFamily="monospace"
-            fontSize="26px"
-            letterSpacing="0.023em"
-            textShadow="2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)"
-            boxShadow="0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)"
-            _before={{
-              content: '""',
-              position: "absolute",
-              top: "3px",
-              left: "4px",
-              right: "3px",
-              bottom: "3px",
-              background: "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
-              pointerEvents: "none",
-            }}
-            _hover={{
-              bg: "rgba(255,145,65,0.96)",
-              color: "white",
-              textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
-              borderColor: "rgba(255,255,255,0.95)",
-              transform: "translateY(-3px)",
-              boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
-            }}
-            _active={{
-              bg: "rgba(235,110,30,0.95)",
-              color: "rgba(255,255,255,0.91)",
-              boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
-              transform: "translateY(1px)",
-            }}
-            _disabled={{
-              bg: "rgba(60,60,60,0.8)",
-              color: "rgba(255,255,255,0.3)",
-              borderColor: "rgba(255,255,255,0.4)",
-              cursor: "not-allowed",
-              textShadow: "1px 1px 0px #000",
-              boxShadow: "0 0 0 2px rgba(40,40,40,0.8), 2px 3px 0 rgba(0,0,0,.3)",
-              transform: "none",
-            }}
-            transition="178ms cubic-bezier(.2,1,.3,1)"
-          >
-            せーの！
-          </AppButton>
-        </Box>
-      </Box>
+      <SeinoButton
+        isVisible={shouldShowSeinoButton}
+        disabled={!allSubmitted}
+        onClick={evalSorted}
+      />
 
       <Box
         display="flex"
