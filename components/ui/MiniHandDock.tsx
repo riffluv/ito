@@ -668,6 +668,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isRestarting ||
     isResetting
   );
+  const isGameFinished = roomStatus === "finished";
   const canShowStart =
     !!isHost &&
     roomStatus === "waiting" &&
@@ -1043,8 +1044,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                       setCustomText(currentTopic || "");
                       setCustomOpen(true);
                     } else {
-                      playTopicShuffle();
-                      await topicControls.shuffleTopic(roomId, mode as any);
+                    if (isGameFinished) return;
+                    playTopicShuffle();
+                    await topicControls.shuffleTopic(roomId, mode as any);
                     }
                   }}
                   size="sm"
@@ -1079,6 +1081,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 <IconButton
                   aria-label="数字配布"
                   onClick={() => {
+                    if (isGameFinished) return;
                     playCardDeal();
                     void topicControls.dealNumbers(roomId);
                   }}
@@ -1108,7 +1111,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   aria-label="リセット"
                   onClick={async () => {
                     if (isResetting) return;
-                    await resetGame();
+                    await resetGame({ playSound: !isGameFinished });
                   }}
                   size="sm"
                   w="40px"
