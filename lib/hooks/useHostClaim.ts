@@ -46,14 +46,10 @@ export function useHostClaim({
 
     // 自分が候補者でない、または前のホストがまだメンバー
     const isDesignatedCandidate = candidateId === uid;
-    const isRecoveringHost =
-      lastKnownHostId === uid && !previousHostStillMember;
+    const isRecoveringHost = lastKnownHostId === uid;
     const hasNoRecordedHost = !candidateId && !lastKnownHostId;
     const shouldAttemptClaim =
-      isDesignatedCandidate ||
-      isRecoveringHost ||
-      hasNoRecordedHost ||
-      (!previousHostStillMember && !!candidateId);
+      isDesignatedCandidate || isRecoveringHost || hasNoRecordedHost;
 
     if (!shouldAttemptClaim) {
       logInfo("room-page", "claim-host skipped", {
