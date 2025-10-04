@@ -426,6 +426,13 @@ export class SoundManager {
           merged.categoryVolume[category] = clamp(value, 0, 1);
         }
       });
+      const legacyResult = (parsed as any)?.categoryVolume?.result;
+      if (typeof legacyResult === "number") {
+        merged.categoryVolume.fanfare = clamp(legacyResult, 0, 1);
+      }
+      if ((merged.categoryVolume as any)?.result !== undefined) {
+        delete (merged.categoryVolume as any).result;
+      }
       if (parsed.successMode === "epic" || parsed.successMode === "normal") {
         merged.successMode = parsed.successMode;
       }

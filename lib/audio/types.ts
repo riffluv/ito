@@ -1,4 +1,4 @@
-export type SoundCategory = "ui" | "notify" | "drag" | "result" | "ambient" | "system" | "card";
+export type SoundCategory = "ui" | "notify" | "drag" | "ambient" | "system" | "card" | "fanfare";
 
 export type SoundId =
   | "ui_click"
@@ -79,10 +79,10 @@ export const SOUND_CATEGORIES: SoundCategory[] = [
   "ui",
   "notify",
   "drag",
-  "result",
   "ambient",
   "system",
   "card",
+  "fanfare",
 ];
 
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
@@ -93,9 +93,9 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     ui: 1,
     notify: 1,
     drag: 1,
-    result: 1,
     ambient: 1,
     system: 1,
     card: 1,
+    fanfare: 0.1,
   },
 };
