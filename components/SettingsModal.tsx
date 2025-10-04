@@ -1,6 +1,6 @@
 "use client";
 import SoundSettingsPlaceholder from "@/components/settings/SoundSettingsPlaceholder";
-import SoundSettingsPanel from "@/components/settings/SoundSettingsPanel";
+import { SoundSettingsPanel } from "@/components/settings/SoundSettingsPanel";
 import { notify } from "@/components/ui/notify";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
@@ -64,6 +64,16 @@ export function SettingsModal({
   const [previewMasterVolume, setPreviewMasterVolume] = useState(
     soundSettings.masterVolume
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [soundActions, setSoundActions] = useState<{
+    save: () => void;
+    cancel: () => void;
+  } | null>(null);
+
+  const registerSoundActions = (actions: { save: () => void; cancel: () => void }) => {
+    setSoundActions(actions);
+  };
+
   const SOUND_FEATURE_LOCKED = false;
   const soundLockMessage =
     "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
@@ -233,6 +243,11 @@ export function SettingsModal({
 
     setSaving(true);
     try {
+      // Save sound settings if in sound tab
+      if (activeTab === "sound" && soundActions) {
+        soundActions.save();
+      }
+
       await updateDoc(doc(db!, "rooms", roomId), {
         "options.resolveMode": resolveMode,
         "options.defaultTopicType": defaultTopicType,
@@ -1208,10 +1223,13 @@ export function SettingsModal({
                 />
               ) : (
                 <SoundSettingsPanel
+                  isModalOpen={isOpen}
                   previewMuted={previewMuted}
                   previewMasterVolume={previewMasterVolume}
                   onMutedChange={setPreviewMuted}
                   onMasterVolumeChange={setPreviewMasterVolume}
+                  onDraftStateChange={setHasUnsavedChanges}
+                  registerActions={registerSoundActions}
                 />
               )
             )}
