@@ -60,7 +60,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "clear_success1",
-    category: "result",
+    category: "fanfare",
     variants: [{ src: "result/clear_success1.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
@@ -69,7 +69,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "clear_success2",
-    category: "result",
+    category: "fanfare",
     variants: [{ src: "result/clear_success2.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
@@ -78,7 +78,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "clear_failure",
-    category: "result",
+    category: "fanfare",
     variants: [{ src: "result/clear_failure" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2.5, max: -0.5 },
@@ -129,7 +129,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "result_victory",
-    category: "result",
+    category: "fanfare",
     variants: [{ src: "result/result_victory" }],
     playbackRateRange: { min: 0.98, max: 1.02 },
     gainDbRange: { min: -0.5, max: 1.5 },
@@ -138,7 +138,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "result_failure",
-    category: "result",
+    category: "fanfare",
     variants: [{ src: "result/result_failure" }],
     playbackRateRange: { min: 0.95, max: 1.02 },
     gainDbRange: { min: -0.5, max: 0.5 },
@@ -155,7 +155,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   }),
   createDefinition({
     id: "round_start",
-    category: "system",
+    category: "fanfare",
     variants: [{ src: "system/round_start" }],
     playbackRateRange: { min: 0.99, max: 1.01 },
     gainDbRange: { min: -0.5, max: 1.5 },

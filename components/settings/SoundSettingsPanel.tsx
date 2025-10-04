@@ -2,34 +2,43 @@
 import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+type AdjustableCategory = "ambient" | "notify" | "ui" | "fanfare";
 
 export function SoundSettingsPanel() {
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
 
-  const [masterVolume, setMasterVolume] = useState(soundSettings.masterVolume);
-  const [muted, setMuted] = useState(soundSettings.muted);
-  const [bgmVolume, setBgmVolume] = useState(soundSettings.categoryVolume.ambient);
-  const [systemVolume, setSystemVolume] = useState(soundSettings.categoryVolume.system);
-  const [sfxVolume, setSfxVolume] = useState(soundSettings.categoryVolume.ui);
-  const [successMode, setSuccessMode] = useState(soundSettings.successMode);
+  const snapshot = useMemo(
+    () => soundManager?.getSettings() ?? soundSettings,
+    [soundManager, soundSettings]
+  );
+
+  const [masterVolume, setMasterVolume] = useState(snapshot.masterVolume);
+  const [muted, setMuted] = useState(snapshot.muted);
+  const [bgmVolume, setBgmVolume] = useState(snapshot.categoryVolume.ambient);
+  const [sfxVolume, setSfxVolume] = useState(snapshot.categoryVolume.ui);
+  const [notifyVolume, setNotifyVolume] = useState(snapshot.categoryVolume.notify);
+  const [fanfareVolume, setFanfareVolume] = useState(
+    snapshot.categoryVolume.fanfare ?? 1
+  );
+  const [successMode, setSuccessMode] = useState(snapshot.successMode);
+
+  const syncFromSettings = useCallback(() => {
+    const current = soundManager?.getSettings() ?? soundSettings;
+    setMasterVolume(current.masterVolume);
+    setMuted(current.muted);
+    setBgmVolume(current.categoryVolume.ambient);
+    setSfxVolume(current.categoryVolume.ui);
+    setNotifyVolume(current.categoryVolume.notify);
+    setFanfareVolume(current.categoryVolume.fanfare ?? 1);
+    setSuccessMode(current.successMode);
+  }, [soundManager, soundSettings]);
 
   useEffect(() => {
-    setMasterVolume(soundSettings.masterVolume);
-    setMuted(soundSettings.muted);
-    setBgmVolume(soundSettings.categoryVolume.ambient);
-    setSystemVolume(soundSettings.categoryVolume.system);
-    setSfxVolume(soundSettings.categoryVolume.ui);
-    setSuccessMode(soundSettings.successMode);
-  }, [
-    soundSettings.masterVolume,
-    soundSettings.muted,
-    soundSettings.categoryVolume.ambient,
-    soundSettings.categoryVolume.system,
-    soundSettings.categoryVolume.ui,
-    soundSettings.successMode,
-  ]);
+    syncFromSettings();
+  }, [syncFromSettings]);
 
   const applyMasterVolume = (value: number) => {
     setMasterVolume(value);
@@ -41,21 +50,29 @@ export function SoundSettingsPanel() {
     soundManager?.setMuted(next);
   };
 
-  const applyCategoryVolume = (
-    category: "ambient" | "system" | "ui",
-    value: number,
-  ) => {
+  const applyCategoryVolume = (category: AdjustableCategory, value: number) => {
     if (!soundManager) return;
     if (category === "ambient") {
       soundManager.setCategoryVolume("ambient", value);
-    } else if (category === "system") {
-      soundManager.setCategoryVolume("system", value);
-      soundManager.setCategoryVolume("result", value);
-      soundManager.setCategoryVolume("notify", value);
-    } else if (category === "ui") {
+      return;
+    }
+
+    if (category === "ui") {
       soundManager.setCategoryVolume("ui", value);
       soundManager.setCategoryVolume("card", value);
       soundManager.setCategoryVolume("drag", value);
+      return;
+    }
+
+    if (category === "notify") {
+      soundManager.setCategoryVolume("notify", value);
+      soundManager.setCategoryVolume("system", value);
+      return;
+    }
+
+    if (category === "fanfare") {
+      soundManager.setCategoryVolume("fanfare", value);
+      return;
     }
   };
 
@@ -137,23 +154,33 @@ export function SoundSettingsPanel() {
       })}
 
       {renderSlider(
-        "演出サウンド音量",
-        systemVolume,
-        (value) => {
-          setSystemVolume(value);
-          applyCategoryVolume("system", value);
-        },
-        "リザルトや通知のファンファーレも一緒に調整されます",
-      )}
-
-      {renderSlider(
         "効果音音量",
         sfxVolume,
         (value) => {
           setSfxVolume(value);
           applyCategoryVolume("ui", value);
         },
-        "カード操作やドラッグの効果音に影響します",
+        "カード操作やドラッグなどのサウンド",
+      )}
+
+      {renderSlider(
+        "通知音量",
+        notifyVolume,
+        (value) => {
+          setNotifyVolume(value);
+          applyCategoryVolume("notify", value);
+        },
+        "トーストやシステム通知の音に影響します",
+      )}
+
+      {renderSlider(
+        "ファンファーレ音量",
+        fanfareVolume,
+        (value) => {
+          setFanfareVolume(value);
+          applyCategoryVolume("fanfare", value);
+        },
+        "ラウンド開始や勝利演出のファンファーレ",
       )}
 
       <Box
@@ -173,14 +200,12 @@ export function SoundSettingsPanel() {
               {
                 mode: "normal" as const,
                 title: "ノーマル",
-                description: "",
               },
               {
                 mode: "epic" as const,
                 title: "エピック",
-                description: "",
               },
-            ].map(({ mode, title, description }) => {
+            ].map(({ mode, title }) => {
               const active = successMode === mode;
               return (
                 <Box
@@ -217,7 +242,6 @@ export function SoundSettingsPanel() {
           </HStack>
         </VStack>
       </Box>
-
     </Stack>
   );
 }

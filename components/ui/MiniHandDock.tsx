@@ -392,9 +392,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         (roomStatus === "waiting" || customStartPending) &&
         isSortSubmit(actualResolveMode)
       ) {
-        playRoundStart();
+        playOrderConfirm();
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
+        playRoundStart();
         notify({
           title: "カスタムお題で開始",
           type: "success",
@@ -411,6 +412,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       customStartPending,
       actualResolveMode,
       playRoundStart,
+      playOrderConfirm,
       playTopicShuffle,
     ]);
 
@@ -456,10 +458,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     try {
       if (effectiveType === "カスタム") {
         if (shouldPlaySound) {
-          playRoundStart();
+          playOrderConfirm();
         }
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
+        if (shouldPlaySound) {
+          playRoundStart();
+        }
         notify({
           title: "カスタムお題で開始",
           type: "success",
@@ -470,9 +475,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         } catch {}
       } else {
         if (shouldPlaySound) {
-          playRoundStart();
+          playOrderConfirm();
         }
         await startGameAction(roomId);
+        if (shouldPlaySound) {
+          playRoundStart();
+        }
         try {
           delete (window as any).__ITO_LAST_RESET;
         } catch {}
@@ -628,8 +636,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     beginAutoStartLock(5000, { broadcast: true });
     setIsRestarting(true);
     try {
-      playRoundStart();
+      playOrderConfirm();
       const ok = await restartGame({ playSound: false });
+      if (ok) {
+        playRoundStart();
+      }
       if (!ok) {
         clearAutoStartLock();
       }
