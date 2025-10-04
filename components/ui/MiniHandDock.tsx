@@ -317,6 +317,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         if (isSortMode) {
           if (isRemoving) {
             await removeCardFromProposal(roomId, me.id);
+            playCardPlace();
             setInlineFeedback({
               message: "カードを待機エリアに戻しました",
               tone: "info",
