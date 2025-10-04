@@ -76,6 +76,7 @@ const cloneSettings = (settings: SoundSettings): SoundSettings => ({
   masterVolume: settings.masterVolume,
   muted: settings.muted,
   categoryVolume: { ...settings.categoryVolume },
+  successMode: settings.successMode,
 });
 
 export class SoundManager {
@@ -418,6 +419,9 @@ export class SoundManager {
           merged.categoryVolume[category] = clamp(value, 0, 1);
         }
       });
+      if (parsed.successMode === "epic" || parsed.successMode === "normal") {
+        merged.successMode = parsed.successMode;
+      }
       return merged;
     } catch (error) {
       console.warn(

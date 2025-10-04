@@ -1,9 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 // ⚡ PERFORMANCE: Three.js/Pixi.jsを動的インポートに変更 (-1MB初期バンドル)
-// @ts-ignore - 動的インポート時の型エラー抑制
 import type * as THREETypes from "three";
-// @ts-ignore - 動的インポート時の型エラー抑制
 import type * as PIXITypes from "pixi.js";
 import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
@@ -102,9 +100,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     let cleanup: (() => void) | null = null;
 
     // ⚡ Three.jsを動的にロード (初回のみ1MB削減)
-    // @ts-ignore - 動的インポート
     import("three").then((module) => {
-      // @ts-ignore - 動的モジュール
       THREE = module;
       logThreeBackgroundInfo("three-loaded");
 
@@ -156,7 +152,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       // ===== ChatGPT高品質魔法陣システム =====
 
       // 共通: ソフト円テクスチャ
-      // @ts-ignore - 動的ロードTHREE
       const makeCircleTexture = (size = 64): any => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
@@ -420,7 +415,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         });
 
         // オービター
-        // @ts-ignore - 動的ロードTHREE
         interface Orbiter {
           s: any;
           r: number;
@@ -563,7 +557,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     logPixiBackground("info", "init-start");
 
-    // @ts-ignore - 動的ロード
     let app: any | null = null;
     let frameId: number | undefined;
     let isAnimating = false; // アニメーションフラグをトップレベルで宣言
@@ -572,7 +565,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     const initPixi = async () => {
       try {
         // ⚡ Pixi.jsを動的にロード (初回のみ400KB削減)
-        // @ts-ignore - 動的インポート
         PIXI = await import("pixi.js");
         logPixiBackground("info", "pixi-loaded");
 
@@ -624,7 +616,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         logPixiBackground("info", "mountains-created");
 
         // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
-        // @ts-ignore - 動的ロードPIXI
         interface ParticleData {
           particle: any;
           vx: number;
