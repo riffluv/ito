@@ -180,13 +180,38 @@ export function useLeaveCleanup({
   }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey])
 
   const performCleanupRef = useRef(performCleanup)
+  const skipCleanupRef = useRef(false)
+
   useEffect(() => {
     performCleanupRef.current = performCleanup
   }, [performCleanup])
 
   useEffect(() => {
     if (!enabled) return
+
+    skipCleanupRef.current = true
+    let timeout: ReturnType<typeof setTimeout> | null = null
+
+    const release = () => {
+      skipCleanupRef.current = false
+      timeout = null
+    }
+
+    if (typeof queueMicrotask === "function") {
+      queueMicrotask(release)
+    } else {
+      timeout = setTimeout(release, 0)
+    }
+
     return () => {
+      if (timeout !== null) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      if (skipCleanupRef.current) {
+        skipCleanupRef.current = false
+        return
+      }
       try {
         performCleanupRef.current?.()
       } catch {}
@@ -210,3 +235,4 @@ export function useLeaveCleanup({
     }
   }, [enabled, performCleanup])
 }
+
