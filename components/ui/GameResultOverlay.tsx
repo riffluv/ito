@@ -4,12 +4,12 @@ import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { useSoundManager } from "@/lib/audio/SoundProvider";
 
 const VICTORY_TITLE = "🏆 勝利！";
 const FAILURE_TITLE = "💀 失敗…";
 const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
 const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
-const SUCCESS_SOUND_MODE: "normal" | "epic" = "normal";
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -31,13 +31,18 @@ export function GameResultOverlay({
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
   const playFailure = useSoundEffect("clear_failure");
+  const soundManager = useSoundManager();
 
   useEffect(() => {
+    // Get fresh settings from localStorage
+    const currentSettings = soundManager?.getSettings();
+    const successMode = currentSettings?.successMode ?? "normal";
+
     if (mode !== "overlay") {
       if (failed) {
         playFailure();
       } else {
-        if (SUCCESS_SOUND_MODE === "epic") {
+        if (successMode === "epic") {
           playSuccessEpic();
         } else {
           playSuccessNormal();
@@ -45,10 +50,10 @@ export function GameResultOverlay({
       }
       return;
     }
-    if (!failed && SUCCESS_SOUND_MODE === "epic") {
+    if (!failed && successMode === "epic") {
       playSuccessEpic();
     }
-  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic]);
+  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, soundManager]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
@@ -504,7 +509,9 @@ export function GameResultOverlay({
           duration: 0.37, // 0.45 → 0.35 → 0.37 に微調整！
           ease: "back.out(2.5)",
           onStart: () => {
-            if (SUCCESS_SOUND_MODE === "normal") {
+            const currentSettings = soundManager?.getSettings();
+            const successMode = currentSettings?.successMode ?? "normal";
+            if (successMode === "normal") {
               playSuccessNormal();
             }
           },
