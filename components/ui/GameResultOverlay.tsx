@@ -9,6 +9,7 @@ const VICTORY_TITLE = "🏆 勝利！";
 const FAILURE_TITLE = "💀 失敗…";
 const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
 const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
+const SUCCESS_SOUND_MODE: "normal" | "epic" = "normal";
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -27,15 +28,27 @@ export function GameResultOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
-  const playClearSuccess = useSoundEffect("clear_success");
+  const playSuccessNormal = useSoundEffect("clear_success1");
+  const playSuccessEpic = useSoundEffect("clear_success2");
   const playFailure = useSoundEffect("clear_failure");
 
   useEffect(() => {
-    if (mode !== "overlay") return;
-    if (!failed) {
-      playClearSuccess();
+    if (mode !== "overlay") {
+      if (failed) {
+        playFailure();
+      } else {
+        if (SUCCESS_SOUND_MODE === "epic") {
+          playSuccessEpic();
+        } else {
+          playSuccessNormal();
+        }
+      }
+      return;
     }
-  }, [failed, mode, playClearSuccess]);
+    if (!failed && SUCCESS_SOUND_MODE === "epic") {
+      playSuccessEpic();
+    }
+  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
@@ -490,6 +503,11 @@ export function GameResultOverlay({
           filter: "blur(0px) brightness(1)",
           duration: 0.37, // 0.45 → 0.35 → 0.37 に微調整！
           ease: "back.out(2.5)",
+          onStart: () => {
+            if (SUCCESS_SOUND_MODE === "normal") {
+              playSuccessNormal();
+            }
+          },
         },
         0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
       )
