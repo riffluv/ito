@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 // ⚡ PERFORMANCE: Three.jsを動的インポートに変更
-// @ts-ignore - 動的インポート時の型エラー抑制
 import type * as THREETypes from "three";
 import { logError, logInfo } from "@/lib/utils/log";
 
@@ -23,14 +22,12 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
     if (!mountRef.current) return;
     logInfo("three-background-advanced", "init-start");
 
-    // @ts-ignore - 動的ロード
     let THREE: any = null;
     let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any, FXAAShader: any;
 
     const initAdvancedBackground = async () => {
       try {
         // ⚡ Three.jsを動的にロード
-        // @ts-ignore - 動的インポート
         THREE = await import("three");
         logInfo("three-background-advanced", "three-loaded");
 
@@ -79,7 +76,6 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         }
 
         // 共通テクスチャ関数
-        // @ts-ignore - 動的ロード
         const makeCircleTexture = (size = 64): any => {
           const canvas = document.createElement('canvas');
           canvas.width = canvas.height = size;
@@ -268,7 +264,6 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         });
 
         // オービター
-        // @ts-ignore - 動的ロード
         interface Orbiter {
           s: any;
           r: number;

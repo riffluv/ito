@@ -63,10 +63,13 @@ export type PlaybackOverrides = {
   skipUnlock?: boolean;
 };
 
+export type SoundSuccessMode = "normal" | "epic";
+
 export type SoundSettings = {
   masterVolume: number; // 0..1 linear
   muted: boolean;
   categoryVolume: Record<SoundCategory, number>;
+  successMode: SoundSuccessMode;
 };
 
 export type SoundEvent =
@@ -85,6 +88,7 @@ export const SOUND_CATEGORIES: SoundCategory[] = [
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
   masterVolume: 0.85,
   muted: false,
+  successMode: "normal",
   categoryVolume: {
     ui: 1,
     notify: 1,

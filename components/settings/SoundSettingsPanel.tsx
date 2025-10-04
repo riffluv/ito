@@ -139,7 +139,7 @@ export function SoundSettingsPanel({
           onChange={(e) => setDraftMasterVolume(parseFloat(e.target.value))}
           style={{
             width: "100%",
-            accentColor: UI_TOKENS.COLORS.dragonQuestGold,
+            accentColor: UI_TOKENS.COLORS.dqGold,
           }}
         />
       </Box>
@@ -154,7 +154,7 @@ export function SoundSettingsPanel({
           onClick={() => setDraftMuted(!draftMuted)}
           px={4}
           py={1}
-          bg={draftMuted ? UI_TOKENS.COLORS.dragonQuestGold : "gray.700"}
+          bg={draftMuted ? UI_TOKENS.COLORS.dqGold : "gray.700"}
           color={draftMuted ? "black" : "white"}
           borderRadius={0}
           border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
@@ -187,7 +187,7 @@ export function SoundSettingsPanel({
           onChange={(e) => setDraftBgmVolume(parseFloat(e.target.value))}
           style={{
             width: "100%",
-            accentColor: UI_TOKENS.COLORS.dragonQuestGold,
+            accentColor: UI_TOKENS.COLORS.dqGold,
           }}
         />
       </Box>
@@ -211,7 +211,7 @@ export function SoundSettingsPanel({
           onChange={(e) => setDraftSystemVolume(parseFloat(e.target.value))}
           style={{
             width: "100%",
-            accentColor: UI_TOKENS.COLORS.dragonQuestGold,
+            accentColor: UI_TOKENS.COLORS.dqGold,
           }}
         />
       </Box>
@@ -235,7 +235,7 @@ export function SoundSettingsPanel({
           onChange={(e) => setDraftSfxVolume(parseFloat(e.target.value))}
           style={{
             width: "100%",
-            accentColor: UI_TOKENS.COLORS.dragonQuestGold,
+            accentColor: UI_TOKENS.COLORS.dqGold,
           }}
         />
       </Box>
