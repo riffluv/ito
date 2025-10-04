@@ -435,7 +435,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       setPending((prev) => prev.filter((id) => id !== activeId));
       try {
         await removeCardFromProposal(roomId, activeId);
-        playDropSuccess();
+        playCardPlace();
         notify({ title: "カードを戻しました", type: "info", duration: 900 });
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
