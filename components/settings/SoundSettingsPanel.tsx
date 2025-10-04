@@ -1,243 +1,221 @@
 "use client";
-import { Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-type SoundSettingsPanelProps = {
-  isModalOpen: boolean;
-  previewMuted: boolean;
-  previewMasterVolume: number;
-  onMutedChange: (muted: boolean) => void;
-  onMasterVolumeChange: (volume: number) => void;
-  onDraftStateChange?: (isDirty: boolean) => void;
-  registerActions?: (actions: {
-    save: () => void;
-    cancel: () => void;
-  }) => void;
-};
-
-export function SoundSettingsPanel({
-  isModalOpen,
-  previewMuted,
-  previewMasterVolume,
-  onMutedChange,
-  onMasterVolumeChange,
-  onDraftStateChange,
-  registerActions,
-}: SoundSettingsPanelProps) {
+export function SoundSettingsPanel() {
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
 
-  // Draft state for all settings
-  const [draftMasterVolume, setDraftMasterVolume] = useState(soundSettings.masterVolume);
-  const [draftMuted, setDraftMuted] = useState(soundSettings.muted);
-  const [draftBgmVolume, setDraftBgmVolume] = useState(soundSettings.categoryVolume.ambient);
-  const [draftSystemVolume, setDraftSystemVolume] = useState(soundSettings.categoryVolume.system);
-  const [draftSfxVolume, setDraftSfxVolume] = useState(soundSettings.categoryVolume.ui);
-
-  const prevIsOpenRef = useRef(false);
-
-  // Reset draft when modal opens
-  useEffect(() => {
-    if (isModalOpen && !prevIsOpenRef.current) {
-      setDraftMasterVolume(soundSettings.masterVolume);
-      setDraftMuted(soundSettings.muted);
-      setDraftBgmVolume(soundSettings.categoryVolume.ambient);
-      setDraftSystemVolume(soundSettings.categoryVolume.system);
-      setDraftSfxVolume(soundSettings.categoryVolume.ui);
-    }
-    prevIsOpenRef.current = isModalOpen;
-  }, [isModalOpen, soundSettings]);
-
-  // Check if draft is dirty
-  const isDirty =
-    draftMasterVolume !== soundSettings.masterVolume ||
-    draftMuted !== soundSettings.muted ||
-    draftBgmVolume !== soundSettings.categoryVolume.ambient ||
-    draftSystemVolume !== soundSettings.categoryVolume.system ||
-    draftSfxVolume !== soundSettings.categoryVolume.ui;
+  const [masterVolume, setMasterVolume] = useState(soundSettings.masterVolume);
+  const [muted, setMuted] = useState(soundSettings.muted);
+  const [bgmVolume, setBgmVolume] = useState(soundSettings.categoryVolume.ambient);
+  const [systemVolume, setSystemVolume] = useState(soundSettings.categoryVolume.system);
+  const [sfxVolume, setSfxVolume] = useState(soundSettings.categoryVolume.ui);
+  const [successMode, setSuccessMode] = useState(soundSettings.successMode);
 
   useEffect(() => {
-    onDraftStateChange?.(isDirty);
-  }, [isDirty, onDraftStateChange]);
-
-  const handleSave = useCallback(() => {
-    if (!soundManager) return;
-
-    // Apply all changes at once
-    const currentSettings = soundManager.getSettings();
-
-    if (currentSettings.masterVolume !== draftMasterVolume) {
-      soundManager.setMasterVolume(draftMasterVolume);
-    }
-    if (currentSettings.muted !== draftMuted) {
-      soundManager.setMuted(draftMuted);
-    }
-    if (currentSettings.categoryVolume.ambient !== draftBgmVolume) {
-      soundManager.setCategoryVolume("ambient", draftBgmVolume);
-    }
-    if (currentSettings.categoryVolume.system !== draftSystemVolume) {
-      soundManager.setCategoryVolume("system", draftSystemVolume);
-      soundManager.setCategoryVolume("result", draftSystemVolume);
-      soundManager.setCategoryVolume("notify", draftSystemVolume);
-    }
-    if (currentSettings.categoryVolume.ui !== draftSfxVolume) {
-      soundManager.setCategoryVolume("ui", draftSfxVolume);
-      soundManager.setCategoryVolume("card", draftSfxVolume);
-      soundManager.setCategoryVolume("drag", draftSfxVolume);
-    }
-
-    // Update preview state
-    onMasterVolumeChange(draftMasterVolume);
-    onMutedChange(draftMuted);
+    setMasterVolume(soundSettings.masterVolume);
+    setMuted(soundSettings.muted);
+    setBgmVolume(soundSettings.categoryVolume.ambient);
+    setSystemVolume(soundSettings.categoryVolume.system);
+    setSfxVolume(soundSettings.categoryVolume.ui);
+    setSuccessMode(soundSettings.successMode);
   }, [
-    soundManager,
-    draftMasterVolume,
-    draftMuted,
-    draftBgmVolume,
-    draftSystemVolume,
-    draftSfxVolume,
-    onMasterVolumeChange,
-    onMutedChange,
+    soundSettings.masterVolume,
+    soundSettings.muted,
+    soundSettings.categoryVolume.ambient,
+    soundSettings.categoryVolume.system,
+    soundSettings.categoryVolume.ui,
+    soundSettings.successMode,
   ]);
 
-  const handleCancel = useCallback(() => {
-    // Reset draft to saved settings
-    setDraftMasterVolume(soundSettings.masterVolume);
-    setDraftMuted(soundSettings.muted);
-    setDraftBgmVolume(soundSettings.categoryVolume.ambient);
-    setDraftSystemVolume(soundSettings.categoryVolume.system);
-    setDraftSfxVolume(soundSettings.categoryVolume.ui);
-    onMasterVolumeChange(soundSettings.masterVolume);
-    onMutedChange(soundSettings.muted);
-  }, [soundSettings, onMasterVolumeChange, onMutedChange]);
+  const applyMasterVolume = (value: number) => {
+    setMasterVolume(value);
+    soundManager?.setMasterVolume(value);
+  };
 
-  useEffect(() => {
-    registerActions?.({ save: handleSave, cancel: handleCancel });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleSave, handleCancel]);
+  const applyMuted = (next: boolean) => {
+    setMuted(next);
+    soundManager?.setMuted(next);
+  };
+
+  const applyCategoryVolume = (
+    category: "ambient" | "system" | "ui",
+    value: number,
+  ) => {
+    if (!soundManager) return;
+    if (category === "ambient") {
+      soundManager.setCategoryVolume("ambient", value);
+    } else if (category === "system") {
+      soundManager.setCategoryVolume("system", value);
+      soundManager.setCategoryVolume("result", value);
+      soundManager.setCategoryVolume("notify", value);
+    } else if (category === "ui") {
+      soundManager.setCategoryVolume("ui", value);
+      soundManager.setCategoryVolume("card", value);
+      soundManager.setCategoryVolume("drag", value);
+    }
+  };
+
+  const applySuccessMode = (mode: typeof successMode) => {
+    setSuccessMode(mode);
+    soundManager?.setSuccessMode(mode);
+  };
+
+  const renderSlider = (
+    label: string,
+    value: number,
+    onChange: (val: number) => void,
+    hint?: string,
+  ) => (
+    <Box>
+      <HStack justify="space-between" mb={2}>
+        <Text fontWeight="bold" fontSize="sm" fontFamily="monospace">
+          {label}
+        </Text>
+        <Text fontSize="sm" opacity={0.8} fontFamily="monospace">
+          {Math.round(value * 100)}%
+        </Text>
+      </HStack>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={value}
+        onChange={(event) => onChange(parseFloat(event.target.value))}
+        style={{
+          width: "100%",
+          accentColor: UI_TOKENS.COLORS.dqGold,
+        }}
+      />
+      {hint ? (
+        <Text
+          fontSize="xs"
+          color={UI_TOKENS.COLORS.textMuted}
+          mt={1}
+          fontFamily="monospace"
+        >
+          {hint}
+        </Text>
+      ) : null}
+    </Box>
+  );
 
   return (
-    <Stack gap={6} color="white">
-      {/* 全体音量 */}
-      <Box>
-        <HStack justify="space-between" mb={2}>
-          <Text fontWeight="bold" fontSize="sm">
-            全体音量
-          </Text>
-          <Text fontSize="sm" opacity={0.8}>
-            {Math.round(draftMasterVolume * 100)}%
-          </Text>
-        </HStack>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={draftMasterVolume}
-          onChange={(e) => setDraftMasterVolume(parseFloat(e.target.value))}
-          style={{
-            width: "100%",
-            accentColor: UI_TOKENS.COLORS.dqGold,
-          }}
-        />
-      </Box>
+    <Stack gap={6} color="white" fontFamily="monospace">
+      {renderSlider("全体音量", masterVolume, (value) => applyMasterVolume(value))}
 
-      {/* ミュート */}
       <HStack justify="space-between">
         <Text fontWeight="bold" fontSize="sm">
           ミュート
         </Text>
         <Box
           as="button"
-          onClick={() => setDraftMuted(!draftMuted)}
+          onClick={() => applyMuted(!muted)}
           px={4}
           py={1}
-          bg={draftMuted ? UI_TOKENS.COLORS.dqGold : "gray.700"}
-          color={draftMuted ? "black" : "white"}
+          bg={muted ? UI_TOKENS.COLORS.dqGold : "gray.700"}
+          color={muted ? "black" : "white"}
           borderRadius={0}
           border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           fontWeight="bold"
           fontSize="sm"
           cursor="pointer"
           transition="all 0.2s"
-          _hover={{ opacity: 0.8 }}
+          _hover={{ opacity: 0.85 }}
         >
-          {draftMuted ? "ON" : "OFF"}
+          {muted ? "ON" : "OFF"}
         </Box>
       </HStack>
 
-      {/* BGM音量 */}
-      <Box>
-        <HStack justify="space-between" mb={2}>
-          <Text fontWeight="bold" fontSize="sm">
-            BGM音量
-          </Text>
-          <Text fontSize="sm" opacity={0.8}>
-            {Math.round(draftBgmVolume * 100)}%
-          </Text>
-        </HStack>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={draftBgmVolume}
-          onChange={(e) => setDraftBgmVolume(parseFloat(e.target.value))}
-          style={{
-            width: "100%",
-            accentColor: UI_TOKENS.COLORS.dqGold,
-          }}
-        />
-      </Box>
+      {renderSlider("BGM音量", bgmVolume, (value) => {
+        setBgmVolume(value);
+        applyCategoryVolume("ambient", value);
+      })}
 
-      {/* 演出サウンド音量 */}
-      <Box>
-        <HStack justify="space-between" mb={2}>
-          <Text fontWeight="bold" fontSize="sm">
-            演出サウンド音量
-          </Text>
-          <Text fontSize="sm" opacity={0.8}>
-            {Math.round(draftSystemVolume * 100)}%
-          </Text>
-        </HStack>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={draftSystemVolume}
-          onChange={(e) => setDraftSystemVolume(parseFloat(e.target.value))}
-          style={{
-            width: "100%",
-            accentColor: UI_TOKENS.COLORS.dqGold,
-          }}
-        />
-      </Box>
+      {renderSlider(
+        "演出サウンド音量",
+        systemVolume,
+        (value) => {
+          setSystemVolume(value);
+          applyCategoryVolume("system", value);
+        },
+        "リザルトや通知のファンファーレも一緒に調整されます",
+      )}
 
-      {/* 効果音音量 */}
-      <Box>
-        <HStack justify="space-between" mb={2}>
+      {renderSlider(
+        "効果音音量",
+        sfxVolume,
+        (value) => {
+          setSfxVolume(value);
+          applyCategoryVolume("ui", value);
+        },
+        "カード操作やドラッグの効果音に影響します",
+      )}
+
+      <Box
+        border="2px solid"
+        borderColor={UI_TOKENS.COLORS.whiteAlpha30}
+        bg={UI_TOKENS.COLORS.panelBg}
+        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+        p={4}
+        borderRadius={0}
+      >
+        <VStack align="stretch" gap={3}>
           <Text fontWeight="bold" fontSize="sm">
-            効果音音量
+            勝利ファンファーレ
           </Text>
-          <Text fontSize="sm" opacity={0.8}>
-            {Math.round(draftSfxVolume * 100)}%
-          </Text>
-        </HStack>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={draftSfxVolume}
-          onChange={(e) => setDraftSfxVolume(parseFloat(e.target.value))}
-          style={{
-            width: "100%",
-            accentColor: UI_TOKENS.COLORS.dqGold,
-          }}
-        />
+          <HStack gap={3} flexWrap="wrap">
+            {[
+              {
+                mode: "normal" as const,
+                title: "ノーマル",
+                description: "",
+              },
+              {
+                mode: "epic" as const,
+                title: "エピック",
+                description: "",
+              },
+            ].map(({ mode, title, description }) => {
+              const active = successMode === mode;
+              return (
+                <Box
+                  key={mode}
+                  as="button"
+                  onClick={() => applySuccessMode(mode)}
+                  px={4}
+                  py={3}
+                  borderRadius={0}
+                  border="2px solid"
+                  borderColor={
+                    active
+                      ? UI_TOKENS.COLORS.whiteAlpha90
+                      : UI_TOKENS.COLORS.whiteAlpha40
+                  }
+                  bg={
+                    active
+                      ? UI_TOKENS.COLORS.dqGold
+                      : UI_TOKENS.COLORS.whiteAlpha10
+                  }
+                  color={active ? UI_TOKENS.COLORS.panelBg : "white"}
+                  minW="140px"
+                  textAlign="left"
+                  cursor="pointer"
+                  transition="all 0.2s"
+                  _hover={{ opacity: 0.9 }}
+                >
+                  <Text fontWeight="bold" fontSize="sm">
+                    {title}
+                  </Text>
+                </Box>
+              );
+            })}
+          </HStack>
+        </VStack>
       </Box>
 
     </Stack>

@@ -60,28 +60,10 @@ export function SettingsModal({
   );
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
-  const [previewMuted, setPreviewMuted] = useState(soundSettings.muted);
-  const [previewMasterVolume, setPreviewMasterVolume] = useState(
-    soundSettings.masterVolume
-  );
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [soundActions, setSoundActions] = useState<{
-    save: () => void;
-    cancel: () => void;
-  } | null>(null);
-
-  const registerSoundActions = (actions: { save: () => void; cancel: () => void }) => {
-    setSoundActions(actions);
-  };
 
   const SOUND_FEATURE_LOCKED = false;
   const soundLockMessage =
     "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
-
-  useEffect(() => {
-    setPreviewMuted(soundSettings.muted);
-    setPreviewMasterVolume(soundSettings.masterVolume);
-  }, [soundSettings.muted, soundSettings.masterVolume]);
 
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -243,11 +225,6 @@ export function SettingsModal({
 
     setSaving(true);
     try {
-      // Save sound settings if in sound tab
-      if (activeTab === "sound" && soundActions) {
-        soundActions.save();
-      }
-
       await updateDoc(doc(db!, "rooms", roomId), {
         "options.resolveMode": resolveMode,
         "options.defaultTopicType": defaultTopicType,
@@ -1217,20 +1194,12 @@ export function SettingsModal({
                 <SoundSettingsPlaceholder
                   locked={SOUND_FEATURE_LOCKED}
                   message={soundLockMessage}
-                  masterVolume={previewMasterVolume}
-                  muted={previewMuted}
+                  masterVolume={soundSettings.masterVolume}
+                  muted={soundSettings.muted}
                   soundManagerReady={Boolean(soundManager)}
                 />
               ) : (
-                <SoundSettingsPanel
-                  isModalOpen={isOpen}
-                  previewMuted={previewMuted}
-                  previewMasterVolume={previewMasterVolume}
-                  onMutedChange={setPreviewMuted}
-                  onMasterVolumeChange={setPreviewMasterVolume}
-                  onDraftStateChange={setHasUnsavedChanges}
-                  registerActions={registerSoundActions}
-                />
+                <SoundSettingsPanel />
               )
             )}
           </Dialog.Body>
@@ -1270,49 +1239,70 @@ export function SettingsModal({
                   e.currentTarget.style.color = "white";
                 }}
               >
-                やめる
+                戻る
               </button>
 
-              <button
-                onClick={handleSave}
-                disabled={saving || !isHost || roomStatus !== "waiting"}
-                style={{
-                  minWidth: "140px",
-                  height: "40px",
-                  borderRadius: 0,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  fontFamily: "monospace",
-                  border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                  background:
-                    saving || !isHost || roomStatus !== "waiting"
-                      ? "#666"
-                      : UI_TOKENS.COLORS.panelBg,
-                  color: "white",
-                  cursor:
-                    saving || !isHost || roomStatus !== "waiting"
-                      ? "not-allowed"
-                      : "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
-                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  opacity:
-                    saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!saving && isHost && roomStatus === "waiting") {
-                    e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!saving && isHost && roomStatus === "waiting") {
-                    e.currentTarget.style.background = UI_TOKENS.COLORS.panelBg;
-                    e.currentTarget.style.color = "white";
-                  }
-                }}
-              >
-                {saving ? "きろくちゅう..." : "きろく"}
-              </button>
+              {activeTab === "game" ? (
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !isHost || roomStatus !== "waiting"}
+                  style={{
+                    minWidth: "140px",
+                    height: "40px",
+                    borderRadius: 0,
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    fontFamily: "monospace",
+                    border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+                    background:
+                      saving || !isHost || roomStatus !== "waiting"
+                        ? "#666"
+                        : UI_TOKENS.COLORS.panelBg,
+                    color: "white",
+                    cursor:
+                      saving || !isHost || roomStatus !== "waiting"
+                        ? "not-allowed"
+                        : "pointer",
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    opacity:
+                      saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving && isHost && roomStatus === "waiting") {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!saving && isHost && roomStatus === "waiting") {
+                      e.currentTarget.style.background = UI_TOKENS.COLORS.panelBg;
+                      e.currentTarget.style.color = "white";
+                    }
+                  }}
+                >
+                  {saving ? "記録中..." : "記録"}
+                </button>
+              ) : (
+                <Box
+                  px={4}
+                  py={2.5}
+                  borderWidth="2px"
+                  borderStyle="solid"
+                  borderColor={UI_TOKENS.COLORS.whiteAlpha60}
+                  bg={UI_TOKENS.COLORS.whiteAlpha10}
+                  color={UI_TOKENS.COLORS.whiteAlpha80}
+                  fontFamily="monospace"
+                  fontSize="0.9rem"
+                  minW="180px"
+                  textAlign="center"
+                  lineHeight="short"
+                >
+                  選択した内容は
+                  <br />
+                  即座に記録されます
+                </Box>
+              )}
             </HStack>
           </Box>
         </Dialog.Content>

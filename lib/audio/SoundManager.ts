@@ -11,6 +11,7 @@ import {
   SoundEvent,
   SoundId,
   SoundSettings,
+  SoundSuccessMode,
   SoundVariant,
 } from "./types";
 
@@ -224,6 +225,12 @@ export class SoundManager {
     this.settings = { ...this.settings, masterVolume: normalized };
     this.persistAndNotify();
     this.applyGainTargets();
+  }
+
+  setSuccessMode(mode: SoundSuccessMode) {
+    if (this.settings.successMode === mode) return;
+    this.settings = { ...this.settings, successMode: mode };
+    this.persistAndNotify();
   }
 
   setCategoryVolume(category: SoundCategory, volume: number) {
