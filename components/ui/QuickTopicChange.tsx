@@ -1,5 +1,5 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
+import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
@@ -7,7 +7,7 @@ import { topicTypeLabels } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
 import { Menu, Text, VStack } from "@chakra-ui/react";
 import { ChevronDown, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export type QuickTopicChangeProps = {
   roomId: string;
@@ -26,6 +26,21 @@ export function QuickTopicChange({
 
   const currentTopic = (room as any)?.topic;
   const currentTopicBox = (room as any)?.topicBox;
+
+  const triggerLabel = useMemo(
+    () => (currentTopic ? "お題変更" : "お題を選択"),
+    [currentTopic]
+  );
+
+  const triggerSubLabel = useMemo(
+    () =>
+      currentTopic && currentTopicBox
+        ? `${currentTopicBox}`
+        : currentTopic
+        ? currentTopic
+        : "カテゴリを選択",
+    [currentTopic, currentTopicBox]
+  );
 
   const handleCategorySelect = async (category: string) => {
     if (isLoading) return;
@@ -78,24 +93,26 @@ export function QuickTopicChange({
 
   if (variant === "button") {
     return (
-      <VStack gap={2}>
+      <VStack gap={2} align="stretch">
         {currentTopic && (
-          <AppButton
+          <OctopathDockButton
             onClick={handleShuffle}
-            variant="outline"
-            size={size}
-            loading={isLoading}
-          >
-            <RefreshCw size={14} />
-            お題をシャッフル
-          </AppButton>
+            isLoading={isLoading}
+            disabled={!currentTopicBox}
+            icon={<RefreshCw size={16} />}
+            label="お題をシャッフル"
+            subLabel={currentTopic || undefined}
+          />
         )}
         <Menu.Root>
           <Menu.Trigger asChild>
-            <AppButton variant="outline" size={size} loading={isLoading}>
-              📝 お題変更
-              <ChevronDown size={14} />
-            </AppButton>
+            <OctopathDockButton
+              label={triggerLabel}
+              subLabel={triggerSubLabel}
+              icon={<ChevronDown size={14} />}
+              isLoading={isLoading}
+              disabled={isLoading}
+            />
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content>
@@ -120,17 +137,14 @@ export function QuickTopicChange({
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <AppButton
-          variant="ghost"
-          size="sm"
-          loading={isLoading}
-          title={currentTopic ? `お題変更 (現在: ${currentTopic})` : "お題を選択"}
-          px={2}
-          minW="auto"
-        >
-          📝
-          <ChevronDown size={12} />
-        </AppButton>
+        <OctopathDockButton
+          label={triggerLabel}
+          subLabel={triggerSubLabel}
+          icon={<ChevronDown size={14} />}
+          isLoading={isLoading}
+          disabled={isLoading}
+          minW="220px"
+        />
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content>
