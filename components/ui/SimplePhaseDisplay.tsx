@@ -1,10 +1,31 @@
 "use client";
 import { Box, Text } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import Tooltip from "@/components/ui/Tooltip";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+
+const phaseAurora = keyframes`
+  0% { transform: translateX(0px) translateY(0px); opacity: 0.55; }
+  45% { transform: translateX(6px) translateY(-3px); opacity: 0.75; }
+  100% { transform: translateX(-5px) translateY(2px); opacity: 0.5; }
+`;
+
+const phaseVeil = keyframes`
+  0% { transform: rotate(-1.5deg) translateY(-6px); opacity: 0.22; }
+  35% { transform: rotate(-0.2deg) translateY(-2px); opacity: 0.30; }
+  65% { transform: rotate(1.1deg) translateY(-4px); opacity: 0.18; }
+  100% { transform: rotate(-1.5deg) translateY(-6px); opacity: 0.24; }
+`;
+
+const topicGlow = keyframes`
+  0% { transform: translate(-40%, -10%) rotate(18deg); opacity: 0.4; }
+  35% { transform: translate(30%, -6%) rotate(18deg); opacity: 0.75; }
+  55% { transform: translate(60%, -4%) rotate(18deg); opacity: 0.5; }
+  100% { transform: translate(120%, -8%) rotate(18deg); opacity: 0.35; }
+`;
 
 // ドラクエ風フェーズアナウンス（シンプル版）
 const getPhaseInfo = (status: string, canStartSorting: boolean = false) => {
@@ -245,6 +266,32 @@ export function SimplePhaseDisplay({
       maxWidth="min(92vw, 520px)"
       css={{
         pointerEvents: "none",
+        position: "relative",
+        isolation: "isolate",
+        '&::before': {
+          content: "''",
+          position: "absolute",
+          inset: "-18px -24px",
+          background: 'radial-gradient(circle at 30% 15%, rgba(120, 180, 255, 0.08), transparent 55%)',
+          filter: 'blur(18px)',
+          opacity: 0.8,
+          animation: `${phaseAurora} 11.8s ease-in-out infinite`,
+          pointerEvents: 'none',
+        },
+        '&::after': {
+          content: "''",
+          position: "absolute",
+          inset: "-10px -18px",
+          background: 'linear-gradient(137deg, rgba(90,120,220,0.08) 0%, rgba(40,65,160,0.12) 60%, rgba(12, 20, 60, 0.0) 100%)',
+          transform: 'rotate(-1.5deg) translateY(-6px)',
+          animation: `${phaseVeil} 16.4s cubic-bezier(0.32, 0.22, 0.18, 1) infinite`,
+          pointerEvents: 'none',
+          mixBlendMode: 'screen',
+        },
+        '@media (prefers-reduced-motion: reduce)': {
+          '&::before': { animation: 'none', opacity: 0.45 },
+          '&::after': { animation: 'none', opacity: 0.12 },
+        },
       }}
     >
       {/* フェーズアナウンス（シームレス・大きく・真っ白） */}
@@ -298,6 +345,21 @@ export function SimplePhaseDisplay({
                 0 8px 32px rgba(0, 0, 0, 0.5),
                 0 0 24px rgba(255, 215, 0, 0.2)
               `,
+              overflow: 'hidden',
+              '&::after': {
+                content: "''",
+                position: 'absolute',
+                inset: '-120% -40%',
+                background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.35), rgba(255, 215, 0, 0.05) 45%, transparent 65%)',
+                transform: 'translate(-40%, -10%) rotate(18deg)',
+                animation: `${topicGlow} 8.6s linear infinite`,
+                mixBlendMode: 'screen',
+                opacity: 0.55,
+                pointerEvents: 'none',
+              },
+              '@media (prefers-reduced-motion: reduce)': {
+                '&::after': { animation: 'none', opacity: 0.2 },
+              },
             }}
           >
             <Text
