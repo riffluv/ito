@@ -6,7 +6,28 @@ import { AppButton } from "@/components/ui/AppButton";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { HStack } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
-import { AdvancedHostPanel } from "./AdvancedHostPanel";
+import dynamic from "next/dynamic";
+import type { AdvancedHostPanelProps } from "./AdvancedHostPanel";
+
+const mapVariant = (variant?: string) => {
+  switch (variant) {
+    case "link":
+    case "soft":
+      return "ghost" as const;
+    case "outline":
+    case "solid":
+    case "ghost":
+    case "subtle":
+      return variant;
+    default:
+      return "outline" as const;
+  }
+};
+
+const AdvancedHostPanel = dynamic<AdvancedHostPanelProps>(
+  () => import("./AdvancedHostPanel"),
+  { ssr: false, loading: () => null }
+);
 
 interface HostControlDockProps {
   roomId: string;
@@ -51,32 +72,19 @@ export default function HostControlDock({
     autoStartControl,
   });
 
-  // Filter out advancedMode action since we handle it separately
-  // Map to valid AppButton variants
-  const mapVariant = (variant?: string) => {
-    switch (variant) {
-      case "link":
-      case "soft":
-        return "ghost";
-      case "outline":
-      case "solid":
-      case "ghost":
-      case "subtle":
-        return variant;
-      default:
-        return "outline";
-    }
-  };
-
-  const displayActions = hostActions.map((action) => {
-    if (action.key === "advancedMode") {
-      return {
-        ...action,
-        onClick: () => setIsAdvancedOpen(true),
-      };
-    }
-    return action;
-  });
+  const displayActions = useMemo(
+    () =>
+      hostActions.map((action) => {
+        if (action.key === "advancedMode") {
+          return {
+            ...action,
+            onClick: () => setIsAdvancedOpen(true),
+          };
+        }
+        return action;
+      }),
+    [hostActions, setIsAdvancedOpen]
+  );
 
   return (
     <>
@@ -96,14 +104,16 @@ export default function HostControlDock({
         ))}
       </HStack>
 
-      <AdvancedHostPanel
-        isOpen={isAdvancedOpen}
-        onClose={() => setIsAdvancedOpen(false)}
-        roomId={roomId}
-        room={room}
-        players={players}
-        onlineCount={onlineCount || players.length}
-      />
+      {isAdvancedOpen ? (
+        <AdvancedHostPanel
+          isOpen={isAdvancedOpen}
+          onClose={() => setIsAdvancedOpen(false)}
+          roomId={roomId}
+          room={room}
+          players={players}
+          onlineCount={onlineCount || players.length}
+        />
+      ) : null}
     </>
   );
 }
