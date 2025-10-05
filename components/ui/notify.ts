@@ -25,6 +25,40 @@ export function notify(opts: NotifyOptions | string): void {
   });
 }
 
+export type NotifyAsyncState = "pending" | "success" | "error";
+
+type NotifyAsyncEventMap = Partial<Record<NotifyAsyncState, NotifyOptions | string>>;
+
+export async function notifyAsync<T>(
+  task: () => Promise<T>,
+  events: NotifyAsyncEventMap,
+  options?: { id?: string | number }
+): Promise<T | null> {
+  const { pending, success, error } = events;
+  const finalId = options?.id != null ? String(options.id) : undefined;
+
+  if (pending) {
+    notify({ ...(typeof pending === "string" ? { title: pending } : pending), id: finalId });
+  }
+
+  try {
+    const result = await task();
+    if (success) {
+      notify({
+        ...(typeof success === "string" ? { title: success } : success),
+        id: finalId,
+      });
+    }
+    return result;
+  } catch (err: any) {
+    if (error) {
+      const base = typeof error === "string" ? { title: error } : error;
+      notify({ ...base, id: finalId, description: base.description ?? err?.message });
+    }
+    return null;
+  }
+}
+
 export async function notifyPromise<T>(
   p: Promise<T>,
   opts?: {

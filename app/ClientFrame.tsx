@@ -1,4 +1,5 @@
 "use client";
+import PerfStatsOverlay from "@/components/dev/PerfStatsOverlay";
 import Header from "@/components/site/Header";
 import { usePathname } from "next/navigation";
 import React from "react";
@@ -13,6 +14,7 @@ export function ClientFrame({ children }: { children: React.ReactNode }) {
     <>
       {showHeader && <Header />}
       <main id="main" role="main">{children}</main>
+      <PerfStatsOverlay />
     </>
   );
 }
