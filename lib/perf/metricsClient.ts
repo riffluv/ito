@@ -1,14 +1,18 @@
-import * as Sentry from "@sentry/nextjs";
-
 type MetricTags = Record<string, string | undefined> | undefined;
 
 type MetricsApi = {
   distribution?: (name: string, value: number, options?: { tags?: Record<string, string> }) => void;
 };
 
+type SentryGlobal = {
+  metrics?: MetricsApi;
+  captureMessage?: (...args: any[]) => void;
+};
+
 function getMetricsApi(): MetricsApi | null {
-  const maybeMetrics = (Sentry as unknown as { metrics?: MetricsApi }).metrics;
-  return maybeMetrics || null;
+  const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
+  const maybeMetrics = globalScope.Sentry?.metrics;
+  return maybeMetrics ?? null;
 }
 
 function sanitizeTags(tags: MetricTags): Record<string, string> | undefined {
@@ -37,6 +41,13 @@ export function recordMetricDistribution(
       });
       return;
     }
+
+    const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
+    globalScope.Sentry?.captureMessage?.(`metrics:${name}`, {
+      level: "info",
+      extra: { value, tags: sanitizedTags },
+    } as any);
+
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.debug(`[metrics:fallback] ${name}`, { value, tags: sanitizedTags });

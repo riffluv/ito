@@ -66,11 +66,10 @@ export default function PerformanceMetricsInitializer() {
 
     const flush = () => {
       if (!worstInteraction) return;
+      const interactionId = (worstInteraction as any)?.interactionId;
       recordMetricDistribution("client.inp.rolling", worstInteraction.duration, {
         event: worstInteraction.name,
-        interactionId: worstInteraction.interactionId
-          ? String(worstInteraction.interactionId)
-          : undefined,
+        interactionId: interactionId != null ? String(interactionId) : undefined,
       });
       worstInteraction = null;
     };
@@ -98,7 +97,9 @@ export default function PerformanceMetricsInitializer() {
     });
 
     try {
-      observer.observe({ type: "event", buffered: true, durationThreshold: 40 });
+      const observerOptions: PerformanceObserverInit = { type: "event", buffered: true };
+      (observerOptions as any).durationThreshold = 40;
+      observer.observe(observerOptions);
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
         // eslint-disable-next-line no-console
@@ -120,3 +121,7 @@ export default function PerformanceMetricsInitializer() {
 
   return null;
 }
+
+
+
+
