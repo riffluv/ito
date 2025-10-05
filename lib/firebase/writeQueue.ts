@@ -1,6 +1,11 @@
 const queues = new Map<string, QueueState>();
 const DEFAULT_MIN_INTERVAL = 120;
 
+const ENABLE_QUEUE_DEBUG =
+  typeof process !== "undefined" &&
+  (process.env.NEXT_PUBLIC_DEBUG_FIRESTORE_QUEUE === "1" ||
+    process.env.NEXT_PUBLIC_DEBUG_FIRESTORE_QUEUE === "true");
+
 type Task<T> = () => Promise<T>;
 
 interface QueueState {
@@ -44,7 +49,14 @@ async function runNext(scope: string) {
   const elapsed = Date.now() - state.lastRun;
   const wait = Math.max(state.minInterval - elapsed, 0);
 
+  if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
+    console.debug(
+      `[FirestoreQueue] ${scope}: starting task (wait ${wait}ms, remaining ${state.tasks.length})`
+    );
+  }
+
   const start = async () => {
+    const startTime = ENABLE_QUEUE_DEBUG && typeof performance !== "undefined" ? performance.now() : 0;
     try {
       const result = await nextTask.execute();
       state.lastRun = Date.now();
@@ -53,6 +65,12 @@ async function runNext(scope: string) {
       nextTask.reject(error);
     } finally {
       state.running = false;
+      if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
+        const duration = startTime ? performance.now() - startTime : 0;
+        console.debug(
+          `[FirestoreQueue] ${scope}: task completed in ${duration ? duration.toFixed(2) : "?"}ms`
+        );
+      }
       if (state.tasks.length === 0) {
         queues.delete(scope);
       } else {
@@ -77,6 +95,11 @@ export function enqueueFirestoreWrite<T>(
 
   return new Promise<T>((resolve, reject) => {
     state.tasks.push({ execute: task, resolve, reject });
+    if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
+      console.debug(
+        `[FirestoreQueue] ${scope}: enqueued (size ${state.tasks.length}${state.running ? ", running" : ""})`
+      );
+    }
     void runNext(scope);
   });
 }
