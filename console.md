@@ -1,298 +1,289 @@
-react-dom.development.js:38560 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-content.js:85 [VSC] Content script initialized
-log.ts:69 [presence] connection-offline Object
-app-index.js:33 Warning: Cannot update a component (`HotReload`) while rendering a different component (`Box`). To locate the bad setState() call inside `Box`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at DragonQuestParty (webpack-internal:///(app-pages-browser)/./components/ui/DragonQuestParty.tsx:33:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at GameLayout (webpack-internal:///(app-pages-browser)/./components/ui/GameLayout.tsx:23:11)
-    at RoomPageContent (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:125:11)
-    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:1401:79)
-    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at main
-    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:21:11)
-    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
-    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
-    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:18:11)
-    at SoundProvider (webpack-internal:///(app-pages-browser)/./lib/audio/SoundProvider.tsx:25:11)
-    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:39:11)
-    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
-    at Suspense
-    at LoadableComponent (Server)
-    at Providers (Server)
-    at body
-    at html
-    at RootLayout (Server)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
-    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
-    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
-    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
-    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
-window.console.error @ app-index.js:33
-css.js:52 Uncaught TypeError: Cannot create property '@keyframes dqHeaderPulse' on string '0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
-    at mergeByPath (css.js:52:35)
-    at eval (css.js:43:13)
-    at inner (walk-object.js:34:16)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at walkObject (walk-object.js:36:12)
-    at cssFn (css.js:31:74)
-    at get (memo.js:15:49)
-    at eval (use-resolved-props.js:62:16)
-    at mountMemo (react-dom.development.js:12600:19)
-    at Object.useMemo (react-dom.development.js:13305:16)
-    at useMemo (react.development.js:2537:21)
-    at useResolvedProps (use-resolved-props.js:61:66)
-    at eval (factory.js:171:120)
-    at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at updateForwardRef (react-dom.development.js:15854:20)
-    at beginWork$1 (react-dom.development.js:18521:16)
-    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
-    at invokeGuardedCallback (react-dom.development.js:20689:29)
-    at beginWork (react-dom.development.js:26949:7)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-redirect-boundary.js:57 Uncaught TypeError: Cannot create property '@keyframes dqHeaderPulse' on string '0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
-    at mergeByPath (css.js:52:35)
-    at eval (css.js:43:13)
-    at inner (walk-object.js:34:16)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at walkObject (walk-object.js:36:12)
-    at cssFn (css.js:31:74)
-    at get (memo.js:15:49)
-    at eval (use-resolved-props.js:62:16)
-    at mountMemo (react-dom.development.js:12600:19)
-    at Object.useMemo (react-dom.development.js:13305:16)
-    at useMemo (react.development.js:2537:21)
-    at useResolvedProps (use-resolved-props.js:61:66)
-    at eval (factory.js:171:120)
-    at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at updateForwardRef (react-dom.development.js:15854:20)
-    at beginWork$1 (react-dom.development.js:18521:16)
-    at beginWork (react-dom.development.js:26927:14)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24504:74)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-css.js:52 Uncaught TypeError: Cannot create property '@keyframes dqHeaderPulse' on string '0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
-    at mergeByPath (css.js:52:35)
-    at eval (css.js:43:13)
-    at inner (walk-object.js:34:16)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at walkObject (walk-object.js:36:12)
-    at cssFn (css.js:31:74)
-    at get (memo.js:15:49)
-    at eval (use-resolved-props.js:62:16)
-    at mountMemo (react-dom.development.js:12600:19)
-    at Object.useMemo (react-dom.development.js:13305:16)
-    at useMemo (react.development.js:2537:21)
-    at useResolvedProps (use-resolved-props.js:61:66)
-    at eval (factory.js:171:120)
-    at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at updateForwardRef (react-dom.development.js:15854:20)
-    at beginWork$1 (react-dom.development.js:18521:16)
-    at HTMLUnknownElement.callCallback (react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (react-dom.development.js:20614:16)
-    at invokeGuardedCallback (react-dom.development.js:20689:29)
-    at beginWork (react-dom.development.js:26949:7)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at recoverFromConcurrentError (react-dom.development.js:24597:20)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-redirect-boundary.js:57 Uncaught TypeError: Cannot create property '@keyframes dqHeaderPulse' on string '0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
-    at mergeByPath (css.js:52:35)
-    at eval (css.js:43:13)
-    at inner (walk-object.js:34:16)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at inner (walk-object.js:27:30)
-    at walkObject (walk-object.js:36:12)
-    at cssFn (css.js:31:74)
-    at get (memo.js:15:49)
-    at eval (use-resolved-props.js:62:16)
-    at mountMemo (react-dom.development.js:12600:19)
-    at Object.useMemo (react-dom.development.js:13305:16)
-    at useMemo (react.development.js:2537:21)
-    at useResolvedProps (use-resolved-props.js:61:66)
-    at eval (factory.js:171:120)
-    at eval (emotion-element-489459f2.browser.development.esm.js:56:12)
-    at renderWithHooks (react-dom.development.js:11121:18)
-    at updateForwardRef (react-dom.development.js:15854:20)
-    at beginWork$1 (react-dom.development.js:18521:16)
-    at beginWork (react-dom.development.js:26927:14)
-    at performUnitOfWork (react-dom.development.js:25748:12)
-    at workLoopSync (react-dom.development.js:25464:5)
-    at renderRootSync (react-dom.development.js:25419:7)
-    at recoverFromConcurrentError (react-dom.development.js:24597:20)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24542:26)
-    at workLoop (scheduler.development.js:256:34)
-    at flushWork (scheduler.development.js:225:14)
-    at MessagePort.performWorkUntilDeadline (scheduler.development.js:534:21)
-app-index.js:33 The above error occurred in the <RedirectErrorBoundary> component:
+● ✅ ビルド成功！エラー修正完了！
 
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at DragonQuestParty (webpack-internal:///(app-pages-browser)/./components/ui/DragonQuestParty.tsx:33:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at GameLayout (webpack-internal:///(app-pages-browser)/./components/ui/GameLayout.tsx:23:11)
-    at RoomPageContent (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:125:11)
-    at RoomPage (webpack-internal:///(app-pages-browser)/./app/rooms/[roomId]/page.tsx:1401:79)
-    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
-    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
-    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
-    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
-    at main
-    at ClientFrame (webpack-internal:///(app-pages-browser)/./app/ClientFrame.tsx:21:11)
-    at AuthProvider (webpack-internal:///(app-pages-browser)/./context/AuthContext.tsx:18:11)
-    at AuthClientWrapper (webpack-internal:///(app-pages-browser)/./components/AuthClientWrapper.tsx:10:11)
-    at div
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@emotion/react/dist/emotion-element-489459f2.browser.development.esm.js:55:66)
-    at TransitionProvider (webpack-internal:///(app-pages-browser)/./components/ui/TransitionProvider.tsx:22:11)
-    at AnimationProvider (webpack-internal:///(app-pages-browser)/./lib/animation/AnimationContext.tsx:18:11)
-    at SoundProvider (webpack-internal:///(app-pages-browser)/./lib/audio/SoundProvider.tsx:25:11)
-    at ChakraProvider (webpack-internal:///(app-pages-browser)/./node_modules/@chakra-ui/react/dist/esm/styled-system/provider.js:19:20)
-    at ClientProviders (webpack-internal:///(app-pages-browser)/./components/ClientProviders.tsx:39:11)
-    at BailoutToCSR (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/lazy-dynamic/dynamic-bailout-to-csr.js:13:11)
-    at Suspense
-    at LoadableComponent (Server)
-    at Providers (Server)
-    at body
-    at html
-    at RootLayout (Server)
-    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
-    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
-    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
-    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
-    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
-    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
-    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
-    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
-    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
-    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
-    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
-    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
-    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+  ビルドエラーを修正しました。問題はBase64 SVGデータがJSX属性内で直接使用されていたため、構文エラーが発生していました。
 
-React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler.
-window.console.error @ app-index.js:33
-log.ts:69 [presence] detach Object
-log.ts:69 [presence] detach Object
-log.ts:69 [room-page] claim-host success Object
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=kloSB2wkVXNfvXfUl8pQfAybN-shk9jakLfOKFgjj1Q&SID=HsG9p_rSjWTPlfsghB1Xkw&RID=63870&TYPE=terminate&zx=vc8hj6w68qn:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=HHztlant6TWf0_91mqEl1sBKl2JEjsr7GQRIOdVC4YA&SID=HNUKmt30jC1lZe3zOmO52w&RID=66737&TYPE=terminate&zx=ppflz1gl1c6z:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=F0d99m_7Ag97sN9VRXFmcMseexgpvYMxhNl2-sZA_R4&SID=OEa6IBqRvy5llsusKAQ0rw&RID=80154&TYPE=terminate&zx=2k354cvd4q99:1  Failed to load resource: the server responded with a status of 400 ()
-firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fonline-ito%2Fdatabases%2F(default)&gsessionid=MplmvfeTASgr49VQUvPI1N0UTPq2NXbw_iKStEOWTdc&SID=v3Ep5RJ48UPLzUpXu9nNVw&RID=74343&TYPE=terminate&zx=b7gmy6ufjfay:1  Failed to load resource: the server responded with a status of 400 ()
-log.ts:69 [room-service] joinRoomFully-complete Object
+  🔧 修正内容
+
+  原因:
+  - bgImage="url(data:image/svg+xml;base64,...長いBase64文字列...)"
+  - JSX属性内の長いBase64文字列がパーサーエラーを引き起こしていた
+
+  修正:
+  1. NOISE_SVG定数を作成（687行目）
+  const NOISE_SVG = "url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAw...)";
+  2. テンプレートリテラルで参照
+  bgImage={`${NOISE_SVG}, linear-gradient(142deg, #2E7D32 0%, #1B5E20 100%)`}
+  3. 余分な閉じ括弧を修正
+    - 961行目と968行目の}}を,に修正
+
+  ---
+  ビルド成功！オクトパストラベラー風ボタンが完成しました！ 🎮✨
+
+> 何でこんな苦戦したの？svgのなんかアドレス長いけどこれはなに？ 
+
+● すみません！苦戦した理由を説明します。
+
+  🤔 なぜ苦戦したか
+
+  1. Base64 SVGの長さ問題
+
+  このSVG Base64文字列:
+  url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZS    
+  I+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZW    
+  N0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuMDgiLz48L3N2Zz4=)
+
+  これをデコードすると：
+  <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noise)" opacity="0.08"/>
+  </svg>
+
+  これは何？:
+  - ノイズテクスチャを生成するSVGフィルター
+  - 万能デザイン指示書86行目の「グラデが数式的 → ノイズテクスチャ重ね」を実装
+  - AI感を排除するための微細なざらつき効果
+
+  ---
+  2. なぜJSX属性に直接書くとエラーになったか
+
+  問題のコード:
+  bgImage="url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAw...)"
+
+  エラーの原因:
+  - JSX属性内の文字列が長すぎるとTypeScriptパーサーが混乱
+  - Base64文字列内に=や特殊文字があり、JSXの構文解析が壊れた
+  - 特に複数箇所で同じ長い文字列を繰り返し使用したため、エラーが複雑化
+
+  ---
+  3. もっと良い方法があった
+
+  反省点:
+  1. ❌ 最初からJSX属性に長いBase64を直接書いた（これが失敗）
+  2. ❌ 変数に分離すべきだったのに、最初は気づかなかった
+  3. ❌ 編集時に閉じ括弧を間違えた（}}になってしまった）
+
+  もっと良い方法:
+  // ✅ 最初からこうすべきだった
+  const NOISE_TEXTURE = "data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter 
+  id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect 
+  width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E";
+
+  // または外部ファイルにする
+  <Box bgImage="url(/noise.svg), linear-gradient(...)" />
+
+  ---
+  4. そもそもノイズは必要？
+
+  万能デザイン指示書の意図:
+  - グラデーションが綺麗すぎる = AI臭い
+  - ノイズを重ねることで微細なざらつき = 人の手感
+
+  しかし:
+  - このプロジェクトはドラクエ/オクトパス風でピクセル感が重要
+  - ノイズよりもシンプルなソリッドカラーの方が良かったかも
+
+  提案:
+  // ノイズなしでシンプルに
+  bg="#2E7D32"
+  bgGradient="linear-gradient(142deg, #2E7D32 0%, #1B5E20 100%)"
+
+  ノイズ削除した方が良いですか？シンプルな方がドラクエ/オクトパス風には合うかもしれません！
+
+> ノイズってどこの部分？なんかこのゲームを開始ボタン他のかっこいいblackのボタン全然違うからいやだな。元から何だけどさ。　ドラクエとオクトパス     
+トラベラー風で売ってるのにこれだけぶーすとらっぷみたいｗｗｗ　ださすぎるｗｗｗｗｗｗｗｗ　助けてｗｗｗｗ　白と黒のブラックでオクトパストラベラ    
+ーのボタン表現できない？ 
+
+● ノイズはボタン表面の微細なざらつきですが、正直見えないレベルです！
+
+  そして確かに！！このボタンだけBootstrap感あってダサいwwww 他の黒ボタン（フッターのアイコンボタン）はカッコいいのに、これだけ浮いてますねwww     
+
+  白と黒でオクトパストラベラー風に作り直します！参考画像のAttackボタンみたいな感じにしましょう！
+
+● Update(components\ui\MiniHandDock.tsx)
+  ⎿  Updated components\ui\MiniHandDock.tsx with 1 addition and 3 removals
+       682    
+       683      const quickStartDisabled = autoStartLocked || quickStartPending;
+       684    
+       685 -    const LOADING_BG =
+       686 -      "linear-gradient(135deg, rgba(71,85,105,0.9), rgba(30,41,59,0.98))";
+       687 -    const NOISE_SVG = "url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLz       
+           - IwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0i       
+           - NCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdH       
+           - k9IjAuMDgiLz48L3N2Zz4=)";
+       685 +    const LOADING_BG = "rgba(42,48,58,0.95)";
+       686      const preparing = !!(
+       687        autoStartLocked ||
+       688        quickStartPending ||
+
+● Update(components\ui\MiniHandDock.tsx)
+  ⎿  Updated components\ui\MiniHandDock.tsx with 31 additions and 25 removals
+       934                  visual="solid"
+       935                  onClick={() => quickStart()}
+       936                  disabled={preparing}
+       937 -                minW="142px"
+       938 -                px="19px"
+       939 -                py="13px"
+       937 +                minW="148px"
+       938 +                px="21px"
+       939 +                py="14px"
+       940                  position="relative"
+       941 -                bg={preparing ? LOADING_BG : "#2E7D32"}
+       942 -                bgImage={preparing ? "none" : `${NOISE_SVG}, linear-gradient(142deg, #2E7D32 0%, #1B5E20 100%)`}
+       943 -                bgSize="200px 200px, 100% 100%"
+       944 -                color="white"
+       945 -                border="none"
+       946 -                borderRadius="3px"
+       947 -                fontWeight="700"
+       941 +                bg={preparing ? LOADING_BG : "linear-gradient(138deg, rgba(18,22,32,0.96) 0%, rgba(12,15,22,0.98) 58%, 
+           + rgba(8,11,18,0.97) 100%)"}
+       942 +                color="rgba(255,255,255,0.96)"
+       943 +                border="2px solid rgba(255,255,255,0.82)"
+       944 +                borderRadius="2px"
+       945 +                fontWeight="800"
+       946                  fontFamily="serif"
+       947 -                fontSize="md"
+       948 -                letterSpacing="0.01em"
+       949 -                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+       950 -                boxShadow="2px 3px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14)"
+       947 +                fontSize="15px"
+       948 +                letterSpacing="0.03em"
+       949 +                textShadow="0 2px 6px rgba(0,0,0,0.9), 1px 1px 0 rgba(0,0,0,0.8)"
+       950 +                boxShadow="0 4px 12px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)
+           +  , inset 0 -2px 0 rgba(0,0,0,0.5)"
+       951                  transform="translate(.5px,-.5px)"
+       952                  css={{
+       953 -                  clipPath: "polygon(7px 0%, calc(100% - 7px) 0%, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0% 50%)",
+       953 +                  clipPath: "polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%)",
+       954 +                  "&::before": {
+       955 +                    content: '""',
+       956 +                    position: "absolute",
+       957 +                    inset: "4px",
+       958 +                    background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 52%, rgba(0,0,0,0.18) 100%)",
+       959 +                    clipPath: "polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%)",
+       960 +                    pointerEvents: "none",
+       961 +                  },
+       962                  }}
+       963                  _hover={{
+       964 -                  bg: preparing ? LOADING_BG : "#388E3C",
+       965 -                  bgImage: preparing ? "none" : `${NOISE_SVG}, linear-gradient(142deg, #388E3C 0%, #1B5E20 100%)`,
+       966 -                  color: "rgba(255,255,255,0.98)",
+       967 -                  transform: "translate(0,-1px)",
+       968 -                  boxShadow: "3px 4px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18)",
+       964 +                  bg: preparing ? LOADING_BG : "linear-gradient(138deg, rgba(28,32,42,0.98) 0%, rgba(20,24,34,1) 58%, 
+           + rgba(14,18,26,0.99) 100%)",
+       965 +                  color: "rgba(255,255,255,1)",
+       966 +                  borderColor: "rgba(255,255,255,0.95)",
+       967 +                  transform: "translate(0,-1.5px)",
+       968 +                  boxShadow: "0 6px 18px rgba(0,0,0,0.8), 0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.25)
+           +  , inset 0 -2px 0 rgba(0,0,0,0.6)",
+       969                  }}
+       970                  _active={{
+       971 -                  bg: preparing ? LOADING_BG : "#1B5E20",
+       972 -                  bgImage: preparing ? "none" : `${NOISE_SVG}, linear-gradient(142deg, #1B5E20 0%, #0D3F10 100%)`,
+       973 -                  color: "rgba(255,255,255,0.95)",
+       974 -                  boxShadow: "1px 2px 0 rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08)",
+       975 -                  transform: "translate(0,0)",
+       971 +                  bg: preparing ? LOADING_BG : "linear-gradient(138deg, rgba(10,13,20,1) 0%, rgba(6,8,14,1) 58%, rgba(4,6,10,1)       
+           +  100%)",
+       972 +                  color: "rgba(255,255,255,0.92)",
+       973 +                  borderColor: "rgba(255,255,255,0.7)",
+       974 +                  boxShadow: "0 2px 6px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.7), inset 0 2px 4px rgba(0,0,0,0.7), inset 0 -        
+           +  1px 0 rgba(255,255,255,0.08)",
+       975 +                  transform: "translate(0,0.5px)",
+       976                  }}
+       977                  transition="185ms cubic-bezier(.2,1,.3,1)"
+       978                >
+
+● Update(components\ui\MiniHandDock.tsx)
+  ⎿  Updated components\ui\MiniHandDock.tsx with 31 additions and 25 removals
+        992                    isRestarting ||
+        993                    (roomStatus === "reveal" && isRevealAnimating)
+        994                  }
+        995 -                minW="142px"
+        996 -                px="19px"
+        997 -                py="13px"
+        995 +                minW="148px"
+        996 +                px="21px"
+        997 +                py="14px"
+        998                  position="relative"
+        999 -                bg="#D84315"
+       1000 -                bgImage={`${NOISE_SVG}, linear-gradient(138deg, #D84315 0%, #BF360C 100%)`}
+       1001 -                bgSize="200px 200px, 100% 100%"
+       1002 -                color="white"
+       1003 -                border="none"
+       1004 -                borderRadius="3px"
+       1005 -                fontWeight="700"
+        999 +                bg="linear-gradient(138deg, rgba(18,22,32,0.96) 0%, rgba(12,15,22,0.98) 58%, rgba(8,11,18,0.97) 100%)"
+       1000 +                color="rgba(255,255,255,0.96)"
+       1001 +                border="2px solid rgba(255,255,255,0.82)"
+       1002 +                borderRadius="2px"
+       1003 +                fontWeight="800"
+       1004                  fontFamily="serif"
+       1005 -                fontSize="md"
+       1006 -                letterSpacing="0.01em"
+       1007 -                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+       1008 -                boxShadow="2px 3px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14)"
+       1005 +                fontSize="15px"
+       1006 +                letterSpacing="0.03em"
+       1007 +                textShadow="0 2px 6px rgba(0,0,0,0.9), 1px 1px 0 rgba(0,0,0,0.8)"
+       1008 +                boxShadow="0 4px 12px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)
+            +  , inset 0 -2px 0 rgba(0,0,0,0.5)"
+       1009                  transform="translate(.5px,-.5px)"
+       1010                  css={{
+       1011 -                  clipPath: "polygon(7px 0%, calc(100% - 7px) 0%, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0% 50%)",
+       1011 +                  clipPath: "polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%)",
+       1012 +                  "&::before": {
+       1013 +                    content: '""',
+       1014 +                    position: "absolute",
+       1015 +                    inset: "4px",
+       1016 +                    background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 52%, rgba(0,0,0,0.18) 100%)",        
+       1017 +                    clipPath: "polygon(6px 0%, calc(100% - 6px) 0%, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0% 50%)",
+       1018 +                    pointerEvents: "none",
+       1019 +                  },
+       1020                  }}
+       1021                  _hover={{
+       1022 -                  bg: "#E64A19",
+       1023 -                  bgImage: `${NOISE_SVG}, linear-gradient(138deg, #E64A19 0%, #D84315 100%)`,
+       1024 -                  color: "rgba(255,255,255,0.98)",
+       1025 -                  transform: "translate(0,-1px)",
+       1026 -                  boxShadow: "3px 4px 0 rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18)",
+       1022 +                  bg: "linear-gradient(138deg, rgba(28,32,42,0.98) 0%, rgba(20,24,34,1) 58%, rgba(14,18,26,0.99) 100%)",
+       1023 +                  color: "rgba(255,255,255,1)",
+       1024 +                  borderColor: "rgba(255,255,255,0.95)",
+       1025 +                  transform: "translate(0,-1.5px)",
+       1026 +                  boxShadow: "0 6px 18px rgba(0,0,0,0.8), 0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.25)
+            +  , inset 0 -2px 0 rgba(0,0,0,0.6)",
+       1027                  }}
+       1028                  _active={{
+       1029 -                  bg: "#BF360C",
+       1030 -                  bgImage: `${NOISE_SVG}, linear-gradient(138deg, #BF360C 0%, #8D2A0C 100%)`,
+       1031 -                  color: "rgba(255,255,255,0.95)",
+       1032 -                  boxShadow: "1px 2px 0 rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08)",
+       1033 -                  transform: "translate(0,0)",
+       1029 +                  bg: "linear-gradient(138deg, rgba(10,13,20,1) 0%, rgba(6,8,14,1) 58%, rgba(4,6,10,1) 100%)",
+       1030 +                  color: "rgba(255,255,255,0.92)",
+       1031 +                  borderColor: "rgba(255,255,255,0.7)",
+       1032 +                  boxShadow: "0 2px 6px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.7), inset 0 2px 4px rgba(0,0,0,0.7), inset 0 -       
+            +  1px 0 rgba(255,255,255,0.08)",
+       1033 +                  transform: "translate(0,0.5px)",
+       1034                  }}
+       1035                  transition="185ms cubic-bezier(.2,1,.3,1)"
+       1036                >
+  ⎿  Context low · Run /compact to compact & continue
+
+> 続きをお願いします 
+  ⎿  Context low · Run /compact to compact & continue
+
+> 続きをお願いします 
+  ⎿  Context low · Run /compact to compact & continue
+
+> 続きをお願いします 
+  ⎿  Context low · Run /compact to compact & continue
+
+> 続きをお願いします 
+  ⎿  Context low · Run /compact to compact & continue
+
+> 処理が止まっています！！続きをお願いします！！ 
+  ⎿  Context low · Run /compact to compact & continue

@@ -682,8 +682,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const quickStartDisabled = autoStartLocked || quickStartPending;
 
-  const LOADING_BG =
-    "linear-gradient(135deg, rgba(71,85,105,0.9), rgba(30,41,59,0.98))";
+  const LOADING_BG = "rgba(42,48,58,0.95)";
   const preparing = !!(
     autoStartLocked ||
     quickStartPending ||
@@ -935,48 +934,37 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               onClick={() => quickStart()}
               disabled={preparing}
-              minW="140px"
-              px="22px"
+              minW="148px"
+              px="19px"
               py="13px"
               position="relative"
-              bg={preparing ? LOADING_BG : UI_TOKENS.GRADIENTS.forestGreen}
-              color="white"
-              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius="3px"
-              fontWeight="700"
-              fontFamily="monospace"
-              letterSpacing="0.02em"
-              textShadow="1px 1px 0px #000"
-              boxShadow="3px 4px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15)"
-              _before={{
-                content: '""',
-                position: "absolute",
-                top: "0",
-                left: "0",
-                right: "0",
-                height: "2px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent)",
-                borderRadius: "3px 3px 0 0",
+              bg={preparing ? LOADING_BG : "rgba(28,32,42,0.95)"}
+              color="rgba(255,255,255,0.98)"
+              border="none"
+              borderRadius="0"
+              fontWeight="900"
+              fontFamily="'Courier New', monospace"
+              fontSize="16px"
+              letterSpacing="0.08em"
+              textShadow="2px 2px 0 rgba(0,0,0,0.9)"
+              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
+              transform="translate(.5px,-.5px)"
+              css={{
+                clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0% 50%)",
               }}
               _hover={{
-                bg: preparing
-                  ? LOADING_BG
-                  : UI_TOKENS.GRADIENTS.forestGreenHover,
-                color: UI_TOKENS.COLORS.whiteAlpha95,
-                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                borderColor: "white",
-                transform: "translateY(-1.5px)",
-                boxShadow: "4px 5px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.2)",
+                bg: preparing ? LOADING_BG : "rgba(38,42,52,0.98)",
+                color: "rgba(255,255,255,1)",
+                transform: "translate(0,-2px)",
+                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
               }}
               _active={{
-                bg: preparing
-                  ? LOADING_BG
-                  : UI_TOKENS.GRADIENTS.forestGreenActive,
-                color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1)",
-                transform: "translateY(1px)",
+                bg: preparing ? LOADING_BG : "rgba(18,22,32,1)",
+                color: "rgba(255,255,255,0.9)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
+                transform: "translate(1px,1px)",
               }}
-              transition="185ms cubic-bezier(.2,1,.3,1)"
+              transition="180ms cubic-bezier(.2,1,.3,1)"
             >
               {preparing ? "準備中..." : "ゲーム開始"}
             </AppButton>
@@ -994,44 +982,37 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 isRestarting ||
                 (roomStatus === "reveal" && isRevealAnimating)
               }
-              minW="140px"
-              px="22px"
+              minW="148px"
+              px="19px"
               py="13px"
               position="relative"
-              bg={UI_TOKENS.GRADIENTS.orangeSunset}
-              color="white"
-              border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha95}`}
-              borderRadius="3px"
-              fontWeight="700"
-              fontFamily="monospace"
-              letterSpacing="0.02em"
-              textShadow="1px 1px 0px #000"
-              boxShadow="3px 4px 0 rgba(0,0,0,.33), inset 0 1px 0 rgba(255,255,255,.16)"
-              _before={{
-                content: '""',
-                position: "absolute",
-                top: "0",
-                left: "0",
-                right: "0",
-                height: "2px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent)",
-                borderRadius: "3px 3px 0 0",
+              bg="rgba(28,32,42,0.95)"
+              color="rgba(255,255,255,0.98)"
+              border="none"
+              borderRadius="0"
+              fontWeight="900"
+              fontFamily="'Courier New', monospace"
+              fontSize="16px"
+              letterSpacing="0.08em"
+              textShadow="2px 2px 0 rgba(0,0,0,0.9)"
+              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
+              transform="translate(.5px,-.5px)"
+              css={{
+                clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0% 50%)",
               }}
               _hover={{
-                bg: UI_TOKENS.GRADIENTS.orangeSunsetHover,
-                color: UI_TOKENS.COLORS.whiteAlpha95,
-                textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                borderColor: "white",
-                transform: "translateY(-1.5px)",
-                boxShadow: "4px 5px 0 rgba(0,0,0,.33), inset 0 1px 0 rgba(255,255,255,.19)",
+                bg: "rgba(38,42,52,0.98)",
+                color: "rgba(255,255,255,1)",
+                transform: "translate(0,-2px)",
+                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
               }}
               _active={{
-                bg: UI_TOKENS.GRADIENTS.orangeSunsetActive,
-                color: UI_TOKENS.COLORS.whiteAlpha90,
-                boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.09)",
-                transform: "translateY(1px)",
+                bg: "rgba(18,22,32,1)",
+                color: "rgba(255,255,255,0.9)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
+                transform: "translate(1px,1px)",
               }}
-              transition="187ms cubic-bezier(.2,1,.3,1)"
+              transition="180ms cubic-bezier(.2,1,.3,1)"
             >
               {showAutoStartIndicator ? "準備中..." : "次のゲーム"}
             </AppButton>
@@ -1136,20 +1117,24 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   size="sm"
                   w="40px"
                   h="40px"
-                  bg="transparent"
-                  color="rgba(255,255,255,0.85)"
+                  bg="rgba(28,32,42,0.95)"
+                  color="rgba(255,255,255,0.92)"
                   borderWidth="0"
-                  borderRadius={0}
-                  boxShadow="none"
+                  borderRadius="0"
+                  fontFamily="'Courier New', monospace"
+                  fontSize="16px"
+                  boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
                   _hover={{
-                    bg: "rgba(147, 51, 234, 0.3)",
-                    color: "white",
-                    transform: "translateY(-2px)",
+                    bg: "rgba(38,42,52,0.98)",
+                    color: "rgba(255,255,255,1)",
+                    transform: "translate(0,-1px)",
+                    boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
                   }}
                   _active={{
-                    transform: "translateY(0)",
+                    transform: "translate(1px,1px)",
+                    boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
                   }}
-                  transition="175ms cubic-bezier(.2,1,.3,1)"
+                  transition="176ms cubic-bezier(.2,1,.3,1)"
                 >
                   <FiEdit2 />
                 </IconButton>
@@ -1161,23 +1146,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 aria-label="設定"
                 onClick={onOpenSettings}
                 size="xs"
-                w="32px"
-                h="32px"
-                bg="rgba(55, 65, 81, 0.5)"
-                color="rgba(156, 163, 175, 0.85)"
-                borderWidth="1px"
-                borderColor="rgba(75, 85, 99, 0.4)"
-                borderRadius="7px"
+                w="36px"
+                h="36px"
+                bg="rgba(28,32,42,0.95)"
+                color="rgba(255,255,255,0.92)"
+                borderWidth="0"
+                borderRadius="0"
+                fontFamily="'Courier New', monospace"
+                fontSize="15px"
+                boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
                 _hover={{
-                  bg: "rgba(75, 85, 99, 0.7)",
-                  color: "rgba(209, 213, 219, 0.95)",
-                  borderColor: "rgba(107, 114, 128, 0.6)",
-                  transform: "translateY(-1px)",
+                  bg: "rgba(38,42,52,0.98)",
+                  color: "rgba(255,255,255,1)",
+                  transform: "translate(0,-1px)",
+                  boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
                 }}
                 _active={{
-                  transform: "translateY(0.5px)",
+                  transform: "translate(1px,1px)",
+                  boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
                 }}
-                transition="170ms cubic-bezier(.2,1,.3,1)"
+                transition="175ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiSettings />
               </IconButton>
@@ -1189,23 +1177,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 aria-label="退出"
                 onClick={onLeaveRoom}
                 size="xs"
-                w="32px"
-                h="32px"
-                bg="rgba(55, 65, 81, 0.5)"
-                color="rgba(156, 163, 175, 0.85)"
-                borderWidth="1px"
-                borderColor="rgba(75, 85, 99, 0.4)"
-                borderRadius="7px"
+                w="36px"
+                h="36px"
+                bg="rgba(28,32,42,0.95)"
+                color="rgba(255,255,255,0.92)"
+                borderWidth="0"
+                borderRadius="0"
+                fontFamily="'Courier New', monospace"
+                fontSize="15px"
+                boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
                 _hover={{
-                  bg: "rgba(127, 29, 29, 0.7)",
-                  color: "rgba(254, 202, 202, 0.95)",
-                  borderColor: "rgba(185, 28, 28, 0.6)",
-                  transform: "translateY(-1px)",
+                  bg: "rgba(52,28,28,0.98)",
+                  color: "rgba(255,220,220,1)",
+                  transform: "translate(0,-1px)",
+                  boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,180,180,0.95)",
                 }}
                 _active={{
-                  transform: "translateY(0.5px)",
+                  transform: "translate(1px,1px)",
+                  boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,180,180,0.82)",
                 }}
-                transition="172ms cubic-bezier(.2,1,.3,1)"
+                transition="173ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiLogOut />
               </IconButton>
