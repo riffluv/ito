@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
+import { enqueueFirestoreWrite } from "@/lib/firebase/writeQueue";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
@@ -214,78 +215,71 @@ export async function addCardToProposalAtPosition(
 ) {
   const roomRef = doc(db!, "rooms", roomId);
   const playerRef = doc(db!, "rooms", roomId, "players", playerId);
-  await runTransaction(db!, async (tx) => {
-    const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
-    if (room.status !== "clue") return; // clue 中のみ
-    if (room?.options?.resolveMode !== "sort-submit") return; // モード確認
-    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[])
-      : null;
-    if (!roundPlayers || roundPlayers.length === 0) return; // 未配札
-    const pSnap = await tx.get(playerRef);
-    if (!pSnap.exists()) throw new Error("player not found");
-    const player: any = pSnap.data();
-    if (typeof player.number !== "number") throw new Error("number not set");
-    if (!roundPlayers.includes(playerId)) return; // このラウンドの対象外
-    const current: string[] = room?.order?.proposal || [];
-    if (current.includes(playerId)) return; // 重複防止
+  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
+    await runTransaction(db!, async (tx) => {
+      const roomSnap = await tx.get(roomRef);
+      if (!roomSnap.exists()) throw new Error("room not found");
+      const room: any = roomSnap.data();
+      if (room.status !== "clue") return; // clue 中のみ
+      if (room?.options?.resolveMode !== "sort-submit") return; // モード確認
+      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+        ? (room.deal.players as string[])
+        : null;
+      if (!roundPlayers || roundPlayers.length === 0) return; // 未配札
+      const pSnap = await tx.get(playerRef);
+      if (!pSnap.exists()) throw new Error("player not found");
+      const player: any = pSnap.data();
+      if (typeof player.number !== "number") throw new Error("number not set");
+      if (!roundPlayers.includes(playerId)) return; // このラウンドの対象外
+      const current: string[] = room?.order?.proposal || [];
+      if (current.includes(playerId)) return; // 重複防止
 
-    let next: any[];
-    const maxCount: number = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[]).length
-      : 0;
-    if (maxCount <= 0) return; // 未配札時は受け付けない
-    // 上限が0になるケースはない想定だが、保険で0を許容
-    if (targetIndex === -1) {
-      // 末尾追加（既存の「出す」ボタン動作）
-      next = [...current];
-      // 空き（null）優先で詰める
-      let placed = false;
-      for (let i = 0; i < Math.max(next.length, maxCount); i++) {
-        if (i >= next.length) next.length = i + 1;
-        if (next[i] == null) {
-          next[i] = playerId;
-          placed = true;
-          break;
+      let next: any[];
+      const maxCount: number = Array.isArray(room?.deal?.players)
+        ? (room.deal.players as string[]).length
+        : 0;
+      if (maxCount <= 0) return; // 未配札時は受け付けない
+      if (targetIndex === -1) {
+        next = [...current];
+        let placed = false;
+        for (let i = 0; i < Math.max(next.length, maxCount); i++) {
+          if (i >= next.length) next.length = i + 1;
+          if (next[i] == null) {
+            next[i] = playerId;
+            placed = true;
+            break;
+          }
         }
-      }
-      if (!placed) next.push(playerId);
-    } else {
-      // 位置指定追加: 配列長が不足していれば null でパディングし、指定位置にセット
-      next = [...current];
-      const clamped = Math.max(
-        0,
-        Math.min(targetIndex, Math.max(0, maxCount - 1))
-      );
-      if (clamped < next.length) {
-        // 既に何かがある位置には置かない（UI側で空きスロットのみ許容している想定）
-        if (typeof next[clamped] === "string" && next[clamped]) {
-          return;
-        }
+        if (!placed) next.push(playerId);
       } else {
-        // 長さを広げ（未定義をnullに正規化する）
-        (next as any).length = clamped + 1;
+        next = [...current];
+        const clamped = Math.max(
+          0,
+          Math.min(targetIndex, Math.max(0, maxCount - 1))
+        );
+        if (clamped < next.length) {
+          if (typeof next[clamped] === "string" && next[clamped]) {
+            return;
+          }
+        } else {
+          (next as any).length = clamped + 1;
+        }
+        next[clamped] = playerId;
+        next = next.map((v) => (v === undefined ? null : v));
       }
-      next[clamped] = playerId;
-      next = next.map((v) => (v === undefined ? null : v));
-    }
-    // 配列を最大人数に合わせて切り詰め
-    if (maxCount > 0) {
-      if (next.length > maxCount) next.length = maxCount;
-      // 長さ不足はnullでパディング
-      if (next.length < maxCount) {
-        const pad = new Array(maxCount - next.length).fill(null);
-        next = [...next, ...pad];
+      if (maxCount > 0) {
+        if (next.length > maxCount) next.length = maxCount;
+        if (next.length < maxCount) {
+          const pad = new Array(maxCount - next.length).fill(null);
+          next = [...next, ...pad];
+        }
       }
-    }
 
-    // order オブジェクトが未作成の場合の安全な merge
-    tx.update(roomRef, {
-      "order.proposal": next,
-      order: { ...(room.order || {}), proposal: next },
-      lastActiveAt: serverTimestamp(),
+      tx.update(roomRef, {
+        "order.proposal": next,
+        order: { ...(room.order || {}), proposal: next },
+        lastActiveAt: serverTimestamp(),
+      });
     });
   });
 }
@@ -296,46 +290,48 @@ export async function addCardToProposalAtPosition(
 // proposal からカードを取り除き、待機エリアへ戻す
 export async function removeCardFromProposal(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
-  await runTransaction(db!, async (tx) => {
-    const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
-    if (room.status !== "clue") return;
-    if (room?.options?.resolveMode !== "sort-submit") return;
-    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[])
-      : null;
-    if (!roundPlayers || roundPlayers.length === 0) return;
-    if (!roundPlayers.includes(playerId)) return;
+  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
+    await runTransaction(db!, async (tx) => {
+      const roomSnap = await tx.get(roomRef);
+      if (!roomSnap.exists()) throw new Error("room not found");
+      const room: any = roomSnap.data();
+      if (room.status !== "clue") return;
+      if (room?.options?.resolveMode !== "sort-submit") return;
+      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+        ? (room.deal.players as string[])
+        : null;
+      if (!roundPlayers || roundPlayers.length === 0) return;
+      if (!roundPlayers.includes(playerId)) return;
 
-    const maxCount: number = roundPlayers.length;
-    let current: (string | null)[] = [];
-    if (Array.isArray(room?.order?.proposal)) {
-      current = (room.order?.proposal as (string | null)[]).map((v) =>
-        typeof v === "string" ? v : null
-      );
-    }
-
-    if (maxCount > 0) {
-      if (current.length < maxCount) {
-        current = [
-          ...current,
-          ...new Array(maxCount - current.length).fill(null),
-        ];
-      } else if (current.length > maxCount) {
-        current.length = maxCount;
+      const maxCount: number = roundPlayers.length;
+      let current: (string | null)[] = [];
+      if (Array.isArray(room?.order?.proposal)) {
+        current = (room.order?.proposal as (string | null)[]).map((v) =>
+          typeof v === "string" ? v : null
+        );
       }
-    }
 
-    const targetIndex = current.findIndex((v) => v === playerId);
-    if (targetIndex < 0) return;
+      if (maxCount > 0) {
+        if (current.length < maxCount) {
+          current = [
+            ...current,
+            ...new Array(maxCount - current.length).fill(null),
+          ];
+        } else if (current.length > maxCount) {
+          current.length = maxCount;
+        }
+      }
 
-    current[targetIndex] = null;
+      const targetIndex = current.findIndex((v) => v === playerId);
+      if (targetIndex < 0) return;
 
-    tx.update(roomRef, {
-      "order.proposal": current,
-      order: { ...(room.order || {}), proposal: current },
-      lastActiveAt: serverTimestamp(),
+      current[targetIndex] = null;
+
+      tx.update(roomRef, {
+        "order.proposal": current,
+        order: { ...(room.order || {}), proposal: current },
+        lastActiveAt: serverTimestamp(),
+      });
     });
   });
 }
@@ -345,58 +341,56 @@ export async function moveCardInProposalToPosition(
   targetIndex: number
 ) {
   const roomRef = doc(db!, "rooms", roomId);
-  await runTransaction(db!, async (tx) => {
-    const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
-    if (room.status !== "clue") return;
-    if (room?.options?.resolveMode !== "sort-submit") return;
-    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[])
-      : null;
-    if (!roundPlayers || roundPlayers.length === 0) return;
-    if (!roundPlayers.includes(playerId)) return;
-    const current: any[] = (room?.order?.proposal || []).slice();
-    const maxCount: number = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[]).length
-      : 0;
-    if (maxCount <= 0) return;
+  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
+    await runTransaction(db!, async (tx) => {
+      const roomSnap = await tx.get(roomRef);
+      if (!roomSnap.exists()) throw new Error("room not found");
+      const room: any = roomSnap.data();
+      if (room.status !== "clue") return;
+      if (room?.options?.resolveMode !== "sort-submit") return;
+      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+        ? (room.deal.players as string[])
+        : null;
+      if (!roundPlayers || roundPlayers.length === 0) return;
+      if (!roundPlayers.includes(playerId)) return;
+      const current: any[] = (room?.order?.proposal || []).slice();
+      const maxCount: number = Array.isArray(room?.deal?.players)
+        ? (room.deal.players as string[]).length
+        : 0;
+      if (maxCount <= 0) return;
 
-    const fromIdx = current.findIndex((v) => v === playerId);
-    if (fromIdx < 0) return; // まだ出ていない
+      const fromIdx = current.findIndex((v) => v === playerId);
+      if (fromIdx < 0) return; // まだ出ていない
 
-    const clamped = Math.max(
-      0,
-      Math.min(targetIndex, Math.max(0, maxCount - 1))
-    );
+      const clamped = Math.max(
+        0,
+        Math.min(targetIndex, Math.max(0, maxCount - 1))
+      );
 
-    // ベストプラクティス: シンプルで信頼性の高い配列移動ロジック
-    if (current[clamped] && current[clamped] !== playerId) {
-      // 目標位置に他のカードがある場合は入れ替え（swap）
-      const targetCard = current[clamped];
-      current[clamped] = playerId;
-      current[fromIdx] = targetCard;
-    } else {
-      // 目標位置が空きまたは自分の場合は単純移動
-      current[fromIdx] = null;
-      if (clamped >= current.length) (current as any).length = clamped + 1;
-      current[clamped] = playerId;
-    }
-
-    // 長さ調整
-    if (maxCount > 0) {
-      if (current.length > maxCount) current.length = maxCount;
-      if (current.length < maxCount) {
-        const pad = new Array(maxCount - current.length).fill(null);
-        current.push(...pad);
+      if (current[clamped] && current[clamped] !== playerId) {
+        const targetCard = current[clamped];
+        current[clamped] = playerId;
+        current[fromIdx] = targetCard;
+      } else {
+        current[fromIdx] = null;
+        if (clamped >= current.length) (current as any).length = clamped + 1;
+        current[clamped] = playerId;
       }
-    }
 
-    const normalized = current.map((v) => (v === undefined ? null : v));
-    tx.update(roomRef, {
-      "order.proposal": normalized,
-      order: { ...(room.order || {}), proposal: normalized },
-      lastActiveAt: serverTimestamp(),
+      if (maxCount > 0) {
+        if (current.length > maxCount) current.length = maxCount;
+        if (current.length < maxCount) {
+          const pad = new Array(maxCount - current.length).fill(null);
+          current.push(...pad);
+        }
+      }
+
+      const normalized = current.map((v) => (v === undefined ? null : v));
+      tx.update(roomRef, {
+        "order.proposal": normalized,
+        order: { ...(room.order || {}), proposal: normalized },
+        lastActiveAt: serverTimestamp(),
+      });
     });
   });
 }

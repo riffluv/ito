@@ -73,6 +73,7 @@ export function GameCard({
   const previousFlipRef = useRef<boolean>(flipped);
   const threeDContainerRef = useRef<HTMLDivElement | null>(null);
   const gsapInitialisedRef = useRef<boolean>(false);
+  const flipTweenRef = useRef<gsap.core.Tween | null>(null);
   const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
     isInteractive && onClick ? onClick : undefined;
   const isResultPreset = flipPreset === "result";
@@ -123,17 +124,37 @@ export function GameCard({
   // 3Dフリップカード実装
   if (variant === "flip") {
     const { effectiveMode, reducedMotion } = useAnimationSettings();
-    // モード変更時の再レンダリング防止
-    const stableModeRef = useRef<"3d" | "simple">(effectiveMode);
+    const prefersSimple = reducedMotion || effectiveMode === "simple";
+
     useEffect(() => {
-      stableModeRef.current = effectiveMode;
-    }, [effectiveMode]);
-    const stableMode = stableModeRef.current;
+      return () => {
+        if (flipTweenRef.current) {
+          flipTweenRef.current.kill();
+          flipTweenRef.current = null;
+        }
+      };
+    }, []);
 
     useLayoutEffect(() => {
-      // GSAP使用時はGPU判定を無視して常に3D回転を試みる（GSAPが内部で最適化）
       const el = threeDContainerRef.current;
       if (!el) return;
+
+      const resetTween = () => {
+        if (flipTweenRef.current) {
+          flipTweenRef.current.kill();
+          flipTweenRef.current = null;
+        }
+      };
+
+      if (prefersSimple) {
+        resetTween();
+        el.style.transform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
+        el.style.transition = "transform 120ms ease-out";
+        return;
+      }
+
+      el.style.transition = "";
+
       if (!gsapInitialisedRef.current) {
         gsap.set(el, {
           rotateY: flipped ? 180 : 0,
@@ -141,23 +162,23 @@ export function GameCard({
           transformOrigin: "center center",
         });
         gsapInitialisedRef.current = true;
-        return;
       }
-        gsap.to(el, {
-          duration: isResultPreset ? 0.28 : 0.35,
-          rotateY: flipped ? 180 : 0,
-          ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-          overwrite: "auto",
+
+      resetTween();
+      flipTweenRef.current = gsap.to(el, {
+        duration: isResultPreset ? 0.28 : 0.35,
+        rotateY: flipped ? 180 : 0,
+        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
+        overwrite: "auto",
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
-      return () => {
-        gsap.killTweensOf(el);
-      };
-      }, [flipped, isResultPreset]);
 
-    // 常に3Dモード（GSAP制御）を使用
-    // GPU判定に関係なく、GSAPが内部で最適化するため低スペックでも動作する
+      return () => {
+        resetTween();
+      };
+    }, [flipped, isResultPreset, prefersSimple]);
+
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
 
     const backNumberFontSize = getNumberFontSize(
