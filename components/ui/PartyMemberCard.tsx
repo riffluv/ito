@@ -34,9 +34,9 @@ export type PartyStatusTone =
   | "default";
 
 const CARD_BACKGROUND =
-  "linear-gradient(145deg, rgba(18,28,42,0.92) 0%, rgba(12,20,35,0.94) 35%, rgba(8,15,28,0.96) 75%, rgba(5,12,22,0.98) 100%)";
+  "linear-gradient(142deg, rgba(17,27,40,0.91) 0%, rgba(13,21,36,0.94) 38%, rgba(9,16,29,0.96) 68%, rgba(6,13,23,0.97) 100%)";
 const CARD_HOVER_BACKGROUND =
-  "linear-gradient(145deg, rgba(28,38,55,0.96) 0%, rgba(22,32,48,0.97) 35%, rgba(18,28,42,0.98) 75%, rgba(15,25,38,0.99) 100%)";
+  "linear-gradient(148deg, rgba(26,36,53,0.95) 0%, rgba(21,31,47,0.97) 41%, rgba(17,27,41,0.98) 72%, rgba(14,24,37,0.99) 100%)";
 const CARD_BOX_SHADOW =
   "0 2px 4px rgba(0,0,0,0.3), 0 6px 12px rgba(0,0,0,0.5), 0 12px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.8)";
 const CARD_HOVER_BOX_SHADOW =
@@ -312,9 +312,9 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           right: 0,
           height: "2px",
           background:
-            "linear-gradient(90deg, rgba(120,160,200,0.15) 0%, rgba(180,200,220,0.4) 15%, rgba(220,240,255,0.7) 35%, rgba(180,200,220,0.4) 65%, rgba(120,160,200,0.15) 100%)",
+            "linear-gradient(87deg, rgba(115,155,195,0.14) 0%, rgba(175,195,215,0.38) 18%, rgba(215,235,250,0.68) 39%, rgba(188,208,228,0.46) 61%, rgba(125,165,205,0.17) 100%)",
           pointerEvents: "none",
-          filter: "blur(0.5px)",
+          filter: "blur(0.6px)",
         },
         "&::after": {
           content: "''",
@@ -324,7 +324,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           right: "2px",
           height: "5px",
           background:
-            "linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.75) 85%, rgba(0,0,0,0.5) 100%)",
+            "linear-gradient(92deg, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.72) 19%, rgba(0,0,0,0.92) 47%, rgba(0,0,0,0.78) 76%, rgba(0,0,0,0.52) 100%)",
           opacity: 0.9,
           filter: "blur(1.5px)",
           pointerEvents: "none",

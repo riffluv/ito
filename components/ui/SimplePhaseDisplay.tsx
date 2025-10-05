@@ -350,7 +350,7 @@ export function SimplePhaseDisplay({
                 content: "''",
                 position: 'absolute',
                 inset: '-120% -40%',
-                background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.35), rgba(255, 215, 0, 0.05) 45%, transparent 65%)',
+                background: 'radial-gradient(ellipse at 48% 52%, rgba(252, 252, 252, 0.32), rgba(248, 210, 0, 0.06) 41%, rgba(255, 220, 10, 0.03) 58%, transparent 69%)',
                 transform: 'translate(-40%, -10%) rotate(18deg)',
                 animation: `${topicGlow} 8.6s linear infinite`,
                 mixBlendMode: 'screen',
