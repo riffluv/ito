@@ -265,7 +265,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
     }
   }, [prefersReducedMotion, isSubmitted]);
 
-  const handleClick = useCallback(() => {
+  const handleDoubleClick = useCallback(() => {
     if (!canTransfer || !onTransfer) return;
     onTransfer();
   }, [canTransfer, onTransfer]);
@@ -342,10 +342,10 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       role={canTransfer ? "button" : undefined}
       aria-label={
         canTransfer
-          ? `${player.name} にホストを委譲`
+          ? `ダブルクリックで ${player.name} にホストを委譲`
           : `${player.name} のステータス`
       }
-      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
     >
       <Box
@@ -624,7 +624,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
 
   return (
     <Tooltip
-      content={`${player.name} にホスト権限を譲渡`}
+      content={`ダブルクリックで ${player.name} にホスト権限を譲渡`}
       openDelay={200}
       showArrow
     >
@@ -632,3 +632,4 @@ export const PartyMemberCard = memo(function PartyMemberCard({
     </Tooltip>
   );
 });
+
