@@ -804,34 +804,33 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             py="10px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.98)"
-            border="2px solid rgba(255,255,255,0.88)"
+            border="none"
             borderRadius="0"
             fontWeight="900"
             fontFamily="'Courier New', monospace"
             fontSize="15px"
             letterSpacing="0.06em"
             textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
             transform="translate(.5px,-.5px)"
             display="flex"
             alignItems="center"
             justifyContent="center"
             _hover={{
               bg: "rgba(38,42,52,0.98)",
-              borderColor: "rgba(255,255,255,0.95)",
               transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
             }}
             _active={{
               transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
             }}
             _disabled={{
               bg: "rgba(28,32,42,0.5)",
-              borderColor: "rgba(255,255,255,0.3)",
               color: "rgba(255,255,255,0.4)",
               filter: "grayscale(0.8)",
               cursor: "not-allowed",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
             }}
             transition="177ms cubic-bezier(.2,1,.3,1)"
           >
@@ -849,34 +848,33 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             py="10px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.92)"
-            border="2px solid rgba(255,255,255,0.88)"
+            border="none"
             borderRadius="0"
             fontWeight="900"
             fontFamily="'Courier New', monospace"
             fontSize="15px"
             letterSpacing="0.06em"
             textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
             transform="translate(.5px,-.5px)"
             display="flex"
             alignItems="center"
             justifyContent="center"
             _hover={{
               bg: "rgba(38,42,52,0.98)",
-              borderColor: "rgba(255,255,255,0.95)",
               transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
             }}
             _active={{
               transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
             }}
             _disabled={{
               bg: "rgba(28,32,42,0.5)",
-              borderColor: "rgba(255,255,255,0.3)",
               color: "rgba(255,255,255,0.4)",
               filter: "grayscale(0.8)",
               cursor: "not-allowed",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
             }}
             transition="174ms cubic-bezier(.2,1,.3,1)"
           >
@@ -894,34 +892,33 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             py="10px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.98)"
-            border="2px solid rgba(255,255,255,0.88)"
+            border="none"
             borderRadius="0"
             fontWeight="900"
             fontFamily="'Courier New', monospace"
             fontSize="15px"
             letterSpacing="0.06em"
             textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
             transform="translate(.5px,-.5px)"
             display="flex"
             alignItems="center"
             justifyContent="center"
             _hover={{
               bg: "rgba(38,42,52,0.98)",
-              borderColor: "rgba(255,255,255,0.95)",
               transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
             }}
             _active={{
               transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
             }}
             _disabled={{
               bg: "rgba(28,32,42,0.5)",
-              borderColor: "rgba(255,255,255,0.3)",
               color: "rgba(255,255,255,0.4)",
               filter: "grayscale(0.8)",
               cursor: "not-allowed",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
             }}
             transition="181ms cubic-bezier(.2,1,.3,1)"
           >
