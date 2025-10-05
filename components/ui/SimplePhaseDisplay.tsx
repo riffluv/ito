@@ -335,6 +335,7 @@ export function SimplePhaseDisplay({
             px={{ base: "11px", md: "13px" }}
             py={{ base: "7px", md: "9px" }}
             position="relative"
+            alignSelf="flex-start"
             css={{
               background: "linear-gradient(137deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
               backdropFilter: "blur(10px) saturate(1.2)",
