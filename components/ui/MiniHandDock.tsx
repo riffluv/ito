@@ -800,8 +800,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="brand"
             onClick={handleDecide}
             disabled={!canDecide}
-            px="20px"
+            px="14px"
             py="10px"
+            w="68px"
+            minW="68px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.98)"
             border="none"
@@ -844,8 +846,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="gray"
             onClick={handleClear}
             disabled={clearButtonDisabled}
-            px="20px"
+            px="14px"
             py="10px"
+            w="68px"
+            minW="68px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.92)"
             border="none"
@@ -888,8 +892,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="brand"
             onClick={handleSubmit}
             disabled={!canClickProposalButton}
-            px="20px"
+            px="14px"
             py="10px"
+            w="68px"
+            minW="68px"
             bg="rgba(28,32,42,0.95)"
             color="rgba(255,255,255,0.98)"
             border="none"
