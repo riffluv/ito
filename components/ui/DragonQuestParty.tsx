@@ -1,6 +1,6 @@
 "use client";
 
-import { notify } from "@/components/ui/notify";
+import { notify, notifyAsync } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { transferHost } from "@/lib/firebase/rooms";
 import { Box, Text } from "@chakra-ui/react";
@@ -128,12 +128,12 @@ export function DragonQuestParty({
       // ブラウザ差でスタイルが残る問題を防ぐ
       gsap.fromTo(
         container,
-        { scale: 0.9, opacity: 0.7 },
+        { scale: 0.94, opacity: 0.72 },
         {
           scale: 1,
           opacity: 1,
-          duration: 0.5,
-          ease: "back.out(1.2)",
+          duration: 0.34,
+          ease: "power2.out",
           clearProps: "transform,opacity",
         }
       );
@@ -173,35 +173,45 @@ export function DragonQuestParty({
       const previousId = displayedHostId;
       setTransferTargetId(targetId);
       setHostOverride({ targetId, previousId });
-      notify({
-        title: `${targetName} がホストになりました`,
-        description: "サーバーと同期中です…",
-        type: "success",
-      });
-      try {
-        await transferHost(roomId, targetId);
-      } catch (e: any) {
-        setHostOverride((current) =>
-          current && current.targetId === targetId ? null : current
-        );
-        setTransferTargetId((current) =>
-          current === targetId ? null : current
-        );
-        const raw = String(e?.message || e || "");
-        let description = "ホスト委譲に失敗しました。";
-        if (raw === "not-host") {
-          description = "ホストのみが委譲できます。";
-        } else if (raw === "target-not-found") {
-          description = "対象プレイヤーが見つかりません。";
-        } else if (raw === "room-not-found") {
-          description = "ルームが存在しません。";
-        }
-        notify({
+
+    const result = await notifyAsync(
+      () => transferHost(roomId, targetId),
+      {
+        pending: {
+          id: `${roomId}-transfer-${targetId}`,
+          title: `${targetName} をホストに設定中…`,
+          type: "info",
+          duration: 1500,
+        },
+        success: {
+          id: `${roomId}-transfer-${targetId}`,
+          title: `${targetName} がホストになりました`,
+          type: "success",
+          duration: 2000,
+        },
+        error: {
+          id: `${roomId}-transfer-${targetId}`,
           title: "委譲に失敗しました",
-          description,
           type: "error",
-        });
+          duration: 3000,
+        },
       }
+    );
+
+    if (!result) {
+      setHostOverride((current) =>
+        current && current.targetId === targetId ? null : current
+      );
+      setTransferTargetId((current) =>
+        current === targetId ? null : current
+      );
+      notify({
+        title: "ホスト委譲を元に戻しました",
+        description: "ネットワーク状況を確認してもう一度お試しください",
+        type: "warning",
+        duration: 3200,
+      });
+    }
     },
     [roomId, transferTargetId, displayedHostId]
   );

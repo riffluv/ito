@@ -280,8 +280,8 @@ export const UI_TOKENS = {
     limeGreen: "rgba(50,205,50,0.9)",
   },
   EASING: {
-    hover: "cubic-bezier(0.4, 0, 0.2, 1)",
-    standard: "cubic-bezier(0.4, 0, 0.2, 1)",
+    hover: "cubic-bezier(0.34, 0.8, 0.36, 1)",
+    standard: "cubic-bezier(0.3, 0.7, 0.4, 1)",
   },
   SHADOWS: {
     cardRaised:

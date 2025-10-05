@@ -298,7 +298,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       boxShadow="card"
       px="12px"
       py="5px"
-      transition="transform 0.2s var(--chakra-easings-stateInOut, cubic-bezier(0.25, 0.46, 0.45, 0.94)), box-shadow 0.2s var(--chakra-easings-stateInOut, cubic-bezier(0.25, 0.46, 0.45, 0.94)), background 0.2s ease"
+      transition="transform 0.16s var(--chakra-easings-stateInOut, cubic-bezier(0.3, 0.7, 0.4, 1.1)), box-shadow 0.16s var(--chakra-easings-stateInOut, cubic-bezier(0.3, 0.7, 0.4, 1.1)), background 0.16s ease"
       css={{
         cursor: canTransfer ? "pointer" : "default",
         pointerEvents: "auto",
@@ -542,7 +542,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
                   ? "linear-gradient(90deg, #D97706 0%, #F59E0B 45%, #B45309 90%)"
                   : "transparent"
               }
-              transition="all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)"
+              transition="all 0.35s cubic-bezier(0.32, 0.94, 0.44, 1)"
               position="relative"
               css={{
                 boxShadow: isSubmitted

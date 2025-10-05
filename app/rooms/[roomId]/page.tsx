@@ -8,7 +8,7 @@
 import CentralCardBoard from "@/components/CentralCardBoard";
 import NameDialog from "@/components/NameDialog";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
-import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
+import dynamic from "next/dynamic";
 // ⚡ PERFORMANCE: React.lazy で遅延ロード
 import { lazy, Suspense } from "react";
 const SettingsModal = lazy(() => import("@/components/SettingsModal"));
@@ -16,7 +16,6 @@ import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
-import MinimalChat from "@/components/ui/MinimalChat";
 import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import { useTransition } from "@/components/ui/TransitionProvider";
@@ -28,6 +27,7 @@ import {
   setPlayerName,
   updateLastSeen,
 } from "@/lib/firebase/players";
+import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { forceDetachAll, presenceSupported } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
@@ -56,6 +56,31 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+const ROOM_CORE_ASSETS = [
+  "/images/flag.webp",
+  "/images/flag2.webp",
+  "/images/flag3.webp",
+  "/images/card1.webp",
+  "/images/card2.webp",
+  "/images/card3.webp",
+  "/images/hanepen1.webp",
+  "/images/hanepen2.webp",
+  "/images/backgrounds/hd2d/bg1.png",
+] as const;
+
+const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
+  ssr: false,
+  loading: () => null,
+});
+
+const RoomPasswordPrompt = dynamic(
+  () =>
+    import("@/components/RoomPasswordPrompt").then((mod) => ({
+      default: mod.RoomPasswordPrompt,
+    })),
+  { ssr: false, loading: () => null }
+);
+
 type RoomPageContentProps = {
   roomId: string;
 };
@@ -65,6 +90,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
+  useAssetPreloader(ROOM_CORE_ASSETS);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
