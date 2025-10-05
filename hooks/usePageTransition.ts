@@ -116,10 +116,14 @@ export function usePageTransition() {
           setLoadingStepsState(stepsToRun);
           setCurrentStep(stepsToRun[0]?.id ?? "");
 
-          // Firebase操作を実行
-          if (firebaseOperation) {
-            await firebaseOperation();
-          }
+          // Firebase操作を並列実行（ローディングと同時進行）
+          let firebaseCompleted = false;
+          const firebasePromise = firebaseOperation ? firebaseOperation().then(() => {
+            firebaseCompleted = true;
+          }).catch((error) => {
+            console.error("Firebase operation error:", error);
+            firebaseCompleted = true; // エラーでも進行を続ける
+          }) : Promise.resolve();
 
           // 総時間を計算
           const totalDuration = stepsToRun.reduce(
@@ -137,7 +141,7 @@ export function usePageTransition() {
           }, routerPushDelay);
           let elapsedTime = 0;
 
-          // 段階的ローディング実行
+          // 段階的ローディング実行（Firebase操作と並列）
           for (let i = 0; i < stepsToRun.length; i++) {
             const step = stepsToRun[i];
             setCurrentStep(step.id);
@@ -156,6 +160,9 @@ export function usePageTransition() {
             );
             setProgress(progress);
           }
+
+          // Firebase操作の完了を待つ
+          await firebasePromise;
 
           // 最終的に100%を確実に設定
           setProgress(100);
