@@ -984,7 +984,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               px="19px"
               py="13px"
               position="relative"
-              bg={preparing ? LOADING_BG : "rgba(28,32,42,0.95)"}
+              bg={preparing ? LOADING_BG : "linear-gradient(135deg, rgba(28,42,68,0.98) 0%, rgba(18,28,48,1) 100%)"}
               color="rgba(255,255,255,0.98)"
               border="none"
               borderRadius="0"
@@ -996,13 +996,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
               transform="translate(.5px,-.5px)"
               _hover={{
-                bg: preparing ? LOADING_BG : "rgba(38,42,52,0.98)",
+                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(38,52,78,1) 0%, rgba(28,38,58,1) 100%)",
                 color: "rgba(255,255,255,1)",
                 transform: "translate(0,-2px)",
                 boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
               }}
               _active={{
-                bg: preparing ? LOADING_BG : "rgba(18,22,32,1)",
+                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(18,28,48,1) 0%, rgba(12,18,32,1) 100%)",
                 color: "rgba(255,255,255,0.9)",
                 boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
                 transform: "translate(1px,1px)",
@@ -1029,7 +1029,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               px="19px"
               py="13px"
               position="relative"
-              bg="rgba(28,32,42,0.95)"
+              bg="linear-gradient(135deg, rgba(28,42,68,0.98) 0%, rgba(18,28,48,1) 100%)"
               color="rgba(255,255,255,0.98)"
               border="none"
               borderRadius="0"
@@ -1041,13 +1041,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
               transform="translate(.5px,-.5px)"
               _hover={{
-                bg: "rgba(38,42,52,0.98)",
+                bg: "linear-gradient(135deg, rgba(38,52,78,1) 0%, rgba(28,38,58,1) 100%)",
                 color: "rgba(255,255,255,1)",
                 transform: "translate(0,-2px)",
                 boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
               }}
               _active={{
-                bg: "rgba(18,22,32,1)",
+                bg: "linear-gradient(135deg, rgba(18,28,48,1) 0%, rgba(12,18,32,1) 100%)",
                 color: "rgba(255,255,255,0.9)",
                 boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
                 transform: "translate(1px,1px)",
