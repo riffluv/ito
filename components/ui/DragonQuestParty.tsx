@@ -3,6 +3,7 @@
 import { notify, notifyAsync } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { transferHost } from "@/lib/firebase/rooms";
+import { toastIds } from "@/lib/ui/toastIds";
 import { Box, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -174,23 +175,24 @@ export function DragonQuestParty({
       setTransferTargetId(targetId);
       setHostOverride({ targetId, previousId });
 
+    const toastId = toastIds.hostTransfer(roomId, targetId);
     const result = await notifyAsync(
       () => transferHost(roomId, targetId),
       {
         pending: {
-          id: `${roomId}-transfer-${targetId}`,
+          id: toastId,
           title: `${targetName} をホストに設定中…`,
           type: "info",
           duration: 1500,
         },
         success: {
-          id: `${roomId}-transfer-${targetId}`,
+          id: toastId,
           title: `${targetName} がホストになりました`,
           type: "success",
           duration: 2000,
         },
         error: {
-          id: `${roomId}-transfer-${targetId}`,
+          id: toastId,
           title: "委譲に失敗しました",
           type: "error",
           duration: 3000,
@@ -198,7 +200,7 @@ export function DragonQuestParty({
       }
     );
 
-    if (!result) {
+    if (result === null) {
       setHostOverride((current) =>
         current && current.targetId === targetId ? null : current
       );
@@ -206,15 +208,16 @@ export function DragonQuestParty({
         current === targetId ? null : current
       );
       notify({
+        id: toastId,
         title: "ホスト委譲を元に戻しました",
         description: "ネットワーク状況を確認してもう一度お試しください",
         type: "warning",
         duration: 3200,
       });
     }
-    },
-    [roomId, transferTargetId, displayedHostId]
-  );
+  },
+  [roomId, transferTargetId, displayedHostId]
+);
 
   if (actualCount === 0) return null;
 

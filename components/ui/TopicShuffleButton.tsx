@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import type { RoomDoc } from "@/lib/types";
 import { RefreshCw } from "lucide-react";
@@ -29,12 +30,14 @@ export function TopicShuffleButton({
     try {
       await topicControls.shuffleTopic(roomId, currentTopicBox);
       notify({
+        id: toastIds.topicShuffleSuccess(roomId),
         title: "お題をシャッフルしました",
         type: "success",
-        duration: 3000,
+        duration: 2000,
       });
     } catch (error: any) {
       notify({
+        id: toastIds.topicError(roomId),
         title: "シャッフルに失敗",
         description: error?.message,
         type: "error",

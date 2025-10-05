@@ -1,0 +1,20 @@
+export const toastIds = {
+  gameStart: (roomId: string) => `${roomId}-toast-game-start`,
+  gameStartError: (roomId: string) => `${roomId}-toast-game-start-error`,
+  gameReset: (roomId: string) => `${roomId}-toast-game-reset`,
+  numberDealSuccess: (roomId: string) => `${roomId}-toast-number-deal-success`,
+  numberDealWarningNoTopic: (roomId: string) => `${roomId}-toast-number-deal-need-topic`,
+  numberDealWarningPlayers: (roomId: string) => `${roomId}-toast-number-deal-need-players`,
+  numberDealError: (roomId: string) => `${roomId}-toast-number-deal-error`,
+  topicChangeSuccess: (roomId: string) => `${roomId}-toast-topic-change`,
+  topicShuffleSuccess: (roomId: string) => `${roomId}-toast-topic-shuffle`,
+  topicError: (roomId: string) => `${roomId}-toast-topic-error`,
+  hostTransfer: (roomId: string, targetId: string) => `${roomId}-toast-host-${targetId}`,
+  firebaseLimit: (roomId: string, key: string) => `${roomId}-toast-firebase-${key}`,
+  clueSaveError: (roomId: string) => `${roomId}-toast-clue-save`,
+  clueClearError: (roomId: string) => `${roomId}-toast-clue-clear`,
+  cardActionError: (roomId: string) => `${roomId}-toast-card-action`,
+  genericInfo: (roomId: string, key: string) => `${roomId}-toast-info-${key}`,
+  genericError: (roomId: string, key: string) => `${roomId}-toast-error-${key}`,
+};
+
