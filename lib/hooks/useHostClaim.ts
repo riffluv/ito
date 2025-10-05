@@ -49,8 +49,13 @@ export function useHostClaim({
     const isRecoveringHost =
       lastKnownHostId === uid && !previousHostStillMember;
     const hasNoRecordedHost = !candidateId && !lastKnownHostId;
+    const isSelfFallback =
+      lastKnownHostId === uid && (!candidateId || candidateId === uid);
     const shouldAttemptClaim =
-      (isDesignatedCandidate || isRecoveringHost || hasNoRecordedHost) &&
+      (isDesignatedCandidate ||
+        isRecoveringHost ||
+        hasNoRecordedHost ||
+        isSelfFallback) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
 
     if (!shouldAttemptClaim) {
@@ -60,6 +65,7 @@ export function useHostClaim({
         candidateId,
         lastKnownHostId,
         previousHostStillMember,
+        selfFallback: isSelfFallback,
         leaving: leavingRef.current,
       });
       clearTimer();
