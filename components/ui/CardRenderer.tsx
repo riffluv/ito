@@ -2,6 +2,7 @@ import GameCard from "@/components/ui/GameCard";
 import { computeCardState } from "@/lib/cards/logic";
 import type { PlayerDoc } from "@/lib/types";
 import { createBoardCardViewModel } from "./cardViewModel";
+import { useRenderMetrics } from "@/lib/perf/useRenderMetrics";
 
 interface CardRendererProps {
   id: string;
@@ -43,6 +44,8 @@ export function CardRenderer(props: CardRendererProps) {
     failed: props.failed,
     realtimeResult: props.realtimeResult ?? null,
   });
+
+  useRenderMetrics("CardRenderer", { thresholdMs: 4 });
 
   const interactive = props.interactiveFlip;
   const variant = interactive ? "flip" : state.variant;

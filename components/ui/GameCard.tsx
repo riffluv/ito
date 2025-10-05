@@ -38,8 +38,6 @@ import {
   getDragonQuestTextColors,
   type GameCardState
 } from "../cards/card.styles";
-import CardHighlightLayer from "./CardHighlightLayer";
-import type { CardHighlightState } from "./CardHighlightLayer";
 
 // テキスト統一スタイル
 const getUnifiedTextStyle = (): React.CSSProperties => ({
@@ -70,9 +68,6 @@ export function GameCard({
   // スタイル取得
   const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
   const textColors = getDragonQuestTextColors(waitingInCentral);
-  const highlightState = state as CardHighlightState;
-  const highlightActive =
-    !waitingInCentral && (boundary || successLevel != null || state === "success" || state === "fail");
 
   const playCardFlip = useSoundEffect("card_flip");
   const previousFlipRef = useRef<boolean>(flipped);
@@ -217,12 +212,6 @@ export function GameCard({
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
       >
-        <CardHighlightLayer
-          state={highlightState}
-          boundary={boundary}
-          successLevel={successLevel}
-          isActive={highlightActive}
-        />
         <div
           className="gc3d"
           ref={threeDContainerRef}
@@ -314,12 +303,6 @@ export function GameCard({
       }}
       tabIndex={0}
     >
-      <CardHighlightLayer
-        state={highlightState}
-        boundary={boundary}
-        successLevel={successLevel}
-        isActive={highlightActive}
-      />
       <Box
         fontSize="2xs"
         lineHeight="1.3"
