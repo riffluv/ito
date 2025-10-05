@@ -1,6 +1,7 @@
 "use client";
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
+import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { notify, muteNotifications } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
@@ -129,6 +130,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     message: string;
     tone: "info" | "success";
   } | null>(null);
+  const [topicActionLoading, setTopicActionLoading] = React.useState(false);
+  const [dealActionLoading, setDealActionLoading] = React.useState(false);
 
   const {
     autoStartLocked,
@@ -1033,132 +1036,88 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </AppButton>
           )}
 
-        <HStack gap="11px">
+        <HStack gap={{ base: "10px", md: "12px" }} flexWrap={{ base: "wrap", md: "nowrap" }}>
           {isHost && (
             <>
               <Tooltip
                 content={
                   effectiveDefaultTopicType === "カスタム"
                     ? "カスタムお題を設定"
-                    : "お題をシャッフルする"
+                    : "お題をシャッフル"
                 }
                 showArrow
-                openDelay={300}
+                openDelay={220}
               >
-                <IconButton
-                  aria-label="お題シャッフル"
+                <OctopathDockButton
+                  compact
+                  icon={
+                    effectiveDefaultTopicType === "カスタム" ? (
+                      <FiEdit2 />
+                    ) : (
+                      <FaRegCreditCard />
+                    )
+                  }
+                  isLoading={topicActionLoading}
+                  disabled={topicActionLoading || (isGameFinished && effectiveDefaultTopicType !== "カスタム")}
                   onClick={async () => {
-                    // 最新のオプションを取得して判定の不整合を防ぐ
+                    if (topicActionLoading) return;
                     let mode = effectiveDefaultTopicType;
                     try {
                       if (db) {
                         const snap = await getDoc(doc(db, "rooms", roomId));
-                        const latest = (snap.data() as any)?.options
-                          ?.defaultTopicType as string | undefined;
+                        const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
                         if (latest) mode = latest;
                       }
                     } catch {}
+
                     if (mode === "カスタム") {
-                      if (!isHost) return;
                       setCustomText(currentTopic || "");
                       setCustomOpen(true);
-                    } else {
+                      return;
+                    }
+
                     if (isGameFinished) return;
-                    playTopicShuffle();
-                    await topicControls.shuffleTopic(roomId, mode as any);
+                    setTopicActionLoading(true);
+                    try {
+                      playTopicShuffle();
+                      await topicControls.shuffleTopic(roomId, mode as any);
+                    } finally {
+                      setTopicActionLoading(false);
                     }
                   }}
-                  size="sm"
-                  w="40px"
-                  h="40px"
-                  bg="transparent"
-                  color="rgba(255,255,255,0.85)"
-                  borderWidth="0"
-                  borderRadius={0}
-                  boxShadow="none"
-                  _hover={{
-                    bg:
-                      effectiveDefaultTopicType === "カスタム"
-                        ? "rgba(147, 51, 234, 0.3)"
-                        : "rgba(58, 176, 255, 0.3)",
-                    color: "white",
-                    transform: "translateY(-2px)",
-                  }}
-                  _active={{
-                    transform: "translateY(0)",
-                  }}
-                  transition="175ms cubic-bezier(.2,1,.3,1)"
-                >
-                  {effectiveDefaultTopicType === "カスタム" ? (
-                    <FiEdit2 />
-                  ) : (
-                    <FaRegCreditCard />
-                  )}
-                </IconButton>
+                />
               </Tooltip>
-              <Tooltip content="数字を配り直す" showArrow openDelay={300}>
-                <IconButton
-                  aria-label="数字配布"
-                  onClick={() => {
-                    if (isGameFinished) return;
-                    playCardDeal();
-                    void topicControls.dealNumbers(roomId);
+
+              <Tooltip content="数字を配り直す" showArrow openDelay={220}>
+                <OctopathDockButton
+                  compact
+                  icon={<FaDice />}
+                  isLoading={dealActionLoading}
+                  disabled={dealActionLoading || isGameFinished}
+                  onClick={async () => {
+                    if (dealActionLoading || isGameFinished) return;
+                    setDealActionLoading(true);
+                    try {
+                      playCardDeal();
+                      await topicControls.dealNumbers(roomId);
+                    } finally {
+                      setDealActionLoading(false);
+                    }
                   }}
-                  size="sm"
-                  w="40px"
-                  h="40px"
-                  bg="transparent"
-                  color="rgba(255,255,255,0.85)"
-                  borderWidth="0"
-                  borderRadius={0}
-                  boxShadow="none"
-                  _hover={{
-                    bg: "rgba(132, 204, 22, 0.3)",
-                    color: "white",
-                    transform: "translateY(-2px)",
-                  }}
-                  _active={{
-                    transform: "translateY(0)",
-                  }}
-                  transition="178ms cubic-bezier(.2,1,.3,1)"
-                >
-                  <FaDice />
-                </IconButton>
+                />
               </Tooltip>
-              <Tooltip content="ゲームをリセット" showArrow openDelay={300}>
-                <IconButton
-                  aria-label="リセット"
+
+              <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
+                <OctopathDockButton
+                  compact
+                  icon={<FaRedo />}
+                  isLoading={isResetting}
+                  disabled={isResetting}
                   onClick={async () => {
                     if (isResetting) return;
                     await resetGame({ playSound: !isGameFinished });
                   }}
-                  size="sm"
-                  w="40px"
-                  h="40px"
-                  bg="transparent"
-                  color="rgba(255,255,255,0.85)"
-                  borderWidth="0"
-                  borderRadius={0}
-                  boxShadow="none"
-                  _hover={{
-                    bg: "rgba(220, 38, 38, 0.3)",
-                    color: "white",
-                    transform: "translateY(-2px)",
-                  }}
-                  _active={{
-                    transform: "translateY(0)",
-                  }}
-                  _disabled={{
-                    bg: "transparent",
-                    color: "rgba(255,255,255,0.3)",
-                    cursor: "not-allowed",
-                    transform: "none",
-                  }}
-                  disabled={isResetting}
-                  transition="172ms cubic-bezier(.2,1,.3,1)"
-                >
-                  <FaRedo />
-                </IconButton>
+                />
               </Tooltip>
             </>
           )}

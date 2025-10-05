@@ -1,12 +1,12 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { Shuffle, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { Shuffle } from "lucide-react";
+import { useMemo, useState } from "react";
 
 export type QuickNumberRedealProps = {
   roomId: string;
@@ -36,6 +36,13 @@ export function QuickNumberRedeal({
   const canRedeal = topicSelected && !tooFewPlayers;
 
   const playCardDeal = useSoundEffect("card_deal");
+  const effectivelyLoading = isLoading;
+
+  const subLabel = useMemo(() => {
+    if (!topicSelected) return "お題未設定";
+    if (effectivelyLoading) return "処理中";
+    return numbersDealt ? "配り直し" : `${effectivePlayerCount}人に配布`;
+  }, [topicSelected, effectivelyLoading, numbersDealt, effectivePlayerCount]);
 
   const handleRedeal = async () => {
     if (isLoading || !canRedeal) return;
@@ -82,42 +89,24 @@ export function QuickNumberRedeal({
     }
   };
 
-  const getButtonText = () => {
-    return "🎯";
-  };
-
-  const getButtonVariant = (): "solid" | "outline" | "ghost" | "subtle" | "surface" | "plain" => {
-    if (!canRedeal) return "ghost";
-    return numbersDealt ? "ghost" : "ghost";
-  };
-
-  const getIcon = () => {
-    if (!canRedeal) return <AlertTriangle size={14} />;
-    return <Shuffle size={14} />;
-  };
-
   return (
-    <AppButton
+    <OctopathDockButton
       onClick={handleRedeal}
-      variant={getButtonVariant()}
-      colorPalette={canRedeal ? "orange" : "gray"}
-      size="sm"
-      loading={isLoading}
+      isLoading={effectivelyLoading}
       disabled={!canRedeal}
+      label="数字再配布"
+      subLabel={subLabel}
+      icon={<Shuffle size={16} />}
       title={
-        !canRedeal 
-          ? (!topicSelected 
-              ? "数字配布: 先にお題を選択してください" 
-              : `数字配布: プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
-            )
-          : numbersDealt 
-            ? "数字を配り直す"
-            : "数字を配布"
+        !canRedeal
+          ? !topicSelected
+            ? "数字配布: 先にお題を選択してください"
+            : `数字配布: プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
+          : numbersDealt
+          ? "数字を配り直す"
+          : "数字を配布"
       }
-      px={2}
-      minW="auto"
-    >
-      {getButtonText()}
-    </AppButton>
+      minW="220px"
+    />
   );
 }

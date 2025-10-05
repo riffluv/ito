@@ -1,12 +1,12 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Shuffle } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export type NumberDealButtonProps = {
   roomId: string;
@@ -36,6 +36,13 @@ export function NumberDealButton({
   const canDeal = topicSelected && !tooFewPlayers;
 
   const playCardDeal = useSoundEffect("card_deal");
+  const effectivelyLoading = isLoading;
+
+  const subLabel = useMemo(() => {
+    if (!topicSelected) return "お題未設定";
+    if (effectivelyLoading) return "処理中";
+    return numbersDealt ? "配り直し" : `${effectivePlayerCount}人に配布`;
+  }, [topicSelected, effectivelyLoading, numbersDealt, effectivePlayerCount]);
 
   const handleDeal = async () => {
     if (isLoading || !canDeal) return;
@@ -83,27 +90,23 @@ export function NumberDealButton({
   };
 
   return (
-    <AppButton
+    <OctopathDockButton
       onClick={handleDeal}
-      variant="ghost"
-      size={size}
-      loading={isLoading}
+      isLoading={effectivelyLoading}
       disabled={!canDeal}
+      label="数字配布"
+      subLabel={subLabel}
+      icon={<Shuffle size={16} />}
       title={
-        !canDeal 
-          ? (!topicSelected 
-              ? "数字配布: 先にお題を選択してください" 
-              : `数字配布: プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
-            )
-          : numbersDealt 
-            ? "数字を配り直す"
-            : "数字を配布"
+        !canDeal
+          ? !topicSelected
+            ? "数字配布: 先にお題を選択してください"
+            : `数字配布: プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`
+          : numbersDealt
+          ? "数字を配り直す"
+          : "数字を配布"
       }
-      px={2}
-      minW="auto"
-      colorPalette={canDeal ? "orange" : "gray"}
-    >
-      <Shuffle size={14} />
-    </AppButton>
+      minW={size === "lg" ? "260px" : size === "md" ? "240px" : "220px"}
+    />
   );
 }

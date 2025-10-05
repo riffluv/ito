@@ -1,6 +1,6 @@
 "use client";
-import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import type { RoomDoc } from "@/lib/types";
@@ -50,22 +50,19 @@ export function TopicShuffleButton({
   const canShuffle = currentTopic && currentTopicBox;
 
   return (
-    <AppButton
+    <OctopathDockButton
       onClick={handleShuffle}
-      variant="ghost"
-      size={size}
-      loading={isLoading}
+      isLoading={isLoading}
       disabled={!canShuffle}
+      label="お題シャッフル"
+      subLabel={currentTopic ? currentTopic : "カテゴリ未選択"}
+      icon={<RefreshCw size={16} />}
       title={
         canShuffle
           ? `お題をシャッフル (現在: ${currentTopic})`
           : "お題を選択してからシャッフルできます"
       }
-      px={2}
-      minW="auto"
-      colorPalette={canShuffle ? "teal" : "gray"}
-    >
-      <RefreshCw size={14} />
-    </AppButton>
+      minW={size === "lg" ? "240px" : size === "md" ? "220px" : "210px"}
+    />
   );
 }
