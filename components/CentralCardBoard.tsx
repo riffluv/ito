@@ -40,6 +40,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 // Layout & animation constants sourced from theme/layout and existing motion logic
 import { EmptyCard } from "@/components/cards";
@@ -73,6 +74,14 @@ interface CentralCardBoardProps {
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
 
+const shallowArrayEqual = (a: readonly string[], b: readonly string[]) => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
@@ -181,8 +190,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return placedIds.has(meId);
   }, [placedIds, meId]);
 
-  const playPickup = useSoundEffect("drag_pickup");
-  const playDropSuccess = useSoundEffect("drop_success");
   const playDropInvalid = useSoundEffect("drop_invalid");
   const playCardPlace = useSoundEffect("card_place");
 
@@ -221,6 +228,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     hasNumber,
     mePlaced,
   });
+
+  const updatePendingState = useCallback(
+    (updater: (prev: string[]) => string[]) => {
+      setPending((prev) => {
+        const next = updater(prev);
+        if (next === prev) return prev;
+        return shallowArrayEqual(prev, next) ? prev : next;
+      });
+    },
+    [setPending]
+  );
 
   // ??????????????????
   const [showResult, setShowResult] = useState(false);
@@ -302,8 +320,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
   useEffect(() => {
     if (!orderList || orderList.length === 0) return;
-    setPending((cur) => cur.filter((id) => !orderListSet.has(id)));
-  }, [orderListSet, setPending]);
+    updatePendingState((cur) => cur.filter((id) => !orderListSet.has(id)));
+  }, [orderListSet, orderList?.length, updatePendingState]);
 
   // proposal ???? proposal ??????ID? pending ???????
   useEffect(() => {
@@ -311,15 +329,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     const present = new Set(
       (proposal as (string | null)[]).filter(Boolean) as string[]
     );
-    setPending((cur) => cur.filter((id) => !present.has(id)));
-  }, [proposal?.join(","), setPending]);
+    updatePendingState((cur) => cur.filter((id) => !present.has(id)));
+  }, [proposal?.join(","), updatePendingState]);
 
   // ????/??????????? pending ?????????????
   useEffect(() => {
     const onVis = () => {
       try {
         if (document.visibilityState === "hidden") {
-          setPending([]);
+          updatePendingState((cur) => (cur.length === 0 ? cur : []));
         }
       } catch {}
     };
@@ -331,7 +349,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         document.removeEventListener("visibilitychange", onVis);
       }
     };
-  }, [setPending]);
+  }, [updatePendingState]);
 
   // ⚡ PERFORMANCE: renderCard をuseCallback化
   const renderCard = useCallback(
@@ -407,8 +425,20 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     );
   }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, eligibleIds.length]);
 
+  // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
+  const onDragStart = useCallback((e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  }, []);
+  const clearActive = useCallback(() => {
+    unstable_batchedUpdates(() => {
+      setIsOver(false);
+      setActiveId(null);
+    });
+  }, [setIsOver]);
+
   // ⚡ PERFORMANCE: onDragEnd をuseCallback化
   const onDragEnd = useCallback(async (e: DragEndEvent) => {
+    clearActive();
     if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
     const { active, over } = e;
     if (!over) {
@@ -432,7 +462,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
         return;
       }
-      setPending((prev) => prev.filter((id) => id !== activeId));
+      updatePendingState((prev) => prev.filter((id) => id !== activeId));
       try {
         await removeCardFromProposal(roomId, activeId);
         playCardPlace();
@@ -465,7 +495,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           });
         }
         if (!alreadyInProposal) {
-          setPending((prev) => {
+          updatePendingState((prev) => {
             const next = [...prev];
             const exist = next.indexOf(activeId);
             if (exist >= 0) next.splice(exist, 1);
@@ -509,20 +539,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resolveMode,
     roomStatus,
     playDropInvalid,
-    playDropSuccess,
     playCardPlace,
     activeProposal,
     meId,
-    setPending,
+    updatePendingState,
     roomId,
     slotCountDragging,
+    clearActive,
   ]);
-
-  // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
-  const onDragStart = useCallback((e: DragStartEvent) => {
-    setActiveId(String(e.active.id));
-  }, []);
-  const clearActive = useCallback(() => setActiveId(null), []);
   const isDraggingOwnPlacedCard =
     activeId === meId && (activeProposal as (string | null)[]).includes(activeId);
 
@@ -646,10 +670,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           <DndContext
             collisionDetection={collisionDetection}
             onDragStart={onDragStart}
-            onDragEnd={(ev) => {
-              onDragEnd(ev);
-              clearActive();
-            }}
+            onDragEnd={onDragEnd}
             onDragCancel={clearActive}
             sensors={sensors}
             modifiers={[restrictToFirstScrollableAncestor]}
