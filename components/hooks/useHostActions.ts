@@ -1,5 +1,6 @@
 "use client";
-import { notify } from "@/components/ui/notify";
+import { notify, muteNotifications } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 import {
   startGame as startGameAction,
   submitSortedOrder,
@@ -69,15 +70,22 @@ export function useHostActions({
       proposal.length > 0 ? proposal.length : orderList.length;
     if (placedCount < 2 || placedCount !== activeCount) {
       notify({
+        id: toastIds.genericInfo(roomId, "evaluate-incomplete"),
         title: "まだ全員分が揃っていません",
         description: `提出: ${placedCount}/${activeCount}`,
         type: "warning",
+        duration: 2200,
       });
       return;
     }
     const finalOrder = proposal.length > 0 ? proposal : orderList;
     await submitSortedOrder(roomId, finalOrder);
-    notify({ title: "並びを確定", type: "success" });
+    notify({
+      id: toastIds.genericInfo(roomId, "evaluate-success"),
+      title: "並びを確定",
+      type: "success",
+      duration: 1800,
+    });
   }, [room.order?.proposal, room.order?.list, onlineCount, players.length, roomId]);
 
   // quickStartアクションのハンドラーを個別にメモ化
@@ -89,18 +97,31 @@ export function useHostActions({
       const activeCount =
         typeof onlineCount === "number" ? onlineCount : players.length;
       if (activeCount < 2) {
-        notify({ title: "プレイヤーは2人以上必要です", type: "info" });
+        notify({
+          id: toastIds.numberDealWarningPlayers(roomId),
+          title: "プレイヤーは2人以上必要です",
+          type: "warning",
+          duration: 2200,
+        });
         return;
       }
       const defaultType = room.options?.defaultTopicType || "通常版";
       autoStartControl?.begin?.(4500, { broadcast: true });
+      muteNotifications(
+        [
+          toastIds.topicChangeSuccess(roomId),
+          toastIds.topicShuffleSuccess(roomId),
+          toastIds.numberDealSuccess(roomId),
+          toastIds.gameReset(roomId),
+        ],
+        2800
+      );
       if (room.status === "waiting") {
         await startGameAction(roomId);
       }
       const selectType = defaultType === "カスタム" ? "通常版" : defaultType;
       await topicControls.selectCategory(roomId, selectType as any);
       await topicControls.dealNumbers(roomId);
-      notify({ title: "🚀 クイック開始しました", type: "success" });
     } catch (error) {
       autoStartControl?.clear?.();
       handleGameError(error, "クイック開始");
@@ -111,7 +132,12 @@ export function useHostActions({
   const handleReset = useCallback(async () => {
     try {
       await topicControls.resetTopic(roomId);
-      notify({ title: "ゲームをリセットしました", type: "success" });
+      notify({
+        id: toastIds.gameReset(roomId),
+        title: "ゲームをリセットしました",
+        type: "success",
+        duration: 2000,
+      });
     } catch (error) {
       handleGameError(error, "ゲームリセット");
     }

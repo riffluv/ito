@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -41,16 +42,20 @@ export function NumberDealButton({
     
     if (!topicSelected) {
       notify({ 
+        id: toastIds.numberDealWarningNoTopic(roomId),
         title: "先にお題を設定してください", 
-        type: "warning" 
+        type: "warning",
+        duration: 2200,
       });
       return;
     }
 
     if (tooFewPlayers) {
       notify({ 
+        id: toastIds.numberDealWarningPlayers(roomId),
         title: `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`, 
-        type: "warning" 
+        type: "warning",
+        duration: 2200,
       });
       return;
     }
@@ -60,13 +65,14 @@ export function NumberDealButton({
       playCardDeal();
       await topicControls.dealNumbers(roomId);
       notify({ 
-        title: numbersDealt ? "数字を配り直しました" : "数字を配布しました", 
-        description: `${effectivePlayerCount}人に新しい数字を配布`,
+        id: toastIds.numberDealSuccess(roomId),
+        title: numbersDealt ? "数字を配り直しました" : "数字を配布しました",
         type: "success",
-        duration: 3000,
+        duration: 2000,
       });
     } catch (error: any) {
       notify({
+        id: toastIds.numberDealError(roomId),
         title: "数字配布に失敗",
         description: error?.message,
         type: "error",

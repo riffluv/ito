@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import { topicTypeLabels } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
@@ -33,16 +34,18 @@ export function QuickTopicChange({
     try {
       await topicControls.selectCategory(roomId, category as any);
       notify({
-        title: "お題を変更しました",
-        description: `新しいカテゴリ: ${category}`,
+        id: toastIds.topicChangeSuccess(roomId),
+        title: `お題変更: ${category}`,
         type: "success",
-        duration: 3000,
+        duration: 2000,
       });
     } catch (error: any) {
       notify({
+        id: toastIds.topicError(roomId),
         title: "お題変更に失敗",
         description: error?.message,
         type: "error",
+        duration: 3200,
       });
     } finally {
       setIsLoading(false);
@@ -56,12 +59,14 @@ export function QuickTopicChange({
     try {
       await topicControls.shuffleTopic(roomId, currentTopicBox);
       notify({
+        id: toastIds.topicShuffleSuccess(roomId),
         title: "お題をシャッフルしました",
         type: "success",
-        duration: 3000,
+        duration: 2000,
       });
     } catch (error: any) {
       notify({
+        id: toastIds.topicError(roomId),
         title: "シャッフルに失敗",
         description: error?.message,
         type: "error",

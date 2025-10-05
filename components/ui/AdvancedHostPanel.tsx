@@ -1,6 +1,7 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { logDebug, logError } from "@/lib/utils/log";
@@ -47,6 +48,7 @@ export function AdvancedHostPanel({
       // 選択後もパネルを開いたままにして、シャッフルや数字配布を可能にする
     } catch (error: any) {
       notify({
+        id: toastIds.topicError(roomId),
         title: "カテゴリ選択に失敗",
         description: error?.message,
         type: "error",
@@ -63,6 +65,7 @@ export function AdvancedHostPanel({
     } catch (error: any) {
       logError("advanced-host-panel", "shuffle-topic", error);
       notify({
+        id: toastIds.topicError(roomId),
         title: "シャッフルに失敗",
         description: error?.message,
         type: "error",
@@ -75,10 +78,16 @@ export function AdvancedHostPanel({
   const handleResetRoom = async () => {
     try {
       await topicControls.resetTopic(roomId);
-      notify({ title: "ルームをリセットしました", type: "success" });
+      notify({
+        id: toastIds.gameReset(roomId),
+        title: "ルームをリセットしました",
+        type: "success",
+        duration: 2000,
+      });
     } catch (error: any) {
       logError("advanced-host-panel", "reset-topic", error);
       notify({
+        id: toastIds.topicError(roomId),
         title: "ルームリセットに失敗",
         description: error?.message,
         type: "error",
@@ -91,6 +100,7 @@ export function AdvancedHostPanel({
       await topicControls.resetTopic(roomId);
     } catch (error: any) {
       notify({
+        id: toastIds.topicError(roomId),
         title: "お題リセットに失敗",
         description: error?.message,
         type: "error",

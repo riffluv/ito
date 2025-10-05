@@ -40,6 +40,24 @@ const playNotificationSound = (type: DragonQuestNotification["type"]) => {
 class NotificationStore {
   private listeners = new Set<(notifications: DragonQuestNotification[]) => void>();
   private notifications: DragonQuestNotification[] = [];
+  private timers = new Map<string, number>();
+  private muteMap = new Map<string, number>();
+
+  private normalize(value: string | undefined) {
+    return (value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .slice(0, 48);
+  }
+
+  private deriveId(notification: Omit<DragonQuestNotification, "id" | "timestamp"> & { id?: string }) {
+    if (notification.id) return notification.id;
+    const base = `${notification.type || "info"}-${this.normalize(notification.title)}-${this.normalize(
+      notification.description
+    )}`;
+    return `auto-${base}`;
+  }
 
   subscribe(listener: (notifications: DragonQuestNotification[]) => void) {
     this.listeners.add(listener);
@@ -53,33 +71,79 @@ class NotificationStore {
     this.listeners.forEach((listener) => listener(snapshot));
   }
 
-  add(notification: Omit<DragonQuestNotification, "id" | "timestamp"> & { id?: string }) {
-    const id = notification.id || `dq-notify-${Date.now()}-${Math.random()}`;
-    // 既存の同一IDがあれば置き換え（重複防止）
-    this.notifications = this.notifications.filter((n) => n.id !== id);
+  private isMuted(id: string) {
+    const until = this.muteMap.get(id);
+    if (!until) return false;
+    if (until > Date.now()) return true;
+    this.muteMap.delete(id);
+    return false;
+  }
 
-    const entry: DragonQuestNotification = {
-      ...notification,
-      id,
-      timestamp: Date.now(),
-    };
-    this.notifications.push(entry);
+  mute(id: string, duration: number) {
+    const until = Date.now() + Math.max(duration, 0);
+    if (!id) return;
+    this.muteMap.set(id, until);
+    // 既存表示も外す
+    this.remove(id);
+  }
+
+  add(notification: Omit<DragonQuestNotification, "id" | "timestamp"> & { id?: string }) {
+    const id = this.deriveId(notification);
+    if (this.isMuted(id)) {
+      this.remove(id);
+      return { id, isUpdate: false, muted: true };
+    }
+    const timestamp = Date.now();
+    const duration = notification.duration ?? DEFAULT_DURATION_MS;
+    const existingIndex = this.notifications.findIndex((n) => n.id === id);
+    let entry: DragonQuestNotification;
+
+    if (existingIndex >= 0) {
+      entry = {
+        ...this.notifications[existingIndex],
+        ...notification,
+        id,
+        timestamp,
+      };
+      this.notifications[existingIndex] = entry;
+    } else {
+      entry = {
+        ...notification,
+        id,
+        timestamp,
+      };
+      this.notifications.push(entry);
+    }
+
     this.emit();
 
-    const duration = notification.duration ?? DEFAULT_DURATION_MS;
-    const timer = window.setTimeout(() => {
-      this.remove(entry.id);
-    }, duration);
+    if (typeof window !== "undefined") {
+      const prevTimer = this.timers.get(id);
+      if (prevTimer) {
+        window.clearTimeout(prevTimer);
+      }
+      const timer = window.setTimeout(() => {
+        this.remove(id);
+      }, duration);
+      this.timers.set(id, timer);
+    }
 
-    return entry.id;
+    return { id, isUpdate: existingIndex >= 0, muted: false };
   }
 
   remove(id: string) {
+    const timer = this.timers.get(id);
+    if (timer) {
+      window.clearTimeout(timer);
+      this.timers.delete(id);
+    }
     this.notifications = this.notifications.filter((n) => n.id !== id);
     this.emit();
   }
 
   clear() {
+    this.timers.forEach((timer) => window.clearTimeout(timer));
+    this.timers.clear();
     this.notifications = [];
     this.emit();
   }
@@ -98,9 +162,19 @@ export function dragonQuestNotify(options: {
     type: options.type ?? "info",
     ...options,
   };
-  const id = notificationStore.add(payload);
-  playNotificationSound(payload.type as DragonQuestNotification["type"]);
-  return id;
+  const { id, isUpdate, muted } = notificationStore.add(payload);
+  if (!muted && !isUpdate) {
+    playNotificationSound(payload.type as DragonQuestNotification["type"]);
+  }
+  return muted ? null : id;
+}
+
+export function muteNotification(id: string, duration = 2000) {
+  notificationStore.mute(id, duration);
+}
+
+export function muteNotifications(ids: string[], duration = 2000) {
+  ids.forEach((id) => notificationStore.mute(id, duration));
 }
 
 const getNotificationIcon = (type: DragonQuestNotification["type"]) =>
@@ -130,6 +204,8 @@ function NotificationItem({
   const contentRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
+  const mountedRef = useRef(false);
+  const lastTimestampRef = useRef(notification.timestamp);
 
   useEffect(() => {
     if (!containerRef.current || !contentRef.current) return;
@@ -173,6 +249,34 @@ function NotificationItem({
       gsap.set(content, { clearProps: "opacity" });
     };
   }, [prefersReduced]);
+
+  useEffect(() => {
+    if (!contentRef.current || prefersReduced) {
+      mountedRef.current = true;
+      lastTimestampRef.current = notification.timestamp;
+      return;
+    }
+
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      lastTimestampRef.current = notification.timestamp;
+      return;
+    }
+
+    if (lastTimestampRef.current === notification.timestamp) return;
+    lastTimestampRef.current = notification.timestamp;
+
+    const content = contentRef.current;
+    gsap.killTweensOf(content, "x");
+    gsap.to(content, {
+      keyframes: [
+        { x: -6, duration: 0.06, ease: "power2.inOut" },
+        { x: 5, duration: 0.09, ease: "power2.inOut" },
+        { x: -3, duration: 0.07, ease: "power2.inOut" },
+        { x: 0, duration: 0.14, ease: "power3.out" },
+      ],
+    });
+  }, [notification.timestamp, prefersReduced]);
 
   useEffect(() => {
     const duration = notification.duration ?? DEFAULT_DURATION_MS;

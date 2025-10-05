@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { db } from "@/lib/firebase/client";
 import { collection, onSnapshot, orderBy, query, limitToLast, Timestamp } from "firebase/firestore";
 import { notify } from "@/components/ui/notify";
+import { toastIds } from "@/lib/ui/toastIds";
 
 export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
   const seenRef = useRef<Set<string> | null>(null);
@@ -52,7 +53,17 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
             const type = (data.type as any) || "info";
             const title = data.title || "通知";
             const description = typeof data.description === "string" ? data.description : undefined;
-            notify({ title, description, type });
+            const toastId = (() => {
+              const raw = (title || "").replace(/\s+/g, "");
+              if (!raw) return data.toastId as string | undefined;
+              if (raw.includes("シャッフル")) return toastIds.topicShuffleSuccess(roomId);
+              if (raw.includes("お題変更") || raw.includes("お題を変更")) return toastIds.topicChangeSuccess(roomId);
+              if (raw.includes("数字") && raw.includes("配")) return toastIds.numberDealSuccess(roomId);
+              if (raw.includes("リセット")) return toastIds.gameReset(roomId);
+              if (raw.includes("開始")) return toastIds.gameStart(roomId);
+              return data.toastId as string | undefined;
+            })();
+            notify({ id: toastId || change.doc.id, title, description, type });
             // 表示したイベントの時刻を保持し、連続追加でも二重表示しない
             if (createdAt && (!initLatest || createdAt.toMillis() > initLatest.toMillis())) {
               initLatestRef.current = createdAt;

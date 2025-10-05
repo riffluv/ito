@@ -1,7 +1,7 @@
 "use client";
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
-import { notify } from "@/components/ui/notify";
+import { notify, muteNotifications } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
@@ -30,6 +30,7 @@ import {
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
 import { UI_TOKENS } from "@/theme/layout";
+import { toastIds } from "@/lib/ui/toastIds";
 import {
   Box,
   Dialog,
@@ -267,6 +268,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (isFirebaseQuotaExceeded(e)) {
         handleFirebaseQuotaError("連想ワード記録");
         notify({
+          id: toastIds.firebaseLimit(roomId, "clue-save"),
           title: "接続制限のため記録不可",
           description:
             "現在連想ワードを記録できません。24時間後に再度お試しください。",
@@ -274,6 +276,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       } else {
         notify({
+          id: toastIds.clueSaveError(roomId),
           title: "記録に失敗しました",
           description: e?.message,
           type: "error",
@@ -294,6 +297,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       });
     } catch (e: any) {
       notify({
+        id: toastIds.clueClearError(roomId),
         title: "クリアに失敗しました",
         description: e?.message,
         type: "error",
@@ -339,6 +343,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (isFirebaseQuotaExceeded(e)) {
         handleFirebaseQuotaError(actionLabel);
         notify({
+          id: toastIds.firebaseLimit(roomId, "card-action"),
           title: "Firebase 制限により処理できません",
           description:
             "現在カード操作を完了できません。しばらく待って再度お試しください。",
@@ -346,6 +351,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       } else {
         notify({
+          id: toastIds.cardActionError(roomId),
           title: actionLabel + "処理に失敗しました",
           description: e?.message,
           type: "error",
@@ -377,10 +383,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     if (!isHost) {
       setCustomStartPending(false);
       notify({
+        id: toastIds.topicChangeSuccess(roomId),
         title: "お題を更新しました",
         description: "ホストが開始するとゲームがスタートします",
         type: "success",
-        duration: 2000,
+        duration: 1800,
       });
       return;
     }
@@ -395,9 +402,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
         notify({
+          id: toastIds.gameStart(roomId),
           title: "カスタムお題で開始",
           type: "success",
-          duration: 1500,
+          duration: 2000,
         });
       }
     } finally {
@@ -417,6 +425,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     if (quickStartPending) return false;
 
     setQuickStartPending(true);
+
+    muteNotifications(
+      [
+        toastIds.topicChangeSuccess(roomId),
+        toastIds.topicShuffleSuccess(roomId),
+        toastIds.numberDealSuccess(roomId),
+        toastIds.gameReset(roomId),
+      ],
+      2800
+    );
 
     let effectiveType = defaultTopicType as string;
     let latestTopic: string | null = currentTopic ?? null;
@@ -459,11 +477,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         }
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
-        notify({
-          title: "カスタムお題で開始",
-          type: "success",
-          duration: 1500,
-        });
         try {
           postRoundReset(roomId);
         } catch {}
@@ -491,6 +504,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       } else {
         const message = error?.message || "処理に失敗しました";
         notify({
+          id: toastIds.gameStartError(roomId),
           title: "ゲーム開始に失敗しました",
           description: message,
           type: "error",
@@ -595,7 +609,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       } else {
         setInlineFeedback(null);
       }
-      notify({ title: "ゲームをリセット！", type: "success" });
+      notify({
+        id: toastIds.gameReset(roomId),
+        title: "ゲームを待機状態に戻しました",
+        type: "success",
+        duration: 2000,
+      });
       try {
         postRoundReset(roomId);
       } catch {}
@@ -603,6 +622,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       const msg = String(e?.message || e || "");
       console.error("❌ resetGame: 失敗", e);
       notify({
+        id: toastIds.genericError(roomId, "game-reset"),
         title: "リセットに失敗しました",
         description: msg,
         type: "error",

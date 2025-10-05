@@ -1,6 +1,10 @@
 // Notification facade wired to Dragon Quest GSAP notifications
 // Centralizes notification calls so we can change rendering strategy later easily.
-import { dragonQuestNotify } from "@/components/ui/DragonQuestNotify";
+import {
+  dragonQuestNotify,
+  muteNotification as muteNotificationInternal,
+  muteNotifications as muteNotificationsInternal,
+} from "@/components/ui/DragonQuestNotify";
 
 export type NotifyOptions = {
   title?: string;
@@ -23,6 +27,14 @@ export function notify(opts: NotifyOptions | string): void {
       duration: o.duration,
     });
   });
+}
+
+export function muteNotification(id: string, duration = 2000) {
+  queueMicrotask(() => muteNotificationInternal(id, duration));
+}
+
+export function muteNotifications(ids: string[], duration = 2000) {
+  queueMicrotask(() => muteNotificationsInternal(ids, duration));
 }
 
 export type NotifyAsyncState = "pending" | "success" | "error";
