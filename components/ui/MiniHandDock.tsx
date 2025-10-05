@@ -725,15 +725,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         columnGap={{ base: "14px", md: "19px" }}
         rowGap={{ base: "11px", md: "14px" }}
         css={{
-          background: "linear-gradient(180deg, rgba(10, 15, 25, 0.83) 0%, rgba(8, 12, 20, 0.92) 65%, rgba(6, 9, 16, 0.95) 100%)",
-          backdropFilter: "blur(12px) saturate(1.2)",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
+          background: "linear-gradient(178deg, rgba(9, 14, 24, 0.81) 0%, rgba(7, 11, 19, 0.91) 58%, rgba(8, 12, 21, 0.94) 83%, rgba(5, 8, 15, 0.96) 100%)",
+          backdropFilter: "blur(11px) saturate(1.15)",
+          border: "2px solid rgba(255, 255, 255, 0.12)",
           borderRadius: 0,
           boxShadow: `
-          0 -3px 18px rgba(0, 0, 0, 0.65),
-          0 -7px 42px rgba(0, 0, 0, 0.48),
-          inset 0 1px 0 rgba(255, 255, 255, 0.09),
-          inset 0 -1px 0 rgba(0, 0, 0, 0.25)
+          0 -2px 17px rgba(0, 0, 0, 0.68),
+          0 -6px 38px rgba(0, 0, 0, 0.52),
+          0 -1px 8px rgba(0, 0, 0, 0.38),
+          inset 0 1px 0 rgba(255, 255, 255, 0.07),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.28)
         `,
         }}
         position="relative"
@@ -744,7 +745,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           left: 0,
           right: 0,
           height: "1px",
-          background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)",
+          background: "linear-gradient(88deg, transparent 0%, rgba(255, 255, 255, 0.16) 38%, rgba(255, 255, 255, 0.23) 56%, transparent 100%)",
         }}
       >
       {/* Left cluster */}

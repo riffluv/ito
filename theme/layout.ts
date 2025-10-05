@@ -306,18 +306,18 @@ export const UI_TOKENS = {
       "0 0 8px rgba(255,215,0,0.6), 0 0 16px rgba(255,215,0,0.4), 1px 1px 0 rgba(0,0,0,0.8)",
   },
   GRADIENTS: {
-    deepBlue: "linear-gradient(137deg, rgba(0,48,112,0.95), rgba(0,32,80,0.98))", // AI感除去: 135deg → 137deg
-    deepBlueHover: "linear-gradient(137deg, rgba(0,60,140,0.98), rgba(0,40,100,1))", // AI感除去: 135deg → 137deg
-    deepBlueActive: "linear-gradient(137deg, rgba(0,36,84,0.95), rgba(0,24,60,0.98))", // AI感除去: 135deg → 137deg
-    forestGreen: "linear-gradient(137deg, rgba(16,112,48,0.95), rgba(8,80,32,0.98))", // AI感除去: 135deg → 137deg
-    forestGreenHover: "linear-gradient(137deg, rgba(32,148,64,0.98), rgba(16,112,48,1))", // AI感除去: 135deg → 137deg
-    forestGreenActive: "linear-gradient(137deg, rgba(8,80,32,1), rgba(4,64,24,1))", // AI感除去: 135deg → 137deg
-    royalPurple: "linear-gradient(137deg, rgba(48,16,112,0.95), rgba(32,8,80,0.98))", // AI感除去: 135deg → 137deg
-    royalPurpleHover: "linear-gradient(137deg, rgba(64,32,148,0.98), rgba(48,16,112,1))", // AI感除去: 135deg → 137deg
-    royalPurpleActive: "linear-gradient(137deg, rgba(32,8,80,1), rgba(24,4,64,1))", // AI感除去: 135deg → 137deg
-    orangeSunset: "linear-gradient(137deg, rgba(112,48,16,0.95), rgba(80,32,8,0.98))", // AI感除去: 135deg → 137deg
-    orangeSunsetHover: "linear-gradient(137deg, rgba(148,64,32,0.98), rgba(112,48,16,1))", // AI感除去: 135deg → 137deg
-    orangeSunsetActive: "linear-gradient(137deg, rgba(80,32,8,1), rgba(64,24,4,1))", // AI感除去: 135deg → 137deg
+    deepBlue: "linear-gradient(133deg, rgba(0,46,108,0.94) 0%, rgba(0,38,92,0.97) 58%, rgba(0,31,78,0.96) 100%)", // AI感除去: 3色・非対称・微差
+    deepBlueHover: "linear-gradient(136deg, rgba(0,58,136,0.97) 0%, rgba(0,52,118,0.99) 54%, rgba(0,39,98,1) 100%)", // AI感除去: 3色・不等間隔
+    deepBlueActive: "linear-gradient(131deg, rgba(0,34,82,0.94) 0%, rgba(0,28,72,0.98) 61%, rgba(0,23,58,0.97) 100%)", // AI感除去: 3色・微差
+    forestGreen: "linear-gradient(139deg, rgba(14,108,46,0.93) 0%, rgba(12,94,38,0.97) 56%, rgba(7,78,31,0.96) 100%)", // AI感除去: 3色・非対称
+    forestGreenHover: "linear-gradient(135deg, rgba(30,144,62,0.96) 0%, rgba(24,128,54,0.99) 52%, rgba(15,110,47,1) 100%)", // AI感除去: 3色・微差
+    forestGreenActive: "linear-gradient(141deg, rgba(7,78,31,0.98) 0%, rgba(6,72,28,1) 59%, rgba(3,62,23,1) 100%)", // AI感除去: 3色・不等間隔
+    royalPurple: "linear-gradient(138deg, rgba(46,14,108,0.93) 0%, rgba(38,11,92,0.97) 57%, rgba(31,7,78,0.96) 100%)", // AI感除去: 3色・非対称
+    royalPurpleHover: "linear-gradient(134deg, rgba(62,30,144,0.96) 0%, rgba(54,24,128,0.99) 53%, rgba(47,15,110,1) 100%)", // AI感除去: 3色・微差
+    royalPurpleActive: "linear-gradient(142deg, rgba(31,7,78,0.98) 0%, rgba(28,6,72,1) 62%, rgba(23,3,62,1) 100%)", // AI感除去: 3色・不等間隔
+    orangeSunset: "linear-gradient(137deg, rgba(108,46,14,0.93) 0%, rgba(92,38,11,0.97) 55%, rgba(78,31,7,0.96) 100%)", // AI感除去: 3色・非対称
+    orangeSunsetHover: "linear-gradient(132deg, rgba(144,62,30,0.96) 0%, rgba(128,54,24,0.99) 51%, rgba(110,47,15,1) 100%)", // AI感除去: 3色・微差
+    orangeSunsetActive: "linear-gradient(140deg, rgba(78,31,7,0.98) 0%, rgba(72,28,6,1) 60%, rgba(62,23,3,1) 100%)", // AI感除去: 3色・不等間隔
     dqPanel:
       "linear-gradient(134deg, rgba(7,8,14,0.86) 0%, rgba(11,13,21,0.92) 47%, rgba(9,10,16,0.89) 78%, rgba(8,9,15,0.87) 100%)", // AI感除去: 非対称4色・不等間隔
   },
