@@ -319,7 +319,7 @@ export const UI_TOKENS = {
     orangeSunsetHover: "linear-gradient(137deg, rgba(148,64,32,0.98), rgba(112,48,16,1))", // AI感除去: 135deg → 137deg
     orangeSunsetActive: "linear-gradient(137deg, rgba(80,32,8,1), rgba(64,24,4,1))", // AI感除去: 135deg → 137deg
     dqPanel:
-      "linear-gradient(137deg, rgba(8,9,15,0.88) 0%, rgba(12,14,22,0.90) 50%, rgba(8,9,15,0.88) 100%)", // AI感除去: 135deg → 137deg
+      "linear-gradient(134deg, rgba(7,8,14,0.86) 0%, rgba(11,13,21,0.92) 47%, rgba(9,10,16,0.89) 78%, rgba(8,9,15,0.87) 100%)", // AI感除去: 非対称4色・不等間隔
   },
   // ボタン影の段階表現
   BUTTON_SHADOWS: {

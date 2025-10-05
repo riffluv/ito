@@ -21,10 +21,12 @@ export type OctopathDockButtonProps = ButtonProps & {
 };
 
 const dockGlint = keyframes`
-  0% { transform: translateX(-40%) rotate(12deg); opacity: 0.28; }
-  35% { transform: translateX(25%) rotate(12deg); opacity: 0.5; }
-  65% { transform: translateX(70%) rotate(12deg); opacity: 0.3; }
-  100% { transform: translateX(120%) rotate(12deg); opacity: 0.22; }
+  0% { transform: translateX(-40%) rotate(11deg); opacity: 0.24; }
+  7% { transform: translateX(-35%) rotate(11deg); opacity: 0.31; }
+  32% { transform: translateX(22%) rotate(11deg); opacity: 0.48; }
+  58% { transform: translateX(68%) rotate(11deg); opacity: 0.29; }
+  71% { transform: translateX(85%) rotate(11deg); opacity: 0.35; }
+  100% { transform: translateX(120%) rotate(11deg); opacity: 0.19; }
 `;
 
 export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButtonProps>(
@@ -53,11 +55,11 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
         position="relative"
         overflow="hidden"
         borderRadius="4px"
-        background="linear-gradient(137deg, rgba(24,28,48,0.96) 0%, rgba(12,16,32,0.92) 100%)"
-        border="1px solid rgba(214, 182, 124, 0.32)"
-        color="rgba(247, 244, 230, 0.92)"
-        textShadow="0 1px 2px rgba(0,0,0,0.78)"
-        boxShadow="0 12px 26px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.08)"
+        background="linear-gradient(133deg, rgba(22,26,44,0.94) 0%, rgba(18,22,38,0.98) 52%, rgba(14,17,31,0.96) 100%)"
+        border="2px solid rgba(208, 176, 118, 0.29)"
+        color="rgba(245, 242, 228, 0.91)"
+        textShadow="0 1.5px 3px rgba(0,0,0,0.82), 1px 0 0 rgba(0,0,0,0.15)"
+        boxShadow="0 11px 23px rgba(0,0,0,0.52), 0 3px 7px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.22)"
         transition="transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease"
         filter={finalDisabled ? "grayscale(0.35) brightness(0.85)" : undefined}
         cursor={finalDisabled ? "default" : "pointer"}
@@ -73,15 +75,15 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
           rest.onMouseLeave?.(event);
         }}
         _hover={{
-          transform: finalDisabled ? undefined : "translateY(-2px)",
+          transform: finalDisabled ? undefined : "translateY(-1.5px)",
           boxShadow: finalDisabled
             ? undefined
-            : "0 18px 32px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.14)",
-          borderColor: finalDisabled ? undefined : "rgba(238, 206, 150, 0.48)",
+            : "0 14px 29px rgba(0,0,0,0.58), 0 5px 9px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.11)",
+          borderColor: finalDisabled ? undefined : "rgba(232, 200, 144, 0.41)",
         }}
         _active={{
-          transform: "translateY(0px)",
-          boxShadow: "0 10px 20px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.05)",
+          transform: "translateY(2px) scale(0.98)",
+          boxShadow: "0 3px 8px rgba(0,0,0,0.62), 0 1px 2px rgba(0,0,0,0.48), inset 0 2px 4px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.02)",
         }}
         _focusVisible={{
           outline: "none",
@@ -90,14 +92,14 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
         _before={{
           content: "''",
           position: "absolute",
-          inset: "-60% -20%",
+          inset: "-58% -22%",
           background:
-            "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.22), rgba(120, 160, 255, 0.08) 45%, transparent 65%)",
-          transform: "translateX(-40%) rotate(12deg)",
-          opacity: 0.45,
+            "radial-gradient(ellipse at 48% 52%, rgba(255, 255, 255, 0.19), rgba(115, 155, 248, 0.07) 43%, transparent 68%)",
+          transform: "translateX(-40%) rotate(11deg)",
+          opacity: 0.38,
           mixBlendMode: "screen",
           pointerEvents: "none",
-          animation: `${dockGlint} 6.8s linear infinite`,
+          animation: `${dockGlint} 7.3s ease-in-out infinite`,
         }}
         _after={{
           content: "''",
