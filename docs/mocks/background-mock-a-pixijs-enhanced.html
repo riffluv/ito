@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A案: Pixi.js強化版 - ドラクエ×オクトパ背景</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: monospace;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+    }
+
+    .ui-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      background: rgba(8, 9, 15, 0.92);
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      color: white;
+      text-align: center;
+      box-shadow:
+        0 0 30px rgba(255, 215, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .ui-overlay h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255, 215, 0, 0.5);
+      letter-spacing: 0.05em;
+    }
+
+    .ui-overlay p {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      background: rgba(8, 9, 15, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      padding: 15px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .controls button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: rgba(255, 215, 0, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      color: white;
+      font-family: monospace;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .controls button:hover {
+      background: rgba(255, 215, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+
+    .controls button.active {
+      background: #FFD700;
+      color: black;
+      border-color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div class="ui-overlay">
+    <h1>A案: Pixi.js強化版</h1>
+    <p>
+      キラキラ光粒子 + オーロラ波 + 星のゆらぎ<br>
+      ドラクエのレトロ感 × オクトパの幻想感<br>
+      <br>
+      <strong>特徴:</strong> 軽量・かわいい・暖かみのある演出
+    </p>
+  </div>
+
+  <div class="controls">
+    <strong>エフェクト切替:</strong>
+    <button onclick="toggleSparkles()" id="btn-sparkles" class="active">✨ キラキラ光粒子</button>
+    <button onclick="toggleStars()" id="btn-stars" class="active">🌟 星空のゆらぎ</button>
+    <button onclick="toggleAurora()" id="btn-aurora" class="active">💫 オーロラ波</button>
+    <button onclick="toggleLeaves()" id="btn-leaves" class="active">🍃 風の葉っぱ</button>
+  </div>
+
+  <script>
+    // Pixi.js セットアップ
+    const app = new PIXI.Application({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: 0x1a0f2e, // 深い紫（夕暮れ感）
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+    });
+
+    document.getElementById('canvas-container').appendChild(app.view);
+
+    // リサイズ対応
+    window.addEventListener('resize', () => {
+      app.renderer.resize(window.innerWidth, window.innerHeight);
+    });
+
+    // ===== 背景グラデーション（ドラクエ×オクト風） =====
+    const bgGradient = new PIXI.Graphics();
+    function drawBgGradient() {
+      bgGradient.clear();
+      const colors = [
+        { color: 0x1a0f2e, alpha: 1, position: 0 },      // 深紫（上）
+        { color: 0x3d2463, alpha: 1, position: 0.3 },    // 紫
+        { color: 0x5a3a7a, alpha: 1, position: 0.5 },    // 明るい紫
+        { color: 0x8b5a3c, alpha: 1, position: 0.7 },    // 茶色（地平線）
+        { color: 0xa67c52, alpha: 1, position: 1 },      // 暖色（下）
+      ];
+
+      for (let i = 0; i < app.screen.height; i++) {
+        const ratio = i / app.screen.height;
+        let color = 0x1a0f2e;
+
+        for (let j = 0; j < colors.length - 1; j++) {
+          if (ratio >= colors[j].position && ratio <= colors[j + 1].position) {
+            const localRatio = (ratio - colors[j].position) / (colors[j + 1].position - colors[j].position);
+            color = PIXI.utils.rgb2hex([
+              ((colors[j].color >> 16) & 0xFF) * (1 - localRatio) / 255 + ((colors[j + 1].color >> 16) & 0xFF) * localRatio / 255,
+              ((colors[j].color >> 8) & 0xFF) * (1 - localRatio) / 255 + ((colors[j + 1].color >> 8) & 0xFF) * localRatio / 255,
+              (colors[j].color & 0xFF) * (1 - localRatio) / 255 + (colors[j + 1].color & 0xFF) * localRatio / 255,
+            ]);
+          }
+        }
+
+        bgGradient.beginFill(color);
+        bgGradient.drawRect(0, i, app.screen.width, 1);
+        bgGradient.endFill();
+      }
+    }
+    drawBgGradient();
+    app.stage.addChild(bgGradient);
+
+    window.addEventListener('resize', drawBgGradient);
+
+    // ===== 1. キラキラ光粒子（スライム的） =====
+    const sparklesContainer = new PIXI.Container();
+    app.stage.addChild(sparklesContainer);
+
+    const sparkles = [];
+    for (let i = 0; i < 80; i++) {
+      const sparkle = new PIXI.Graphics();
+      const size = Math.random() * 3 + 1;
+      sparkle.beginFill(0xFFD700, Math.random() * 0.6 + 0.4);
+      sparkle.drawCircle(0, 0, size);
+      sparkle.endFill();
+
+      sparkle.x = Math.random() * app.screen.width;
+      sparkle.y = Math.random() * app.screen.height;
+      sparkle.vx = (Math.random() - 0.5) * 0.5;
+      sparkle.vy = (Math.random() - 0.5) * 0.5;
+      sparkle.life = Math.random() * Math.PI * 2;
+      sparkle.speed = Math.random() * 0.02 + 0.01;
+
+      sparkles.push(sparkle);
+      sparklesContainer.addChild(sparkle);
+    }
+
+    // ===== 2. 星空のゆらぎ =====
+    const starsContainer = new PIXI.Container();
+    app.stage.addChild(starsContainer);
+
+    const stars = [];
+    for (let i = 0; i < 120; i++) {
+      const star = new PIXI.Graphics();
+      const size = Math.random() * 2 + 0.5;
+      star.beginFill(0xFFFFFF, Math.random() * 0.8 + 0.2);
+      star.drawCircle(0, 0, size);
+      star.endFill();
+
+      star.x = Math.random() * app.screen.width;
+      star.y = Math.random() * app.screen.height * 0.6; // 上半分だけ
+      star.alpha = Math.random() * 0.7 + 0.3;
+      star.baseAlpha = star.alpha;
+      star.twinkleSpeed = Math.random() * 0.02 + 0.005;
+      star.twinklePhase = Math.random() * Math.PI * 2;
+
+      stars.push(star);
+      starsContainer.addChild(star);
+    }
+
+    // ===== 3. オーロラ波 =====
+    const auroraContainer = new PIXI.Container();
+    app.stage.addChild(auroraContainer);
+
+    const aurora = new PIXI.Graphics();
+    auroraContainer.addChild(aurora);
+    let auroraPhase = 0;
+
+    function drawAurora() {
+      aurora.clear();
+
+      const colors = [0x4169E1, 0x9370DB, 0xFF69B4, 0xFFD700];
+      const waves = 3;
+
+      for (let w = 0; w < waves; w++) {
+        aurora.beginFill(colors[w % colors.length], 0.08);
+        aurora.moveTo(0, app.screen.height * 0.3 + w * 50);
+
+        for (let x = 0; x <= app.screen.width; x += 20) {
+          const y = app.screen.height * 0.3 + w * 50 + Math.sin((x * 0.01 + auroraPhase + w * 0.5)) * 40;
+          aurora.lineTo(x, y);
+        }
+
+        aurora.lineTo(app.screen.width, app.screen.height);
+        aurora.lineTo(0, app.screen.height);
+        aurora.endFill();
+      }
+
+      auroraPhase += 0.02;
+    }
+
+    // ===== 4. 風で揺れる葉っぱ =====
+    const leavesContainer = new PIXI.Container();
+    app.stage.addChild(leavesContainer);
+
+    const leaves = [];
+    for (let i = 0; i < 30; i++) {
+      const leaf = new PIXI.Graphics();
+      const size = Math.random() * 4 + 2;
+      leaf.beginFill(0x90EE90, Math.random() * 0.4 + 0.3);
+      leaf.drawEllipse(0, 0, size, size * 1.5);
+      leaf.endFill();
+
+      leaf.x = Math.random() * app.screen.width;
+      leaf.y = Math.random() * app.screen.height * 0.5;
+      leaf.vx = (Math.random() - 0.3) * 1.5;
+      leaf.vy = Math.random() * 0.5 + 0.3;
+      leaf.rotation = Math.random() * Math.PI * 2;
+      leaf.rotationSpeed = (Math.random() - 0.5) * 0.05;
+
+      leaves.push(leaf);
+      leavesContainer.addChild(leaf);
+    }
+
+    // ===== アニメーションループ =====
+    app.ticker.add(() => {
+      // キラキラ光粒子
+      sparkles.forEach(sparkle => {
+        sparkle.x += sparkle.vx;
+        sparkle.y += sparkle.vy;
+        sparkle.life += sparkle.speed;
+        sparkle.alpha = (Math.sin(sparkle.life) + 1) / 2 * 0.7 + 0.3;
+
+        // 画面外に出たら反対側から
+        if (sparkle.x < 0) sparkle.x = app.screen.width;
+        if (sparkle.x > app.screen.width) sparkle.x = 0;
+        if (sparkle.y < 0) sparkle.y = app.screen.height;
+        if (sparkle.y > app.screen.height) sparkle.y = 0;
+      });
+
+      // 星のゆらぎ
+      stars.forEach(star => {
+        star.twinklePhase += star.twinkleSpeed;
+        star.alpha = star.baseAlpha + Math.sin(star.twinklePhase) * 0.3;
+      });
+
+      // オーロラ波
+      drawAurora();
+
+      // 葉っぱ
+      leaves.forEach(leaf => {
+        leaf.x += leaf.vx;
+        leaf.y += leaf.vy;
+        leaf.rotation += leaf.rotationSpeed;
+
+        // 画面外に出たら上から再出現
+        if (leaf.x < -10) leaf.x = app.screen.width + 10;
+        if (leaf.x > app.screen.width + 10) leaf.x = -10;
+        if (leaf.y > app.screen.height + 10) {
+          leaf.y = -10;
+          leaf.x = Math.random() * app.screen.width;
+        }
+      });
+    });
+
+    // ===== エフェクト切替 =====
+    let effectsState = {
+      sparkles: true,
+      stars: true,
+      aurora: true,
+      leaves: true,
+    };
+
+    function toggleSparkles() {
+      effectsState.sparkles = !effectsState.sparkles;
+      sparklesContainer.visible = effectsState.sparkles;
+      document.getElementById('btn-sparkles').classList.toggle('active');
+    }
+
+    function toggleStars() {
+      effectsState.stars = !effectsState.stars;
+      starsContainer.visible = effectsState.stars;
+      document.getElementById('btn-stars').classList.toggle('active');
+    }
+
+    function toggleAurora() {
+      effectsState.aurora = !effectsState.aurora;
+      auroraContainer.visible = effectsState.aurora;
+      document.getElementById('btn-aurora').classList.toggle('active');
+    }
+
+    function toggleLeaves() {
+      effectsState.leaves = !effectsState.leaves;
+      leavesContainer.visible = effectsState.leaves;
+      document.getElementById('btn-leaves').classList.toggle('active');
+    }
+  </script>
+</body>
+</html>

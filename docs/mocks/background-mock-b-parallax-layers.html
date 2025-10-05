@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B案: CSS視差レイヤー + Pixi.js - HD-2D風背景</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: monospace;
+      overflow: hidden;
+      background: #0a0514;
+    }
+
+    /* ===== 視差スクロールレイヤー構造 ===== */
+    #parallax-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      perspective: 1000px;
+    }
+
+    .parallax-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.1s ease-out;
+    }
+
+    /* 遠景: ぼんやり山・城 */
+    #layer-far {
+      z-index: 1;
+      background:
+        linear-gradient(to bottom,
+          rgba(10, 5, 20, 0) 0%,
+          rgba(20, 10, 30, 0.3) 40%,
+          rgba(40, 20, 50, 0.5) 70%,
+          rgba(60, 30, 70, 0.8) 100%
+        );
+    }
+
+    #layer-far::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 40%;
+      background:
+        radial-gradient(ellipse at 20% 100%, rgba(80, 40, 100, 0.6) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 100%, rgba(60, 30, 80, 0.5) 0%, transparent 40%),
+        radial-gradient(ellipse at 85% 100%, rgba(90, 50, 110, 0.4) 0%, transparent 35%);
+    }
+
+    /* 中景: Pixi.js パーティクル */
+    #layer-middle {
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* 近景: ドット草原（CSS） */
+    #layer-near {
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    #layer-near::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 20%;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(50, 100, 50, 0.2) 0px,
+          rgba(50, 100, 50, 0.2) 2px,
+          transparent 2px,
+          transparent 4px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          rgba(40, 80, 40, 0.3) 0px,
+          rgba(40, 80, 40, 0.3) 2px,
+          transparent 2px,
+          transparent 4px
+        ),
+        linear-gradient(to top, rgba(30, 60, 30, 0.5) 0%, transparent 100%);
+      background-size: 4px 4px, 4px 4px, 100% 100%;
+    }
+
+    /* UI オーバーレイ */
+    .ui-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      background: rgba(8, 9, 15, 0.92);
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      color: white;
+      text-align: center;
+      box-shadow:
+        0 0 30px rgba(255, 215, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .ui-overlay h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255, 215, 0, 0.5);
+      letter-spacing: 0.05em;
+    }
+
+    .ui-overlay p {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(8, 9, 15, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      padding: 15px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .controls p {
+      margin: 5px 0;
+      color: rgba(255, 255, 255, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div id="parallax-container">
+    <!-- 遠景: CSS山・城 -->
+    <div class="parallax-layer" id="layer-far"></div>
+
+    <!-- 中景: Pixi.js パーティクル -->
+    <div class="parallax-layer" id="layer-middle"></div>
+
+    <!-- 近景: CSSドット草原 -->
+    <div class="parallax-layer" id="layer-near"></div>
+  </div>
+
+  <div class="ui-overlay">
+    <h1>B案: CSS視差 + Pixi.js</h1>
+    <p>
+      HD-2D風レイヤー構造<br>
+      遠景（CSS山）→ 中景（Pixi粒子）→ 近景（ドット草原）<br>
+      <br>
+      <strong>特徴:</strong> 奥行き感・オクトパ風・重厚感
+    </p>
+  </div>
+
+  <div class="controls">
+    <strong>視差効果:</strong>
+    <p>マウスを動かすと視差が発生します</p>
+    <p id="mouse-pos">X: 0, Y: 0</p>
+  </div>
+
+  <script>
+    // ===== 視差スクロール =====
+    const parallaxContainer = document.getElementById('parallax-container');
+    const layerFar = document.getElementById('layer-far');
+    const layerMiddle = document.getElementById('layer-middle');
+    const layerNear = document.getElementById('layer-near');
+    const mousePosDisplay = document.getElementById('mouse-pos');
+
+    let mouseX = 0;
+    let mouseY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+
+      mousePosDisplay.textContent = `X: ${mouseX.toFixed(2)}, Y: ${mouseY.toFixed(2)}`;
+    });
+
+    function updateParallax() {
+      // 遠景: ゆっくり動く
+      layerFar.style.transform = `translate(${mouseX * -10}px, ${mouseY * -10}px)`;
+
+      // 中景: 中速
+      // (Pixi.jsキャンバスは別途制御)
+
+      // 近景: 速く動く
+      layerNear.style.transform = `translate(${mouseX * -30}px, ${mouseY * -30}px)`;
+
+      requestAnimationFrame(updateParallax);
+    }
+
+    updateParallax();
+
+    // ===== Pixi.js セットアップ（中景） =====
+    const app = new PIXI.Application({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundAlpha: 0, // 透明
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+    });
+
+    document.getElementById('layer-middle').appendChild(app.view);
+
+    // リサイズ対応
+    window.addEventListener('resize', () => {
+      app.renderer.resize(window.innerWidth, window.innerHeight);
+    });
+
+    // ===== 光の粒子（中景専用） =====
+    const particles = [];
+    const particleCount = 100;
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = new PIXI.Graphics();
+      const size = Math.random() * 2.5 + 0.5;
+
+      // 暖色系の粒子（ドラクエ感）
+      const colors = [0xFFD700, 0xFFA500, 0xFFFFFF, 0xFFC0CB];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
+      particle.beginFill(color, Math.random() * 0.5 + 0.3);
+      particle.drawCircle(0, 0, size);
+      particle.endFill();
+
+      particle.x = Math.random() * app.screen.width;
+      particle.y = Math.random() * app.screen.height;
+      particle.vx = (Math.random() - 0.5) * 0.3;
+      particle.vy = (Math.random() - 0.5) * 0.3;
+      particle.life = Math.random() * Math.PI * 2;
+      particle.speed = Math.random() * 0.015 + 0.005;
+
+      particles.push(particle);
+      app.stage.addChild(particle);
+    }
+
+    // ===== 雪のような降下パーティクル =====
+    const snowParticles = [];
+    const snowCount = 40;
+
+    for (let i = 0; i < snowCount; i++) {
+      const snow = new PIXI.Graphics();
+      const size = Math.random() * 3 + 1;
+
+      snow.beginFill(0xFFFFFF, Math.random() * 0.4 + 0.2);
+      snow.drawCircle(0, 0, size);
+      snow.endFill();
+
+      snow.x = Math.random() * app.screen.width;
+      snow.y = Math.random() * app.screen.height;
+      snow.vy = Math.random() * 0.5 + 0.2;
+      snow.vx = (Math.random() - 0.5) * 0.3;
+
+      snowParticles.push(snow);
+      app.stage.addChild(snow);
+    }
+
+    // ===== アニメーションループ =====
+    let parallaxOffsetX = 0;
+    let parallaxOffsetY = 0;
+
+    app.ticker.add(() => {
+      // 視差効果をPixi粒子に適用（中速）
+      parallaxOffsetX += (mouseX * -20 - parallaxOffsetX) * 0.05;
+      parallaxOffsetY += (mouseY * -20 - parallaxOffsetY) * 0.05;
+
+      // 光の粒子
+      particles.forEach(particle => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.life += particle.speed;
+        particle.alpha = (Math.sin(particle.life) + 1) / 2 * 0.5 + 0.3;
+
+        // 画面外ループ
+        if (particle.x < -10) particle.x = app.screen.width + 10;
+        if (particle.x > app.screen.width + 10) particle.x = -10;
+        if (particle.y < -10) particle.y = app.screen.height + 10;
+        if (particle.y > app.screen.height + 10) particle.y = -10;
+
+        // 視差適用
+        particle.position.set(
+          particle.x + parallaxOffsetX * 0.5,
+          particle.y + parallaxOffsetY * 0.5
+        );
+      });
+
+      // 雪パーティクル
+      snowParticles.forEach(snow => {
+        snow.x += snow.vx;
+        snow.y += snow.vy;
+
+        // 下に落ちたら上から再出現
+        if (snow.y > app.screen.height + 10) {
+          snow.y = -10;
+          snow.x = Math.random() * app.screen.width;
+        }
+
+        if (snow.x < -10) snow.x = app.screen.width + 10;
+        if (snow.x > app.screen.width + 10) snow.x = -10;
+      });
+    });
+  </script>
+</body>
+</html>
