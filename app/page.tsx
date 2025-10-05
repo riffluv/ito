@@ -94,9 +94,8 @@ export default function MainMenu() {
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
   const [showSkeletons, setShowSkeletons] = useState(false);
-  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
-    "create"
-  );
+  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">("create");
+  const pendingJoinRef = useRef<LobbyRoom | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
@@ -335,11 +334,14 @@ export default function MainMenu() {
     async (room: LobbyRoom) => {
       if (!room) return;
       if (!displayName || !String(displayName).trim()) {
+        pendingJoinRef.current = room;
         setTempName("");
         setNameDialogMode("create");
         nameDialog.onOpen();
         return;
       }
+
+      pendingJoinRef.current = null;
 
       try {
         await transition.navigateWithTransition(
@@ -399,6 +401,15 @@ export default function MainMenu() {
       transition,
     ]
   );
+
+  useEffect(() => {
+    if (!displayName || !displayName.trim()) return;
+    const pendingRoom = pendingJoinRef.current;
+    if (pendingRoom) {
+      pendingJoinRef.current = null;
+      void goToRoom(pendingRoom);
+    }
+  }, [displayName, goToRoom]);
 
   const handleJoinRoom = useCallback(
     (roomId: string) => {
@@ -466,6 +477,7 @@ export default function MainMenu() {
   }, [passwordSubmitting]);
 
   const openCreateFlow = () => {
+    pendingJoinRef.current = null;
     if (!displayName) {
       setTempName("");
       setNameDialogMode("create");
@@ -1233,11 +1245,19 @@ export default function MainMenu() {
         isOpen={nameDialog.open}
         defaultValue={tempName}
         mode={nameDialogMode}
-        onCancel={() => nameDialog.onClose()}
+        onCancel={() => {
+          pendingJoinRef.current = null;
+          nameDialog.onClose();
+        }}
         onSubmit={async (val) => {
           if (!val?.trim()) return;
-          setDisplayName(val.trim());
+          const trimmed = val.trim();
+          setDisplayName(trimmed);
           nameDialog.onClose();
+
+          if (pendingJoinRef.current) {
+            return;
+          }
 
           // 名前設定後のアクション判定
           if (nameDialogMode === "create") {
