@@ -49,6 +49,67 @@ import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
 
+// ========================================
+// 🎨 Design System: Footer Button Styles
+// ========================================
+/**
+ * ドラクエ風フッターボタンの共通スタイル定数
+ *
+ * 設計方針:
+ * - DRY原則に従い、重複を排除
+ * - 保守性向上のため一箇所で管理
+ * - ドラクエ風UI統一デザイン（角ばった・モノスペース・立体感）
+ */
+const FOOTER_BUTTON_BASE_STYLES = {
+  // サイズ
+  px: "14px",
+  py: "10px",
+  w: "68px",
+  minW: "68px",
+
+  // 背景・枠線
+  bg: "rgba(28,32,42,0.95)",
+  border: "none",
+  borderRadius: "0",
+
+  // タイポグラフィ
+  fontWeight: "900",
+  fontFamily: "'Courier New', monospace",
+  fontSize: "15px",
+  letterSpacing: "0.06em",
+  textShadow: "1px 1px 0 rgba(0,0,0,0.9)",
+
+  // 立体感演出
+  boxShadow: "3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)",
+  transform: "translate(.5px,-.5px)",
+
+  // レイアウト
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+
+  // アニメーション
+  transition: "177ms cubic-bezier(.2,1,.3,1)",
+
+  // インタラクション状態
+  _hover: {
+    bg: "rgba(38,42,52,0.98)",
+    transform: "translate(0,-1px)",
+    boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
+  },
+  _active: {
+    transform: "translate(1px,1px)",
+    boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
+  },
+  _disabled: {
+    bg: "rgba(28,32,42,0.5)",
+    color: "rgba(255,255,255,0.4)",
+    filter: "grayscale(0.8)",
+    cursor: "not-allowed",
+    boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
+  },
+} as const;
+
 interface MiniHandDockProps {
   roomId: string;
   me: (PlayerDoc & { id: string }) | undefined;
@@ -795,138 +856,39 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         />
         <Tooltip content={decideTooltip} showArrow openDelay={180}>
           <AppButton
+            {...FOOTER_BUTTON_BASE_STYLES}
             size="sm"
             visual="solid"
             palette="brand"
+            color="rgba(255,255,255,0.98)"
             onClick={handleDecide}
             disabled={!canDecide}
-            px="14px"
-            py="10px"
-            w="68px"
-            minW="68px"
-            bg="rgba(28,32,42,0.95)"
-            color="rgba(255,255,255,0.98)"
-            border="none"
-            borderRadius="0"
-            fontWeight="900"
-            fontFamily="'Courier New', monospace"
-            fontSize="15px"
-            letterSpacing="0.06em"
-            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
-            transform="translate(.5px,-.5px)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            _hover={{
-              bg: "rgba(38,42,52,0.98)",
-              transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
-            }}
-            _active={{
-              transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
-            }}
-            _disabled={{
-              bg: "rgba(28,32,42,0.5)",
-              color: "rgba(255,255,255,0.4)",
-              filter: "grayscale(0.8)",
-              cursor: "not-allowed",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
-            }}
-            transition="177ms cubic-bezier(.2,1,.3,1)"
           >
             決定
           </AppButton>
         </Tooltip>
         <Tooltip content={clearTooltip} showArrow openDelay={180}>
           <AppButton
+            {...FOOTER_BUTTON_BASE_STYLES}
             size="sm"
             visual="outline"
             palette="gray"
+            color="rgba(255,255,255,0.92)"
             onClick={handleClear}
             disabled={clearButtonDisabled}
-            px="14px"
-            py="10px"
-            w="68px"
-            minW="68px"
-            bg="rgba(28,32,42,0.95)"
-            color="rgba(255,255,255,0.92)"
-            border="none"
-            borderRadius="0"
-            fontWeight="900"
-            fontFamily="'Courier New', monospace"
-            fontSize="15px"
-            letterSpacing="0.06em"
-            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
-            transform="translate(.5px,-.5px)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            _hover={{
-              bg: "rgba(38,42,52,0.98)",
-              transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
-            }}
-            _active={{
-              transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
-            }}
-            _disabled={{
-              bg: "rgba(28,32,42,0.5)",
-              color: "rgba(255,255,255,0.4)",
-              filter: "grayscale(0.8)",
-              cursor: "not-allowed",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
-            }}
-            transition="174ms cubic-bezier(.2,1,.3,1)"
           >
             クリア
           </AppButton>
         </Tooltip>
         <Tooltip content={submitTooltip} showArrow openDelay={180}>
           <AppButton
+            {...FOOTER_BUTTON_BASE_STYLES}
             size="sm"
             visual="solid"
             palette="brand"
+            color="rgba(255,255,255,0.98)"
             onClick={handleSubmit}
             disabled={!canClickProposalButton}
-            px="14px"
-            py="10px"
-            w="68px"
-            minW="68px"
-            bg="rgba(28,32,42,0.95)"
-            color="rgba(255,255,255,0.98)"
-            border="none"
-            borderRadius="0"
-            fontWeight="900"
-            fontFamily="'Courier New', monospace"
-            fontSize="15px"
-            letterSpacing="0.06em"
-            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
-            boxShadow="3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)"
-            transform="translate(.5px,-.5px)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            _hover={{
-              bg: "rgba(38,42,52,0.98)",
-              transform: "translate(0,-1px)",
-              boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
-            }}
-            _active={{
-              transform: "translate(1px,1px)",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
-            }}
-            _disabled={{
-              bg: "rgba(28,32,42,0.5)",
-              color: "rgba(255,255,255,0.4)",
-              filter: "grayscale(0.8)",
-              cursor: "not-allowed",
-              boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
-            }}
-            transition="181ms cubic-bezier(.2,1,.3,1)"
           >
             {actionLabel}
           </AppButton>
