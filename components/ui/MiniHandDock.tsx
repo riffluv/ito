@@ -765,26 +765,33 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             if (e.key === "Enter") handleDecide();
           }}
           size="sm"
-          bg={UI_TOKENS.COLORS.panelBg}
-          color="white"
-          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-          borderRadius={4}
-          boxShadow="inset 1px 1px 2px rgba(0,0,0,0.4), 0 1px 2px rgba(255,255,255,0.1)"
-          _placeholder={{ color: UI_TOKENS.COLORS.whiteAlpha50 }}
+          bg="rgba(18,22,32,0.95)"
+          color="rgba(255,255,255,0.98)"
+          fontFamily="'Courier New', monospace"
+          fontSize="15px"
+          fontWeight="700"
+          letterSpacing="0.04em"
+          border="none"
+          borderRadius={0}
+          boxShadow="inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.08), 0 0 0 2px rgba(255,255,255,0.75)"
+          _placeholder={{
+            color: "rgba(255,255,255,0.45)",
+            letterSpacing: "0.06em",
+          }}
           _focus={{
-            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-            boxShadow: "inset 1px 1px 2px rgba(0,0,0,0.4), 0 1px 2px rgba(255,255,255,0.1)",
-            bg: UI_TOKENS.COLORS.panelBg,
+            boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.12), 0 0 0 2px rgba(255,255,255,0.95)",
+            bg: "rgba(22,26,36,0.98)",
             outline: "none",
           }}
           _hover={{
-            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-            bg: UI_TOKENS.COLORS.panelBg,
+            boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1), 0 0 0 2px rgba(255,255,255,0.85)",
+            bg: "rgba(20,24,34,0.96)",
           }}
           w={{ base: "100%", md: "280px" }}
           maxW={{ base: "100%", md: "380px" }}
           flex={{ base: "1 1 100%", md: "1 1 auto" }}
           minW={0}
+          transition="box-shadow 168ms cubic-bezier(.2,1,.3,1)"
         />
         <Tooltip content={decideTooltip} showArrow openDelay={180}>
           <AppButton
@@ -793,26 +800,40 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="brand"
             onClick={handleDecide}
             disabled={!canDecide}
-            px="17px"
-            py="11px"
-            bg="rgba(71, 85, 105, 0.9)"
-            color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-            borderRadius="3px"
-            fontWeight="600"
-            letterSpacing="0.015em"
-            boxShadow="2px 3px 0 rgba(0,0,0,.28), 0 1px 0 rgba(255,255,255,.08)"
+            px="20px"
+            py="10px"
+            bg="rgba(28,32,42,0.95)"
+            color="rgba(255,255,255,0.98)"
+            border="2px solid rgba(255,255,255,0.88)"
+            borderRadius="0"
+            fontWeight="900"
+            fontFamily="'Courier New', monospace"
+            fontSize="15px"
+            letterSpacing="0.06em"
+            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            transform="translate(.5px,-.5px)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
             _hover={{
-              bg: "rgba(100, 116, 139, 0.9)",
-              borderColor: "white",
-              transform: "translateY(-1px)",
-              boxShadow: "3px 4px 0 rgba(0,0,0,.28), 0 1px 0 rgba(255,255,255,.12)",
+              bg: "rgba(38,42,52,0.98)",
+              borderColor: "rgba(255,255,255,0.95)",
+              transform: "translate(0,-1px)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
             }}
             _active={{
-              transform: "translateY(1px)",
-              boxShadow: "1px 2px 0 rgba(0,0,0,.35)",
+              transform: "translate(1px,1px)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
             }}
-            transition="180ms cubic-bezier(.2,1,.3,1)"
+            _disabled={{
+              bg: "rgba(28,32,42,0.5)",
+              borderColor: "rgba(255,255,255,0.3)",
+              color: "rgba(255,255,255,0.4)",
+              filter: "grayscale(0.8)",
+              cursor: "not-allowed",
+            }}
+            transition="177ms cubic-bezier(.2,1,.3,1)"
           >
             決定
           </AppButton>
@@ -824,26 +845,40 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="gray"
             onClick={handleClear}
             disabled={clearButtonDisabled}
-            px="14px"
-            py="9px"
-            bg="rgba(55, 65, 81, 0.7)"
-            color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-            borderRadius="5px"
-            fontWeight="600"
-            letterSpacing="0.01em"
-            boxShadow="1px 2px 0 rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.05)"
+            px="20px"
+            py="10px"
+            bg="rgba(28,32,42,0.95)"
+            color="rgba(255,255,255,0.92)"
+            border="2px solid rgba(255,255,255,0.88)"
+            borderRadius="0"
+            fontWeight="900"
+            fontFamily="'Courier New', monospace"
+            fontSize="15px"
+            letterSpacing="0.06em"
+            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            transform="translate(.5px,-.5px)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
             _hover={{
-              bg: "rgba(75, 85, 99, 0.8)",
-              borderColor: UI_TOKENS.COLORS.whiteAlpha90,
-              transform: "translateY(-1px)",
-              boxShadow: "2px 3px 0 rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.08)",
+              bg: "rgba(38,42,52,0.98)",
+              borderColor: "rgba(255,255,255,0.95)",
+              transform: "translate(0,-1px)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
             }}
             _active={{
-              transform: "translateY(1px)",
-              boxShadow: "0 1px 0 rgba(0,0,0,.28)",
+              transform: "translate(1px,1px)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
             }}
-            transition="175ms cubic-bezier(.2,1,.3,1)"
+            _disabled={{
+              bg: "rgba(28,32,42,0.5)",
+              borderColor: "rgba(255,255,255,0.3)",
+              color: "rgba(255,255,255,0.4)",
+              filter: "grayscale(0.8)",
+              cursor: "not-allowed",
+            }}
+            transition="174ms cubic-bezier(.2,1,.3,1)"
           >
             クリア
           </AppButton>
@@ -855,26 +890,40 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             palette="brand"
             onClick={handleSubmit}
             disabled={!canClickProposalButton}
-            px="19px"
-            py="11px"
-            bg="rgba(75, 85, 99, 0.9)"
-            color="white"
-            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-            borderRadius="3px"
-            fontWeight="600"
-            letterSpacing="0.018em"
-            boxShadow="2px 3px 0 rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.07)"
+            px="20px"
+            py="10px"
+            bg="rgba(28,32,42,0.95)"
+            color="rgba(255,255,255,0.98)"
+            border="2px solid rgba(255,255,255,0.88)"
+            borderRadius="0"
+            fontWeight="900"
+            fontFamily="'Courier New', monospace"
+            fontSize="15px"
+            letterSpacing="0.06em"
+            textShadow="1px 1px 0 rgba(0,0,0,0.9)"
+            boxShadow="3px 3px 0 rgba(0,0,0,.65)"
+            transform="translate(.5px,-.5px)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
             _hover={{
-              bg: "rgba(107, 114, 128, 0.9)",
-              borderColor: "white",
-              transform: "translateY(-1px)",
-              boxShadow: "3px 4px 0 rgba(0,0,0,.3), 0 1px 0 rgba(255,255,255,.1)",
+              bg: "rgba(38,42,52,0.98)",
+              borderColor: "rgba(255,255,255,0.95)",
+              transform: "translate(0,-1px)",
+              boxShadow: "4px 4px 0 rgba(0,0,0,.7)",
             }}
             _active={{
-              transform: "translateY(1px)",
-              boxShadow: "1px 2px 0 rgba(0,0,0,.38)",
+              transform: "translate(1px,1px)",
+              boxShadow: "2px 2px 0 rgba(0,0,0,.75)",
             }}
-            transition="182ms cubic-bezier(.2,1,.3,1)"
+            _disabled={{
+              bg: "rgba(28,32,42,0.5)",
+              borderColor: "rgba(255,255,255,0.3)",
+              color: "rgba(255,255,255,0.4)",
+              filter: "grayscale(0.8)",
+              cursor: "not-allowed",
+            }}
+            transition="181ms cubic-bezier(.2,1,.3,1)"
           >
             {actionLabel}
           </AppButton>
@@ -949,9 +998,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               textShadow="2px 2px 0 rgba(0,0,0,0.9)"
               boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
               transform="translate(.5px,-.5px)"
-              css={{
-                clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0% 50%)",
-              }}
               _hover={{
                 bg: preparing ? LOADING_BG : "rgba(38,42,52,0.98)",
                 color: "rgba(255,255,255,1)",
@@ -997,9 +1043,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               textShadow="2px 2px 0 rgba(0,0,0,0.9)"
               boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
               transform="translate(.5px,-.5px)"
-              css={{
-                clipPath: "polygon(8px 0%, calc(100% - 8px) 0%, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0% 50%)",
-              }}
               _hover={{
                 bg: "rgba(38,42,52,0.98)",
                 color: "rgba(255,255,255,1)",
