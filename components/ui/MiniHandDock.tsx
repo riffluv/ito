@@ -1164,6 +1164,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   }}
                 />
               </Tooltip>
+
+              {/* 区切り線 */}
+              <Box
+                w="2px"
+                h="32px"
+                bg="rgba(255,255,255,0.22)"
+                mx={{ base: "10px", md: "12px" }}
+              />
             </>
           )}
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
