@@ -92,6 +92,7 @@ export default function WaitingArea({
         alignItems={players.length === 0 ? "center" : "flex-start"}
         gap={UNIFIED_LAYOUT.SPACING.CARD_GAP}
         overflowX="auto"
+        overflowY="hidden"
         bg="transparent"
         data-drop-enabled={dropZoneEnabled ? "true" : undefined}
         data-drop-over={dropZoneEnabled ? "true" : undefined}

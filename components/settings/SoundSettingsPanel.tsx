@@ -85,163 +85,260 @@ export function SoundSettingsPanel() {
     label: string,
     value: number,
     onChange: (val: number) => void,
-    hint?: string,
   ) => (
     <Box>
-      <HStack justify="space-between" mb={2}>
-        <Text fontWeight="bold" fontSize="sm" fontFamily="monospace">
+      <HStack justify="space-between" mb="6px">
+        <Text
+          fontWeight="bold"
+          fontSize="13px"
+          fontFamily="monospace"
+          textShadow="1px 1px 0px #000"
+          letterSpacing="0.01em"
+        >
           {label}
         </Text>
-        <Text fontSize="sm" opacity={0.8} fontFamily="monospace">
-          {Math.round(value * 100)}%
-        </Text>
-      </HStack>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={value}
-        onChange={(event) => onChange(parseFloat(event.target.value))}
-        style={{
-          width: "100%",
-          accentColor: UI_TOKENS.COLORS.dqGold,
-        }}
-      />
-      {hint ? (
-        <Text
-          fontSize="xs"
-          color={UI_TOKENS.COLORS.textMuted}
-          mt={1}
-          fontFamily="monospace"
+        <Box
+          px="7px"
+          py="1px"
+          bg={UI_TOKENS.COLORS.panelBg}
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
+          borderRadius={0}
+          boxShadow="inset 0 1px 2px rgba(0,0,0,0.4)"
         >
-          {hint}
-        </Text>
-      ) : null}
+          <Text
+            fontSize="11px"
+            fontFamily="monospace"
+            fontWeight="bold"
+            textShadow="1px 1px 0px #000"
+          >
+            {Math.round(value * 100)}%
+          </Text>
+        </Box>
+      </HStack>
+
+      {/* ドラクエ風カスタムスライダー */}
+      <Box position="relative" py="4px">
+        {/* スライダーレール（外枠） */}
+        <Box
+          position="relative"
+          h="11px"
+          bg={UI_TOKENS.COLORS.panelBg}
+          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow="inset 0.5px 1px 3px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1), inset -0.5px 0 2px rgba(0,0,0,0.2)"
+        >
+          {/* 塗りつぶしバー（ゴールド + ノイズ風ムラ） */}
+          <Box
+            position="absolute"
+            top="0"
+            left="0"
+            h="100%"
+            w={`${value * 100}%`}
+            bg={UI_TOKENS.COLORS.dqGold}
+            boxShadow="inset 0 -1px 0 rgba(0,0,0,0.35), inset 0.5px 1px 0 rgba(255,255,255,0.4), inset -1px 0 1px rgba(0,0,0,0.15)"
+            transition="width 0.08s cubic-bezier(.2,1,.3,1)"
+            css={{
+              backgroundImage: `linear-gradient(
+                135deg,
+                rgba(255,255,255,0.08) 0%,
+                transparent 25%,
+                rgba(0,0,0,0.05) 50%,
+                transparent 75%,
+                rgba(255,255,255,0.06) 100%
+              )`,
+              backgroundSize: "8px 8px",
+            }}
+          />
+        </Box>
+
+        {/* HTMLスライダー（透明で上に重ねる） */}
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={value}
+          onChange={(event) => onChange(parseFloat(event.target.value))}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            opacity: 0,
+            cursor: "pointer",
+            margin: 0,
+            padding: 0,
+          }}
+        />
+      </Box>
     </Box>
   );
 
   return (
-    <Stack gap={6} color="white" fontFamily="monospace">
+    <Stack gap="11px" color="white" fontFamily="monospace">
       {renderSlider("全体音量", masterVolume, (value) => applyMasterVolume(value))}
 
-      <HStack justify="space-between">
-        <Text fontWeight="bold" fontSize="sm">
+      {renderSlider("BGM", bgmVolume, (value) => {
+        setBgmVolume(value);
+        applyCategoryVolume("ambient", value);
+      })}
+
+      {renderSlider("効果音", sfxVolume, (value) => {
+        setSfxVolume(value);
+        applyCategoryVolume("ui", value);
+      })}
+
+      {renderSlider("通知音", notifyVolume, (value) => {
+        setNotifyVolume(value);
+        applyCategoryVolume("notify", value);
+      })}
+
+      {renderSlider("ファンファーレ", fanfareVolume, (value) => {
+        setFanfareVolume(value);
+        applyCategoryVolume("fanfare", value);
+      })}
+
+      <Box mt="7px">
+        <HStack justify="space-between" align="center" mb="7px">
+          <Text
+            fontWeight="bold"
+            fontSize="13px"
+            textShadow="1px 1px 0px #000"
+            letterSpacing="0.01em"
+          >
+            勝利ファンファーレ
+          </Text>
+        </HStack>
+        <HStack gap="9px" flexWrap="wrap">
+          {[
+            { mode: "normal" as const, title: "ノーマル" },
+            { mode: "epic" as const, title: "エピック" },
+          ].map(({ mode, title }) => {
+            const active = successMode === mode;
+            return (
+              <Box
+                key={mode}
+                as="button"
+                onClick={() => applySuccessMode(mode)}
+                px="14px"
+                py="7px"
+                borderRadius={0}
+                border="2px solid"
+                borderColor={
+                  active
+                    ? UI_TOKENS.COLORS.whiteAlpha90
+                    : UI_TOKENS.COLORS.whiteAlpha40
+                }
+                bg={
+                  active ? UI_TOKENS.COLORS.dqGold : UI_TOKENS.COLORS.whiteAlpha10
+                }
+                color={active ? "black" : "white"}
+                flex="1"
+                textAlign="center"
+                cursor="pointer"
+                fontWeight="bold"
+                fontSize="13px"
+                boxShadow={
+                  active
+                    ? "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+                    : "2.5px 2px 0 rgba(0,0,0,0.3), inset 0.5px 1px 3px rgba(0,0,0,0.3)"
+                }
+                transform={active ? "translate(0.5px, -0.5px)" : "translate(0, 0)"}
+                transition="all 0.18s cubic-bezier(.2,1,.3,1)"
+                textShadow={active ? "none" : "1px 1px 0px #000"}
+                css={
+                  active
+                    ? {
+                        backgroundImage: `linear-gradient(
+                          135deg,
+                          rgba(255,255,255,0.08) 0%,
+                          transparent 25%,
+                          rgba(0,0,0,0.05) 50%,
+                          transparent 75%,
+                          rgba(255,255,255,0.06) 100%
+                        )`,
+                        backgroundSize: "8px 8px",
+                      }
+                    : {}
+                }
+                _hover={{
+                  transform: "translate(0, -1px)",
+                  boxShadow: active
+                    ? "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+                    : "3px 3px 0 rgba(0,0,0,0.3), inset 0.5px 1px 3px rgba(0,0,0,0.3)",
+                }}
+                _active={{
+                  transform: "translate(0, 0)",
+                  boxShadow: "1.5px 1px 0 rgba(0,0,0,0.5), inset 0.5px 1px 3px rgba(0,0,0,0.4)",
+                }}
+              >
+                {title}
+              </Box>
+            );
+          })}
+        </HStack>
+      </Box>
+
+      <HStack justify="space-between" align="center" mt="7px">
+        <Text
+          fontWeight="bold"
+          fontSize="13px"
+          textShadow="1px 1px 0px #000"
+          letterSpacing="0.01em"
+        >
           ミュート
         </Text>
         <Box
           as="button"
           onClick={() => applyMuted(!muted)}
-          px={4}
-          py={1}
-          bg={muted ? UI_TOKENS.COLORS.dqGold : "gray.700"}
+          px="14px"
+          py="5px"
+          minW="60px"
+          bg={muted ? UI_TOKENS.COLORS.dqGold : UI_TOKENS.COLORS.panelBg}
           color={muted ? "black" : "white"}
           borderRadius={0}
           border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           fontWeight="bold"
-          fontSize="sm"
+          fontSize="13px"
           cursor="pointer"
-          transition="all 0.2s"
-          _hover={{ opacity: 0.85 }}
+          boxShadow={
+            muted
+              ? "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+              : "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)"
+          }
+          transition="all 0.18s cubic-bezier(.2,1,.3,1)"
+          transform={muted ? "translate(0.5px, -0.5px)" : "translate(0, 0)"}
+          textShadow={muted ? "none" : "1px 1px 0px #000"}
+          css={
+            muted
+              ? {
+                  backgroundImage: `linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.08) 0%,
+                    transparent 25%,
+                    rgba(0,0,0,0.05) 50%,
+                    transparent 75%,
+                    rgba(255,255,255,0.06) 100%
+                  )`,
+                  backgroundSize: "8px 8px",
+                }
+              : {}
+          }
+          _hover={{
+            transform: muted ? "translate(0, -1px)" : "translate(0, -1px)",
+            boxShadow: muted
+              ? "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+              : "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)",
+          }}
+          _active={{
+            transform: "translate(0, 0)",
+            boxShadow: "1.5px 1px 0 rgba(0,0,0,0.5), inset 0.5px 1px 3px rgba(0,0,0,0.4)",
+          }}
         >
           {muted ? "ON" : "OFF"}
         </Box>
       </HStack>
-
-      {renderSlider("BGM音量", bgmVolume, (value) => {
-        setBgmVolume(value);
-        applyCategoryVolume("ambient", value);
-      })}
-
-      {renderSlider(
-        "効果音音量",
-        sfxVolume,
-        (value) => {
-          setSfxVolume(value);
-          applyCategoryVolume("ui", value);
-        },
-        "カード操作やドラッグなどのサウンド",
-      )}
-
-      {renderSlider(
-        "通知音量",
-        notifyVolume,
-        (value) => {
-          setNotifyVolume(value);
-          applyCategoryVolume("notify", value);
-        },
-        "トーストやシステム通知の音に影響します",
-      )}
-
-      {renderSlider(
-        "ファンファーレ音量",
-        fanfareVolume,
-        (value) => {
-          setFanfareVolume(value);
-          applyCategoryVolume("fanfare", value);
-        },
-        "ラウンド開始や勝利演出のファンファーレ",
-      )}
-
-      <Box
-        border="2px solid"
-        borderColor={UI_TOKENS.COLORS.whiteAlpha30}
-        bg={UI_TOKENS.COLORS.panelBg}
-        boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
-        p={4}
-        borderRadius={0}
-      >
-        <VStack align="stretch" gap={3}>
-          <Text fontWeight="bold" fontSize="sm">
-            勝利ファンファーレ
-          </Text>
-          <HStack gap={3} flexWrap="wrap">
-            {[
-              {
-                mode: "normal" as const,
-                title: "ノーマル",
-              },
-              {
-                mode: "epic" as const,
-                title: "エピック",
-              },
-            ].map(({ mode, title }) => {
-              const active = successMode === mode;
-              return (
-                <Box
-                  key={mode}
-                  as="button"
-                  onClick={() => applySuccessMode(mode)}
-                  px={4}
-                  py={3}
-                  borderRadius={0}
-                  border="2px solid"
-                  borderColor={
-                    active
-                      ? UI_TOKENS.COLORS.whiteAlpha90
-                      : UI_TOKENS.COLORS.whiteAlpha40
-                  }
-                  bg={
-                    active
-                      ? UI_TOKENS.COLORS.dqGold
-                      : UI_TOKENS.COLORS.whiteAlpha10
-                  }
-                  color={active ? UI_TOKENS.COLORS.panelBg : "white"}
-                  minW="140px"
-                  textAlign="left"
-                  cursor="pointer"
-                  transition="all 0.2s"
-                  _hover={{ opacity: 0.9 }}
-                >
-                  <Text fontWeight="bold" fontSize="sm">
-                    {title}
-                  </Text>
-                </Box>
-              );
-            })}
-          </HStack>
-        </VStack>
-      </Box>
     </Stack>
   );
 }

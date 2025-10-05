@@ -247,7 +247,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             : "カードを場に出せません";
     const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
 
-    const playRoundStart = useSoundEffect("round_start");
     const playOrderConfirm = useSoundEffect("order_confirm");
     const playCardPlace = useSoundEffect("card_place");
     const playCardDeal = useSoundEffect("card_deal");
@@ -395,7 +394,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         playOrderConfirm();
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
-        playRoundStart();
         notify({
           title: "カスタムお題で開始",
           type: "success",
@@ -411,7 +409,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       roomStatus,
       customStartPending,
       actualResolveMode,
-      playRoundStart,
       playOrderConfirm,
       playTopicShuffle,
     ]);
@@ -462,9 +459,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         }
         await startGameAction(roomId);
         await topicControls.dealNumbers(roomId);
-        if (shouldPlaySound) {
-          playRoundStart();
-        }
         notify({
           title: "カスタムお題で開始",
           type: "success",
@@ -478,9 +472,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           playOrderConfirm();
         }
         await startGameAction(roomId);
-        if (shouldPlaySound) {
-          playRoundStart();
-        }
         try {
           delete (window as any).__ITO_LAST_RESET;
         } catch {}
@@ -638,9 +629,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     try {
       playOrderConfirm();
       const ok = await restartGame({ playSound: false });
-      if (ok) {
-        playRoundStart();
-      }
       if (!ok) {
         clearAutoStartLock();
       }
@@ -659,7 +647,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     beginAutoStartLock,
     restartGame,
     clearAutoStartLock,
-    playRoundStart,
   ]);
 
   // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ

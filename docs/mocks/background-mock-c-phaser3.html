@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C案: Phaser 3ゲーム特化 - レトロゲーム背景</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: monospace;
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #game-container {
+      position: relative;
+    }
+
+    .ui-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      background: rgba(8, 9, 15, 0.92);
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      color: white;
+      text-align: center;
+      box-shadow:
+        0 0 30px rgba(255, 215, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+
+    .ui-overlay h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255, 215, 0, 0.5);
+      letter-spacing: 0.05em;
+    }
+
+    .ui-overlay p {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(8, 9, 15, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      padding: 15px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .controls button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: rgba(255, 215, 0, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      color: white;
+      font-family: monospace;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .controls button:hover {
+      background: rgba(255, 215, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <div class="ui-overlay">
+    <h1>C案: Phaser 3特化版</h1>
+    <p>
+      ゲームエンジン特化のパーティクル<br>
+      ドット絵風エフェクト + レトロ感<br>
+      <br>
+      <strong>特徴:</strong> 豊富なエフェクト・ゲーム的演出
+    </p>
+  </div>
+
+  <div class="controls">
+    <strong>Phaser 3 演出:</strong>
+    <button onclick="addExplosion()">💥 エクスプロージョン</button>
+    <button onclick="addFireworks()">🎆 花火</button>
+    <button onclick="toggleRain()">🌧️ 雨トグル</button>
+  </div>
+
+  <script>
+    let scene;
+    let particles = [];
+    let emitters = [];
+    let rainEnabled = false;
+    let rainEmitter = null;
+
+    const config = {
+      type: Phaser.AUTO,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      parent: 'game-container',
+      backgroundColor: '#1a0f2e',
+      scene: {
+        create: create,
+        update: update
+      }
+    };
+
+    const game = new Phaser.Game(config);
+
+    function create() {
+      scene = this;
+
+      // ===== 背景グラデーション =====
+      const graphics = scene.add.graphics();
+
+      // 夕暮れ風グラデーション
+      const colors = [
+        { color: 0x1a0f2e, position: 0 },      // 深紫
+        { color: 0x3d2463, position: 0.3 },    // 紫
+        { color: 0x8b5a3c, position: 0.7 },    // 茶色
+        { color: 0xa67c52, position: 1 },      // 暖色
+      ];
+
+      for (let i = 0; i < scene.scale.height; i++) {
+        const ratio = i / scene.scale.height;
+        let color = 0x1a0f2e;
+
+        for (let j = 0; j < colors.length - 1; j++) {
+          if (ratio >= colors[j].position && ratio <= colors[j + 1].position) {
+            const localRatio = (ratio - colors[j].position) / (colors[j + 1].position - colors[j].position);
+            const r1 = (colors[j].color >> 16) & 0xFF;
+            const g1 = (colors[j].color >> 8) & 0xFF;
+            const b1 = colors[j].color & 0xFF;
+            const r2 = (colors[j + 1].color >> 16) & 0xFF;
+            const g2 = (colors[j + 1].color >> 8) & 0xFF;
+            const b2 = colors[j + 1].color & 0xFF;
+
+            const r = Math.floor(r1 * (1 - localRatio) + r2 * localRatio);
+            const g = Math.floor(g1 * (1 - localRatio) + g2 * localRatio);
+            const b = Math.floor(b1 * (1 - localRatio) + b2 * localRatio);
+
+            color = (r << 16) + (g << 8) + b;
+          }
+        }
+
+        graphics.fillStyle(color);
+        graphics.fillRect(0, i, scene.scale.width, 1);
+      }
+
+      // ===== 星空パーティクル =====
+      for (let i = 0; i < 150; i++) {
+        const star = scene.add.circle(
+          Phaser.Math.Between(0, scene.scale.width),
+          Phaser.Math.Between(0, scene.scale.height * 0.6),
+          Phaser.Math.FloatBetween(0.5, 2),
+          0xFFFFFF,
+          Phaser.Math.FloatBetween(0.3, 0.9)
+        );
+
+        star.twinkleSpeed = Phaser.Math.FloatBetween(0.005, 0.02);
+        star.baseAlpha = star.alpha;
+        particles.push(star);
+      }
+
+      // ===== 光の粒子（ドラクエスライム風） =====
+      for (let i = 0; i < 60; i++) {
+        const sparkle = scene.add.circle(
+          Phaser.Math.Between(0, scene.scale.width),
+          Phaser.Math.Between(0, scene.scale.height),
+          Phaser.Math.FloatBetween(1, 3),
+          0xFFD700,
+          Phaser.Math.FloatBetween(0.4, 0.8)
+        );
+
+        sparkle.vx = Phaser.Math.FloatBetween(-0.5, 0.5);
+        sparkle.vy = Phaser.Math.FloatBetween(-0.5, 0.5);
+        particles.push(sparkle);
+      }
+
+      // ===== 雨エミッター（初期は非表示） =====
+      createRainEmitter();
+    }
+
+    function update() {
+      // 星のゆらぎ
+      particles.forEach((p, i) => {
+        if (i < 150) {
+          // 星
+          p.alpha = p.baseAlpha + Math.sin(Date.now() * p.twinkleSpeed) * 0.3;
+        } else {
+          // スライム光
+          p.x += p.vx;
+          p.y += p.vy;
+
+          // 画面外ループ
+          if (p.x < 0) p.x = scene.scale.width;
+          if (p.x > scene.scale.width) p.x = 0;
+          if (p.y < 0) p.y = scene.scale.height;
+          if (p.y > scene.scale.height) p.y = 0;
+
+          // 明滅
+          p.alpha = 0.5 + Math.sin(Date.now() * 0.003 + i) * 0.3;
+        }
+      });
+    }
+
+    // ===== エクスプロージョン =====
+    function addExplosion() {
+      const x = Phaser.Math.Between(100, scene.scale.width - 100);
+      const y = Phaser.Math.Between(100, scene.scale.height - 100);
+
+      const explosion = scene.add.particles(x, y, 'default', {
+        speed: { min: 100, max: 300 },
+        scale: { start: 1, end: 0 },
+        blendMode: 'ADD',
+        lifespan: 800,
+        tint: [0xFFD700, 0xFF6347, 0xFFFFFF],
+        quantity: 30,
+      });
+
+      explosion.explode();
+
+      scene.time.delayedCall(1000, () => {
+        explosion.destroy();
+      });
+    }
+
+    // ===== 花火 =====
+    function addFireworks() {
+      const x = Phaser.Math.Between(200, scene.scale.width - 200);
+      const y = Phaser.Math.Between(100, scene.scale.height / 2);
+
+      const colors = [0xFF69B4, 0x00CED1, 0xFFD700, 0x9370DB, 0xFF6347];
+      const color = Phaser.Utils.Array.GetRandom(colors);
+
+      const firework = scene.add.particles(x, y, 'default', {
+        speed: { min: 200, max: 400 },
+        scale: { start: 0.8, end: 0 },
+        blendMode: 'ADD',
+        lifespan: 1200,
+        tint: color,
+        quantity: 50,
+        angle: { min: 0, max: 360 },
+      });
+
+      firework.explode();
+
+      scene.time.delayedCall(1500, () => {
+        firework.destroy();
+      });
+    }
+
+    // ===== 雨エミッター作成 =====
+    function createRainEmitter() {
+      rainEmitter = scene.add.particles(0, 0, 'default', {
+        x: { min: 0, max: scene.scale.width },
+        y: -10,
+        speedY: { min: 300, max: 500 },
+        lifespan: 3000,
+        scale: { start: 0.3, end: 0.1 },
+        alpha: { start: 0.6, end: 0.2 },
+        tint: 0xADD8E6,
+        frequency: 20,
+        quantity: 2,
+      });
+
+      rainEmitter.stop(); // 初期は停止
+    }
+
+    // ===== 雨トグル =====
+    function toggleRain() {
+      rainEnabled = !rainEnabled;
+
+      if (rainEnabled) {
+        rainEmitter.start();
+      } else {
+        rainEmitter.stop();
+      }
+    }
+
+    // リサイズ対応
+    window.addEventListener('resize', () => {
+      game.scale.resize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
