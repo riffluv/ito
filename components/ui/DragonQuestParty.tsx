@@ -5,8 +5,29 @@ import Tooltip from "@/components/ui/Tooltip";
 import { transferHost } from "@/lib/firebase/rooms";
 import { toastIds } from "@/lib/ui/toastIds";
 import { Box, Text } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const panelFloat = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-1.5px); }
+  100% { transform: translateY(1.2px); }
+`;
+
+const headerPulse = keyframes`
+  0% { box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08); }
+  40% { box-shadow: 0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12); }
+  100% { box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08); }
+`;
+
+const headerGlint = keyframes`
+  0% { transform: translateX(-140%) rotate(9deg); opacity: 0; }
+  12% { transform: translateX(20%) rotate(9deg); opacity: 0.35; }
+  18% { transform: translateX(80%) rotate(9deg); opacity: 0.12; }
+  28% { transform: translateX(140%) rotate(9deg); opacity: 0; }
+  100% { transform: translateX(140%) rotate(9deg); opacity: 0; }
+`;
 
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
 
@@ -242,7 +263,14 @@ export function DragonQuestParty({
         boxShadow="panel"
         w={PANEL_WIDTH}
         maxW={PANEL_WIDTH}
-        css={{ pointerEvents: "auto" }}
+        css={{
+          pointerEvents: "auto",
+          position: "relative",
+          animation: `${panelFloat} 7.4s cubic-bezier(0.44, 0.12, 0.34, 0.96) infinite alternate`,
+          '@media (prefers-reduced-motion: reduce)': {
+            animation: 'none',
+          },
+        }}
       >
         {/* Octopath Traveler-style party header */}
         <Box
@@ -258,6 +286,24 @@ export function DragonQuestParty({
           css={{
             boxShadow: "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
             backdropFilter: "blur(4px)",
+            position: "relative",
+            overflow: "hidden",
+            animation: `${headerPulse} 9.8s ease-in-out infinite`,
+            '&::after': {
+              content: "''",
+              position: "absolute",
+              inset: "-40%",
+              background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 60%)',
+              transform: 'translateX(-120%) rotate(12deg)',
+              animation: `${headerGlint} 6.2s cubic-bezier(0.16, 0.84, 0.33, 1) infinite`,
+              pointerEvents: 'none',
+              mixBlendMode: 'screen',
+              opacity: 0.7,
+            },
+            '@media (prefers-reduced-motion: reduce)': {
+              animation: 'none',
+              '&::after': { animation: 'none', opacity: 0 },
+            },
           }}
         >
           {/* フラッグエンブレム */}
