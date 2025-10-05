@@ -1,6 +1,7 @@
 import GameCard from "@/components/ui/GameCard";
 import { computeCardState } from "@/lib/cards/logic";
 import type { PlayerDoc } from "@/lib/types";
+import { createBoardCardViewModel } from "./cardViewModel";
 
 interface CardRendererProps {
   id: string;
@@ -48,24 +49,16 @@ export function CardRenderer(props: CardRendererProps) {
   const flipped = interactive ? interactive.flipped : state.flipped;
   const flipPreset = interactive?.preset ?? "reveal";
 
-  return (
-    <GameCard
-      key={id}
-      variant={variant}
-      flipped={flipped}
-      index={typeof props.idx === "number" ? props.idx : null}
-      name={player?.name}
-      clue={state.clueText || undefined}
-      number={state.number}
-      state={state.state}
-      successLevel={state.successLevel}
-      boundary={state.boundary}
-      waitingInCentral={state.waitingInCentral}
-      isInteractive={!!interactive}
-      onClick={interactive ? interactive.onToggle : undefined}
-      flipPreset={flipPreset}
-      // boundary styling hint via name prop aria? (Could be extended)
-    />
-  );
-}
+  const cardViewModel = createBoardCardViewModel({
+    player,
+    index: typeof props.idx === "number" ? props.idx : null,
+    state,
+    variant,
+    flipped,
+    isInteractive: !!interactive,
+    flipPreset,
+    onClick: interactive ? interactive.onToggle : undefined,
+  });
 
+  return <GameCard key={id} {...cardViewModel} />;
+}
