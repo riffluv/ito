@@ -55,7 +55,7 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
         position="relative"
         overflow="hidden"
         borderRadius="0"
-        background="rgba(28,32,42,0.95)"
+        background="rgba(8,9,15,0.95)"
         border="none"
         color="rgba(255,255,255,0.98)"
         fontFamily="'Courier New', monospace"
@@ -82,12 +82,12 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
           boxShadow: finalDisabled
             ? undefined
             : "4px 5px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
-          background: finalDisabled ? undefined : "rgba(38,42,52,0.98)",
+          background: finalDisabled ? undefined : "rgba(12,13,18,0.98)",
         }}
         _active={{
           transform: "translate(1px,1px)",
           boxShadow: "2px 2px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
-          background: "rgba(18,22,32,1)",
+          background: "rgba(5,6,10,1)",
         }}
         _focusVisible={{
           outline: "none",
@@ -112,7 +112,7 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
           {icon ? (
             <Box
               fontSize="lg"
-              color="rgba(255, 236, 200, 0.9)"
+              color="rgba(255,255,255,0.98)"
               filter="drop-shadow(0 2px 6px rgba(0,0,0,0.6))"
               display="flex"
               alignItems="center"
