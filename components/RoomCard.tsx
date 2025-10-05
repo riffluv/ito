@@ -3,8 +3,21 @@ import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { Lock, Play, UserCheck, Users } from "lucide-react";
+import { memo, useCallback, type KeyboardEvent, type PointerEvent } from "react";
 
-export function RoomCard({
+type RoomCardProps = {
+  id: string;
+  name: string;
+  status: string;
+  count: number;
+  creatorName?: string | null;
+  hostName?: string | null;
+  requiresPassword?: boolean;
+  onJoin: (roomId: string) => void;
+};
+
+export const RoomCard = memo(function RoomCard({
+  id,
   name,
   status,
   count,
@@ -12,15 +25,7 @@ export function RoomCard({
   hostName,
   requiresPassword,
   onJoin,
-}: {
-  name: string;
-  status: string;
-  count: number;
-  creatorName?: string | null;
-  hostName?: string | null;
-  requiresPassword?: boolean;
-  onJoin: () => void;
-}) {
+}: RoomCardProps) {
   const displayCreator = (creatorName && creatorName.trim()) || "匿名";
   const displayHost = (hostName && hostName.trim()) || displayCreator;
   const showHostLine = displayHost !== displayCreator;
@@ -28,17 +33,43 @@ export function RoomCard({
   const isWaiting = status === "waiting";
   const locked = !!requiresPassword;
 
+  const handleCardClick = useCallback(() => {
+    if (!isWaiting) return;
+    onJoin(id);
+  }, [id, isWaiting, onJoin]);
+
+  const handleCardPointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (!isWaiting) return;
+      if (event.button !== 0) return;
+      event.preventDefault();
+      onJoin(id);
+    },
+    [id, isWaiting, onJoin]
+  );
+
+  const handleCardKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (!isWaiting) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onJoin(id);
+      }
+    },
+    [id, isWaiting, onJoin]
+  );
+
   return (
     <Box
       role="group"
       position="relative"
       cursor={isWaiting ? "pointer" : "not-allowed"}
-      onClick={() => {
-        if (!isWaiting) return; // 進行中は無効
-        onJoin();
-      }}
+      tabIndex={isWaiting ? 0 : -1}
       aria-disabled={!isWaiting}
       data-locked={locked ? "true" : "false"}
+      onClick={handleCardClick}
+      onPointerDown={handleCardPointerDown}
+      onKeyDown={handleCardKeyDown}
       _hover={{}}
       css={{
         "&:hover .hover-decoration": {
@@ -203,9 +234,14 @@ export function RoomCard({
               visual="solid"
               palette={locked ? "purple" : "brand"}
               css={{ width: "100%" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onJoin();
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                event.stopPropagation();
+                onJoin(id);
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onJoin(id);
               }}
             >
               {!locked && <Play size={16} style={{ marginRight: "8px" }} />}
@@ -249,10 +285,12 @@ export function RoomCard({
           bg="accentSubtle"
           borderTopRadius={0}
           opacity={0}
-          transition="opacity 0.31s ease" // AI感除去: 0.3s → 0.31s
+          transition="opacity 0.31s ease" // AI tweak: 0.3s -> 0.31s
         />
       </Box>
     </Box>
   );
-}
+});
+
+RoomCard.displayName = "RoomCard";
 

@@ -198,6 +198,14 @@ export default function MainMenu() {
 
   const roomIds = useMemo(() => rooms.map((room) => room.id), [rooms]);
 
+  const roomMap = useMemo(() => {
+    const map = new Map<string, LobbyRoom>();
+    rooms.forEach((room) => {
+      map.set(room.id, room);
+    });
+    return map;
+  }, [rooms]);
+
   // 人数カウント（RTDB優先、ない時はFirestore使う）
   const { counts: lobbyCounts, refresh: refreshLobbyCounts } = useLobbyCounts(
     roomIds,
@@ -393,7 +401,8 @@ export default function MainMenu() {
   );
 
   const handleJoinRoom = useCallback(
-    (room: LobbyRoom | null) => {
+    (roomId: string) => {
+      const room = roomMap.get(roomId) ?? null;
       if (!room) return;
       if (room.status !== "waiting") {
         notify({
@@ -415,7 +424,7 @@ export default function MainMenu() {
       }
       void goToRoom(room);
     },
-    [goToRoom]
+    [goToRoom, roomMap]
   );
 
   const handlePasswordSubmit = useCallback(
@@ -925,13 +934,14 @@ export default function MainMenu() {
                   {paginatedRooms.map((room) => (
                     <RoomCard
                       key={room.id}
+                      id={room.id}
                       name={stripMinimalTag(room.name) || ""}
                       status={room.status}
                       count={lobbyCounts[room.id] ?? 0}
                       creatorName={room.creatorName || room.hostName || "匿名"}
                       hostName={room.hostName || null}
                       requiresPassword={room.requiresPassword}
-                      onJoin={() => handleJoinRoom(room)}
+                      onJoin={handleJoinRoom}
                     />
                   ))}
                 </Grid>

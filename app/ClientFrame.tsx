@@ -1,17 +1,19 @@
 "use client";
 import PerfStatsOverlay from "@/components/dev/PerfStatsOverlay";
+import PerformanceMetricsInitializer from "@/components/perf/PerformanceMetricsInitializer";
 import Header from "@/components/site/Header";
 import { usePathname } from "next/navigation";
 import React from "react";
 
-// クライアント側でのみ実行されるラッパー。
-// /rooms/ 配下ではグローバル Header を非表示にしフルスクリーン AppShell を最大化。
-// 注意: RPGPageTransitionは削除 - TransitionProviderシステムに統一
+// Client-only wrapper.
+// Hides the global Header on /rooms/ routes to maximize the AppShell.
+// TransitionProvider replaces the legacy RPGPageTransition.
 export function ClientFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const showHeader = pathname === "/"; // ヘッダーはメインメニューのみ
+  const showHeader = pathname === "/"; // Header is visible only on the lobby
   return (
     <>
+      <PerformanceMetricsInitializer />
       {showHeader && <Header />}
       <main id="main" role="main">{children}</main>
       <PerfStatsOverlay />
