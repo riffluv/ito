@@ -8,6 +8,7 @@ import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
 import { updateClue1 } from "@/lib/firebase/players";
 import { resetRoomWithPrune } from "@/lib/firebase/rooms";
+import { keyframes } from "@emotion/react";
 import {
   canSubmitCard,
   computeAllSubmitted,
@@ -48,6 +49,35 @@ import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
+
+// ========================================
+// 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
+// ========================================
+const shimmerAnimation = keyframes`
+  0% { transform: translate(-100%, -100%); opacity: 0; }
+  12% { transform: translate(-20%, -20%); opacity: 0.35; }
+  28% { transform: translate(40%, 40%); opacity: 0.18; }
+  42% { transform: translate(80%, 80%); opacity: 0.08; }
+  100% { transform: translate(140%, 140%); opacity: 0; }
+`;
+
+const pulseGlow = keyframes`
+  0% {
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2);
+  }
+  34% {
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(110,210,255,0.88), inset 0 -2px 13px rgba(110,210,255,0.24);
+  }
+  58% {
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(120,220,255,0.95), inset 0 -2px 16px rgba(120,220,255,0.35);
+  }
+  82% {
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(105,205,255,0.88), inset 0 -2px 13px rgba(105,205,255,0.26);
+  }
+  100% {
+    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2);
+  }
+`;
 
 // ========================================
 // 🎨 Design System: Footer Button Styles
@@ -952,7 +982,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               px="19px"
               py="13px"
               position="relative"
-              bg={preparing ? LOADING_BG : "linear-gradient(135deg, rgba(28,42,68,0.98) 0%, rgba(18,28,48,1) 100%)"}
+              overflow="hidden"
+              bg={preparing ? LOADING_BG : "linear-gradient(135deg, rgba(18,52,86,0.98) 0%, rgba(10,38,68,1) 100%)"}
               color="rgba(255,255,255,0.98)"
               border="none"
               borderRadius="0"
@@ -960,22 +991,46 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               fontFamily="'Courier New', monospace"
               fontSize="16px"
               letterSpacing="0.08em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.9)"
-              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
+              textShadow="2px 2px 0 rgba(0,0,0,0.9), 0 0 8px rgba(100,200,255,0.4)"
+              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2)"
               transform="translate(.5px,-.5px)"
               _hover={{
-                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(38,52,78,1) 0%, rgba(28,38,58,1) 100%)",
+                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(28,62,96,1) 0%, rgba(18,48,78,1) 100%)",
                 color: "rgba(255,255,255,1)",
                 transform: "translate(0,-2px)",
-                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
+                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(120,220,255,0.95), inset 0 -2px 16px rgba(120,220,255,0.3)",
+                textShadow: "2px 2px 0 rgba(0,0,0,0.9), 0 0 12px rgba(120,220,255,0.6)",
               }}
               _active={{
-                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(18,28,48,1) 0%, rgba(12,18,32,1) 100%)",
+                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(10,38,68,1) 0%, rgba(8,28,48,1) 100%)",
                 color: "rgba(255,255,255,0.9)",
-                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
+                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(80,180,235,0.8)",
                 transform: "translate(1px,1px)",
               }}
-              transition="180ms cubic-bezier(.2,1,.3,1)"
+              transition="box-shadow 180ms cubic-bezier(.2,1,.3,1), transform 180ms cubic-bezier(.2,1,.3,1), background 180ms cubic-bezier(.2,1,.3,1)"
+              css={{
+                animation: preparing ? "none" : `${pulseGlow} 3.8s cubic-bezier(.36, .12, .25, 1) infinite`,
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  top: "-50%",
+                  left: "-50%",
+                  width: "200%",
+                  height: "200%",
+                  background: "radial-gradient(circle at 30% 30%, rgba(140,230,255,0.25), transparent 60%)",
+                  animation: preparing ? "none" : `${shimmerAnimation} 6.2s cubic-bezier(.16, .84, .33, 1) infinite`,
+                  pointerEvents: "none",
+                  zIndex: 1,
+                },
+                "& > *": {
+                  position: "relative",
+                  zIndex: 2,
+                },
+                '@media (prefers-reduced-motion: reduce)': {
+                  animation: 'none',
+                  '&::before': { animation: 'none' },
+                },
+              }}
             >
               {preparing ? "準備中..." : "ゲーム開始"}
             </AppButton>
