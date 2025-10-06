@@ -120,12 +120,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Optimize waiting players calculation for 8+ players
-  const waitingPlayers = useMemo(() => {
-    return (eligibleIds || [])
-      .map((id) => playerMap.get(id)!)
-      .filter((p) => p && !placedIds.has(p.id) && p.id !== activeId);
-  }, [eligibleIds, playerMap, placedIds, activeId]);
 
   // Accessibility sensors for keyboard and pointer interactions
   // Sensors: mouse uses small distance threshold; touch uses hold delay with tolerance
@@ -239,6 +233,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [setPending]
   );
+
+  // 待機エリアはpending中のカードも除外して残像を防ぐ
+  const waitingPlayers = useMemo(() => {
+    const pendingLookup = new Set((pending || []).filter(Boolean));
+    return (eligibleIds || [])
+      .map((id) => playerMap.get(id)!)
+      .filter((p) => {
+        if (!p) return false;
+        if (pendingLookup.has(p.id)) return false;
+        if (placedIds.has(p.id)) return false;
+        return p.id !== activeId;
+      });
+  }, [eligibleIds, playerMap, placedIds, activeId, pending]);
 
   // ??????????????????
   const [showResult, setShowResult] = useState(false);
