@@ -10,6 +10,7 @@ interface UseHostClaimParams {
   candidateId: string | null;
   lastKnownHostId: string | null;
   previousHostStillMember: boolean;
+  isMember: boolean;
   leavingRef: React.MutableRefObject<boolean>;
 }
 
@@ -25,10 +26,12 @@ export function useHostClaim({
   candidateId,
   lastKnownHostId,
   previousHostStillMember,
+  isMember,
   leavingRef,
 }: UseHostClaimParams) {
   const hostClaimTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hostClaimAttemptRef = useRef<number>(0);
+  const hostClaimPostSuccessRef = useRef<number>(0);
 
   useEffect(() => {
     const clearTimer = () => {
@@ -38,8 +41,25 @@ export function useHostClaim({
       }
     };
 
+    const scheduleRetry = (delay: number) => {
+      if (hostClaimTimerRef.current) {
+        clearTimeout(hostClaimTimerRef.current);
+      }
+      hostClaimTimerRef.current = setTimeout(() => {
+        hostClaimTimerRef.current = null;
+        if (!cancelled) {
+          void attemptClaim();
+        }
+      }, delay);
+    };
+
     // ホストが存在する、または基本条件を満たさない
     if (!uid || !user || hostId || leavingRef.current) {
+      clearTimer();
+      return clearTimer;
+    }
+
+    if (!isMember) {
       clearTimer();
       return clearTimer;
     }
@@ -58,16 +78,11 @@ export function useHostClaim({
         isSelfFallback) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
 
+    logInfo("room-page", "claim-host evaluate " + JSON.stringify({ roomId, uid, hostId, candidateId, lastKnownHostId, previousHostStillMember, isMember, leaving: leavingRef.current }));
+
     if (!shouldAttemptClaim) {
-      logInfo("room-page", "claim-host skipped", {
-        roomId,
-        uid,
-        candidateId,
-        lastKnownHostId,
-        previousHostStillMember,
-        selfFallback: isSelfFallback,
-        leaving: leavingRef.current,
-      });
+      logInfo("room-page", "claim-host skipped " + JSON.stringify({ roomId, uid, candidateId, lastKnownHostId, previousHostStillMember, isMember, leaving: leavingRef.current }));
+      hostClaimPostSuccessRef.current = 0;
       clearTimer();
       return clearTimer;
     }
@@ -109,11 +124,17 @@ export function useHostClaim({
           throw error;
         }
         hostClaimAttemptRef.current = 0;
-        logInfo("room-page", "claim-host success", {
-          roomId,
-          uid,
-          attempts: hostClaimAttemptRef.current,
-        });
+        logInfo("room-page", "claim-host success " + JSON.stringify({ roomId, uid, attempts: hostClaimAttemptRef.current }));
+        if (!hostId || String(hostId).trim().length === 0) {
+          const retryCount = hostClaimPostSuccessRef.current + 1;
+          if (retryCount <= 3) {
+            hostClaimPostSuccessRef.current = retryCount;
+            const delay = 600 * Math.pow(2, retryCount - 1);
+            scheduleRetry(delay);
+          }
+        } else {
+          hostClaimPostSuccessRef.current = 0;
+        }
       } catch (error) {
         logError("room-page", "claim-host", error);
         if (!cancelled) {
@@ -146,6 +167,7 @@ export function useHostClaim({
     candidateId,
     lastKnownHostId,
     previousHostStillMember,
+    isMember,
     roomId,
     leavingRef,
   ]);
