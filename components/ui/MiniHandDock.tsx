@@ -36,6 +36,7 @@ import { toastIds } from "@/lib/ui/toastIds";
 import {
   Box,
   Dialog,
+  Flex,
   HStack,
   IconButton,
   Input,
@@ -853,7 +854,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {isHost && roomStatus === "waiting" && !preparing && (
         <Box
           position="fixed"
-          bottom={{ base: "110px", md: "120px" }}
+          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}
@@ -873,7 +874,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {isHost && ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished") && !autoStartLocked && !isRestarting && !(roomStatus === "reveal" && isRevealAnimating) && (
         <Box
           position="fixed"
-          bottom={{ base: "110px", md: "120px" }}
+          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}
@@ -899,103 +900,161 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         maxW={{ base: "calc(100vw - 32px)", md: "900px" }}
         w="100%"
       >
-        <HStack
-          gap={{ base: "10px", md: "11px" }}
-          align="center"
+        <Flex
+          gap={{ base: "12px", md: "16px" }}
+          align="flex-end"
           justify="center"
           flexWrap={{ base: "wrap", md: "nowrap" }}
-          px={{ base: "12px", md: "16px" }}
-          py={{ base: "8px", md: "10px" }}
+          px={{ base: "14px", md: "18px" }}
+          py={{ base: "10px", md: "12px" }}
           css={{
-            background: "rgba(8,9,15,0.75)",
-            backdropFilter: "blur(10px) saturate(1.1)",
-            border: "2px solid rgba(255,255,255,0.15)",
+            position: "relative",
+            background: "rgba(8,9,15,0.78)",
+            backdropFilter: "blur(10px) saturate(1.08)",
+            border: "2px solid rgba(255,255,255,0.16)",
             borderRadius: 0,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+            boxShadow: "0 10px 26px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06)",
+            overflow: "hidden",
+            "::before": {
+              content: '""',
+              position: "absolute",
+              inset: "0",
+              border: "1px solid rgba(255,255,255,0.06)",
+              pointerEvents: "none",
+            },
+            "::after": {
+              content: '""',
+              position: "absolute",
+              left: "-20%",
+              right: "-20%",
+              top: "-45%",
+              height: "120%",
+              background: "radial-gradient(ellipse at center, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 68%)",
+              opacity: 0.2,
+              pointerEvents: "none",
+            },
           }}
         >
-          <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
-        <Input
-          placeholder="連想ワード"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={50}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleDecide();
-          }}
-          size="sm"
-          bg="rgba(18,22,32,0.95)"
-          color="rgba(255,255,255,0.98)"
-          fontFamily="'Courier New', monospace"
-          fontSize="15px"
-          fontWeight="700"
-          letterSpacing="0.04em"
-          border="none"
-          borderRadius={0}
-          boxShadow="inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.08), 0 0 0 2px rgba(255,255,255,0.75)"
-          _placeholder={{
-            color: "rgba(255,255,255,0.45)",
-            letterSpacing: "0.06em",
-          }}
-          _focus={{
-            boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.12), 0 0 0 2px rgba(255,255,255,0.95)",
-            bg: "rgba(22,26,36,0.98)",
-            outline: "none",
-          }}
-          _hover={{
-            boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1), 0 0 0 2px rgba(255,255,255,0.85)",
-            bg: "rgba(20,24,34,0.96)",
-          }}
-          w={{ base: "calc(100% - 20px)", md: "240px" }}
-          maxW={{ base: "100%", md: "320px" }}
-          flex={{ base: "1 1 auto", md: "0 1 auto" }}
-          minW={0}
-          transition="box-shadow 168ms cubic-bezier(.2,1,.3,1)"
-        />
-        <Tooltip content={decideTooltip} showArrow openDelay={180}>
-          <AppButton
-            {...FOOTER_BUTTON_BASE_STYLES}
-            size="sm"
-            visual="solid"
-            palette="brand"
-            color="rgba(255,255,255,0.98)"
-            onClick={handleDecide}
-            disabled={!canDecide}
-          >
-            決定
-          </AppButton>
-        </Tooltip>
-        <Tooltip content={clearTooltip} showArrow openDelay={180}>
-          <AppButton
-            {...FOOTER_BUTTON_BASE_STYLES}
-            size="sm"
-            visual="outline"
-            palette="gray"
-            color="rgba(255,255,255,0.92)"
-            onClick={handleClear}
-            disabled={clearButtonDisabled}
-          >
-            クリア
-          </AppButton>
-        </Tooltip>
-          <Tooltip content={submitTooltip} showArrow openDelay={180}>
-            <AppButton
-              {...FOOTER_BUTTON_BASE_STYLES}
-              size="sm"
-              visual="solid"
-              palette="brand"
-              color="rgba(255,255,255,0.98)"
-              onClick={handleSubmit}
-              disabled={!canClickProposalButton}
-            >
-              {actionLabel}
-            </AppButton>
-          </Tooltip>
+          <Box flexShrink={0}>
+            <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
+          </Box>
 
-          {/* ホスト専用: 3つのアイコンボタン (お題BOXの右側) */}
+          <VStack
+            gap="6px"
+            align="flex-start"
+            flex={{ base: "1 1 100%", md: "1 1 280px" }}
+            minW={{ base: "220px", md: "240px" }}
+          >
+            <Text
+              fontSize="12px"
+              fontWeight="800"
+              letterSpacing="0.18em"
+              color="rgba(255,255,255,0.75)"
+              textTransform="uppercase"
+            >
+              連想ワード
+            </Text>
+            <Input
+              placeholder="連想ワード"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={50}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleDecide();
+              }}
+              size="sm"
+              bg="rgba(18,22,32,0.95)"
+              color="rgba(255,255,255,0.98)"
+              fontFamily="'Courier New', monospace"
+              fontSize="16px"
+              fontWeight="700"
+              letterSpacing="0.04em"
+              border="none"
+              borderRadius={0}
+              boxShadow="inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.08), 0 0 0 2px rgba(255,255,255,0.78)"
+              minH="48px"
+              w="100%"
+              transition="box-shadow 168ms cubic-bezier(.2,1,.3,1)"
+              _placeholder={{
+                color: "rgba(255,255,255,0.45)",
+                letterSpacing: "0.06em",
+              }}
+              _focus={{
+                boxShadow:
+                  "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.12), 0 0 0 2px rgba(255,255,255,0.95)",
+                bg: "rgba(22,26,36,0.98)",
+                outline: "none",
+              }}
+              _hover={{
+                boxShadow:
+                  "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1), 0 0 0 2px rgba(255,255,255,0.85)",
+                bg: "rgba(20,24,34,0.96)",
+              }}
+            />
+          </VStack>
+
+          <HStack
+            gap={{ base: "6px", md: "8px" }}
+            align="flex-end"
+            flex={{ base: "1 1 100%", md: "0 1 auto" }}
+            minW={0}
+            justify={{ base: "flex-start", md: "flex-end" }}
+          >
+            <Tooltip content={decideTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="solid"
+                palette="brand"
+                color="rgba(255,255,255,0.98)"
+                onClick={handleDecide}
+                disabled={!canDecide}
+                w="auto"
+                minW="70px"
+              >
+                決定
+              </AppButton>
+            </Tooltip>
+            <Tooltip content={clearTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="outline"
+                palette="gray"
+                color="rgba(255,255,255,0.92)"
+                onClick={handleClear}
+                disabled={clearButtonDisabled}
+                w="auto"
+                minW="70px"
+              >
+                クリア
+              </AppButton>
+            </Tooltip>
+            <Tooltip content={submitTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="solid"
+                palette="brand"
+                color="rgba(255,255,255,0.98)"
+                onClick={handleSubmit}
+                disabled={!canClickProposalButton}
+                w="auto"
+                minW="88px"
+              >
+                {actionLabel}
+              </AppButton>
+            </Tooltip>
+          </HStack>
+
           {isHost && (
-            <>
-              <Box w="2px" h="32px" bg="rgba(255,255,255,0.22)" mx="10px" />
+            <Flex
+              gap={{ base: "6px", md: "8px" }}
+              align="center"
+              flex={{ base: "1 1 100%", md: "0 0 auto" }}
+              flexWrap="nowrap"
+            >
+              <Box w="2px" h="36px" bg="rgba(255,255,255,0.22)" mx={{ base: "2px", md: "6px" }} />
               <Tooltip
                 content={
                   effectiveDefaultTopicType === "カスタム"
@@ -1076,9 +1135,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   }}
                 />
               </Tooltip>
-            </>
+            </Flex>
           )}
-        </HStack>
+        </Flex>
       </Box>
 
       {/* フィードバックメッセージ (中央入力エリアの上) */}
@@ -1380,5 +1439,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
+
 
 
