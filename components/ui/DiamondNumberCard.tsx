@@ -30,7 +30,9 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
 
       gsap.timeline({
         defaults: { ease: "power2.out" },
-        onComplete: () => gsap.set(element, { willChange: null, scale: 1, y: 0, opacity: 1 }),
+        onComplete: () => {
+          gsap.set(element, { willChange: 'auto', scale: 1, y: 0, opacity: 1 });
+        },
       })
         .fromTo(
           element,
@@ -59,7 +61,7 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
 
     return () => {
       gsap.killTweensOf(element);
-      gsap.set(element, { willChange: null });
+      gsap.set(element, { willChange: 'auto' });
     };
   }, [number, isAnimating]);
 

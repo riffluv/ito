@@ -320,6 +320,8 @@ export const UI_TOKENS = {
     orangeSunsetActive: "linear-gradient(140deg, rgba(78,31,7,0.98) 0%, rgba(72,28,6,1) 60%, rgba(62,23,3,1) 100%)", // AI感除去: 3色・不等間隔
     dqPanel:
       "linear-gradient(134deg, rgba(7,8,14,0.86) 0%, rgba(11,13,21,0.92) 47%, rgba(9,10,16,0.89) 78%, rgba(8,9,15,0.87) 100%)", // AI感除去: 非対称4色・不等間隔
+    mainBg:
+      "linear-gradient(138deg, rgba(6,8,20,0.94) 0%, rgba(10,14,34,0.97) 44%, rgba(6,8,22,0.99) 100%)", // ルーム待機全体の背景
   },
   // ボタン影の段階表現
   BUTTON_SHADOWS: {
