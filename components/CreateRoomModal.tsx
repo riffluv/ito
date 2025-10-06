@@ -386,105 +386,82 @@ export function CreateRoomModal({
           {/* Form Content - ドラクエ風 */}
           {isSuccess ? (
             <Box px={6} py={6} position="relative" zIndex={1}>
-              <VStack gap={5} align="stretch">
-                <VStack align="stretch" gap={3}>
+              <VStack gap={4} align="stretch">
+                <Text
+                  fontSize="sm"
+                  color="rgba(255,255,255,0.85)"
+                  fontFamily="monospace"
+                  textAlign="center"
+                  textShadow="0 1px 2px rgba(0,0,0,0.6)"
+                >
+                  このリンクを おくって なかまを よぼう！
+                </Text>
+
+                <Box
+                  p={3}
+                  bg="rgba(8,9,15,0.6)"
+                  border="2px solid rgba(255,255,255,0.3)"
+                  borderRadius={0}
+                >
                   <Text
-                    fontSize="md"
+                    fontSize="sm"
                     color="rgba(255,255,255,0.95)"
                     fontFamily="monospace"
-                    fontWeight="bold"
-                    textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                    pb={2}
-                    css={{
-                      borderBottom: "2px solid rgba(255,255,255,0.2)",
-                    }}
+                    wordBreak="break-all"
+                    lineHeight="1.6"
+                    textAlign="center"
                   >
-                    なかまを しょうたい
+                    {inviteUrl}
                   </Text>
-                  <Box
-                    border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-                    borderRadius={0}
-                    p={4}
-                    css={{
-                      background: "linear-gradient(135deg, rgba(18,20,28,0.85) 0%, rgba(12,14,20,0.9) 100%)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    <VStack gap={3} align="stretch">
-                      <Text
-                        fontSize="xs"
-                        color="rgba(255,255,255,0.7)"
-                        fontFamily="monospace"
-                        textShadow="0 1px 2px rgba(0,0,0,0.6)"
-                      >
-                        このリンクを おくって なかまを よぼう！
-                      </Text>
-                      <Box
-                        p={3}
-                        bg="rgba(8,9,15,0.6)"
-                        border="2px solid rgba(255,255,255,0.3)"
-                        borderRadius={0}
-                      >
-                        <Text
-                          fontSize="sm"
-                          color="rgba(255,255,255,0.95)"
-                          fontFamily="monospace"
-                          wordBreak="break-all"
-                          lineHeight="1.6"
-                        >
-                          {inviteUrl}
-                        </Text>
-                      </Box>
-                      <button
-                        type="button"
-                        onClick={handleCopyInvite}
-                        style={{
-                          width: "100%",
-                          height: "44px",
-                          borderRadius: 0,
-                          border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                          background: inviteCopied ? "white" : "transparent",
-                          color: inviteCopied ? "black" : "white",
-                          fontFamily: "monospace",
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                          padding: "0 16px",
-                          cursor: "pointer",
-                          textShadow: inviteCopied ? "none" : "0 2px 4px rgba(0,0,0,0.8)",
-                          transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-                          boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
-                          outline: "none",
-                        }}
-                        onMouseEnter={(event) => {
-                          if (!inviteCopied) {
-                            event.currentTarget.style.background = "white";
-                            event.currentTarget.style.color = "black";
-                            event.currentTarget.style.transform = "translateY(-2px)";
-                            event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
-                          }
-                        }}
-                        onMouseLeave={(event) => {
-                          if (!inviteCopied) {
-                            event.currentTarget.style.background = "transparent";
-                            event.currentTarget.style.color = "white";
-                            event.currentTarget.style.transform = "translateY(0)";
-                            event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
-                          }
-                        }}
-                        onMouseDown={(event) => {
-                          event.currentTarget.style.transform = "translateY(1px)";
-                          event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
-                        }}
-                        onMouseUp={(event) => {
-                          event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-2px)";
-                          event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
-                        }}
-                      >
-                        {inviteCopied ? "✓ コピーしました！" : "◆ リンクを コピー"}
-                      </button>
-                    </VStack>
-                  </Box>
-                </VStack>
+                </Box>
+
+                <button
+                  type="button"
+                  onClick={handleCopyInvite}
+                  style={{
+                    width: "100%",
+                    height: "48px",
+                    borderRadius: 0,
+                    border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+                    background: inviteCopied ? "white" : "transparent",
+                    color: inviteCopied ? "black" : "white",
+                    fontFamily: "monospace",
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    padding: "0 16px",
+                    cursor: "pointer",
+                    textShadow: inviteCopied ? "none" : "0 2px 4px rgba(0,0,0,0.8)",
+                    transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
+                    outline: "none",
+                  }}
+                  onMouseEnter={(event) => {
+                    if (!inviteCopied) {
+                      event.currentTarget.style.background = "white";
+                      event.currentTarget.style.color = "black";
+                      event.currentTarget.style.transform = "translateY(-2px)";
+                      event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                    }
+                  }}
+                  onMouseLeave={(event) => {
+                    if (!inviteCopied) {
+                      event.currentTarget.style.background = "transparent";
+                      event.currentTarget.style.color = "white";
+                      event.currentTarget.style.transform = "translateY(0)";
+                      event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
+                    }
+                  }}
+                  onMouseDown={(event) => {
+                    event.currentTarget.style.transform = "translateY(1px)";
+                    event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
+                  }}
+                  onMouseUp={(event) => {
+                    event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-2px)";
+                    event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                  }}
+                >
+                  {inviteCopied ? "✓ コピーしました！" : "◆ リンクを コピー"}
+                </button>
               </VStack>
             </Box>
           ) : (
