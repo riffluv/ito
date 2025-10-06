@@ -81,6 +81,13 @@ const RoomPasswordPrompt = dynamic(
   { ssr: false, loading: () => null }
 );
 
+const PREFETCH_COMPONENT_LOADERS: Array<() => Promise<unknown>> = [
+  () => import("@/components/SettingsModal"),
+  () => import("@/components/ui/MinimalChat"),
+  () => import("@/components/RoomPasswordPrompt").then((mod) => mod.RoomPasswordPrompt),
+  () => import("@/components/ui/Tooltip"),
+];
+
 type RoomPageContentProps = {
   roomId: string;
 };
@@ -91,6 +98,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const transition = useTransition();
   const uid = user?.uid || null;
   useAssetPreloader(ROOM_CORE_ASSETS);
+
+  useEffect(() => {
+    const prefetch = async () => {
+      await Promise.allSettled(
+        PREFETCH_COMPONENT_LOADERS.map((loader) => {
+          try {
+            return loader();
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        })
+      );
+    };
+    prefetch();
+  }, []);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
