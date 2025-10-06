@@ -100,7 +100,7 @@ export default function RulesPage() {
                 borderBottom: "2px solid rgba(255,255,255,0.2)",
               }}
             >
-              序の紋章III の きまり
+              序の紋章III のきまり
             </Heading>
             <HStack
               align="center"
@@ -151,17 +151,17 @@ export default function RulesPage() {
                   textShadow="1px 1px 2px rgba(0,0,0,0.8)"
                   letterSpacing="0.3px"
                 >
-                  きょうりょくがたの パーティーゲーム。
+                  協力型のパーティーゲーム。
                   <br />
-                  かくプレイヤーは 1〜100の かずを もち、
+                  各プレイヤーは 1〜100の 数字を持ち、
                   <br />
-                  じぶんの かずを ちょくせつ いわずに
+                  自分の数字を直接言わずに
                   <br />
-                  「おだい」に そった ひょうげんで つたえ、
+                  「お題」に沿った表現で伝え、
                   <br />
-                  ぜんいんで カードを ちいさい じゅんに
+                  全員でカードを小さい順に
                   <br />
-                  ならべることを めざします。
+                  並べることを目指します。
                 </Text>
               </Box>
             </HStack>
@@ -190,7 +190,7 @@ export default function RulesPage() {
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
             >
-              ゲームの ながれ
+              ゲームの流れ
             </Heading>
 
             <List.Root
@@ -200,24 +200,24 @@ export default function RulesPage() {
             >
               {[
                 {
-                  title: "▶ １．カード くばり",
-                  desc: "かくプレイヤーに １〜１００の カードを １まいずつ くばります。じぶんの すうじは ほかの プレイヤーに おしえては いけません。",
+                  title: "▶ １．お題を決める",
+                  desc: "1枚のお題カードを引いてテーマを決めます（例：「怖いもの」「好きな食べ物」など）。数字の大小を表現しやすいテーマが良いです。",
                 },
                 {
-                  title: "▶ ２．おだいを きめる",
-                  desc: "１まいの おだいカードを ひいて テーマを きめます（れい：「こわいもの」「すきな たべもの」など）。すうじの だいしょうを ひょうげんしやすい テーマが よいです。",
+                  title: "▶ ２．数字配布",
+                  desc: "各プレイヤーに 1〜100の数字がランダムに配られます。自分の数字は他のプレイヤーに教えてはいけません。",
                 },
                 {
-                  title: "▶ ３．ひょうげん（ヒント）",
-                  desc: "かくプレイヤーは じぶんの すうじを ちょくせつ いわず、テーマに そった「たとえ」や「イメージ」で ひょうげんします。",
+                  title: "▶ ３．表現（ヒント）",
+                  desc: "各プレイヤーは自分の数字を直接言わず、テーマに沿った「例え」や「イメージ」で表現します。",
                 },
                 {
-                  title: "▶ ４．カードを だす",
-                  desc: "ひょうげんを きいて、じぶんの カードが ちいさいと おもう じゅんに カードを ばに だして いきます。",
+                  title: "▶ ４．カードを出す",
+                  desc: "表現を聞いて、自分のカードが小さいと思う順にカードを場に出していきます。",
                 },
                 {
-                  title: "▶ ５．はんてい",
-                  desc: "すべての カードを ばに だし、ちいさい じゅんに ならんで いれば せいこう です。じゅんじょが いれかわって いたら しっぱい です。",
+                  title: "▶ ５．判定",
+                  desc: "全てのカードを場に出し、小さい順に並んでいれば成功です。順序が入れ替わっていたら失敗です。",
                 },
               ].map((step, index) => (
                 <List.Item key={index}>
@@ -286,7 +286,7 @@ export default function RulesPage() {
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
             >
-              Online版の とくちょう
+              Online版の特徴
             </Heading>
 
             <List.Root as="ul" gap="4" style={{ listStyleType: "none" }}>
@@ -342,7 +342,7 @@ export default function RulesPage() {
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
             >
-              こうりゃくの ポイント
+              攻略のポイント
             </Heading>
 
             <VStack gap={{ base: 8, md: 10 }} align="stretch">
