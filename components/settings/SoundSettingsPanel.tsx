@@ -24,6 +24,7 @@ export function SoundSettingsPanel() {
     snapshot.categoryVolume.fanfare ?? 1
   );
   const [successMode, setSuccessMode] = useState(snapshot.successMode);
+  const soundEnabled = !muted;
 
   const syncFromSettings = useCallback(() => {
     const current = soundManager?.getSettings() ?? soundSettings;
@@ -287,7 +288,7 @@ export function SoundSettingsPanel() {
           textShadow="1px 1px 0px #000"
           letterSpacing="0.01em"
         >
-          ミュート
+          サウンド
         </Text>
         <Box
           as="button"
@@ -295,24 +296,22 @@ export function SoundSettingsPanel() {
           px="14px"
           py="5px"
           minW="60px"
-          bg={muted ? UI_TOKENS.COLORS.dqGold : UI_TOKENS.COLORS.panelBg}
-          color={muted ? "black" : "white"}
+          bg={soundEnabled ? UI_TOKENS.COLORS.dqGold : UI_TOKENS.COLORS.panelBg}
+          color={soundEnabled ? "black" : "white"}
           borderRadius={0}
           border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           fontWeight="bold"
           fontSize="13px"
           cursor="pointer"
           boxShadow={
-            muted
-              ? "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+            soundEnabled ? "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
               : "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)"
           }
           transition="all 0.18s cubic-bezier(.2,1,.3,1)"
-          transform={muted ? "translate(0.5px, -0.5px)" : "translate(0, 0)"}
-          textShadow={muted ? "none" : "1px 1px 0px #000"}
+          transform={soundEnabled ? "translate(0.5px, -0.5px)" : "translate(0, 0)"}
+          textShadow={soundEnabled ? "none" : "1px 1px 0px #000"}
           css={
-            muted
-              ? {
+            soundEnabled ? {
                   backgroundImage: `linear-gradient(
                     135deg,
                     rgba(255,255,255,0.08) 0%,
@@ -327,7 +326,7 @@ export function SoundSettingsPanel() {
           }
           _hover={{
             transform: muted ? "translate(0, -1px)" : "translate(0, -1px)",
-            boxShadow: muted
+            boxShadow: soundEnabled
               ? "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
               : "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)",
           }}
@@ -336,7 +335,7 @@ export function SoundSettingsPanel() {
             boxShadow: "1.5px 1px 0 rgba(0,0,0,0.5), inset 0.5px 1px 3px rgba(0,0,0,0.4)",
           }}
         >
-          {muted ? "ON" : "OFF"}
+          {soundEnabled ? "ON" : "OFF"}
         </Box>
       </HStack>
     </Stack>
