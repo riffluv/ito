@@ -958,25 +958,91 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const waitingToRejoin = room?.status === "waiting";
 
   if (!room) {
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition(
+          "/",
+          {
+            direction: "fade",
+            duration: 1.0,
+            showLoading: true,
+            loadingSteps: [
+              { id: "return", message: "ロビーへ戻ります...", duration: 1000 },
+            ],
+          }
+        );
+      } else {
+        router.push("/");
+      }
+    };
+
     return (
       <Box
         h="100dvh"
         display="flex"
-        flexDirection="column"
         alignItems="center"
         justifyContent="center"
         px={4}
-        gap={4}
+        bg={UI_TOKENS.GRADIENTS.mainBg}
       >
-        <Text fontSize="xl" fontWeight="bold" color="white">
-          🏠 部屋が見つかりません
-        </Text>
-        <Text color="gray.400" textAlign="center">
-          この部屋は削除されたか、存在しない可能性があります
-        </Text>
-        <AppButton onClick={() => router.push("/")} palette="brand">
-          メインメニューに戻る
-        </AppButton>
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg={UI_TOKENS.GRADIENTS.dqPanel}
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "520px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text
+              fontSize={{ base: "xl", md: "2xl" }}
+              fontWeight="800"
+              fontFamily="monospace"
+              letterSpacing="0.1em"
+              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              mb={3}
+            >
+              ▼ 404 - Not Found ▼
+            </Text>
+            <Text
+              fontSize={{ base: "lg", md: "xl" }}
+              fontWeight="700"
+              lineHeight={1.6}
+              textShadow="1px 1px 0 rgba(0,0,0,0.8)"
+            >
+              部屋が みつからないよ！
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              部屋が さくじょされたか、<br />
+              URLが まちがっているようだ。
+            </Text>
+          </Box>
+          <Box display="flex" justifyContent="center">
+            <AppButton
+              onClick={handleBackToLobby}
+              palette="brand"
+              size="md"
+              minW="180px"
+            >
+              ロビーへもどる
+            </AppButton>
+          </Box>
+        </Box>
       </Box>
     );
   }
