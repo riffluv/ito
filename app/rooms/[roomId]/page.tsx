@@ -496,6 +496,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // 前のホストがまだメンバーかどうかを計算
   const previousHostStillMember = useMemo(() => {
     if (!lastKnownHostId) return false;
+    if (uid && lastKnownHostId === uid) return false;
     if (Array.isArray(onlinePlayers) && onlinePlayers.some((p) => p.id === lastKnownHostId)) {
       return true;
     }
@@ -517,6 +518,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     candidateId: hostClaimCandidateId,
     lastKnownHostId,
     previousHostStillMember,
+    isMember,
     leavingRef,
   });
 
