@@ -939,22 +939,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
           </Box>
 
-          <VStack
-            gap="6px"
-            align="flex-start"
+          <Box
             flex={{ base: "1 1 100%", md: "1 1 280px" }}
             minW={{ base: "220px", md: "240px" }}
           >
-            <Text
-              fontSize="12px"
-              fontWeight="800"
-              letterSpacing="0.18em"
-              color="rgba(255,255,255,0.75)"
-              textTransform="uppercase"
-            >
-              連想ワード
-            </Text>
             <Input
+              aria-label="連想ワード"
               placeholder="連想ワード"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -991,7 +981,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 bg: "rgba(20,24,34,0.96)",
               }}
             />
-          </VStack>
+          </Box>
 
           <HStack
             gap={{ base: "6px", md: "8px" }}

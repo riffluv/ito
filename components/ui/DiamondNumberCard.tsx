@@ -15,64 +15,52 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
   const previousNumber = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!textRef.current) return;
+    const element = textRef.current;
+    if (!element) return;
 
-    // 数字が変わった瞬間を検出
-    const isNewNumber = previousNumber.current === null && typeof number === "number";
-    const isNumberChanged =
-      previousNumber.current !== null &&
-      typeof number === "number" &&
-      previousNumber.current !== number;
+    const hasNumber = typeof number === "number";
+    const previous = previousNumber.current;
+    const numberChanged = hasNumber && previous !== number;
 
-    if (isNewNumber || isNumberChanged) {
-      // 派手な登場・変更演出（軽量化：1つのtimelineに統合）
-      const tl = gsap.timeline({ defaults: { ease: "back.out(1.85)" } });
+    gsap.killTweensOf(element);
 
-      tl.fromTo(
-        textRef.current,
-        {
-          scale: 0,
-          rotation: -173,
-          opacity: 0,
-        },
-        {
-          scale: 1.28,
-          rotation: 0,
-          opacity: 1,
-          duration: 0.43,
-        }
-      )
-      .to(textRef.current, {
-        scale: 1,
-        duration: 0.17,
-        ease: "power2.out",
-      }, "-=0.08")
-      // 光のフラッシュ演出（同一timeline内で実行）
-      .to(textRef.current, {
-        textShadow: "0 0 19px rgba(255,255,255,0.9), 0 0 37px rgba(58,176,255,0.8), 0 3px 7px rgba(0,0,0,0.6)",
-        duration: 0.12,
-        ease: "power2.out",
-      }, "-=0.17")
-      .to(textRef.current, {
-        textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6)",
-        duration: 0.34,
-        ease: "power2.in",
-      });
-
+    if (numberChanged) {
       previousNumber.current = number;
-    } else if (isAnimating && previousNumber.current !== null) {
-      // 通常のポップアニメーション
-      gsap.to(textRef.current, {
-        scale: 1.14,
-        duration: 0.13,
-        ease: "back.out(1.4)",
+      gsap.set(element, { willChange: "transform" });
+
+      gsap.timeline({
+        defaults: { ease: "power2.out" },
+        onComplete: () => gsap.set(element, { willChange: null, scale: 1, y: 0, opacity: 1 }),
+      })
+        .fromTo(
+          element,
+          { scale: 0.7, y: 12, opacity: 0.82 },
+          { scale: 1.08, y: 0, opacity: 1, duration: 0.24 }
+        )
+        .to(
+          element,
+          { scale: 1, duration: 0.18, ease: "back.out(1.4)" },
+          "-=0.08"
+        );
+    } else if (isAnimating && hasNumber) {
+      gsap.to(element, {
+        scale: 1.05,
+        duration: 0.18,
+        ease: "power2.out",
         yoyo: true,
         repeat: 1,
       });
-    } else {
-      // 初回レンダリングやリセット時
+    } else if (hasNumber) {
       previousNumber.current = number;
+      gsap.set(element, { scale: 1, y: 0, opacity: 1 });
+    } else {
+      previousNumber.current = null;
     }
+
+    return () => {
+      gsap.killTweensOf(element);
+      gsap.set(element, { willChange: null });
+    };
   }, [number, isAnimating]);
 
   return (
