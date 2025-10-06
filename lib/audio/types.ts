@@ -93,9 +93,9 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
     ui: 1,
     notify: 1,
     drag: 1,
-    ambient: 1,
+    ambient: 0.2,
     system: 1,
     card: 1,
-    fanfare: 0.1,
+    fanfare: 0.5,
   },
 };
