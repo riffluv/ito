@@ -425,8 +425,11 @@ export function ThreeBackgroundAdvanced({ className }: ThreeBackgroundAdvancedPr
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: 0,
-        pointerEvents: 'none',
+        zIndex: 0, // BASEレイヤー (UI手前の背景)
+        overflow: 'hidden',
+        clipPath: 'inset(0)',
+        contain: 'strict',
+        pointerEvents: 'none', // マウスイベント遮断
         background: 'transparent',
       }}
     />

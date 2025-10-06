@@ -15,6 +15,7 @@ import {
 import { logDebug } from "@/lib/utils/log";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
@@ -75,12 +76,16 @@ export function useParticipants(
         (snap) => {
           const list: (PlayerDoc & { id: string })[] = [];
           snap.forEach((d) => list.push(d.data() as any));
-          setPlayers(list);
-          setLoading(false);
+          unstable_batchedUpdates(() => {
+            setPlayers(list);
+            setLoading(false);
+          });
         },
         (err) => {
-          setError(err as any);
-          setLoading(false);
+          unstable_batchedUpdates(() => {
+            setError(err as any);
+            setLoading(false);
+          });
           if (isFirebaseQuotaExceeded(err)) {
             handleFirebaseQuotaError("プレイヤー購読");
             backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分停止

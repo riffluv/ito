@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { SoundManager } from "./SoundManager";
+import { SOUND_LIBRARY } from "./registry";
 import { DEFAULT_SOUND_SETTINGS, SoundSettings } from "./types";
 import { setGlobalSoundManager } from "./global";
 
@@ -13,6 +14,8 @@ const context = createContext<SoundContextValue>({
   manager: null,
   settings: DEFAULT_SOUND_SETTINGS,
 });
+
+const PREWARM_SOUND_IDS = SOUND_LIBRARY.filter((sound) => sound.preload?.decode).map((sound) => sound.id);
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const managerRef = useRef<SoundManager | null>(null);
@@ -42,6 +45,13 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       manager.destroy();
       managerRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (!manager) return;
+    if (PREWARM_SOUND_IDS.length === 0) return;
+    manager.prewarm(PREWARM_SOUND_IDS).catch(() => undefined);
   }, []);
 
   const value = useMemo<SoundContextValue>(() => ({

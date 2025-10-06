@@ -261,6 +261,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, []);
 
   const [text, setText] = React.useState<string>(me?.clue1 || "");
+  const deferredText = React.useDeferredValue(text);
   const [isRestarting, setIsRestarting] = React.useState(false);
   const [quickStartPending, setQuickStartPending] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
@@ -327,7 +328,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     topicBox === "カスタム" ||
     (!topicBox && effectiveDefaultTopicType === "カスタム");
   const trimmedText = text.trim();
+  const deferredTrimmedText = deferredText.trim();
   const hasText = trimmedText.length > 0;
+  const displayHasText = deferredTrimmedText.length > 0;
   const clueEditable = roomStatus === "waiting" || roomStatus === "clue";
   const placed = !!proposal?.includes(me?.id || "");
   const ready = !!(me && (me as any).ready === true);
@@ -371,12 +374,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     ? "判定中は操作できません"
     : placed
       ? "カード提出中は操作できません"
-      : !hasText
+      : !displayHasText
         ? "連想ワードが入力されていません"
         : "連想ワードをクリア";
   const decideTooltip = !clueEditable
     ? "判定中は操作できません"
-    : !hasText
+    : !displayHasText
       ? "連想ワードを入力してください"
       : "連想ワードを決定";
   const submitDisabledReason = !clueEditable
@@ -385,7 +388,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       ? "参加処理が終わるまで待ってください"
       : typeof me?.number !== "number"
         ? "番号が配られるまで待ってください"
-        : !hasText
+        : !displayHasText
           ? "連想ワードを入力するとカードを出せます"
           : !ready
             ? "「決定」を押すとカードを出せます"
@@ -1429,6 +1432,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
 
 
 
