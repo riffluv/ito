@@ -86,6 +86,27 @@ type WindowWithIdleCallback = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
+// 開発者メモボックスの共通スタイル定数
+const DEVELOPER_NOTE_STYLES = {
+  box: {
+    p: 4,
+    bg: "rgba(12,14,20,0.6)",
+    borderRadius: 0,
+  },
+  heading: {
+    fontSize: "sm" as const,
+    fontFamily: "monospace",
+    fontWeight: 700,
+    textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+  },
+  text: {
+    fontSize: "xs" as const,
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: "monospace",
+    lineHeight: "1.7",
+  },
+} as const;
+
 export default function MainMenu() {
   const router = useRouter();
   const { user, displayName, setDisplayName } = useAuth();
@@ -1061,113 +1082,64 @@ export default function MainMenu() {
                       textShadow="1px 1px 0px #000"
                       letterSpacing="0.5px"
                     >
-                      開発者メモ
+                      開発者より
                     </Text>
                   </HStack>
 
                   <VStack gap={4} align="stretch">
+                    <Box {...DEVELOPER_NOTE_STYLES.box} border="2px solid rgba(255,255,255,0.2)">
+                      <VStack gap={2} align="start">
+                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
+                          🎮 このゲームについて
+                        </Text>
+                        <Text {...DEVELOPER_NOTE_STYLES.text} textShadow="1px 1px 0px #000">
+                          「連想ワードで数字の大きさを伝える」発想にハマりました。
+                          オンラインで同時にドラッグで並べる、ホストの「せーの！」で左から3Dめくり、
+                          参加者全員のカードがリアルタイムでめくれていく瞬間の一体感を、気持ちよく遊べるよう一から設計しています。
+                        </Text>
+                      </VStack>
+                    </Box>
+
                     <Box
-                      p={3}
-                      bg="rgba(12,14,20,0.6)"
+                      {...DEVELOPER_NOTE_STYLES.box}
                       border="2px solid rgba(34,197,94,0.3)"
-                      borderRadius={0}
                       css={{
                         borderLeft: "3px solid transparent",
                         borderImage: "linear-gradient(to bottom, rgba(34,197,94,0.95), rgba(34,197,94,0.5)) 1"
                       }}
                     >
-                      <HStack gap={2} mb={2}>
-                        <Text
-                          fontSize="sm"
-                          color="rgba(34,197,94,0.95)"
-                          fontFamily="monospace"
-                          fontWeight={700}
-                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                        >
-                          ★ 技術的更新
+                      <VStack gap={2} align="start">
+                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
+                          ⚠️ 注意事項
                         </Text>
-                      </HStack>
-                      <VStack gap={1.5} align="start" pl={2}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・GSAPアニメーション最適化
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・Firebase最適化
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・パスワード実装
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・パフォーマンス向上
+                        <Text {...DEVELOPER_NOTE_STYLES.text}>
+                          本作は公式とは無関係のオリジナル作品です。
+                          「ブラウザでここまでできるの!?」を目指しています。
                         </Text>
                       </VStack>
                     </Box>
 
                     <Box
+                      {...DEVELOPER_NOTE_STYLES.box}
                       p={3}
-                      bg="rgba(12,14,20,0.6)"
-                      border="2px solid rgba(251,191,36,0.3)"
-                      borderRadius={0}
-                      css={{
-                        borderLeft: "3px solid transparent",
-                        borderImage: "linear-gradient(to bottom, rgba(251,191,36,0.95), rgba(251,191,36,0.5)) 1"
-                      }}
-                    >
-                      <HStack gap={2} mb={2}>
-                        <Text
-                          fontSize="sm"
-                          color="rgba(251,191,36,0.95)"
-                          fontFamily="monospace"
-                          fontWeight={700}
-                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                        >
-                          ▲ 調整中
-                        </Text>
-                      </HStack>
-                      <VStack gap={1.5} align="start" pl={2}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・UI細部ブラッシュアップ
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・サウンド関係
-                        </Text>
-                      </VStack>
-                    </Box>
-
-                    <Box
-                      p={3}
-                      bg="rgba(12,14,20,0.6)"
                       border="2px solid rgba(147,51,234,0.3)"
-                      borderRadius={0}
                       css={{
                         borderLeft: "3px solid transparent",
                         borderImage: "linear-gradient(to bottom, rgba(147,51,234,0.95), rgba(147,51,234,0.5)) 1"
                       }}
                     >
-                      <HStack gap={2} mb={2}>
-                        <Text
-                          fontSize="sm"
-                          color="rgba(147,51,234,0.95)"
-                          fontFamily="monospace"
-                          fontWeight={700}
-                          textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                        >
+                      <VStack gap={2} align="start">
+                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
                           ◆ 今後の予定
                         </Text>
-                      </HStack>
-                      <VStack gap={1.5} align="start" pl={2}>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・新機能検討
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・ちゃんと寝る
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・コーヒーを辞める（最重要）
-                        </Text>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.85)" fontFamily="monospace">
-                          ・音響システム実装
-                        </Text>
+                        <VStack gap={1.5} align="start" pl={2}>
+                          <Text {...DEVELOPER_NOTE_STYLES.text}>
+                            ・ちゃんと寝る
+                          </Text>
+                          <Text {...DEVELOPER_NOTE_STYLES.text}>
+                            ・コーヒーを辞める（最重要）
+                          </Text>
+                        </VStack>
                       </VStack>
                     </Box>
                   </VStack>

@@ -295,6 +295,36 @@ export function CreateRoomModal({
   }, []);
 
   const canSubmit = name.trim().length > 0 && !submitting;
+
+  // カード表示モード選択ボタンの共通スタイル
+  const getDisplayModeButtonStyle = (isSelected: boolean) => ({
+    flex: 1,
+    height: "52px",
+    borderRadius: 0,
+    fontWeight: "bold" as const,
+    fontSize: "0.95rem",
+    fontFamily: "monospace",
+    border: isSelected ? "3px solid white" : "2px solid rgba(255,255,255,0.5)",
+    background: isSelected ? "white" : "transparent",
+    color: isSelected ? "black" : "white",
+    cursor: "pointer" as const,
+    textShadow: isSelected ? "none" : "1px 1px 0px #000",
+    transition: "180ms cubic-bezier(.2,1,.3,1)",
+    boxShadow: isSelected ? "2px 3px 0 rgba(0,0,0,.6)" : "none",
+    transform: isSelected ? "translate(.5px,-.5px)" : "none",
+  });
+
+  const handleDisplayModeHover = (e: React.MouseEvent<HTMLButtonElement>, isSelected: boolean, isEnter: boolean) => {
+    if (isSelected) return;
+    if (isEnter) {
+      e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+      e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)";
+    } else {
+      e.currentTarget.style.background = "transparent";
+      e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
+    }
+  };
+
   return (
     <Dialog.Root open={isOpen} closeOnInteractOutside={false} onOpenChange={(d) => !d.open && onClose()}>
       {/* Sophisticated backdrop */}
@@ -655,85 +685,48 @@ export function CreateRoomModal({
                       fontSize: "0.95rem",
                       fontWeight: "bold",
                       color: "rgba(255,255,255,0.95)",
-                      marginBottom: "8px",
+                      marginBottom: "9px",
                       fontFamily: "monospace",
                       textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                     }}
                   >
-                    カード ひょうじ モード
+                    待機エリア 表示設定
                   </Field.Label>
+                  <Text
+                    fontSize="xs"
+                    color="rgba(255,255,255,0.7)"
+                    mb={2}
+                    fontFamily="monospace"
+                    textShadow="1px 1px 0px #000"
+                  >
+                    待機中のプレイヤーカードをどう表示するか
+                  </Text>
                   <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
                     <button
                       type="button"
                       onClick={() => setDisplayMode("full")}
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        height: "48px",
-                        borderRadius: 0,
-                        fontWeight: "bold",
-                        fontSize: "0.9rem",
-                        fontFamily: "monospace",
-                        border: "2px solid white",
-                        background: displayMode === "full" ? "white" : "transparent",
-                        color: displayMode === "full" ? "black" : "white",
-                        cursor: "pointer",
-                        textShadow: displayMode === "full" ? "none" : "1px 1px 0px #000",
-                        transition: "all 0.1s ease",
-                        whiteSpace: "nowrap",
-                        overflow: "visible",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 8px",
-                      }}
+                      style={getDisplayModeButtonStyle(displayMode === "full")}
                       role="radio"
                       aria-checked={displayMode === "full"}
                       tabIndex={displayMode === "full" ? 0 : -1}
+                      onMouseEnter={(e) => handleDisplayModeHover(e, displayMode === "full", true)}
+                      onMouseLeave={(e) => handleDisplayModeHover(e, displayMode === "full", false)}
                     >
                       🤝 みんな
                     </button>
                     <button
                       type="button"
                       onClick={() => setDisplayMode("minimal")}
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        height: "48px",
-                        borderRadius: 0,
-                        fontWeight: "bold",
-                        fontSize: "0.9rem",
-                        fontFamily: "monospace",
-                        border: "2px solid white",
-                        background: displayMode === "minimal" ? "white" : "transparent",
-                        color: displayMode === "minimal" ? "black" : "white",
-                        cursor: "pointer",
-                        textShadow: displayMode === "minimal" ? "none" : "1px 1px 0px #000",
-                        transition: "all 0.1s ease",
-                        whiteSpace: "nowrap",
-                        overflow: "visible",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 8px",
-                      }}
+                      style={getDisplayModeButtonStyle(displayMode === "minimal")}
                       role="radio"
                       aria-checked={displayMode === "minimal"}
                       tabIndex={displayMode === "minimal" ? 0 : -1}
+                      onMouseEnter={(e) => handleDisplayModeHover(e, displayMode === "minimal", true)}
+                      onMouseLeave={(e) => handleDisplayModeHover(e, displayMode === "minimal", false)}
                     >
                       👤 自分
                     </button>
                   </HStack>
-                  <Text
-                    fontSize="xs"
-                    color="white"
-                    mt={2}
-                    fontFamily="monospace"
-                    opacity={0.7}
-                    textShadow="1px 1px 0px #000"
-                  >
-                    みんな: 全員のカード表示 / 自分: 自分のみ表示
-                  </Text>
                 </Field.Root>
               </VStack>
             </form>
