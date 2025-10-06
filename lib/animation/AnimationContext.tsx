@@ -141,13 +141,59 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [setForce3DTransforms]);
 
+  const [systemPrefersReduced, setSystemPrefersReduced] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let media: MediaQueryList;
+    try {
+      media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    } catch {
+      return;
+    }
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      setSystemPrefersReduced(event.matches);
+    };
+
+    setSystemPrefersReduced(media.matches);
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleChange);
+    } else if (typeof (media as any).addListener === "function") {
+      (media as any).addListener(handleChange);
+    }
+
+    return () => {
+      if (typeof media.removeEventListener === "function") {
+        media.removeEventListener("change", handleChange);
+      } else if (typeof (media as any).removeListener === "function") {
+        (media as any).removeListener(handleChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    root.setAttribute("data-force-animations", forceAnimations ? "on" : "off");
+
+    if (!forceAnimations && systemPrefersReduced) {
+      root.setAttribute("data-prefers-reduced-motion", "true");
+    } else {
+      root.removeAttribute("data-prefers-reduced-motion");
+    }
+  }, [forceAnimations, systemPrefersReduced]);
+
   const reducedMotion = useMemo(() => {
-    const base =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    return forceAnimations ? false : !!base;
-  }, [forceAnimations]);
+    return forceAnimations ? false : systemPrefersReduced;
+  }, [forceAnimations, systemPrefersReduced]);
 
   // 3Dサポートの簡易フィーチャーテスト（CSS 3D + WebGLのどちらかに依存するUI向け）
   const [supports3D, setSupports3D] = useState<boolean>(true);

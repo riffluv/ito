@@ -3,6 +3,7 @@
 import Tooltip from "@/components/ui/Tooltip";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
+import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import {
   memo,
   useCallback,
@@ -48,8 +49,6 @@ const CARD_HEIGHT = "56px";
 const CARD_AVATAR_SIZE = "44px";
 const CARD_RADIUS = "4px";
 const CARD_HOVER_LIFT = "-3px";
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
 const actionableHoverStyle = {
   bg: CARD_HOVER_BACKGROUND,
   transform: `translateY(${CARD_HOVER_LIFT})`,
@@ -168,21 +167,8 @@ const runSubmitFlash = (node: HTMLDivElement) => {
 };
 
 const useReducedMotionPreference = (): boolean => {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(REDUCED_MOTION_QUERY).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
-    const handler = () => setPrefersReducedMotion(mediaQuery.matches);
-    handler();
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
-
-  return prefersReducedMotion;
+  const { reducedMotion } = useAnimationSettings();
+  return reducedMotion;
 };
 
 export const PartyMemberCard = memo(function PartyMemberCard({
