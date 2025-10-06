@@ -1020,7 +1020,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               lineHeight={1.6}
               textShadow="1px 1px 0 rgba(0,0,0,0.8)"
             >
-              部屋が みつからないよ！
+              へやが みつからないよ！
             </Text>
             <Text
               fontSize={{ base: "md", md: "lg" }}
