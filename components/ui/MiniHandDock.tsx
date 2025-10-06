@@ -80,7 +80,7 @@ const pulseGlow = keyframes`
 `;
 
 // ========================================
-// 🎨 Design System: Footer Button Styles
+// 🎨 Design System: Button Styles
 // ========================================
 /**
  * ドラクエ風フッターボタンの共通スタイル定数
@@ -137,6 +137,55 @@ const FOOTER_BUTTON_BASE_STYLES = {
     filter: "grayscale(0.8)",
     cursor: "not-allowed",
     boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
+  },
+} as const;
+
+/**
+ * せーの！ボタンスタイル（ゲーム開始・次のゲームボタンと共通）
+ *
+ * 設計方針:
+ * - SeinoButtonと完全に統一されたデザイン
+ * - オレンジ系のドラクエ風デザイン
+ * - 立体感のある演出
+ */
+const SEINO_BUTTON_STYLES = {
+  minW: "211px",
+  px: "34px",
+  py: "19px",
+  position: "relative" as const,
+  bg: "rgba(255,128,45,0.93)",
+  color: "white",
+  border: "3px solid rgba(255,255,255,0.92)",
+  borderRadius: 0,
+  fontWeight: "800",
+  fontFamily: "monospace",
+  fontSize: "26px",
+  letterSpacing: "0.023em",
+  textShadow: "2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)",
+  boxShadow: "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)",
+  _before: {
+    content: '""',
+    position: "absolute" as const,
+    top: "3px",
+    left: "4px",
+    right: "3px",
+    bottom: "3px",
+    background: "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
+    pointerEvents: "none" as const,
+  },
+  _hover: {
+    bg: "rgba(255,145,65,0.96)",
+    color: "white",
+    textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
+    borderColor: "rgba(255,255,255,0.95)",
+    transform: "translateY(-3px)",
+    boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
+  },
+  _active: {
+    bg: "rgba(235,110,30,0.95)",
+    color: "rgba(255,255,255,0.91)",
+    boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
+    transform: "translateY(1px)",
   },
 } as const;
 
@@ -800,53 +849,72 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         onClick={evalSorted}
       />
 
+      {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
+      {isHost && roomStatus === "waiting" && !preparing && (
+        <Box
+          position="fixed"
+          bottom={{ base: "110px", md: "120px" }}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={55}
+        >
+          <AppButton
+            {...SEINO_BUTTON_STYLES}
+            size="lg"
+            visual="solid"
+            onClick={() => quickStart()}
+          >
+            ゲーム開始
+          </AppButton>
+        </Box>
+      )}
+
+      {/* 次のゲームボタン (フッターパネルとカードの間) */}
+      {isHost && ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished") && !autoStartLocked && !isRestarting && !(roomStatus === "reveal" && isRevealAnimating) && (
+        <Box
+          position="fixed"
+          bottom={{ base: "110px", md: "120px" }}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={55}
+        >
+          <AppButton
+            {...SEINO_BUTTON_STYLES}
+            size="lg"
+            visual="solid"
+            onClick={handleNextGame}
+          >
+            次のゲーム
+          </AppButton>
+        </Box>
+      )}
+
+      {/* 中央: 連想ワード入力エリア (Octopath風・独立浮遊) */}
       <Box
-        display="flex"
-        flexWrap="wrap"
-        alignItems={{ base: "stretch", md: "center" }}
-        justifyContent={
-          hasHostButtons ? { base: "center", md: "flex-start" } : "center"
-        }
+        position="fixed"
+        bottom={{ base: "16px", md: "20px" }}
+        left="50%"
+        transform="translateX(-50%)"
+        zIndex={50}
+        maxW={{ base: "calc(100vw - 32px)", md: "900px" }}
         w="100%"
-        maxW="1280px"
-        mx="auto"
-        px={{ base: "17px", md: "22px" }}
-        py={{ base: "14px", md: "17px" }}
-        columnGap={{ base: "14px", md: "19px" }}
-        rowGap={{ base: "11px", md: "14px" }}
-        css={{
-          background: "linear-gradient(178deg, rgba(9, 14, 24, 0.81) 0%, rgba(7, 11, 19, 0.91) 58%, rgba(8, 12, 21, 0.94) 83%, rgba(5, 8, 15, 0.96) 100%)",
-          backdropFilter: "blur(11px) saturate(1.15)",
-          border: "2px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: 0,
-          boxShadow: `
-          0 -2px 17px rgba(0, 0, 0, 0.68),
-          0 -6px 38px rgba(0, 0, 0, 0.52),
-          0 -1px 8px rgba(0, 0, 0, 0.38),
-          inset 0 1px 0 rgba(255, 255, 255, 0.07),
-          inset 0 -1px 0 rgba(0, 0, 0, 0.28)
-        `,
-        }}
-        position="relative"
-        _before={{
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "1px",
-          background: "linear-gradient(88deg, transparent 0%, rgba(255, 255, 255, 0.16) 38%, rgba(255, 255, 255, 0.23) 56%, transparent 100%)",
-        }}
       >
-      {/* Left cluster */}
-      <HStack
-        gap={{ base: "14px", md: "11px" }}
-        align="center"
-        flexWrap={{ base: "wrap", md: "nowrap" }}
-        rowGap={{ base: 2, md: 0 }}
-        flex={{ base: "1 1 100%", md: "0 0 auto" }}
-      >
-        <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
+        <HStack
+          gap={{ base: "10px", md: "11px" }}
+          align="center"
+          justify="center"
+          flexWrap={{ base: "wrap", md: "nowrap" }}
+          px={{ base: "12px", md: "16px" }}
+          py={{ base: "8px", md: "10px" }}
+          css={{
+            background: "rgba(8,9,15,0.75)",
+            backdropFilter: "blur(10px) saturate(1.1)",
+            border: "2px solid rgba(255,255,255,0.15)",
+            borderRadius: 0,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+          }}
+        >
+          <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
         <Input
           placeholder="連想ワード"
           value={text}
@@ -878,9 +946,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1), 0 0 0 2px rgba(255,255,255,0.85)",
             bg: "rgba(20,24,34,0.96)",
           }}
-          w={{ base: "100%", md: "280px" }}
-          maxW={{ base: "100%", md: "380px" }}
-          flex={{ base: "1 1 100%", md: "1 1 auto" }}
+          w={{ base: "calc(100% - 20px)", md: "240px" }}
+          maxW={{ base: "100%", md: "320px" }}
+          flex={{ base: "1 1 auto", md: "0 1 auto" }}
           minW={0}
           transition="box-shadow 168ms cubic-bezier(.2,1,.3,1)"
         />
@@ -910,180 +978,24 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             クリア
           </AppButton>
         </Tooltip>
-        <Tooltip content={submitTooltip} showArrow openDelay={180}>
-          <AppButton
-            {...FOOTER_BUTTON_BASE_STYLES}
-            size="sm"
-            visual="solid"
-            palette="brand"
-            color="rgba(255,255,255,0.98)"
-            onClick={handleSubmit}
-            disabled={!canClickProposalButton}
-          >
-            {actionLabel}
-          </AppButton>
-        </Tooltip>
-      </HStack>
-
-      {/* Spacer */}
-      <Box
-        flex={{ base: "0 0 100%", md: 1 }}
-        display={{ base: "none", md: "block" }}
-      />
-
-      {inlineFeedback && (
-        <Text
-          position="absolute"
-          bottom="calc(100% + 7px)"
-          left="50%"
-          transform="translateX(-50%)"
-          fontSize="0.75rem"
-          color={
-            inlineFeedback.tone === "success"
-              ? UI_TOKENS.COLORS.whiteAlpha90
-              : UI_TOKENS.COLORS.whiteAlpha60
-          }
-          fontFamily="monospace"
-          bg="rgba(10, 15, 25, 0.95)"
-          px="14px"
-          py="7px"
-          borderRadius="3px"
-          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
-          boxShadow="0 2px 8px rgba(0,0,0,0.4)"
-          whiteSpace="nowrap"
-          pointerEvents="none"
-          zIndex={10}
-        >
-          {inlineFeedback.message}
-        </Text>
-      )}
-
-      {/* Right cluster */}
-      <HStack
-        gap="14px"
-        align="center"
-        flexWrap={{ base: "wrap", md: "nowrap" }}
-        rowGap={{ base: 2, md: 0 }}
-        flex={{ base: "1 1 100%", md: "0 0 auto" }}
-        justifyContent={{ base: "center", md: "flex-end" }}
-      >
-        {isHost && roomStatus === "waiting" && (
-          <Tooltip
-            content={preparing ? "準備中です" : "ゲームを開始する"}
-            showArrow
-            openDelay={180}
-          >
+          <Tooltip content={submitTooltip} showArrow openDelay={180}>
             <AppButton
-              size="md"
+              {...FOOTER_BUTTON_BASE_STYLES}
+              size="sm"
               visual="solid"
-              onClick={() => quickStart()}
-              disabled={preparing}
-              minW="148px"
-              px="19px"
-              py="13px"
-              position="relative"
-              overflow="hidden"
-              bg={preparing ? LOADING_BG : "linear-gradient(135deg, rgba(18,52,86,0.98) 0%, rgba(10,38,68,1) 100%)"}
+              palette="brand"
               color="rgba(255,255,255,0.98)"
-              border="none"
-              borderRadius="0"
-              fontWeight="900"
-              fontFamily="'Courier New', monospace"
-              fontSize="16px"
-              letterSpacing="0.08em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.9), 0 0 8px rgba(100,200,255,0.4)"
-              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2)"
-              transform="translate(.5px,-.5px)"
-              _hover={{
-                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(28,62,96,1) 0%, rgba(18,48,78,1) 100%)",
-                color: "rgba(255,255,255,1)",
-                transform: "translate(0,-2px)",
-                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(120,220,255,0.95), inset 0 -2px 16px rgba(120,220,255,0.3)",
-                textShadow: "2px 2px 0 rgba(0,0,0,0.9), 0 0 12px rgba(120,220,255,0.6)",
-              }}
-              _active={{
-                bg: preparing ? LOADING_BG : "linear-gradient(135deg, rgba(10,38,68,1) 0%, rgba(8,28,48,1) 100%)",
-                color: "rgba(255,255,255,0.9)",
-                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(80,180,235,0.8)",
-                transform: "translate(1px,1px)",
-              }}
-              transition="box-shadow 180ms cubic-bezier(.2,1,.3,1), transform 180ms cubic-bezier(.2,1,.3,1), background 180ms cubic-bezier(.2,1,.3,1)"
-              css={{
-                animation: preparing ? "none" : `${pulseGlow} 3.8s cubic-bezier(.36, .12, .25, 1) infinite`,
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: "-50%",
-                  left: "-50%",
-                  width: "200%",
-                  height: "200%",
-                  background: "radial-gradient(circle at 30% 30%, rgba(140,230,255,0.25), transparent 60%)",
-                  animation: preparing ? "none" : `${shimmerAnimation} 6.2s cubic-bezier(.16, .84, .33, 1) infinite`,
-                  pointerEvents: "none",
-                  zIndex: 1,
-                },
-                "& > *": {
-                  position: "relative",
-                  zIndex: 2,
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  animation: 'none',
-                  '&::before': { animation: 'none' },
-                },
-              }}
+              onClick={handleSubmit}
+              disabled={!canClickProposalButton}
             >
-              {preparing ? "準備中..." : "ゲーム開始"}
+              {actionLabel}
             </AppButton>
           </Tooltip>
-        )}
-        {isHost &&
-          ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
-            roomStatus === "finished") && (
-            <AppButton
-              size="md"
-              visual="solid"
-              onClick={handleNextGame}
-              disabled={
-                autoStartLocked ||
-                isRestarting ||
-                (roomStatus === "reveal" && isRevealAnimating)
-              }
-              minW="148px"
-              px="19px"
-              py="13px"
-              position="relative"
-              bg="linear-gradient(135deg, rgba(28,42,68,0.98) 0%, rgba(18,28,48,1) 100%)"
-              color="rgba(255,255,255,0.98)"
-              border="none"
-              borderRadius="0"
-              fontWeight="900"
-              fontFamily="'Courier New', monospace"
-              fontSize="16px"
-              letterSpacing="0.08em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.9)"
-              boxShadow="4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.92)"
-              transform="translate(.5px,-.5px)"
-              _hover={{
-                bg: "linear-gradient(135deg, rgba(38,52,78,1) 0%, rgba(28,38,58,1) 100%)",
-                color: "rgba(255,255,255,1)",
-                transform: "translate(0,-2px)",
-                boxShadow: "5px 6px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(255,255,255,0.98)",
-              }}
-              _active={{
-                bg: "linear-gradient(135deg, rgba(18,28,48,1) 0%, rgba(12,18,32,1) 100%)",
-                color: "rgba(255,255,255,0.9)",
-                boxShadow: "2px 2px 0 rgba(0,0,0,.8), 0 0 0 3px rgba(255,255,255,0.85)",
-                transform: "translate(1px,1px)",
-              }}
-              transition="180ms cubic-bezier(.2,1,.3,1)"
-            >
-              {showAutoStartIndicator ? "準備中..." : "次のゲーム"}
-            </AppButton>
-          )}
 
-        <HStack gap={{ base: "10px", md: "12px" }} flexWrap={{ base: "wrap", md: "nowrap" }}>
+          {/* ホスト専用: 3つのアイコンボタン (お題BOXの右側) */}
           {isHost && (
             <>
+              <Box w="2px" h="32px" bg="rgba(255,255,255,0.22)" mx="10px" />
               <Tooltip
                 content={
                   effectiveDefaultTopicType === "カスタム"
@@ -1164,16 +1076,50 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   }}
                 />
               </Tooltip>
-
-              {/* 区切り線 */}
-              <Box
-                w="2px"
-                h="32px"
-                bg="rgba(255,255,255,0.22)"
-                mx={{ base: "10px", md: "12px" }}
-              />
             </>
           )}
+        </HStack>
+      </Box>
+
+      {/* フィードバックメッセージ (中央入力エリアの上) */}
+      {inlineFeedback && (
+        <Text
+          position="fixed"
+          bottom={{ base: "calc(16px + 60px)", md: "calc(20px + 62px)" }}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={55}
+          fontSize="0.75rem"
+          color={
+            inlineFeedback.tone === "success"
+              ? UI_TOKENS.COLORS.whiteAlpha90
+              : UI_TOKENS.COLORS.whiteAlpha60
+          }
+          fontFamily="monospace"
+          bg="rgba(10, 15, 25, 0.95)"
+          px="14px"
+          py="7px"
+          borderRadius="3px"
+          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
+          boxShadow="0 2px 8px rgba(0,0,0,0.4)"
+          whiteSpace="nowrap"
+          pointerEvents="none"
+        >
+          {inlineFeedback.message}
+        </Text>
+      )}
+
+      {/* 右端: 共通ボタン (設定・退出のみ) */}
+      <Box
+        position="fixed"
+        bottom={{ base: "16px", md: "20px" }}
+        right={{ base: "16px", md: "24px" }}
+        zIndex={50}
+      >
+        <HStack
+          gap="10px"
+          align="center"
+        >
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
           {!isHost &&
             isCustomModeSelectable &&
@@ -1274,7 +1220,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </Tooltip>
           )}
         </HStack>
-        {/* カスタムお題入力モーダル（簡易版） */}
+      </Box>
+
+      {/* カスタムお題入力モーダル（簡易版） */}
         {/* このモーダルは外側クリック/ESCで閉じない（初心者が迷わないように明示ボタンのみ）*/}
         <Dialog.Root
           open={customOpen}
@@ -1429,8 +1377,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </Dialog.Content>
           </Dialog.Positioner>
         </Dialog.Root>
-      </HStack>
-    </Box>
     </>
   );
 }
