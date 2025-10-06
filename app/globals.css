@@ -178,7 +178,9 @@
 
   /* stylelint-disable declaration-no-important */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    html:not([data-force-animations="on"]) *,
+    html:not([data-force-animations="on"]) *::before,
+    html:not([data-force-animations="on"]) *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
