@@ -38,9 +38,15 @@ export type SoundVariant = {
   weight?: number;
 };
 
+export type SoundPreloadOptions = {
+  link?: boolean;
+  decode?: boolean;
+};
+
 export type SoundDefinition = {
   id: SoundId;
   category: SoundCategory;
+  preload?: SoundPreloadOptions;
   /**
    * When true the previous instance is stopped before playing a new one. Defaults to false, allowing overlap.
    */

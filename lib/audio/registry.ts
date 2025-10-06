@@ -19,6 +19,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "card_flip",
     category: "card",
+    preload: { link: true, decode: true },
     variants: [{ src: "card/card_flip" }],
     playbackRateRange: { min: 0.92, max: 1.03 },
     gainDbRange: { min: -1, max: 1 },
@@ -28,6 +29,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "card_place",
     category: "card",
+    preload: { link: true, decode: true },
     variants: [{ src: "card/card_place" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -1.5, max: 0.5 },
@@ -36,6 +38,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "card_deal",
     category: "card",
+    preload: { link: true, decode: true },
     variants: [{ src: "card/card_deal" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -3, max: -0.5 },
@@ -44,6 +47,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "topic_shuffle",
     category: "system",
+    preload: { link: true, decode: true },
     variants: [{ src: "system/topic_shuffle" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
@@ -52,6 +56,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "reset_game",
     category: "system",
+    preload: { link: true, decode: true },
     variants: [{ src: "system/reset_game" }],
     playbackRateRange: { min: 0.9, max: 1.05 },
     gainDbRange: { min: -3, max: -0.5 },
@@ -61,6 +66,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "clear_success1",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "result/clear_success1.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
@@ -70,6 +76,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "clear_success2",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "result/clear_success2.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
@@ -79,6 +86,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "clear_failure",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "result/clear_failure" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2.5, max: -0.5 },
@@ -156,6 +164,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "round_start",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "system/round_start" }],
     playbackRateRange: { min: 0.99, max: 1.01 },
     gainDbRange: { min: -0.5, max: 1.5 },
@@ -165,6 +174,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "order_confirm",
     category: "system",
+    preload: { link: true, decode: true },
     variants: [{ src: "system/order_confirm" }],
     playbackRateRange: { min: 0.97, max: 1.03 },
     gainDbRange: { min: -1, max: 1 },

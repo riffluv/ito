@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { logDebug } from "@/lib/utils/log";
-import { AUDIO_EXTENSIONS, SFX_BASE_PATH, SOUND_INDEX } from "./registry";
+import { SOUND_INDEX } from "./registry";
+import { buildCandidateUrls } from "./paths";
 import {
   DEFAULT_SOUND_SETTINGS,
   PlaybackOverrides,
@@ -58,21 +59,6 @@ const pickVariant = (variants: SoundVariant[]) => {
 
 const dbToLinear = (db: number) => 10 ** (db / 20);
 
-const ensureLeadingSlash = (path: string) =>
-  path.startsWith("/") ? path : `/${path}`;
-
-const buildCandidateUrls = (src: string) => {
-  const base = src.startsWith("/")
-    ? src
-    : `${SFX_BASE_PATH.replace(/\/$/, "")}/${src.replace(/^\//, "")}`;
-  if (/\.[a-zA-Z0-9]+$/.test(base)) {
-    return [ensureLeadingSlash(base)];
-  }
-  return AUDIO_EXTENSIONS.map((extension) =>
-    ensureLeadingSlash(`${base}.${extension}`)
-  );
-};
-
 const cloneSettings = (settings: SoundSettings): SoundSettings => ({
   masterVolume: settings.masterVolume,
   muted: settings.muted,
@@ -111,6 +97,21 @@ export class SoundManager {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  /** Pre-decode targeted sound assets to avoid first-play latency. */
+  async prewarm(soundIds: SoundId[] = []): Promise<void> {
+    if (!isBrowser()) return;
+    if (soundIds.length === 0) return;
+
+    const context = this.ensureContext();
+    if (!context) return;
+
+    const uniqueIds = Array.from(new Set(soundIds));
+    const tasks = uniqueIds.map((id) => this.warmupDefinition(SOUND_INDEX[id]));
+    if (tasks.length === 0) return;
+
+    await Promise.allSettled(tasks);
   }
 
   async play(soundId: SoundId, overrides?: PlaybackOverrides): Promise<void> {
@@ -349,6 +350,18 @@ export class SoundManager {
     return { gainNode, disconnect };
   }
 
+
+  private async warmupDefinition(definition: SoundDefinition): Promise<void> {
+    if (definition.variants.length === 0) {
+      return;
+    }
+    await Promise.allSettled(
+      definition.variants.map((variant) =>
+        this.loadVariant(definition, variant)
+      )
+    );
+  }
+
   private async loadVariant(
     definition: SoundDefinition,
     variant: SoundVariant
@@ -528,3 +541,5 @@ export class SoundManager {
     });
   }
 }
+
+

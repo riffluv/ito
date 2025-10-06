@@ -3,11 +3,11 @@ import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { UI_TOKENS } from "@/theme/layout";
 import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 // 仕様: 48pxの名簿行（コンパクト）と、クリックで拡張（ヒントや詳細）。
 // グルーピング: 未入力 / 入力中 / 準備OK（見出しはスティッキー）。
-export function PlayerList({
+export const PlayerList = React.memo(function PlayerList({
   players,
   online,
   myId,
@@ -80,6 +80,7 @@ export function PlayerList({
             color="white"
             border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha80}`}
             boxShadow={UI_TOKENS.SHADOWS.cardRaised}
+            style={{ contentVisibility: "auto", contain: "paint" }}
             _hover={{
               borderColor: UI_TOKENS.COLORS.whiteAlpha90,
               transform: "translateY(-1px)",
@@ -211,4 +212,4 @@ export function PlayerList({
       )}
     </Stack>
   );
-}
+});

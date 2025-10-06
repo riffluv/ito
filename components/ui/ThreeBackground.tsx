@@ -878,8 +878,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: 0, // BASEレベル（UI要素の直下）
-        pointerEvents: 'none', // マウスイベントを通す
+        zIndex: 0, // BASEレイヤー (UI手前の背景)
+        overflow: 'hidden',
+        clipPath: 'inset(0)',
+        contain: 'strict',
+        pointerEvents: 'none', // マウスイベント遮断
         // 背景タイプ別の設定
         background: backgroundType === "css"
           ? 'var(--chakra-colors-bg-canvas)'

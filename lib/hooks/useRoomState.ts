@@ -11,6 +11,7 @@ import {
 } from "@/lib/utils/errorHandling";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 
 export type RoomState = {
   room: (RoomDoc & { id: string }) | null;
@@ -182,8 +183,10 @@ export function useRoomState(
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
   useEffect(() => {
-    setPlayers(fetchedPlayers);
-    setLoading(partLoading === true);
+    unstable_batchedUpdates(() => {
+      setPlayers(fetchedPlayers);
+      setLoading(partLoading === true);
+    });
   }, [fetchedPlayers, partLoading]);
 
   const rejoinSessionKey = useMemo(
