@@ -876,6 +876,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   meId={meId}
                   displayMode={displayMode}
                   returnDropZoneId={RETURN_DROP_ZONE_ID}
+                  hideClues={roomStatus !== "clue"}
                 />
               </Box>
             )}
@@ -1049,6 +1050,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     isDraggingEnabled={false}
                     meId={meId}
                     displayMode={displayMode}
+                    hideClues={roomStatus !== "clue"}
                   />
                 </Box>
               )}
