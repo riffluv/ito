@@ -33,25 +33,27 @@ export function range(n: number): number[] { return Array.from({ length: n }, (_
 // 入室順でプレイヤーIDをソートする関数
 export function sortPlayersByJoinOrder(
   playerIds: string[],
-  players: Array<{ id: string; lastSeen?: any }>
+  players: Array<{ id: string; lastSeen?: any; joinedAt?: any }>
 ): string[] {
-  const playerMap = new Map(players.map(p => [p.id, p]));
+  const playerMap = new Map(players.map((p) => [p.id, p] as const));
 
   return [...playerIds].sort((a, b) => {
     const playerA = playerMap.get(a);
     const playerB = playerMap.get(b);
 
-    // lastSeenが存在しない場合は元の順序を維持
-    if (!playerA?.lastSeen || !playerB?.lastSeen) {
-      return playerIds.indexOf(a) - playerIds.indexOf(b);
+    const joinedA = (playerA as any)?.joinedAt?.seconds ?? null;
+    const joinedB = (playerB as any)?.joinedAt?.seconds ?? null;
+    if (joinedA !== null && joinedB !== null && joinedA !== joinedB) {
+      return joinedA - joinedB;
     }
 
-    // Timestamp型の比較（Firestore serverTimestamp）
-    const timeA = playerA.lastSeen?.seconds || 0;
-    const timeB = playerB.lastSeen?.seconds || 0;
+    const lastSeenA = (playerA as any)?.lastSeen?.seconds ?? null;
+    const lastSeenB = (playerB as any)?.lastSeen?.seconds ?? null;
+    if (lastSeenA !== null && lastSeenB !== null && lastSeenA !== lastSeenB) {
+      return lastSeenA - lastSeenB;
+    }
 
-    // 入室順（早い順）でソート
-    return timeA - timeB;
+    return playerIds.indexOf(a) - playerIds.indexOf(b);
   });
 }
 
