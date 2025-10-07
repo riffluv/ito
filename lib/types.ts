@@ -65,6 +65,8 @@ export type RoomDoc = {
     players?: string[];
   } | null;
   round?: number;
+  // MVP投票 (記録簿内で完結)
+  mvpVotes?: Record<string, string> | null; // { voterId: votedPlayerId }
 };
 
 export type PlayerDoc = {

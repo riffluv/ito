@@ -1137,6 +1137,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           orderNumbers={room.order?.numbers ?? {}}
           slotCount={slotCount}
           topic={room.topic ?? null}
+          mvpVotes={room.mvpVotes ?? null}
         />
       </Box>
     </Box>

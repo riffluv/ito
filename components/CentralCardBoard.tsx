@@ -72,6 +72,7 @@ interface CentralCardBoardProps {
   // ????????????????????????/???????
   slotCount?: number;
   topic?: string | null;
+  mvpVotes?: Record<string, string> | null;
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
@@ -101,6 +102,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   displayMode = "full",
   slotCount,
   topic = null,
+  mvpVotes = null,
 }) => {
   const [isLedgerOpen, setLedgerOpen] = useState(false);
 
@@ -1080,6 +1082,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         orderList={orderList}
         topic={topic}
         failed={failed}
+        roomId={roomId}
+        myId={meId}
+        mvpVotes={mvpVotes}
       />
     </Box>
   );
