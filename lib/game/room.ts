@@ -87,34 +87,37 @@ export async function dealNumbers(roomId: string): Promise<number> {
     isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
   );
   // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
-  let target = all;
+  const fallbackPool = activeByRecency.length > 0 ? activeByRecency : all;
+  let target = fallbackPool;
   try {
     if (presenceSupported()) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids) && uids.length > 0) {
-        const set = new Set(uids);
-        const filtered = all.filter((p) => set.has(p.id));
-        target = filtered.length > 0
-          ? filtered
-          : activeByRecency.length > 0
-            ? activeByRecency
-            : all;
-      } else {
-        target = activeByRecency.length > 0 ? activeByRecency : all;
+        const presenceSet = new Set(uids);
+        const presencePlayers: typeof all = [];
+        const missingPlayers: typeof all = [];
+        for (const player of fallbackPool) {
+          if (presenceSet.has(player.id)) {
+            presencePlayers.push(player);
+          } else {
+            missingPlayers.push(player);
+          }
+        }
+        if (presencePlayers.length > 0) {
+          target = [...presencePlayers, ...missingPlayers];
+        }
       }
-    } else {
-      target = activeByRecency.length > 0 ? activeByRecency : all;
     }
   } catch {
-    target = activeByRecency.length > 0 ? activeByRecency : all;
+    target = fallbackPool;
   }
   if (!target.length) {
-    target = activeByRecency.length > 0 ? activeByRecency : all;
+    target = fallbackPool;
   }
   if (target.length < Math.min(2, all.length)) {
     target = all;
   }
-  const ordered = target.sort((a, b) =>
+  const ordered = [...target].sort((a, b) =>
     String(a.uid || a.id).localeCompare(String(b.uid || b.id))
   );
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
