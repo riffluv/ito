@@ -73,6 +73,14 @@ const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
   loading: () => null,
 });
 
+const MvpLedger = dynamic(
+  () => import("@/components/ui/MvpLedger").then((mod) => ({ default: mod.MvpLedger })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
 const RoomPasswordPrompt = dynamic(
   () =>
     import("@/components/RoomPasswordPrompt").then((mod) => ({
@@ -136,6 +144,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 設定モーダルの状態管理
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // 記録簿モーダルの状態管理
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  // ゲーム終了判定
+  const isGameFinished = room?.status === "finished";
   const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
@@ -1224,6 +1236,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           onlineUids={onlineUids}
           roundIds={players.map((p) => p.id)}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenLedger={() => setIsLedgerOpen(true)}
           onLeaveRoom={leaveRoom}
           pop={pop}
         />
@@ -1290,6 +1303,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           currentOptions={room.options || {}}
           isHost={isHost}
           roomStatus={room.status}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <MvpLedger
+          isOpen={isLedgerOpen}
+          onClose={() => setIsLedgerOpen(false)}
+          players={players}
+          orderList={room.order?.list || []}
+          topic={room.topic || null}
+          failed={!!room.order?.failed}
         />
       </Suspense>
     </>

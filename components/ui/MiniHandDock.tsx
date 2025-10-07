@@ -50,6 +50,9 @@ import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
+import { gsap } from "gsap";
+import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+import Image from "next/image";
 
 // ========================================
 // 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
@@ -204,6 +207,7 @@ interface MiniHandDockProps {
   allowContinueAfterFail?: boolean;
   roomName?: string;
   onOpenSettings?: () => void;
+  onOpenLedger?: () => void;
   onLeaveRoom?: () => void | Promise<void>;
   pop?: boolean;
   // 在席者のみでリセットするための補助情報
@@ -227,6 +231,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     allowContinueAfterFail,
     topicBox = null,
     onOpenSettings,
+    onOpenLedger,
     onLeaveRoom,
     pop = false,
     onlineUids,
@@ -1209,6 +1214,53 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 </IconButton>
               </Tooltip>
             )}
+          {onOpenLedger && (
+            <Box
+              w="40px"
+              h="40px"
+              opacity={isGameFinished ? 1 : 0}
+              pointerEvents={isGameFinished ? "auto" : "none"}
+              transition="opacity 200ms ease"
+            >
+              <Tooltip content="冒険の記録を見る" showArrow openDelay={180}>
+                <IconButton
+                  aria-label="記録簿"
+                  onClick={onOpenLedger}
+                  size="xs"
+                  w="40px"
+                  h="40px"
+                  bg="rgba(28,32,42,0.95)"
+                  color="rgba(255,255,255,0.92)"
+                  borderWidth="0"
+                  borderRadius="0"
+                  boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(214,177,117,0.88)"
+                  p="0"
+                  overflow="visible"
+                  position="relative"
+                  _hover={{
+                    bg: "rgba(38,42,52,0.98)",
+                    transform: "translate(0,-1px)",
+                    boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(214,177,117,0.95)",
+                  }}
+                  _active={{
+                    transform: "translate(1px,1px)",
+                    boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(214,177,117,0.82)",
+                  }}
+                  transition="175ms cubic-bezier(.2,1,.3,1)"
+                >
+                  <Image
+                    src="/images/hanepen2.webp"
+                    alt="記録簿"
+                    width={24}
+                    height={24}
+                    style={{
+                      filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.6))",
+                    }}
+                  />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
           {onOpenSettings && (
             <Tooltip content="設定を開く" showArrow openDelay={180}>
               <IconButton
