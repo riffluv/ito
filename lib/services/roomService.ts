@@ -196,6 +196,7 @@ export async function ensureMember({
       orderIndex: 0,
       uid,
       lastSeen: serverTimestamp(),
+      joinedAt: serverTimestamp(),
     };
     await setDoc(meRef, p);
     registerAvatarUsage(roomId, selectedAvatar);
@@ -207,6 +208,9 @@ export async function ensureMember({
   const patch: Record<string, any> = { lastSeen: serverTimestamp() };
   if (!existing?.uid) {
     patch.uid = uid;
+  }
+  if (!existing?.joinedAt) {
+    patch.joinedAt = serverTimestamp();
   }
   if (normalizedName && normalizedName.length > 0 && existing?.name !== normalizedName) {
     patch.name = normalizedName;

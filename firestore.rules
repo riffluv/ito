@@ -115,7 +115,7 @@ service cloud.firestore {
 
     function isValidPlayerDoc(data) {
       return data is map
-        && data.keys().hasOnly(['name', 'avatar', 'number', 'clue1', 'ready', 'orderIndex', 'uid', 'lastSeen'])
+        && data.keys().hasOnly(['name', 'avatar', 'number', 'clue1', 'ready', 'orderIndex', 'uid', 'lastSeen', 'joinedAt'])
         && safeText(data.name, 1, 24)
         && safeTextAllowEmpty(data.avatar, 64)
         && (data.number == null || (data.number is number && data.number >= 0 && data.number <= 120))
@@ -123,7 +123,8 @@ service cloud.firestore {
         && data.ready is bool
         && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 20
         && (!('uid' in data) || optionalSafeText(data.uid, 1, 64))
-        && (!('lastSeen' in data) || isTimestampValue(data.lastSeen));
+        && (!('lastSeen' in data) || isTimestampValue(data.lastSeen))
+        && (!('joinedAt' in data) || isTimestampValue(data.joinedAt));
     }
 
     function isValidChatDoc(data) {

@@ -76,6 +76,7 @@ export type PlayerDoc = {
   orderIndex: number;
   uid?: string;
   lastSeen?: Timestamp | FieldValue;
+  joinedAt?: Timestamp | FieldValue;
 };
 
 export type ChatDoc = {

@@ -75,5 +75,6 @@ export function sanitizePlayer(
     orderIndex: typeof input?.orderIndex === "number" ? input.orderIndex : 0,
     uid: input?.uid || undefined,
     lastSeen: input?.lastSeen,
+    joinedAt: input?.joinedAt,
   };
 }
