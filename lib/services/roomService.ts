@@ -201,6 +201,28 @@ export async function ensureMember({
     registerAvatarUsage(roomId, selectedAvatar);
     return { joined: true } as const;
   }
+  const existing = meSnap.data() as Partial<PlayerDoc> | undefined;
+  const normalizedName =
+    typeof displayName === "string" ? displayName.trim() : "";
+  const patch: Record<string, any> = { lastSeen: serverTimestamp() };
+  if (!existing?.uid) {
+    patch.uid = uid;
+  }
+  if (normalizedName && normalizedName.length > 0 && existing?.name !== normalizedName) {
+    patch.name = normalizedName;
+  }
+  try {
+    await updateDoc(meRef, patch);
+  } catch (error) {
+    logWarn("roomService", "ensure-member-update-existing-failed", {
+      roomId,
+      uid,
+      error,
+    });
+  }
+  if (existing?.avatar) {
+    registerAvatarUsage(roomId, String(existing.avatar));
+  }
   return { joined: false } as const;
 }
 
@@ -310,25 +332,26 @@ export async function joinRoomFully({
   notifyChat?: boolean;
 }): Promise<EnsureMemberResult> {
   const created = await ensureMember({ roomId, uid, displayName });
-  if ((created as any)?.reason === "inProgress") {
+  const inProgress = (created as { reason?: string }).reason === "inProgress";
+  if (inProgress) {
     throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
-  if (created.joined) {
-    await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
-    await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
-    await updateLastActive(roomId).catch(() => void 0);
-    if (notifyChat) {
-      try {
-        const { addDoc, collection, serverTimestamp } = await import(
-          "firebase/firestore"
-        );
-        await addDoc(collection(db!, "rooms", roomId, "chat"), {
-          sender: "system",
-          text: `${displayName || "匿名"} さんが参加しました`,
-          createdAt: serverTimestamp(),
-        } as any);
-      } catch {}
-    }
+
+  await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
+  await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
+  await updateLastActive(roomId).catch(() => void 0);
+
+  if (notifyChat && created.joined) {
+    try {
+      const { addDoc, collection, serverTimestamp } = await import(
+        "firebase/firestore"
+      );
+      await addDoc(collection(db!, "rooms", roomId, "chat"), {
+        sender: "system",
+        text: `${displayName || "����"} ���񂪎Q�����܂���`,
+        createdAt: serverTimestamp(),
+      } as any);
+    } catch {}
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
   const { logInfo } = await import("@/lib/utils/log");
