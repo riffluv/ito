@@ -1071,36 +1071,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       {/* GSAP?????????????????????? */}
       {roomStatus === "finished" && (
-        <>
-          <GameResultOverlay failed={failed} mode="overlay" />
-          <Box
-            position="fixed"
-            top={{ base: 16, md: 24 }}
-            right={{ base: 16, md: 32 }}
-            zIndex={isLedgerOpen ? 141 : 120}
-          >
-            <Button
-              onClick={() => setLedgerOpen(true)}
-              bg="rgba(214,177,117,0.28)"
-              color="rgba(255,240,219,0.95)"
-              border="1px solid rgba(247,224,168,0.6)"
-              borderRadius="999px"
-              px={{ base: 5, md: 6 }}
-              py={{ base: 2.5, md: 3 }}
-              fontSize={{ base: "13px", md: "15px" }}
-              letterSpacing="0.08em"
-              fontWeight={700}
-              textTransform="uppercase"
-              boxShadow="0 8px 20px rgba(0,0,0,0.45)"
-              transition="all 180ms cubic-bezier(.2,1,.3,1)"
-              _hover={{ bg: "rgba(214,177,117,0.35)", transform: "translateY(-2px)" }}
-              _active={{ bg: "rgba(214,177,117,0.4)", transform: "translateY(0)" }}
-              position="relative"
-            >
-              記録簿を開く
-            </Button>
-          </Box>
-        </>
+        <GameResultOverlay failed={failed} mode="overlay" />
       )}
       <MvpLedger
         isOpen={isLedgerOpen}
