@@ -257,10 +257,11 @@ export function MvpLedger({
             <Box
               display="grid"
               gridTemplateColumns={{
-                base: "50px 50px 1fr 2fr 70px 110px",
-                md: "60px 60px 1.2fr 2fr 80px 130px"
+                base: "50px 50px 1fr 2fr 70px 80px 70px",
+                md: "60px 60px 1.2fr 2fr 80px 90px 80px"
               }}
               gap={{ base: 2, md: 3 }}
+              px={{ base: 3, md: 4 }}
               fontSize={{ base: "14px", md: "16px" }}
               fontWeight={700}
               letterSpacing="0.05em"
@@ -276,6 +277,7 @@ export function MvpLedger({
               <Box>連想語</Box>
               <Box textAlign="center">数字</Box>
               <Box textAlign="center">MVP</Box>
+              <Box textAlign="center">投票</Box>
             </Box>
 
             {/* 表データ */}
@@ -305,8 +307,8 @@ export function MvpLedger({
                     }}
                     display="grid"
                     gridTemplateColumns={{
-                      base: "50px 50px 1fr 2fr 70px 110px",
-                      md: "60px 60px 1.2fr 2fr 80px 130px"
+                      base: "50px 50px 1fr 2fr 70px 80px 70px",
+                      md: "60px 60px 1.2fr 2fr 80px 90px 80px"
                     }}
                     gap={{ base: 2, md: 3 }}
                     alignItems="center"
@@ -394,35 +396,34 @@ export function MvpLedger({
                       {typeof player.number === "number" ? player.number : "?"}
                     </Box>
 
-                    {/* MVP投票 */}
+                    {/* MVP得票数 */}
                     <Flex
                       align="center"
                       justify="center"
-                      gap={2}
+                      gap={1}
                     >
-                      {/* 得票数表示 */}
-                      <Flex align="center" gap={1}>
-                        {mvpStats.mvpId === player.id && (
-                          <Text fontSize={{ base: "14px", md: "16px" }}>🏆</Text>
-                        )}
-                        <Text
-                          fontSize={{ base: "12px", md: "13px" }}
-                          fontWeight={700}
-                          color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
-                          textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                        >
-                          ⭐{mvpStats.voteCounts[player.id] || 0}
-                        </Text>
-                      </Flex>
+                      {mvpStats.mvpId === player.id && (
+                        <Text fontSize={{ base: "14px", md: "16px" }}>🏆</Text>
+                      )}
+                      <Text
+                        fontSize={{ base: "13px", md: "14px" }}
+                        fontWeight={700}
+                        color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
+                        textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+                      >
+                        ★{mvpStats.voteCounts[player.id] || 0}
+                      </Text>
+                    </Flex>
 
-                      {/* 投票ボタン */}
-                      {player.id !== myId && (
+                    {/* 投票ボタン */}
+                    <Flex justify="center">
+                      {player.id !== myId ? (
                         <Button
                           size="xs"
                           variant="ghost"
                           border={mvpStats.myVote === player.id ? "2px solid white" : "2px solid rgba(255,255,255,0.5)"}
                           borderRadius="0"
-                          px={{ base: 1.5, md: 2 }}
+                          px={{ base: 2, md: 3 }}
                           fontSize={{ base: "10px", md: "11px" }}
                           letterSpacing="0.02em"
                           fontWeight={700}
@@ -441,6 +442,8 @@ export function MvpLedger({
                         >
                           {mvpStats.myVote === player.id ? "✓" : "投票"}
                         </Button>
+                      ) : (
+                        <Text fontSize={{ base: "11px", md: "12px" }} opacity={0.5}>―</Text>
                       )}
                     </Flex>
                   </Box>
