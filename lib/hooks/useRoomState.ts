@@ -38,6 +38,7 @@ export function useRoomState(
   const joinInFlightRef = useRef<Promise<unknown> | null>(null);
   const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const joinAttemptRef = useRef(0);
+  const membershipRetryAtRef = useRef(0);
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -318,6 +319,46 @@ export function useRoomState(
     () => !!(room && uid && room.hostId === uid),
     [room?.hostId, uid]
   );
+
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    if (!uid || !room) return;
+    if (!displayName || !String(displayName).trim()) return;
+    if (!isHost && room.status !== "waiting") return;
+    if (loading) return;
+    if (leavingRef.current) return;
+
+    if (isMember) {
+      membershipRetryAtRef.current = 0;
+      return;
+    }
+
+    if (joinInFlightRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      membershipRetryAtRef.current &&
+      now - membershipRetryAtRef.current < 1500
+    ) {
+      return;
+    }
+
+    membershipRetryAtRef.current = now;
+    joinCompletedRef.current = false;
+    setJoinAttemptToken((value) => value + 1);
+  }, [
+    firebaseEnabled,
+    loading,
+    isMember,
+    room?.status,
+    uid,
+    room,
+    displayName,
+    isHost,
+    roomId,
+  ]);
 
   // メモ化されたstateオブジェクトで不必要な再レンダリングを防ぐ
   const state: RoomState = useMemo(
