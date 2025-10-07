@@ -5,7 +5,6 @@ import { SortableItem } from "@/components/sortable/SortableItem";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import WaitingArea from "@/components/ui/WaitingArea";
-import { MvpLedger } from "@/components/ui/MvpLedger";
 import {
   addCardToProposalAtPosition,
   finalizeReveal,
@@ -72,7 +71,6 @@ interface CentralCardBoardProps {
   // ????????????????????????/???????
   slotCount?: number;
   topic?: string | null;
-  mvpVotes?: Record<string, string> | null;
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
@@ -102,15 +100,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   displayMode = "full",
   slotCount,
   topic = null,
-  mvpVotes = null,
 }) => {
-  const [isLedgerOpen, setLedgerOpen] = useState(false);
-
-  useEffect(() => {
-    if (roomStatus !== "finished" && isLedgerOpen) {
-      setLedgerOpen(false);
-    }
-  }, [roomStatus, isLedgerOpen]);
   // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
     const m = new Map<string, PlayerDoc & { id: string }>();
@@ -1075,17 +1065,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {roomStatus === "finished" && (
         <GameResultOverlay failed={failed} mode="overlay" />
       )}
-      <MvpLedger
-        isOpen={isLedgerOpen}
-        onClose={() => setLedgerOpen(false)}
-        players={players}
-        orderList={orderList}
-        topic={topic}
-        failed={failed}
-        roomId={roomId}
-        myId={meId}
-        mvpVotes={mvpVotes}
-      />
     </Box>
   );
 };

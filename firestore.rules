@@ -20,6 +20,10 @@ service cloud.firestore {
         && !value.matches('.*>.*');
     }
 
+    function safeVoteTarget(value) {
+      return value is string && value.size() >= 1 && value.size() <= 64;
+    }
+
     function optionalSafeText(value, min, max) {
       return value == null || safeText(value, min, max);
     }
@@ -69,13 +73,17 @@ service cloud.firestore {
         && (!('players' in deal) || (deal.players is list && deal.players.size() <= 16));
     }
 
+    function isValidMvpVotesMap(votes) {
+      return votes is map && votes.size() <= 16;
+    }
+
     function isValidRoomDoc(data) {
       return data is map
         && data.keys().hasOnly([
           'name', 'hostId', 'hostName', 'creatorId', 'creatorName', 'options', 'status',
           'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
           'topic', 'topicOptions', 'topicBox',
-          'order', 'result', 'deal', 'round',
+          'order', 'result', 'deal', 'round', 'mvpVotes',
           'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion'
         ])
         && (!('name' in data) || safeText(data.name, 1, 48))
@@ -107,6 +115,7 @@ service cloud.firestore {
         && (!('order' in data) || data.order == null || isValidOrderMap(data.order))
         && (!('result' in data) || data.result == null || isValidResultMap(data.result))
         && (!('deal' in data) || data.deal == null || isValidDealMap(data.deal))
+        && (!('mvpVotes' in data) || data.mvpVotes == null || isValidMvpVotesMap(data.mvpVotes))
         && (!('createdAt' in data) || data.createdAt is timestamp)
         && (!('lastActiveAt' in data) || data.lastActiveAt is timestamp)
         && (!('closedAt' in data) || isTimestampValue(data.closedAt))
@@ -155,6 +164,8 @@ service cloud.firestore {
             && orderChangeKeysAreSafe())
           // カスタムお題モード時、参加者によるお題更新を許可
           || canParticipantUpdateCustomTopic(roomId)
+          // ゲーム終了後のMVP投票
+          || canParticipantCastMvpVote(roomId)
         );
 
       allow delete: if isAuthenticated() && (isHost(roomId) || isAdmin());
@@ -274,6 +285,23 @@ service cloud.firestore {
         && (!('topicBox' in resource.data)
           || resource.data.topicBox == null
           || resource.data.topicBox == 'カスタム');
+    }
+
+    function canParticipantCastMvpVote(roomId) {
+      let voterField = 'mvpVotes.' + request.auth.uid;
+      let fields = request.writeFields;
+      let allowedFields = fields.hasOnly([voterField])
+        || fields.hasOnly([voterField, 'lastActiveAt']);
+      let nextHasVote = request.resource.data.keys().hasAny(['mvpVotes'])
+        && request.resource.data.mvpVotes is map
+        && request.resource.data.mvpVotes.keys().hasAny([request.auth.uid]);
+      return isParticipant(roomId)
+        && getRoomStatus(roomId) == 'finished'
+        && allowedFields
+        && (
+          !nextHasVote
+          || safeVoteTarget(request.resource.data.mvpVotes[request.auth.uid])
+        );
     }
 
     // トップレベル差分: order と lastActiveAt 以外は変えていないこと
