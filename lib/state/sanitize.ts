@@ -58,6 +58,21 @@ export function sanitizeRoom(input: any): RoomDoc {
     result: input?.result ?? null,
     deal: input?.deal ?? null,
     round: typeof input?.round === "number" ? input.round : 0,
+    mvpVotes: (() => {
+      if (!input?.mvpVotes || typeof input.mvpVotes !== "object") {
+        return null;
+      }
+      const entries = Object.entries(input.mvpVotes).filter(
+        ([voterId, votedId]) => typeof voterId === "string" && typeof votedId === "string" && votedId
+      );
+      if (entries.length === 0) {
+        return {};
+      }
+      return entries.reduce<Record<string, string>>((acc, [voterId, votedId]) => {
+        acc[String(voterId)] = String(votedId);
+        return acc;
+      }, {});
+    })(),
   };
 }
 

@@ -11,12 +11,11 @@ import {
   Stack,
   Text,
   useBreakpointValue,
-  IconButton,
 } from "@chakra-ui/react";
 import { gsap } from "gsap";
-import { useEffect, useMemo, useRef } from "react";
-import { db } from "@/lib/firebase/client";
-import { doc, updateDoc } from "firebase/firestore";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { notify } from "@/components/ui/notify";
+import { castMvpVote } from "@/lib/game/mvp";
 
 interface LedgerPlayer extends PlayerDoc {
   id: string;
@@ -59,22 +58,24 @@ export function MvpLedger({
     return [...ordered, ...leftovers];
   }, [players, orderList]);
 
+  const validTargets = useMemo(
+    () => new Set(sortedPlayers.map((p) => p.id)),
+    [sortedPlayers]
+  );
+
   // MVP投票の集計
   const mvpStats = useMemo(() => {
     const votes = mvpVotes || {};
     const voteCounts: Record<string, number> = {};
     const voters = Object.keys(votes);
 
-    // 得票数カウント
     Object.values(votes).forEach((votedId) => {
       voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
     });
 
-    // 全員投票したか
-    const allVoted = sortedPlayers.length > 0 &&
-                     sortedPlayers.every((p) => voters.includes(p.id));
+    const allVoted =
+      sortedPlayers.length > 0 && sortedPlayers.every((p) => voters.includes(p.id));
 
-    // MVP決定 (全員投票済みで最多得票)
     let mvpId: string | null = null;
     if (allVoted) {
       let maxVotes = 0;
@@ -96,19 +97,32 @@ export function MvpLedger({
     };
   }, [mvpVotes, sortedPlayers, myId]);
 
-  // MVP投票関数
-  const handleVote = async (votedPlayerId: string) => {
-    if (!db || votedPlayerId === myId) return; // 自分には投票できない
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
-    try {
-      const roomRef = doc(db, "rooms", roomId);
-      await updateDoc(roomRef, {
-        [`mvpVotes.${myId}`]: votedPlayerId,
-      });
-    } catch (error) {
-      console.error("MVP投票エラー:", error);
-    }
-  };
+  const handleVote = useCallback(
+    async (votedPlayerId: string) => {
+      if (!votedPlayerId || votedPlayerId === myId) return; // 自分には投票できない
+      if (pendingTarget) return; // 多重送信ガード
+      if (!validTargets.has(votedPlayerId)) return;
+
+      const nextVote = mvpStats.myVote === votedPlayerId ? null : votedPlayerId;
+      setPendingTarget(votedPlayerId);
+      try {
+        await castMvpVote(roomId, myId, nextVote);
+      } catch (error) {
+        console.error("MVP投票エラー:", error);
+        notify({
+          id: `mvp-vote-error:${roomId}`,
+          title: "MVP投票に失敗しました",
+          description: "通信状態を確認して再度お試しください。",
+          type: "error",
+        });
+      } finally {
+        setPendingTarget(null);
+      }
+    },
+    [myId, roomId, mvpStats.myVote, pendingTarget, validTargets]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -302,7 +316,7 @@ export function MvpLedger({
                 {sortedPlayers.map((player, index) => (
                   <Box
                     key={player.id}
-                    ref={(el) => {
+                    ref={(el: HTMLDivElement | null) => {
                       if (el) rowRefs.current[index] = el;
                     }}
                     display="grid"
@@ -431,6 +445,7 @@ export function MvpLedger({
                           bg={mvpStats.myVote === player.id ? "rgba(255,255,255,0.2)" : "transparent"}
                           textShadow="1px 1px 0 rgba(0,0,0,0.6)"
                           onClick={() => handleVote(player.id)}
+                          loading={pendingTarget === player.id}
                           _hover={{
                             bg: "rgba(255,255,255,0.15)",
                             transform: "translateY(-1px)",
@@ -440,7 +455,7 @@ export function MvpLedger({
                             transform: "translateY(0)",
                           }}
                         >
-                          {mvpStats.myVote === player.id ? "✓" : "投票"}
+                          {mvpStats.myVote === player.id ? "取消" : "投票"}
                         </Button>
                       ) : (
                         <Text fontSize={{ base: "11px", md: "12px" }} opacity={0.5}>―</Text>

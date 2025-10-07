@@ -53,6 +53,7 @@ export async function startGame(roomId: string) {
     result: null,
     deal: null,
     order: null,
+    mvpVotes: {},
     lastActiveAt: serverTimestamp(),
   });
   // プレイヤーの一時状態も同時に初期化（古い連想が残るのを防止）
@@ -155,6 +156,7 @@ export async function continueAfterFail(roomId: string) {
     result: null,
     order: null,
     deal: null,
+    mvpVotes: {},
     lastActiveAt: serverTimestamp(),
   });
   // waiting に戻るタイミングでプレイヤーの連想/readyも即時クリア
@@ -180,7 +182,7 @@ export async function resetRoom(roomId: string) {
   const curr: any = snap.data();
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
   if (!next) throw new Error("invalid transition: RESET");
-  await updateDoc(ref, { status: next, result: null, deal: null, order: null, lastActiveAt: serverTimestamp() });
+  await updateDoc(ref, { status: next, result: null, deal: null, order: null, mvpVotes: {}, lastActiveAt: serverTimestamp() });
   try {
     const { collection, getDocs, writeBatch } = await import("firebase/firestore");
     const playersRef = collection(db!, "rooms", roomId, "players");
