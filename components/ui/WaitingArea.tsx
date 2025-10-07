@@ -13,6 +13,7 @@ export interface WaitingAreaProps {
   meId?: string;
   displayMode?: "full" | "minimal";
   returnDropZoneId?: string;
+  hideClues?: boolean;
 }
 
 export default function WaitingArea({
@@ -22,6 +23,7 @@ export default function WaitingArea({
   meId,
   displayMode = "full",
   returnDropZoneId,
+  hideClues = false,
 }: WaitingAreaProps) {
   const generatedDropId = useId();
   const dropZoneId = returnDropZoneId ?? `waiting-area-${generatedDropId.replace(/:/g, "")}`;
@@ -105,6 +107,7 @@ export default function WaitingArea({
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
+                optimisticReset={hideClues}
               />
             ))
           : players.map((p) => (
@@ -113,6 +116,7 @@ export default function WaitingArea({
                 player={p}
                 isDraggingEnabled={isDraggingEnabled}
                 meId={meId}
+                optimisticReset={hideClues}
               />
             ))}
       </Box>
