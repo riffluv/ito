@@ -5,6 +5,7 @@ import { SortableItem } from "@/components/sortable/SortableItem";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import WaitingArea from "@/components/ui/WaitingArea";
+import { MvpLedger } from "@/components/ui/MvpLedger";
 import {
   addCardToProposalAtPosition,
   finalizeReveal,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/game/room";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import { Box, VisuallyHidden } from "@chakra-ui/react";
+import { Box, Button, VisuallyHidden } from "@chakra-ui/react";
 import Tooltip from "@/components/ui/Tooltip";
 import {
   DndContext,
@@ -70,6 +71,7 @@ interface CentralCardBoardProps {
   displayMode?: "full" | "minimal"; // ????????
   // ????????????????????????/???????
   slotCount?: number;
+  topic?: string | null;
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
@@ -98,7 +100,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   orderNumbers = {},
   displayMode = "full",
   slotCount,
+  topic = null,
 }) => {
+  const [isLedgerOpen, setLedgerOpen] = useState(false);
+
+  useEffect(() => {
+    if (roomStatus !== "finished" && isLedgerOpen) {
+      setLedgerOpen(false);
+    }
+  }, [roomStatus, isLedgerOpen]);
   // Build quick lookup map (id -> player) - memoized for 8+ players performance
   const playerMap = useMemo(() => {
     const m = new Map<string, PlayerDoc & { id: string }>();
@@ -1061,8 +1071,45 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       {/* GSAP?????????????????????? */}
       {roomStatus === "finished" && (
-        <GameResultOverlay failed={failed} mode="overlay" />
+        <>
+          <GameResultOverlay failed={failed} mode="overlay" />
+          <Box
+            position="fixed"
+            top={{ base: 16, md: 24 }}
+            right={{ base: 16, md: 32 }}
+            zIndex={isLedgerOpen ? 141 : 120}
+          >
+            <Button
+              onClick={() => setLedgerOpen(true)}
+              bg="rgba(214,177,117,0.28)"
+              color="rgba(255,240,219,0.95)"
+              border="1px solid rgba(247,224,168,0.6)"
+              borderRadius="999px"
+              px={{ base: 5, md: 6 }}
+              py={{ base: 2.5, md: 3 }}
+              fontSize={{ base: "13px", md: "15px" }}
+              letterSpacing="0.08em"
+              fontWeight={700}
+              textTransform="uppercase"
+              boxShadow="0 8px 20px rgba(0,0,0,0.45)"
+              transition="all 180ms cubic-bezier(.2,1,.3,1)"
+              _hover={{ bg: "rgba(214,177,117,0.35)", transform: "translateY(-2px)" }}
+              _active={{ bg: "rgba(214,177,117,0.4)", transform: "translateY(0)" }}
+              position="relative"
+            >
+              記録簿を開く
+            </Button>
+          </Box>
+        </>
       )}
+      <MvpLedger
+        isOpen={isLedgerOpen}
+        onClose={() => setLedgerOpen(false)}
+        players={players}
+        orderList={orderList}
+        topic={topic}
+        failed={failed}
+      />
     </Box>
   );
 };
