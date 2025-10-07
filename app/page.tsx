@@ -1089,9 +1089,14 @@ export default function MainMenu() {
                   <VStack gap={4} align="stretch">
                     <Box {...DEVELOPER_NOTE_STYLES.box} border="2px solid rgba(255,255,255,0.2)">
                       <VStack gap={2} align="start">
-                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
-                          🎮 このゲームについて
-                        </Text>
+                        <HStack gap={2} align="center">
+                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
+                            🎮
+                          </Text>
+                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
+                            このゲームについて
+                          </Text>
+                        </HStack>
                         <Text {...DEVELOPER_NOTE_STYLES.text} textShadow="1px 1px 0px #000">
                           「連想ワードで数字の大きさを伝える」発想にハマりました。
                           オンラインで同時にドラッグで並べる、ホストの「せーの！」で左から3Dめくり、
@@ -1109,9 +1114,14 @@ export default function MainMenu() {
                       }}
                     >
                       <VStack gap={2} align="start">
-                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
-                          ⚠️ 注意事項
-                        </Text>
+                        <HStack gap={2} align="center">
+                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
+                            ⚠️
+                          </Text>
+                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
+                            注意事項
+                          </Text>
+                        </HStack>
                         <Text {...DEVELOPER_NOTE_STYLES.text}>
                           本作は公式とは無関係のオリジナル作品です。
                           「ブラウザでここまでできるの!?」を目指しています。
@@ -1121,7 +1131,6 @@ export default function MainMenu() {
 
                     <Box
                       {...DEVELOPER_NOTE_STYLES.box}
-                      p={3}
                       border="2px solid rgba(147,51,234,0.3)"
                       css={{
                         borderLeft: "3px solid transparent",
@@ -1129,9 +1138,16 @@ export default function MainMenu() {
                       }}
                     >
                       <VStack gap={2} align="start">
-                        <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
-                          ◆ 今後の予定
-                        </Text>
+                        <HStack gap={2} align="center">
+                          <Box w="1em" display="flex" justifyContent="center">
+                            <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
+                              ◆
+                            </Text>
+                          </Box>
+                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
+                            今後の予定
+                          </Text>
+                        </HStack>
                         <VStack gap={1.5} align="start" pl={2}>
                           <Text {...DEVELOPER_NOTE_STYLES.text}>
                             ・ちゃんと寝る
