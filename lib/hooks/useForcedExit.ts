@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { notify } from "@/components/ui/notify";
-import { logDebug } from "@/lib/utils/log";
+import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
+import { logDebug, logError } from "@/lib/utils/log";
 
 interface UseForcedExitParams {
   uid: string | null;
@@ -14,6 +15,8 @@ interface UseForcedExitParams {
   leavingRef: React.MutableRefObject<boolean>;
   setPendingRejoinFlag: () => void;
   setForcedExitReason: (reason: "game-in-progress" | null) => void;
+  roomId: string;
+  displayName?: string | null;
 }
 
 /**
@@ -32,8 +35,11 @@ export function useForcedExit({
   leavingRef,
   setPendingRejoinFlag,
   setForcedExitReason,
+  roomId,
+  displayName,
 }: UseForcedExitParams) {
   const forcedExitScheduledRef = useRef(false);
+  const forcedExitCleanupRef = useRef(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -55,7 +61,6 @@ export function useForcedExit({
     if (pendingRejoin) return;
 
     if (!canAccess && roomStatus !== "waiting") {
-      // ゲーム進行中 → 観戦モード
       if (!forcedExitScheduledRef.current) {
         forcedExitScheduledRef.current = true;
         setPendingRejoinFlag();
@@ -70,6 +75,17 @@ export function useForcedExit({
           logDebug("room-page", "notify-force-exit-init-failed", error);
         }
         setForcedExitReason("game-in-progress");
+      }
+
+      if (!forcedExitCleanupRef.current) {
+        forcedExitCleanupRef.current = true;
+        leaveRoomAction(roomId, uid, displayName ?? null)
+          .catch((error) => {
+            logError("useForcedExit", "auto-leave-failed", error);
+          })
+          .finally(() => {
+            forcedExitCleanupRef.current = false;
+          });
       }
     }
 
@@ -90,5 +106,7 @@ export function useForcedExit({
     leavingRef,
     setPendingRejoinFlag,
     setForcedExitReason,
+    roomId,
+    displayName,
   ]);
 }
