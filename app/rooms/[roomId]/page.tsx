@@ -431,6 +431,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     leavingRef,
     setPendingRejoinFlag,
     setForcedExitReason,
+    roomId,
+    displayName,
   });
 
   const handleForcedExitLeaveNow = useCallback(() => {
@@ -1331,4 +1333,5 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
 
