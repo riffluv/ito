@@ -133,7 +133,8 @@
       "Bash(timeout:*)",
       "WebFetch(domain:chakra-ui.com)",
       "mcp__serena__write_memory",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []
