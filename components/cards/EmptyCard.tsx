@@ -15,6 +15,9 @@ import { gsap } from "gsap";
 interface ExtendedEmptyCardProps extends EmptyCardProps {
   id?: string; // @dnd-kit用のID
   isDragActive?: boolean; // 全体でドラッグが行われているかどうか
+  isMagnetTarget?: boolean;
+  magnetStrength?: number;
+  prefersReducedMotion?: boolean;
 }
 
 export function EmptyCard({
@@ -27,6 +30,9 @@ export function EmptyCard({
   children,
   id,
   isDragActive = false,
+  isMagnetTarget = false,
+  magnetStrength = 0,
+  prefersReducedMotion = false,
   ...props
 }: ExtendedEmptyCardProps) {
   // @dnd-kitのuseDroppable（IDがある場合のみ）
@@ -62,11 +68,16 @@ export function EmptyCard({
     }
   };
 
+  const transformDuration = prefersReducedMotion ? 0.05 : 0.18;
+  const boxShadowDuration = prefersReducedMotion ? 0.05 : 0.2;
+  const magnetTimingFunction = prefersReducedMotion ? "linear" : "cubic-bezier(0.2, 0.8, 0.4, 1)";
+
   return (
     <BaseCard
       ref={combinedRef}
       variant="empty"
       data-slot
+      data-magnet-target={isMagnetTarget ? "true" : undefined}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -77,7 +88,7 @@ export function EmptyCard({
         border: "3px dashed rgba(255, 255, 255, 0.3)", // 古い石板の破線
         borderRadius: 0, // 角ばったドラクエ風
         // ドラクエ風シンプル遷移
-        transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}, transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.2s ${UI_TOKENS.EASING.standard}`,
+        transition: `border-color 0.2s ${UI_TOKENS.EASING.standard}, transform ${transformDuration}s ${prefersReducedMotion ? "linear" : "cubic-bezier(0.25, 0.75, 0.5, 1)"}, box-shadow ${boxShadowDuration}s ${UI_TOKENS.EASING.standard}`,
         position: "relative",
 
         // 古い遺跡っぽい内側装飾
@@ -103,6 +114,14 @@ export function EmptyCard({
         ...(isDragActive && isDroppable && !dndDroppable.isOver && {
           borderColor: "rgba(255, 255, 255, 0.4)",
           boxShadow: "inset 0 0 6px rgba(255, 255, 255, 0.05)",
+        }),
+
+        // マグネット候補の視覚強調（段階的な吸着感）
+        ...(isMagnetTarget && !dndDroppable.isOver && {
+          borderColor: `rgba(255, 255, 255, ${0.45 + Math.min(0.45, magnetStrength * 0.55)})`,
+          boxShadow: `inset 0 0 ${6 + magnetStrength * 10}px rgba(255, 255, 255, ${0.05 + magnetStrength * 0.25}), 0 0 ${8 + magnetStrength * 12}px rgba(255, 255, 255, ${0.12 + magnetStrength * 0.18})`,
+          transform: `scale(${1 + magnetStrength * (prefersReducedMotion ? 0.025 : 0.045)})`,
+          transitionTimingFunction: magnetTimingFunction,
         }),
 
         // ドロップ可能時：ドラクエ風光る効果

@@ -20,6 +20,7 @@ import {
   DndContext,
   DragEndEvent,
   DragOverlay,
+  DragMoveEvent,
   DragStartEvent,
   KeyboardSensor,
   MouseSensor,
@@ -30,6 +31,7 @@ import {
   useSensor,
   useSensors,
   type CollisionDetection,
+  type DropAnimation,
 } from "@dnd-kit/core";
 import {
   restrictToFirstScrollableAncestor,
@@ -53,6 +55,8 @@ import {
   REVEAL_LINGER,
   RESULT_VISIBLE_MS,
 } from "@/lib/ui/motion";
+import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
+import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 
 interface CentralCardBoardProps {
   roomId: string;
@@ -74,6 +78,14 @@ interface CentralCardBoardProps {
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
+
+const createInitialMagnetState = (): MagnetResult => ({
+  dx: 0,
+  dy: 0,
+  strength: 0,
+  distance: Number.POSITIVE_INFINITY,
+  shouldSnap: false,
+});
 
 const shallowArrayEqual = (a: readonly string[], b: readonly string[]) => {
   if (a === b) return true;
@@ -122,6 +134,110 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
+  const prefersReducedMotion = useReducedMotionPreference();
+
+  const [magnetState, setMagnetState] = useState<MagnetResult>(() => createInitialMagnetState());
+  const magnetStateRef = useRef(magnetState);
+  useEffect(() => {
+    magnetStateRef.current = magnetState;
+  }, [magnetState]);
+  const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
+  const magnetTargetRef = useRef<string | null>(null);
+  const magnetHighlightTimeoutRef = useRef<number | null>(null);
+
+  const magnetConfig = useMemo(
+    () => ({
+      snapRadius: prefersReducedMotion ? 90 : 140,
+      snapThreshold: prefersReducedMotion ? 52 : 92,
+      maxOffset: prefersReducedMotion ? 16 : 34,
+    }),
+    [prefersReducedMotion]
+  );
+  const magnetConfigRef = useRef(magnetConfig);
+  useEffect(() => {
+    magnetConfigRef.current = magnetConfig;
+  }, [magnetConfig]);
+
+  const resetMagnet = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const immediate = options?.immediate ?? false;
+      if (
+        magnetStateRef.current.strength === 0 &&
+        !magnetStateRef.current.shouldSnap &&
+        magnetTargetRef.current === null
+      ) {
+        if (immediate) {
+          setMagnetTargetId(null);
+        }
+        return;
+      }
+
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+
+      magnetTargetRef.current = null;
+      const next = createInitialMagnetState();
+      magnetStateRef.current = next;
+      setMagnetState(next);
+
+      if (immediate) {
+        setMagnetTargetId(null);
+      } else {
+        setMagnetTargetId((prev) => (prev === null ? prev : null));
+      }
+    },
+    []
+  );
+
+  const scheduleMagnetTarget = useCallback(
+    (nextId: string | null) => {
+      if (magnetTargetRef.current === nextId) return;
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+
+      if (typeof window === "undefined") {
+        magnetTargetRef.current = nextId;
+        setMagnetTargetId(nextId);
+        return;
+      }
+
+      const delay = prefersReducedMotion ? 36 : 90;
+      if (delay <= 0) {
+        magnetTargetRef.current = nextId;
+        setMagnetTargetId(nextId);
+        return;
+      }
+
+      magnetHighlightTimeoutRef.current = window.setTimeout(() => {
+        magnetTargetRef.current = nextId;
+        setMagnetTargetId(nextId);
+        magnetHighlightTimeoutRef.current = null;
+      }, delay);
+    },
+    [prefersReducedMotion]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const dropAnimation = useMemo<DropAnimation>(() => {
+    if (prefersReducedMotion) {
+      return { duration: 110, easing: "linear" };
+    }
+    return magnetState.shouldSnap
+      ? { duration: 160, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)" }
+      : { duration: 220, easing: UI_TOKENS.EASING.standard };
+  }, [magnetState.shouldSnap, prefersReducedMotion]);
 
   // Accessibility sensors for keyboard and pointer interactions
   // Sensors: mouse uses small distance threshold; touch uses hold delay with tolerance
@@ -485,31 +601,87 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, availableEligibleCount]);
 
   // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
-  const onDragStart = useCallback((e: DragStartEvent) => {
-    setActiveId(String(e.active.id));
-  }, []);
+  const onDragStart = useCallback(
+    (e: DragStartEvent) => {
+      resetMagnet({ immediate: true });
+      setActiveId(String(e.active.id));
+    },
+    [resetMagnet]
+  );
   const clearActive = useCallback(() => {
     unstable_batchedUpdates(() => {
       setIsOver(false);
       setActiveId(null);
     });
-  }, [setIsOver]);
+    resetMagnet({ immediate: true });
+  }, [resetMagnet, setIsOver]);
+
+  const onDragMove = useCallback(
+    (event: DragMoveEvent) => {
+      if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
+        return;
+      }
+
+      const { over, active } = event;
+
+      if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
+        scheduleMagnetTarget(null);
+        if (magnetStateRef.current.strength > 0 || magnetStateRef.current.shouldSnap) {
+          const next = createInitialMagnetState();
+          magnetStateRef.current = next;
+          setMagnetState(next);
+        }
+        return;
+      }
+
+      scheduleMagnetTarget(String(over.id));
+
+      const activeRect =
+        active.rect.current.translated ?? active.rect.current.initial ?? null;
+      const magnetSnapshot = computeMagnetTransform(
+        over.rect,
+        activeRect,
+        magnetConfigRef.current
+      );
+
+      const previous = magnetStateRef.current;
+      const deltaX = Math.abs(previous.dx - magnetSnapshot.dx);
+      const deltaY = Math.abs(previous.dy - magnetSnapshot.dy);
+      const deltaStrength = Math.abs(previous.strength - magnetSnapshot.strength);
+      if (deltaX < 0.5 && deltaY < 0.5 && deltaStrength < 0.05 && previous.shouldSnap === magnetSnapshot.shouldSnap) {
+        return;
+      }
+
+      magnetStateRef.current = magnetSnapshot;
+      setMagnetState(magnetSnapshot);
+    },
+    [resolveMode, roomStatus, magnetConfigRef, scheduleMagnetTarget]
+  );
 
   // ⚡ PERFORMANCE: onDragEnd をuseCallback化
-  const onDragEnd = useCallback(async (e: DragEndEvent) => {
-    clearActive();
-    if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
-    const { active, over } = e;
-    if (!over) {
-      playDropInvalid();
-      notify({ title: "この位置には置けません", type: "info", duration: 900 });
-      return;
-    }
-    if (active.id === over.id) return;
+  const onDragEnd = useCallback(
+    async (e: DragEndEvent) => {
+      const { active, over } = e;
+      const activeRect =
+        active.rect.current.translated ?? active.rect.current.initial ?? null;
+      const overRect = over?.rect ?? null;
+      const magnetSnapshot =
+        over && typeof over.id === "string" && over.id.startsWith("slot-")
+          ? computeMagnetTransform(overRect, activeRect, magnetConfigRef.current)
+          : createInitialMagnetState();
 
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    const alreadyInProposal = (activeProposal as (string | null)[]).includes(activeId);
+      try {
+        if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
+        if (!over) {
+          playDropInvalid();
+          notify({ title: "この位置には置けません", type: "info", duration: 900 });
+          return;
+        }
+        if (active.id === over.id) return;
+
+        const activeId = String(active.id);
+        const overId = String(over.id);
+        const alreadyInProposal = (activeProposal as (string | null)[]).includes(activeId);
 
     if (overId === RETURN_DROP_ZONE_ID) {
       if (!alreadyInProposal) {
@@ -543,12 +715,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return;
     }
 
-    if (overId.startsWith("slot-")) {
-      let slotIndex = parseInt(overId.split("-")[1]);
-      if (!Number.isNaN(slotIndex)) {
-        const maxSlots = Math.max(0, slotCountDragging - 1);
-        const originalSlotIndex = slotIndex;
-        slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
+        if (overId.startsWith("slot-")) {
+          let slotIndex = parseInt(overId.split("-")[1]);
+          if (!Number.isNaN(slotIndex)) {
+            const maxSlots = Math.max(0, slotCountDragging - 1);
+            const originalSlotIndex = slotIndex;
+            slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
 
         if (process.env.NODE_ENV === "development" && originalSlotIndex !== slotIndex) {
           logWarn("central-card-board", "slot-index-clamped", {
@@ -586,31 +758,37 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     }
 
-    if (alreadyInProposal) {
-      const targetIndex = (activeProposal as (string | null)[]).indexOf(overId);
-      if (targetIndex < 0) {
-        playDropInvalid();
-        return;
+        if (alreadyInProposal) {
+          const targetIndex = (activeProposal as (string | null)[]).indexOf(overId);
+          if (targetIndex < 0) {
+            playDropInvalid();
+            return;
+          }
+          try {
+            await moveCardInProposalToPosition(roomId, activeId, targetIndex);
+            playCardPlace();
+          } catch {
+            playDropInvalid();
+          }
+        }
+      } finally {
+        clearActive();
       }
-      try {
-        await moveCardInProposalToPosition(roomId, activeId, targetIndex);
-        playCardPlace();
-      } catch {
-        playDropInvalid();
-      }
-    }
-  }, [
-    resolveMode,
-    roomStatus,
-    playDropInvalid,
-    playCardPlace,
-    activeProposal,
-    meId,
-    updatePendingState,
-    roomId,
-    slotCountDragging,
-    clearActive,
-  ]);
+    },
+    [
+      resolveMode,
+      roomStatus,
+      playDropInvalid,
+      playCardPlace,
+      activeProposal,
+      meId,
+      updatePendingState,
+      roomId,
+      slotCountDragging,
+      clearActive,
+      magnetConfigRef,
+    ]
+  );
   const isDraggingOwnPlacedCard =
     activeId === meId && (activeProposal as (string | null)[]).includes(activeId);
 
@@ -734,6 +912,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           <DndContext
             collisionDetection={collisionDetection}
             onDragStart={onDragStart}
+            onDragMove={onDragMove}
             onDragEnd={onDragEnd}
             onDragCancel={clearActive}
             sensors={sensors}
@@ -874,6 +1053,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           id={`slot-${idx}`}
                           isDroppable={true}
                           isDragActive={!!activeId}
+                          isMagnetTarget={magnetTargetId === `slot-${idx}`}
+                          magnetStrength={magnetTargetId === `slot-${idx}` ? magnetState.strength : 0}
+                          prefersReducedMotion={prefersReducedMotion}
                         />
                       );
                     }
@@ -883,19 +1065,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             </Box>
 
             {/* DragOverlay: ????????????????????????????100%????? */}
-            <DragOverlay
-              dropAnimation={{ duration: 200, easing: UI_TOKENS.EASING.standard }}
-              modifiers={[restrictToWindowEdges]}
-            >
+            <DragOverlay dropAnimation={dropAnimation} modifiers={[restrictToWindowEdges]}>
               {activeId
                 ? (() => {
                   const idx = (activeProposal as (string | null)[]).indexOf(
                     activeId
                   );
                     const ghostStyle = {
-                      transform: "scale(1.05)",
                       filter: UI_TOKENS.FILTERS.dropShadowStrong,
                       opacity: 0.98,
+                      pointerEvents: "none",
+                      willChange: "transform",
                     } as React.CSSProperties;
                     
                     if (idx >= 0) {
