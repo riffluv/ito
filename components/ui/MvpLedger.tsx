@@ -291,14 +291,15 @@ export function MvpLedger({
               pb="9px"
               borderBottom="2px solid rgba(255,255,255,0.85)"
               alignItems="center"
+              justifyItems="center"
             >
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">NO</Flex>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">{/* アバター */}</Flex>
-              <Box textAlign="left" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
-              <Box textAlign="left" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">数字</Flex>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">MVP</Flex>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">投票</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">NO</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
+              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
+              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">数字</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">MVP</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">投票</Flex>
             </Box>
 
             {/* 表データ */}
@@ -330,6 +331,7 @@ export function MvpLedger({
                     gridTemplateColumns={columnTemplate}
                     gap={{ base: "7px", md: "11px" }}
                     alignItems="center"
+                    justifyItems="center"
                     bg="rgba(0,0,0,0.3)"
                     borderRadius="0"
                     px={{ base: "11px", md: "15px" }}
@@ -345,7 +347,6 @@ export function MvpLedger({
                       fontSize={{ base: "14px", md: "16px" }}
                       fontWeight={700}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                      width="100%"
                     >
                       {String(index + 1).padStart(2, "0")}
                     </Flex>
@@ -354,7 +355,6 @@ export function MvpLedger({
                     <Flex
                       justify="center"
                       align="center"
-                      width="100%"
                     >
                       <Box
                         w={{ base: "40px", md: "48px" }}
@@ -390,6 +390,8 @@ export function MvpLedger({
                     {/* 名前 */}
                     <Box
                       textAlign="left"
+                      justifySelf="start"
+                      w="100%"
                       fontSize={{ base: "14px", md: "15px" }}
                       fontWeight={700}
                       letterSpacing="0.03em"
@@ -404,6 +406,8 @@ export function MvpLedger({
                     {/* 連想語 */}
                     <Box
                       textAlign="left"
+                      justifySelf="start"
+                      w="100%"
                       fontSize={{ base: "13px", md: "14px" }}
                       fontWeight={600}
                       textShadow="1px 1px 0 rgba(0,0,0,0.5)"
@@ -421,7 +425,8 @@ export function MvpLedger({
                       fontSize={{ base: "15px", md: "17px" }}
                       fontWeight={700}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                      width="100%"
+                      justifySelf="center"
+                      w="100%"
                     >
                       {typeof player.number === "number" ? player.number : "?"}
                     </Flex>
@@ -430,13 +435,13 @@ export function MvpLedger({
                     <Flex
                       justify="center"
                       align="center"
-                      width="100%"
                       fontSize={{ base: "13px", md: "14px" }}
                       fontWeight={700}
                       color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
                       whiteSpace="nowrap"
                       gap="4px"
+                      justifySelf="center"
                     >
                       {mvpStats.mvpId === player.id && (
                         <Text as="span" fontSize={{ base: "14px", md: "16px" }} role="img" aria-hidden="true" mr="1px">🏆</Text>
@@ -447,7 +452,7 @@ export function MvpLedger({
                     </Flex>
 
                     {/* 投票ボタン */}
-                    <Flex justify="center" align="center" width="100%">
+                    <Flex justify="center" align="center" justifySelf="center" w="100%">
                       {player.id !== myId ? (
                         <Button
                           size="xs"
@@ -474,11 +479,14 @@ export function MvpLedger({
                             bg: "rgba(255,255,255,0.25)",
                             transform: "translateY(0)",
                           }}
+                          mx="auto"
                         >
                           {mvpStats.myVote === player.id ? "取消" : "投票"}
                         </Button>
                       ) : (
-                        <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
+                        <Flex justify="center" align="center" w="100%">
+                          <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
+                        </Flex>
                       )}
                     </Flex>
                   </Box>
