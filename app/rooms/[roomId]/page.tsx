@@ -1261,7 +1261,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           textTransform="uppercase"
           fontFamily="monospace"
         >
-          ※ 観戦中 ※
+          ▼ 観戦中 ▼
         </Text>
         <Box textAlign="center">
           <Text
@@ -1277,7 +1277,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             lineHeight={1.7}
             mt={1}
           >
-            ホストがリセットすればまた席に戻れます。しばらく観戦しながらお待ちください。
+            ホストがリセットすれば再び席に戻れるよ！それまではゲームを観戦しよう！
           </Text>
         </Box>
       </Box>
@@ -1385,7 +1385,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                   color="white"
                   fontFamily="monospace"
                 >
-                  {"\u914d\u672d\u3092\u6574\u3048\u3066\u304f\u3060\u3055\u3044"}
+                  あれれ？カードが配れていないよ！
                 </Text>
               </Dialog.Title>
             </Box>
@@ -1397,20 +1397,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                   fontFamily="monospace"
                   lineHeight={1.7}
                 >
-                  {
-                    "\u30db\u30b9\u30c8\u304c\u96e2\u8131\u3057\u305f\u76f4\u5f8c\u306e\u305f\u3081\u6570\u5b57\u306e\u518d\u914d\u5e03\u304c\u5b8c\u4e86\u3057\u3066\u3044\u307e\u305b\u3093\u3002\u4e0b\u90e8\u30d5\u30c3\u30bf\u30fc\u53f3\u7aef\u306e\u300c\u30ea\u30bb\u30c3\u30c8\u300d\u304b\u3089\u5f85\u6a5f\u72b6\u614b\u306b\u623b\u3057\u3001\u518d\u5ea6\u300c\u30b2\u30fc\u30e0\u958b\u59cb\u300d\u3092\u62bc\u3057\u3066\u304f\u3060\u3055\u3044\u3002"
-                  }
+                  前のホストが急にいなくなっちゃったから、数字の配布が途中で止まってしまったんだ。
+                  右下の「リセット」を押して最初に戻してから、もう一度「ゲーム開始」してね！
                 </Text>
                 <Text
                   color={UI_TOKENS.COLORS.whiteAlpha80}
                 >
-                  {
-                    "\u30ea\u30bb\u30c3\u30c8\u5f8c\u306f\u81ea\u52d5\u3067\u6570\u5b57\u304c\u914d\u308a\u76f4\u3055\u308c\u3001\u5168\u54e1\u304c\u9023\u60f3\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3067\u304d\u308b\u72b6\u614b\u306b\u623b\u308a\u307e\u3059\u3002"
-                  }
+                  リセットすれば、ちゃんとカードが配り直されるから安心してね！
                 </Text>
                 <HStack justify="flex-end" pt={2}>
                   <AppButton palette="brand" size="md" onClick={handleDealRecoveryDismiss}>
-                    {"\u4e86\u89e3"}
+                    わかった！
                   </AppButton>
                 </HStack>
               </VStack>
