@@ -330,7 +330,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "exit", message: "繝ｭ繝薙・縺ｸ謌ｻ繧翫∪縺・..", duration: 1200 },
+              { id: "exit", message: "ロビーへ戻ります...", duration: 1200 },
             ],
           },
           performExit
@@ -780,7 +780,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "leave", message: "繝ｭ繝薙・縺ｸ謌ｻ繧翫∪縺・..", duration: 600 }, // 1200ms 竊・600ms 縺ｫ遏ｭ邵ｮ
+              { id: "leave", message: "ロビーへ戻ります...", duration: 600 }, // 1200ms → 600ms に短縮
             ],
           },
           async () => {
@@ -1067,7 +1067,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "return", message: "繝ｭ繝薙・縺ｸ謌ｻ繧翫∪縺・..", duration: 1000 },
+              { id: "return", message: "ロビーへ戻ります...", duration: 1000 },
             ],
           }
         );
