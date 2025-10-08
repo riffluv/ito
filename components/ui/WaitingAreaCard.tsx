@@ -40,12 +40,22 @@ function WaitingAreaCardComponent({
 
   const [displayClue, setDisplayClue] = useState<string>(deriveInitialClue);
   const promptShownRef = useRef(false);
+  const waitingTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     promptShownRef.current = false;
+    if (waitingTimerRef.current !== null) {
+      window.clearTimeout(waitingTimerRef.current);
+      waitingTimerRef.current = null;
+    }
   }, [player.id]);
 
   useEffect(() => {
+    if (waitingTimerRef.current !== null) {
+      window.clearTimeout(waitingTimerRef.current);
+      waitingTimerRef.current = null;
+    }
+
     if (ready) {
       const clueText = player?.clue1?.trim() || "";
       setDisplayClue(clueText);
@@ -54,8 +64,16 @@ function WaitingAreaCardComponent({
     }
 
     if (!gameStarted) {
-      setDisplayClue(WAITING_LABEL);
+      const showImmediate = !promptShownRef.current;
       promptShownRef.current = false;
+      if (showImmediate) {
+        setDisplayClue(WAITING_LABEL);
+      } else {
+        waitingTimerRef.current = window.setTimeout(() => {
+          setDisplayClue(WAITING_LABEL);
+          waitingTimerRef.current = null;
+        }, 220);
+      }
       return;
     }
 
