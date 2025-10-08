@@ -206,6 +206,8 @@ export async function setOrderProposal(roomId: string, proposal: string[]) {
   await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
 }
 
+type ProposalWriteResult = "ok" | "noop" | "missing-deal";
+
 // sort-submit モード: プレイヤーが自分のカードを場(提案配列)に置く
 // 既存の末尾追加機能（「出す」ボタン用）
 export async function addCardToProposal(roomId: string, playerId: string) {
@@ -220,73 +222,107 @@ export async function addCardToProposalAtPosition(
 ) {
   const roomRef = doc(db!, "rooms", roomId);
   const playerRef = doc(db!, "rooms", roomId, "players", playerId);
-  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
-    await runTransaction(db!, async (tx) => {
-      const roomSnap = await tx.get(roomRef);
-      if (!roomSnap.exists()) throw new Error("room not found");
-      const room: any = roomSnap.data();
-      if (room.status !== "clue") return; // clue 中のみ
-      if (room?.options?.resolveMode !== "sort-submit") return; // モード確認
-      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-        ? (room.deal.players as string[])
-        : null;
-      if (!roundPlayers || roundPlayers.length === 0) return; // 未配札
-      const pSnap = await tx.get(playerRef);
-      if (!pSnap.exists()) throw new Error("player not found");
-      const player: any = pSnap.data();
-      if (typeof player.number !== "number") throw new Error("number not set");
-      if (!roundPlayers.includes(playerId)) return; // このラウンドの対象外
-      const current: string[] = room?.order?.proposal || [];
-      if (current.includes(playerId)) return; // 重複防止
 
-      let next: any[];
-      const maxCount: number = Array.isArray(room?.deal?.players)
-        ? (room.deal.players as string[]).length
-        : 0;
-      if (maxCount <= 0) return; // 未配札時は受け付けない
-      if (targetIndex === -1) {
-        next = [...current];
-        let placed = false;
-        for (let i = 0; i < Math.max(next.length, maxCount); i++) {
-          if (i >= next.length) next.length = i + 1;
-          if (next[i] == null) {
-            next[i] = playerId;
-            placed = true;
-            break;
-          }
+  const runOnce = (attemptIndex: number) =>
+    enqueueFirestoreWrite<ProposalWriteResult>(`proposal:${roomId}`, async () => {
+      return runTransaction(db!, async (tx) => {
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists()) throw new Error("room not found");
+        const room: any = roomSnap.data();
+        if (room.status !== "clue") return "noop";
+        if (room?.options?.resolveMode !== "sort-submit") return "noop";
+
+        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+          ? (room.deal.players as string[])
+          : null;
+        if (!roundPlayers || roundPlayers.length === 0) return "missing-deal";
+        if (!roundPlayers.includes(playerId)) return "missing-deal";
+
+        const pSnap = await tx.get(playerRef);
+        if (!pSnap.exists()) throw new Error("player not found");
+        const player: any = pSnap.data();
+        if (typeof player.number !== "number") {
+          return "missing-deal";
         }
-        if (!placed) next.push(playerId);
-      } else {
-        next = [...current];
-        const clamped = Math.max(
-          0,
-          Math.min(targetIndex, Math.max(0, maxCount - 1))
-        );
-        if (clamped < next.length) {
-          if (typeof next[clamped] === "string" && next[clamped]) {
-            return;
+
+        const maxCount: number = roundPlayers.length;
+        if (maxCount <= 0) return "missing-deal";
+
+        let current: (string | null)[] = Array.isArray(room?.order?.proposal)
+          ? (room.order.proposal as (string | null)[]).map((v) =>
+              typeof v === "string" ? v : null
+            )
+          : [];
+
+        if (current.includes(playerId)) return "noop";
+
+        let next = [...current];
+
+        if (targetIndex === -1) {
+          let placed = false;
+          for (let i = 0; i < Math.max(next.length, maxCount); i += 1) {
+            if (i >= next.length) next.length = i + 1;
+            if (next[i] == null) {
+              next[i] = playerId;
+              placed = true;
+              break;
+            }
           }
+          if (!placed) next.push(playerId);
         } else {
-          (next as any).length = clamped + 1;
+          const clamped = Math.max(
+            0,
+            Math.min(targetIndex, Math.max(0, maxCount - 1))
+          );
+          if (clamped < next.length) {
+            if (typeof next[clamped] === "string" && next[clamped]) {
+              return "noop";
+            }
+          } else {
+            next.length = clamped + 1;
+          }
+          next[clamped] = playerId;
         }
-        next[clamped] = playerId;
-        next = next.map((v) => (v === undefined ? null : v));
-      }
-      if (maxCount > 0) {
-        if (next.length > maxCount) next.length = maxCount;
-        if (next.length < maxCount) {
-          const pad = new Array(maxCount - next.length).fill(null);
-          next = [...next, ...pad];
-        }
-      }
 
-      tx.update(roomRef, {
-        "order.proposal": next,
-        order: { ...(room.order || {}), proposal: next },
-        lastActiveAt: serverTimestamp(),
+        if (maxCount > 0) {
+          if (next.length > maxCount) next.length = maxCount;
+          if (next.length < maxCount) {
+            const pad = new Array(maxCount - next.length).fill(null);
+            next = [...next, ...pad];
+          }
+        }
+
+        const normalized = next.map((v) => (v === undefined ? null : v));
+
+        tx.update(roomRef, {
+          "order.proposal": normalized,
+          order: { ...(room.order || {}), proposal: normalized },
+          lastActiveAt: serverTimestamp(),
+        });
+
+        return "ok";
       });
     });
-  });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await runOnce(attempt);
+    if (result === "ok" || result === "noop") {
+      return;
+    }
+
+    if (result === "missing-deal") {
+      if (attempt === 0) {
+        await dealNumbers(roomId).catch(() => {});
+      } else if (attempt === 1) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 200);
+        });
+      } else {
+        throw new Error("カードの提出準備が整っていません");
+      }
+      continue;
+    }
+  }
 }
 
 // 既にproposalに含まれるカードを、空きスロットに移動（重複防止）。
