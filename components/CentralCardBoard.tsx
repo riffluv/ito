@@ -121,7 +121,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const hasNumber = useMemo(() => !!me?.number, [me?.number]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
-
+  const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
 
   // Accessibility sensors for keyboard and pointer interactions
   // Sensors: mouse uses small distance threshold; touch uses hold delay with tolerance
@@ -202,6 +202,40 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           }
         : null,
   });
+  useEffect(() => {
+    const onCardReturning = (event: Event) => {
+      const detail = (event as CustomEvent<{ roomId?: string; playerId?: string }>).detail;
+      if (!detail || detail.roomId !== roomId || !detail.playerId) return;
+      const playerId = detail.playerId;
+      setOptimisticReturningIds((prev) =>
+        prev.includes(playerId) ? prev : [...prev, playerId]
+      );
+    };
+    window.addEventListener("ito:card-returning", onCardReturning as EventListener);
+    return () => {
+      window.removeEventListener("ito:card-returning", onCardReturning as EventListener);
+    };
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!optimisticReturningIds.length) return;
+    if (!proposal || proposal.length === 0) {
+      setOptimisticReturningIds([]);
+      return;
+    }
+    const proposalSet = new Set(
+      (proposal as (string | null)[]).filter((id): id is string => typeof id === "string" && id.length > 0)
+    );
+    setOptimisticReturningIds((prev) => prev.filter((id) => proposalSet.has(id)));
+  }, [proposal?.join(","), optimisticReturningIds.length]);
+
+  useEffect(() => {
+    if (roomStatus !== "clue") {
+      setOptimisticReturningIds([]);
+    }
+  }, [roomStatus]);
+
+
 
   // sequential ?? reveal hook ? pending ????????????????
   const {
@@ -236,6 +270,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [setPending]
   );
 
+  const optimisticReturningSet = useMemo(
+    () => new Set(optimisticReturningIds),
+    [optimisticReturningIds]
+  );
+  const availableEligibleCount = useMemo(() => {
+    if (!Array.isArray(eligibleIds)) return 0;
+    let count = 0;
+    eligibleIds.forEach((id) => {
+      if (playerMap.has(id)) {
+        count += 1;
+      }
+    });
+    return count;
+  }, [eligibleIds, playerMap]);
+
   // 待機エリアはpending中のカードも除外して残像を防ぐ
   const waitingPlayers = useMemo(() => {
     const pendingLookup = new Set((pending || []).filter(Boolean));
@@ -244,10 +293,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       .filter((p) => {
         if (!p) return false;
         if (pendingLookup.has(p.id)) return false;
+        if (optimisticReturningSet.has(p.id)) return true;
         if (placedIds.has(p.id)) return false;
         return p.id !== activeId;
       });
-  }, [eligibleIds, playerMap, placedIds, activeId, pending]);
+  }, [eligibleIds, playerMap, placedIds, activeId, pending, optimisticReturningSet]);
 
   // ??????????????????
   const [showResult, setShowResult] = useState(false);
@@ -421,18 +471,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (typeof slotCount === "number" && slotCount > 0) return slotCount;
     return Math.max(
       (activeProposal as (string | null)[]).length || 0,
-      Array.isArray(eligibleIds) ? eligibleIds.length : 0
+      availableEligibleCount
     );
-  }, [slotCount, (activeProposal as (string | null)[]).length, eligibleIds.length]);
+  }, [slotCount, (activeProposal as (string | null)[]).length, availableEligibleCount]);
   const slotCountStatic = useMemo(() => {
     if (typeof slotCount === "number" && slotCount > 0) return slotCount;
     if (roomStatus === "reveal" || roomStatus === "finished")
       return (orderList || []).length || 0;
     return Math.max(
       (activeProposal as (string | null)[]).length || 0,
-      Array.isArray(eligibleIds) ? eligibleIds.length : 0
+      availableEligibleCount
     );
-  }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, eligibleIds.length]);
+  }, [slotCount, roomStatus, orderList?.length, (activeProposal as (string | null)[]).length, availableEligibleCount]);
 
   // ⚡ PERFORMANCE: onDragStart/clearActive をuseCallback化
   const onDragStart = useCallback((e: DragStartEvent) => {
@@ -471,6 +521,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
         return;
       }
+      window.dispatchEvent(
+        new CustomEvent("ito:card-returning", {
+          detail: { roomId, playerId: activeId },
+        })
+      );
       updatePendingState((prev) => prev.filter((id) => id !== activeId));
       try {
         await removeCardFromProposal(roomId, activeId);
@@ -789,13 +844,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       const ap = activeProposal[idx] as any;
                       const cardId =
                         (ap ?? null) || (pending && pending[idx]) || null;
+                      const isOptimisticReturning =
+                        cardId != null && optimisticReturningSet.has(cardId);
                       const ready = cardId
                         ? !!(
                             playerMap.get(cardId)?.clue1 &&
                             playerMap.get(cardId)!.clue1.trim() !== ""
                           )
                         : false;
-                      if (cardId && ready) {
+                      if (cardId && ready && !isOptimisticReturning) {
                         // proposal ???? sortable?pending ???????????????
                         return ap ? (
                           <SortableItem id={cardId} key={cardId}>
@@ -965,6 +1022,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                       roomStatus === "reveal" ||
                       roomStatus === "finished";
 
+                    const isOptimisticReturning =
+                      cardId != null && optimisticReturningSet.has(cardId);
+
                     // ????????????????????????????
                     const ready = cardId
                       ? !!(
@@ -972,7 +1032,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                           playerMap.get(cardId)!.clue1.trim() !== ""
                         )
                       : false;
-                    return cardId && ready && isGameActive ? (
+                    return cardId && ready && !isOptimisticReturning && isGameActive ? (
                       <React.Fragment key={cardId ?? `slot-${idx}`}>
                         {renderCard(cardId, idx)}
                       </React.Fragment>

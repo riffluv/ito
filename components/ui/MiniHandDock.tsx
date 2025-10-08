@@ -469,27 +469,32 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
 
     try {
-        if (isSortMode) {
-          if (isRemoving) {
-            await removeCardFromProposal(roomId, me.id);
-            playCardPlace();
-            setInlineFeedback({
-              message: "カードを待機エリアに戻しました",
-              tone: "info",
-            });
-          } else {
-            await addCardToProposal(roomId, me.id);
-            playCardPlace();
-            setInlineFeedback({
-              message: "カードを提出しました",
-              tone: "success",
-            });
-          }
-        } else {
-          await commitPlayFromClue(roomId, me.id);
+      if (isSortMode) {
+        if (isRemoving) {
+          window.dispatchEvent(
+            new CustomEvent("ito:card-returning", {
+              detail: { roomId, playerId: me.id },
+            })
+          );
+          await removeCardFromProposal(roomId, me.id);
           playCardPlace();
-          setInlineFeedback({ message: "カードを提出しました", tone: "success" });
+          setInlineFeedback({
+            message: "カードを待機エリアに戻しました",
+            tone: "info",
+          });
+        } else {
+          await addCardToProposal(roomId, me.id);
+          playCardPlace();
+          setInlineFeedback({
+            message: "カードを提出しました",
+            tone: "success",
+          });
         }
+      } else {
+        await commitPlayFromClue(roomId, me.id);
+        playCardPlace();
+        setInlineFeedback({ message: "カードを提出しました", tone: "success" });
+      }
     } catch (e: any) {
       const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(e)) {
