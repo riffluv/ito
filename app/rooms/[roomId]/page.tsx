@@ -633,15 +633,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
     const mode = room?.options?.resolveMode || "sequential";
     const id = `clues-ready-${mode}-${roomId}-${room?.round || 0}`;
-    // sequential: 縺吶＄蜃ｺ縺怜ｧ九ａ繧峨ｌ繧・
-    // sort-submit: 荳ｦ縺ｹ縺ｦ繝帙せ繝医′縲後○繝ｼ縺ｮ縺ｧ蛻､螳壹阪・繧ｿ繝ｳ繧呈款縺呎ｵ√ｌ繧剃ｿ・☆
+    // sequential: すぐ出し始められる
+    // sort-submit: 並べてホストが『せーので判定』ボタンを押し通れを促す
     try {
       notify({
         id,
         type: "success",
-        title: "蜈ｨ蜩｡縺ｮ騾｣諠ｳ繝ｯ繝ｼ繝峨′謠・＞縺ｾ縺励◆",
+        title: "全員の連想ワードが揃いました",
         description:
-          "繧ｫ繝ｼ繝峨ｒ蜈ｨ蜩｡蝣ｴ縺ｫ鄂ｮ縺阪∫嶌隲・＠縺ｦ荳ｦ縺ｹ譖ｿ縺医※縺九ｉ縲弱○繝ｼ縺ｮ縺ｧ蛻､螳壹上ｒ謚ｼ縺励※縺上□縺輔＞",
+          "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
         duration: 6000,
       });
     } catch (error) {
@@ -1261,7 +1261,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           textTransform="uppercase"
           fontFamily="monospace"
         >
-          笆ｼ 隕ｳ謌ｦ荳ｭ 笆ｼ
+          ※ 観戦中 ※
         </Text>
         <Box textAlign="center">
           <Text
