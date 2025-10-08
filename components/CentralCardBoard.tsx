@@ -1116,6 +1116,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   displayMode={displayMode}
                   returnDropZoneId={RETURN_DROP_ZONE_ID}
                   hideClues={roomStatus !== "clue"}
+                  gameStarted={roomStatus === "clue"}
                 />
               </Box>
             )}
@@ -1293,6 +1294,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     meId={meId}
                     displayMode={displayMode}
                     hideClues={roomStatus !== "clue"}
+                    gameStarted={roomStatus === "clue"}
                   />
                 </Box>
               )}

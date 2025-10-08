@@ -4,14 +4,17 @@ import { createWaitingCardViewModel } from "./cardViewModel";
 import type { PlayerDoc } from "@/lib/types";
 import { Box } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { WAITING_LABEL } from "@/lib/ui/constants";
+import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 
 interface WaitingAreaCardProps {
   player: PlayerDoc & { id: string };
   isDraggingEnabled?: boolean;
   meId?: string;
   optimisticReset?: boolean;
+  gameStarted?: boolean;
 }
 
 function WaitingAreaCardComponent({
@@ -19,15 +22,68 @@ function WaitingAreaCardComponent({
   isDraggingEnabled = false,
   meId,
   optimisticReset = false,
+  gameStarted = false,
 }: WaitingAreaCardProps) {
   // 連想ワードの有効性を厳密にチェック（空文字列も無効とする）
   const hasValidClue = !!(player?.clue1 && player.clue1.trim() !== "");
   const ready = !optimisticReset && hasValidClue;
 
-  const cardViewModel = useMemo(
-    () => createWaitingCardViewModel({ player, ready }),
-    [player, ready]
-  );
+  const prefersReducedMotion = useReducedMotionPreference();
+  const PROMPT_LABEL = "Add your hint.";
+
+  const deriveInitialClue = () => {
+    if (ready) {
+      return player?.clue1?.trim() || "";
+    }
+    return WAITING_LABEL;
+  };
+
+  const [displayClue, setDisplayClue] = useState<string>(deriveInitialClue);
+  const promptShownRef = useRef(false);
+
+  useEffect(() => {
+    promptShownRef.current = false;
+  }, [player.id]);
+
+  useEffect(() => {
+    if (ready) {
+      const clueText = player?.clue1?.trim() || "";
+      setDisplayClue(clueText);
+      promptShownRef.current = false;
+      return;
+    }
+
+    if (!gameStarted) {
+      setDisplayClue(WAITING_LABEL);
+      promptShownRef.current = false;
+      return;
+    }
+
+    if (promptShownRef.current) {
+      setDisplayClue(PROMPT_LABEL);
+      return;
+    }
+
+    promptShownRef.current = true;
+
+    setDisplayClue(PROMPT_LABEL);
+  }, [gameStarted, ready, player.clue1]);
+
+  const cardViewModel = useMemo(() => {
+    const base = createWaitingCardViewModel({ player, ready });
+    if (!ready) {
+      return {
+        ...base,
+        clue: displayClue,
+      };
+    }
+    return {
+      ...base,
+      clue: player.clue1?.trim() || base.clue,
+      variant: base.variant,
+      flipped: false,
+    };
+  }, [player, ready, displayClue]);
 
   // ドラッグ機能（連想ワード確定後のみ有効）
   const { attributes, listeners, setNodeRef, isDragging } =
@@ -38,20 +94,19 @@ function WaitingAreaCardComponent({
         !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
     });
 
-  const style: CSSProperties = isDragging
+  const baseStyle: CSSProperties = isDragging
     ? {
-        // DragOverlay を使うため、元要素は動かさず不可視にする
         opacity: 0,
         pointerEvents: "none",
         cursor: "grabbing",
         transition: "none",
       }
     : {
-        // 非ドラッグ時は通常の見た目
         cursor:
           isDraggingEnabled && ready && meId === player.id ? "grab" : "default",
-        transition: "transform 0.2s ease",
+        transition: "transform 0.28s ease",
       };
+  const style: CSSProperties = baseStyle;
 
   return (
     <Box
@@ -71,6 +126,7 @@ const propsAreEqual = (prev: WaitingAreaCardProps, next: WaitingAreaCardProps) =
   if (prev.isDraggingEnabled !== next.isDraggingEnabled) return false;
   if (prev.meId !== next.meId) return false;
   if (prev.optimisticReset !== next.optimisticReset) return false;
+  if (prev.gameStarted !== next.gameStarted) return false;
 
   const prevPlayer = prev.player;
   const nextPlayer = next.player;
