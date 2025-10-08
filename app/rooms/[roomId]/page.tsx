@@ -924,7 +924,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     const timerId = window.setTimeout(() => {
       setDealRecoveryOpen(true);
       dealRecoveryTimerRef.current = null;
-    }, 1800);
+    }, 4500);
 
     dealRecoveryTimerRef.current = timerId;
 
@@ -1489,5 +1489,4 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-
 
