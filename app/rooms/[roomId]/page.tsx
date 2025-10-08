@@ -865,22 +865,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const needsDealRecovery = useMemo(() => {
     if (!room || room.status !== "clue") return false;
-    const dealPlayers = Array.isArray(room?.deal?.players)
-      ? (room.deal?.players as string[]).filter(
+    const deal = room.deal;
+    if (!deal) return true;
+    const dealPlayers = Array.isArray(deal.players)
+      ? (deal.players as string[]).filter(
           (pid): pid is string => typeof pid === "string" && pid.length > 0
         )
       : [];
-    if (dealPlayers.length === 0) return true;
-    if (players.length === 0) return true;
-    const playerIndex = new Map(players.map((p) => [p.id, p]));
-    for (const pid of dealPlayers) {
-      const candidate = playerIndex.get(pid);
-      if (!candidate || typeof candidate.number !== "number") {
-        return true;
-      }
-    }
-    return false;
-  }, [room, players]);
+    return dealPlayers.length === 0;
+  }, [room?.status, room?.deal?.players]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1276,7 +1269,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             fontWeight={700}
             textShadow="2px 2px 0 rgba(0,0,0,0.8)"
           >
-            蟶ｭ縺ｯ蝓九∪縺｣縺ｦ縺・∪縺・
+            席は埋まっています
           </Text>
           <Text
             fontSize={{ base: "sm", md: "md" }}
@@ -1284,7 +1277,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             lineHeight={1.7}
             mt={1}
           >
-            繝帙せ繝医′繝ｪ繧ｻ繝・ヨ縺吶ｌ縺ｰ蜀阪・蟶ｭ縺ｫ謌ｻ繧後ｋ繧茨ｼ√◎繧後∪縺ｧ縺ｯ繧ｲ繝ｼ繝縺ｮ讒伜ｭ舌ｒ隕ｳ謌ｦ縺励ｈ縺・ｼ・
+            ホストがリセットすればまた席に戻れます。しばらく観戦しながらお待ちください。
           </Text>
         </Box>
       </Box>
@@ -1301,10 +1294,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           onClick={handleRetryJoin}
           disabled={!waitingToRejoin}
         >
-          蟶ｭ縺ｫ謌ｻ繧後ｋ縺玖ｩｦ縺・
+          席に戻れるか試す
         </AppButton>
         <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
-          繝ｭ繝薙・縺ｸ謌ｻ繧・
+          ロビーへ戻る
         </AppButton>
       </Box>
     </Box>
