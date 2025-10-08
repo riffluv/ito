@@ -11,6 +11,7 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  Image,
 } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -180,6 +181,10 @@ export function MvpLedger({
   const headerFont = useBreakpointValue({ base: "18px", md: "21px" });
   const bodyFont = useBreakpointValue({ base: "15px", md: "16px" });
   const wrapperMarginTop = useBreakpointValue({ base: "12vh", md: "10vh" });
+  const columnTemplate = {
+    base: "60px 60px minmax(0, 1.4fr) minmax(0, 2.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
+    md: "68px 68px minmax(0, 1.5fr) minmax(0, 2.2fr) minmax(0, 0.9fr) minmax(0, 0.95fr) minmax(0, 0.95fr)",
+  } as const;
 
   if (!isOpen) return null;
 
@@ -218,33 +223,43 @@ export function MvpLedger({
           <Flex
             justify="space-between"
             align="center"
-            px={{ base: 5, md: 7 }}
-            py={4}
+            px={{ base: "19px", md: "27px" }}
+            py={{ base: "11px", md: "14px" }}
             borderBottom="3px solid rgba(255,255,255,0.9)"
             position="relative"
             zIndex={1}
             bg="rgba(0,0,0,0.4)"
           >
-            <Box>
-              <Text
-                fontSize={{ base: "20px", md: "24px" }}
-                letterSpacing="0.1em"
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-                fontWeight={700}
-              >
-                {failed ? "▼ 戦いの記録 ▼" : "▲ 冒険の記録 ▲"}
-              </Text>
-              <Text
-                fontSize="13px"
-                letterSpacing="0.06em"
-                mt={1}
-                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
-                opacity={0.9}
-              >
-                {failed ? "［敗北］" : "［勝利］"}
-                {topic ? ` お題: ${topic}` : ""}
-              </Text>
-            </Box>
+            <Flex align="center" gap={{ base: "11px", md: "15px" }}>
+              <Image
+                src="/images/hanepen1.webp"
+                alt="pen"
+                w={{ base: "32px", md: "38px" }}
+                h={{ base: "32px", md: "38px" }}
+                objectFit="contain"
+                filter="drop-shadow(1px 1px 2px rgba(0,0,0,0.8))"
+              />
+              <Box>
+                <Text
+                  fontSize={{ base: "19px", md: "23px" }}
+                  letterSpacing="0.12em"
+                  textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+                  fontWeight={700}
+                >
+                  {failed ? "BATTLE REPORT" : "PARTY RECORDS"}
+                </Text>
+                <Text
+                  fontSize={{ base: "11px", md: "12px" }}
+                  letterSpacing="0.05em"
+                  mt="5px"
+                  textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                  opacity={0.88}
+                >
+                  {failed ? "［敗北］" : "［勝利］"}
+                  {topic ? ` お題: ${topic}` : ""}
+                </Text>
+              </Box>
+            </Flex>
             <CloseButton
               aria-label="閉じる"
               variant="ghost"
@@ -258,8 +273,8 @@ export function MvpLedger({
 
           {/* 表部分 - CSS Grid使用 */}
           <Box
-            px={{ base: 5, md: 7 }}
-            py={{ base: 4, md: 5 }}
+            px={{ base: "19px", md: "27px" }}
+            py={{ base: "12px", md: "16px" }}
             position="relative"
             zIndex={1}
             flex="1"
@@ -270,36 +285,28 @@ export function MvpLedger({
             {/* Grid定義 */}
             <Box
               display="grid"
-              gridTemplateColumns={{
-                base: "50px 50px 1fr 2fr 70px 80px 70px",
-                md: "60px 60px 1.2fr 2fr 80px 90px 80px"
-              }}
-              gap={{ base: 2, md: 3 }}
-              px={{ base: 3, md: 4 }}
-              fontSize={{ base: "14px", md: "16px" }}
-              fontWeight={700}
-              letterSpacing="0.05em"
-              color="white"
-              pb={3}
+              gridTemplateColumns={columnTemplate}
+              gap={{ base: "7px", md: "11px" }}
+              px={{ base: "11px", md: "15px" }}
+              pb="9px"
               borderBottom="2px solid rgba(255,255,255,0.85)"
-              textShadow="1px 1px 0 rgba(0,0,0,0.7)"
               alignItems="center"
             >
-              <Box textAlign="center">NO</Box>
-              <Box />
-              <Box>なかま</Box>
-              <Box>連想語</Box>
-              <Box textAlign="center">数字</Box>
-              <Box textAlign="center">MVP</Box>
-              <Box textAlign="center">投票</Box>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">NO</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">{/* アバター */}</Flex>
+              <Box textAlign="left" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
+              <Box textAlign="left" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">数字</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">MVP</Flex>
+              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" width="100%">投票</Flex>
             </Box>
 
             {/* 表データ */}
             <Box
-              mt={3}
+              mt="7px"
               flex="1"
               overflowY="auto"
-              pr={{ base: 1, md: 2 }}
+              pr={{ base: "3px", md: "6px" }}
               css={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "rgba(255,255,255,0.6) transparent",
@@ -312,7 +319,7 @@ export function MvpLedger({
                 },
               }}
             >
-              <Stack gap={{ base: 2, md: 2.5 }}>
+              <Stack gap={{ base: "5px", md: "7px" }}>
                 {sortedPlayers.map((player, index) => (
                   <Box
                     key={player.id}
@@ -320,64 +327,70 @@ export function MvpLedger({
                       if (el) rowRefs.current[index] = el;
                     }}
                     display="grid"
-                    gridTemplateColumns={{
-                      base: "50px 50px 1fr 2fr 70px 80px 70px",
-                      md: "60px 60px 1.2fr 2fr 80px 90px 80px"
-                    }}
-                    gap={{ base: 2, md: 3 }}
+                    gridTemplateColumns={columnTemplate}
+                    gap={{ base: "7px", md: "11px" }}
                     alignItems="center"
                     bg="rgba(0,0,0,0.3)"
                     borderRadius="0"
-                    px={{ base: 3, md: 4 }}
-                    py={{ base: 3, md: 3.5 }}
+                    px={{ base: "11px", md: "15px" }}
+                    py={{ base: "7px", md: "9px" }}
                     _hover={{
                       bg: "rgba(255,255,255,0.1)",
                     }}
                   >
                     {/* NO. */}
-                    <Box
-                      fontSize={{ base: "15px", md: "17px" }}
+                    <Flex
+                      justify="center"
+                      align="center"
+                      fontSize={{ base: "14px", md: "16px" }}
                       fontWeight={700}
-                      textAlign="center"
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+                      width="100%"
                     >
                       {String(index + 1).padStart(2, "0")}
-                    </Box>
+                    </Flex>
 
                     {/* アバター */}
-                    <Box
-                      w={{ base: "44px", md: "52px" }}
-                      h={{ base: "44px", md: "52px" }}
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      border="2px solid rgba(255,255,255,0.5)"
-                      bg="rgba(0,0,0,0.4)"
+                    <Flex
+                      justify="center"
+                      align="center"
+                      width="100%"
                     >
-                      {player.avatar?.startsWith("/avatars/") ? (
-                        <img
-                          src={player.avatar}
-                          alt={player.name || "avatar"}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8)) contrast(1.1)",
-                          }}
-                        />
-                      ) : (
-                        <Text
-                          fontSize={{ base: "24px", md: "28px" }}
-                          filter="drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
-                        >
-                          {player.avatar || "⚔️"}
-                        </Text>
-                      )}
-                    </Box>
+                      <Box
+                        w={{ base: "40px", md: "48px" }}
+                        h={{ base: "40px", md: "48px" }}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        border="2px solid rgba(255,255,255,0.5)"
+                        bg="rgba(0,0,0,0.4)"
+                      >
+                        {player.avatar?.startsWith("/avatars/") ? (
+                          <img
+                            src={player.avatar}
+                            alt={player.name || "avatar"}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8)) contrast(1.1)",
+                            }}
+                          />
+                        ) : (
+                          <Text
+                            fontSize={{ base: "22px", md: "26px" }}
+                            filter="drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
+                          >
+                            {player.avatar || "⚔️"}
+                          </Text>
+                        )}
+                      </Box>
+                    </Flex>
 
                     {/* 名前 */}
                     <Box
-                      fontSize={{ base: "15px", md: "16px" }}
+                      textAlign="left"
+                      fontSize={{ base: "14px", md: "15px" }}
                       fontWeight={700}
                       letterSpacing="0.03em"
                       textShadow="1px 1px 0 rgba(0,0,0,0.6)"
@@ -390,7 +403,8 @@ export function MvpLedger({
 
                     {/* 連想語 */}
                     <Box
-                      fontSize={{ base: "14px", md: "15px" }}
+                      textAlign="left"
+                      fontSize={{ base: "13px", md: "14px" }}
                       fontWeight={600}
                       textShadow="1px 1px 0 rgba(0,0,0,0.5)"
                       overflow="hidden"
@@ -401,44 +415,50 @@ export function MvpLedger({
                     </Box>
 
                     {/* 数字 */}
-                    <Box
-                      textAlign="center"
-                      fontSize={{ base: "16px", md: "18px" }}
+                    <Flex
+                      justify="center"
+                      align="center"
+                      fontSize={{ base: "15px", md: "17px" }}
                       fontWeight={700}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+                      width="100%"
                     >
                       {typeof player.number === "number" ? player.number : "?"}
-                    </Box>
+                    </Flex>
 
                     {/* MVP得票数 */}
                     <Flex
-                      align="center"
                       justify="center"
-                      gap={1}
+                      align="center"
+                      width="100%"
+                      fontSize={{ base: "13px", md: "14px" }}
+                      fontWeight={700}
+                      color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
+                      textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+                      whiteSpace="nowrap"
+                      gap="4px"
                     >
                       {mvpStats.mvpId === player.id && (
-                        <Text fontSize={{ base: "14px", md: "16px" }}>🏆</Text>
+                        <Text as="span" fontSize={{ base: "14px", md: "16px" }} role="img" aria-hidden="true" mr="1px">🏆</Text>
                       )}
-                      <Text
-                        fontSize={{ base: "13px", md: "14px" }}
-                        fontWeight={700}
-                        color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
-                        textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                      >
+                      <Text as="span" display="inline-block">
                         ★{mvpStats.voteCounts[player.id] || 0}
                       </Text>
                     </Flex>
 
                     {/* 投票ボタン */}
-                    <Flex justify="center">
+                    <Flex justify="center" align="center" width="100%">
                       {player.id !== myId ? (
                         <Button
                           size="xs"
                           variant="ghost"
                           border={mvpStats.myVote === player.id ? "2px solid white" : "2px solid rgba(255,255,255,0.5)"}
                           borderRadius="0"
-                          px={{ base: 2, md: 3 }}
-                          fontSize={{ base: "10px", md: "11px" }}
+                          px={{ base: "6px", md: "9px" }}
+                          py={{ base: "3px", md: "4px" }}
+                          minH="auto"
+                          h="auto"
+                          fontSize={{ base: "9px", md: "10px" }}
                           letterSpacing="0.02em"
                           fontWeight={700}
                           color="white"
@@ -458,7 +478,7 @@ export function MvpLedger({
                           {mvpStats.myVote === player.id ? "取消" : "投票"}
                         </Button>
                       ) : (
-                        <Text fontSize={{ base: "11px", md: "12px" }} opacity={0.5}>―</Text>
+                        <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
                       )}
                     </Flex>
                   </Box>
@@ -471,10 +491,10 @@ export function MvpLedger({
           <Flex
             justify="space-between"
             align="center"
-            px={{ base: 5, md: 7 }}
-            py={4}
+            px={{ base: "19px", md: "27px" }}
+            py={{ base: "11px", md: "13px" }}
             borderTop="3px solid rgba(255,255,255,0.9)"
-            fontSize={{ base: "12px", md: "13px" }}
+            fontSize={{ base: "11px", md: "13px" }}
             letterSpacing="0.03em"
             bg="rgba(0,0,0,0.4)"
             zIndex={1}
@@ -510,4 +530,3 @@ export function MvpLedger({
     </Portal>
   );
 }
-
