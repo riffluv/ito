@@ -620,7 +620,11 @@ export function MvpLedger({
                   </>
                 ) : (
                   <>
-                    🏆 {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name || "？？？"} がMVPに選ばれました！
+                    {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name ? (
+                      <>🏆 {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name} がMVPに選ばれました！</>
+                    ) : (
+                      <>👋 MVPは去っていきました...</>
+                    )}
                   </>
                 )
               ) : (
