@@ -77,15 +77,24 @@ export function MvpLedger({
     const allVoted =
       sortedPlayers.length > 0 && sortedPlayers.every((p) => voters.includes(p.id));
 
-    let mvpId: string | null = null;
+    let mvpIds: string[] = [];
+    let isTie = false;
+    let isAllTie = false;
     if (allVoted) {
-      let maxVotes = 0;
-      Object.entries(voteCounts).forEach(([playerId, count]) => {
-        if (count > maxVotes) {
-          maxVotes = count;
-          mvpId = playerId;
-        }
-      });
+      const maxVotes = Math.max(...Object.values(voteCounts), 0);
+
+      if (maxVotes > 0) {
+        // 最多得票者を全員取得
+        mvpIds = sortedPlayers
+          .filter((p) => (voteCounts[p.id] || 0) === maxVotes)
+          .map((p) => p.id);
+
+        // 2人以上いたら同点
+        isTie = mvpIds.length > 1;
+
+        // 全員が同点かチェック
+        isAllTie = mvpIds.length === sortedPlayers.length;
+      }
     }
 
     return {
@@ -93,7 +102,9 @@ export function MvpLedger({
       totalVoters: voters.length,
       totalPlayers: sortedPlayers.length,
       allVoted,
-      mvpId,
+      mvpIds,
+      isTie,
+      isAllTie,
       myVote: votes[myId] || null,
     };
   }, [mvpVotes, sortedPlayers, myId]);
@@ -105,11 +116,19 @@ export function MvpLedger({
       if (!votedPlayerId || votedPlayerId === myId) return; // 自分には投票できない
       if (pendingTarget) return; // 多重送信ガード
       if (!validTargets.has(votedPlayerId)) return;
+      if (mvpStats.myVote) return; // すでに投票済みなら何もしない
 
-      const nextVote = mvpStats.myVote === votedPlayerId ? null : votedPlayerId;
       setPendingTarget(votedPlayerId);
       try {
-        await castMvpVote(roomId, myId, nextVote);
+        await castMvpVote(roomId, myId, votedPlayerId);
+
+        const playerName = sortedPlayers.find(p => p.id === votedPlayerId)?.name;
+        notify({
+          id: `mvp-vote-success:${roomId}`,
+          title: "MVP投票完了",
+          description: `${playerName || "このプレイヤー"} に投票しました`,
+          type: "success",
+        });
       } catch (error) {
         console.error("MVP投票エラー:", error);
         notify({
@@ -122,7 +141,7 @@ export function MvpLedger({
         setPendingTarget(null);
       }
     },
-    [myId, roomId, mvpStats.myVote, pendingTarget, validTargets]
+    [myId, roomId, mvpStats.myVote, pendingTarget, validTargets, sortedPlayers]
   );
 
   useEffect(() => {
@@ -182,8 +201,8 @@ export function MvpLedger({
   const bodyFont = useBreakpointValue({ base: "15px", md: "16px" });
   const wrapperMarginTop = useBreakpointValue({ base: "12vh", md: "10vh" });
   const columnTemplate = {
-    base: "60px 60px minmax(0, 1.4fr) minmax(0, 2.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
-    md: "68px 68px minmax(0, 1.5fr) minmax(0, 2.2fr) minmax(0, 0.9fr) minmax(0, 0.95fr) minmax(0, 0.95fr)",
+    base: "50px 60px minmax(0, 1.5fr) minmax(0, 2.2fr) 80px 100px",
+    md: "60px 68px minmax(0, 1.6fr) minmax(0, 2.3fr) 90px 120px",
   } as const;
 
   if (!isOpen) return null;
@@ -299,7 +318,6 @@ export function MvpLedger({
               <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
               <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">数字</Flex>
               <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">MVP</Flex>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">投票</Flex>
             </Box>
 
             {/* 表データ */}
@@ -332,12 +350,45 @@ export function MvpLedger({
                     gap={{ base: "7px", md: "11px" }}
                     alignItems="center"
                     justifyItems="center"
-                    bg="rgba(0,0,0,0.3)"
+                    bg={
+                      mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
+                        ? mvpStats.isAllTie
+                          ? "linear-gradient(135deg, rgba(59,130,246,0.27), rgba(37,99,235,0.21))"
+                          : mvpStats.isTie
+                          ? "linear-gradient(135deg, rgba(34,197,94,0.26), rgba(22,163,74,0.19))"
+                          : "linear-gradient(135deg, rgba(255,215,0,0.28), rgba(255,165,0,0.22))"
+                        : "rgba(0,0,0,0.3)"
+                    }
                     borderRadius="0"
                     px={{ base: "11px", md: "15px" }}
                     py={{ base: "7px", md: "9px" }}
+                    border={
+                      mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
+                        ? mvpStats.isAllTie
+                          ? "2px solid rgba(59,130,246,0.88)"
+                          : mvpStats.isTie
+                          ? "2px solid rgba(34,197,94,0.82)"
+                          : "2px solid rgba(255,215,0,0.85)"
+                        : "none"
+                    }
+                    boxShadow={
+                      mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
+                        ? mvpStats.isAllTie
+                          ? "0 0 19px rgba(59,130,246,0.52), inset 0 1px 0 rgba(255,255,255,0.16)"
+                          : mvpStats.isTie
+                          ? "0 0 17px rgba(34,197,94,0.48), inset 0 1px 0 rgba(255,255,255,0.14)"
+                          : "0 0 18px rgba(255,215,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12)"
+                        : "none"
+                    }
+                    position="relative"
                     _hover={{
-                      bg: "rgba(255,255,255,0.1)",
+                      bg: mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
+                        ? mvpStats.isAllTie
+                          ? "linear-gradient(135deg, rgba(59,130,246,0.33), rgba(37,99,235,0.27))"
+                          : mvpStats.isTie
+                          ? "linear-gradient(135deg, rgba(34,197,94,0.31), rgba(22,163,74,0.24))"
+                          : "linear-gradient(135deg, rgba(255,215,0,0.32), rgba(255,165,0,0.26))"
+                        : "rgba(255,255,255,0.1)",
                     }}
                   >
                     {/* NO. */}
@@ -431,62 +482,93 @@ export function MvpLedger({
                       {typeof player.number === "number" ? player.number : "?"}
                     </Flex>
 
-                    {/* MVP得票数 */}
+                    {/* MVP / 投票統合列 */}
                     <Flex
                       justify="center"
                       align="center"
-                      fontSize={{ base: "13px", md: "14px" }}
-                      fontWeight={700}
-                      color={mvpStats.voteCounts[player.id] > 0 ? "white" : "rgba(255,255,255,0.4)"}
-                      textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                      whiteSpace="nowrap"
-                      gap="4px"
                       justifySelf="center"
+                      w="100%"
+                      gap="4px"
                     >
-                      {mvpStats.mvpId === player.id && (
-                        <Text as="span" fontSize={{ base: "14px", md: "16px" }} role="img" aria-hidden="true" mr="1px">🏆</Text>
-                      )}
-                      <Text as="span" display="inline-block">
-                        ★{mvpStats.voteCounts[player.id] || 0}
-                      </Text>
-                    </Flex>
-
-                    {/* 投票ボタン */}
-                    <Flex justify="center" align="center" justifySelf="center" w="100%">
-                      {player.id !== myId ? (
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          border={mvpStats.myVote === player.id ? "2px solid white" : "2px solid rgba(255,255,255,0.5)"}
-                          borderRadius="0"
-                          px={{ base: "6px", md: "9px" }}
-                          py={{ base: "3px", md: "4px" }}
-                          minH="auto"
-                          h="auto"
-                          fontSize={{ base: "9px", md: "10px" }}
-                          letterSpacing="0.02em"
-                          fontWeight={700}
-                          color="white"
-                          bg={mvpStats.myVote === player.id ? "rgba(255,255,255,0.2)" : "transparent"}
-                          textShadow="1px 1px 0 rgba(0,0,0,0.6)"
-                          onClick={() => handleVote(player.id)}
-                          loading={pendingTarget === player.id}
-                          _hover={{
-                            bg: "rgba(255,255,255,0.15)",
-                            transform: "translateY(-1px)",
-                          }}
-                          _active={{
-                            bg: "rgba(255,255,255,0.25)",
-                            transform: "translateY(0)",
-                          }}
-                          mx="auto"
-                        >
-                          {mvpStats.myVote === player.id ? "取消" : "投票"}
-                        </Button>
+                      {mvpStats.allVoted ? (
+                        // 全員投票完了後: MVP表示
+                        <>
+                          {mvpStats.mvpIds.includes(player.id) && (
+                            <Text
+                              as="span"
+                              fontSize={{ base: "16px", md: "18px" }}
+                              role="img"
+                              aria-hidden="true"
+                            >
+                              {mvpStats.isAllTie ? "🌟" : mvpStats.isTie ? "✨" : "🏆"}
+                            </Text>
+                          )}
+                          <Text
+                            as="span"
+                            fontSize={{ base: "13px", md: "14px" }}
+                            fontWeight={700}
+                            color={
+                              mvpStats.mvpIds.includes(player.id)
+                                ? mvpStats.isAllTie
+                                  ? "#3B82F6"
+                                  : mvpStats.isTie
+                                  ? "#22C55E"
+                                  : "#FFD700"
+                                : "white"
+                            }
+                            textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+                          >
+                            ★{mvpStats.voteCounts[player.id] || 0}
+                          </Text>
+                        </>
                       ) : (
-                        <Flex justify="center" align="center" w="100%">
-                          <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
-                        </Flex>
+                        // 投票中: 投票ボタンまたは投票済み表示
+                        <>
+                          {player.id !== myId ? (
+                            mvpStats.myVote ? (
+                              <Text
+                                fontSize={{ base: "10px", md: "11px" }}
+                                color={mvpStats.myVote === player.id ? "#FFD700" : "rgba(255,255,255,0.3)"}
+                                fontWeight={700}
+                                letterSpacing="0.02em"
+                              >
+                                {mvpStats.myVote === player.id ? "✓投票済" : "―"}
+                              </Text>
+                            ) : (
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                border="2px solid rgba(255,255,255,0.5)"
+                                borderRadius="0"
+                                px={{ base: "7px", md: "10px" }}
+                                py={{ base: "4px", md: "5px" }}
+                                minH="auto"
+                                h="auto"
+                                fontSize={{ base: "9px", md: "10px" }}
+                                letterSpacing="0.02em"
+                                fontWeight={700}
+                                color="white"
+                                bg="transparent"
+                                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                                onClick={() => handleVote(player.id)}
+                                loading={pendingTarget === player.id}
+                                transition="180ms cubic-bezier(.2,1,.3,1)"
+                                _hover={{
+                                  bg: "rgba(255,255,255,0.15)",
+                                  transform: "translateY(-1px)",
+                                }}
+                                _active={{
+                                  bg: "rgba(255,255,255,0.25)",
+                                  transform: "translateY(0)",
+                                }}
+                              >
+                                投票
+                              </Button>
+                            )
+                          ) : (
+                            <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
+                          )}
+                        </>
                       )}
                     </Flex>
                   </Box>
@@ -508,7 +590,31 @@ export function MvpLedger({
             zIndex={1}
           >
             <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85}>
-              ※投票は各ラウンドでリセットされます
+              {mvpStats.allVoted ? (
+                mvpStats.isAllTie ? (
+                  <>
+                    🌟 全員同点！ みんな最高！
+                  </>
+                ) : mvpStats.isTie ? (
+                  <>
+                    ✨ 同点！{" "}
+                    {mvpStats.mvpIds
+                      .map(id => sortedPlayers.find(p => p.id === id)?.name)
+                      .filter(Boolean)
+                      .join(" & ")}{" "}
+                    が同率トップ！
+                  </>
+                ) : (
+                  <>
+                    🏆 {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name || "？？？"} がMVPに選ばれました！
+                  </>
+                )
+              ) : (
+                <>
+                  MVP投票: {mvpStats.totalVoters}/{mvpStats.totalPlayers}人完了
+                  {mvpStats.totalPlayers > 0 && " ※全員投票でMVPが決定します"}
+                </>
+              )}
             </Text>
             <Button
               size="sm"
