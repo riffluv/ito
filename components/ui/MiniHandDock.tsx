@@ -264,11 +264,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     };
   }, []);
 
-  const [text, setText] = React.useState<string>(me?.clue1 || "");
-  const deferredText = React.useDeferredValue(text);
-  const [isRestarting, setIsRestarting] = React.useState(false);
-  const [quickStartPending, setQuickStartPending] = React.useState(false);
-  const [isResetting, setIsResetting] = React.useState(false);
+const [text, setText] = React.useState<string>(me?.clue1 || "");
+const deferredText = React.useDeferredValue(text);
+const [isRestarting, setIsRestarting] = React.useState(false);
+const [quickStartPending, setQuickStartPending] = React.useState(false);
+const [isResetting, setIsResetting] = React.useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
@@ -276,8 +276,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     message: string;
     tone: "info" | "success";
   } | null>(null);
-  const [topicActionLoading, setTopicActionLoading] = React.useState(false);
-  const [dealActionLoading, setDealActionLoading] = React.useState(false);
+const [topicActionLoading, setTopicActionLoading] = React.useState(false);
+const [dealActionLoading, setDealActionLoading] = React.useState(false);
+const [submitPending, setSubmitPending] = React.useState(false);
 
   const {
     autoStartLocked,
@@ -674,7 +675,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   };
 
   const evalSorted = async () => {
-    if (!allSubmitted) return;
+    if (!allSubmitted || submitPending) return;
+    setSubmitPending(true);
     const list = (proposal || []).filter(
       (v): v is string => typeof v === "string" && v.length > 0
     );
@@ -683,6 +685,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       await submitSortedOrder(roomId, list);
     } catch (error) {
       handleGameError(error, "並び確定");
+    } finally {
+      setSubmitPending(false);
     }
   };
 
@@ -862,7 +866,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
         isVisible={shouldShowSeinoButton}
-        disabled={!allSubmitted}
+        disabled={!allSubmitted || submitPending}
+        aria-busy={submitPending ? "true" : undefined}
         onClick={evalSorted}
       />
 

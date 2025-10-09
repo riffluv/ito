@@ -6,8 +6,8 @@ import { topicControls } from "@/lib/game/topicControls";
 import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
 import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { handleGameError, withErrorHandling } from "@/lib/utils/errorHandling";
-import { useCallback, useMemo } from "react";
+import { handleGameError } from "@/lib/utils/errorHandling";
+import { useCallback, useMemo, useState } from "react";
 import { executeQuickStart } from "@/lib/game/quickStart";
 
 const normalizeProposalIds = (source: unknown): string[] =>
@@ -34,6 +34,7 @@ export type HostAction = {
   title?: string;
   palette?: "brand" | "orange" | "gray" | "teal";
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
+  busy?: boolean;
 };
 
 type AutoStartControl = {
@@ -62,6 +63,7 @@ export function useHostActions({
   onlineCount?: number;
   autoStartControl?: AutoStartControl;
 }): HostAction[] {
+  const [evaluatePending, setEvaluatePending] = useState(false);
   // buildHostActionModelをメモ化して不必要な再計算を防ぐ
   const intents = useMemo(
     () => buildHostActionModel(
@@ -76,6 +78,8 @@ export function useHostActions({
 
   // evaluateアクションのハンドラーを個別にメモ化
   const handleEvaluate = useCallback(async () => {
+    if (evaluatePending) return;
+    setEvaluatePending(true);
     const proposal = normalizeProposalIds(room.order?.proposal);
     const orderList = normalizeOrderList(room.order?.list);
     const activeCount =
@@ -103,8 +107,11 @@ export function useHostActions({
       });
     } catch (error) {
       handleGameError(error, "並び確定");
+    } finally {
+      setEvaluatePending(false);
     }
   }, [
+    evaluatePending,
     room.order?.proposal,
     room.order?.list,
     onlineCount,
@@ -169,21 +176,28 @@ export function useHostActions({
   const actions: HostAction[] = useMemo(() => intents.map((i: HostIntent): HostAction => {
     const uniqueKey =
       i.key + (i?.payload?.category ? `-${i.payload.category}` : "");
-    const make = (onClick: () => Promise<void> | void): HostAction => ({
+    const make = (
+      onClick: () => Promise<void> | void,
+      overrides?: Partial<HostAction>
+    ): HostAction => ({
       key: uniqueKey,
       label: i.label,
-      disabled: i.disabled,
+      disabled: overrides?.disabled ?? i.disabled,
       title: i.reason,
       palette: i.palette,
       variant: i.variant,
       onClick,
+      busy: overrides?.busy,
     });
 
     if (i.key === "primary") {
       return make(hostPrimaryAction?.onClick || (() => {}));
     }
     if (i.key === "evaluate") {
-      return make(handleEvaluate);
+      return make(handleEvaluate, {
+        disabled: i.disabled || evaluatePending,
+        busy: evaluatePending,
+      });
     }
     if (i.key === "quickStart") {
       const action = make(handleQuickStart);
@@ -202,7 +216,7 @@ export function useHostActions({
     }
     // それ以外(旧pickTopic等) は no-op
     return make(() => {});
-  }), [intents, hostPrimaryAction, handleEvaluate, handleQuickStart, handleReset]);
+  }), [intents, hostPrimaryAction, handleEvaluate, handleQuickStart, handleReset, evaluatePending, autoStartControl?.locked]);
 
   return actions;
 }

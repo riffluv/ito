@@ -29,10 +29,16 @@ async function broadcastNotify(
   roomId: string,
   type: "info" | "warning" | "success" | "error",
   title: string,
-  description?: string
+  description?: string,
+  contextKey?: string
 ) {
   try {
-    await sendNotifyEvent(roomId, { type, title, description });
+    await sendNotifyEvent(roomId, {
+      type,
+      title,
+      description,
+      dedupeKey: contextKey,
+    });
   } catch {
     // ignore broadcast failure
   }
@@ -70,7 +76,13 @@ export async function startGame(roomId: string) {
 
   // ゲーム開始通知をブロードキャスト
   try {
-    await broadcastNotify(roomId, "success", "ゲームを開始しました", "連想ワードを入力してください");
+    await broadcastNotify(
+      roomId,
+      "success",
+      "ゲームを開始しました",
+      "連想ワードを入力してください",
+      "room:start"
+    );
   } catch {
     // 通知失敗は無視
   }

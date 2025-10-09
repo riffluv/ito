@@ -14,6 +14,7 @@ interface SeinoButtonProps {
 
 export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const prevVisibleRef = React.useRef<boolean>(isVisible);
 
   React.useEffect(() => {
     const el = containerRef.current;
@@ -25,36 +26,59 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
           display: "block",
           pointerEvents: disabled ? "none" : "auto",
         });
-        gsap.fromTo(
-          el,
-          {
-            x: -250,
-            opacity: 0,
-            rotation: -8,
-            scale: 0.9,
+        if (!prevVisibleRef.current) {
+          gsap.fromTo(
+            el,
+            {
+              x: -250,
+              opacity: 0,
+              rotation: -8,
+              scale: 0.9,
+            },
+            {
+              x: 0,
+              opacity: 1,
+              rotation: 0,
+              scale: 1,
+              duration: 0.45,
+              ease: "back.out(2.5)",
+            }
+          );
+          gsap.fromTo(
+            el,
+            {
+              filter: "brightness(1)",
+            },
+            {
+              filter: "brightness(1.4)",
+              duration: 0.15,
+              yoyo: true,
+              repeat: 1,
+              ease: "power2.inOut",
+            }
+          );
+        }
+        gsap.set(el, {
+          pointerEvents: disabled ? "none" : "auto",
+          filter: "brightness(1)",
+        });
+      } else if (prevVisibleRef.current) {
+        gsap.to(el, {
+          opacity: 0,
+          duration: 0.18,
+          x: 16,
+          ease: "power1.out",
+          onComplete: () => {
+            gsap.set(el, {
+              display: "none",
+              pointerEvents: "none",
+              x: 0,
+              rotation: 0,
+              scale: 1,
+              filter: "brightness(1)",
+            });
           },
-          {
-            x: 0,
-            opacity: 1,
-            rotation: 0,
-            scale: 1,
-            duration: 0.45,
-            ease: "back.out(2.5)",
-          }
-        );
-        gsap.fromTo(
-          el,
-          {
-            filter: "brightness(1)",
-          },
-          {
-            filter: "brightness(1.4)",
-            duration: 0.15,
-            yoyo: true,
-            repeat: 1,
-            ease: "power2.inOut",
-          }
-        );
+        });
       } else {
         gsap.set(el, {
           display: "none",
@@ -67,6 +91,8 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
         });
       }
     }, containerRef);
+
+    prevVisibleRef.current = isVisible;
 
     return () => {
       ctx.revert();

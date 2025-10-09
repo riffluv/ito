@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase/client";
+import { bumpMetric } from "@/lib/utils/metrics";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 export type NotifyEvent = {
@@ -32,13 +33,22 @@ function shouldSkipNotify(key: string, now: number): boolean {
 
 export async function sendNotifyEvent(
   roomId: string,
-  opts: { type: NotifyEvent["type"]; title: string; description?: string }
+  opts: {
+    type: NotifyEvent["type"];
+    title: string;
+    description?: string;
+    dedupeKey?: string;
+  }
 ) {
-  const key = `${roomId}:${opts.type}:${opts.title}:${opts.description ?? ""}`;
+  const key = `${roomId}:${opts.type}:${opts.title}:${opts.description ?? ""}:${
+    opts.dedupeKey ?? ""
+  }`;
   const now = Date.now();
   if (shouldSkipNotify(key, now)) {
+    bumpMetric("notify", "dedupeSkipped");
     return;
   }
+  bumpMetric("notify", "published");
   await addDoc(collection(db!, "rooms", roomId, "events"), {
     kind: "notify",
     type: opts.type,
