@@ -68,9 +68,23 @@ export function MvpLedger({
   const mvpStats = useMemo(() => {
     const votes = mvpVotes || {};
     const voteCounts: Record<string, number> = {};
-    const voters = Object.keys(votes);
 
-    Object.values(votes).forEach((votedId) => {
+    // オンライン中のプレイヤーIDのSet
+    const onlinePlayerIds = new Set(sortedPlayers.map((p) => p.id));
+
+    // 投票済み判定: オンラインで投票した人（投票先が落ちててもOK）
+    const voters = Object.keys(votes).filter((voterId) =>
+      onlinePlayerIds.has(voterId)
+    );
+
+    // 有効票の集計: 投票者も投票先もオンライン
+    const validVotes = Object.entries(votes).filter(
+      ([voterId, votedId]) =>
+        onlinePlayerIds.has(voterId) && onlinePlayerIds.has(votedId)
+    );
+
+    // 有効な投票のみをカウント
+    validVotes.forEach(([_, votedId]) => {
       voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
     });
 
@@ -105,7 +119,7 @@ export function MvpLedger({
       mvpIds,
       isTie,
       isAllTie,
-      myVote: votes[myId] || null,
+      myVote: onlinePlayerIds.has(myId) ? (votes[myId] || null) : null,
     };
   }, [mvpVotes, sortedPlayers, myId]);
 
