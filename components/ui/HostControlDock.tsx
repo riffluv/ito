@@ -138,7 +138,8 @@ export default function HostControlDock({
             <AppButton
               key={action.key}
               onClick={action.onClick}
-              disabled={action.disabled}
+              disabled={action.disabled || Boolean(action.busy)}
+              aria-busy={action.busy ? "true" : undefined}
               title={action.title}
               colorPalette={action.palette}
               variant={mapVariant(action.variant)}

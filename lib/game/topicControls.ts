@@ -31,10 +31,11 @@ async function broadcastNotify(
   roomId: string,
   type: "info" | "warning" | "success" | "error",
   title: string,
-  description?: string
+  description?: string,
+  contextKey?: string
 ) {
   try {
-    await sendNotifyEvent(roomId, { type, title, description });
+    await sendNotifyEvent(roomId, { type, title, description, dedupeKey: contextKey });
   } catch {
     // ignore broadcast failure
   }
@@ -58,7 +59,8 @@ export const topicControls = {
         roomId,
         "success",
         `カテゴリ「${label}」を選択しました`,
-        picked ? `お題: ${picked}` : undefined
+        picked ? `お題: ${picked}` : undefined,
+        `topic:select:${type}:${picked ?? "none"}`
       );
     } catch (error: any) {
       if (isFirebaseQuotaExceeded(error)) {
@@ -88,7 +90,13 @@ export const topicControls = {
         topicBox: "カスタム",
         topicOptions: null,
       });
-      await broadcastNotify(roomId, "success", "お題を更新しました", `新しいお題: ${value}`);
+      await broadcastNotify(
+        roomId,
+        "success",
+        "お題を更新しました",
+        `新しいお題: ${value}`,
+        `topic:custom:${value}`
+      );
       try {
         await sendSystemMessage(roomId, `📝 お題を変更: ${value}`);
       } catch {}
@@ -173,7 +181,7 @@ export const topicControls = {
         throw new Error("プレイヤー状態を安全に再初期化しました。もう一度お試しください。");
       }
 
-      await broadcastNotify(roomId, "success", "ゲームをリセットしました");
+      await broadcastNotify(roomId, "success", "ゲームをリセットしました", undefined, "topic:reset");
     } catch (error: any) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("ゲームリセット");
@@ -203,7 +211,8 @@ export const topicControls = {
         roomId,
         "success",
         "お題をシャッフルしました",
-        picked ? `新しいお題: ${picked}` : undefined
+        picked ? `新しいお題: ${picked}` : undefined,
+        `topic:shuffle:${currentCategory}:${picked ?? "none"}`
       );
     } catch (error: any) {
       notify({
@@ -222,7 +231,8 @@ export const topicControls = {
         roomId,
         "success",
         "数字を配りました",
-        `対象プレイヤー: ${assignedCount}人`
+        `対象プレイヤー: ${assignedCount}人`,
+        `numbers:deal:${assignedCount}`
       );
     } catch (error: any) {
       notify({

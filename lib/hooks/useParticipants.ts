@@ -13,6 +13,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logDebug } from "@/lib/utils/log";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
@@ -77,6 +78,7 @@ export function useParticipants(
       if (unsubRef.current) return;
       const now = Date.now();
       if (now < backoffUntilRef.current) return;
+      bumpMetric("participants", "subscribeAttempts");
       unsubRef.current = onSnapshot(
         query(
           collection(db!, "rooms", roomId, "players").withConverter(
@@ -91,6 +93,8 @@ export function useParticipants(
             setPlayers(list);
             setLoading(false);
           });
+          setMetric("participants", "lastSnapshotTs", Date.now());
+          setMetric("participants", "playersCount", list.length);
         },
         (err) => {
           unstable_batchedUpdates(() => {
@@ -107,6 +111,7 @@ export function useParticipants(
               } catch {}
               backoffTimer = null;
             }
+            bumpMetric("participants", "quotaExceeded");
             const resume = () => {
               if (
                 typeof document !== "undefined" &&
@@ -126,6 +131,7 @@ export function useParticipants(
                   visibilityCleanupRef.current = () => {
                     document.removeEventListener("visibilitychange", handler);
                   };
+                  bumpMetric("participants", "visibilityAwait");
                 }
                 return;
               }
@@ -137,6 +143,7 @@ export function useParticipants(
                 maybeStart();
               }
             };
+            bumpMetric("participants", "resumeScheduled");
             resume();
           }
         }
@@ -167,6 +174,7 @@ export function useParticipants(
     const off = subscribePresence(roomId, (uids) => {
       logDebug("presence", "update", { roomId, uids });
       setOnlineUids(uids);
+      setMetric("participants", "onlineCount", Array.isArray(uids) ? uids.length : 0);
     });
     return () => off();
   }, [roomId]);
@@ -218,6 +226,10 @@ export function useParticipants(
     const set = new Set(onlineUids);
     return players.filter((p) => set.has(p.id));
   }, [players, Array.isArray(onlineUids) ? onlineUids.join(",") : "_"]);
+
+  useEffect(() => {
+    setMetric("participants", "activeCount", participants.length);
+  }, [participants.length]);
 
   const detach = async () => {
     try {
