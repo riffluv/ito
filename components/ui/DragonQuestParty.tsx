@@ -8,6 +8,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 
 const panelFloat = keyframes`
   0% { transform: translateY(0px); }
@@ -69,6 +70,8 @@ export function DragonQuestParty({
     { targetId: string; previousId: string | null } | null
   >(null);
   const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const prefersReducedMotion = useReducedMotionPreference();
+  const [ambientPhase, setAmbientPhase] = useState<0 | 1>(0);
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
@@ -116,15 +119,14 @@ export function DragonQuestParty({
   const effectiveIsHostUser = Boolean(isHostUser && !hostOverride);
 
   const orderedPlayers = useMemo(() => {
-    const list = [...displayedPlayers];
-    list.sort((a, b) => {
-      if (displayedHostId) {
-        if (a.id === displayedHostId && b.id !== displayedHostId) return -1;
-        if (b.id === displayedHostId && a.id !== displayedHostId) return 1;
-      }
-      return a.orderIndex - b.orderIndex;
-    });
-    return list;
+    if (!displayedHostId) {
+      return displayedPlayers;
+    }
+    const hostPlayer = displayedPlayers.find((player) => player.id === displayedHostId);
+    if (!hostPlayer) {
+      return displayedPlayers;
+    }
+    return [hostPlayer, ...displayedPlayers.filter((player) => player.id !== displayedHostId)];
   }, [displayedPlayers, displayedHostId]);
 
   const submittedSet = useMemo(() => {
@@ -244,6 +246,35 @@ export function DragonQuestParty({
 
   const enableScroll = orderedPlayers.length > 6;
   const shouldRevealNumbers = roomStatus === "finished";
+  useEffect(() => {
+    if (!prefersReducedMotion) return;
+    const id = window.setInterval(
+      () => setAmbientPhase((prev) => (prev === 0 ? 1 : 0)),
+      2400
+    );
+    return () => window.clearInterval(id);
+  }, [prefersReducedMotion]);
+
+  const reducedPanelTranslate = prefersReducedMotion
+    ? ambientPhase === 1
+      ? "-2px"
+      : "0px"
+    : undefined;
+  const headerGlowOpacity = prefersReducedMotion
+    ? ambientPhase === 1
+      ? 0.36
+      : 0.18
+    : 0.7;
+  const headerGlowShift = prefersReducedMotion
+    ? ambientPhase === 1
+      ? "translateX(30%) rotate(12deg)"
+      : "translateX(-30%) rotate(12deg)"
+    : "translateX(-120%) rotate(12deg)";
+  const headerBoxShadow = prefersReducedMotion
+    ? ambientPhase === 1
+      ? "0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)"
+      : "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)"
+    : "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)";
 
   return (
     <Box
@@ -266,10 +297,14 @@ export function DragonQuestParty({
         css={{
           pointerEvents: "auto",
           position: "relative",
-          animation: `${panelFloat} 7.4s cubic-bezier(0.44, 0.12, 0.34, 0.96) infinite alternate`,
-          '@media (prefers-reduced-motion: reduce)': {
-            animation: 'none',
-          },
+          ...(prefersReducedMotion
+            ? {
+                transform: `translateY(${reducedPanelTranslate})`,
+                transition: "transform 1.3s ease-in-out",
+              }
+            : {
+                animation: `${panelFloat} 7.4s cubic-bezier(0.44, 0.12, 0.34, 0.96) infinite alternate`,
+              }),
         }}
       >
         {/* Octopath Traveler-style party header */}
@@ -284,25 +319,36 @@ export function DragonQuestParty({
           border="1px solid rgba(255,255,255,0.15)"
           borderRadius="2px"
           css={{
-            boxShadow: "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
+            boxShadow: headerBoxShadow,
             backdropFilter: "blur(4px)",
             position: "relative",
             overflow: "hidden",
-            animation: `${headerPulse} 9.8s ease-in-out infinite`,
+            ...(prefersReducedMotion
+              ? {
+                  transition:
+                    "box-shadow 1.2s ease-in-out, filter 1.2s ease-in-out",
+                }
+              : {
+                  animation: `${headerPulse} 9.8s ease-in-out infinite`,
+                }),
             '&::after': {
               content: "''",
               position: "absolute",
               inset: "-40%",
-              background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 60%)',
-              transform: 'translateX(-120%) rotate(12deg)',
-              animation: `${headerGlint} 6.2s cubic-bezier(0.16, 0.84, 0.33, 1) infinite`,
-              pointerEvents: 'none',
-              mixBlendMode: 'screen',
-              opacity: 0.7,
-            },
-            '@media (prefers-reduced-motion: reduce)': {
-              animation: 'none',
-              '&::after': { animation: 'none', opacity: 0 },
+              background:
+                "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 60%)",
+              transform: headerGlowShift,
+              ...(prefersReducedMotion
+                ? {
+                    transition:
+                      "opacity 1.2s ease-in-out, transform 1.2s ease-in-out",
+                  }
+                : {
+                    animation: `${headerGlint} 6.2s cubic-bezier(0.16, 0.84, 0.33, 1) infinite`,
+                  }),
+              pointerEvents: "none",
+              mixBlendMode: "screen",
+              opacity: headerGlowOpacity,
             },
           }}
         >
