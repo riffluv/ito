@@ -10,6 +10,22 @@ import { handleGameError, withErrorHandling } from "@/lib/utils/errorHandling";
 import { useCallback, useMemo } from "react";
 import { executeQuickStart } from "@/lib/game/quickStart";
 
+const normalizeProposalIds = (source: unknown): string[] =>
+  Array.isArray(source)
+    ? source.filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0
+      )
+    : [];
+
+const normalizeOrderList = (source: unknown): string[] =>
+  Array.isArray(source)
+    ? source.filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0
+      )
+    : [];
+
 export type HostAction = {
   key: string;
   label: string;
@@ -60,8 +76,8 @@ export function useHostActions({
 
   // evaluateアクションのハンドラーを個別にメモ化
   const handleEvaluate = useCallback(async () => {
-    const proposal = room.order?.proposal ? [...room.order.proposal] : [];
-    const orderList = room.order?.list ? [...room.order.list] : [];
+    const proposal = normalizeProposalIds(room.order?.proposal);
+    const orderList = normalizeOrderList(room.order?.list);
     const activeCount =
       typeof onlineCount === "number" ? onlineCount : players.length;
     const placedCount =
@@ -77,14 +93,24 @@ export function useHostActions({
       return;
     }
     const finalOrder = proposal.length > 0 ? proposal : orderList;
-    await submitSortedOrder(roomId, finalOrder);
-    notify({
-      id: toastIds.genericInfo(roomId, "evaluate-success"),
-      title: "並びを確定",
-      type: "success",
-      duration: 1800,
-    });
-  }, [room.order?.proposal, room.order?.list, onlineCount, players.length, roomId]);
+    try {
+      await submitSortedOrder(roomId, finalOrder);
+      notify({
+        id: toastIds.genericInfo(roomId, "evaluate-success"),
+        title: "並びを確定",
+        type: "success",
+        duration: 1800,
+      });
+    } catch (error) {
+      handleGameError(error, "並び確定");
+    }
+  }, [
+    room.order?.proposal,
+    room.order?.list,
+    onlineCount,
+    players.length,
+    roomId,
+  ]);
 
   // quickStartアクションのハンドラーを個別にメモ化
   const handleQuickStart = useCallback(async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { User } from "firebase/auth";
-import { logInfo, logError } from "@/lib/utils/log";
+import { logError, logDebug } from "@/lib/utils/log";
 
 interface UseHostClaimParams {
   roomId: string;
@@ -78,10 +78,35 @@ export function useHostClaim({
         isSelfFallback) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
 
-    logInfo("room-page", "claim-host evaluate " + JSON.stringify({ roomId, uid, hostId, candidateId, lastKnownHostId, previousHostStillMember, isMember, leaving: leavingRef.current }));
+    logDebug(
+      "room-page",
+      "claim-host evaluate " +
+        JSON.stringify({
+          roomId,
+          uid,
+          hostId,
+          candidateId,
+          lastKnownHostId,
+          previousHostStillMember,
+          isMember,
+          leaving: leavingRef.current,
+        })
+    );
 
     if (!shouldAttemptClaim) {
-      logInfo("room-page", "claim-host skipped " + JSON.stringify({ roomId, uid, candidateId, lastKnownHostId, previousHostStillMember, isMember, leaving: leavingRef.current }));
+      logDebug(
+        "room-page",
+        "claim-host skipped " +
+          JSON.stringify({
+            roomId,
+            uid,
+            candidateId,
+            lastKnownHostId,
+            previousHostStillMember,
+            isMember,
+            leaving: leavingRef.current,
+          })
+      );
       hostClaimPostSuccessRef.current = 0;
       clearTimer();
       return clearTimer;
@@ -124,7 +149,15 @@ export function useHostClaim({
           throw error;
         }
         hostClaimAttemptRef.current = 0;
-        logInfo("room-page", "claim-host success " + JSON.stringify({ roomId, uid, attempts: hostClaimAttemptRef.current }));
+        logDebug(
+          "room-page",
+          "claim-host success " +
+            JSON.stringify({
+              roomId,
+              uid,
+              attempts: hostClaimAttemptRef.current,
+            })
+        );
         if (!hostId || String(hostId).trim().length === 0) {
           const retryCount = hostClaimPostSuccessRef.current + 1;
           if (retryCount <= 3) {

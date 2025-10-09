@@ -6,7 +6,7 @@ import {
   CHAT_PANEL_BOTTOM_DESKTOP,
   CHAT_PANEL_BOTTOM_MOBILE,
 } from "@/lib/ui/layout";
-import { Box } from "@chakra-ui/react";
+import { Box, Image } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { UI_TOKENS } from "@/theme/layout";
 import { keyframes } from "@emotion/react";
@@ -200,12 +200,10 @@ export default function MinimalChat({
               },
             }}
           >
-            <Box
-              as="img"
+            <Image
               src="/images/hanepen2.webp"
               alt=""
-              width="22px"
-              height="22px"
+              boxSize="22px"
               style={{
                 filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))",
               }}

@@ -1439,7 +1439,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         players={players}
         hostId={room?.hostId ?? null}
         onOpenLedger={() => setIsLedgerOpen(true)}
-        isGameFinished={room?.status === "finished" || room?.status === "completed"}
+        isGameFinished={room?.status === "finished"}
       />
 
       <RoomPasswordPrompt
@@ -1489,4 +1489,3 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-

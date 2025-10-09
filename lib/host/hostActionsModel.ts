@@ -32,12 +32,22 @@ function hasValidTopic(room: RoomDoc): boolean {
   return typeof room.topic === "string" && room.topic.length > 0;
 }
 
+function filterValidIds(
+  input: ReadonlyArray<string | null | undefined> | undefined | null
+): string[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter(
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0
+  );
+}
+
 function getProposalArray(room: RoomDoc): string[] {
-  return room.order?.proposal ? [...room.order.proposal] : [];
+  return filterValidIds(room.order?.proposal as any);
 }
 
 function getOrderList(room: RoomDoc): string[] {
-  return room.order?.list ? [...room.order.list] : [];
+  return filterValidIds(room.order?.list as any);
 }
 
 export function buildHostActionModel(
