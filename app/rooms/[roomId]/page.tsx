@@ -1323,7 +1323,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           onlineUids={onlineUids}
           roundIds={players.map((p) => p.id)}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenLedger={() => setIsLedgerOpen(true)}
           onLeaveRoom={leaveRoom}
           pop={pop}
         />
@@ -1439,6 +1438,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         roomId={roomId}
         players={players}
         hostId={room?.hostId ?? null}
+        onOpenLedger={() => setIsLedgerOpen(true)}
+        isGameFinished={room?.status === "finished" || room?.status === "completed"}
       />
 
       <RoomPasswordPrompt
