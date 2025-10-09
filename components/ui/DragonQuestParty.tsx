@@ -242,10 +242,6 @@ export function DragonQuestParty({
   [roomId, transferTargetId, displayedHostId]
 );
 
-  if (actualCount === 0) return null;
-
-  const enableScroll = orderedPlayers.length > 6;
-  const shouldRevealNumbers = roomStatus === "finished";
   useEffect(() => {
     if (!prefersReducedMotion) return;
     const id = window.setInterval(
@@ -254,6 +250,21 @@ export function DragonQuestParty({
     );
     return () => window.clearInterval(id);
   }, [prefersReducedMotion]);
+
+  const enableScroll = orderedPlayers.length > 6;
+  const shouldRevealNumbers = roomStatus === "finished";
+
+  if (actualCount === 0) {
+    return (
+      <Box
+        position="fixed"
+        top={{ base: "108px", md: "120px" }}
+        left={{ base: "20px", md: "24px" }}
+        zIndex={60}
+        pointerEvents="none"
+      />
+    );
+  }
 
   const reducedPanelTranslate = prefersReducedMotion
     ? ambientPhase === 1

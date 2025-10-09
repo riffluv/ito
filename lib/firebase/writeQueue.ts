@@ -1,3 +1,5 @@
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+
 const queues = new Map<string, QueueState>();
 const DEFAULT_MIN_INTERVAL = 120;
 
@@ -48,6 +50,8 @@ async function runNext(scope: string) {
   state.running = true;
   const elapsed = Date.now() - state.lastRun;
   const wait = Math.max(state.minInterval - elapsed, 0);
+  setMetric("firestoreQueue", `${scope}:pending`, state.tasks.length);
+  setMetric("firestoreQueue", `${scope}:waitMs`, wait);
 
   if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
     console.debug(
@@ -61,8 +65,10 @@ async function runNext(scope: string) {
       const result = await nextTask.execute();
       state.lastRun = Date.now();
       nextTask.resolve(result);
+      bumpMetric("firestoreQueue", `${scope}:success`);
     } catch (error) {
       nextTask.reject(error);
+      bumpMetric("firestoreQueue", `${scope}:errors`);
     } finally {
       state.running = false;
       if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
@@ -71,6 +77,7 @@ async function runNext(scope: string) {
           `[FirestoreQueue] ${scope}: task completed in ${duration ? duration.toFixed(2) : "?"}ms`
         );
       }
+      setMetric("firestoreQueue", `${scope}:pending`, state.tasks.length);
       if (state.tasks.length === 0) {
         queues.delete(scope);
       } else {
@@ -100,6 +107,8 @@ export function enqueueFirestoreWrite<T>(
         `[FirestoreQueue] ${scope}: enqueued (size ${state.tasks.length}${state.running ? ", running" : ""})`
       );
     }
+    setMetric("firestoreQueue", `${scope}:pending`, state.tasks.length);
+    bumpMetric("firestoreQueue", `${scope}:enqueued`);
     void runNext(scope);
   });
 }
