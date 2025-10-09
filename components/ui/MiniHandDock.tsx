@@ -28,6 +28,7 @@ import type { PlayerDoc } from "@/lib/types";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import {
   handleFirebaseQuotaError,
+  handleGameError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
@@ -678,7 +679,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       (v): v is string => typeof v === "string" && v.length > 0
     );
     playOrderConfirm();
-    await submitSortedOrder(roomId, list);
+    try {
+      await submitSortedOrder(roomId, list);
+    } catch (error) {
+      handleGameError(error, "並び確定");
+    }
   };
 
   const resetGame = async (options?: { showFeedback?: boolean; playSound?: boolean }) => {

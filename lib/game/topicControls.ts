@@ -16,6 +16,17 @@ import {
 } from "@/lib/topics";
 import { doc, updateDoc } from "firebase/firestore";
 
+const PLAYER_RESET_BATCH_SIZE = 400;
+
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  if (!items.length || size <= 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 async function broadcastNotify(
   roomId: string,
   type: "info" | "warning" | "success" | "error",
@@ -109,11 +120,8 @@ export const topicControls = {
         }
       }
 
-      // バッチ処理で効率的に更新
-      const batch = writeBatch(db!);
-
       // 1. roomドキュメントをリセット
-      batch.update(roomRef, {
+      await updateDoc(roomRef, {
         status: "waiting", // ★ ロビー状態に戻す
         result: null,
         deal: null,
@@ -126,25 +134,31 @@ export const topicControls = {
         expiresAt: null,
       });
 
-      // 2. すべてのplayerドキュメントのclue1をクリア
+      // 2. すべてのplayerドキュメントのclue1をクリア（バッチ分割）
       const playersRef = collection(db!, "rooms", roomId, "players");
       const playersSnapshot = await getDocs(playersRef);
+      const playerDocs = playersSnapshot.docs;
 
-      playersSnapshot.forEach((playerDoc) => {
-        // clue1フィールドのみクリアして状態をリセット
-        batch.update(playerDoc.ref, {
-          clue1: "", // 🚨 連想ワードをクリアして紫マークを消す
-          ready: false // readyフラグもリセット
+      const chunks = chunkArray(playerDocs, PLAYER_RESET_BATCH_SIZE);
+      for (const chunk of chunks) {
+        const batch = writeBatch(db!);
+        chunk.forEach((playerDoc) => {
+          batch.update(playerDoc.ref, {
+            clue1: "",
+            ready: false,
+          });
         });
-      });
-
-      // バッチ実行
-      try {
-        await batch.commit();
-      } catch (commitError) {
-        logWarn("topicControls", "reset-topic-batch-commit-failed", commitError);
-        await emergencyResetPlayerStates(roomId);
-        throw commitError;
+        try {
+          await batch.commit();
+        } catch (commitError) {
+          logWarn("topicControls", "reset-topic-batch-commit-failed", {
+            roomId,
+            size: chunk.length,
+            error: commitError,
+          });
+          await emergencyResetPlayerStates(roomId);
+          throw commitError;
+        }
       }
 
       let verified = true;

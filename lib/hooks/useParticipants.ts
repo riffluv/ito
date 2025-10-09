@@ -55,11 +55,22 @@ export function useParticipants(
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const visibilityCleanupRef = { current: null as null | (() => void) };
+
+    const detachVisibilityListener = () => {
+      if (typeof document === "undefined") return;
+      if (visibilityCleanupRef.current) {
+        visibilityCleanupRef.current();
+        visibilityCleanupRef.current = null;
+      }
+    };
+
     const stop = () => {
       try {
         unsubRef.current?.();
       } catch {}
       unsubRef.current = null;
+      detachVisibilityListener();
     };
 
     const maybeStart = () => {
@@ -100,12 +111,31 @@ export function useParticipants(
               if (
                 typeof document !== "undefined" &&
                 document.visibilityState !== "visible"
-              )
+              ) {
+                if (
+                  typeof document !== "undefined" &&
+                  !visibilityCleanupRef.current
+                ) {
+                  const handler = () => {
+                    if (document.visibilityState === "visible") {
+                      detachVisibilityListener();
+                      resume();
+                    }
+                  };
+                  document.addEventListener("visibilitychange", handler);
+                  visibilityCleanupRef.current = () => {
+                    document.removeEventListener("visibilitychange", handler);
+                  };
+                }
                 return;
+              }
+              detachVisibilityListener();
               const remain = backoffUntilRef.current - Date.now();
-              if (remain > 0)
+              if (remain > 0) {
                 backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
-              else maybeStart();
+              } else {
+                maybeStart();
+              }
             };
             resume();
           }
@@ -123,6 +153,7 @@ export function useParticipants(
         } catch {}
       }
       stop();
+      detachVisibilityListener();
     };
   }, [roomId]);
 
