@@ -40,6 +40,42 @@ export async function fetchTopicSections(): Promise<TopicSections> {
   return parseItoWordMarkdown(text);
 }
 
+const TOPIC_CACHE_WINDOW_MS = 5 * 60 * 1000;
+let cachedSections: TopicSections | null = null;
+let cachedAt = 0;
+let inflight: Promise<TopicSections> | null = null;
+
+export async function getTopicSectionsCached(options?: { force?: boolean }): Promise<TopicSections> {
+  const force = options?.force ?? false;
+  const now = Date.now();
+
+  if (!force && cachedSections && now - cachedAt < TOPIC_CACHE_WINDOW_MS) {
+    return cachedSections;
+  }
+
+  if (!force && inflight) {
+    return inflight;
+  }
+
+  const request = fetchTopicSections()
+    .then((sections) => {
+      cachedSections = sections;
+      cachedAt = Date.now();
+      inflight = null;
+      return sections;
+    })
+    .catch((error) => {
+      inflight = null;
+      throw error;
+    });
+
+  if (!force) {
+    inflight = request;
+  }
+
+  return request;
+}
+
 export function parseItoWordMarkdown(md: string): TopicSections {
   const lines = md.split(/\r?\n/);
   const normal: string[] = [];

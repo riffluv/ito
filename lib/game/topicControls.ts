@@ -8,7 +8,7 @@ import { sendNotifyEvent } from "@/lib/firebase/events";
 import { emergencyResetPlayerStates, verifyPlayerStatesCleared } from "@/lib/utils/emergencyRecovery";
 import { logWarn } from "@/lib/utils/log";
 import {
-  fetchTopicSections,
+  getTopicSectionsCached,
   getTopicsByType,
   pickOne,
   topicTypeLabels,
@@ -34,7 +34,7 @@ export const topicControls = {
   // カテゴリを選択してお題をランダム決定
   async selectCategory(roomId: string, type: TopicType) {
     try {
-      const sections = await fetchTopicSections();
+      const sections = await getTopicSectionsCached();
       const pool = getTopicsByType(sections, type);
       const picked = pickOne(pool) || null;
       await updateDoc(doc(db!, "rooms", roomId), {
@@ -181,7 +181,7 @@ export const topicControls = {
       return;
     }
     try {
-      const sections = await fetchTopicSections();
+      const sections = await getTopicSectionsCached();
       const pool = getTopicsByType(sections, currentCategory as TopicType);
       const picked = pickOne(pool) || null;
       await updateDoc(doc(db!, "rooms", roomId), { topic: picked });
