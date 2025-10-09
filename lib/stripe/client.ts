@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-const DEFAULT_API_VERSION = "2025-08-27.basil" as const;
+const DEFAULT_API_VERSION = "2024-06-20";
 const STRIPE_APP_NAME = "Sei no Monshou III";
 
 const globalStripe = globalThis as typeof globalThis & {
@@ -8,11 +8,11 @@ const globalStripe = globalThis as typeof globalThis & {
 };
 
 function resolveApiVersion(): Stripe.StripeConfig["apiVersion"] {
-  const configured = process.env.STRIPE_API_VERSION as Stripe.StripeConfig["apiVersion"] | undefined;
-  if (!configured || configured.trim().length === 0) {
-    return DEFAULT_API_VERSION;
+  const configured = process.env.STRIPE_API_VERSION;
+  if (configured && configured.trim().length > 0) {
+    return configured.trim() as Stripe.StripeConfig["apiVersion"];
   }
-  return configured;
+  return DEFAULT_API_VERSION as unknown as Stripe.StripeConfig["apiVersion"];
 }
 
 function createStripeClient(): Stripe {
@@ -43,3 +43,5 @@ export function getStripeClient(): Stripe {
   }
   return globalStripe.__STRIPE_CLIENT__;
 }
+
+export type { Stripe };
