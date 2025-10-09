@@ -1083,14 +1083,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         alignItems="center"
         justifyContent="center"
         px={4}
-        bg={UI_TOKENS.GRADIENTS.mainBg}
+        bg="rgba(8,9,15,1)"
       >
         <Box
           position="relative"
           border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
           borderRadius={0}
           boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg={UI_TOKENS.GRADIENTS.dqPanel}
+          bg="rgba(8,9,15,0.9)"
           color={UI_TOKENS.COLORS.textBase}
           px={{ base: 6, md: 8 }}
           py={{ base: 6, md: 7 }}
@@ -1112,7 +1112,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               textShadow="2px 2px 0 rgba(0,0,0,0.8)"
               mb={3}
             >
-              笆ｼ 404 - Not Found 笆ｼ
+              ▼ 404 - Not Found ▼
             </Text>
             <Text
               fontSize={{ base: "lg", md: "xl" }}
@@ -1120,7 +1120,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               lineHeight={1.6}
               textShadow="1px 1px 0 rgba(0,0,0,0.8)"
             >
-              {"\u304a\u3063\u3068\u3001\u90e8\u5c4b\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093"}
+              おっと、部屋が見つかりません
             </Text>
             <Text
               fontSize={{ base: "md", md: "lg" }}
@@ -1128,8 +1128,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               lineHeight={1.7}
               mt={3}
             >
-              {"\u90e8\u5c4b\u304c\u524a\u9664\u3055\u308c\u305f\u304b\u3001URL\u304c\u9593\u9055\u3063\u3066\u3044\u308b\u3088\u3046\u3067\u3059"}
-              
+              部屋が削除されたか、URLが間違っているようです
             </Text>
           </Box>
           <Box display="flex" justifyContent="center">
@@ -1139,7 +1138,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               size="md"
               minW="180px"
             >
-              {"\u30ed\u30d3\u30fc\u3078\u623b\u308b"}
+              ロビーへ戻る
             </AppButton>
           </Box>
         </Box>
