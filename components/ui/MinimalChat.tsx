@@ -9,23 +9,74 @@ import {
 import { Box } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { UI_TOKENS } from "@/theme/layout";
+import { keyframes } from "@emotion/react";
 import React from "react";
 import type { PlayerDoc } from "@/lib/types";
+import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
+
+// 戦績ボタン用アンビエント効果（高頻度版）
+const ledgerGlint = keyframes`
+  0% { transform: translateX(-140%) rotate(9deg); opacity: 0; }
+  8% { transform: translateX(-40%) rotate(9deg); opacity: 0.4; }
+  16% { transform: translateX(30%) rotate(9deg); opacity: 0.5; }
+  24% { transform: translateX(100%) rotate(9deg); opacity: 0.3; }
+  32% { transform: translateX(150%) rotate(9deg); opacity: 0; }
+
+  /* 2周目: すぐ次の光が来る */
+  40% { transform: translateX(-140%) rotate(9deg); opacity: 0; }
+  48% { transform: translateX(-40%) rotate(9deg); opacity: 0.4; }
+  56% { transform: translateX(30%) rotate(9deg); opacity: 0.5; }
+  64% { transform: translateX(100%) rotate(9deg); opacity: 0.3; }
+  72% { transform: translateX(150%) rotate(9deg); opacity: 0; }
+
+  /* 短い休憩 */
+  100% { transform: translateX(150%) rotate(9deg); opacity: 0; }
+`;
 
 interface MinimalChatProps {
   roomId: string;
   players?: (PlayerDoc & { id: string })[];
   hostId?: string | null;
+  onOpenLedger?: () => void;
+  isGameFinished?: boolean;
 }
 
 export default function MinimalChat({
   roomId,
   players = [],
   hostId = null,
+  onOpenLedger,
+  isGameFinished = false,
 }: MinimalChatProps) {
   const [open, setOpen] = React.useState(false);
+  const prefersReducedMotion = useReducedMotionPreference();
+  const [ambientPhase, setAmbientPhase] = React.useState<0 | 1>(0);
+
+  // アンビエント効果のフェーズ切り替え（高頻度: 800ms）
+  React.useEffect(() => {
+    if (prefersReducedMotion) return;
+    const id = window.setInterval(
+      () => setAmbientPhase((prev) => (prev === 0 ? 1 : 0)),
+      800 // 超高頻度で常に光っている感じに
+    );
+    return () => window.clearInterval(id);
+  }, [prefersReducedMotion]);
+
+  // 低スペック対応: prefersReducedMotionの時は静的な切り替え（常に明るめ）
+  const glowOpacity = prefersReducedMotion
+    ? ambientPhase === 1
+      ? 0.5
+      : 0.35
+    : 0.8; // 常時明るめに
+  const glowShift = prefersReducedMotion
+    ? ambientPhase === 1
+      ? "translateX(30%) rotate(12deg)"
+      : "translateX(-30%) rotate(12deg)"
+    : "translateX(-120%) rotate(12deg)";
+
   return (
     <>
+      {/* チャットトグルボタン */}
       <Box
         position="fixed"
         // さらに外側（画面の右端に寄せる）
@@ -52,6 +103,117 @@ export default function MinimalChat({
           {open ? "✕" : "💬"}
         </IconButtonDQ>
       </Box>
+
+      {/* 戦績ボタン（チャットトグルの下） */}
+      {onOpenLedger && (
+        <Box
+          position="fixed"
+          right={{ base: 3, md: 5 }}
+          bottom={{
+            base: `calc(${CHAT_FAB_OFFSET_MOBILE} - 58px)`,
+            md: `calc(${CHAT_FAB_OFFSET_DESKTOP} - 62px)`,
+          }}
+          zIndex={20}
+          opacity={isGameFinished ? 1 : 0}
+          pointerEvents={isGameFinished ? "auto" : "none"}
+          transform={isGameFinished ? "translateY(0)" : "translateY(12px)"}
+          transition="all 320ms cubic-bezier(.2,1,.3,1)"
+        >
+          <Box
+            as="button"
+            onClick={onOpenLedger}
+            display="flex"
+            alignItems="center"
+            gap="8px"
+            minW="150px"
+            height="48px"
+            px="14px"
+            border="3px solid rgba(214,177,117,0.9)"
+            borderRadius="0"
+            background="linear-gradient(180deg, rgba(20,23,34,0.98) 0%, rgba(12,14,20,1) 100%)"
+            fontFamily="monospace"
+            fontSize="15px"
+            fontWeight="700"
+            letterSpacing="0.08em"
+            color="white"
+            textShadow="2px 2px 0 rgba(0,0,0,0.9)"
+            boxShadow={`
+              inset 0 2px 0 rgba(255,255,255,0.12),
+              inset 0 -2px 0 rgba(0,0,0,0.5),
+              0 4px 8px rgba(0,0,0,0.4),
+              2px 2px 0 rgba(0,0,0,0.8)
+            `}
+            transition={`transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+            cursor="pointer"
+            position="relative"
+            overflow="hidden"
+            _hover={{
+              background: "linear-gradient(180deg, rgba(25,28,39,0.98) 0%, rgba(15,17,23,1) 100%)",
+              transform: "translateY(-1px)",
+              boxShadow: `
+                inset 0 2px 0 rgba(255,255,255,0.15),
+                inset 0 -2px 0 rgba(0,0,0,0.6),
+                0 6px 12px rgba(0,0,0,0.5),
+                2px 2px 0 rgba(0,0,0,0.9)
+              `,
+            }}
+            _active={{
+              transform: "translateY(0)",
+              boxShadow: `
+                inset 0 1px 0 rgba(255,255,255,0.08),
+                inset 0 -1px 0 rgba(0,0,0,0.4),
+                0 2px 4px rgba(0,0,0,0.3),
+                1px 1px 0 rgba(0,0,0,0.7)
+              `,
+            }}
+            css={{
+              // アンビエント光効果（高頻度版）
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                inset: "-40%",
+                background:
+                  "radial-gradient(circle at 20% 20%, rgba(214,177,117,0.35), transparent 60%)",
+                transform: glowShift,
+                ...(prefersReducedMotion
+                  ? {
+                      transition:
+                        "opacity 0.4s ease-in-out, transform 0.4s ease-in-out",
+                    }
+                  : {
+                      animation: `${ledgerGlint} 3.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite`,
+                    }),
+                pointerEvents: "none",
+                mixBlendMode: "screen",
+                opacity: glowOpacity,
+              },
+              // ベース光（常時点灯）
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(214,177,117,0.08), transparent 80%)",
+                pointerEvents: "none",
+                mixBlendMode: "screen",
+                opacity: 1,
+              },
+            }}
+          >
+            <Box
+              as="img"
+              src="/images/hanepen2.webp"
+              alt=""
+              width="22px"
+              height="22px"
+              style={{
+                filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))",
+              }}
+            />
+            <Box as="span">戦績を見る</Box>
+          </Box>
+        </Box>
+      )}
 
       {open && (
         <Box
