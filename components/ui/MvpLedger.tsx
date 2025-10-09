@@ -383,7 +383,7 @@ export function MvpLedger({
                           : mvpStats.isTie
                           ? "2px solid rgba(34,197,94,0.82)"
                           : "2px solid rgba(255,215,0,0.85)"
-                        : "none"
+                        : "2px solid transparent"
                     }
                     boxShadow={
                       mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
