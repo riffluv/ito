@@ -1,16 +1,14 @@
 "use client";
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import {
-  startGame as startGameAction,
-  submitSortedOrder,
-} from "@/lib/game/room";
+import { submitSortedOrder } from "@/lib/game/room";
 import { topicControls } from "@/lib/game/topicControls";
 import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
 import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { handleGameError, withErrorHandling } from "@/lib/utils/errorHandling";
 import { useCallback, useMemo } from "react";
+import { executeQuickStart } from "@/lib/game/quickStart";
 
 export type HostAction = {
   key: string;
@@ -116,12 +114,10 @@ export function useHostActions({
         ],
         2800
       );
-      if (room.status === "waiting") {
-        await startGameAction(roomId);
-      }
-      const selectType = defaultType === "カスタム" ? "通常版" : defaultType;
-      await topicControls.selectCategory(roomId, selectType as any);
-      await topicControls.dealNumbers(roomId);
+      await executeQuickStart(roomId, {
+        roomStatus: room.status,
+        defaultTopicType: defaultType,
+      });
     } catch (error) {
       autoStartControl?.clear?.();
       handleGameError(error, "クイック開始");
