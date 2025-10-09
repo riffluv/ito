@@ -1,0 +1,71 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getStripeClient, type Stripe } from "@/lib/stripe/client";
+import {
+  assertAllowedPriceId,
+  assertAllowedReturnUrl,
+  parseCheckoutBody,
+} from "@/lib/stripe/helpers";
+import { ZodError } from "zod";
+
+export const runtime = "nodejs";
+
+export async function POST(request: NextRequest) {
+  let payload;
+  try {
+    payload = parseCheckoutBody(await request.json());
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: "Invalid payload", issues: error.flatten() },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  let priceId: string;
+  let successUrl: string;
+  let cancelUrl: string;
+
+  try {
+    priceId = assertAllowedPriceId(payload.priceId);
+    successUrl = assertAllowedReturnUrl(payload.successUrl, "successUrl");
+    cancelUrl = assertAllowedReturnUrl(payload.cancelUrl, "cancelUrl");
+  } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Validation error" }, { status: 400 });
+  }
+
+  const metadata =
+    payload.userId && payload.userId.length > 0 ? { userId: payload.userId } : undefined;
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripeClient();
+  } catch (error) {
+    console.error("[stripe] Stripe client initialization failed", error);
+    return NextResponse.json({ error: "Stripe client not configured" }, { status: 500 });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata,
+    });
+
+    if (!session.url) {
+      return NextResponse.json({ error: "Checkout session missing URL" }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: session.url }, { status: 201 });
+  } catch (error) {
+    console.error("[stripe] Failed to create checkout session", error);
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
+}
