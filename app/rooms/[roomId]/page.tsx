@@ -47,6 +47,7 @@ import {
 import { toMillis } from "@/lib/time";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
+import { initMetricsExport } from "@/lib/utils/metricsExport";
 import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
@@ -107,6 +108,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const transition = useTransition();
   const uid = user?.uid || null;
   useAssetPreloader(ROOM_CORE_ASSETS);
+  useEffect(() => {
+    initMetricsExport();
+  }, []);
 
   useEffect(() => {
     const prefetch = async () => {
@@ -137,6 +141,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     isHost,
     detachNow,
     leavingRef,
+    joinStatus,
   } = useRoomState(
     roomId,
     uid,
@@ -1333,8 +1338,35 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </Box>
   );
 
+  const joinStatusMessage =
+    joinStatus === "retrying"
+      ? "再接続を試行しています..."
+      : joinStatus === "joining"
+      ? "ルームへ再参加中です..."
+      : null;
+
+  const joinStatusBanner = joinStatusMessage ? (
+    <Box
+      position="fixed"
+      top="12px"
+      right="16px"
+      zIndex={1200}
+      padding="10px 14px"
+      background="rgba(8, 12, 20, 0.82)"
+      border="1px solid rgba(255,255,255,0.18)"
+      color="rgba(255,255,255,0.9)"
+      fontFamily="'Courier New', monospace"
+      fontSize="13px"
+      borderRadius="4px"
+      boxShadow="0 4px 12px rgba(0,0,0,0.35)"
+    >
+      {joinStatusMessage}
+    </Box>
+  ) : null;
+
   return (
     <>
+      {joinStatusBanner}
       {/* 蜿ｳ荳翫ヨ繝ｼ繧ｹ繝磯夂衍縺ｮ雉ｼ隱ｭ・医メ繝｣繝・ヨ縺ｨ迢ｬ遶具ｼ・*/}
       <RoomNotifyBridge roomId={roomId} />
       <GameLayout

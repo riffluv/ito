@@ -21,6 +21,7 @@ export type RoomState = {
   onlinePlayers: (PlayerDoc & { id: string })[];
   isMember: boolean;
   isHost: boolean;
+  joinStatus?: "idle" | "joining" | "retrying" | "joined";
 };
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
@@ -43,6 +44,9 @@ export function useRoomState(
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const leavingRef = useRef(false);
+  const [joinStatus, setJoinStatus] = useState<"idle" | "joining" | "retrying" | "joined">(
+    "idle"
+  );
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -173,6 +177,9 @@ export function useRoomState(
         joinRetryTimerRef.current = null;
       }
     }
+    if (isMember) {
+      setJoinStatus("joined");
+    }
   }, [isMember]);
 
   // participants: Firestore players + RTDB presence
@@ -254,6 +261,7 @@ export function useRoomState(
           joinCompletedRef.current = true;
           joinAttemptRef.current = 0;
           clearRetryTimer();
+          setJoinStatus("joined");
         })
         .catch((error) => {
           joinCompletedRef.current = false;
@@ -271,8 +279,10 @@ export function useRoomState(
                 joinRetryTimerRef.current = null;
                 setJoinAttemptToken((value) => value + 1);
               }, delay);
+              setJoinStatus("retrying");
             } else {
               logError("room-state", "joinRoomFully-max-retries", error);
+              setJoinStatus("retrying");
             }
           } else {
             joinAttemptRef.current = 0;
@@ -284,6 +294,7 @@ export function useRoomState(
         });
 
       joinInFlightRef.current = joinTask;
+      setJoinStatus("joining");
       joinTask.catch(() => void 0);
     } else if (isMember) {
       joinAttemptRef.current = 0;
@@ -291,9 +302,11 @@ export function useRoomState(
       ensureMember({ roomId, uid, displayName: displayName }).catch(
         () => void 0
       );
+      setJoinStatus("joined");
     } else {
       joinAttemptRef.current = 0;
       clearRetryTimer();
+      setJoinStatus("idle");
     }
   }, [
     roomId,
@@ -348,6 +361,7 @@ export function useRoomState(
     membershipRetryAtRef.current = now;
     joinCompletedRef.current = false;
     setJoinAttemptToken((value) => value + 1);
+    setJoinStatus("joining");
   }, [
     firebaseEnabled,
     loading,
@@ -375,5 +389,5 @@ export function useRoomState(
   );
 
   const detachNow = detach;
-  return { ...state, detachNow, leavingRef } as const;
+  return { ...state, detachNow, leavingRef, joinStatus } as const;
 }

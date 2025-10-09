@@ -2,7 +2,8 @@
 
 import { Box, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { ItoMetrics, metricsKey, readMetrics } from "@/lib/utils/metrics";
+import { ItoMetrics, metricsKey, readMetrics, subscribeMetrics } from "@/lib/utils/metrics";
+import { initMetricsExport } from "@/lib/utils/metricsExport";
 
 const ENABLED = process.env.NEXT_PUBLIC_DEBUG_METRICS === "1";
 
@@ -25,13 +26,11 @@ export function DebugMetricsHUD() {
 
   useEffect(() => {
     if (!ENABLED) return;
-    const update = () => {
-      setMetrics(readMetrics());
-    };
-    update();
-    const id = window.setInterval(update, REFRESH_INTERVAL);
+    initMetricsExport();
+    setMetrics(readMetrics());
+    const unsubscribe = subscribeMetrics((snapshot) => setMetrics(snapshot));
     return () => {
-      window.clearInterval(id);
+      unsubscribe();
     };
   }, []);
 
