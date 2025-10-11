@@ -69,8 +69,8 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
       opacity: 1,
       y: 0,
       scale: 1,
-      duration: 0.6,
-      ease: "back.out(1.3)",
+      duration: 0.55,
+      ease: "cubic-bezier(.2,1,.3,1.05)",
     });
 
     // 2. 矢印バウンス登場
@@ -80,8 +80,8 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
         opacity: 1,
         y: 0,
         scale: 1,
-        duration: 0.5,
-        ease: "back.out(1.7)",
+        duration: 0.48,
+        ease: "cubic-bezier(.18,.95,.28,1.08)",
       },
       "-=0.3"
     );
@@ -89,23 +89,23 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
     // 3. 矢印が上下にバウンス（2回）
     tl.to(arrow, {
       y: "-=8",
-      duration: 0.4,
+      duration: 0.42,
       repeat: 3,
       yoyo: true,
-      ease: "sine.inOut",
+      ease: "cubic-bezier(.4,.1,.6,.9)",
     });
 
-    // 4. パーティクル拡散（8方向）
+    // 4. パーティクル拡散（4方向）
     tl.to(
       particles,
       {
         scale: 1.2,
-        x: (i) => Math.cos((i * Math.PI) / 4) * PARTICLE_CONFIG.spreadDistance,
-        y: (i) => Math.sin((i * Math.PI) / 4) * PARTICLE_CONFIG.spreadDistance,
+        x: (i) => [18, -18, 22, -22][i] || 0,
+        y: (i) => [-22, -22, 18, 18][i] || 0,
         opacity: 0,
-        duration: 1.0,
-        ease: "power2.out",
-        stagger: 0.05,
+        duration: 0.95,
+        ease: "cubic-bezier(.3,.9,.5,1)",
+        stagger: 0.06,
       },
       "-=1.2"
     );
@@ -115,8 +115,8 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
       container,
       {
         opacity: 0,
-        duration: 0.5,
-        ease: "power2.inOut",
+        duration: 0.52,
+        ease: "cubic-bezier(.4,.2,.6,1)",
       },
       "+=1.5"
     );
