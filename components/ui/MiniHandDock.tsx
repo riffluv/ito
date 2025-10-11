@@ -53,6 +53,7 @@ import { SeinoButton } from "./SeinoButton";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
+import { InputModal } from "./InputModal";
 
 // ========================================
 // 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
@@ -280,6 +281,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [topicActionLoading, setTopicActionLoading] = React.useState(false);
   const [dealActionLoading, setDealActionLoading] = React.useState(false);
 
+  // モーダル状態管理
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const triggerButtonRef = React.useRef<HTMLDivElement>(null);
+
   const {
     autoStartLocked,
     beginLock: beginAutoStartLock,
@@ -326,6 +331,55 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       setIsRevealAnimating(false);
     }
   }, [roomStatus]);
+
+  // スペースキー/Escキーのグローバルハンドラー
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // モーダル内の入力欄やその他の入力要素にフォーカスがある場合は無視
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const canEdit = roomStatus === "waiting" || roomStatus === "clue";
+
+      // スペースキーでモーダルを開く
+      if (e.key === " " && !isModalOpen && canEdit) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsModalOpen(true);
+        // スクロール抑止
+        document.body.style.overflow = "hidden";
+      }
+
+      // Escキーでモーダルを閉じる
+      if (e.key === "Escape" && isModalOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsModalOpen(false);
+        // スクロール復元
+        document.body.style.overflow = "";
+        // トリガーボタンにフォーカスを戻す
+        setTimeout(() => {
+          triggerButtonRef.current?.focus();
+        }, 250);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+      // クリーンアップ時にスクロール復元
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen, roomStatus]);
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
@@ -903,21 +957,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Box>
       )}
 
-      {/* 中央: 連想ワード入力エリア (Octopath風・独立浮遊) */}
+      {/* 中央: カード表示 + 入力モーダル起動ボタン */}
       <Box
         position="fixed"
         bottom={{ base: "16px", md: "20px" }}
         left="50%"
         transform="translateX(-50%)"
         zIndex={50}
-        maxW={{ base: "calc(100vw - 32px)", md: "900px" }}
+        maxW={{ base: "calc(100vw - 32px)", md: "600px" }}
         w="100%"
       >
         <Flex
           gap={{ base: "12px", md: "16px" }}
-          align="flex-end"
+          align="center"
           justify="center"
-          flexWrap={{ base: "wrap", md: "nowrap" }}
           px={{ base: "14px", md: "18px" }}
           py={{ base: "10px", md: "12px" }}
           css={{
@@ -948,113 +1001,50 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             },
           }}
         >
+          {/* カード表示 */}
           <Box flexShrink={0}>
             <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
           </Box>
 
-          <Box
-            flex={{ base: "1 1 100%", md: "1 1 280px" }}
-            minW={{ base: "220px", md: "240px" }}
-          >
-            <Input
-              aria-label="連想ワード"
-              placeholder="連想ワード"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              maxLength={50}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleDecide();
-              }}
-              size="sm"
-              bg="rgba(18,22,32,0.95)"
-              color="rgba(255,255,255,0.98)"
-              fontFamily="'Courier New', monospace"
-              fontSize="16px"
-              fontWeight="700"
-              letterSpacing="0.04em"
-              border="none"
-              borderRadius={0}
-              boxShadow="inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.08), 0 0 0 2px rgba(255,255,255,0.78)"
-              minH="48px"
-              w="100%"
-              transition="box-shadow 168ms cubic-bezier(.2,1,.3,1)"
-              _placeholder={{
-                color: "rgba(255,255,255,0.45)",
-                letterSpacing: "0.06em",
-              }}
-              _focus={{
-                boxShadow:
-                  "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.12), 0 0 0 2px rgba(255,255,255,0.95)",
-                bg: "rgba(22,26,36,0.98)",
-                outline: "none",
-              }}
-              _hover={{
-                boxShadow:
-                  "inset 2px 2px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1), 0 0 0 2px rgba(255,255,255,0.85)",
-                bg: "rgba(20,24,34,0.96)",
-              }}
-            />
+          {/* 入力モーダル起動ボタン */}
+          <Box ref={triggerButtonRef}>
+            <Tooltip content="連想ワード入力 (Space)" showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="md"
+                visual="solid"
+                palette="brand"
+                color="rgba(255,255,255,0.98)"
+                onClick={() => setIsModalOpen(true)}
+                disabled={!clueEditable}
+                w="auto"
+                minW="140px"
+                px="20px"
+                py="12px"
+              >
+                <HStack gap="8px">
+                  <Text>入力</Text>
+                  <Text
+                    fontSize="11px"
+                    opacity={0.75}
+                    fontWeight="700"
+                    bg="rgba(255,255,255,0.15)"
+                    px="6px"
+                    py="2px"
+                    borderRadius="2px"
+                  >
+                    Space
+                  </Text>
+                </HStack>
+              </AppButton>
+            </Tooltip>
           </Box>
 
-          <HStack
-            gap={{ base: "6px", md: "8px" }}
-            align="flex-end"
-            flex={{ base: "1 1 100%", md: "0 1 auto" }}
-            minW={0}
-            justify={{ base: "flex-start", md: "flex-end" }}
-          >
-            <Tooltip content={decideTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="solid"
-                palette="brand"
-                color="rgba(255,255,255,0.98)"
-                onClick={handleDecide}
-                disabled={!canDecide}
-                w="auto"
-                minW="70px"
-              >
-                決定
-              </AppButton>
-            </Tooltip>
-            <Tooltip content={clearTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="outline"
-                palette="gray"
-                color="rgba(255,255,255,0.92)"
-                onClick={handleClear}
-                disabled={clearButtonDisabled}
-                w="auto"
-                minW="70px"
-              >
-                クリア
-              </AppButton>
-            </Tooltip>
-            <Tooltip content={submitTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="solid"
-                palette="brand"
-                color="rgba(255,255,255,0.98)"
-                onClick={handleSubmit}
-                disabled={!canClickProposalButton}
-                w="auto"
-                minW="88px"
-              >
-                {actionLabel}
-              </AppButton>
-            </Tooltip>
-          </HStack>
-
+          {/* ホスト専用ボタン */}
           {isHost && (
             <Flex
               gap={{ base: "6px", md: "8px" }}
               align="center"
-              flex={{ base: "1 1 100%", md: "0 0 auto" }}
               flexWrap="nowrap"
             >
               <Box w="2px" h="36px" bg="rgba(255,255,255,0.22)" mx={{ base: "2px", md: "6px" }} />
@@ -1486,6 +1476,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             </Dialog.Content>
           </Dialog.Positioner>
         </Dialog.Root>
+
+      {/* 連想ワード入力モーダル */}
+      <InputModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          document.body.style.overflow = "";
+        }}
+        text={text}
+        onTextChange={setText}
+        onDecide={handleDecide}
+        onClear={handleClear}
+        onSubmit={handleSubmit}
+        canDecide={canDecide}
+        canClear={!clearButtonDisabled}
+        canSubmit={canClickProposalButton}
+        actionLabel={actionLabel}
+        decideTooltip={decideTooltip}
+        clearTooltip={clearTooltip}
+        submitTooltip={submitTooltip}
+        footerHeight={80}
+      />
     </>
   );
 }
