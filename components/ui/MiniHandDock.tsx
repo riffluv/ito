@@ -86,6 +86,44 @@ const pulseGlow = keyframes`
   }
 `;
 
+// オレンジ系アンビエント（ゲーム開始ボタン用）
+const orangeGlowStart = keyframes`
+  0% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,145,65,0.3);
+  }
+  32% {
+    box-shadow: 0 0 0 2px rgba(230,105,35,0.85), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.24), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 22px rgba(255,155,75,0.42);
+  }
+  61% {
+    box-shadow: 0 0 0 2px rgba(240,115,45,0.88), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.26), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 26px rgba(255,165,85,0.52);
+  }
+  87% {
+    box-shadow: 0 0 0 2px rgba(225,100,30,0.82), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,150,70,0.38);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,145,65,0.3);
+  }
+`;
+
+// オレンジ系アンビエント（次のゲーム用 - 少し控えめ）
+const orangeGlowNext = keyframes`
+  0% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 14px rgba(255,145,65,0.25);
+  }
+  38% {
+    box-shadow: 0 0 0 2px rgba(230,105,35,0.84), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,155,75,0.35);
+  }
+  69% {
+    box-shadow: 0 0 0 2px rgba(235,110,40,0.86), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.24), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,160,80,0.4);
+  }
+  91% {
+    box-shadow: 0 0 0 2px rgba(225,100,30,0.82), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 16px rgba(255,150,70,0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 14px rgba(255,145,65,0.25);
+  }
+`;
+
 const TYPING_TAGS = new Set(["input", "textarea", "select"]);
 
 const isTypingFocus = (target: EventTarget | null): boolean => {
@@ -1010,6 +1048,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             size="lg"
             visual="solid"
             onClick={() => quickStart()}
+            css={{
+              animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
+            }}
           >
             ゲーム開始
           </AppButton>
@@ -1030,6 +1071,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             size="lg"
             visual="solid"
             onClick={handleNextGame}
+            css={{
+              animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
+            }}
           >
             次のゲーム
           </AppButton>
