@@ -159,18 +159,18 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
         w="0"
         h="0"
       >
-        {Array.from({ length: PARTICLE_CONFIG.count }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <Box
             key={i}
             ref={(el: HTMLDivElement | null) => {
               if (el) particlesRef.current[i] = el;
             }}
             position="absolute"
-            w={PARTICLE_CONFIG.size}
-            h={PARTICLE_CONFIG.size}
-            bg="rgba(120,210,255,0.95)"
+            w="3px"
+            h="3px"
+            bg="rgba(108,198,252,0.88)"
             borderRadius="50%"
-            boxShadow="0 0 8px rgba(80,180,255,0.7)"
+            boxShadow="0 0 6px rgba(108,198,252,0.5)"
           />
         ))}
       </Box>
@@ -181,24 +181,24 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
         <Box
           ref={textRef}
           bg="rgba(28,32,42,0.98)"
-          color="rgba(255,255,255,0.98)"
-          px="18px"
-          py="10px"
-          borderRadius={0}
-          border="2px solid rgba(255,255,255,0.9)"
-          boxShadow="3px 3px 0 rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15)"
+          color="rgba(255,255,255,0.96)"
+          px="17px"
+          py="11px"
+          borderRadius="2px"
+          border="3px solid rgba(255,255,255,0.88)"
+          boxShadow="2px 3px 0 rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.12), inset -1px -1px 0 rgba(0,0,0,0.3)"
           fontFamily="'Courier New', monospace"
           fontSize={{ base: "13px", md: "15px" }}
           fontWeight="700"
-          textShadow="1px 1px 0 rgba(0,0,0,0.9)"
+          textShadow="1px 1px 0 rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.6)"
           whiteSpace="nowrap"
           mb="8px"
         >
-          <Text as="span" color="rgba(120,210,255,0.98)" fontWeight="800">
-            E
+          <Text as="span" color="rgba(108,198,252,0.94)" fontWeight="800">
+            ▶ E
           </Text>
-          <Text as="span" mx="6px">
-            or ドラッグ で出す！
+          <Text as="span" mx="7px" letterSpacing="0.02em">
+            / ドラッグ
           </Text>
         </Box>
 
@@ -210,9 +210,9 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
           justifyContent="center"
           w="36px"
           h="36px"
-          color="rgba(120,210,255,0.98)"
+          color="rgba(108,198,252,0.94)"
           fontSize="28px"
-          filter="drop-shadow(0 0 8px rgba(80,180,255,0.6)) drop-shadow(1px 1px 2px rgba(0,0,0,0.8))"
+          filter="drop-shadow(0 0 6px rgba(108,198,252,0.4)) drop-shadow(1px 2px 1px rgba(0,0,0,0.85))"
         >
           <FaArrowUp />
         </Box>
