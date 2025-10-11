@@ -420,6 +420,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     !!isHost && isSortMode && roomStatus === "clue" && allSubmitted;
 
   React.useEffect(() => {
+    if (!ready) return;
+    const el = inputRef.current;
+    if (!el) return;
+    if (typeof window === "undefined") return;
+    if (document.activeElement === el) {
+      el.blur();
+    }
+  }, [ready]);
+
+  React.useEffect(() => {
     if (!clueEditable) {
       setInlineFeedback(null);
     }
@@ -629,13 +639,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (event.repeat) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key?.toLowerCase() !== "e") return;
-      if (isTypingFocus(event.target)) return;
+      const target = event.target as HTMLElement | null;
+      if (target === inputRef.current) {
+        event.preventDefault();
+        inputRef.current?.blur();
+        handleSubmit();
+        return;
+      }
+      if (isTypingFocus(target)) return;
       event.preventDefault();
       handleSubmit();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleSubmit, isSubmitHintEligible]);
+  }, [handleSubmit, inputRef, isSubmitHintEligible]);
 
   // カスタムお題モーダル制御
     const [customOpen, setCustomOpen] = React.useState(false);
