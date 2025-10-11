@@ -51,6 +51,7 @@ import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
 import SpaceKeyHint from "./SpaceKeyHint";
+import SubmitEHint from "./SubmitEHint";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
@@ -83,6 +84,17 @@ const pulseGlow = keyframes`
     box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2);
   }
 `;
+
+const TYPING_TAGS = new Set(["input", "textarea", "select"]);
+
+const isTypingFocus = (target: EventTarget | null): boolean => {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName.toLowerCase();
+  if (TYPING_TAGS.has(tagName)) return true;
+  const role = target.getAttribute("role");
+  return role === "textbox";
+};
 
 // ========================================
 // 🎨 Design System: Button Styles
@@ -281,9 +293,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [topicActionLoading, setTopicActionLoading] = React.useState(false);
   const [dealActionLoading, setDealActionLoading] = React.useState(false);
   const [shouldShowSpaceHint, setShouldShowSpaceHint] = React.useState(false);
+  const [shouldShowSubmitHint, setShouldShowSubmitHint] = React.useState(false);
 
   // 入力フィールド参照
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const submitHintShownRef = React.useRef(false);
+  const resetSubmitHint = React.useCallback(() => {
+    submitHintShownRef.current = false;
+    setShouldShowSubmitHint(false);
+  }, []);
 
   const {
     autoStartLocked,
@@ -418,6 +436,31 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
+  const isSubmitHintEligible =
+    roomStatus === "clue" &&
+    !isRevealAnimating &&
+    canClickProposalButton &&
+    actionLabel === "出す";
+
+  React.useEffect(() => {
+    if (isSubmitHintEligible && !submitHintShownRef.current) {
+      submitHintShownRef.current = true;
+      setShouldShowSubmitHint(true);
+      return;
+    }
+    if (!isSubmitHintEligible) {
+      resetSubmitHint();
+    }
+  }, [isSubmitHintEligible, resetSubmitHint]);
+
+  React.useEffect(() => {
+    if (!shouldShowSubmitHint) return;
+    const timer = window.setTimeout(() => {
+      setShouldShowSubmitHint(false);
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [shouldShowSubmitHint]);
+
   const baseActionTooltip =
     isSortMode && placed ? "カードを待機エリアに戻す" : "カードを場に出す";
   const clearButtonDisabled = !clueEditable || !hasText || placed;
@@ -514,6 +557,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (!canSubmit || !cluesReady) return;
     }
 
+    let didSucceed = false;
     try {
       if (isSortMode) {
         if (isRemoving) {
@@ -528,6 +572,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             message: "カードを待機エリアに戻しました",
             tone: "info",
           });
+          didSucceed = true;
         } else {
           await addCardToProposal(roomId, me.id);
           playCardPlace();
@@ -535,11 +580,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             message: "カードを提出しました",
             tone: "success",
           });
+          didSucceed = true;
         }
       } else {
         await commitPlayFromClue(roomId, me.id);
         playCardPlace();
         setInlineFeedback({ message: "カードを提出しました", tone: "success" });
+        didSucceed = true;
       }
     } catch (e: any) {
       const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
@@ -561,16 +608,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       }
     }
-    }, [
-      me?.id,
-      clueEditable,
-      isSortMode,
-      placed,
-      canSubmit,
-      cluesReady,
-      roomId,
-      playCardPlace,
-    ]);
+    if (didSucceed) {
+      resetSubmitHint();
+    }
+  }, [
+    me?.id,
+    clueEditable,
+    isSortMode,
+    placed,
+    canSubmit,
+    cluesReady,
+    roomId,
+    playCardPlace,
+    resetSubmitHint,
+  ]);
+
+  React.useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!isSubmitHintEligible) return;
+      if (event.repeat) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key?.toLowerCase() !== "e") return;
+      if (isTypingFocus(event.target)) return;
+      event.preventDefault();
+      handleSubmit();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleSubmit, isSubmitHintEligible]);
 
   // カスタムお題モーダル制御
     const [customOpen, setCustomOpen] = React.useState(false);
@@ -904,6 +969,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     <>
       {/* 🎮 Spaceキーヒント（ゲーム開始直後に初回のみ表示） */}
       <SpaceKeyHint shouldShow={shouldShowSpaceHint} />
+      <SubmitEHint shouldShow={shouldShowSubmitHint} />
 
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
