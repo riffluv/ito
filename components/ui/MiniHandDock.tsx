@@ -50,6 +50,7 @@ import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
+import SpaceKeyHint from "./SpaceKeyHint";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
@@ -279,6 +280,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   } | null>(null);
   const [topicActionLoading, setTopicActionLoading] = React.useState(false);
   const [dealActionLoading, setDealActionLoading] = React.useState(false);
+  const [shouldShowSpaceHint, setShouldShowSpaceHint] = React.useState(false);
 
   // 入力フィールド参照
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -404,6 +406,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       setInlineFeedback(null);
     }
   }, [clueEditable]);
+
+  // ゲーム開始直後（clueフェーズに入った時）にSpaceキーヒント表示
+  React.useEffect(() => {
+    if (roomStatus === "clue") {
+      setShouldShowSpaceHint(true);
+    } else {
+      setShouldShowSpaceHint(false);
+    }
+  }, [roomStatus]);
 
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
@@ -891,6 +902,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   return (
     <>
+      {/* 🎮 Spaceキーヒント（ゲーム開始直後に初回のみ表示） */}
+      <SpaceKeyHint shouldShow={shouldShowSpaceHint} />
+
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
         isVisible={shouldShowSeinoButton}
