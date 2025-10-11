@@ -134,7 +134,8 @@
       "WebFetch(domain:chakra-ui.com)",
       "mcp__serena__write_memory",
       "Bash(sed:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

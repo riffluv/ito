@@ -53,7 +53,6 @@ import { SeinoButton } from "./SeinoButton";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
-import { InputModal } from "./InputModal";
 
 // ========================================
 // 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
@@ -281,9 +280,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [topicActionLoading, setTopicActionLoading] = React.useState(false);
   const [dealActionLoading, setDealActionLoading] = React.useState(false);
 
-  // モーダル状態管理
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const triggerButtonRef = React.useRef<HTMLDivElement>(null);
+  // 入力フィールド参照
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const {
     autoStartLocked,
@@ -332,12 +330,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   }, [roomStatus]);
 
-  // スペースキー/Escキーのグローバルハンドラー
+  // スペースキーのグローバルハンドラー（フォーカスのみ）
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // モーダル内の入力欄やその他の入力要素にフォーカスがある場合は無視
+      // 入力欄やその他の入力要素にフォーカスがある場合は無視
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -349,26 +347,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       const canEdit = roomStatus === "waiting" || roomStatus === "clue";
 
-      // スペースキーでモーダルを開く
-      if (e.key === " " && !isModalOpen && canEdit) {
+      // スペースキーで入力欄にフォーカス
+      if (e.key === " " && canEdit) {
         e.preventDefault();
         e.stopPropagation();
-        setIsModalOpen(true);
-        // スクロール抑止
-        document.body.style.overflow = "hidden";
-      }
-
-      // Escキーでモーダルを閉じる
-      if (e.key === "Escape" && isModalOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsModalOpen(false);
-        // スクロール復元
-        document.body.style.overflow = "";
-        // トリガーボタンにフォーカスを戻す
-        setTimeout(() => {
-          triggerButtonRef.current?.focus();
-        }, 250);
+        inputRef.current?.focus();
       }
     };
 
@@ -376,10 +359,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
     return () => {
       window.removeEventListener("keydown", handleGlobalKeyDown);
-      // クリーンアップ時にスクロール復元
-      document.body.style.overflow = "";
     };
-  }, [isModalOpen, roomStatus]);
+  }, [roomStatus]);
 
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
@@ -957,181 +938,200 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Box>
       )}
 
-      {/* 中央: カード表示 + 入力モーダル起動ボタン */}
-      <Box
+      {/* 中央下部: シームレス浮遊ボタン群（常時表示） */}
+      <Flex
         position="fixed"
-        bottom={{ base: "16px", md: "20px" }}
+        bottom={{ base: "20px", md: "24px" }}
         left="50%"
         transform="translateX(-50%)"
         zIndex={50}
-        maxW={{ base: "calc(100vw - 32px)", md: "600px" }}
-        w="100%"
+        gap={{ base: "10px", md: "14px" }}
+        align="center"
+        justify="center"
+        flexWrap="nowrap"
+        maxW="95vw"
       >
-        <Flex
-          gap={{ base: "12px", md: "16px" }}
-          align="center"
-          justify="center"
-          px={{ base: "14px", md: "18px" }}
-          py={{ base: "10px", md: "12px" }}
-          css={{
-            position: "relative",
-            background: "rgba(8,9,15,0.78)",
-            backdropFilter: "blur(10px) saturate(1.08)",
-            border: "2px solid rgba(255,255,255,0.16)",
-            borderRadius: 0,
-            boxShadow: "0 10px 26px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06)",
-            overflow: "hidden",
-            "::before": {
-              content: '""',
-              position: "absolute",
-              inset: "0",
-              border: "1px solid rgba(255,255,255,0.06)",
-              pointerEvents: "none",
-            },
-            "::after": {
-              content: '""',
-              position: "absolute",
-              left: "-20%",
-              right: "-20%",
-              top: "-45%",
-              height: "120%",
-              background: "radial-gradient(ellipse at center, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 68%)",
-              opacity: 0.2,
-              pointerEvents: "none",
-            },
-          }}
+        {/* 数字カード（大きく・モダン） */}
+        <Box
+          flexShrink={0}
+          transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
+          transformOrigin="left center"
         >
-          {/* カード表示 */}
-          <Box flexShrink={0}>
-            <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
-          </Box>
+          <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
+        </Box>
 
-          {/* 入力モーダル起動ボタン */}
-          <Box ref={triggerButtonRef}>
-            <Tooltip content="連想ワード入力 (Space)" showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="md"
-                visual="solid"
-                palette="brand"
-                color="rgba(255,255,255,0.98)"
-                onClick={() => setIsModalOpen(true)}
-                disabled={!clueEditable}
-                w="auto"
-                minW="140px"
-                px="20px"
-                py="12px"
-              >
-                <HStack gap="8px">
-                  <Text>入力</Text>
-                  <Text
-                    fontSize="11px"
-                    opacity={0.75}
-                    fontWeight="700"
-                    bg="rgba(255,255,255,0.15)"
-                    px="6px"
-                    py="2px"
-                    borderRadius="2px"
-                  >
-                    Space
-                  </Text>
-                </HStack>
-              </AppButton>
-            </Tooltip>
-          </Box>
-
-          {/* ホスト専用ボタン */}
-          {isHost && (
-            <Flex
-              gap={{ base: "6px", md: "8px" }}
-              align="center"
-              flexWrap="nowrap"
+        {/* 入力エリア（常時表示・シームレス） */}
+        <HStack gap={{ base: "8px", md: "10px" }} flexWrap="nowrap">
+          <Input
+            ref={inputRef}
+            aria-label="連想ワード"
+            placeholder="連想ワード..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canDecide) {
+                e.preventDefault();
+                handleDecide();
+              }
+            }}
+            maxLength={50}
+            size="md"
+            bg="rgba(18,22,32,0.85)"
+            color="rgba(255,255,255,0.98)"
+            fontFamily="'Courier New', monospace"
+            fontSize={{ base: "14px", md: "16px" }}
+            fontWeight="700"
+            letterSpacing="0.02em"
+            border="none"
+            borderRadius="3px"
+            boxShadow="inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.25)"
+            minH={{ base: "44px", md: "48px" }}
+            w={{ base: "200px", md: "280px" }}
+            transition="box-shadow 150ms ease"
+            disabled={!clueEditable}
+            _placeholder={{
+              color: "rgba(255,255,255,0.35)",
+            }}
+            _focus={{
+              boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.4)",
+              bg: "rgba(22,26,36,0.9)",
+              outline: "none",
+            }}
+            _disabled={{
+              opacity: 0.5,
+              cursor: "not-allowed",
+            }}
+          />
+          <Tooltip content={decideTooltip} showArrow openDelay={180}>
+            <AppButton
+              {...FOOTER_BUTTON_BASE_STYLES}
+              size="sm"
+              visual="solid"
+              palette="brand"
+              onClick={handleDecide}
+              disabled={!canDecide}
+              w="auto"
+              minW="60px"
             >
-              <Box w="2px" h="36px" bg="rgba(255,255,255,0.22)" mx={{ base: "2px", md: "6px" }} />
-              <Tooltip
-                content={
-                  effectiveDefaultTopicType === "カスタム"
-                    ? "カスタムお題を設定"
-                    : "お題をシャッフル"
+              決定
+            </AppButton>
+          </Tooltip>
+          <Tooltip content={clearTooltip} showArrow openDelay={180}>
+            <AppButton
+              {...FOOTER_BUTTON_BASE_STYLES}
+              size="sm"
+              visual="outline"
+              palette="gray"
+              onClick={handleClear}
+              disabled={clearButtonDisabled}
+              w="auto"
+              minW="60px"
+            >
+              クリア
+            </AppButton>
+          </Tooltip>
+          <Tooltip content={submitTooltip} showArrow openDelay={180}>
+            <AppButton
+              {...FOOTER_BUTTON_BASE_STYLES}
+              size="sm"
+              visual="solid"
+              palette="brand"
+              onClick={handleSubmit}
+              disabled={!canClickProposalButton}
+              w="auto"
+              minW="70px"
+            >
+              {actionLabel}
+            </AppButton>
+          </Tooltip>
+        </HStack>
+
+        {/* ホスト専用ボタン */}
+        {isHost && (
+          <>
+            <Tooltip
+              content={
+                effectiveDefaultTopicType === "カスタム"
+                  ? "カスタムお題を設定"
+                  : "お題をシャッフル"
+              }
+              showArrow
+              openDelay={220}
+            >
+              <OctopathDockButton
+                compact
+                icon={
+                  effectiveDefaultTopicType === "カスタム" ? (
+                    <FiEdit2 />
+                  ) : (
+                    <FaRegCreditCard />
+                  )
                 }
-                showArrow
-                openDelay={220}
-              >
-                <OctopathDockButton
-                  compact
-                  icon={
-                    effectiveDefaultTopicType === "カスタム" ? (
-                      <FiEdit2 />
-                    ) : (
-                      <FaRegCreditCard />
-                    )
+                isLoading={topicActionLoading}
+                disabled={topicActionLoading || (isGameFinished && effectiveDefaultTopicType !== "カスタム")}
+                onClick={async () => {
+                  if (topicActionLoading) return;
+                  let mode = effectiveDefaultTopicType;
+                  try {
+                    if (db) {
+                      const snap = await getDoc(doc(db, "rooms", roomId));
+                      const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
+                      if (latest) mode = latest;
+                    }
+                  } catch {}
+
+                  if (mode === "カスタム") {
+                    setCustomText(currentTopic || "");
+                    setCustomOpen(true);
+                    return;
                   }
-                  isLoading={topicActionLoading}
-                  disabled={topicActionLoading || (isGameFinished && effectiveDefaultTopicType !== "カスタム")}
-                  onClick={async () => {
-                    if (topicActionLoading) return;
-                    let mode = effectiveDefaultTopicType;
-                    try {
-                      if (db) {
-                        const snap = await getDoc(doc(db, "rooms", roomId));
-                        const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
-                        if (latest) mode = latest;
-                      }
-                    } catch {}
 
-                    if (mode === "カスタム") {
-                      setCustomText(currentTopic || "");
-                      setCustomOpen(true);
-                      return;
-                    }
+                  if (isGameFinished) return;
+                  setTopicActionLoading(true);
+                  try {
+                    playTopicShuffle();
+                    await topicControls.shuffleTopic(roomId, mode as any);
+                  } finally {
+                    setTopicActionLoading(false);
+                  }
+                }}
+              />
+            </Tooltip>
 
-                    if (isGameFinished) return;
-                    setTopicActionLoading(true);
-                    try {
-                      playTopicShuffle();
-                      await topicControls.shuffleTopic(roomId, mode as any);
-                    } finally {
-                      setTopicActionLoading(false);
-                    }
-                  }}
-                />
-              </Tooltip>
+            <Tooltip content="数字を配り直す" showArrow openDelay={220}>
+              <OctopathDockButton
+                compact
+                icon={<FaDice />}
+                isLoading={dealActionLoading}
+                disabled={dealActionLoading || isGameFinished}
+                onClick={async () => {
+                  if (dealActionLoading || isGameFinished) return;
+                  setDealActionLoading(true);
+                  try {
+                    playCardDeal();
+                    await topicControls.dealNumbers(roomId);
+                  } finally {
+                    setDealActionLoading(false);
+                  }
+                }}
+              />
+            </Tooltip>
 
-              <Tooltip content="数字を配り直す" showArrow openDelay={220}>
-                <OctopathDockButton
-                  compact
-                  icon={<FaDice />}
-                  isLoading={dealActionLoading}
-                  disabled={dealActionLoading || isGameFinished}
-                  onClick={async () => {
-                    if (dealActionLoading || isGameFinished) return;
-                    setDealActionLoading(true);
-                    try {
-                      playCardDeal();
-                      await topicControls.dealNumbers(roomId);
-                    } finally {
-                      setDealActionLoading(false);
-                    }
-                  }}
-                />
-              </Tooltip>
-
-              <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
-                <OctopathDockButton
-                  compact
-                  icon={<FaRedo />}
-                  isLoading={isResetting}
-                  disabled={isResetting}
-                  onClick={async () => {
-                    if (isResetting) return;
-                    await resetGame({ playSound: !isGameFinished });
-                  }}
-                />
-              </Tooltip>
-            </Flex>
-          )}
-        </Flex>
-      </Box>
+            <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
+              <OctopathDockButton
+                compact
+                icon={<FaRedo />}
+                isLoading={isResetting}
+                disabled={isResetting}
+                onClick={async () => {
+                  if (isResetting) return;
+                  await resetGame({ playSound: !isGameFinished });
+                }}
+              />
+            </Tooltip>
+          </>
+        )}
+      </Flex>
 
       {/* フィードバックメッセージ (中央入力エリアの上) */}
       {inlineFeedback && (
@@ -1477,27 +1477,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           </Dialog.Positioner>
         </Dialog.Root>
 
-      {/* 連想ワード入力モーダル */}
-      <InputModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          document.body.style.overflow = "";
-        }}
-        text={text}
-        onTextChange={setText}
-        onDecide={handleDecide}
-        onClear={handleClear}
-        onSubmit={handleSubmit}
-        canDecide={canDecide}
-        canClear={!clearButtonDisabled}
-        canSubmit={canClickProposalButton}
-        actionLabel={actionLabel}
-        decideTooltip={decideTooltip}
-        clearTooltip={clearTooltip}
-        submitTooltip={submitTooltip}
-        footerHeight={80}
-      />
     </>
   );
 }
