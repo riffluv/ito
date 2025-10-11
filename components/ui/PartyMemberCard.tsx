@@ -4,6 +4,7 @@ import Tooltip from "@/components/ui/Tooltip";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import {
   memo,
   useCallback,
@@ -46,7 +47,9 @@ const CARD_FLASH_SHADOW =
   "0 6px 12px rgba(255,255,255,0.3), 0 12px 24px rgba(255,255,255,0.2), 0 18px 36px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.4)";
 const CLUE_FLASH_BRIGHTNESS = 1.4;
 const CARD_HEIGHT = "56px";
+const CARD_HEIGHT_DPI125 = "50px";
 const CARD_AVATAR_SIZE = "44px";
+const CARD_AVATAR_SIZE_DPI125 = "38px";
 const CARD_RADIUS = "4px";
 const CARD_HOVER_LIFT = "-3px";
 const actionableHoverStyle = {
@@ -290,6 +293,14 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         pointerEvents: "auto",
         backdropFilter: "blur(8px) saturate(1.2)",
         position: "relative",
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          minHeight: CARD_HEIGHT_DPI125,
+          paddingLeft: "10px",
+          paddingRight: "10px",
+          paddingTop: "4px",
+          paddingBottom: "4px",
+          columnGap: "6px",
+        },
         "&::before": {
           content: "''",
           position: "absolute",
@@ -343,6 +354,10 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         justifyContent="center"
         position="relative"
         css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            width: CARD_AVATAR_SIZE_DPI125,
+            height: CARD_AVATAR_SIZE_DPI125,
+          },
           clipPath:
             "polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)",
           "&::before": {
@@ -400,6 +415,11 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           fontFamily="system-ui"
           truncate
           title={`${isHost ? "ホスト: " : ""}${player.name}`}
+          css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              fontSize: "14px",
+            },
+          }}
         >
           {player.name}
         </Text>
@@ -415,6 +435,12 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         py="2px"
         position="relative"
         css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            paddingLeft: "6px",
+            paddingRight: "6px",
+            paddingTop: "1px",
+            paddingBottom: "1px",
+          },
           background: `linear-gradient(135deg, ${
             statusMeta.tone === "submitted"
               ? "rgba(22, 163, 74, 0.25) 0%, rgba(21, 128, 61, 0.35) 100%"

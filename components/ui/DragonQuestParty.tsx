@@ -31,6 +31,7 @@ const headerGlint = keyframes`
 `;
 
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 interface DragonQuestPartyProps {
   players: PartyMember[];
@@ -48,7 +49,9 @@ interface DragonQuestPartyProps {
 }
 
 const PANEL_WIDTH = { base: "232px", md: "268px" };
+const PANEL_WIDTH_DPI125 = { base: "220px", md: "252px" };
 const LIST_MAX_HEIGHT = "calc(100vh - 224px)";
+const LIST_MAX_HEIGHT_DPI125 = "calc(100vh - 200px)";
 const LIST_GAP = 2;
 
 export function DragonQuestParty({
@@ -294,7 +297,13 @@ export function DragonQuestParty({
       top={{ base: "108px", md: "120px" }}
       left={{ base: "20px", md: "24px" }}
       zIndex={60}
-      css={{ pointerEvents: "none" }}
+      css={{
+        pointerEvents: "none",
+        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+          top: "96px",
+          left: "16px",
+        },
+      }}
     >
       <Box
         p={4}
@@ -308,6 +317,15 @@ export function DragonQuestParty({
         css={{
           pointerEvents: "auto",
           position: "relative",
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            width: PANEL_WIDTH_DPI125.base,
+            maxWidth: PANEL_WIDTH_DPI125.base,
+            padding: "12px",
+            "@media (min-width: 768px)": {
+              width: PANEL_WIDTH_DPI125.md,
+              maxWidth: PANEL_WIDTH_DPI125.md,
+            },
+          },
           ...(prefersReducedMotion
             ? {
                 transform: `translateY(${reducedPanelTranslate})`,
@@ -334,6 +352,13 @@ export function DragonQuestParty({
             backdropFilter: "blur(4px)",
             position: "relative",
             overflow: "hidden",
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              paddingLeft: "8px",
+              paddingRight: "8px",
+              paddingTop: "6px",
+              paddingBottom: "6px",
+              gap: "6px",
+            },
             ...(prefersReducedMotion
               ? {
                   transition:
@@ -371,6 +396,10 @@ export function DragonQuestParty({
             flexShrink={0}
             css={{
               filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.8))",
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                width: "20px",
+                height: "20px",
+              },
             }}
           >
             <img
@@ -399,6 +428,12 @@ export function DragonQuestParty({
               truncate
               textShadow="0 1px 2px rgba(0,0,0,0.6)"
               fontFamily="system-ui, -apple-system, sans-serif"
+              css={{
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  fontSize: "13px",
+                  maxWidth: "140px",
+                },
+              }}
             >
               {displayRoomName && displayRoomName.trim().length > 0
                 ? displayRoomName
@@ -436,6 +471,10 @@ export function DragonQuestParty({
             scrollbarColor: enableScroll
               ? "var(--chakra-colors-accent) transparent"
               : undefined,
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              marginTop: "12px",
+              maxHeight: LIST_MAX_HEIGHT_DPI125,
+            },
             "&::-webkit-scrollbar": {
               width: enableScroll ? "6px" : "0px",
             },

@@ -31,7 +31,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
-import { UI_TOKENS } from "@/theme/layout";
+import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { toastIds } from "@/lib/ui/toastIds";
 import {
   Box,
@@ -1042,6 +1042,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}
+          css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              bottom: "clamp(100px, 15vh, 180px)",
+            },
+          }}
         >
           <AppButton
             {...SEINO_BUTTON_STYLES}
@@ -1065,6 +1070,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}
+          css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              bottom: "clamp(100px, 15vh, 180px)",
+            },
+          }}
         >
           <AppButton
             {...SEINO_BUTTON_STYLES}
@@ -1092,12 +1102,23 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         justify="center"
         flexWrap="nowrap"
         maxW="95vw"
+        css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            bottom: "16px",
+            gap: "8px",
+          },
+        }}
       >
         {/* 数字カード（大きく・モダン） */}
         <Box
           flexShrink={0}
           transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
           transformOrigin="left center"
+          css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              transform: "scale(1.0)",
+            },
+          }}
         >
           <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
         </Box>
@@ -1131,6 +1152,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             w={{ base: "200px", md: "280px" }}
             transition="box-shadow 150ms ease"
             disabled={!clueEditable}
+            css={{
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                minHeight: "40px",
+                width: "220px",
+                fontSize: "14px",
+              },
+            }}
             _placeholder={{
               color: "rgba(255,255,255,0.35)",
             }}
@@ -1309,6 +1337,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         bottom={{ base: "16px", md: "20px" }}
         right={{ base: "16px", md: "24px" }}
         zIndex={50}
+        css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            bottom: "14px",
+            right: "20px",
+          },
+        }}
       >
         <HStack
           gap="10px"

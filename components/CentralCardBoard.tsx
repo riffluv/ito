@@ -362,8 +362,11 @@ function InteractiveBoardBase({
           width="100%"
           maxWidth="var(--board-max-width)"
           marginInline="auto"
-          mt={{ base: 6, md: 8 }}
+          mt={{ base: 4, md: 5 }}
           css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              marginTop: "1.25rem !important",
+            },
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
               marginTop: "1rem !important",
             },
@@ -479,8 +482,11 @@ function StaticBoardBase({
           width="100%"
           maxWidth="var(--board-max-width)"
           marginInline="auto"
-          mt={{ base: 6, md: 8 }}
+          mt={{ base: 4, md: 5 }}
           css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              marginTop: "1.25rem !important",
+            },
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
               marginTop: "1rem !important",
             },
@@ -1317,12 +1323,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         overflow="visible"
         position="relative"
         minHeight={0}
-        pt={{ base: "12vh", md: "14vh" }}
-        pb={{ base: 4, md: 6 }}
+        pt={{ base: "8vh", md: "10vh" }}
+        pb={{ base: 2, md: 3 }}
         css={{
+          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+            paddingTop: "9vh !important",
+            paddingBottom: "0.75rem !important",
+          },
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            paddingTop: "14vh !important",
-            paddingBottom: "1rem !important",
+            paddingTop: "10vh !important",
+            paddingBottom: "0.5rem !important",
           },
         }}
       >
