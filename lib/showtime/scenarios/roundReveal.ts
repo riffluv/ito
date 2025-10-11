@@ -24,17 +24,5 @@ export const roundRevealScenario: Scenario<RevealContext> = [
     }),
     fireAndForget: true,
   },
-  {
-    action: "banner.show",
-    params: (ctx) => ({
-      text: ctx.success ? "勝利！" : "惜しい…",
-      subtext: ctx.success
-        ? "素晴らしいチームワークでした"
-        : "次のラウンドで巻き返そう",
-      variant: ctx.success ? "success" : "warning",
-      durationMs: 3200,
-    }),
-    fireAndForget: true,
-  },
 ];
 
