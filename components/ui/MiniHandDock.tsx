@@ -52,6 +52,7 @@ import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
 import SpaceKeyHint from "./SpaceKeyHint";
 import SubmitEHint from "./SubmitEHint";
+import { KEYBOARD_KEYS } from "./hints/constants";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
@@ -368,7 +369,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       const canEdit = roomStatus === "waiting" || roomStatus === "clue";
 
       // スペースキーで入力欄にフォーカス
-      if (e.key === " " && canEdit) {
+      if (e.key === KEYBOARD_KEYS.SPACE && canEdit) {
         e.preventDefault();
         e.stopPropagation();
         inputRef.current?.focus();
@@ -638,7 +639,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       if (!isSubmitHintEligible) return;
       if (event.repeat) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key?.toLowerCase() !== "e") return;
+      if (event.key?.toLowerCase() !== KEYBOARD_KEYS.E) return;
       const target = event.target as HTMLElement | null;
       if (target === inputRef.current) {
         event.preventDefault();
@@ -1066,7 +1067,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && canDecide) {
+              if (e.key === KEYBOARD_KEYS.ENTER && canDecide) {
                 e.preventDefault();
                 handleDecide();
               }
@@ -1468,7 +1469,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     value={customText}
                     onChange={(e: any) => setCustomText(e.target.value)}
                     onKeyDown={(e: any) => {
-                      if (e.key === "Enter") {
+                      if (e.key === KEYBOARD_KEYS.ENTER) {
                         e.preventDefault();
                         if (customText.trim()) handleSubmitCustom(customText);
                       }

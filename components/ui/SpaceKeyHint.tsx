@@ -3,6 +3,12 @@ import React from "react";
 import { Box, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { FaArrowDown } from "react-icons/fa";
+import {
+  HINT_POSITIONS,
+  HINT_COMMON_STYLES,
+  PARTICLE_CONFIG,
+  HINT_ANIMATION_CONFIG,
+} from "./hints/constants";
 
 interface SpaceKeyHintProps {
   /** 表示トリガー（clueEditable状態など） */
@@ -39,7 +45,7 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
       // 少し遅延してアニメーション開始（DOMマウント待ち）
       const timer = setTimeout(() => {
         runAnimation();
-      }, 300);
+      }, HINT_ANIMATION_CONFIG.startDelay);
 
       return () => clearTimeout(timer);
     }
@@ -63,7 +69,7 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
     const tl = gsap.timeline({
       onComplete: () => {
         // アニメーション終了後に非表示
-        setTimeout(() => setIsVisible(false), 100);
+        setTimeout(() => setIsVisible(false), HINT_ANIMATION_CONFIG.endDelay);
       },
     });
 
@@ -109,8 +115,8 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
       particles,
       {
         scale: 1.2,
-        x: (i) => Math.cos((i * Math.PI) / 4) * 40,
-        y: (i) => Math.sin((i * Math.PI) / 4) * 40,
+        x: (i) => Math.cos((i * Math.PI) / 4) * PARTICLE_CONFIG.spreadDistance,
+        y: (i) => Math.sin((i * Math.PI) / 4) * PARTICLE_CONFIG.spreadDistance,
         opacity: 0,
         duration: 1.0,
         ease: "power2.out",
@@ -137,12 +143,12 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
     <Box
       ref={containerRef}
       position="fixed"
-      bottom={{ base: "calc(20px + 60px + 10px)", md: "calc(24px + 62px + 15px)" }}
-      left={{ base: "50%", md: "calc(50% - 80px)" }}
-      transform="translateX(-50%)"
-      zIndex={45}
-      pointerEvents="none"
-      opacity={0}
+      bottom={HINT_POSITIONS.SPACE.bottom}
+      left={HINT_POSITIONS.SPACE.left}
+      transform={HINT_POSITIONS.SPACE.transform}
+      zIndex={HINT_COMMON_STYLES.zIndex}
+      pointerEvents={HINT_COMMON_STYLES.pointerEvents}
+      opacity={HINT_COMMON_STYLES.initialOpacity}
     >
       {/* パーティクルコンテナ */}
       <Box
@@ -153,15 +159,15 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
         w="0"
         h="0"
       >
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: PARTICLE_CONFIG.count }).map((_, i) => (
           <Box
             key={i}
             ref={(el: HTMLDivElement | null) => {
               if (el) particlesRef.current[i] = el;
             }}
             position="absolute"
-            w="6px"
-            h="6px"
+            w={PARTICLE_CONFIG.size}
+            h={PARTICLE_CONFIG.size}
             bg="rgba(255,220,120,0.95)"
             borderRadius="50%"
             boxShadow="0 0 8px rgba(255,200,100,0.7)"
