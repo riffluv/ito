@@ -1,595 +1,128 @@
 "use client";
+
 import React, { useEffect, useRef, useState } from "react";
-// ⚡ PERFORMANCE: Three.js/Pixi.jsを動的インポートに変更 (-1MB初期バンドル)
-import type * as THREETypes from "three";
+// ⚡ PERFORMANCE: Pixi.js を動的インポートに変更（初期バンドル削減）
 import type * as PIXITypes from "pixi.js";
-import { ThreeBackgroundAdvanced } from "./ThreeBackgroundAdvanced";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 
-const logThreeBackgroundInfo = (event: string, data?: unknown) => {
-  logInfo("three-background", event, data);
-};
-const logPixiBackground = (level: "info" | "warn" | "error", event: string, data?: unknown) => {
-  if (level === "warn") {
-    logWarn("three-background-pixi", event, data);
-  } else if (level === "error") {
-    logError("three-background-pixi", event, data);
-  } else {
-    logInfo("three-background-pixi", event, data);
+type BackgroundType = "css" | "pixi";
+
+const normalizeBackgroundType = (value: string | null): BackgroundType => {
+  if (value === "pixi" || value === "pixijs") {
+    return "pixi";
   }
+  return "css";
 };
 
-interface ThreeBackgroundProps {
+const logPixiBackground = (
+  level: "info" | "warn" | "error",
+  event: string,
+  data?: unknown
+) => {
+  const logger =
+    level === "warn" ? logWarn : level === "error" ? logError : logInfo;
+  logger("three-background-pixi", event, data);
+};
+
+export interface ThreeBackgroundProps {
   className?: string;
 }
 
 export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREETypes.Scene>();
-  const rendererRef = useRef<THREETypes.WebGLRenderer>();
-  const cameraRef = useRef<THREETypes.PerspectiveCamera>();
-  const frameRef = useRef<number>();
-  const { reducedMotion, effectiveMode, supports3D, gpuCapability } = useAnimationSettings();
+  const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
+    useAnimationSettings();
   const isLowPowerDevice = reducedMotion || gpuCapability === "low";
 
-  const [backgroundType, setBackgroundType] = useState<"css" | "three3d" | "three3d_advanced" | "pixijs" | "hd2d">("css");
-  const [hd2dImageIndex, setHd2dImageIndex] = useState<number>(1); // 1, 2, 3... の画像
+  const [backgroundType, setBackgroundType] = useState<BackgroundType>("css");
 
-  // LocalStorageから設定読み込み & イベントリスナー設定
+  // LocalStorage から背景設定を読み込み & イベントで更新
   useEffect(() => {
-    // 初期設定読み込み
-    const loadBackgroundType = () => {
-      try {
-        const saved = localStorage.getItem("backgroundType");
-        if (saved && ["css", "three3d", "three3d_advanced", "pixijs", "hd2d"].includes(saved)) {
-          setBackgroundType(saved as any);
-        }
-      } catch {
-        // エラーは無視
+    try {
+      const saved = localStorage.getItem("backgroundType");
+      setBackgroundType(normalizeBackgroundType(saved));
+    } catch {
+      // noop
+    }
+
+    const handleBackgroundChange = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        setBackgroundType(
+          normalizeBackgroundType(event.detail?.backgroundType ?? null)
+        );
       }
     };
 
-    loadBackgroundType();
-
-    // HD-2D画像番号読み込み
-    const loadHd2dImageIndex = () => {
-      try {
-        const saved = localStorage.getItem("hd2dImageIndex");
-        if (saved) {
-          const index = parseInt(saved);
-          if (index >= 1 && index <= 8) {
-            setHd2dImageIndex(index);
-          }
-        }
-      } catch {
-        // エラーは無視
-      }
-    };
-
-    loadHd2dImageIndex();
-
-    // 設定変更イベントリスナー
-    const handleBackgroundChange = (event: any) => {
-      setBackgroundType(event.detail.backgroundType);
-    };
-
-    const handleHd2dImageChange = (event: any) => {
-      setHd2dImageIndex(event.detail.imageIndex);
-    };
-
-    window.addEventListener("backgroundTypeChanged", handleBackgroundChange);
-    window.addEventListener("hd2dImageChanged", handleHd2dImageChange);
+    window.addEventListener(
+      "backgroundTypeChanged",
+      handleBackgroundChange as EventListener
+    );
     return () => {
-      window.removeEventListener("backgroundTypeChanged", handleBackgroundChange);
-      window.removeEventListener("hd2dImageChanged", handleHd2dImageChange);
+      window.removeEventListener(
+        "backgroundTypeChanged",
+        handleBackgroundChange as EventListener
+      );
     };
   }, []);
 
-  // Three.js初期化用Effect (動的ロード対応)
+  // Pixi 背景
   useEffect(() => {
-    if (backgroundType !== "three3d") {
+    if (backgroundType !== "pixi") {
       return;
     }
 
-    if (!mountRef.current) return;
-
-    logThreeBackgroundInfo("init-start");
-
-    let THREE: any = null;
-    let cleanup: (() => void) | null = null;
-
-    // ⚡ Three.jsを動的にロード (初回のみ1MB削減)
-    import("three").then((module) => {
-      THREE = module;
-      logThreeBackgroundInfo("three-loaded");
-
-      if (!mountRef.current) return;
-
-      try {
-        // シーン初期化
-        const scene = new THREE.Scene();
-      sceneRef.current = scene;
-      logThreeBackgroundInfo("scene-created");
-
-      // カメラ設定（魔法陣全体が見える距離）
-      const camera = new THREE.PerspectiveCamera(
-        55, // 魔法陣全体を見渡せる広角
-        window.innerWidth / window.innerHeight,
-        0.1,
-        2000
-      );
-      camera.position.set(0, 0, 10); // 魔法陣全体が収まる距離
-      camera.lookAt(0, 0, 0);
-      cameraRef.current = camera;
-      logThreeBackgroundInfo("camera-positioned", { position: camera.position.toArray() });
-
-      // レンダラー設定（高品質）
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true, // 高品質アンチエイリアス
-        alpha: false,
-        powerPreference: 'high-performance'
+    if (
+      isLowPowerDevice ||
+      !supports3D ||
+      effectiveMode === "reduce" ||
+      effectiveMode === "off"
+    ) {
+      logPixiBackground("warn", "fallback-low-power", {
+        reducedMotion,
+        supports3D,
+        gpuCapability,
       });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      const pixelRatio = isLowPowerDevice ? 1 : Math.min(1.4, window.devicePixelRatio || 1);
-      renderer.setPixelRatio(pixelRatio);
-      renderer.setClearColor(0x04020a, 1); // より深い宇宙の闇（3D魔法陣用）
-      // 色空間・トーンマッピング設定
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
-
-      const targetFPS = isLowPowerDevice ? 30 : 45;
-      const frameInterval = 1000 / targetFPS;
-      let lastFrameTime = performance.now();
-
-      logThreeBackgroundInfo("renderer-configured");
-
-      rendererRef.current = renderer;
-      mountRef.current.appendChild(renderer.domElement);
-      logThreeBackgroundInfo("canvas-mounted");
-
-      // ===== ChatGPT高品質魔法陣システム =====
-
-      // 共通: ソフト円テクスチャ
-      const makeCircleTexture = (size = 64): any => {
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          // コンテキストが取得できない場合は空のテクスチャを返す
-          return new THREE.CanvasTexture(canvas);
-        }
-        const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-        g.addColorStop(0, 'rgba(255,255,255,1)');
-        g.addColorStop(0.35, 'rgba(255,255,255,0.8)');
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, size, size);
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.magFilter = THREE.LinearFilter;
-        tex.minFilter = THREE.LinearMipMapLinearFilter;
-        tex.colorSpace = THREE.SRGBColorSpace;
-        return tex;
-      };
-
-      // 1. 高品質ネビュラ背景
-      const createAdvancedNebula = () => {
-        const nebulaUniforms = {
-          u_time: { value: 0 },
-          u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-        };
-
-        const nebulaMaterial = new THREE.ShaderMaterial({
-          uniforms: nebulaUniforms,
-          vertexShader: `
-            varying vec2 vUv;
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            precision highp float;
-            varying vec2 vUv;
-            uniform float u_time;
-            uniform vec2 u_resolution;
-
-            // Simplex noise
-            vec3 mod289(vec3 x) { return x - floor(x*(1.0/289.0))*289.0; }
-            vec2 mod289(vec2 x) { return x - floor(x*(1.0/289.0))*289.0; }
-            vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
-
-            float snoise(vec2 v) {
-              const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
-              vec2 i = floor(v + dot(v, C.yy));
-              vec2 x0 = v - i + dot(i, C.xx);
-              vec2 i1 = (x0.x > x0.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
-              vec4 x12 = x0.xyxy + C.xxzz;
-              x12.xy -= i1;
-              i = mod289(i);
-              vec3 p = permute(permute(i.y + vec3(0.0,i1.y,1.0)) + i.x + vec3(0.0,i1.x,1.0));
-              vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-              m *= m; m *= m;
-              vec3 x = 2.0*fract(p*0.0243902439)-1.0;
-              vec3 h = abs(x)-0.5;
-              vec3 ox = floor(x+0.5);
-              vec3 a0 = x-ox;
-              m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-              vec3 g;
-              g.x = a0.x*x0.x + h.x*x0.y;
-              g.y = a0.y*x12.x + h.y*x12.y;
-              g.z = a0.z*x12.z + h.z*x12.w;
-              return 130.0*dot(m,g);
-            }
-
-            float fbm(vec2 st) {
-              float v = 0.0;
-              float a = 0.55;
-              mat2 rot = mat2(0.8,-0.6,0.6,0.8);
-              for(int i = 0; i < 6; i++) {
-                v += a * snoise(st);
-                st = rot * st * 2.0 + 0.1;
-                a *= 0.55;
-              }
-              return v;
-            }
-
-            void main() {
-              vec2 p = (vUv-0.5) * vec2(u_resolution.x/u_resolution.y, 1.0);
-              float t = u_time * 0.045;
-              float n = fbm(p * 1.2 + vec2(t, -t*0.6));
-              vec3 colA = vec3(0.12,0.02,0.20);
-              vec3 colB = vec3(0.71,0.45,1.00);
-              vec3 colC = vec3(0.23,0.09,0.36);
-              float glow = smoothstep(0.15,0.75,n*0.5+0.5);
-              vec3 col = mix(colA, colC, glow);
-              col = mix(col, colB, pow(max(n,0.0),2.0)*0.55);
-              float r = length(p);
-              col += 0.15*vec3(0.7,0.3,1.0)*smoothstep(0.8,0.0,r);
-              col *= 1.0 - smoothstep(0.6,1.1,r);
-              gl_FragColor = vec4(col,1.0);
-            }
-          `,
-          depthWrite: false
-        });
-
-        const nebula = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), nebulaMaterial);
-        nebula.position.z = -4.0;
-        nebula.frustumCulled = false;
-        scene.add(nebula);
-        return { nebula, nebulaUniforms };
-      };
-
-      // 2. 高精細スターフィールド（個別瞬き）
-      const createAdvancedStars = () => {
-        const starGeom = new THREE.BufferGeometry();
-        const STAR_COUNT = 800; // モバイル対応で減らした
-        const pos = new Float32Array(STAR_COUNT * 3);
-        const phase = new Float32Array(STAR_COUNT);
-
-        for (let i = 0; i < STAR_COUNT; i++) {
-          const r = THREE.MathUtils.randFloat(20, 120);
-          const theta = Math.acos(THREE.MathUtils.randFloatSpread(2));
-          const phi = THREE.MathUtils.randFloat(0, Math.PI * 2);
-          pos[i*3+0] = r * Math.sin(theta) * Math.cos(phi);
-          pos[i*3+1] = r * Math.sin(theta) * Math.sin(phi);
-          pos[i*3+2] = r * Math.cos(theta);
-          phase[i] = Math.random() * Math.PI * 2;
-        }
-
-        starGeom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        starGeom.setAttribute('phase', new THREE.BufferAttribute(phase, 1));
-
-        const starUniforms = {
-          u_time: { value: 0 },
-          u_tex: { value: makeCircleTexture(64) }
-        };
-
-        const starMat = new THREE.ShaderMaterial({
-          uniforms: starUniforms,
-          vertexShader: `
-            attribute float phase;
-            varying float vPhase;
-            void main() {
-              vPhase = phase;
-              vec4 mv = modelViewMatrix * vec4(position, 1.0);
-              gl_Position = projectionMatrix * mv;
-              float size = 1.2 * (300.0 / -mv.z);
-              gl_PointSize = clamp(size, 1.0, 6.0);
-            }
-          `,
-          fragmentShader: `
-            precision highp float;
-            varying float vPhase;
-            uniform float u_time;
-            uniform sampler2D u_tex;
-            void main() {
-              vec2 uv = gl_PointCoord;
-              vec4 s = texture2D(u_tex, uv);
-              float tw = 0.6 + 0.4 * sin(u_time*2.2 + vPhase);
-              gl_FragColor = vec4(s.rgb, s.a * tw);
-            }
-          `,
-          transparent: true,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending
-        });
-
-        const stars = new THREE.Points(starGeom, starMat);
-        scene.add(stars);
-        return { stars, starUniforms };
-      };
-
-      // 3. 高品質魔法陣システム
-      const createAdvancedMagicCircle = () => {
-        const glyphGroup = new THREE.Group();
-        scene.add(glyphGroup);
-
-        // マテリアル
-        const lineMat = new THREE.LineBasicMaterial({ color: 0xE7C8FF, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
-        const thinMat = new THREE.LineBasicMaterial({ color: 0xC5A3FF, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
-        const dashMat = new THREE.LineDashedMaterial({ color: 0xFFFFFF, dashSize: 0.22, gapSize: 0.12, scale: 1, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
-        const glowMat = new THREE.MeshBasicMaterial({ color: 0xB07BFF, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-
-        // 幾何学関数（簡略化）
-        const circleGeometry = (r = 1, seg = 256) => {
-          const pts = [];
-          for (let i = 0; i <= seg; i++) {
-            const a = (i / seg) * Math.PI * 2;
-            pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0));
-          }
-          return new THREE.BufferGeometry().setFromPoints(pts);
-        };
-
-        const polygonGeometry = (n = 3, r = 1) => {
-          const pts = [];
-          for (let i = 0; i <= n; i++) {
-            const a = (i % n) / n * Math.PI * 2 - Math.PI / 2;
-            pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0));
-          }
-          return new THREE.BufferGeometry().setFromPoints(pts);
-        };
-
-        const starPolygonGeometry = (n = 5, ro = 2, ri = 1) => {
-          const pts = [];
-          const N = n * 2;
-          for (let i = 0; i <= N; i++) {
-            const r = (i % 2 === 0) ? ro : ri;
-            const a = i / N * Math.PI * 2 - Math.PI / 2;
-            pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0));
-          }
-          return new THREE.BufferGeometry().setFromPoints(pts);
-        };
-
-        // レイヤー構成
-        const layerBack = new THREE.Group();
-        const layerMid = new THREE.Group();
-        const layerFore = new THREE.Group();
-        glyphGroup.add(layerBack, layerMid, layerFore);
-
-        // 背面グロー
-        const glow1 = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.2, 256), glowMat);
-        glow1.position.z = -0.02;
-        layerBack.add(glow1);
-        const glow2 = new THREE.Mesh(new THREE.RingGeometry(2.6, 3.1, 256), glowMat);
-        glow2.position.z = -0.02;
-        layerBack.add(glow2);
-
-        // メイン円
-        [1.25, 2.05, 2.95, 4.0].forEach((r, i) => {
-          const m = (i % 2 === 0) ? lineMat : thinMat;
-          layerMid.add(new THREE.Line(circleGeometry(r), m));
-        });
-
-        // ダッシュ円（アニメーション付き）
-        const dash1 = new THREE.Line(circleGeometry(1.65), dashMat);
-        dash1.computeLineDistances();
-        layerMid.add(dash1);
-        const dash2 = new THREE.Line(circleGeometry(3.5), dashMat.clone());
-        dash2.material.dashSize = 0.28;
-        dash2.material.gapSize = 0.14;
-        dash2.computeLineDistances();
-        layerMid.add(dash2);
-
-        // ポリゴン
-        layerMid.add(new THREE.Line(polygonGeometry(3, 1.05), thinMat));
-        layerMid.add(new THREE.Line(starPolygonGeometry(5, 1.9, 0.8), lineMat));
-
-        // ノード
-        const nodeTex = makeCircleTexture(128);
-        const nodeMat = new THREE.SpriteMaterial({
-          map: nodeTex,
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          color: 0xFFFFFF,
-          opacity: 0.95
-        });
-
-        [0, Math.PI/3, Math.PI*2/3, Math.PI, Math.PI*4/3, Math.PI*5/3].forEach(a => {
-          const sprite = new THREE.Sprite(nodeMat.clone());
-          sprite.position.set(Math.cos(a)*2.95, Math.sin(a)*2.95, 0.01);
-          sprite.scale.setScalar(0.14);
-          layerFore.add(sprite);
-        });
-
-        // オービター
-        interface Orbiter {
-          s: any;
-          r: number;
-          a: number;
-          v: number;
-        }
-        const orbiters: Orbiter[] = [];
-        const addOrbiter = (radius: number, speed: number, size: number) => {
-          const s = new THREE.Sprite(nodeMat.clone());
-          s.scale.setScalar(size);
-          s.position.z = 0.02;
-          layerFore.add(s);
-          orbiters.push({ s, r: radius, a: Math.random() * Math.PI * 2, v: speed });
-        };
-        addOrbiter(1.65, 0.25, 0.11);
-        addOrbiter(2.05, -0.18, 0.09);
-        addOrbiter(3.5, 0.12, 0.12);
-
-        glyphGroup.rotation.z = 0.03;
-
-        return { glyphGroup, layerBack, layerMid, layerFore, orbiters, dash1, dash2 };
-      };
-
-      // シーン構築（ChatGPT高品質版）
-      const { nebula, nebulaUniforms } = createAdvancedNebula();
-      const { stars, starUniforms } = createAdvancedStars();
-      const magicCircle = createAdvancedMagicCircle();
-
-      logThreeBackgroundInfo("magic-circle-created");
-
-      // 最初に一度レンダリングしてシーンが見えるかテスト
-      logThreeBackgroundInfo("initial-render-start");
-      renderer.render(scene, camera);
-      logThreeBackgroundInfo("initial-render-complete");
-
-      // 高品質魔法陣アニメーションループ
-      const animate = () => {
-        frameRef.current = requestAnimationFrame(animate);
-
-        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-          return;
-        }
-
-        const now = performance.now();
-        if (now - lastFrameTime < frameInterval) {
-          return;
-        }
-        lastFrameTime = now;
-
-        const time = now * 0.001;
-
-        // ネビュラ背景アニメーション
-        nebulaUniforms.u_time.value = time;
-
-        // 星の個別瞬きアニメーション
-        starUniforms.u_time.value = time;
-        stars.rotation.y = time * 0.004;
-        stars.rotation.x = Math.sin(time * 0.05) * 0.015;
-
-        // 魔法陣の多層回転
-        magicCircle.layerBack.rotation.z = time * 0.005;
-        magicCircle.layerMid.rotation.z = -time * 0.007;
-        magicCircle.layerFore.rotation.z = time * 0.010;
-
-        // ダッシュラインの流れアニメーション
-        (magicCircle.dash1.material as any).dashOffset = (time * 0.03) % 1;
-        (magicCircle.dash2.material as any).dashOffset = (-time * 0.02) % 1;
-
-        // オービターの周回動作
-        for (const orbiter of magicCircle.orbiters) {
-          orbiter.a += orbiter.v * 0.01;
-          orbiter.s.position.set(
-            Math.cos(orbiter.a) * orbiter.r,
-            Math.sin(orbiter.a) * orbiter.r,
-            0.02
-          );
-        }
-
-        // カメラの微細な動き
-        if (cameraRef.current) {
-          cameraRef.current.position.x = Math.sin(time * 0.05) * 0.03;
-          cameraRef.current.position.y = Math.sin(time * 0.08) * 0.02;
-        }
-
-        // レンダリング
-        renderer.render(scene, camera);
-      };
-
-      logThreeBackgroundInfo("magic-circle-animation-start");
-      animate();
-
-      // ウィンドウリサイズ対応
-      const handleResize = () => {
-        if (cameraRef.current && rendererRef.current) {
-          const w = window.innerWidth;
-          const h = window.innerHeight;
-          cameraRef.current.aspect = w / h;
-          cameraRef.current.updateProjectionMatrix();
-          rendererRef.current.setSize(w, h, false);
-          // ネビュラの解像度更新
-          nebulaUniforms.u_resolution.value.set(w, h);
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-
-      // クリーンアップ関数を保存
-      cleanup = () => {
-        window.removeEventListener('resize', handleResize);
-        if (frameRef.current) {
-          cancelAnimationFrame(frameRef.current);
-        }
-        if (mountRef.current && rendererRef.current?.domElement) {
-          mountRef.current.removeChild(rendererRef.current.domElement);
-        }
-        if (rendererRef.current) {
-          rendererRef.current.dispose();
-        }
-      };
-
-    } catch (error) {
-      logError("three-background", "init-failed", error);
-    }
-    }).catch((error) => {
-      logError("three-background", "dynamic-import-failed", error);
-    });
-
-    // クリーンアップ
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, [backgroundType]); // backgroundTypeが変わったら再初期化
-
-  // PixiJS初期化用Effect - Octopath Traveler風HD-2D背景 (動的ロード対応)
-  useEffect(() => {
-    if (backgroundType !== "pixijs") {
+      setBackgroundType("css");
       return;
     }
-    if (!mountRef.current) return;
+
+    if (!mountRef.current) {
+      return;
+    }
 
     logPixiBackground("info", "init-start");
 
-    let app: any | null = null;
+    let app: PIXITypes.Application | null = null;
     let frameId: number | undefined;
-    let isAnimating = false; // アニメーションフラグをトップレベルで宣言
-    let PIXI: any = null;
+    let isAnimating = false;
+    let PIXI: typeof import("pixi.js") | null = null;
 
     const initPixi = async () => {
       try {
-        // ⚡ Pixi.jsを動的にロード (初回のみ400KB削減)
         PIXI = await import("pixi.js");
         logPixiBackground("info", "pixi-loaded");
 
-        // PixiJS v8対応: 正しいinit()方法
         app = new PIXI.Application();
         await app.init({
           width: window.innerWidth,
           height: window.innerHeight,
-          backgroundColor: 0x0E0F13, // テーマ統一（16進数で指定）
+          backgroundColor: 0x0e0f13,
           antialias: !isLowPowerDevice,
-          resolution: isLowPowerDevice ? 1 : Math.min(1.3, window.devicePixelRatio || 1),
+          resolution: isLowPowerDevice
+            ? 1
+            : Math.min(1.3, window.devicePixelRatio || 1),
           autoDensity: false,
         });
 
-        if (mountRef.current && app.canvas) {
-          mountRef.current.appendChild(app.canvas);
-          logPixiBackground("info", "canvas-mounted");
-        } else {
+        if (!mountRef.current || !app.canvas) {
           logPixiBackground("error", "mount-missing");
           return;
         }
+        mountRef.current.appendChild(app.canvas);
+        logPixiBackground("info", "canvas-mounted");
 
-        // === Octopath Traveler風HD-2D要素 ===
-
-        // 1. 奥行きのある背景グラデーション（大地のイメージ）
+        // 1. 背景グラデーション
         const bgGradient = new PIXI.Graphics();
         bgGradient.rect(0, 0, app.screen.width, app.screen.height);
         bgGradient.fill({
@@ -599,11 +132,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         app.stage.addChild(bgGradient);
         logPixiBackground("info", "background-gradient-created");
 
-        // 2. 遠景の山々（シルエット）
+        // 2. 遠景の山
         const mountains = new PIXI.Graphics();
         mountains.moveTo(0, app.screen.height * 0.7);
         for (let i = 0; i <= app.screen.width; i += 100) {
-          const height = app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
+          const height =
+            app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
           mountains.lineTo(i, height);
         }
         mountains.lineTo(app.screen.width, app.screen.height);
@@ -615,54 +149,38 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         app.stage.addChild(mountains);
         logPixiBackground("info", "mountains-created");
 
-        // 3. 浮遊する光の粒子（ドラクエ風マジックパーティクル）
+        // 3. 粒子
         interface ParticleData {
-          particle: any;
+          particle: PIXITypes.Graphics;
           vx: number;
           vy: number;
           life: number;
         }
-
         const particles: ParticleData[] = [];
-
-        // 安全な色の配列（ドラクエ風の金色系）
-        const safeColors = [
-          0xffd700, // 金色
-          0xffdc00, // 明るい金色
-          0xffc700, // 濃い金色
-          0xffed4a, // 黄金色
-          0xfff176, // ライトゴールド
-          0xffb300, // オレンジゴールド
-        ];
+        const colors = [0xffd700, 0xffdc00, 0xffc700, 0xffed4a, 0xfff176, 0xffb300];
 
         for (let i = 0; i < 30; i++) {
           const particle = new PIXI.Graphics();
           particle.circle(0, 0, Math.random() * 2 + 1);
           particle.fill({
-            color: safeColors[Math.floor(Math.random() * safeColors.length)],
+            color: colors[Math.floor(Math.random() * colors.length)],
             alpha: Math.random() * 0.6 + 0.2,
           });
-
           particle.x = Math.random() * app.screen.width;
           particle.y = Math.random() * app.screen.height;
-
-          const particleData: ParticleData = {
+          particles.push({
             particle,
             vx: (Math.random() - 0.5) * 0.5,
             vy: (Math.random() - 0.5) * 0.3,
             life: Math.random() * 2 + 1,
-          };
-
-          particles.push(particleData);
+          });
           app.stage.addChild(particle);
         }
         logPixiBackground("info", "gold-particles-created");
 
-        // 4. 可愛い前景の草原（なめらかな曲線）
+        // 4. 前景の草
         const foreground = new PIXI.Graphics();
         const grassY = app.screen.height * 0.87;
-
-        // なめらかな波形の草原（直線じゃない、でもボコボコしすぎない）
         foreground.moveTo(0, grassY);
         for (let i = 0; i <= app.screen.width; i += 30) {
           const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
@@ -671,58 +189,55 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         foreground.lineTo(app.screen.width, app.screen.height);
         foreground.lineTo(0, app.screen.height);
         foreground.fill({
-          color: 0x2d5940, // 落ち着いた深緑
+          color: 0x2d5940,
           alpha: 0.8,
         });
         app.stage.addChild(foreground);
 
-        // 可愛い小さな草のアクセント（少なめ）
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 40; i++) {
           const grassAccent = new PIXI.Graphics();
           const x = Math.random() * app.screen.width;
           const y = app.screen.height * (0.88 + Math.random() * 0.08);
           const size = Math.random() * 1.5 + 0.8;
-
           grassAccent.circle(x, y, size);
           grassAccent.fill({
-            color: 0x4a7c59, // 明るめの緑
+            color: 0x4a7c59,
             alpha: 0.7,
           });
           app.stage.addChild(grassAccent);
         }
         logPixiBackground("info", "grass-foreground-created");
 
-        // 5. アニメーションループ - パフォーマンス最適化版
+        // アニメーション
         let lastTime = 0;
         const targetFPS = 60;
         const frameInterval = 1000 / targetFPS;
-        isAnimating = true; // アニメーション制御フラグを有効化
+        isAnimating = true;
 
-        // Pixi.jsの自動ティッカーを無効化
         if (app.ticker) {
           app.ticker.autoStart = false;
           app.ticker.stop();
         }
 
         const animate = (currentTime: number) => {
-          // アニメーション停止フラグチェック
           if (!isAnimating) {
             return;
           }
 
-          if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+          if (
+            typeof document !== "undefined" &&
+            document.visibilityState === "hidden"
+          ) {
             frameId = requestAnimationFrame(animate);
             return;
           }
 
-          // フレームレート調整
           if (currentTime - lastTime < frameInterval) {
             frameId = requestAnimationFrame(animate);
             return;
           }
           lastTime = currentTime;
 
-          // アプリケーションが破棄されていたら停止
           if (!app || !app.stage) {
             isAnimating = false;
             if (frameId) {
@@ -732,43 +247,23 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             return;
           }
 
-          // 安全なアニメーション実行
           try {
-            // 光の粒子アニメーション
-            particles.forEach(data => {
-              const { particle, vx, vy, life } = data;
-              if (!particle || !particle.parent) return; // 安全チェック追加
-
+            particles.forEach(({ particle, vx, vy, life }) => {
+              if (!particle || !particle.parent) return;
               particle.x += vx;
               particle.y += vy;
 
-              // 画面外に出たら反対側から再出現
               if (particle.x > app!.screen.width) particle.x = -10;
               if (particle.x < -10) particle.x = app!.screen.width;
               if (particle.y > app!.screen.height) particle.y = -10;
               if (particle.y < -10) particle.y = app!.screen.height;
 
-              // 明滅効果（最適化済み）
               particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
             });
-          } catch (error) {
-            // アニメーションエラー時は停止
-            logPixiBackground("error", "animation-error", error);
-            isAnimating = false;
-            if (frameId) {
-              cancelAnimationFrame(frameId);
-              frameId = undefined;
-            }
-            return;
-          }
 
-          // 手動レンダリング（Tickerを使わない）
-          try {
-            if (app && app.renderer && app.stage) {
-              app.renderer.render(app.stage);
-            }
-          } catch (renderError) {
-            logPixiBackground("error", "render-error", renderError);
+            app.renderer.render(app.stage);
+          } catch (error) {
+            logPixiBackground("error", "animation-error", error);
             isAnimating = false;
             return;
           }
@@ -776,124 +271,94 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           frameId = requestAnimationFrame(animate);
         };
 
-        // 既存のアニメーションがあれば停止
-        if (frameId) {
-          cancelAnimationFrame(frameId);
-          frameId = undefined;
-        }
-
-        animate(performance.now());
+        frameId = requestAnimationFrame(animate);
         logPixiBackground("info", "animation-started");
-
       } catch (error) {
         logPixiBackground("error", "init-failed", error);
-        // 初期化失敗時は app を null に設定
-        if (app && app.stage) {
+        if (app) {
           try {
-            app.destroy();
-          } catch (e) {
-            // 破棄エラーは無視
+            app.destroy(true);
+          } catch (destroyError) {
+            logPixiBackground("warn", "destroy-error", destroyError);
           }
         }
         app = null;
-
-        // エラー時はフォールバック背景を表示（テキストなし）
         if (mountRef.current) {
-          mountRef.current.style.backgroundColor = '#0E0F13';
+          mountRef.current.style.backgroundColor = "#0E0F13";
         }
       }
     };
 
     initPixi();
 
-    // リサイズ対応 - PixiJS v8対応
     const handleResize = () => {
       try {
-        if (app && app.stage && app.renderer) {
+        if (app && app.renderer) {
           app.renderer.resize(window.innerWidth, window.innerHeight);
         }
       } catch (error) {
         logPixiBackground("warn", "resize-error", error);
       }
     };
+    window.addEventListener("resize", handleResize);
 
-    window.addEventListener('resize', handleResize);
-
-    // 強化されたクリーンアップ - Runtime Error対策
     return () => {
-      window.removeEventListener('resize', handleResize);
-
-      // アニメーション完全停止
-      isAnimating = false; // アニメーションフラグを無効化
+      window.removeEventListener("resize", handleResize);
+      isAnimating = false;
       if (frameId) {
         cancelAnimationFrame(frameId);
-        frameId = undefined;
       }
+      frameId = undefined;
 
-      // Pixi.jsアプリケーション安全破棄
       if (app) {
         try {
-          // アプリケーションが既に破棄されていないかチェック
-          if (app.stage) {
-            // ティッカー完全停止
-            if (app.ticker) {
-              app.ticker.stop();
-              app.ticker.autoStart = false;
-            }
-            // ステージクリア
-            if (app.stage) {
-              app.stage.removeChildren();
-            }
-            // アプリケーション破棄（シンプルに）
-            app.destroy(true);
+          if (app.ticker) {
+            app.ticker.stop();
+            app.ticker.autoStart = false;
           }
-        } catch (e) {
-          logPixiBackground("warn", "destroy-error", e);
-        } finally {
-          app = null; // 確実にnullに設定
+          app.stage.removeChildren();
+          app.destroy(true);
+        } catch (error) {
+          logPixiBackground("warn", "destroy-error", error);
         }
       }
+      app = null;
 
-      // DOMのクリーンアップ
       if (mountRef.current) {
-        mountRef.current.innerHTML = '';
-        mountRef.current.style.backgroundColor = '';
+        mountRef.current.innerHTML = "";
+        mountRef.current.style.backgroundColor = "";
       }
       logPixiBackground("info", "cleanup-complete");
     };
-  }, [backgroundType, reducedMotion, effectiveMode, supports3D, isLowPowerDevice]);
-
-  // 豪華版が選択された場合は専用コンポーネントを使用
-  if (backgroundType === "three3d_advanced") {
-    return <ThreeBackgroundAdvanced className={className} />;
-  }
+  }, [
+    backgroundType,
+    effectiveMode,
+    gpuCapability,
+    isLowPowerDevice,
+    reducedMotion,
+    supports3D,
+  ]);
 
   return (
     <div
       ref={mountRef}
       className={className}
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0, // BASEレイヤー (UI手前の背景)
-        overflow: 'hidden',
-        clipPath: 'inset(0)',
-        contain: 'strict',
-        pointerEvents: 'none', // マウスイベント遮断
-        // 背景タイプ別の設定
-        background: backgroundType === "css"
-          ? 'var(--chakra-colors-bg-canvas)'
-          : backgroundType === "pixijs"
-          ? 'var(--chakra-colors-bg-canvas)'
-          : backgroundType === "hd2d"
-          ? `url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.png) center/cover no-repeat, url(/images/backgrounds/hd2d/bg${hd2dImageIndex}.jpg) center/cover no-repeat`
-          : 'transparent',
+        width: "100%",
+        height: "100%",
+        zIndex: 0,
+        overflow: "hidden",
+        clipPath: "inset(0)",
+        contain: "strict",
+        pointerEvents: "none",
+        background:
+          backgroundType === "pixi"
+            ? "var(--chakra-colors-bg-canvas)"
+            : "var(--chakra-colors-bg-canvas)",
       }}
-    >
-      {/* PixiJS キャンバスはuseEffect内で動的に追加されます */}
-    </div>
+    />
   );
 }
