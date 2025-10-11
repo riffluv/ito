@@ -30,16 +30,16 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
           {
             x: -250,
             opacity: 0,
-            rotation: -8,
-            scale: 0.9,
+            rotation: -3,
+            scale: 0.92,
           },
           {
             x: 0,
             opacity: 1,
             rotation: 0,
             scale: 1,
-            duration: 0.45,
-            ease: "back.out(2.5)",
+            duration: 0.42,
+            ease: "cubic-bezier(.18,.95,.28,1.08)",
           }
         );
         gsap.fromTo(
@@ -48,11 +48,11 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
             filter: "brightness(1)",
           },
           {
-            filter: "brightness(1.4)",
-            duration: 0.15,
+            filter: "brightness(1.15)",
+            duration: 0.14,
             yoyo: true,
             repeat: 1,
-            ease: "power2.inOut",
+            ease: "cubic-bezier(.4,.1,.6,.9)",
           }
         );
       } else {
@@ -87,23 +87,23 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
           position="absolute"
           left="-17px"
           top="50%"
-          transform="translateY(-51%) rotate(43deg)"
+          transform="translateY(-51%) rotate(38deg)"
           w="13px"
           h="13px"
           bg="rgba(255,128,45,0.91)"
-          border="2.5px solid rgba(255,255,255,0.88)"
-          boxShadow="0 1px 3px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(0,0,0,0.3)"
+          border="3px solid rgba(255,255,255,0.88)"
+          boxShadow="1px 2px 0 rgba(0,0,0,0.55), inset -1px -1px 1px rgba(0,0,0,0.32)"
         />
         <Box
           position="absolute"
           right="-18px"
           top="50%"
-          transform="translateY(-49%) rotate(46deg)"
+          transform="translateY(-49%) rotate(52deg)"
           w="11px"
           h="11px"
           bg="rgba(248,115,30,0.88)"
-          border="2.5px solid rgba(255,255,255,0.91)"
-          boxShadow="0 1px 4px rgba(0,0,0,0.48), inset -1px -1px 2px rgba(0,0,0,0.28)"
+          border="3px solid rgba(255,255,255,0.91)"
+          boxShadow="2px 1px 0 rgba(0,0,0,0.52), inset -1px -1px 1px rgba(0,0,0,0.3)"
         />
 
         <AppButton
