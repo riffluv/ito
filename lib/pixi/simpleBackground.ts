@@ -1,0 +1,442 @@
+import type * as PIXI from "pixi.js";
+
+export type BackgroundQuality = "low" | "med" | "high";
+
+export interface SimpleBackgroundMetrics {
+  fps?: number;
+  frameTimeP95?: number;
+  fallback?: boolean;
+}
+
+export interface SimpleBackgroundOptions {
+  width: number;
+  height: number;
+  quality: BackgroundQuality;
+  backgroundColor?: number;
+  dprCap?: number;
+  onMetrics?: (metrics: SimpleBackgroundMetrics) => void;
+}
+
+export interface SimpleBackgroundController {
+  canvas: HTMLCanvasElement;
+  destroy(): void;
+  resize(width: number, height: number): void;
+  setQuality(quality: BackgroundQuality): void;
+  lightSweep(): void;
+  updatePointerGlow(active: boolean): void;
+}
+
+const DEFAULT_BACKGROUND = 0x0a0a0a;
+const DPR_CAP = 2;
+const LIGHT_SWEEP_DURATION_MS = 1100;
+
+const easeInOut = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+const createVignetteTexture = (
+  pixi: typeof PIXI,
+  size = 512
+): PIXI.Texture => {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create vignette texture context");
+  }
+
+  const gradient = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    size * 0.2,
+    size / 2,
+    size / 2,
+    size / 2
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,0)");
+  gradient.addColorStop(0.7, "rgba(0,0,0,0.08)");
+  gradient.addColorStop(1, "rgba(0,0,0,0.55)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  return pixi.Texture.from(canvas);
+};
+
+const createGrainTexture = (
+  pixi: typeof PIXI,
+  size = 128
+): PIXI.Texture => {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create grain texture context");
+  }
+
+  const imageData = ctx.createImageData(size, size);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = 110 + Math.random() * 85;
+    data[i] = noise;
+    data[i + 1] = noise;
+    data[i + 2] = noise;
+    data[i + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  return pixi.Texture.from(canvas);
+};
+
+const createLightSweepTexture = (
+  pixi: typeof PIXI,
+  width = 768,
+  height = 256
+): PIXI.Texture => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create light sweep texture context");
+  }
+
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "rgba(255,255,255,0)");
+  gradient.addColorStop(0.45, "rgba(255,255,255,0.04)");
+  gradient.addColorStop(0.5, "rgba(255,255,255,0.25)");
+  gradient.addColorStop(0.55, "rgba(255,255,255,0.04)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  return pixi.Texture.from(canvas);
+};
+
+const createPointerGlowTexture = (
+  pixi: typeof PIXI,
+  radius = 256
+): PIXI.Texture => {
+  const size = radius * 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create pointer glow texture context");
+  }
+  const gradient = ctx.createRadialGradient(
+    radius,
+    radius,
+    0,
+    radius,
+    radius,
+    radius
+  );
+  gradient.addColorStop(0, "rgba(255,255,255,0.08)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return pixi.Texture.from(canvas);
+};
+
+export async function createSimpleBackground(
+  options: SimpleBackgroundOptions
+): Promise<SimpleBackgroundController> {
+  const pixi = (await import("pixi.js")) as typeof PIXI;
+  const BLEND_MODES = (pixi as unknown as {
+    BLEND_MODES?: Record<string, number>;
+  }).BLEND_MODES;
+  const WRAP_MODES = (pixi as unknown as {
+    WRAP_MODES?: Record<string, number>;
+  }).WRAP_MODES;
+  const app = new pixi.Application();
+  const resolution = Math.min(
+    options.dprCap ?? DPR_CAP,
+    typeof window !== "undefined" && window.devicePixelRatio
+      ? window.devicePixelRatio
+      : 1
+  );
+
+  await app.init({
+    width: options.width,
+    height: options.height,
+    backgroundColor: options.backgroundColor ?? DEFAULT_BACKGROUND,
+    antialias: true,
+    resolution,
+    autoDensity: false,
+    powerPreference: "low-power",
+  });
+
+  if (!app.canvas) {
+    throw new Error("Pixi canvas is unavailable");
+  }
+
+  app.canvas.style.width = `${options.width}px`;
+  app.canvas.style.height = `${options.height}px`;
+  app.canvas.style.position = "absolute";
+  app.canvas.style.top = "0";
+  app.canvas.style.left = "0";
+  app.canvas.style.pointerEvents = "none";
+
+  const root = new pixi.Container();
+  root.eventMode = "none";
+  app.stage.addChild(root);
+
+  const baseRect = new pixi.Graphics();
+  baseRect.rect(0, 0, options.width, options.height);
+  baseRect.fill(options.backgroundColor ?? DEFAULT_BACKGROUND);
+  baseRect.cacheAsBitmap = true;
+  root.addChild(baseRect);
+
+  const vignette = new pixi.Sprite(createVignetteTexture(pixi));
+  vignette.alpha = 0.15;
+  if (BLEND_MODES?.MULTIPLY !== undefined) {
+    vignette.blendMode = BLEND_MODES.MULTIPLY as any;
+  }
+  vignette.anchor.set(0.5);
+  root.addChild(vignette);
+
+  const grainTexture = createGrainTexture(pixi);
+  if (WRAP_MODES?.REPEAT !== undefined) {
+    grainTexture.baseTexture.wrapMode = WRAP_MODES.REPEAT as any;
+  }
+  const grain = new pixi.TilingSprite(
+    grainTexture,
+    options.width,
+    options.height
+  );
+  grain.alpha = 0.065;
+  if (BLEND_MODES?.SCREEN !== undefined) {
+    grain.blendMode = BLEND_MODES.SCREEN as any;
+  }
+  root.addChild(grain);
+
+  const lightSweepTexture = createLightSweepTexture(pixi);
+  const lightSweep = new pixi.Sprite(lightSweepTexture);
+  lightSweep.anchor.set(0.5);
+  if (BLEND_MODES?.SCREEN !== undefined) {
+    lightSweep.blendMode = BLEND_MODES.SCREEN as any;
+  }
+  lightSweep.alpha = 0;
+  lightSweep.visible = false;
+  root.addChild(lightSweep);
+
+  const pointerGlow = new pixi.Sprite(createPointerGlowTexture(pixi));
+  pointerGlow.anchor.set(0.5);
+  if (BLEND_MODES?.SCREEN !== undefined) {
+    pointerGlow.blendMode = BLEND_MODES.SCREEN as any;
+  }
+  pointerGlow.alpha = 0;
+  pointerGlow.visible = false;
+  root.addChild(pointerGlow);
+
+  let running = false;
+  let rafId: number | null = null;
+  let quality: BackgroundQuality = options.quality;
+  let sweepActive = false;
+  let sweepStart = 0;
+  let pointerGlowActive = false;
+  let pointerGlowProgress = 0;
+  let lastMetricsLog = performance.now();
+
+  const animationState = {
+    grainSpeed: 0.12,
+    parallaxPhase: 0,
+    parallaxSpeed: 0.08,
+  };
+
+  const renderNow = () => {
+    app.renderer.render(app.stage);
+  };
+
+  const applyLayout = (width: number, height: number) => {
+    baseRect.clear();
+    baseRect.rect(0, 0, width, height);
+    baseRect.fill(options.backgroundColor ?? DEFAULT_BACKGROUND);
+
+    vignette.width = width * 1.2;
+    vignette.height = height * 1.2;
+    vignette.position.set(width / 2, height / 2);
+
+    grain.width = width;
+    grain.height = height;
+
+    lightSweep.width = Math.hypot(width, height) * 1.1;
+    lightSweep.height = Math.max(width, height) * 0.35;
+    lightSweep.rotation = -0.38;
+    lightSweep.position.set(width / 2, height / 2);
+
+    pointerGlow.position.set(width / 2, height * 0.92);
+    pointerGlow.width = width * 0.6;
+    pointerGlow.height = width * 0.18;
+
+    app.renderer.resize(width, height);
+    app.canvas.style.width = `${width}px`;
+    app.canvas.style.height = `${height}px`;
+    renderNow();
+  };
+
+  applyLayout(options.width, options.height);
+
+  const stopLoop = () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    running = false;
+  };
+
+  const scheduleLoop = () => {
+    if (running) return;
+    running = true;
+    let lastTime = performance.now();
+    let lastRender = lastTime;
+    const maxFps = quality === "high" ? 60 : 30;
+    const minFrameInterval = 1000 / maxFps;
+
+    const tick = () => {
+      if (!running) {
+        rafId = null;
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+
+      const currentTime = performance.now();
+      const delta = currentTime - lastTime;
+      lastTime = currentTime;
+
+      let needsRender = false;
+
+      if (quality !== "low") {
+        animationState.grainSpeed = quality === "high" ? 0.18 : 0.08;
+        grain.tilePosition.x += animationState.grainSpeed * delta;
+        grain.tilePosition.y += animationState.grainSpeed * delta * 0.45;
+        needsRender = true;
+      }
+
+      if (quality === "high") {
+        animationState.parallaxPhase += delta * animationState.parallaxSpeed;
+        const rotation = Math.sin(animationState.parallaxPhase * 0.002) * 0.0025;
+        root.pivot.set(app.screen.width / 2, app.screen.height / 2);
+        root.position.set(app.screen.width / 2, app.screen.height / 2);
+        root.rotation = rotation;
+        needsRender = true;
+      } else if (root.rotation !== 0) {
+        root.rotation = 0;
+        root.pivot.set(0, 0);
+        root.position.set(0, 0);
+        needsRender = true;
+      }
+
+      if (pointerGlowActive) {
+        pointerGlowProgress += delta / 200;
+        const eased = easeInOut(Math.min(pointerGlowProgress, 1));
+        pointerGlow.alpha = eased * 0.08;
+        pointerGlow.visible = true;
+        if (pointerGlowProgress >= 1) {
+          pointerGlowActive = false;
+        }
+        needsRender = true;
+      } else if (pointerGlow.alpha > 0) {
+        pointerGlow.alpha = Math.max(0, pointerGlow.alpha - delta / 300);
+        pointerGlow.visible = pointerGlow.alpha > 0.001;
+        needsRender = true;
+      }
+
+      if (sweepActive) {
+        const elapsed = currentTime - sweepStart;
+        const t = Math.min(1, elapsed / LIGHT_SWEEP_DURATION_MS);
+        const eased = easeInOut(t);
+        lightSweep.position.x =
+          app.screen.width * (-0.3 + eased * 1.6);
+        lightSweep.alpha = 0.22 * Math.sin(Math.PI * t);
+        lightSweep.visible = true;
+        needsRender = true;
+        if (elapsed >= LIGHT_SWEEP_DURATION_MS) {
+          sweepActive = false;
+          lightSweep.visible = false;
+          lightSweep.alpha = 0;
+        }
+      }
+
+      if (needsRender && currentTime - lastRender >= minFrameInterval) {
+        renderNow();
+        lastRender = currentTime;
+      } else if (!needsRender && quality === "low" && !sweepActive) {
+        stopLoop();
+      }
+
+      if (options.onMetrics && currentTime - lastMetricsLog > 5000) {
+        lastMetricsLog = currentTime;
+        options.onMetrics({
+          frameTimeP95: minFrameInterval,
+        });
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+  };
+
+  const controller: SimpleBackgroundController = {
+    canvas: app.canvas,
+    destroy() {
+      stopLoop();
+      pointerGlowActive = false;
+      sweepActive = false;
+      try {
+        app.stage.removeChildren();
+        app.destroy(true);
+      } catch {
+        // noop
+      }
+    },
+    resize(width: number, height: number) {
+      applyLayout(width, height);
+      if (quality !== "low" || sweepActive || pointerGlow.alpha > 0) {
+        scheduleLoop();
+      }
+    },
+    setQuality(nextQuality: BackgroundQuality) {
+      if (quality === nextQuality) return;
+      quality = nextQuality;
+      if (quality === "low") {
+        root.rotation = 0;
+        root.pivot.set(0, 0);
+        root.position.set(0, 0);
+        if (!sweepActive && pointerGlow.alpha <= 0.001) {
+          stopLoop();
+        }
+      } else {
+        scheduleLoop();
+      }
+    },
+    lightSweep() {
+      sweepActive = true;
+      sweepStart = performance.now();
+      lightSweep.visible = true;
+      pointerGlowActive = false;
+      pointerGlowProgress = 0;
+      scheduleLoop();
+    },
+    updatePointerGlow(active: boolean) {
+      if (active) {
+        pointerGlowActive = true;
+        pointerGlowProgress = 0;
+        scheduleLoop();
+      } else if (pointerGlow.alpha > 0) {
+        scheduleLoop();
+      }
+    },
+  };
+
+  if (quality !== "low") {
+    scheduleLoop();
+  } else {
+    renderNow();
+  }
+
+  return controller;
+}

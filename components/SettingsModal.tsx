@@ -11,6 +11,20 @@ import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useEffect, useState as useLocalState, useState } from "react";
 
+type BackgroundOption = "css" | "pixi-simple" | "pixi-dq";
+const normalizeBackgroundOption = (
+  value: string | null
+): BackgroundOption => {
+  if (value === "pixi-simple" || value === "pixi-lite") {
+    return "pixi-simple";
+  }
+  if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
+    return "pixi-dq";
+  }
+  return "css";
+};
+
+
 export type SettingsModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -51,7 +65,7 @@ export function SettingsModal({
 
   // 背景設定のstate（localStorageから読み込み）
   const [backgroundType, setBackgroundType] =
-    useLocalState<"css" | "pixi">("css");
+    useLocalState<BackgroundOption>("css");
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">(
     "background"
   );
@@ -61,6 +75,34 @@ export function SettingsModal({
   const SOUND_FEATURE_LOCKED = false;
   const soundLockMessage =
     "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
+
+  const backgroundLabelMap: Record<BackgroundOption, string> = {
+    css: "CSS はいけい",
+    "pixi-simple": "Pixi ライト",
+    "pixi-dq": "ドラクエ風 Pixi",
+  };
+
+  const backgroundOptions: {
+    value: BackgroundOption;
+    title: string;
+    description: string;
+  }[] = [
+    {
+      value: "css",
+      title: "CSS はいけい",
+      description: "けいりょうな CSS グラデーション。すべての環境で安定。",
+    },
+    {
+      value: "pixi-simple",
+      title: "Pixi はいけい",
+      description: "黒ベースの PixiJS 背景。",
+    },
+    {
+      value: "pixi-dq",
+      title: "山はいいよね。 pixiJS",
+      description: "和みそうな、景色 PixiJS 背景。",
+    },
+  ];
 
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -120,29 +162,24 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      if (saved === "pixi" || saved === "pixijs") {
-        setBackgroundType("pixi");
-      } else {
-        setBackgroundType("css");
-      }
+      setBackgroundType(normalizeBackgroundOption(saved));
     } catch {
-      // localStorage読み込みエラーは無視
+      // noop
     }
   }, []);
 
   // 背景設定のリアルタイム更新
-  const handleBackgroundChange = (newType: "css" | "pixi") => {
+  const handleBackgroundChange = (newType: BackgroundOption) => {
     setBackgroundType(newType);
     try {
       localStorage.setItem("backgroundType", newType);
-      // カスタムイベントで他のコンポーネントに通知
       window.dispatchEvent(
         new CustomEvent("backgroundTypeChanged", {
           detail: { backgroundType: newType },
         })
       );
     } catch {
-      // エラーは無視
+      // noop
     }
   };
 
@@ -644,31 +681,16 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい:{" "}
-                    {backgroundType === "pixi" ? "ピクシー" : "シンプル"}
+                    げんざい: {backgroundLabelMap[backgroundType]}
                   </Text>
                   <Stack gap={2}>
-                    {[
-                      {
-                        value: "css",
-                        title: "シンプル はいけい",
-                        description:
-                          "けいりょう CSS はいけい（すべての PC で あんてい）",
-                      },
-                      {
-                        value: "pixi",
-                        title: "ピクシー はいけい",
-                        description: "ころころかえます PixiJS エフェクト",
-                      },
-                    ].map((opt) => {
-                      const isSelected = backgroundType === (opt.value as any);
+                    {backgroundOptions.map((opt) => {
+                      const isSelected = backgroundType === opt.value;
                       return (
                         <Box
                           key={opt.value}
                           cursor="pointer"
-                          onClick={() =>
-                            handleBackgroundChange(opt.value as any)
-                          }
+                          onClick={() => handleBackgroundChange(opt.value)}
                           p={4}
                           borderRadius={0}
                           border="2px solid"

@@ -1,16 +1,24 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-// ⚡ PERFORMANCE: Pixi.js を動的インポートに変更（初期バンドル削減）
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type * as PIXITypes from "pixi.js";
+import type {
+  BackgroundQuality as SimpleBackgroundQuality,
+  SimpleBackgroundController,
+} from "@/lib/pixi/simpleBackground";
+import type { DragonQuestBackgroundController } from "@/lib/pixi/dragonQuestBackground";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 
-type BackgroundType = "css" | "pixi";
+type BackgroundType = "css" | "pixi-simple" | "pixi-dq";
+type BackgroundQuality = "low" | "med" | "high";
 
 const normalizeBackgroundType = (value: string | null): BackgroundType => {
-  if (value === "pixi" || value === "pixijs") {
-    return "pixi";
+  if (value === "pixi-simple" || value === "pixi-lite") {
+    return "pixi-simple";
+  }
+  if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
+    return "pixi-dq";
   }
   return "css";
 };
@@ -25,19 +33,70 @@ const logPixiBackground = (
   logger("three-background-pixi", event, data);
 };
 
+declare global {
+  interface Window {
+    bg?: {
+      lightSweep: () => void;
+      setQuality: (quality: BackgroundQuality) => void;
+      getQuality: () => BackgroundQuality;
+      getRenderer: () => "dom" | "pixi";
+    };
+  }
+}
+
+const ensureGlobalBackground = () => {
+  if (typeof window === "undefined") return;
+  if (!window.bg) {
+    window.bg = {
+      lightSweep: () => {},
+      setQuality: () => {},
+      getQuality: () => "low",
+      getRenderer: () => "dom",
+    };
+  }
+};
+
+const updateGlobalBackground = (payload: {
+  renderer: "dom" | "pixi";
+  quality: BackgroundQuality;
+  onLightSweep?: () => void;
+  onSetQuality?: (quality: BackgroundQuality) => void;
+}) => {
+  if (typeof window === "undefined") return;
+  ensureGlobalBackground();
+  const noop = () => {};
+  window.bg = {
+    lightSweep: payload.onLightSweep ?? noop,
+    setQuality: payload.onSetQuality ?? noop,
+    getQuality: () => payload.quality,
+    getRenderer: () => payload.renderer,
+  };
+};
+
 export interface ThreeBackgroundProps {
   className?: string;
 }
 
 export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const simpleControllerRef = useRef<SimpleBackgroundController | null>(null);
+  const dragonQuestControllerRef =
+    useRef<DragonQuestBackgroundController | null>(null);
+  const legacyFrameIdRef = useRef<number>();
+  const legacyAppRef = useRef<PIXITypes.Application | null>(null);
   const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
     useAnimationSettings();
-  const isLowPowerDevice = reducedMotion || gpuCapability === "low";
 
-  const [backgroundType, setBackgroundType] = useState<BackgroundType>("css");
+  const isLowPowerDevice =
+    reducedMotion || gpuCapability === "low" || effectiveMode === "simple";
 
-  // LocalStorage から背景設定を読み込み & イベントで更新
+  const [backgroundType, setBackgroundType] =
+    useState<BackgroundType>("css");
+
+  useEffect(() => {
+    ensureGlobalBackground();
+  }, []);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
@@ -45,7 +104,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     } catch {
       // noop
     }
-
     const handleBackgroundChange = (event: Event) => {
       if (event instanceof CustomEvent) {
         setBackgroundType(
@@ -66,23 +124,205 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     };
   }, []);
 
-  // Pixi 背景
+  const effectiveQuality = useMemo<BackgroundQuality>(() => {
+    if (backgroundType === "pixi-dq") {
+      return "high";
+    }
+    if (backgroundType === "pixi-simple") {
+      return "low";
+    }
+    return "low";
+  }, [backgroundType]);
+
+  const cleanupSimpleBackground = () => {
+    if (simpleControllerRef.current) {
+      try {
+        simpleControllerRef.current.destroy();
+      } catch (error) {
+        logPixiBackground("warn", "simple-destroy-error", error);
+      }
+      simpleControllerRef.current = null;
+    }
+    if (mountRef.current) {
+      mountRef.current.innerHTML = "";
+    }
+  };
+
+  const cleanupDragonQuestBackground = () => {
+    if (dragonQuestControllerRef.current) {
+      try {
+        dragonQuestControllerRef.current.destroy();
+      } catch (error) {
+        logPixiBackground("warn", "dragon-quest-destroy-error", error);
+      }
+      dragonQuestControllerRef.current = null;
+    }
+    if (mountRef.current) {
+      mountRef.current.innerHTML = "";
+    }
+  };
+
+  const cleanupLegacyBackground = () => {
+    const frameId = legacyFrameIdRef.current;
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      legacyFrameIdRef.current = undefined;
+    }
+    const app = legacyAppRef.current;
+    if (app) {
+      try {
+        app.stage.removeChildren();
+        app.destroy(true);
+      } catch (error) {
+        logPixiBackground("warn", "legacy-destroy-error", error);
+      }
+      legacyAppRef.current = null;
+    }
+    if (mountRef.current) {
+      mountRef.current.innerHTML = "";
+    }
+  };
+
   useEffect(() => {
-    if (backgroundType !== "pixi") {
+    if (backgroundType !== "pixi-simple") {
+      cleanupSimpleBackground();
+      cleanupDragonQuestBackground();
+      if (backgroundType !== "pixi-dq") {
+        updateGlobalBackground({
+          renderer: "dom",
+          quality: effectiveQuality,
+        });
+      }
       return;
     }
 
-    if (
-      isLowPowerDevice ||
-      !supports3D ||
-      effectiveMode === "reduce" ||
-      effectiveMode === "off"
-    ) {
-      logPixiBackground("warn", "fallback-low-power", {
+    if (isLowPowerDevice || !supports3D) {
+      logPixiBackground("warn", "simple-fallback-low-power", {
         reducedMotion,
         supports3D,
         gpuCapability,
+        effectiveMode,
       });
+      cleanupSimpleBackground();
+      setBackgroundType("css");
+      return;
+    }
+
+    let disposed = false;
+    let detachResize: (() => void) | null = null;
+
+    const init = async () => {
+      try {
+        const module = await import("@/lib/pixi/simpleBackground");
+        if (disposed) return;
+        const controller = await module.createSimpleBackground({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          quality: effectiveQuality as SimpleBackgroundQuality,
+          backgroundColor: 0x0a0a0a,
+          dprCap: 2,
+          onMetrics: (metrics) => {
+            logPixiBackground("info", "simple-metrics", metrics);
+          },
+        });
+
+        if (!mountRef.current) {
+          controller.destroy();
+          return;
+        }
+
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(controller.canvas);
+        simpleControllerRef.current = controller;
+        logPixiBackground("info", "simple-init-success");
+
+        const handleResize = () => {
+          controller.resize(window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener("resize", handleResize);
+        detachResize = () =>
+          window.removeEventListener("resize", handleResize);
+
+        updateGlobalBackground({
+          renderer: "pixi",
+          quality: effectiveQuality,
+          onLightSweep: () => controller.lightSweep(),
+        });
+      } catch (error) {
+        logPixiBackground("error", "simple-init-failed", error);
+        if (!disposed) {
+          cleanupSimpleBackground();
+          setBackgroundType("css");
+        }
+      }
+    };
+
+    init();
+
+    return () => {
+      disposed = true;
+      if (detachResize) {
+        detachResize();
+      }
+      if (simpleControllerRef.current) {
+        try {
+          simpleControllerRef.current.destroy();
+        } catch (error) {
+          logPixiBackground("warn", "simple-cleanup-error", error);
+        }
+        simpleControllerRef.current = null;
+      }
+      updateGlobalBackground({
+        renderer: "dom",
+        quality: effectiveQuality,
+      });
+    };
+  }, [
+    backgroundType,
+    effectiveMode,
+    effectiveQuality,
+    gpuCapability,
+    isLowPowerDevice,
+    reducedMotion,
+    supports3D,
+  ]);
+
+  useEffect(() => {
+    if (
+      backgroundType === "pixi-simple" &&
+      simpleControllerRef.current
+    ) {
+      simpleControllerRef.current.setQuality(effectiveQuality);
+      updateGlobalBackground({
+        renderer: "pixi",
+        quality: effectiveQuality,
+        onLightSweep: () => simpleControllerRef.current?.lightSweep(),
+      });
+    }
+  }, [backgroundType, effectiveQuality]);
+
+  useEffect(() => {
+    if (backgroundType !== "pixi-dq") {
+      cleanupDragonQuestBackground();
+      cleanupLegacyBackground();
+      if (backgroundType !== "pixi-simple") {
+        updateGlobalBackground({
+          renderer: "dom",
+          quality: effectiveQuality,
+        });
+      }
+      return;
+    }
+
+    if (isLowPowerDevice || !supports3D) {
+      logPixiBackground("warn", "dragon-quest-fallback-low-power", {
+        reducedMotion,
+        supports3D,
+        gpuCapability,
+        effectiveMode,
+      });
+      cleanupDragonQuestBackground();
+      cleanupLegacyBackground();
       setBackgroundType("css");
       return;
     }
@@ -91,248 +331,72 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return;
     }
 
-    logPixiBackground("info", "init-start");
+    cleanupSimpleBackground();
+    cleanupLegacyBackground();
 
-    let app: PIXITypes.Application | null = null;
-    let frameId: number | undefined;
-    let isAnimating = false;
-    let PIXI: typeof import("pixi.js") | null = null;
+    let disposed = false;
+    let detachResize: (() => void) | null = null;
 
-    const initPixi = async () => {
+    const init = async () => {
       try {
-        PIXI = await import("pixi.js");
-        logPixiBackground("info", "pixi-loaded");
+        const module = await import("@/lib/pixi/dragonQuestBackground");
+        if (disposed) return;
+        const controller =
+          await module.createDragonQuestBackground({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            antialias: !isLowPowerDevice,
+            resolution: Math.min(1.3, window.devicePixelRatio || 1),
+          });
 
-        app = new PIXI.Application();
-        await app.init({
-          width: window.innerWidth,
-          height: window.innerHeight,
-          backgroundColor: 0x0e0f13,
-          antialias: !isLowPowerDevice,
-          resolution: isLowPowerDevice
-            ? 1
-            : Math.min(1.3, window.devicePixelRatio || 1),
-          autoDensity: false,
-        });
-
-        if (!mountRef.current || !app.canvas) {
-          logPixiBackground("error", "mount-missing");
+        if (!mountRef.current) {
+          controller.destroy();
           return;
         }
-        mountRef.current.appendChild(app.canvas);
-        logPixiBackground("info", "canvas-mounted");
 
-        // 1. 背景グラデーション
-        const bgGradient = new PIXI.Graphics();
-        bgGradient.rect(0, 0, app.screen.width, app.screen.height);
-        bgGradient.fill({
-          color: 0x1a1b2e,
-          alpha: 1,
-        });
-        app.stage.addChild(bgGradient);
-        logPixiBackground("info", "background-gradient-created");
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(controller.canvas);
+        dragonQuestControllerRef.current = controller;
+        logPixiBackground("info", "dragon-quest-init-success");
 
-        // 2. 遠景の山
-        const mountains = new PIXI.Graphics();
-        mountains.moveTo(0, app.screen.height * 0.7);
-        for (let i = 0; i <= app.screen.width; i += 100) {
-          const height =
-            app.screen.height * (0.7 + Math.sin(i * 0.01) * 0.15);
-          mountains.lineTo(i, height);
-        }
-        mountains.lineTo(app.screen.width, app.screen.height);
-        mountains.lineTo(0, app.screen.height);
-        mountains.fill({
-          color: 0x2d1b4e,
-          alpha: 0.8,
-        });
-        app.stage.addChild(mountains);
-        logPixiBackground("info", "mountains-created");
-
-        // 3. 粒子
-        interface ParticleData {
-          particle: PIXITypes.Graphics;
-          vx: number;
-          vy: number;
-          life: number;
-        }
-        const particles: ParticleData[] = [];
-        const colors = [0xffd700, 0xffdc00, 0xffc700, 0xffed4a, 0xfff176, 0xffb300];
-
-        for (let i = 0; i < 30; i++) {
-          const particle = new PIXI.Graphics();
-          particle.circle(0, 0, Math.random() * 2 + 1);
-          particle.fill({
-            color: colors[Math.floor(Math.random() * colors.length)],
-            alpha: Math.random() * 0.6 + 0.2,
-          });
-          particle.x = Math.random() * app.screen.width;
-          particle.y = Math.random() * app.screen.height;
-          particles.push({
-            particle,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.3,
-            life: Math.random() * 2 + 1,
-          });
-          app.stage.addChild(particle);
-        }
-        logPixiBackground("info", "gold-particles-created");
-
-        // 4. 前景の草
-        const foreground = new PIXI.Graphics();
-        const grassY = app.screen.height * 0.87;
-        foreground.moveTo(0, grassY);
-        for (let i = 0; i <= app.screen.width; i += 30) {
-          const gentleWave = Math.sin(i * 0.008) * 12 + grassY;
-          foreground.lineTo(i, gentleWave);
-        }
-        foreground.lineTo(app.screen.width, app.screen.height);
-        foreground.lineTo(0, app.screen.height);
-        foreground.fill({
-          color: 0x2d5940,
-          alpha: 0.8,
-        });
-        app.stage.addChild(foreground);
-
-        for (let i = 0; i < 40; i++) {
-          const grassAccent = new PIXI.Graphics();
-          const x = Math.random() * app.screen.width;
-          const y = app.screen.height * (0.88 + Math.random() * 0.08);
-          const size = Math.random() * 1.5 + 0.8;
-          grassAccent.circle(x, y, size);
-          grassAccent.fill({
-            color: 0x4a7c59,
-            alpha: 0.7,
-          });
-          app.stage.addChild(grassAccent);
-        }
-        logPixiBackground("info", "grass-foreground-created");
-
-        // アニメーション
-        let lastTime = 0;
-        const targetFPS = 60;
-        const frameInterval = 1000 / targetFPS;
-        isAnimating = true;
-
-        if (app.ticker) {
-          app.ticker.autoStart = false;
-          app.ticker.stop();
-        }
-
-        const animate = (currentTime: number) => {
-          if (!isAnimating) {
-            return;
-          }
-
-          if (
-            typeof document !== "undefined" &&
-            document.visibilityState === "hidden"
-          ) {
-            frameId = requestAnimationFrame(animate);
-            return;
-          }
-
-          if (currentTime - lastTime < frameInterval) {
-            frameId = requestAnimationFrame(animate);
-            return;
-          }
-          lastTime = currentTime;
-
-          if (!app || !app.stage) {
-            isAnimating = false;
-            if (frameId) {
-              cancelAnimationFrame(frameId);
-              frameId = undefined;
-            }
-            return;
-          }
-
-          try {
-            particles.forEach(({ particle, vx, vy, life }) => {
-              if (!particle || !particle.parent) return;
-              particle.x += vx;
-              particle.y += vy;
-
-              if (particle.x > app!.screen.width) particle.x = -10;
-              if (particle.x < -10) particle.x = app!.screen.width;
-              if (particle.y > app!.screen.height) particle.y = -10;
-              if (particle.y < -10) particle.y = app!.screen.height;
-
-              particle.alpha = Math.sin(currentTime * 0.001 * life) * 0.3 + 0.4;
-            });
-
-            app.renderer.render(app.stage);
-          } catch (error) {
-            logPixiBackground("error", "animation-error", error);
-            isAnimating = false;
-            return;
-          }
-
-          frameId = requestAnimationFrame(animate);
+        const handleResize = () => {
+          controller.resize(window.innerWidth, window.innerHeight);
         };
+        window.addEventListener("resize", handleResize);
+        detachResize = () =>
+          window.removeEventListener("resize", handleResize);
 
-        frameId = requestAnimationFrame(animate);
-        logPixiBackground("info", "animation-started");
+        updateGlobalBackground({
+          renderer: "pixi",
+          quality: effectiveQuality,
+          onLightSweep: () => {},
+        });
       } catch (error) {
-        logPixiBackground("error", "init-failed", error);
-        if (app) {
-          try {
-            app.destroy(true);
-          } catch (destroyError) {
-            logPixiBackground("warn", "destroy-error", destroyError);
-          }
-        }
-        app = null;
-        if (mountRef.current) {
-          mountRef.current.style.backgroundColor = "#0E0F13";
+        logPixiBackground("error", "dragon-quest-init-failed", error);
+        if (!disposed) {
+          cleanupDragonQuestBackground();
+          setBackgroundType("css");
         }
       }
     };
 
-    initPixi();
-
-    const handleResize = () => {
-      try {
-        if (app && app.renderer) {
-          app.renderer.resize(window.innerWidth, window.innerHeight);
-        }
-      } catch (error) {
-        logPixiBackground("warn", "resize-error", error);
-      }
-    };
-    window.addEventListener("resize", handleResize);
+    init();
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      isAnimating = false;
-      if (frameId) {
-        cancelAnimationFrame(frameId);
+      disposed = true;
+      if (detachResize) {
+        detachResize();
       }
-      frameId = undefined;
-
-      if (app) {
-        try {
-          if (app.ticker) {
-            app.ticker.stop();
-            app.ticker.autoStart = false;
-          }
-          app.stage.removeChildren();
-          app.destroy(true);
-        } catch (error) {
-          logPixiBackground("warn", "destroy-error", error);
-        }
-      }
-      app = null;
-
-      if (mountRef.current) {
-        mountRef.current.innerHTML = "";
-        mountRef.current.style.backgroundColor = "";
-      }
-      logPixiBackground("info", "cleanup-complete");
+      cleanupDragonQuestBackground();
+      updateGlobalBackground({
+        renderer: "dom",
+        quality: effectiveQuality,
+      });
     };
   }, [
     backgroundType,
     effectiveMode,
+    effectiveQuality,
     gpuCapability,
     isLowPowerDevice,
     reducedMotion,
@@ -354,10 +418,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         clipPath: "inset(0)",
         contain: "strict",
         pointerEvents: "none",
-        background:
-          backgroundType === "pixi"
-            ? "var(--chakra-colors-bg-canvas)"
-            : "var(--chakra-colors-bg-canvas)",
+        background: "var(--chakra-colors-bg-canvas)",
       }}
     />
   );
