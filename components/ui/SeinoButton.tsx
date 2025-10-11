@@ -3,8 +3,28 @@
 import React from "react";
 import { Box } from "@chakra-ui/react";
 import { gsap } from "gsap";
+import { keyframes } from "@emotion/react";
 
 import { AppButton } from "@/components/ui/AppButton";
+
+// せーの！専用アンビエント（強めの光）
+const orangeGlowSeino = keyframes`
+  0% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,145,65,0.4);
+  }
+  28% {
+    box-shadow: 0 0 0 2px rgba(235,110,40,0.88), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.26), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 28px rgba(255,165,85,0.55);
+  }
+  54% {
+    box-shadow: 0 0 0 2px rgba(245,120,50,0.92), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 32px rgba(255,175,95,0.65);
+  }
+  79% {
+    box-shadow: 0 0 0 2px rgba(230,105,35,0.85), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.24), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 24px rgba(255,155,75,0.48);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,145,65,0.4);
+  }
+`;
 
 interface SeinoButtonProps {
   isVisible: boolean;
@@ -125,6 +145,9 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
           letterSpacing="0.023em"
           textShadow="2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)"
           boxShadow="0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)"
+          css={{
+            animation: `${orangeGlowSeino} 2.8s cubic-bezier(.35,.12,.65,.88) infinite`,
+          }}
           _before={{
             content: '""',
             position: "absolute",
