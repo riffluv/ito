@@ -40,6 +40,7 @@ declare global {
       setQuality: (quality: BackgroundQuality) => void;
       getQuality: () => BackgroundQuality;
       getRenderer: () => "dom" | "pixi";
+      updatePointerGlow: (active: boolean) => void;
     };
   }
 }
@@ -52,6 +53,7 @@ const ensureGlobalBackground = () => {
       setQuality: () => {},
       getQuality: () => "low",
       getRenderer: () => "dom",
+      updatePointerGlow: () => {},
     };
   }
 };
@@ -61,15 +63,18 @@ const updateGlobalBackground = (payload: {
   quality: BackgroundQuality;
   onLightSweep?: () => void;
   onSetQuality?: (quality: BackgroundQuality) => void;
+  onPointerGlow?: (active: boolean) => void;
 }) => {
   if (typeof window === "undefined") return;
   ensureGlobalBackground();
   const noop = () => {};
+  const noopGlow = () => {};
   window.bg = {
     lightSweep: payload.onLightSweep ?? noop,
     setQuality: payload.onSetQuality ?? noop,
     getQuality: () => payload.quality,
     getRenderer: () => payload.renderer,
+    updatePointerGlow: payload.onPointerGlow ?? noopGlow,
   };
 };
 
@@ -247,6 +252,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           renderer: "pixi",
           quality: effectiveQuality,
           onLightSweep: () => controller.lightSweep(),
+          onPointerGlow: (active) => controller.updatePointerGlow(active),
         });
       } catch (error) {
         logPixiBackground("error", "simple-init-failed", error);
@@ -297,6 +303,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         renderer: "pixi",
         quality: effectiveQuality,
         onLightSweep: () => simpleControllerRef.current?.lightSweep(),
+        onPointerGlow: (active) =>
+          simpleControllerRef.current?.updatePointerGlow(active),
       });
     }
   }, [backgroundType, effectiveQuality]);
@@ -369,7 +377,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         updateGlobalBackground({
           renderer: "pixi",
           quality: effectiveQuality,
-          onLightSweep: () => {},
+          onLightSweep: () => controller.lightSweep(),
         });
       } catch (error) {
         logPixiBackground("error", "dragon-quest-init-failed", error);

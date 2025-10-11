@@ -142,6 +142,33 @@ const createPointerGlowTexture = (
   return pixi.Texture.from(canvas);
 };
 
+const createDiagonalGradientTexture = (
+  pixi: typeof PIXI,
+  width = 1024,
+  height = 1024,
+  stops: Array<{ offset: number; color: string }> = [
+    { offset: 0, color: "rgba(28, 65, 120, 0.25)" },
+    { offset: 0.45, color: "rgba(18, 35, 80, 0.18)" },
+    { offset: 1, color: "rgba(8, 12, 24, 0)" },
+  ]
+): PIXI.Texture => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Unable to create diagonal gradient texture context");
+  }
+
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  stops.forEach((stop) => {
+    gradient.addColorStop(stop.offset, stop.color);
+  });
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  return pixi.Texture.from(canvas);
+};
+
 export async function createSimpleBackground(
   options: SimpleBackgroundOptions
 ): Promise<SimpleBackgroundController> {
@@ -184,12 +211,51 @@ export async function createSimpleBackground(
   const root = new pixi.Container();
   root.eventMode = "none";
   app.stage.addChild(root);
+  const parallaxLayers: Array<{
+    display: PIXI.Container;
+    depthX: number;
+    depthY: number;
+    baseX: number;
+    baseY: number;
+  }> = [];
 
   const baseRect = new pixi.Graphics();
   baseRect.rect(0, 0, options.width, options.height);
   baseRect.fill(options.backgroundColor ?? DEFAULT_BACKGROUND);
   baseRect.cacheAsBitmap = true;
   root.addChild(baseRect);
+
+  const diagonalOverlay = new pixi.Sprite(
+    createDiagonalGradientTexture(pixi)
+  );
+  diagonalOverlay.anchor.set(0.5);
+  diagonalOverlay.alpha = 0.24;
+  if (BLEND_MODES?.SCREEN !== undefined) {
+    diagonalOverlay.blendMode = BLEND_MODES.SCREEN as any;
+  }
+  root.addChild(diagonalOverlay);
+  parallaxLayers.push({
+    display: diagonalOverlay,
+    depthX: 0.035,
+    depthY: 0.02,
+    baseX: 0,
+    baseY: 0,
+  });
+
+  const softAurora = new pixi.Sprite(createPointerGlowTexture(pixi, 480));
+  softAurora.anchor.set(0.5);
+  softAurora.alpha = 0.12;
+  if (BLEND_MODES?.ADD !== undefined) {
+    softAurora.blendMode = BLEND_MODES.ADD as any;
+  }
+  root.addChild(softAurora);
+  parallaxLayers.push({
+    display: softAurora,
+    depthX: 0.06,
+    depthY: 0.05,
+    baseX: 0,
+    baseY: 0,
+  });
 
   const vignette = new pixi.Sprite(createVignetteTexture(pixi));
   vignette.alpha = 0.15;
@@ -233,6 +299,11 @@ export async function createSimpleBackground(
   pointerGlow.visible = false;
   root.addChild(pointerGlow);
 
+  let pointerTargetX = 0;
+  let pointerTargetY = 0.08;
+  let pointerCurrentX = 0;
+  let pointerCurrentY = 0;
+
   let running = false;
   let rafId: number | null = null;
   let quality: BackgroundQuality = options.quality;
@@ -248,6 +319,14 @@ export async function createSimpleBackground(
     parallaxSpeed: 0.08,
   };
 
+  const setPointerTarget = (x: number, y: number) => {
+    const clampedX = Math.max(-1, Math.min(1, x));
+    const clampedY = Math.max(-1, Math.min(1, y));
+    pointerTargetX = clampedX;
+    pointerTargetY = clampedY;
+  };
+
+
   const renderNow = () => {
     app.renderer.render(app.stage);
   };
@@ -256,6 +335,14 @@ export async function createSimpleBackground(
     baseRect.clear();
     baseRect.rect(0, 0, width, height);
     baseRect.fill(options.backgroundColor ?? DEFAULT_BACKGROUND);
+
+    diagonalOverlay.width = width * 1.6;
+    diagonalOverlay.height = height * 1.25;
+    diagonalOverlay.position.set(width / 2, height / 2);
+
+    softAurora.width = width * 1.05;
+    softAurora.height = height * 0.75;
+    softAurora.position.set(width / 2, height * 0.78);
 
     vignette.width = width * 1.2;
     vignette.height = height * 1.2;
@@ -272,6 +359,16 @@ export async function createSimpleBackground(
     pointerGlow.position.set(width / 2, height * 0.92);
     pointerGlow.width = width * 0.6;
     pointerGlow.height = width * 0.18;
+
+    parallaxLayers.forEach((layer) => {
+      if (layer.display.position) {
+        layer.baseX = layer.display.position.x;
+        layer.baseY = layer.display.position.y;
+      } else {
+        layer.baseX = 0;
+        layer.baseY = 0;
+      }
+    });
 
     app.renderer.resize(width, height);
     app.canvas.style.width = `${width}px`;
@@ -328,6 +425,22 @@ export async function createSimpleBackground(
         root.rotation = 0;
         root.pivot.set(0, 0);
         root.position.set(0, 0);
+        needsRender = true;
+      }
+
+      const prevPointerX = pointerCurrentX;
+      const prevPointerY = pointerCurrentY;
+      pointerCurrentX += (pointerTargetX - pointerCurrentX) * 0.08;
+      pointerCurrentY += (pointerTargetY - pointerCurrentY) * 0.1;
+      parallaxLayers.forEach((layer) => {
+        const offsetX = pointerCurrentX * app!.screen.width * layer.depthX;
+        const offsetY = pointerCurrentY * app!.screen.height * layer.depthY;
+        layer.display.position.set(layer.baseX + offsetX, layer.baseY + offsetY);
+      });
+      if (
+        Math.abs(pointerCurrentX - prevPointerX) > 0.0005 ||
+        Math.abs(pointerCurrentY - prevPointerY) > 0.0005
+      ) {
         needsRender = true;
       }
 
@@ -395,9 +508,7 @@ export async function createSimpleBackground(
     },
     resize(width: number, height: number) {
       applyLayout(width, height);
-      if (quality !== "low" || sweepActive || pointerGlow.alpha > 0) {
-        scheduleLoop();
-      }
+      scheduleLoop();
     },
     setQuality(nextQuality: BackgroundQuality) {
       if (quality === nextQuality) return;
@@ -406,12 +517,8 @@ export async function createSimpleBackground(
         root.rotation = 0;
         root.pivot.set(0, 0);
         root.position.set(0, 0);
-        if (!sweepActive && pointerGlow.alpha <= 0.001) {
-          stopLoop();
-        }
-      } else {
-        scheduleLoop();
       }
+      scheduleLoop();
     },
     lightSweep() {
       sweepActive = true;
@@ -419,24 +526,23 @@ export async function createSimpleBackground(
       lightSweep.visible = true;
       pointerGlowActive = false;
       pointerGlowProgress = 0;
+      setPointerTarget(0, -0.04);
       scheduleLoop();
     },
     updatePointerGlow(active: boolean) {
       if (active) {
         pointerGlowActive = true;
         pointerGlowProgress = 0;
+        setPointerTarget(pointerTargetX * 0.6, -0.08);
         scheduleLoop();
-      } else if (pointerGlow.alpha > 0) {
+      } else {
+        setPointerTarget(pointerTargetX * 0.4, 0.08);
         scheduleLoop();
       }
     },
   };
 
-  if (quality !== "low") {
-    scheduleLoop();
-  } else {
-    renderNow();
-  }
+  scheduleLoop();
 
   return controller;
 }

@@ -38,6 +38,7 @@ import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { selectHostCandidate } from "@/lib/host/HostManager";
+import { showtime } from "@/lib/showtime";
 import { verifyPassword } from "@/lib/security/password";
 import {
   assignNumberIfNeeded,
@@ -159,6 +160,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
+  const previousRoundRef = useRef<number | null>(null);
+  const previousStatusRef = useRef<string | null>(null);
   const [joinVersion, setJoinVersion] = useState(0);
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
@@ -593,6 +596,42 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     const targets = players.filter((p) => idSet.has(p.id));
     return targets.length > 0 && targets.every((p) => p.ready === true);
   }, [players, room?.deal?.players]);
+
+  useEffect(() => {
+    if (!room) {
+      previousRoundRef.current = null;
+      return;
+    }
+    const currentRound =
+      typeof room.round === "number" && room.round > 0 ? room.round : null;
+    if (
+      currentRound &&
+      previousRoundRef.current !== currentRound
+    ) {
+      void showtime.play("round:start", {
+        round: currentRound,
+        status: room.status,
+      });
+    }
+    previousRoundRef.current = currentRound;
+  }, [room?.round, room?.status]);
+
+  useEffect(() => {
+    if (!room) {
+      previousStatusRef.current = null;
+      return;
+    }
+    const status = room.status ?? null;
+    const prev = previousStatusRef.current;
+    if (status && prev !== status) {
+      if (status === "reveal" || status === "finished") {
+        void showtime.play("round:reveal", {
+          success: room.result?.success ?? null,
+        });
+      }
+    }
+    previousStatusRef.current = status;
+  }, [room?.status, room?.result?.success]);
 
   // canStartSorting 縺ｯ eligibleIds 螳夂ｾｩ蠕後↓遘ｻ蜍・
 
