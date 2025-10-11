@@ -11,6 +11,7 @@ export interface DragonQuestBackgroundController {
   canvas: HTMLCanvasElement;
   resize(width: number, height: number): void;
   destroy(): void;
+  lightSweep(): void;
 }
 
 type Particle = {
@@ -62,6 +63,9 @@ export async function createDragonQuestBackground(
   options: DragonQuestBackgroundOptions
 ): Promise<DragonQuestBackgroundController> {
   const pixi = (await import("pixi.js")) as typeof PIXI;
+  const BLEND_MODES = (pixi as unknown as {
+    BLEND_MODES?: Record<string, number>;
+  }).BLEND_MODES;
   const app = new pixi.Application();
   await app.init({
     width: options.width,
@@ -86,11 +90,18 @@ export async function createDragonQuestBackground(
   const stage = app.stage;
   const bgGradient = new pixi.Graphics();
   const mountains = new pixi.Graphics();
+  const sweepOverlay = new pixi.Graphics();
   const foreground = new pixi.Graphics();
   const particlesContainer = new pixi.Container();
 
+  sweepOverlay.alpha = 0;
+  if (BLEND_MODES?.ADD !== undefined) {
+    sweepOverlay.blendMode = BLEND_MODES.ADD as any;
+  }
+
   stage.addChild(bgGradient);
   stage.addChild(mountains);
+  stage.addChild(sweepOverlay);
   stage.addChild(particlesContainer);
   stage.addChild(foreground);
 
@@ -133,6 +144,14 @@ export async function createDragonQuestBackground(
       color: 0x2d5940,
       alpha: 0.8,
     });
+    sweepOverlay.clear();
+    sweepOverlay.beginFill(0xffffff, 0.25);
+    sweepOverlay.drawRect(0, 0, width, height);
+    sweepOverlay.endFill();
+    sweepOverlay.alpha = 0;
+    mountains.position.set(0, 0);
+    particlesContainer.position.set(0, 0);
+    foreground.position.set(0, 0);
   };
 
   rebuildBackground(options.width, options.height);
@@ -157,6 +176,23 @@ export async function createDragonQuestBackground(
     options.height,
     60
   );
+
+  let pointerTargetX = 0;
+  let pointerTargetY = 0;
+  let pointerCurrentX = 0;
+  let pointerCurrentY = 0;
+  let sweepActive = false;
+  let sweepStart = 0;
+  const SWEEP_DURATION = 900;
+
+  const triggerLightSweep = () => {
+    sweepActive = true;
+    sweepStart = performance.now();
+    sweepOverlay.alpha = 0;
+    pointerTargetY = -0.35;
+  };
+
+
 
   let running = true;
   let frameId: number | null = null;
@@ -186,6 +222,29 @@ export async function createDragonQuestBackground(
         Math.sin(time * 0.001 * particle.life) * 0.3 + 0.4;
     });
 
+    pointerCurrentX += (pointerTargetX - pointerCurrentX) * 0.06;
+    pointerCurrentY += (pointerTargetY - pointerCurrentY) * 0.06;
+    const width = app.screen.width;
+    const height = app.screen.height;
+    mountains.x = pointerCurrentX * width * 0.05;
+    mountains.y = pointerCurrentY * height * 0.04;
+    particlesContainer.x = pointerCurrentX * width * 0.025;
+    particlesContainer.y = pointerCurrentY * height * 0.03;
+    foreground.x = pointerCurrentX * width * 0.07;
+    foreground.y = pointerCurrentY * height * 0.06;
+
+    if (sweepActive) {
+      const elapsed = time - sweepStart;
+      const t = Math.min(1, elapsed / SWEEP_DURATION);
+      const envelope = Math.sin(Math.PI * t);
+      sweepOverlay.alpha = envelope * 0.35;
+      if (elapsed >= SWEEP_DURATION) {
+        sweepActive = false;
+        sweepOverlay.alpha = 0;
+        pointerTargetY = 0;
+      }
+    }
+
     app.renderer.render(stage);
   };
 
@@ -199,6 +258,10 @@ export async function createDragonQuestBackground(
       app.canvas.style.height = `${height}px`;
       rebuildBackground(width, height);
     },
+    lightSweep() {
+      triggerLightSweep();
+    },
+
     destroy() {
       running = false;
       if (frameId !== null) {
@@ -208,6 +271,11 @@ export async function createDragonQuestBackground(
       particles.forEach((particle) => {
         particle.sprite.destroy();
       });
+      if (typeof window !== "undefined") {
+        // no pointer listeners to remove currently
+      }
+      sweepActive = false;
+      sweepOverlay.alpha = 0;
       try {
         stage.removeChildren();
         app.destroy(true);
@@ -219,4 +287,3 @@ export async function createDragonQuestBackground(
 
   return controller;
 }
-
