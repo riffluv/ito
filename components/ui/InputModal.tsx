@@ -7,6 +7,10 @@ import { Box, Input, HStack, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
+import * as PIXI from "pixi.js";
+import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 
 /**
  * 🎮 InputModal - ドラクエ風連想ワード入力モーダル
@@ -97,6 +101,13 @@ export function InputModal({
   const triggerRef = useRef<HTMLElement | null>(null);
   const prefersReducedMotion = useReducedMotionPreference();
 
+  // Pixi HUD レイヤー（モーダル背景用）
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const pixiContainer = usePixiHudLayer("input-modal", {
+    zIndex: 105,
+  });
+  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
+
   // 開閉アニメーション
   useEffect(() => {
     if (!modalRef.current) return;
@@ -168,6 +179,51 @@ export function InputModal({
     [canDecide, onDecide, onClose]
   );
 
+  // Pixi背景の描画とDOM同期
+  useEffect(() => {
+    if (!isOpen || !pixiContainer) {
+      // モーダルが閉じられたらPixiリソースを破棄
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+      return;
+    }
+
+    // Graphicsオブジェクトを作成
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    // クリーンアップ
+    return () => {
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+    };
+  }, [isOpen, pixiContainer]);
+
+  // DOM要素とPixiコンテナの位置・サイズ同期
+  usePixiLayerLayout(contentRef, pixiContainer, {
+    disabled: !isOpen || !pixiContainer,
+    onUpdate: (layout) => {
+      const graphics = pixiGraphicsRef.current;
+      if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        return;
+      }
+
+      graphics.clear();
+      graphics.position.set(layout.x, layout.y);
+      drawSettingsModalBackground(PIXI, graphics, {
+        width: layout.width,
+        height: layout.height,
+        dpr: layout.dpr,
+      });
+    },
+  });
+
   if (typeof window === "undefined") return null;
 
   return createPortal(
@@ -189,23 +245,16 @@ export function InputModal({
       }}
     >
       <Box
+        ref={contentRef}
         px={{ base: "18px", md: "24px" }}
         py={{ base: "16px", md: "20px" }}
         css={{
           position: "relative",
-          background: "rgba(8,9,15,0.96)",
+          background: "transparent",
           backdropFilter: "blur(14px) saturate(1.12)",
           border: "3px solid rgba(255,255,255,0.9)",
           borderRadius: 0,
-          boxShadow:
-            "0 12px 32px rgba(0,0,0,0.82), inset 0 2px 0 rgba(255,255,255,0.08)",
-          "::before": {
-            content: '""',
-            position: "absolute",
-            inset: "0",
-            border: "1px solid rgba(255,255,255,0.08)",
-            pointerEvents: "none",
-          },
+          boxShadow: "none",
         }}
       >
         {/* タイトル */}
@@ -217,6 +266,8 @@ export function InputModal({
           textShadow="2px 2px 0 rgba(0,0,0,0.9)"
           letterSpacing="0.08em"
           mb={{ base: "14px", md: "16px" }}
+          position="relative"
+          zIndex={20}
         >
           連想ワード入力
         </Text>
@@ -231,6 +282,8 @@ export function InputModal({
           onKeyDown={handleKeyDown}
           maxLength={50}
           size="md"
+          position="relative"
+          zIndex={20}
           bg="rgba(18,22,32,0.95)"
           color="rgba(255,255,255,0.98)"
           fontFamily="'Courier New', monospace"
@@ -261,7 +314,7 @@ export function InputModal({
         />
 
         {/* ボタン群 */}
-        <HStack gap={{ base: "8px", md: "12px" }} justify="flex-end">
+        <HStack gap={{ base: "8px", md: "12px" }} justify="flex-end" position="relative" zIndex={20}>
           <Tooltip content={decideTooltip} showArrow openDelay={180}>
             <AppButton
               {...FOOTER_BUTTON_BASE_STYLES}
@@ -317,6 +370,8 @@ export function InputModal({
           textAlign="center"
           mt={{ base: "12px", md: "14px" }}
           letterSpacing="0.04em"
+          position="relative"
+          zIndex={20}
         >
           Escで閉じる
         </Text>
