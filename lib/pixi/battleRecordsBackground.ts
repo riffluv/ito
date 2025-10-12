@@ -1,4 +1,5 @@
 import type * as PIXI from "pixi.js";
+import { drawPanelBase } from "./panels/drawPanelBase";
 
 export interface BattleRecordsBoardOptions {
   /**
@@ -32,51 +33,62 @@ export function drawBattleRecordsBoard(
   graphics: PIXI.Graphics,
   options: BattleRecordsBoardOptions
 ): void {
-  const { width, height, dpr = 1 } = options;
+  const { width, height } = options;
 
   graphics.clear();
 
-  // ========================================
-  // Layer 1: 外周の深い影（多層グロー）
-  // ========================================
-  // 最外周 - ダークブルーのソフトグロー
-  graphics.rect(-24, -24, width + 48, height + 48)
-    .fill({ color: 0x0a0d1f, alpha: 0.3 });
+  const { borderWidth } = drawPanelBase(graphics, {
+    width,
+    height,
+    glow: [
+      { padding: 24, color: 0x0a0d1f, alpha: 0.3 },
+      { padding: 16, color: 0x0d1128, alpha: 0.5 },
+      { padding: 8, color: 0x0f1530, alpha: 0.7 },
+    ],
+    background: { color: 0x08090f, alpha: 0.92 },
+    border: { color: 0xffffff, alpha: 0.92, width: 3 },
+    bezel: {
+      thickness: 1,
+      highlight: { color: 0xffffff, alpha: 0.4 },
+      shadow: { color: 0x000000, alpha: 0.5 },
+    },
+    innerHighlights: [
+      {
+        orientation: "horizontal",
+        position: "start",
+        inset: 8,
+        thickness: 1,
+        color: 0xffffff,
+        alpha: 0.25,
+      },
+      {
+        orientation: "horizontal",
+        position: "end",
+        inset: 8,
+        thickness: 1,
+        color: 0xffffff,
+        alpha: 0.25,
+      },
+      {
+        orientation: "vertical",
+        position: "start",
+        inset: 8,
+        thickness: 1,
+        color: 0xffffff,
+        alpha: 0.25,
+      },
+      {
+        orientation: "vertical",
+        position: "end",
+        inset: 8,
+        thickness: 1,
+        color: 0xffffff,
+        alpha: 0.25,
+      },
+    ],
+  });
 
-  // 2層目 - 深い紺のミディアムグロー
-  graphics.rect(-16, -16, width + 32, height + 32)
-    .fill({ color: 0x0d1128, alpha: 0.5 });
-
-  // 3層目 - 濃い紺のタイトグロー
-  graphics.rect(-8, -8, width + 16, height + 16)
-    .fill({ color: 0x0f1530, alpha: 0.7 });
-
-  // ========================================
-  // Layer 2: メイン背景（リッチブラック）
-  // ========================================
-  graphics.rect(0, 0, width, height)
-    .fill({ color: 0x08090f, alpha: 0.92 });
-
-  // ========================================
-  // Layer 3: 太い白枠（3px）- ドラクエの象徴的な枠
-  // ========================================
-  const borderW = 3;
-
-  // 上辺
-  graphics.rect(0, 0, width, borderW)
-    .fill({ color: 0xffffff, alpha: 0.92 });
-
-  // 下辺
-  graphics.rect(0, height - borderW, width, borderW)
-    .fill({ color: 0xffffff, alpha: 0.92 });
-
-  // 左辺
-  graphics.rect(0, 0, borderW, height)
-    .fill({ color: 0xffffff, alpha: 0.92 });
-
-  // 右辺
-  graphics.rect(width - borderW, 0, borderW, height)
-    .fill({ color: 0xffffff, alpha: 0.92 });
+  const borderW = borderWidth;
 
   // ========================================
   // Layer 4: ゴールドアクセント（コーナー装飾）
@@ -108,29 +120,6 @@ export function drawBattleRecordsBoard(
     .fill({ color: goldColor, alpha: goldAlpha });
   graphics.rect(width - borderW - 2, height - borderW - cornerSize, 2, cornerSize)
     .fill({ color: goldColor, alpha: goldAlpha });
-
-  // ========================================
-  // Layer 5: 内側の繊細な装飾ライン（二重枠）
-  // ========================================
-  const innerOffset = 8;
-  const lineWidth = 1;
-
-  // 内側白枠（淡い）
-  // 上辺
-  graphics.rect(innerOffset, innerOffset, width - innerOffset * 2, lineWidth)
-    .fill({ color: 0xffffff, alpha: 0.25 });
-
-  // 下辺
-  graphics.rect(innerOffset, height - innerOffset - lineWidth, width - innerOffset * 2, lineWidth)
-    .fill({ color: 0xffffff, alpha: 0.25 });
-
-  // 左辺
-  graphics.rect(innerOffset, innerOffset, lineWidth, height - innerOffset * 2)
-    .fill({ color: 0xffffff, alpha: 0.25 });
-
-  // 右辺
-  graphics.rect(width - innerOffset - lineWidth, innerOffset, lineWidth, height - innerOffset * 2)
-    .fill({ color: 0xffffff, alpha: 0.25 });
 
   // ========================================
   // Layer 6: 内側シャドウ（シンプル版）

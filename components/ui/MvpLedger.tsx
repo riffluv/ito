@@ -297,6 +297,7 @@ export function MvpLedger({
       >
         <Flex
           ref={boardRef}
+          data-pixi-target="battle-records-board"
           role="dialog"
           aria-modal
           aria-label="連想記録簿"
