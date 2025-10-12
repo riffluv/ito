@@ -4,7 +4,7 @@ import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/topicControls";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { logDebug, logError } from "@/lib/utils/log";
+import { logError } from "@/lib/utils/log";
 import { Dialog, HStack, Text, VStack } from "@chakra-ui/react";
 import { X } from "lucide-react";
 
@@ -34,13 +34,6 @@ export function AdvancedHostPanel({
 
   // ゲーム開始後はresolveMode変更を無効化
   const canChangeMode = room.status === "waiting";
-
-  // Debug log for troubleshooting
-  logDebug("advanced-host-panel", "state", {
-    status: room.status,
-    canChangeMode,
-    currentMode,
-  });
 
   const handleCategorySelect = async (category: string) => {
     try {

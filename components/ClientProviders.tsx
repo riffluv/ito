@@ -2,6 +2,7 @@
 import AuthClientWrapper from "@/components/AuthClientWrapper";
 import { DragonQuestNotifyContainer } from "@/components/ui/DragonQuestNotify";
 import { TransitionProvider } from "@/components/ui/TransitionProvider";
+import { PixiHudStage } from "@/components/ui/pixi/PixiHudStage";
 import system from "@/theme";
 import { Box, ChakraProvider } from "@chakra-ui/react";
 import React, { useEffect } from "react";
@@ -28,11 +29,13 @@ export default function ClientProviders({
       <SoundProvider>
         <AnimationProvider>
           <TransitionProvider>
-            <Box bg="canvasBg" color="fgDefault" h="100dvh">
-              <DarkModeOnlyBridge />
-              <AuthClientWrapper>{children}</AuthClientWrapper>
-              <DragonQuestNotifyContainer />
-            </Box>
+            <PixiHudStage zIndex={105}>
+              <Box bg="canvasBg" color="fgDefault" h="100dvh">
+                <DarkModeOnlyBridge />
+                <AuthClientWrapper>{children}</AuthClientWrapper>
+                <DragonQuestNotifyContainer />
+              </Box>
+            </PixiHudStage>
           </TransitionProvider>
         </AnimationProvider>
       </SoundProvider>
