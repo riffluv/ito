@@ -118,11 +118,13 @@ export class GuideButton extends PIXI.Container {
       fontSize: 14,
       fill: finalConfig.keyColor,
       fontWeight: '800',
-      dropShadow: true,
-      dropShadowDistance: 2,
-      dropShadowColor: 0x000000,
-      dropShadowAlpha: 0.95,
-      dropShadowBlur: 4,
+      dropShadow: {
+        alpha: 0.95,
+        blur: 4,
+        color: 0x000000,
+        distance: 2,
+        angle: Math.PI / 2,
+      },
       letterSpacing: 0.5,
     });
     this.keyText.x = GuideButton.PADDING_X;
@@ -135,11 +137,13 @@ export class GuideButton extends PIXI.Container {
       fontSize: 14,
       fill: 0xffffff, // 白
       fontWeight: '700',
-      dropShadow: true,
-      dropShadowDistance: 2,
-      dropShadowColor: 0x000000,
-      dropShadowAlpha: 0.95,
-      dropShadowBlur: 4,
+      dropShadow: {
+        alpha: 0.95,
+        blur: 4,
+        color: 0x000000,
+        distance: 2,
+        angle: Math.PI / 2,
+      },
       letterSpacing: 0.5,
     });
     this.descText.x = this.keyText.x + this.keyText.width + 6; // キーテキストの右に配置
@@ -153,11 +157,13 @@ export class GuideButton extends PIXI.Container {
       fontSize: 28,
       fill: finalConfig.keyColor,
       fontWeight: '800',
-      dropShadow: true,
-      dropShadowDistance: 2,
-      dropShadowColor: 0x000000,
-      dropShadowAlpha: 0.95,
-      dropShadowBlur: 4,
+      dropShadow: {
+        alpha: 0.95,
+        blur: 4,
+        color: 0x000000,
+        distance: 2,
+        angle: Math.PI / 2,
+      },
     });
     this.arrow.anchor.set(0.5, finalConfig.arrowDirection === 'up' ? 1 : 0);
     this.arrow.x = GuideButton.BOX_WIDTH / 2;
@@ -369,7 +375,7 @@ export class GuideButton extends PIXI.Container {
   /**
    * クリーンアップ（メモリリーク防止）
    */
-  destroy(options?: boolean | PIXI.IDestroyOptions): void {
+  destroy(options?: boolean | PIXI.DestroyOptions): void {
     this.stopTimeline();
     super.destroy(options);
   }
