@@ -9,7 +9,11 @@ import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
-import { useEffect, useState as useLocalState, useState } from "react";
+import { useEffect, useState as useLocalState, useState, useRef } from "react";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
+import * as PIXI from "pixi.js";
+import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 
 type BackgroundOption = "css" | "pixi-simple" | "pixi-dq";
 const normalizeBackgroundOption = (
@@ -51,6 +55,13 @@ export function SettingsModal({
     force3DTransforms,
     setForce3DTransforms,
   } = useAnimationSettings();
+
+  // Pixi HUD レイヤー（モーダル背景用）
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const pixiContainer = usePixiHudLayer("settings-modal", {
+    zIndex: 105,
+  });
+  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
 
   const [resolveMode, setResolveMode] = useState<string>(
     currentOptions?.resolveMode || "sort-submit"
@@ -283,6 +294,51 @@ export function SettingsModal({
     },
   ];
 
+  // Pixi背景の描画とDOM同期
+  useEffect(() => {
+    if (!isOpen || !pixiContainer) {
+      // モーダルが閉じられたらPixiリソースを破棄
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+      return;
+    }
+
+    // Graphicsオブジェクトを作成
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    // クリーンアップ
+    return () => {
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+    };
+  }, [isOpen, pixiContainer]);
+
+  // DOM要素とPixiコンテナの位置・サイズ同期
+  usePixiLayerLayout(modalRef, pixiContainer, {
+    disabled: !isOpen || !pixiContainer,
+    onUpdate: (layout) => {
+      const graphics = pixiGraphicsRef.current;
+      if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        return;
+      }
+
+      graphics.clear();
+      graphics.position.set(layout.x, layout.y);
+      drawSettingsModalBackground(PIXI, graphics, {
+        width: layout.width,
+        height: layout.height,
+        dpr: layout.dpr,
+      });
+    },
+  });
+
   return (
     <Dialog.Root
       open={isOpen}
@@ -296,11 +352,12 @@ export function SettingsModal({
       />
       <Dialog.Positioner>
         <Dialog.Content
+          ref={modalRef}
           css={{
-            background: UI_TOKENS.COLORS.panelBg,
+            background: "transparent",
             border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
             borderRadius: 0,
-            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+            boxShadow: "none",
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -314,7 +371,7 @@ export function SettingsModal({
               position: "absolute",
               top: "12px",
               right: "12px",
-              zIndex: 10,
+              zIndex: 30,
               background: UI_TOKENS.COLORS.panelBg,
               borderRadius: 0,
               padding: "0",
@@ -342,7 +399,7 @@ export function SettingsModal({
           <Box
             p={6}
             position="relative"
-            zIndex={1}
+            zIndex={20}
             css={{
               borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
@@ -372,7 +429,7 @@ export function SettingsModal({
             </Text>
           </Box>
 
-          <Dialog.Body px={6} pb={2}>
+          <Dialog.Body px={6} pb={2} position="relative" zIndex={20}>
             {/* タブ切り替え */}
             <HStack gap={3} mb={4} justify="center">
               {[
@@ -1068,6 +1125,8 @@ export function SettingsModal({
           <Box
             p={6}
             pt={4}
+            position="relative"
+            zIndex={20}
             css={{
               background: "transparent",
               borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
