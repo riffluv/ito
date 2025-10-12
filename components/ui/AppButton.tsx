@@ -52,7 +52,14 @@ export const useButtonAnimation = () => {
   return { handleMouseDown, handleMouseUp, handleMouseEnter, handleMouseLeave };
 };
 
-const PALETTES: Record<ButtonPalette, SystemStyleObject> = {
+type PaletteConfig = {
+  background: string;
+  hoverBg: string;
+  border: string;
+  textColor: string;
+};
+
+const PALETTES: Record<ButtonPalette, PaletteConfig> = {
   brand: {
     background: "rgba(20, 23, 34, 0.95)",
     hoverBg: "rgba(28, 32, 45, 0.97)",

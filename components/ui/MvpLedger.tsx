@@ -17,6 +17,10 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notify } from "@/components/ui/notify";
 import { castMvpVote } from "@/lib/game/mvp";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
+import * as PIXI from "pixi.js";
+import { drawBattleRecordsBoard } from "@/lib/pixi/battleRecordsBackground";
 
 interface LedgerPlayer extends PlayerDoc {
   id: string;
@@ -49,6 +53,12 @@ export function MvpLedger({
   const boardRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const rowRefs = useRef<HTMLDivElement[]>([]);
+
+  // Pixi HUD レイヤー（モーダル背景用）
+  const pixiContainer = usePixiHudLayer("battle-records-board", {
+    zIndex: 90,
+  });
+  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
 
   const sortedPlayers = useMemo(() => {
     const lookup = new Map(players.map((p) => [p.id, p]));
@@ -211,12 +221,57 @@ export function MvpLedger({
     }
   }, [isOpen]);
 
+  // Pixi背景の描画とDOM同期
+  useEffect(() => {
+    if (!isOpen || !pixiContainer) {
+      // モーダルが閉じられたらPixiリソースを破棄
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+      return;
+    }
+
+    // Graphicsオブジェクトを作成
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    // クリーンアップ
+    return () => {
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+    };
+  }, [isOpen, pixiContainer]);
+
+  // DOM要素とPixiコンテナの位置・サイズ同期
+  usePixiLayerLayout(boardRef, pixiContainer, {
+    disabled: !isOpen || !pixiContainer,
+    onUpdate: (layout) => {
+      const graphics = pixiGraphicsRef.current;
+      if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        return;
+      }
+
+      graphics.clear();
+      graphics.position.set(layout.x, layout.y);
+      drawBattleRecordsBoard(PIXI, graphics, {
+        width: layout.width,
+        height: layout.height,
+        dpr: layout.dpr,
+      });
+    },
+  });
+
   const headerFont = useBreakpointValue({ base: "18px", md: "21px" });
   const bodyFont = useBreakpointValue({ base: "15px", md: "16px" });
   const wrapperMarginTop = useBreakpointValue({ base: "12vh", md: "10vh" });
   const columnTemplate = {
-    base: "50px 60px minmax(0, 1.5fr) minmax(0, 2.2fr) 80px 100px",
-    md: "60px 68px minmax(0, 1.6fr) minmax(0, 2.3fr) 90px 120px",
+    base: "50px 64px minmax(0, 1.65fr) minmax(0, 2.5fr) 88px 108px",
+    md: "62px 74px minmax(0, 1.75fr) minmax(0, 2.7fr) 100px 132px",
   } as const;
 
   if (!isOpen) return null;
@@ -227,10 +282,18 @@ export function MvpLedger({
         ref={overlayRef}
         position="fixed"
         inset={0}
-        zIndex={120}
+        zIndex={100}
         bg="rgba(8, 9, 15, 0.88)"
         backdropFilter="blur(6px)"
         onClick={onClose}
+      />
+      <Flex
+        position="fixed"
+        inset={0}
+        zIndex={120}
+        justify="center"
+        align="flex-start"
+        pointerEvents="none"
       >
         <Flex
           ref={boardRef}
@@ -238,18 +301,19 @@ export function MvpLedger({
           aria-modal
           aria-label="連想記録簿"
           direction="column"
-          maxW={{ base: "94vw", md: "min(920px, 86vw)" }}
+          maxW={{ base: "95vw", md: "min(1000px, 88vw)" }}
           maxH={{ base: "92vh", md: "88vh" }}
-          mx="auto"
+          w="100%"
           mt={wrapperMarginTop}
-          bg="rgba(8, 9, 15, 0.95)"
-          border="3px solid rgba(255,255,255,0.9)"
-          boxShadow="0 0 0 1px rgba(0,0,0,0.8), 0 12px 48px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.12)"
+          bg="transparent"
+          border="none"
+          boxShadow="none"
           transformOrigin="center"
           color="white"
           fontFamily="monospace"
           overflow="hidden"
           position="relative"
+          pointerEvents="auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ヘッダー */}
@@ -258,10 +322,10 @@ export function MvpLedger({
             align="center"
             px={{ base: "19px", md: "27px" }}
             py={{ base: "11px", md: "14px" }}
-            borderBottom="3px solid rgba(255,255,255,0.9)"
+            borderBottom="none"
             position="relative"
-            zIndex={1}
-            bg="rgba(0,0,0,0.4)"
+            zIndex={20}
+            bg="transparent"
           >
             <Flex align="center" gap={{ base: "11px", md: "15px" }}>
               <Image
@@ -309,7 +373,7 @@ export function MvpLedger({
             px={{ base: "19px", md: "27px" }}
             py={{ base: "12px", md: "16px" }}
             position="relative"
-            zIndex={1}
+            zIndex={20}
             flex="1"
             overflow="hidden"
             display="flex"
@@ -371,7 +435,7 @@ export function MvpLedger({
                           : mvpStats.isTie
                           ? "linear-gradient(135deg, rgba(34,197,94,0.26), rgba(22,163,74,0.19))"
                           : "linear-gradient(135deg, rgba(255,215,0,0.28), rgba(255,165,0,0.22))"
-                        : "rgba(0,0,0,0.3)"
+                        : "transparent"
                     }
                     borderRadius="0"
                     px={{ base: "11px", md: "15px" }}
@@ -402,7 +466,7 @@ export function MvpLedger({
                           : mvpStats.isTie
                           ? "linear-gradient(135deg, rgba(34,197,94,0.31), rgba(22,163,74,0.24))"
                           : "linear-gradient(135deg, rgba(255,215,0,0.32), rgba(255,165,0,0.26))"
-                        : "rgba(255,255,255,0.1)",
+                        : "rgba(255,255,255,0.05)",
                     }}
                   >
                     {/* NO. */}
@@ -597,11 +661,11 @@ export function MvpLedger({
             align="center"
             px={{ base: "19px", md: "27px" }}
             py={{ base: "11px", md: "13px" }}
-            borderTop="3px solid rgba(255,255,255,0.9)"
+            borderTop="none"
             fontSize={{ base: "11px", md: "13px" }}
             letterSpacing="0.03em"
-            bg="rgba(0,0,0,0.4)"
-            zIndex={1}
+            bg="transparent"
+            zIndex={20}
           >
             <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85}>
               {mvpStats.allVoted ? (
@@ -658,7 +722,7 @@ export function MvpLedger({
             </Button>
           </Flex>
         </Flex>
-      </Box>
+      </Flex>
     </Portal>
   );
 }
