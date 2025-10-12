@@ -14,11 +14,15 @@ import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
 import { doc, serverTimestamp, setDoc, Timestamp, DocumentReference, getDoc } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { logError } from "@/lib/utils/log";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
 import { generateRoomId } from "@/lib/utils/roomId";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
+import * as PIXI from "pixi.js";
+import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 
 export function CreateRoomModal({
   isOpen,
@@ -40,6 +44,13 @@ export function CreateRoomModal({
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Pixi HUD レイヤー（モーダル背景用）
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const pixiContainer = usePixiHudLayer("create-room-modal", {
+    zIndex: 105,
+  });
+  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
 
   useEffect(() => {
     if (!enablePassword) {
@@ -325,6 +336,51 @@ export function CreateRoomModal({
     }
   };
 
+  // Pixi背景の描画とDOM同期
+  useEffect(() => {
+    if (!isOpen || !pixiContainer) {
+      // モーダルが閉じられたらPixiリソースを破棄
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+      return;
+    }
+
+    // Graphicsオブジェクトを作成
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    // クリーンアップ
+    return () => {
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+    };
+  }, [isOpen, pixiContainer]);
+
+  // DOM要素とPixiコンテナの位置・サイズ同期
+  usePixiLayerLayout(modalRef, pixiContainer, {
+    disabled: !isOpen || !pixiContainer,
+    onUpdate: (layout) => {
+      const graphics = pixiGraphicsRef.current;
+      if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        return;
+      }
+
+      graphics.clear();
+      graphics.position.set(layout.x, layout.y);
+      drawSettingsModalBackground(PIXI, graphics, {
+        width: layout.width,
+        height: layout.height,
+        dpr: layout.dpr,
+      });
+    },
+  });
+
   return (
     <Dialog.Root open={isOpen} closeOnInteractOutside={false} onOpenChange={(d) => !d.open && onClose()}>
       {/* Sophisticated backdrop */}
@@ -337,11 +393,12 @@ export function CreateRoomModal({
 
       <Dialog.Positioner>
         <Dialog.Content
+          ref={modalRef}
           css={{
-            background: UI_TOKENS.COLORS.panelBg, // NameDialogと同じリッチブラック
+            background: "transparent",
             border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-            borderRadius: 0, // 角ばった統一
-            boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+            borderRadius: 0,
+            boxShadow: "none",
             maxWidth: "480px",
             width: "90vw",
             padding: 0,
@@ -358,7 +415,7 @@ export function CreateRoomModal({
               position: "absolute",
               top: "12px",
               right: "12px",
-              zIndex: 10,
+              zIndex: 30,
               borderRadius: 0, // NameDialogと同じ角ばり
               padding: "0",
               cursor: "pointer",
@@ -382,7 +439,7 @@ export function CreateRoomModal({
           <Box
             p={6}
             position="relative"
-            zIndex={1}
+            zIndex={20}
             css={{
               borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
@@ -415,7 +472,7 @@ export function CreateRoomModal({
 
           {/* Form Content - ドラクエ風 */}
           {isSuccess ? (
-            <Box px={6} py={6} position="relative" zIndex={1}>
+            <Box px={6} py={6} position="relative" zIndex={20}>
               <VStack gap={4} align="stretch">
                 <Text
                   fontSize="sm"
@@ -495,7 +552,7 @@ export function CreateRoomModal({
               </VStack>
             </Box>
           ) : (
-            <Box px={6} py={6} position="relative" zIndex={1}>
+            <Box px={6} py={6} position="relative" zIndex={20}>
               <form
                 autoComplete="off"
                 onSubmit={(event) => event.preventDefault()}
@@ -738,7 +795,7 @@ export function CreateRoomModal({
             p={4}
             pt={0}
             position="relative"
-            zIndex={1}
+            zIndex={20}
             css={{
               borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
             }}
