@@ -9,6 +9,7 @@ import CentralCardBoard from "@/components/CentralCardBoard";
 import NameDialog from "@/components/NameDialog";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
+import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
 import dynamic from "next/dynamic";
 // 笞｡ PERFORMANCE: React.lazy 縺ｧ驕・ｻｶ繝ｭ繝ｼ繝・
 import { lazy, Suspense } from "react";
@@ -1551,6 +1552,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       </Suspense>
 
       <DebugMetricsHUD />
+
+      {/* 🎮 Pure PixiJS版ガイドボタン */}
+      <PixiGuideButtonsAuto currentPhase={room?.status} me={me} />
     </>
   );
 }
