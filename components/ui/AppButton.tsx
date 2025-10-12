@@ -34,6 +34,9 @@ export type AppButtonProps = Omit<ButtonProps, "variant" | "colorScheme"> & {
   colorPalette?: ButtonPalette;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   density?: "compact" | "comfortable";
+  href?: string;
+  target?: string;
+  rel?: string;
 };
 
 export const useButtonAnimation = () => {

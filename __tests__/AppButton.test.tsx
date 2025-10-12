@@ -103,10 +103,13 @@ describe("AppButton", () => {
 
   it("should support href prop for link usage", () => {
     renderWithChakra(
-      <AppButton href="/test-link">リンクボタン</AppButton>
+      <AppButton as="a" href="/test-link">
+        リンクボタン
+      </AppButton>
     );
-    
-    const button = screen.getByRole("button", { name: "リンクボタン" });
-    expect(button).toBeInTheDocument();
+
+    const link = screen.getByRole("link", { name: "リンクボタン" });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/test-link");
   });
 });
