@@ -353,6 +353,7 @@ export function SettingsModal({
       <Dialog.Positioner>
         <Dialog.Content
           ref={modalRef}
+          data-pixi-target="settings-modal"
           css={{
             background: "transparent",
             border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
