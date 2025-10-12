@@ -134,7 +134,7 @@ export function AdvancedHostPanel({
                     <AppButton
                       onClick={handleResetRoom}
                       variant="ghost"
-                      colorPalette="red"
+                      colorPalette="danger"
                       flex="1"
                     >
                       ルームリセット
