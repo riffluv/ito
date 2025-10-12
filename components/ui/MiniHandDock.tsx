@@ -1024,8 +1024,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <>
       {/* 🎮 Spaceキーヒント（ゲーム開始直後に初回のみ表示） */}
-      <SpaceKeyHint shouldShow={shouldShowSpaceHint} />
-      <SubmitEHint shouldShow={shouldShowSubmitHint} />
+      {/* 注: Pure PixiJS版に移行したためコメントアウト */}
+      {/* <SpaceKeyHint shouldShow={shouldShowSpaceHint} /> */}
+      {/* <SubmitEHint shouldShow={shouldShowSubmitHint} /> */}
 
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
@@ -1097,6 +1098,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         left="50%"
         transform="translateX(-50%)"
         zIndex={50}
+        data-guide-target="mini-hand-dock"
         gap={{ base: "10px", md: "14px" }}
         align="center"
         justify="center"
@@ -1137,6 +1139,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 handleDecide();
               }
             }}
+            data-guide-target="association-input"
             maxLength={50}
             size="md"
             bg="rgba(18,22,32,0.85)"
