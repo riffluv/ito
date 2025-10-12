@@ -136,7 +136,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       }
       if (options?.interactive) {
         existing.container.eventMode = "dynamic";
-        currentApp.canvas.style.pointerEvents = "auto";
+        // Canvas全体のpointerEventsは"none"のまま（DOM要素のイベントをブロックしない）
       }
       return existing.container;
     }
@@ -147,7 +147,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     container.label = name;
     if (options?.interactive) {
       container.eventMode = "dynamic";
-      currentApp.canvas.style.pointerEvents = "auto";
+      // Canvas全体のpointerEventsは"none"のまま（DOM要素のイベントをブロックしない）
     } else {
       container.eventMode = "none";
     }
@@ -173,9 +173,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     record.container.destroy({ children: true });
     store.delete(name);
 
-    if (store.size === 0) {
-      currentApp.canvas.style.pointerEvents = "none";
-    }
+    // Canvas全体のpointerEventsは常に"none"のまま
   }, []);
 
   const contextValue = useMemo<PixiHudContextValue>(
