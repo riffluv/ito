@@ -1,5 +1,12 @@
 "use client";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   getAuth,
   onAuthStateChanged,
@@ -43,31 +50,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInRetryRef = useRef(0);
+  const signInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!firebaseEnabled || !auth) {
+      setLoading(false);
+      return;
+    }
+  }, [auth, firebaseEnabled]);
+
   useEffect(() => {
     if (!firebaseEnabled || !auth) return;
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      // 認証中（user=null）でも匿名ログイン試行中なら loading を継続
-      if (u !== null) {
+      if (u) {
+        signInRetryRef.current = 0;
+        if (signInTimerRef.current) {
+          clearTimeout(signInTimerRef.current);
+          signInTimerRef.current = null;
+        }
         setLoading(false);
       }
     });
-    return () => unsub();
+    return () => {
+      unsub();
+    };
   }, [auth]);
 
   useEffect(() => {
     if (!firebaseEnabled || !auth) return;
-    if (!user) {
-      signInAnonymously(auth)
-        .then(() => {
-          // 匿名ログイン成功後、onAuthStateChanged が発火して loading=false になる
-        })
-        .catch(() => {
-          // 失敗しても loading を解除（無限ローディング防止）
-          setLoading(false);
-        });
-    }
+    if (user) return;
+
+    setLoading(true);
+
+    let cancelled = false;
+
+    const scheduleNext = (delay: number) => {
+      if (cancelled) return;
+      if (signInTimerRef.current) {
+        clearTimeout(signInTimerRef.current);
+        signInTimerRef.current = null;
+      }
+      signInTimerRef.current = setTimeout(() => {
+        if (cancelled) return;
+        signInAnonymously(auth)
+          .then(() => {
+            signInRetryRef.current = 0;
+            // 成功時は onAuthStateChanged 側で loading を解除
+          })
+          .catch(() => {
+            const nextAttempt = signInRetryRef.current + 1;
+            signInRetryRef.current = nextAttempt;
+            if (nextAttempt >= 5) {
+              setLoading(false);
+              return;
+            }
+            const delayMs = Math.min(500 * Math.pow(2, nextAttempt - 1), 5000);
+            scheduleNext(delayMs);
+          });
+      }, delay);
+    };
+
+    // 初回は即時実行
+    scheduleNext(0);
+
+    return () => {
+      cancelled = true;
+      if (signInTimerRef.current) {
+        clearTimeout(signInTimerRef.current);
+        signInTimerRef.current = null;
+      }
+    };
   }, [auth, user]);
+
+  useEffect(() => {
+    if (!user?.displayName) return;
+    setDisplayNameState((current) => {
+      if (current && current.trim().length > 0) {
+        return current;
+      }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("displayName", user.displayName ?? "");
+      }
+      return user.displayName ?? "";
+    });
+  }, [user?.displayName]);
 
   const value: AuthContextValue = { user, loading, displayName, setDisplayName };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
