@@ -253,7 +253,7 @@ export default function MinimalChat({
             background:
               "linear-gradient(135deg, rgba(12,14,20,0.95) 0%, rgba(18,20,28,0.92) 100%)",
           }}
-          zIndex={21}
+          zIndex={130}
           borderRadius="0"
           overflow="hidden"
           bg="rgba(12,14,20,0.92)"
