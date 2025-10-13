@@ -424,7 +424,7 @@ export function MvpLedger({
               <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
               <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
               <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">数字</Flex>
+              <Box textAlign="right" justifySelf="end" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" pr={{ base: "8px", md: "12px" }}>数字</Box>
               <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">MVP</Flex>
             </Box>
 
@@ -577,18 +577,18 @@ export function MvpLedger({
                       {player.clue1?.trim() ? player.clue1 : "――"}
                     </Box>
 
-                    {/* 数字 */}
-                    <Flex
-                      justify="center"
-                      align="center"
+                    {/* 数字（右揃え） */}
+                    <Box
+                      textAlign="right"
+                      justifySelf="end"
+                      w="100%"
                       fontSize={{ base: "15px", md: "17px" }}
                       fontWeight={700}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
-                      justifySelf="center"
-                      w="100%"
+                      pr={{ base: "8px", md: "12px" }}
                     >
                       {typeof player.number === "number" ? player.number : "?"}
-                    </Flex>
+                    </Box>
 
                     {/* MVP / 投票統合列 */}
                     <Flex
