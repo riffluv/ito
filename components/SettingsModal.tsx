@@ -357,7 +357,7 @@ export function SettingsModal({
           css={{
             background: "transparent",
             border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-            borderRadius: 0,
+            borderRadius: "0",
             boxShadow: "none",
             maxWidth: "480px",
             width: "90vw",
@@ -374,7 +374,7 @@ export function SettingsModal({
               right: "12px",
               zIndex: 30,
               background: UI_TOKENS.COLORS.panelBg,
-              borderRadius: 0,
+              borderRadius: "0",
               padding: "0",
               border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
               color: "white",
@@ -386,7 +386,7 @@ export function SettingsModal({
               justifyContent: "center",
               fontSize: "16px",
               fontWeight: "bold",
-              transition: `background-color 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`,
+              transition: `background-color 177ms cubic-bezier(.2,1,.3,1), color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)`,
               "&:hover": {
                 background: "white",
                 color: UI_TOKENS.COLORS.panelBg,
@@ -446,7 +446,7 @@ export function SettingsModal({
                     onClick={() => setActiveTab(t.key as any)}
                     px={4}
                     py={2}
-                    borderRadius={0}
+                    borderRadius="0"
                     border="2px solid"
                     borderColor={
                       isActive
@@ -461,7 +461,7 @@ export function SettingsModal({
                     color="white"
                     fontFamily="monospace"
                     fontWeight="bold"
-                    transition={`background-color 0.12s ${UI_TOKENS.EASING.standard}, color 0.12s ${UI_TOKENS.EASING.standard}, border-color 0.12s ${UI_TOKENS.EASING.standard}`}
+                    transition={`background-color 117ms cubic-bezier(.2,1,.3,1), color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
                   >
                     {t.label}
                   </Box>
@@ -485,7 +485,7 @@ export function SettingsModal({
                           cursor="pointer"
                           onClick={() => setResolveMode(option.value)}
                           p={4}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             isSelected
@@ -497,7 +497,7 @@ export function SettingsModal({
                               ? UI_TOKENS.COLORS.whiteAlpha10
                               : UI_TOKENS.COLORS.panelBg
                           }
-                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1), box-shadow 177ms cubic-bezier(.2,1,.3,1)`}
                           boxShadow={
                             isSelected
                               ? UI_TOKENS.SHADOWS.panelDistinct
@@ -533,7 +533,7 @@ export function SettingsModal({
                             <Box
                               w={5}
                               h={5}
-                              borderRadius={0}
+                              borderRadius="0"
                               border="2px solid"
                               borderColor={
                                 isSelected
@@ -543,7 +543,7 @@ export function SettingsModal({
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
-                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+                              transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)`}
                             >
                               {isSelected && (
                                 <Box
@@ -554,7 +554,7 @@ export function SettingsModal({
                                   w="10px"
                                   h="6px"
                                   color="black"
-                                  fontWeight="900"
+                                  fontWeight={880}
                                   fontSize="12px"
                                   fontFamily="monospace"
                                   lineHeight={1}
@@ -584,7 +584,7 @@ export function SettingsModal({
                           cursor="pointer"
                           onClick={() => setDefaultTopicType(option.value)}
                           p={4}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             isSelected
@@ -596,7 +596,7 @@ export function SettingsModal({
                               ? UI_TOKENS.COLORS.whiteAlpha10
                               : UI_TOKENS.COLORS.panelBg
                           }
-                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1), box-shadow 177ms cubic-bezier(.2,1,.3,1)`}
                           boxShadow={
                             isSelected
                               ? UI_TOKENS.SHADOWS.panelDistinct
@@ -632,7 +632,7 @@ export function SettingsModal({
                             <Box
                               w={5}
                               h={5}
-                              borderRadius={0}
+                              borderRadius="0"
                               border="2px solid"
                               borderColor={
                                 isSelected
@@ -642,7 +642,7 @@ export function SettingsModal({
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
-                              transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
+                              transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)`}
                             >
                               {isSelected && (
                                 <Box
@@ -653,7 +653,7 @@ export function SettingsModal({
                                   w="10px"
                                   h="6px"
                                   color="black"
-                                  fontWeight="900"
+                                  fontWeight={880}
                                   fontSize="12px"
                                   fontFamily="monospace"
                                   lineHeight={1}
@@ -673,7 +673,7 @@ export function SettingsModal({
                   <Box
                     p={4}
                     bg={UI_TOKENS.COLORS.whiteAlpha05}
-                    borderRadius={0}
+                    borderRadius="0"
                     border="2px solid"
                     borderColor={UI_TOKENS.COLORS.whiteAlpha60}
                     boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
@@ -710,7 +710,7 @@ export function SettingsModal({
                         onClick={() => setGraphicsTab(t.key as any)}
                         px={4}
                         py={2}
-                        borderRadius={0}
+                        borderRadius="0"
                         border="2px solid"
                         borderColor={
                           isActive
@@ -725,7 +725,7 @@ export function SettingsModal({
                         color="white"
                         fontFamily="monospace"
                         fontWeight="bold"
-                        transition={`background-color 0.12s ${UI_TOKENS.EASING.standard}, color 0.12s ${UI_TOKENS.EASING.standard}, border-color 0.12s ${UI_TOKENS.EASING.standard}`}
+                        transition={`background-color 117ms cubic-bezier(.2,1,.3,1), color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
                       >
                         {t.label}
                       </Box>
@@ -750,7 +750,7 @@ export function SettingsModal({
                           cursor="pointer"
                           onClick={() => handleBackgroundChange(opt.value)}
                           p={4}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             isSelected
@@ -762,7 +762,7 @@ export function SettingsModal({
                               ? UI_TOKENS.COLORS.whiteAlpha10
                               : UI_TOKENS.COLORS.panelBg
                           }
-                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1), box-shadow 177ms cubic-bezier(.2,1,.3,1)`}
                           boxShadow={
                             isSelected
                               ? UI_TOKENS.SHADOWS.panelDistinct
@@ -798,7 +798,7 @@ export function SettingsModal({
                             <Box
                               w={5}
                               h={5}
-                              borderRadius={0}
+                              borderRadius="0"
                               border="2px solid"
                               borderColor={
                                 isSelected
@@ -808,7 +808,7 @@ export function SettingsModal({
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
-                              transition="background-color 0.15s ease, border-color 0.15s ease"
+                              transition="background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)"
                             >
                               {isSelected && (
                                 <Box
@@ -819,7 +819,7 @@ export function SettingsModal({
                                   w="10px"
                                   h="6px"
                                   color="black"
-                                  fontWeight="900"
+                                  fontWeight={880}
                                   fontSize="12px"
                                   fontFamily="monospace"
                                   lineHeight={1}
@@ -885,7 +885,7 @@ export function SettingsModal({
                           onClick={isAvailable ? handleClick : undefined}
                           opacity={isAvailable ? 1 : 0.5}
                           p={4}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             isSelected
@@ -897,7 +897,7 @@ export function SettingsModal({
                               ? UI_TOKENS.COLORS.whiteAlpha10
                               : UI_TOKENS.COLORS.panelBg
                           }
-                          transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
+                          transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1), box-shadow 177ms cubic-bezier(.2,1,.3,1)`}
                           boxShadow={
                             isSelected
                               ? UI_TOKENS.SHADOWS.panelDistinct
@@ -937,7 +937,7 @@ export function SettingsModal({
                             <Box
                               w={5}
                               h={5}
-                              borderRadius={0}
+                              borderRadius="0"
                               border="2px solid"
                               borderColor={
                                 isSelected
@@ -947,7 +947,7 @@ export function SettingsModal({
                               bg={isSelected ? "white" : "transparent"}
                               mt={0.5}
                               position="relative"
-                              transition="background-color 0.15s ease, border-color 0.15s ease"
+                              transition="background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)"
                             >
                               {isSelected && (
                                 <Box
@@ -958,7 +958,7 @@ export function SettingsModal({
                                   w="10px"
                                   h="6px"
                                   color="black"
-                                  fontWeight="900"
+                                  fontWeight={880}
                                   fontSize="12px"
                                   fontFamily="monospace"
                                   lineHeight={1}
@@ -988,7 +988,7 @@ export function SettingsModal({
                       cursor="pointer"
                       onClick={() => setForceAnimationsPersist(false)}
                       p={4}
-                      borderRadius={0}
+                      borderRadius="0"
                       border="2px solid"
                       borderColor={
                         !forceAnimations
@@ -1024,7 +1024,7 @@ export function SettingsModal({
                         <Box
                           w={5}
                           h={5}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             !forceAnimations
@@ -1040,7 +1040,7 @@ export function SettingsModal({
                       cursor="pointer"
                       onClick={() => setForceAnimationsPersist(true)}
                       p={4}
-                      borderRadius={0}
+                      borderRadius="0"
                       border="2px solid"
                       borderColor={
                         forceAnimations
@@ -1076,7 +1076,7 @@ export function SettingsModal({
                         <Box
                           w={5}
                           h={5}
-                          borderRadius={0}
+                          borderRadius="0"
                           border="2px solid"
                           borderColor={
                             forceAnimations
@@ -1139,8 +1139,8 @@ export function SettingsModal({
                 style={{
                   minWidth: "120px",
                   height: "40px",
-                  borderRadius: 0,
-                  fontWeight: "bold",
+                  borderRadius: "0",
+                  fontWeight: 880,
                   fontSize: "1rem",
                   fontFamily: "monospace",
                   border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
@@ -1169,8 +1169,8 @@ export function SettingsModal({
                   style={{
                     minWidth: "140px",
                     height: "40px",
-                    borderRadius: 0,
-                    fontWeight: "bold",
+                    borderRadius: "0",
+                    fontWeight: 880,
                     fontSize: "1rem",
                     fontFamily: "monospace",
                     border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
@@ -1184,9 +1184,9 @@ export function SettingsModal({
                         ? "not-allowed"
                         : "pointer",
                     textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
-                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                    transition: `background-color 103ms cubic-bezier(.2,1,.3,1), color 103ms cubic-bezier(.2,1,.3,1), border-color 103ms cubic-bezier(.2,1,.3,1)`,
                     opacity:
-                      saving || !isHost || roomStatus !== "waiting" ? 0.6 : 1,
+                      saving || !isHost || roomStatus !== "waiting" ? 0.62 : 1,
                   }}
                   onMouseEnter={(e) => {
                     if (!saving && isHost && roomStatus === "waiting") {

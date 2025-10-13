@@ -113,7 +113,7 @@ const getSolidStyles = (palette: ButtonPalette): SystemStyleObject => {
     background: p.background,
     color: p.textColor,
     border: p.border,
-    borderRadius: "3px", // 指示書: 角丸3px（AI感排除）
+    borderRadius: "0", // 指示書: 角丸3px（AI感排除）
     fontWeight: 690, // 指示書: 偶数回避→奇数的な値（700→690）
     textShadow: "1px 1px 0 rgba(0,0,0,0.73)", // 指示書: 0.75→0.73（微差）
     // 指示書準拠: 段積み影でピクセル風（ぼかし削減）+ 微差の非均一
@@ -154,7 +154,7 @@ const getOutlineStyles = (palette: ButtonPalette): SystemStyleObject => {
     background: "rgba(0,0,0,0.23)", // 指示書: 0.25→0.23
     color: p.textColor,
     border: "2px solid rgba(255,255,255,0.58)", // 指示書: 0.6→0.58
-    borderRadius: "3px", // 指示書: 統一感のある微差
+    borderRadius: "0", // 指示書: 統一感のある微差
     fontWeight: 580, // 指示書: 600→580（偶数回避）
     textShadow: "1px 1px 0 rgba(0,0,0,0.58)", // 指示書: 0.6→0.58（役割差）
     boxShadow: "1px 2px 0 rgba(0,0,0,0.14)", // 指示書: 0.15→0.14
@@ -302,7 +302,7 @@ export function AppButton({
   const variantStyles = getStylesForVisual(visual, activePalette);
 
   const baseStyles: SystemStyleObject = {
-    borderRadius: "3px", // 指示書: 基本は3px
+    borderRadius: "0", // 指示書: 基本は3px
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
     // 指示書: 奇数px + 微差でAI感排除

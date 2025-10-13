@@ -336,10 +336,9 @@ export function ChatPanel({
       gridTemplateRows="minmax(0,1fr) auto"
       overflow="hidden"
       minH={0}
-      // PixiHUD化: 背景を透明に
+      // PixiHUD化: 背景を透明に、枠はPixi側で描画
       bg="transparent"
-      border="3px solid rgba(255,255,255,0.9)"
-      borderRadius={0}
+      border="none"
       boxShadow="none"
       position="relative"
       zIndex={120}
@@ -390,7 +389,7 @@ export function ChatPanel({
                     px={3}
                     py={2}
                     border={`2px dashed ${UI_TOKENS.COLORS.whiteAlpha40}`}
-                    borderRadius={0}
+                    borderRadius="3px"
                     bg="rgba(12,14,22,0.75)"
                     color={UI_TOKENS.COLORS.whiteAlpha80}
                     fontFamily="monospace"
@@ -467,7 +466,7 @@ export function ChatPanel({
             bg="rgba(12,14,24,0.9)"
             color="white"
             border="2px solid rgba(255,255,255,0.6)"
-            borderRadius={0} // 完全角ばったドラクエ風
+            borderRadius="3px"
             boxShadow="inset 0 2px 4px rgba(0,0,0,0.3)"
             fontFamily="monospace"
             fontSize="sm"
@@ -479,12 +478,13 @@ export function ChatPanel({
               borderColor: UI_TOKENS.COLORS.dqBlue,
               boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
               bg: "rgba(12,14,24,0.95)",
+              outline: "none",
             }}
             _hover={{
               borderColor: "rgba(255,255,255,0.8)",
               bg: "rgba(12,14,24,0.95)",
             }}
-            transition="all 0.15s ease"
+            transition="all 177ms cubic-bezier(.2,1,.3,1)"
             px={2}
             py={1}
             css={{
@@ -505,10 +505,10 @@ export function ChatPanel({
             bg="rgba(12,14,24,0.9)"
             color="white"
             border="2px solid rgba(255,255,255,0.9)"
-            borderRadius={0}
+            borderRadius="3px"
             px={3}
             py={1}
-            fontWeight="700"
+            fontWeight={690}
             fontFamily="monospace"
             fontSize="sm"
             textShadow="0 1px 2px rgba(0,0,0,0.8)"
@@ -544,7 +544,7 @@ export function ChatPanel({
               cursor: "not-allowed",
               borderColor: "rgba(255,255,255,0.3)",
             }}
-            transition="all 0.15s ease"
+            transition="all 177ms cubic-bezier(.2,1,.3,1)"
           >
             送信
           </AppButton>
