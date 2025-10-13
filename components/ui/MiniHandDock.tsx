@@ -623,13 +623,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           });
           didSucceed = true;
         } else {
-          await addCardToProposal(roomId, me.id);
-          playCardPlace();
-          setInlineFeedback({
-            message: "カードを提出しました",
-            tone: "success",
-          });
-          didSucceed = true;
+          const result = await addCardToProposal(roomId, me.id);
+          if (result === "noop") {
+            setInlineFeedback({
+              message: "カードは既に提出済みです",
+              tone: "info",
+            });
+          } else {
+            playCardPlace();
+            setInlineFeedback({
+              message: "カードを提出しました",
+              tone: "success",
+            });
+            didSucceed = true;
+          }
         }
       } else {
         await commitPlayFromClue(roomId, me.id);
@@ -847,7 +854,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       (v): v is string => typeof v === "string" && v.length > 0
     );
     playOrderConfirm();
-    await submitSortedOrder(roomId, list);
+    try {
+      await submitSortedOrder(roomId, list);
+    } catch (error: any) {
+      notify({
+        id: toastIds.genericError(roomId, "submit-order"),
+        title: "並びの確定に失敗しました",
+        description:
+          error?.message ||
+          "提出枚数や並び順を確認して、もう一度お試しください。",
+        type: "error",
+      });
+    }
   };
 
   const resetGame = async (options?: { showFeedback?: boolean; playSound?: boolean }) => {

@@ -315,12 +315,18 @@ export function PixiGuideButtons({
 interface PixiGuideButtonsAutoProps {
   currentPhase?: string;
   me?: { ready?: boolean; clue1?: string } | null;
+  disabled?: boolean;
 }
 
-export function PixiGuideButtonsAuto({ currentPhase, me }: PixiGuideButtonsAutoProps) {
+export function PixiGuideButtonsAuto({
+  currentPhase,
+  me,
+  disabled = false,
+}: PixiGuideButtonsAutoProps) {
   // フェーズごとの表示制御
-  const showSpace = currentPhase === "clue" && !me?.ready;
-  const showE = currentPhase === "clue" && me?.ready && !!me?.clue1?.trim();
+  const showSpace = !disabled && currentPhase === "clue" && !me?.ready;
+  const showE =
+    !disabled && currentPhase === "clue" && me?.ready && !!me?.clue1?.trim();
 
   return <PixiGuideButtons showSpace={showSpace} showE={showE} />;
 }

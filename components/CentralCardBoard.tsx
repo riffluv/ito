@@ -1057,7 +1057,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (!canConfirm) return;
     try {
       await submitSortedOrder(roomId, (proposal as (string | null)[]).filter(Boolean) as string[]);
-    } catch {}
+    } catch (error: any) {
+      notify({
+        title: "並びの確定に失敗しました",
+        description:
+          error?.message ||
+          "提出枚数やカードの内容を確認して、もう一度お試しください。",
+        type: "error",
+      });
+    }
   }, [canConfirm, roomId, proposal]);
 
   const magnetAwareDragMove = useCallback(
@@ -1207,8 +1215,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
+            let previousPending: string[] | undefined;
             if (!alreadyInProposal) {
               updatePendingState((prev) => {
+                previousPending = prev.slice();
                 const next = [...prev];
                 const exist = next.indexOf(activePlayerId);
                 if (exist >= 0) next.splice(exist, 1);
@@ -1223,13 +1233,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             try {
               if (alreadyInProposal) {
                 await moveCardInProposalToPosition(roomId, activePlayerId, slotIndex);
+                playCardPlace();
+                return;
               } else {
-                await addCardToProposalAtPosition(roomId, activePlayerId, slotIndex);
+                const result = await addCardToProposalAtPosition(
+                  roomId,
+                  activePlayerId,
+                  slotIndex
+                );
+                if (result === "noop") {
+                  if (previousPending !== undefined) {
+                    const snapshot = previousPending.slice();
+                    updatePendingState(() => snapshot);
+                  }
+                  notify({
+                    title: "その位置には置けません",
+                    description: "カードが既に置かれているか、提案が更新されています。",
+                    type: "info",
+                  });
+                  playDropInvalid();
+                  return;
+                }
               }
               playCardPlace();
               return;
             } catch (error) {
               logError("central-card-board", "add-card-to-proposal", error);
+              if (previousPending !== undefined) {
+                const snapshot = previousPending.slice();
+                updatePendingState(() => snapshot);
+              }
               playDropInvalid();
               return;
             }

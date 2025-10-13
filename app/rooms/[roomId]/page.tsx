@@ -1589,7 +1589,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       <DebugMetricsHUD />
 
       {/* 🎮 Pure PixiJS版ガイドボタン */}
-      <PixiGuideButtonsAuto currentPhase={room?.status} me={me} />
+      <PixiGuideButtonsAuto
+        currentPhase={room?.status}
+        me={me}
+        disabled={isSpectatorMode}
+      />
     </>
   );
 }
