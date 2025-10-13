@@ -222,7 +222,10 @@ type ProposalWriteResult = "ok" | "noop" | "missing-deal";
 
 // sort-submit モード: プレイヤーが自分のカードを場(提案配列)に置く
 // 既存の末尾追加機能（「出す」ボタン用）
-export async function addCardToProposal(roomId: string, playerId: string) {
+export async function addCardToProposal(
+  roomId: string,
+  playerId: string
+): Promise<ProposalWriteResult> {
   return addCardToProposalAtPosition(roomId, playerId, -1); // -1 = 末尾追加
 }
 
@@ -231,7 +234,7 @@ export async function addCardToProposalAtPosition(
   roomId: string,
   playerId: string,
   targetIndex: number = -1
-) {
+): Promise<ProposalWriteResult> {
   const roomRef = doc(db!, "rooms", roomId);
   const playerRef = doc(db!, "rooms", roomId, "players", playerId);
 
@@ -319,7 +322,7 @@ export async function addCardToProposalAtPosition(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const result = await runOnce(attempt);
     if (result === "ok" || result === "noop") {
-      return;
+      return result;
     }
 
     if (result === "missing-deal") {
@@ -335,6 +338,8 @@ export async function addCardToProposalAtPosition(
       continue;
     }
   }
+
+  throw new Error("カードの提出に失敗しました");
 }
 
 // 既にproposalに含まれるカードを、空きスロットに移動（重複防止）。

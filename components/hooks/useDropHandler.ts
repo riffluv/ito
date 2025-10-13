@@ -76,7 +76,14 @@ export function useDropHandler({
 
     // Only sort-submit mode is supported
     try {
-      await addCardToProposal(roomId, meId);
+      const result = await addCardToProposal(roomId, meId);
+      if (result === "noop") {
+        notify({
+          title: "カードは既に提出済みです",
+          type: "info",
+        });
+        return;
+      }
       setPending((p) => (p.includes(pid) ? p : [...p, pid]));
       notify({ title: "カードを場に置きました", type: "success" });
     } catch (err: any) {
@@ -112,9 +119,11 @@ export function useDropHandler({
     }
 
     // 位置指定追加に切り替え
+    let previous: string[] | null = null;
     try {
       // Optimistic update at target index
       setPending((prev) => {
+        previous = prev.slice();
         const next = [...prev];
         const exist = next.indexOf(pid);
         if (exist >= 0) next.splice(exist, 1);
@@ -122,9 +131,21 @@ export function useDropHandler({
         next[targetIndex] = pid;
         return next;
       });
-      await addCardToProposalAtPosition(roomId, meId, targetIndex);
+      const result = await addCardToProposalAtPosition(roomId, meId, targetIndex);
+      if (result === "noop") {
+        setPending(previous ?? []);
+        notify({
+          title: "その位置には置けません",
+          description: "別の位置を選ぶか、既存のカードを動かしてください。",
+          type: "info",
+        });
+        return;
+      }
       notify({ title: "カードをその位置に置きました", type: "success" });
     } catch (err: any) {
+      if (previous !== null) {
+        setPending(previous);
+      }
       notify({
         title: "配置に失敗しました",
         description: err?.message,
