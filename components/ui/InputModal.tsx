@@ -49,8 +49,8 @@ const FOOTER_BUTTON_BASE_STYLES = {
   minW: "68px",
   bg: "rgba(28,32,42,0.95)",
   border: "none",
-  borderRadius: "0",
-  fontWeight: "900",
+  borderRadius: "3px",
+  fontWeight: 880,
   fontFamily: "'Courier New', monospace",
   fontSize: "15px",
   letterSpacing: "0.06em",
@@ -252,15 +252,14 @@ export function InputModal({
           position: "relative",
           background: "transparent",
           backdropFilter: "blur(14px) saturate(1.12)",
-          border: "3px solid rgba(255,255,255,0.9)",
-          borderRadius: 0,
+          border: "none",
           boxShadow: "none",
         }}
       >
         {/* タイトル */}
         <Text
           fontSize={{ base: "16px", md: "18px" }}
-          fontWeight="900"
+          fontWeight={880}
           fontFamily="'Courier New', monospace"
           color="rgba(255,255,255,0.98)"
           textShadow="2px 2px 0 rgba(0,0,0,0.9)"
@@ -288,10 +287,10 @@ export function InputModal({
           color="rgba(255,255,255,0.98)"
           fontFamily="'Courier New', monospace"
           fontSize="17px"
-          fontWeight="700"
+          fontWeight={690}
           letterSpacing="0.04em"
           border="none"
-          borderRadius={0}
+          borderRadius="3px"
           boxShadow="inset 3px 3px 0 rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.08), 0 0 0 3px rgba(255,255,255,0.85)"
           minH="52px"
           mb={{ base: "16px", md: "20px" }}
@@ -365,7 +364,7 @@ export function InputModal({
         {/* 閉じるヒント */}
         <Text
           fontSize="12px"
-          color="rgba(255,255,255,0.5)"
+          color="rgba(255,255,255,0.53)"
           fontFamily="'Courier New', monospace"
           textAlign="center"
           mt={{ base: "12px", md: "14px" }}
