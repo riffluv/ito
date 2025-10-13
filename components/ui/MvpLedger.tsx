@@ -303,6 +303,11 @@ export function MvpLedger({
     md: "62px 74px minmax(0, 1.75fr) minmax(0, 2.7fr) 100px 132px",
   } as const;
 
+  const voteControlWidth = {
+    base: "56px",
+    md: "64px",
+  } as const;
+
   if (!isOpen) return null;
 
   return (
@@ -418,14 +423,25 @@ export function MvpLedger({
               pb="9px"
               borderBottom="2px solid rgba(255,255,255,0.85)"
               alignItems="center"
-              justifyItems="center"
             >
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">NO</Flex>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
+              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">NO</Flex>
+              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
               <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
               <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
               <Box textAlign="right" justifySelf="end" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" pr={{ base: "8px", md: "12px" }}>数字</Box>
-              <Flex justify="center" align="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">MVP</Flex>
+              <Flex
+                justify="center"
+                align="center"
+                justifySelf="center"
+                w={voteControlWidth}
+                fontSize={{ base: "13px", md: "15px" }}
+                fontWeight={700}
+                letterSpacing="0.05em"
+                color="white"
+                textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+              >
+                MVP
+              </Flex>
             </Box>
 
             {/* 表データ */}
@@ -457,7 +473,6 @@ export function MvpLedger({
                     gridTemplateColumns={columnTemplate}
                     gap={{ base: "7px", md: "11px" }}
                     alignItems="center"
-                    justifyItems="center"
                     bg={
                       mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
                         ? mvpStats.isAllTie
@@ -503,6 +518,7 @@ export function MvpLedger({
                     <Flex
                       justify="center"
                       align="center"
+                      justifySelf="center"
                       fontSize={{ base: "14px", md: "16px" }}
                       fontWeight={700}
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
@@ -514,6 +530,7 @@ export function MvpLedger({
                     <Flex
                       justify="center"
                       align="center"
+                      justifySelf="center"
                     >
                       <Box
                         w={{ base: "40px", md: "48px" }}
@@ -595,8 +612,9 @@ export function MvpLedger({
                       justify="center"
                       align="center"
                       justifySelf="center"
-                      w="100%"
+                      w={voteControlWidth}
                       gap="4px"
+                      minH="28px"
                     >
                       {mvpStats.allVoted ? (
                         // 全員投票完了後: MVP表示
@@ -639,6 +657,10 @@ export function MvpLedger({
                                 color={mvpStats.myVote === player.id ? "#FFD700" : "rgba(255,255,255,0.3)"}
                                 fontWeight={700}
                                 letterSpacing="0.02em"
+                                display="inline-flex"
+                                justifyContent="center"
+                                textAlign="center"
+                                w="100%"
                               >
                                 {mvpStats.myVote === player.id ? "✓投票済" : "―"}
                               </Text>
@@ -648,10 +670,11 @@ export function MvpLedger({
                                 variant="ghost"
                                 border="2px solid rgba(255,255,255,0.5)"
                                 borderRadius="0"
-                                px={{ base: "7px", md: "10px" }}
+                                px={{ base: "9px", md: "12px" }}
                                 py={{ base: "4px", md: "5px" }}
                                 minH="auto"
                                 h="auto"
+                                w="auto"
                                 fontSize={{ base: "9px", md: "10px" }}
                                 letterSpacing="0.02em"
                                 fontWeight={700}
