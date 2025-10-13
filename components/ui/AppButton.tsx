@@ -113,31 +113,29 @@ const getSolidStyles = (palette: ButtonPalette): SystemStyleObject => {
     background: p.background,
     color: p.textColor,
     border: p.border,
-    borderRadius: 0,
+    borderRadius: "3px", // 指示書: 角丸3px（AI感排除）
     fontWeight: 700,
     textShadow: "1px 1px 0 rgba(0,0,0,0.75)",
+    // 指示書準拠: 段積み影でピクセル風（ぼかし削減）+ 微差の非均一
     boxShadow: `
-      inset 0 2px 0 rgba(255,255,255,0.1),
-      inset 0 -2px 0 rgba(0,0,0,0.35),
-      0 4px 8px rgba(0,0,0,0.4),
-      0 2px 0 rgba(0,0,0,0.6)
+      2px 3px 0 rgba(0,0,0,0.28),
+      inset 0 1px 0 rgba(255,255,255,0.1),
+      inset 0 -2px 0 rgba(0,0,0,0.35)
     `,
     "&:hover": {
       background: p.hoverBg,
-      transform: "translateY(-2px)",
+      transform: "translate(-0.5px, -1px)", // 指示書: 微小上移動+非対称（手癖）
       boxShadow: `
-        inset 0 2px 0 rgba(255,255,255,0.12),
-        inset 0 -2px 0 rgba(0,0,0,0.45),
-        0 6px 12px rgba(0,0,0,0.45),
-        0 3px 0 rgba(0,0,0,0.65)
+        3px 4px 0 rgba(0,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        inset 0 -2px 0 rgba(0,0,0,0.4)
       `,
     },
     "&:active": {
-      transform: "translateY(0px)",
+      transform: "translateY(1px)", // 指示書: 押し込み感（物理感）
       boxShadow: `
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        inset 0 -1px 0 rgba(0,0,0,0.35),
-        0 2px 4px rgba(0,0,0,0.35)
+        1px 2px 0 rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(0,0,0,0.3)
       `,
     },
     "&:disabled": {
@@ -145,7 +143,7 @@ const getSolidStyles = (palette: ButtonPalette): SystemStyleObject => {
       opacity: 0.7,
       cursor: "not-allowed",
       transform: "translateY(0)",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+      boxShadow: "1px 2px 0 rgba(0,0,0,0.2)",
     },
   };
 };
@@ -156,19 +154,26 @@ const getOutlineStyles = (palette: ButtonPalette): SystemStyleObject => {
     background: "rgba(0,0,0,0.25)",
     color: p.textColor,
     border: "2px solid rgba(255,255,255,0.6)",
-    borderRadius: 0,
+    borderRadius: "3px", // 指示書: 統一感のある微差
     fontWeight: 600,
     textShadow: "1px 1px 0 rgba(0,0,0,0.6)",
+    boxShadow: "1px 2px 0 rgba(0,0,0,0.15)", // 指示書: アウトラインにも軽い影
     "&:hover": {
       background: "rgba(255,255,255,0.1)",
       borderColor: "rgba(255,255,255,0.85)",
+      transform: "translate(-0.5px, -1px)", // 指示書: ホバーで微動
+      boxShadow: "2px 3px 0 rgba(0,0,0,0.2)",
     },
     "&:active": {
       background: "rgba(0,0,0,0.35)",
+      transform: "translateY(1px)", // 指示書: 押し込み
+      boxShadow: "0 1px 0 rgba(0,0,0,0.2)",
     },
     "&:disabled": {
       opacity: 0.65,
       cursor: "not-allowed",
+      transform: "none",
+      boxShadow: "none",
     },
   };
 };
@@ -176,11 +181,14 @@ const getOutlineStyles = (palette: ButtonPalette): SystemStyleObject => {
 const getGhostStyles = (): SystemStyleObject => ({
   background: "transparent",
   border: "1px solid transparent",
+  borderRadius: "3px", // 指示書: 全variant統一
   "&:hover": {
     background: "rgba(255,255,255,0.06)",
+    transform: "translate(-0.5px, -1px)", // 指示書: 控えめな動き
   },
   "&:active": {
     background: "rgba(255,255,255,0.12)",
+    transform: "translateY(0.5px)", // 指示書: 軽い押し込み
   },
 });
 
@@ -294,29 +302,31 @@ export function AppButton({
   const variantStyles = getStylesForVisual(visual, activePalette);
 
   const baseStyles: SystemStyleObject = {
-    borderRadius: 0,
+    borderRadius: "3px", // 指示書: 基本は3px
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
-    letterSpacing: visual === "solid" ? "0.4px" : "0.2px",
-    transition: `transform 0.18s ${UI_TOKENS.EASING.standard}, background 0.18s ${UI_TOKENS.EASING.standard}, box-shadow 0.18s ${UI_TOKENS.EASING.standard}`,
+    // 指示書: 奇数px + 微差でAI感排除
+    letterSpacing: visual === "solid" ? "0.02em" : "0.01em",
+    // 指示書: 手癖イージング cubic-bezier(.2,1,.3,1) + 180ms（中途半端な数値）
+    transition: `transform 180ms cubic-bezier(.2,1,.3,1), background 180ms cubic-bezier(.2,1,.3,1), box-shadow 180ms cubic-bezier(.2,1,.3,1)`,
     position: "relative",
     overflow: "hidden",
     "&:focus-visible": {
-      outline: "3px solid rgba(124, 221, 255, 0.7)",
-      outlineOffset: "3px",
+      outline: "2px solid rgba(124, 221, 255, 0.7)", // 指示書: 2-3pxが適切
+      outlineOffset: "2px",
     },
     ...(css ?? {}),
   };
 
   if (visual === "solid") {
+    // 指示書: グラデは削除（綺麗すぎる=AI感）、代わりにシンプルな立体感
     baseStyles["&::before"] = {
       content: '""',
       position: "absolute",
-      inset: "4px",
+      inset: "3px", // 指示書: 奇数pxで微差
       pointerEvents: "none",
-      background:
-        "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.18) 100%)",
-      opacity: 0.85,
+      background: "rgba(255,255,255,0.08)", // 指示書: 控えめな単色ハイライト
+      opacity: 0.9,
     };
   }
 
