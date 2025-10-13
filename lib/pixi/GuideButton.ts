@@ -88,9 +88,8 @@ export class GuideButton extends PIXI.Container {
     // 設定マージ
     const finalConfig = { ...GuideButton.DEFAULT_CONFIG, ...config };
 
-    // パーティクルコンテナ（最背面）
+    // パーティクルコンテナ（矢印の先端位置に配置 - arrowDirection判定のため後で設定）
     this.particleContainer = new PIXI.Container();
-    this.particleContainer.position.set(GuideButton.BOX_WIDTH / 2, GuideButton.BOX_HEIGHT / 2);
     this.addChild(this.particleContainer);
 
     // 背景（シンプル＋ガイド感のあるデザイン）
@@ -186,12 +185,20 @@ export class GuideButton extends PIXI.Container {
     this.arrow.y = finalConfig.arrowDirection === 'up' ? -6 : GuideButton.BOX_HEIGHT + 6;
     this.addChild(this.arrow);
 
-    // パーティクル生成（4個 - 微妙なサイズ差でHD-2D感）
+    // パーティクルコンテナを矢印の先端位置に配置（矢印の外側に配置）
+    const particleOffsetFromArrow = finalConfig.arrowDirection === 'up' ? -16 : 16;
+    this.particleContainer.position.set(
+      GuideButton.BOX_WIDTH / 2,
+      finalConfig.arrowDirection === 'up' ? -6 + particleOffsetFromArrow : GuideButton.BOX_HEIGHT + 6 + particleOffsetFromArrow
+    );
+
+    // パーティクル生成（8個 - 8方向放射状の花火）
     if (finalConfig.showParticles) {
-      const particleSizes = [2.5, 3, 2.5, 3]; // 微差（万能デザイン指示書: 可変の微差）
-      for (let i = 0; i < 4; i++) {
+      // 万能デザイン指示書: 可変の微差 - サイズに不均一性
+      const particleSizes = [2.8, 3.2, 2.5, 3.5, 2.6, 3.3, 2.9, 3.1];
+      for (let i = 0; i < 8; i++) {
         const particle = new PIXI.Graphics();
-        particle.beginFill(finalConfig.particleColor, 0.86);
+        particle.beginFill(finalConfig.particleColor, 0.88);
         particle.drawCircle(0, 0, particleSizes[i]);
         particle.endFill();
         particle.alpha = 0;
@@ -247,19 +254,32 @@ export class GuideButton extends PIXI.Container {
       '-=0.28'
     );
 
-    // 3. パーティクル拡散
+    // 3. パーティクル拡散（8方向放射状の花火 - 万能デザイン指示書: 不等間隔）
     this.timeline.to(
       this.particles,
       {
-        scale: 1.2,
-        x: (i) => [18, -18, 22, -22][i] || 0,
-        y: (i) => [22, 22, -18, -18][i] || 0,
+        scale: 1.15,
+        x: (i) => {
+          // 8方向放射（角度: 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°）
+          const angle = (i * Math.PI * 2) / 8;
+          // 距離に微差（10〜14px - 万能デザイン指示書: 可変の微差）
+          const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
+          return Math.cos(angle) * distance;
+        },
+        y: (i) => {
+          const angle = (i * Math.PI * 2) / 8;
+          const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
+          return Math.sin(angle) * distance;
+        },
         alpha: 0,
-        duration: 0.95,
-        ease: 'cubic-bezier(.3,.9,.5,1)',
-        stagger: 0.06,
+        duration: 0.88,
+        ease: 'cubic-bezier(.25,.85,.45,1)', // 万能デザイン指示書: 出だし早く→着地やわらか
+        stagger: {
+          each: 0.045,
+          from: 'random', // ランダム順で出現（万能デザイン指示書: 不等間隔）
+        },
       },
-      '-=0.4'
+      '-=0.35'
     );
 
     // 4. 矢印バウンスアニメーション（無限ループ、向きに応じて方向変更）
@@ -353,19 +373,32 @@ export class GuideButton extends PIXI.Container {
       '-=0.3'
     );
 
-    // 3. パーティクル拡散
+    // 3. パーティクル拡散（8方向放射状の花火 - 万能デザイン指示書: 不等間隔）
     this.timeline.to(
       this.particles,
       {
-        scale: 1.2,
-        x: (i) => [18, -18, 22, -22][i] || 0,
-        y: (i) => [22, 22, -18, -18][i] || 0,
+        scale: 1.15,
+        x: (i) => {
+          // 8方向放射（角度: 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°）
+          const angle = (i * Math.PI * 2) / 8;
+          // 距離に微差（10〜14px - 万能デザイン指示書: 可変の微差）
+          const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
+          return Math.cos(angle) * distance;
+        },
+        y: (i) => {
+          const angle = (i * Math.PI * 2) / 8;
+          const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
+          return Math.sin(angle) * distance;
+        },
         alpha: 0,
-        duration: 0.95,
-        ease: 'cubic-bezier(.3,.9,.5,1)',
-        stagger: 0.06,
+        duration: 0.88,
+        ease: 'cubic-bezier(.25,.85,.45,1)', // 万能デザイン指示書: 出だし早く→着地やわらか
+        stagger: {
+          each: 0.045,
+          from: 'random', // ランダム順で出現（万能デザイン指示書: 不等間隔）
+        },
       },
-      '-=0.6'
+      '-=0.55'
     );
 
     // 4. 指定時間待機
