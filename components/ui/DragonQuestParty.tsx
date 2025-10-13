@@ -52,6 +52,7 @@ const PANEL_WIDTH = { base: "232px", md: "268px" };
 const PANEL_WIDTH_DPI125 = { base: "220px", md: "252px" };
 const LIST_MAX_HEIGHT = "calc(100vh - 224px)";
 const LIST_MAX_HEIGHT_DPI125 = "calc(100vh - 200px)";
+const LIST_MAX_HEIGHT_DPI150 = "calc(100vh - 180px)";
 const LIST_GAP = 2;
 
 export function DragonQuestParty({
@@ -75,6 +76,8 @@ export function DragonQuestParty({
   const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotionPreference();
   const [ambientPhase, setAmbientPhase] = useState<0 | 1>(0);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const [enableScroll, setEnableScroll] = useState(false);
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
@@ -254,7 +257,38 @@ export function DragonQuestParty({
     return () => window.clearInterval(id);
   }, [prefersReducedMotion]);
 
-  const enableScroll = orderedPlayers.length > 6;
+  const updateScrollOverflow = useCallback(() => {
+    if (orderedPlayers.length <= 6) {
+      setEnableScroll(false);
+      return;
+    }
+    const el = listContainerRef.current;
+    if (!el) return;
+    const tolerance = 12; // px
+    const isOverflowing = el.scrollHeight - el.clientHeight > tolerance;
+    setEnableScroll(isOverflowing);
+  }, [orderedPlayers.length]);
+
+  useEffect(() => {
+    updateScrollOverflow();
+  }, [orderedPlayers.length, updateScrollOverflow]);
+
+  useEffect(() => {
+    const el = listContainerRef.current;
+    if (!el) return;
+    updateScrollOverflow();
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => updateScrollOverflow());
+      observer.observe(el);
+    }
+    const handleResize = () => updateScrollOverflow();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (observer) observer.disconnect();
+    };
+  }, [updateScrollOverflow]);
   const shouldRevealNumbers = roomStatus === "finished";
 
   if (actualCount === 0) {
@@ -475,6 +509,10 @@ export function DragonQuestParty({
               marginTop: "12px",
               maxHeight: LIST_MAX_HEIGHT_DPI125,
             },
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              marginTop: "12px",
+              maxHeight: LIST_MAX_HEIGHT_DPI150,
+            },
             "&::-webkit-scrollbar": {
               width: enableScroll ? "6px" : "0px",
             },
@@ -486,6 +524,7 @@ export function DragonQuestParty({
               background: "transparent",
             },
           }}
+          ref={listContainerRef}
         >
           {orderedPlayers.map((player) => {
             const fresh = (displayedPlayerMap.get(player.id) ?? player) as PartyMember;
