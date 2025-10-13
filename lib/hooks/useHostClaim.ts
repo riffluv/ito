@@ -7,6 +7,8 @@ interface UseHostClaimParams {
   uid: string | null;
   user: User | null;
   hostId: string | null;
+  hostLikelyUnavailable: boolean;
+  isSoloMember: boolean;
   candidateId: string | null;
   lastKnownHostId: string | null;
   previousHostStillMember: boolean;
@@ -23,6 +25,8 @@ export function useHostClaim({
   uid,
   user,
   hostId,
+  hostLikelyUnavailable,
+  isSoloMember,
   candidateId,
   lastKnownHostId,
   previousHostStillMember,
@@ -53,13 +57,20 @@ export function useHostClaim({
       }, delay);
     };
 
-    // ホストが存在する、または基本条件を満たさない
-    if (!uid || !user || hostId || leavingRef.current) {
+    const hostUnavailable = !hostId || hostLikelyUnavailable;
+
+    // 条件を満たさない場合は処理を停止
+    if (!uid || !user || leavingRef.current) {
       clearTimer();
       return clearTimer;
     }
 
     if (!isMember) {
+      clearTimer();
+      return clearTimer;
+    }
+
+    if (!hostUnavailable) {
       clearTimer();
       return clearTimer;
     }
@@ -75,7 +86,8 @@ export function useHostClaim({
       (isDesignatedCandidate ||
         isRecoveringHost ||
         hasNoRecordedHost ||
-        isSelfFallback) &&
+        isSelfFallback ||
+        isSoloMember) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
 
     logDebug(
@@ -85,10 +97,13 @@ export function useHostClaim({
           roomId,
           uid,
           hostId,
+          hostUnavailable,
+          hostLikelyUnavailable,
           candidateId,
           lastKnownHostId,
           previousHostStillMember,
           isMember,
+          isSoloMember,
           leaving: leavingRef.current,
         })
     );
@@ -104,6 +119,9 @@ export function useHostClaim({
             lastKnownHostId,
             previousHostStillMember,
             isMember,
+            hostUnavailable,
+            hostLikelyUnavailable,
+            isSoloMember,
             leaving: leavingRef.current,
           })
       );
@@ -158,7 +176,7 @@ export function useHostClaim({
               attempts: hostClaimAttemptRef.current,
             })
         );
-        if (!hostId || String(hostId).trim().length === 0) {
+        if (hostUnavailable) {
           const retryCount = hostClaimPostSuccessRef.current + 1;
           if (retryCount <= 3) {
             hostClaimPostSuccessRef.current = retryCount;
@@ -197,6 +215,8 @@ export function useHostClaim({
     uid,
     user,
     hostId,
+    hostLikelyUnavailable,
+    isSoloMember,
     candidateId,
     lastKnownHostId,
     previousHostStillMember,

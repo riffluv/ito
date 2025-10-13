@@ -141,6 +141,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     onlinePlayers,
     loading,
     isHost,
+    isMember,
     detachNow,
     leavingRef,
     joinStatus,
@@ -244,6 +245,41 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     return map;
   }, [room?.hostId, room?.hostName, uid, displayName]);
+
+  const stableHostId =
+    typeof room?.hostId === "string" ? room.hostId.trim() : "";
+
+  const hostLikelyUnavailable = useMemo(() => {
+    if (!stableHostId) {
+      return true;
+    }
+    if (uid && stableHostId === uid) {
+      return false;
+    }
+    if (onlinePlayers.some((p) => p.id === stableHostId)) {
+      return false;
+    }
+    if (Array.isArray(onlineUids) && onlineUids.includes(stableHostId)) {
+      return false;
+    }
+    const hostPlayer = players.find((p) => p.id === stableHostId);
+    if (!hostPlayer) {
+      return true;
+    }
+    const lastSeenMs = toMillis(hostPlayer.lastSeen);
+    if (lastSeenMs > 0) {
+      const elapsed = Date.now() - lastSeenMs;
+      if (elapsed <= 15000) {
+        return false;
+      }
+    }
+    return true;
+  }, [stableHostId, uid, onlinePlayers, onlineUids, players]);
+
+  const isSoloMember = useMemo(
+    () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
+    [isMember, players, uid]
+  );
 
   const hostClaimCandidateId = useMemo(() => {
     const roomKey = room?.id ?? null;
@@ -393,12 +429,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [room?.creatorId, lastKnownHostId]);
 
   useEffect(() => {
-    const stableHost =
-      typeof room?.hostId === "string" ? room.hostId.trim() : "";
-    if (stableHost) {
-      setLastKnownHostId(stableHost);
+    if (stableHostId) {
+      setLastKnownHostId(stableHostId);
     }
-  }, [room?.hostId]);
+  }, [stableHostId]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -425,7 +459,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 蜈･螳､繧ｬ繝ｼ繝・ 閾ｪ蛻・′繝｡繝ｳ繝舌・縺ｧ縺ｪ縺・ｴ蜷医∝ｾ・ｩ滉ｸｭ莉･螟悶・驛ｨ螻九↓縺ｯ蜈･繧後↑縺・
   // 縺溘□縺励√・繧ｹ繝医・蟶ｸ縺ｫ繧｢繧ｯ繧ｻ繧ｹ蜿ｯ閭ｽ
-  const isMember = !!(uid && players.some((p) => p.id === uid));
   const canAccess = isMember || isHost;
   const isSpectatorMode =
     (!canAccess && room?.status !== "waiting") ||
@@ -562,7 +595,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
     uid,
     user,
-    hostId: room?.hostId || null,
+    hostId: stableHostId || null,
+    hostLikelyUnavailable,
+    isSoloMember,
     candidateId: hostClaimCandidateId,
     lastKnownHostId,
     previousHostStillMember,
