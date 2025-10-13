@@ -1,5 +1,6 @@
 import type * as PIXI from "pixi.js";
 import { drawPanelBase } from "./panels/drawPanelBase";
+import { BattleRecordsAmbient } from "./battleRecordsAmbient";
 
 export interface BattleRecordsBoardOptions {
   /**
@@ -16,6 +17,11 @@ export interface BattleRecordsBoardOptions {
    * デバイスピクセル比
    */
   dpr?: number;
+
+  /**
+   * 勝利/敗北フラグ（アンビエント効果に影響）
+   */
+  failed?: boolean;
 }
 
 /**
@@ -146,6 +152,25 @@ export function drawBattleRecordsBoard(
     .fill({ color: 0x000000, alpha: 0.5 });
   graphics.rect(width - 1, 0, 1, height)
     .fill({ color: 0x000000, alpha: 0.5 });
+}
+
+/**
+ * アンビエント効果を作成
+ *
+ * 勝利/敗北に応じた大気効果を生成:
+ * - 勝利: 金色の微粒子が上昇 + 淡いグロー脈動
+ * - 敗北: 青白い微粒子が下降 + 静かな脈動
+ *
+ * @returns アンビエントコンテナ（アニメーション付き）
+ */
+export function createBattleRecordsAmbient(
+  options: BattleRecordsBoardOptions
+): BattleRecordsAmbient {
+  return new BattleRecordsAmbient({
+    width: options.width,
+    height: options.height,
+    failed: options.failed,
+  });
 }
 
 /**
