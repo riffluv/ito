@@ -30,12 +30,12 @@ const FALLBACK_DOCK_HEIGHT = {
 } as const;
 
 const SPACE_TARGET_GAP = 10;
-const E_TARGET_GAP = 12;
+const E_TARGET_GAP = -20; // 上に配置（マイナスでDockより上）
 const E_HORIZONTAL_GAP = 40;
 const E_DIAGONAL_OFFSET_Y = 42;
 const E_RIGHT_INSET = {
-  base: 18,
-  desktop: 26,
+  base: 80, // 左に大きく移動
+  desktop: 120, // デスクトップでさらに左
 } as const;
 
 /**

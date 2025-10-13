@@ -75,12 +75,12 @@ export class GuideButton extends PIXI.Container {
     showParticles: true,
   };
 
-  // サイズ定数（HD-2D風コンパクトデザイン）
-  private static readonly BOX_WIDTH = 220;
-  private static readonly BOX_HEIGHT = 46;
-  private static readonly BORDER_WIDTH = 3;
-  private static readonly PADDING_X = 12;
-  private static readonly PADDING_Y = 10;
+  // サイズ定数（HD-2D風コンパクトデザイン - オクトパストラベラー風に引き締め）
+  private static readonly BOX_WIDTH = 140;
+  private static readonly BOX_HEIGHT = 38;
+  private static readonly BORDER_WIDTH = 2;
+  private static readonly PADDING_X = 10;
+  private static readonly PADDING_Y = 8;
 
   constructor(config: GuideButtonConfig) {
     super();
@@ -93,24 +93,33 @@ export class GuideButton extends PIXI.Container {
     this.particleContainer.position.set(GuideButton.BOX_WIDTH / 2, GuideButton.BOX_HEIGHT / 2);
     this.addChild(this.particleContainer);
 
-    // 背景（HD-2D風: リッチブラック + 立体感）
+    // 背景（シンプル＋ガイド感のあるデザイン）
     this.bg = new PIXI.Graphics();
+
+    // メイン背景（リッチブラック）
     this.bg.beginFill(finalConfig.bgColor, 0.92);
     this.bg.drawRect(0, 0, GuideButton.BOX_WIDTH, GuideButton.BOX_HEIGHT);
     this.bg.endFill();
+
     this.addChild(this.bg);
 
-    // 枠線（ドラクエ風太枠 + HD-2D立体感）
+    // 枠線（ガイド感のある白枠）
     this.border = new PIXI.Graphics();
-    // 外枠（太い白枠）
-    this.border.lineStyle(GuideButton.BORDER_WIDTH, finalConfig.borderColor, 0.9);
-    this.border.drawRect(
+    this.border.rect(
       GuideButton.BORDER_WIDTH / 2,
       GuideButton.BORDER_WIDTH / 2,
       GuideButton.BOX_WIDTH - GuideButton.BORDER_WIDTH,
       GuideButton.BOX_HEIGHT - GuideButton.BORDER_WIDTH
     );
+    this.border.stroke({
+      width: GuideButton.BORDER_WIDTH,
+      color: finalConfig.borderColor,
+      alpha: 0.9,
+    });
     this.addChild(this.border);
+
+    // テキストを一つのコンテナにまとめて完全センタリング
+    const textContainer = new PIXI.Container();
 
     // キーテキスト（特別な色: ゴールド/ブルー）
     this.keyText = new PIXI.Text(`▶ ${config.key}`, {
@@ -119,63 +128,71 @@ export class GuideButton extends PIXI.Container {
       fill: finalConfig.keyColor,
       fontWeight: '800',
       dropShadow: {
-        alpha: 0.95,
-        blur: 4,
+        alpha: 0.9,
+        blur: 3,
         color: 0x000000,
-        distance: 2,
+        distance: 1.5,
         angle: Math.PI / 2,
       },
-      letterSpacing: 0.5,
+      letterSpacing: 0,
     });
-    this.keyText.x = GuideButton.PADDING_X;
-    this.keyText.y = GuideButton.BOX_HEIGHT / 2 - this.keyText.height / 2; // 垂直中央揃え
-    this.addChild(this.keyText);
+    this.keyText.anchor.set(0, 0.5);
+    this.keyText.x = 0;
+    this.keyText.y = 0;
+    textContainer.addChild(this.keyText);
 
     // 説明テキスト（白色）
     this.descText = new PIXI.Text(config.description, {
       fontFamily: '"Courier New", monospace',
       fontSize: 14,
-      fill: 0xffffff, // 白
+      fill: 0xffffff,
       fontWeight: '700',
       dropShadow: {
-        alpha: 0.95,
-        blur: 4,
+        alpha: 0.9,
+        blur: 3,
         color: 0x000000,
-        distance: 2,
+        distance: 1.5,
         angle: Math.PI / 2,
       },
-      letterSpacing: 0.5,
+      letterSpacing: 0,
     });
-    this.descText.x = this.keyText.x + this.keyText.width + 6; // キーテキストの右に配置
-    this.descText.y = this.keyText.y; // キーと同じY位置
-    this.addChild(this.descText);
+    this.descText.anchor.set(0, 0.5);
+    this.descText.x = this.keyText.width + 4;
+    this.descText.y = 0;
+    textContainer.addChild(this.descText);
+
+    // テキストコンテナ全体をボックスの中央に配置
+    textContainer.x = GuideButton.BOX_WIDTH / 2 - (this.keyText.width + 4 + this.descText.width) / 2;
+    textContainer.y = GuideButton.BOX_HEIGHT / 2;
+    this.addChild(textContainer);
 
     // 矢印（向き設定可能: ↓ または ↑）
     const arrowChar = finalConfig.arrowDirection === 'up' ? '▲' : '▼';
     this.arrow = new PIXI.Text(arrowChar, {
       fontFamily: '"Courier New", monospace',
-      fontSize: 28,
+      fontSize: 20,
       fill: finalConfig.keyColor,
       fontWeight: '800',
       dropShadow: {
-        alpha: 0.95,
-        blur: 4,
+        alpha: 0.9,
+        blur: 3,
         color: 0x000000,
-        distance: 2,
+        distance: 1.5,
         angle: Math.PI / 2,
       },
     });
     this.arrow.anchor.set(0.5, finalConfig.arrowDirection === 'up' ? 1 : 0);
     this.arrow.x = GuideButton.BOX_WIDTH / 2;
-    this.arrow.y = finalConfig.arrowDirection === 'up' ? -8 : GuideButton.BOX_HEIGHT + 8;
+    this.arrow.y = finalConfig.arrowDirection === 'up' ? -6 : GuideButton.BOX_HEIGHT + 6;
     this.addChild(this.arrow);
 
-    // パーティクル生成（4個）
+    // パーティクル生成（4個 - 微妙なサイズ差でHD-2D感）
     if (finalConfig.showParticles) {
+      const particleSizes = [2.5, 3, 2.5, 3]; // 微差（万能デザイン指示書: 可変の微差）
       for (let i = 0; i < 4; i++) {
         const particle = new PIXI.Graphics();
-        particle.beginFill(finalConfig.particleColor, 0.88);
-        particle.drawCircle(0, 0, 3);
+        particle.beginFill(finalConfig.particleColor, 0.86);
+        particle.drawCircle(0, 0, particleSizes[i]);
         particle.endFill();
         particle.alpha = 0;
         this.particles.push(particle);
@@ -202,7 +219,7 @@ export class GuideButton extends PIXI.Container {
 
     // 矢印の向きに応じた初期Y位置
     const arrowDirection = this.arrow.text === '▲' ? 'up' : 'down';
-    const arrowFinalY = arrowDirection === 'up' ? -8 : GuideButton.BOX_HEIGHT + 8;
+    const arrowFinalY = arrowDirection === 'up' ? -6 : GuideButton.BOX_HEIGHT + 6;
     const arrowInitialY = arrowDirection === 'up' ? arrowFinalY - 10 : arrowFinalY + 10;
 
     // 初期状態リセット
@@ -210,24 +227,24 @@ export class GuideButton extends PIXI.Container {
     gsap.set(this.arrow, { y: arrowInitialY, alpha: 0 });
     gsap.set(this.particles, { scale: 0, alpha: 1 });
 
-    // 1. コンテナフェードイン
+    // 1. コンテナフェードイン（万能デザイン指示書: 出だし早く→着地やわらか）
     this.timeline.to(this, {
       alpha: 1,
       scale: 1,
-      duration: 0.55,
-      ease: 'cubic-bezier(.2,1,.3,1.05)',
+      duration: 0.52,
+      ease: 'cubic-bezier(.2,1,.3,1)', // 指示書推奨のカーブ
     });
 
-    // 2. 矢印バウンス登場
+    // 2. 矢印バウンス登場（小さなオーバーシュート）
     this.timeline.to(
       this.arrow,
       {
         y: arrowFinalY,
         alpha: 1,
-        duration: 0.48,
-        ease: 'cubic-bezier(.18,.95,.28,1.08)',
+        duration: 0.45,
+        ease: 'cubic-bezier(.16,1.1,.3,1)', // 指示書推奨: 小さなオーバーシュート
       },
-      '-=0.3'
+      '-=0.28'
     );
 
     // 3. パーティクル拡散
