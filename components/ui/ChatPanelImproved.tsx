@@ -19,6 +19,10 @@ import {
 } from "firebase/firestore";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
+import * as PIXI from "pixi.js";
+import { drawChatPanelBackground } from "@/lib/pixi/chatPanelBackground";
 
 /**
  * ドラクエ風チャットパネル (改良版)
@@ -85,6 +89,13 @@ export function ChatPanel({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
 
+  // Pixi HUD レイヤー（モーダル背景用）
+  const chatRef = useRef<HTMLDivElement>(null);
+  const pixiContainer = usePixiHudLayer("chat-panel", {
+    zIndex: 15,
+  });
+  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
+
   // 自動スクロール制御
   const autoScrollRef = useRef(true);
   const lastMessageCountRef = useRef(0);
@@ -145,6 +156,51 @@ export function ChatPanel({
       scrollToBottom("smooth");
     }
   }, [messages.length, scrollToBottom]);
+
+  // Pixi背景の描画とDOM同期
+  useEffect(() => {
+    if (!pixiContainer) {
+      // Pixiコンテナがない場合はリソース破棄
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+      return;
+    }
+
+    // Graphicsオブジェクトを作成
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    // クリーンアップ
+    return () => {
+      if (pixiGraphicsRef.current) {
+        pixiGraphicsRef.current.destroy({ children: true });
+        pixiGraphicsRef.current = null;
+      }
+    };
+  }, [pixiContainer]);
+
+  // DOM要素とPixiコンテナの位置・サイズ同期
+  usePixiLayerLayout(chatRef, pixiContainer, {
+    disabled: !pixiContainer,
+    onUpdate: (layout) => {
+      const graphics = pixiGraphicsRef.current;
+      if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        return;
+      }
+
+      graphics.clear();
+      graphics.position.set(layout.x, layout.y);
+      drawChatPanelBackground(PIXI, graphics, {
+        width: layout.width,
+        height: layout.height,
+        dpr: layout.dpr,
+      });
+    },
+  });
 
   const playerMeta = useMemo(() => {
     const meta = new Map<string, PlayerChatMeta>();
@@ -270,6 +326,8 @@ export function ChatPanel({
 
   return (
     <Box
+      ref={chatRef}
+      data-pixi-target="chat-panel"
       h="100%"
       maxH="300px"
       w="100%"
@@ -278,26 +336,16 @@ export function ChatPanel({
       gridTemplateRows="minmax(0,1fr) auto"
       overflow="hidden"
       minH={0}
-      // ドラクエ風統一デザイン
-      bg="rgba(8,9,15,0.95)"
+      // PixiHUD化: 背景を透明に
+      bg="transparent"
       border="3px solid rgba(255,255,255,0.9)"
       borderRadius={0}
-      boxShadow="0 8px 32px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1)"
+      boxShadow="none"
       position="relative"
-      _before={{
-        content: '""',
-        position: "absolute",
-        top: "-3px",
-        left: "-3px",
-        right: "-3px",
-        bottom: "-3px",
-        bg: "linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))",
-        borderRadius: 0,
-        zIndex: -1,
-      }}
+      zIndex={120}
     >
       {/* メッセージエリア: 1fr行で安定スクロール、ドラクエ風一行チャット */}
-      <Box overflow="hidden" minH={0}>
+      <Box overflow="hidden" minH={0} position="relative" zIndex={1}>
         <ScrollableArea
           label="チャットメッセージ"
           withPadding={true}
@@ -382,6 +430,8 @@ export function ChatPanel({
         p={2}
         bg="rgba(8,9,15,0.98)"
         borderTop="2px solid rgba(255,255,255,0.3)"
+        position="relative"
+        zIndex={1}
         css={{
           "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
             padding: "0.4rem !important",
