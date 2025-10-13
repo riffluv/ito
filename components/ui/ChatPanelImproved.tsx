@@ -479,15 +479,43 @@ export function ChatPanel({
               boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
               bg: "rgba(12,14,24,0.95)",
               outline: "none",
+              outlineOffset: "0px",
+              "--chakra-ring-width": "0px",
+              "--chakra-ring-offset-width": "0px",
+              "--chakra-ring-color": "transparent",
+              "--chakra-ring-offset-color": "transparent",
+              "--chakra-ring-offset-shadow": "0 0 #0000",
+              "--chakra-ring-shadow": "0 0 #0000",
             }}
-            _hover={{
-              borderColor: "rgba(255,255,255,0.8)",
+            _focusVisible={{
+              borderColor: UI_TOKENS.COLORS.dqBlue,
+              boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
               bg: "rgba(12,14,24,0.95)",
+              outline: "none",
+              outlineOffset: "0px",
+              "--chakra-ring-width": "0px",
+              "--chakra-ring-offset-width": "0px",
+              "--chakra-ring-color": "transparent",
+              "--chakra-ring-offset-color": "transparent",
+              "--chakra-ring-offset-shadow": "0 0 #0000",
+              "--chakra-ring-shadow": "0 0 #0000",
             }}
             transition="all 177ms cubic-bezier(.2,1,.3,1)"
             px={2}
             py={1}
             css={{
+              "&:hover": {
+                borderColor: "rgba(255,255,255,0.8)",
+                background: "rgba(12,14,24,0.95)",
+              },
+              "&:hover[data-focus], &:hover[data-focus-visible], &:hover:focus-visible": {
+                borderColor: UI_TOKENS.COLORS.dqBlue,
+                boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
+              },
+              "&[data-focus], &[data-focus-visible], &:focus-visible": {
+                borderColor: UI_TOKENS.COLORS.dqBlue,
+                boxShadow: `0 0 8px ${UI_TOKENS.COLORS.dqBlue}`,
+              },
               "@media (min-resolution: 1.25dppx), screen and (-webkit-device-pixel-ratio: 1.25)": {
                 fontSize: "0.7rem !important",
                 padding: "0.2rem 0.4rem !important",
