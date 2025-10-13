@@ -1116,9 +1116,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           flexShrink={0}
           transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
           transformOrigin="left center"
+          mr={{ base: "14px", md: "20px" }}
           css={{
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               transform: "scale(1.0)",
+              marginRight: "12px",
             },
           }}
         >
