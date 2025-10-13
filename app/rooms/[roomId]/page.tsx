@@ -1104,6 +1104,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return Array.from(ids);
   }, [room?.order?.proposal, orderList]);
 
+  const meHasPlacedCard = submittedPlayerIds.includes(meId);
+
   if (!firebaseEnabled) {
     return (
       <Box
@@ -1593,6 +1595,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         currentPhase={room?.status}
         me={me}
         disabled={isSpectatorMode}
+        hasPlacedCard={meHasPlacedCard}
       />
     </>
   );

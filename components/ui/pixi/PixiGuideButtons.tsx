@@ -60,17 +60,24 @@ interface PixiGuideButtonsProps {
   showE?: boolean;
   /** 一時表示モード（ミリ秒指定で自動消滅） */
   temporaryDuration?: number;
+  /** ガイド全体を無効化するか（観戦モードなど） */
+  disabled?: boolean;
+  /** プレイヤーがすでにカードを提出済みか */
+  hasCardPlaced?: boolean;
 }
 
 export function PixiGuideButtons({
   showSpace = false,
   showE = false,
   temporaryDuration,
+  disabled = false,
+  hasCardPlaced = false,
 }: PixiGuideButtonsProps) {
   const layer = usePixiHudLayer("guide-buttons", { zIndex: 45 });
   const spaceGuideRef = useRef<GuideButton | null>(null);
   const eGuideRef = useRef<GuideButton | null>(null);
   const isInitializedRef = useRef(false);
+  const updateScheduledRef = useRef(false);
 
   const updatePositions = useCallback(() => {
     const spaceGuide = spaceGuideRef.current;
@@ -176,9 +183,26 @@ export function PixiGuideButtons({
     eGuide.position.set(eX, eY);
   }, []);
 
+  const requestPositionUpdate = useCallback(() => {
+    if (disabled) return;
+    if (!showSpace && (!showE || hasCardPlaced)) return;
+    if (updateScheduledRef.current) return;
+    updateScheduledRef.current = true;
+    window.requestAnimationFrame(() => {
+      updateScheduledRef.current = false;
+      updatePositions();
+    });
+  }, [disabled, showSpace, showE, hasCardPlaced, updatePositions]);
+
   // 初期化: ガイドボタンを作成してレイヤーに追加
   useEffect(() => {
     if (!layer || isInitializedRef.current) return;
+
+    if (disabled) {
+      spaceGuideRef.current?.hide();
+      eGuideRef.current?.hide();
+      return;
+    }
 
     isInitializedRef.current = true;
 
@@ -198,7 +222,7 @@ export function PixiGuideButtons({
     const resizeObserver =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(() =>
-            window.requestAnimationFrame(updatePositions)
+            requestPositionUpdate()
           )
         : null;
 
@@ -216,7 +240,7 @@ export function PixiGuideButtons({
         }
       });
       if (added) {
-        window.requestAnimationFrame(updatePositions);
+        requestPositionUpdate();
       }
     };
 
@@ -237,10 +261,10 @@ export function PixiGuideButtons({
     }
 
     // 配置を更新
-    window.requestAnimationFrame(updatePositions);
+    requestPositionUpdate();
 
     // リサイズイベント
-    const handleResize = () => window.requestAnimationFrame(updatePositions);
+    const handleResize = () => requestPositionUpdate();
     window.addEventListener("resize", handleResize);
 
     // クリーンアップ
@@ -262,16 +286,21 @@ export function PixiGuideButtons({
       eGuideRef.current = null;
       isInitializedRef.current = false;
     };
-  }, [layer, updatePositions]);
+  }, [layer, disabled, requestPositionUpdate]);
 
   useEffect(() => {
-    window.requestAnimationFrame(updatePositions);
-  }, [updatePositions, showSpace, showE]);
+    requestPositionUpdate();
+  }, [requestPositionUpdate]);
 
   // Spaceガイド表示制御
   useEffect(() => {
     const spaceGuide = spaceGuideRef.current;
     if (!spaceGuide) return;
+
+    if (disabled) {
+      spaceGuide.hide();
+      return;
+    }
 
     if (showSpace) {
       if (temporaryDuration) {
@@ -282,12 +311,17 @@ export function PixiGuideButtons({
     } else {
       spaceGuide.hide();
     }
-  }, [showSpace, temporaryDuration]);
+  }, [showSpace, temporaryDuration, disabled]);
 
   // Eガイド表示制御
   useEffect(() => {
     const eGuide = eGuideRef.current;
     if (!eGuide) return;
+
+    if (disabled || hasCardPlaced) {
+      eGuide.hide();
+      return;
+    }
 
     if (showE) {
       if (temporaryDuration) {
@@ -298,7 +332,7 @@ export function PixiGuideButtons({
     } else {
       eGuide.hide();
     }
-  }, [showE, temporaryDuration]);
+  }, [showE, temporaryDuration, disabled, hasCardPlaced]);
 
   // このコンポーネントはPixiだけで描画するのでDOMは返さない
   return null;
@@ -316,17 +350,29 @@ interface PixiGuideButtonsAutoProps {
   currentPhase?: string;
   me?: { ready?: boolean; clue1?: string } | null;
   disabled?: boolean;
+  hasPlacedCard?: boolean;
 }
 
 export function PixiGuideButtonsAuto({
   currentPhase,
   me,
   disabled = false,
+  hasPlacedCard = false,
 }: PixiGuideButtonsAutoProps) {
-  // フェーズごとの表示制御
   const showSpace = !disabled && currentPhase === "clue" && !me?.ready;
   const showE =
-    !disabled && currentPhase === "clue" && me?.ready && !!me?.clue1?.trim();
+    !disabled &&
+    !hasPlacedCard &&
+    currentPhase === "clue" &&
+    me?.ready &&
+    !!me?.clue1?.trim();
 
-  return <PixiGuideButtons showSpace={showSpace} showE={showE} />;
+  return (
+    <PixiGuideButtons
+      showSpace={showSpace}
+      showE={showE}
+      disabled={disabled}
+      hasCardPlaced={hasPlacedCard}
+    />
+  );
 }
