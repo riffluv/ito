@@ -20,7 +20,8 @@ import { castMvpVote } from "@/lib/game/mvp";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import * as PIXI from "pixi.js";
-import { drawBattleRecordsBoard } from "@/lib/pixi/battleRecordsBackground";
+import { drawBattleRecordsBoard, createBattleRecordsAmbient } from "@/lib/pixi/battleRecordsBackground";
+import type { BattleRecordsAmbient } from "@/lib/pixi/battleRecordsAmbient";
 
 interface LedgerPlayer extends PlayerDoc {
   id: string;
@@ -59,6 +60,7 @@ export function MvpLedger({
     zIndex: 90,
   });
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
+  const ambientRef = useRef<BattleRecordsAmbient | null>(null);
 
   const sortedPlayers = useMemo(() => {
     const lookup = new Map(players.map((p) => [p.id, p]));
@@ -229,10 +231,14 @@ export function MvpLedger({
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
+      if (ambientRef.current) {
+        ambientRef.current.destroy({ children: true });
+        ambientRef.current = null;
+      }
       return;
     }
 
-    // Graphicsオブジェクトを作成
+    // Graphicsオブジェクトを作成（背景パネル）
     const graphics = new PIXI.Graphics();
     graphics.zIndex = -10; // 最背面に配置
     pixiContainer.addChild(graphics);
@@ -243,6 +249,10 @@ export function MvpLedger({
       if (pixiGraphicsRef.current) {
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
+      }
+      if (ambientRef.current) {
+        ambientRef.current.destroy({ children: true });
+        ambientRef.current = null;
       }
     };
   }, [isOpen, pixiContainer]);
@@ -262,7 +272,26 @@ export function MvpLedger({
         width: layout.width,
         height: layout.height,
         dpr: layout.dpr,
+        failed,
       });
+
+      // アンビエント効果の作成・更新
+      if (!ambientRef.current && pixiContainer) {
+        // 初回作成
+        const ambient = createBattleRecordsAmbient({
+          width: layout.width,
+          height: layout.height,
+          failed,
+        });
+        ambient.position.set(layout.x, layout.y);
+        ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
+        pixiContainer.addChild(ambient);
+        ambientRef.current = ambient;
+      } else if (ambientRef.current) {
+        // リサイズ対応
+        ambientRef.current.resize(layout.width, layout.height);
+        ambientRef.current.position.set(layout.x, layout.y);
+      }
     },
   });
 
