@@ -80,6 +80,7 @@ export class SoundManager {
   private readonly unlockHandler = () => void this.tryUnlockContext();
   private ambientDuckAmount = 1;
   private ambientDuckTimeout: number | null = null;
+  private pendingPlays: { soundId: SoundId; overrides?: PlaybackOverrides }[] = [];
 
   constructor() {
     if (!isBrowser()) return;
@@ -116,7 +117,11 @@ export class SoundManager {
     await Promise.allSettled(tasks);
   }
 
-  async play(soundId: SoundId, overrides?: PlaybackOverrides): Promise<void> {
+  async play(
+    soundId: SoundId,
+    overrides?: PlaybackOverrides,
+    internal = false
+  ): Promise<void> {
     if (!isBrowser()) return;
     if (this.settings.muted || this.settings.masterVolume <= 0) return;
 
@@ -127,6 +132,11 @@ export class SoundManager {
     if (!context || !this.masterGain) return;
 
     await this.resumeContext();
+
+    if (!internal && this.context?.state === "suspended") {
+      this.enqueuePendingPlay(soundId, overrides);
+      return;
+    }
 
     const variant = pickVariant(definition.variants);
     const asset = await this.loadVariant(definition, variant);
@@ -525,6 +535,23 @@ export class SoundManager {
       this.applyGainTargets(0.12);
       this.ambientDuckTimeout = null;
     }, 240);
+  }
+
+  private enqueuePendingPlay(soundId: SoundId, overrides?: PlaybackOverrides) {
+    if (this.pendingPlays.length > 8) {
+      this.pendingPlays.shift();
+    }
+    this.pendingPlays.push({ soundId, overrides });
+    this.attachUnlockHandlers();
+  }
+
+  private async flushPendingPlays() {
+    if (!this.pendingPlays.length) return;
+    const queue = [...this.pendingPlays];
+    this.pendingPlays.length = 0;
+    for (const item of queue) {
+      await this.play(item.soundId, item.overrides, true);
+    }
   }
 
   private handleVisibilityChange = () => {
