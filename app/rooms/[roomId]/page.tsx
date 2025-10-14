@@ -59,7 +59,7 @@ import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSoundManager } from "@/lib/audio/SoundProvider";
+import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 
 const ROOM_CORE_ASSETS = [
   "/images/flag.webp",
@@ -111,18 +111,36 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const transition = useTransition();
   const uid = user?.uid || null;
   const soundManager = useSoundManager();
+  const soundSettings = useSoundSettings();
+  const bgmPlayingRef = useRef(false);
   useAssetPreloader(ROOM_CORE_ASSETS);
   useEffect(() => {
     initMetricsExport();
   }, []);
 
+  const shouldPlayBgm =
+    !!soundManager &&
+    !soundSettings.muted &&
+    (soundSettings.categoryVolume?.ambient ?? 0) > 0.001;
+
   useEffect(() => {
     if (!soundManager) return;
-    void soundManager.play("bgm1");
-    return () => {
+    if (shouldPlayBgm) {
+      bgmPlayingRef.current = true;
+      void soundManager.play("bgm1").catch(() => {
+        bgmPlayingRef.current = false;
+      });
+    } else if (bgmPlayingRef.current) {
       soundManager.stop("bgm1");
+      bgmPlayingRef.current = false;
+    }
+    return () => {
+      if (bgmPlayingRef.current) {
+        soundManager.stop("bgm1");
+        bgmPlayingRef.current = false;
+      }
     };
-  }, [soundManager]);
+  }, [soundManager, shouldPlayBgm]);
 
   useEffect(() => {
     const prefetch = async () => {
