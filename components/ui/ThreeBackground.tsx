@@ -37,6 +37,7 @@ declare global {
   interface Window {
     bg?: {
       lightSweep: () => void;
+      launchFireworks: () => void;
       setQuality: (quality: BackgroundQuality) => void;
       getQuality: () => BackgroundQuality;
       getRenderer: () => "dom" | "pixi";
@@ -50,6 +51,7 @@ const ensureGlobalBackground = () => {
   if (!window.bg) {
     window.bg = {
       lightSweep: () => {},
+      launchFireworks: () => {},
       setQuality: () => {},
       getQuality: () => "low",
       getRenderer: () => "dom",
@@ -62,6 +64,7 @@ const updateGlobalBackground = (payload: {
   renderer: "dom" | "pixi";
   quality: BackgroundQuality;
   onLightSweep?: () => void;
+  onLaunchFireworks?: () => void;
   onSetQuality?: (quality: BackgroundQuality) => void;
   onPointerGlow?: (active: boolean) => void;
 }) => {
@@ -71,6 +74,7 @@ const updateGlobalBackground = (payload: {
   const noopGlow = () => {};
   window.bg = {
     lightSweep: payload.onLightSweep ?? noop,
+    launchFireworks: payload.onLaunchFireworks ?? noop,
     setQuality: payload.onSetQuality ?? noop,
     getQuality: () => payload.quality,
     getRenderer: () => payload.renderer,
@@ -383,6 +387,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           renderer: "pixi",
           quality: effectiveQuality,
           onLightSweep: () => controller.lightSweep(),
+          onLaunchFireworks: () => controller.launchFireworks(),
         });
       } catch (error) {
         logPixiBackground("error", "dragon-quest-init-failed", error);

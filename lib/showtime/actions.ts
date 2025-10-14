@@ -38,6 +38,23 @@ const backgroundLightSweep: ActionExecutor<ShowtimeContext, { delayMs?: number }
   }
 };
 
+const backgroundFireworks: ActionExecutor<ShowtimeContext, { delayMs?: number }> = async (
+  params
+) => {
+  if (!ensureClient()) return;
+  console.log('🎆 backgroundFireworks action triggered!', { params, hasBg: !!window.bg, hasLaunchFireworks: !!window.bg?.launchFireworks });
+  if (params?.delayMs) {
+    await wait(params.delayMs);
+  }
+  try {
+    window.bg?.launchFireworks();
+    console.log('🎆 window.bg.launchFireworks() called successfully');
+  } catch (error) {
+    console.error('🎆 launchFireworks failed:', error);
+    logWarn(SCOPE, "bg.launchFireworks failed", error);
+  }
+};
+
 const backgroundPointerGlow: ActionExecutor<ShowtimeContext, { active: boolean }> = async (
   params
 ) => {
@@ -92,6 +109,7 @@ const debugLog: ActionExecutor<ShowtimeContext, { level?: "debug" | "info" | "wa
 
 export const ACTION_EXECUTORS: Record<string, ActionExecutor> = {
   "background.lightSweep": backgroundLightSweep,
+  "background.fireworks": backgroundFireworks,
   "background.pointerGlow": backgroundPointerGlow,
   "audio.play": audioPlay,
   "banner.show": bannerShow,

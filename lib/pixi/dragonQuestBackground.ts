@@ -12,6 +12,7 @@ export interface DragonQuestBackgroundController {
   resize(width: number, height: number): void;
   destroy(): void;
   lightSweep(): void;
+  launchFireworks(): void;
 }
 
 type Particle = {
@@ -21,6 +22,19 @@ type Particle = {
   life: number;
 };
 
+type Firework = {
+  sprite: PIXI.Graphics;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  phase: "launch" | "explode";
+  exploded: boolean;
+  color: number;
+};
+
 const SAFE_COLORS = [
   0xffd700,
   0xffdc00,
@@ -28,6 +42,17 @@ const SAFE_COLORS = [
   0xffed4a,
   0xfff176,
   0xffb300,
+];
+
+const FIREWORK_COLORS = [
+  0xff3366, // ピンク
+  0xffaa00, // オレンジ
+  0xffff33, // 黄色
+  0x33ff66, // 緑
+  0x33aaff, // 青
+  0xaa33ff, // 紫
+  0xff66ff, // マゼンタ
+  0xffffff, // 白
 ];
 
 const createParticles = (
@@ -93,6 +118,7 @@ export async function createDragonQuestBackground(
   const sweepOverlay = new pixi.Graphics();
   const foreground = new pixi.Graphics();
   const particlesContainer = new pixi.Container();
+  const fireworksContainer = new pixi.Container();
 
   sweepOverlay.alpha = 0;
   if (BLEND_MODES?.ADD !== undefined) {
@@ -103,6 +129,7 @@ export async function createDragonQuestBackground(
   stage.addChild(mountains);
   stage.addChild(sweepOverlay);
   stage.addChild(particlesContainer);
+  stage.addChild(fireworksContainer);
   stage.addChild(foreground);
 
   if (app.ticker) {
@@ -192,6 +219,93 @@ export async function createDragonQuestBackground(
     pointerTargetY = -0.35;
   };
 
+  const fireworks: Firework[] = [];
+
+  const launchFirework = (startX: number, startY: number, color: number) => {
+    console.log('🚀 launchFirework:', { startX, startY, color, containerChildren: fireworksContainer.children.length });
+    const fw = new pixi.Graphics();
+    fw.circle(0, 0, 4);
+    fw.fill({ color, alpha: 1 });
+    fireworksContainer.addChild(fw);
+
+    fireworks.push({
+      sprite: fw,
+      x: startX,
+      y: startY,
+      vx: (Math.random() - 0.5) * 2,
+      vy: -8 - Math.random() * 4,
+      life: 1,
+      maxLife: 1,
+      phase: "launch",
+      exploded: false,
+      color,
+    });
+    console.log('🚀 Firework added! Total:', fireworks.length);
+  };
+
+  const explodeFirework = (fw: Firework) => {
+    fw.exploded = true;
+    const particleCount = 60 + Math.floor(Math.random() * 40);
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 3 + Math.random() * 4;
+      const particle = new pixi.Graphics();
+      particle.circle(0, 0, 2 + Math.random() * 2);
+      particle.fill({ color: fw.color, alpha: 0.9 });
+      fireworksContainer.addChild(particle);
+
+      fireworks.push({
+        sprite: particle,
+        x: fw.x,
+        y: fw.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: 1,
+        phase: "explode",
+        exploded: true,
+        color: fw.color,
+      });
+    }
+  };
+
+  const triggerFireworks = () => {
+    console.log('🎆 triggerFireworks called!', { width: app.screen.width, height: app.screen.height, fireworksCount: fireworks.length });
+    const width = app.screen.width;
+    const height = app.screen.height;
+
+    // 左の山から3発
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        const x = width * 0.15 + Math.random() * width * 0.1;
+        const y = height * 0.75;
+        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+        console.log(`🎆 Launching firework ${i} from LEFT:`, { x, y, color });
+        launchFirework(x, y, color);
+      }, i * 120);
+    }
+
+    // 右の山から3発
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        const x = width * 0.75 + Math.random() * width * 0.1;
+        const y = height * 0.75;
+        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+        launchFirework(x, y, color);
+      }, i * 120 + 60);
+    }
+
+    // 中央から2発（でっかい！）
+    for (let i = 0; i < 2; i++) {
+      setTimeout(() => {
+        const x = width * 0.45 + Math.random() * width * 0.1;
+        const y = height * 0.8;
+        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+        launchFirework(x, y, color);
+      }, i * 180 + 240);
+    }
+  };
+
 
 
   let running = true;
@@ -245,6 +359,49 @@ export async function createDragonQuestBackground(
       }
     }
 
+    // 花火アニメーション
+    if (fireworks.length > 0 && Math.random() < 0.1) {
+      console.log('🎆 Animating fireworks:', fireworks.length);
+    }
+    for (let i = fireworks.length - 1; i >= 0; i--) {
+      const fw = fireworks[i];
+      if (!fw.sprite) continue;
+
+      if (fw.phase === "launch") {
+        fw.x += fw.vx;
+        fw.y += fw.vy;
+        fw.vy += 0.15; // 重力
+        fw.life -= 0.016;
+
+        fw.sprite.x = fw.x;
+        fw.sprite.y = fw.y;
+
+        // 頂点に達したら爆発
+        if (fw.vy > 0 && !fw.exploded) {
+          explodeFirework(fw);
+          fw.sprite.destroy();
+          fireworks.splice(i, 1);
+          continue;
+        }
+      } else if (fw.phase === "explode") {
+        fw.x += fw.vx;
+        fw.y += fw.vy;
+        fw.vy += 0.08; // 重力
+        fw.vx *= 0.98; // 空気抵抗
+        fw.life -= 0.013;
+
+        fw.sprite.x = fw.x;
+        fw.sprite.y = fw.y;
+        fw.sprite.alpha = Math.max(0, fw.life);
+      }
+
+      // ライフが尽きたら削除
+      if (fw.life <= 0) {
+        fw.sprite.destroy();
+        fireworks.splice(i, 1);
+      }
+    }
+
     app.renderer.render(stage);
   };
 
@@ -261,7 +418,9 @@ export async function createDragonQuestBackground(
     lightSweep() {
       triggerLightSweep();
     },
-
+    launchFireworks() {
+      triggerFireworks();
+    },
     destroy() {
       running = false;
       if (frameId !== null) {
@@ -271,6 +430,10 @@ export async function createDragonQuestBackground(
       particles.forEach((particle) => {
         particle.sprite.destroy();
       });
+      fireworks.forEach((fw) => {
+        fw.sprite.destroy();
+      });
+      fireworks.length = 0;
       if (typeof window !== "undefined") {
         // no pointer listeners to remove currently
       }
