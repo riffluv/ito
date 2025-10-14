@@ -28,6 +28,12 @@ export const roundRevealScenario: Scenario<RevealContext> = [
     fireAndForget: true,
   },
   {
+    action: "background.meteors",
+    when: (ctx) => ctx.success === false,
+    delayMs: 100,
+    fireAndForget: true,
+  },
+  {
     action: "audio.play",
     params: (ctx) => ({
       id: ctx.success ? "result_victory" : "result_failure",

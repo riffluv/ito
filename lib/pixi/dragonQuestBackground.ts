@@ -13,6 +13,7 @@ export interface DragonQuestBackgroundController {
   destroy(): void;
   lightSweep(): void;
   launchFireworks(): void;
+  launchMeteors(): void;
 }
 
 type Particle = {
@@ -33,6 +34,18 @@ type Firework = {
   phase: "launch" | "explode";
   exploded: boolean;
   color: number;
+};
+
+type Meteor = {
+  sprite: PIXI.Graphics;
+  trail: PIXI.Graphics;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  rotation: number;
+  size: number;
 };
 
 const SAFE_COLORS = [
@@ -119,6 +132,7 @@ export async function createDragonQuestBackground(
   const foreground = new pixi.Graphics();
   const particlesContainer = new pixi.Container();
   const fireworksContainer = new pixi.Container();
+  const meteorsContainer = new pixi.Container();
 
   sweepOverlay.alpha = 0;
   if (BLEND_MODES?.ADD !== undefined) {
@@ -129,6 +143,7 @@ export async function createDragonQuestBackground(
   stage.addChild(mountains);
   stage.addChild(sweepOverlay);
   stage.addChild(particlesContainer);
+  stage.addChild(meteorsContainer);
   stage.addChild(fireworksContainer);
   stage.addChild(foreground);
 
@@ -220,6 +235,7 @@ export async function createDragonQuestBackground(
   };
 
   const fireworks: Firework[] = [];
+  const meteors: Meteor[] = [];
 
   const launchFirework = (startX: number, startY: number, color: number) => {
     console.log('🚀 launchFirework:', { startX, startY, color, containerChildren: fireworksContainer.children.length });
@@ -266,6 +282,64 @@ export async function createDragonQuestBackground(
         exploded: true,
         color: fw.color,
       });
+    }
+  };
+
+  const launchMeteor = (startX: number, startY: number, targetX: number, targetY: number, size: number) => {
+    console.log('☄️ launchMeteor:', { startX, startY, targetX, targetY, size });
+
+    // 隕石本体
+    const meteor = new pixi.Graphics();
+    meteor.circle(0, 0, size);
+    meteor.fill({ color: 0xff4400, alpha: 1 });
+
+    // 尾（トレイル）
+    const trail = new pixi.Graphics();
+    trail.rect(-size * 3, -size / 2, size * 3, size);
+    trail.fill({ color: 0xff6600, alpha: 0.6 });
+
+    meteorsContainer.addChild(trail);
+    meteorsContainer.addChild(meteor);
+
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const speed = 15 + Math.random() * 5;
+    const vx = (dx / distance) * speed;
+    const vy = (dy / distance) * speed;
+    const rotation = Math.atan2(dy, dx);
+
+    meteors.push({
+      sprite: meteor,
+      trail,
+      x: startX,
+      y: startY,
+      vx,
+      vy,
+      life: 1,
+      rotation,
+      size,
+    });
+
+    console.log('☄️ Meteor added! Total:', meteors.length);
+  };
+
+  const triggerMeteors = () => {
+    console.log('☄️ triggerMeteors called!');
+    const width = app.screen.width;
+    const height = app.screen.height;
+
+    // 右上から左下へ3〜5個の隕石を発射
+    const meteorCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < meteorCount; i++) {
+      setTimeout(() => {
+        const startX = width * (0.7 + Math.random() * 0.3); // 右上
+        const startY = -50 - Math.random() * 100;
+        const targetX = width * (0.1 + Math.random() * 0.2); // 左下
+        const targetY = height + 100 + Math.random() * 100;
+        const size = 8 + Math.random() * 8; // でかい隕石！
+        launchMeteor(startX, startY, targetX, targetY, size);
+      }, i * 150 + Math.random() * 100);
     }
   };
 
@@ -359,6 +433,33 @@ export async function createDragonQuestBackground(
       }
     }
 
+    // 隕石アニメーション
+    for (let i = meteors.length - 1; i >= 0; i--) {
+      const meteor = meteors[i];
+      if (!meteor.sprite || !meteor.trail) continue;
+
+      meteor.x += meteor.vx;
+      meteor.y += meteor.vy;
+      meteor.life -= 0.008;
+
+      meteor.sprite.x = meteor.x;
+      meteor.sprite.y = meteor.y;
+      meteor.sprite.rotation = meteor.rotation;
+      meteor.sprite.alpha = Math.max(0, meteor.life);
+
+      meteor.trail.x = meteor.x;
+      meteor.trail.y = meteor.y;
+      meteor.trail.rotation = meteor.rotation;
+      meteor.trail.alpha = Math.max(0, meteor.life * 0.6);
+
+      // 画面外に出たら削除
+      if (meteor.y > height + 200 || meteor.life <= 0) {
+        meteor.sprite.destroy();
+        meteor.trail.destroy();
+        meteors.splice(i, 1);
+      }
+    }
+
     // 花火アニメーション
     if (fireworks.length > 0 && Math.random() < 0.1) {
       console.log('🎆 Animating fireworks:', fireworks.length);
@@ -421,6 +522,9 @@ export async function createDragonQuestBackground(
     launchFireworks() {
       triggerFireworks();
     },
+    launchMeteors() {
+      triggerMeteors();
+    },
     destroy() {
       running = false;
       if (frameId !== null) {
@@ -434,6 +538,11 @@ export async function createDragonQuestBackground(
         fw.sprite.destroy();
       });
       fireworks.length = 0;
+      meteors.forEach((m) => {
+        m.sprite.destroy();
+        m.trail.destroy();
+      });
+      meteors.length = 0;
       if (typeof window !== "undefined") {
         // no pointer listeners to remove currently
       }

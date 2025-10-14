@@ -55,6 +55,23 @@ const backgroundFireworks: ActionExecutor<ShowtimeContext, { delayMs?: number }>
   }
 };
 
+const backgroundMeteors: ActionExecutor<ShowtimeContext, { delayMs?: number }> = async (
+  params
+) => {
+  if (!ensureClient()) return;
+  console.log('☄️ backgroundMeteors action triggered!', { params, hasBg: !!window.bg, hasLaunchMeteors: !!window.bg?.launchMeteors });
+  if (params?.delayMs) {
+    await wait(params.delayMs);
+  }
+  try {
+    window.bg?.launchMeteors();
+    console.log('☄️ window.bg.launchMeteors() called successfully');
+  } catch (error) {
+    console.error('☄️ launchMeteors failed:', error);
+    logWarn(SCOPE, "bg.launchMeteors failed", error);
+  }
+};
+
 const backgroundPointerGlow: ActionExecutor<ShowtimeContext, { active: boolean }> = async (
   params
 ) => {
@@ -110,6 +127,7 @@ const debugLog: ActionExecutor<ShowtimeContext, { level?: "debug" | "info" | "wa
 export const ACTION_EXECUTORS: Record<string, ActionExecutor> = {
   "background.lightSweep": backgroundLightSweep,
   "background.fireworks": backgroundFireworks,
+  "background.meteors": backgroundMeteors,
   "background.pointerGlow": backgroundPointerGlow,
   "audio.play": audioPlay,
   "banner.show": bannerShow,
