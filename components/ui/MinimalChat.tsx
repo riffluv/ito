@@ -13,6 +13,7 @@ import { keyframes } from "@emotion/react";
 import React from "react";
 import type { PlayerDoc } from "@/lib/types";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
+import { gsap } from "gsap";
 
 // 戦績ボタン用アンビエント効果（高頻度版）
 const ledgerGlint = keyframes`
@@ -51,6 +52,7 @@ export default function MinimalChat({
   const [open, setOpen] = React.useState(false);
   const prefersReducedMotion = useReducedMotionPreference();
   const [ambientPhase, setAmbientPhase] = React.useState<0 | 1>(0);
+  const chatPanelRef = React.useRef<HTMLDivElement>(null);
 
   // アンビエント効果のフェーズ切り替え（高頻度: 800ms）
   React.useEffect(() => {
@@ -61,6 +63,46 @@ export default function MinimalChat({
     );
     return () => window.clearInterval(id);
   }, [prefersReducedMotion]);
+
+  // チャットパネルの「ぴょこん」アニメーション
+  React.useEffect(() => {
+    const panel = chatPanelRef.current;
+    if (!panel) return;
+
+    if (prefersReducedMotion) {
+      // モーション削減時は即座に表示/非表示
+      gsap.set(panel, { opacity: open ? 1 : 0, scale: 1, y: 0 });
+      return;
+    }
+
+    if (open) {
+      // 開くアニメーション：下から「ぴょこん」
+      gsap.fromTo(
+        panel,
+        {
+          opacity: 0,
+          scale: 0.8,
+          y: 20,
+        },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.35,
+          ease: "back.out(1.7)", // 弾むような感じ
+        }
+      );
+    } else {
+      // 閉じるアニメーション：下に「すっ」
+      gsap.to(panel, {
+        opacity: 0,
+        scale: 0.9,
+        y: 10,
+        duration: 0.2,
+        ease: "power2.in",
+      });
+    }
+  }, [open, prefersReducedMotion]);
 
   // 低スペック対応: prefersReducedMotionの時は静的な切り替え（常に明るめ）
   const glowOpacity = prefersReducedMotion
@@ -215,6 +257,7 @@ export default function MinimalChat({
 
       {open && (
         <Box
+          ref={chatPanelRef}
           position="fixed"
           right={{ base: 3, md: 5 }}
           bottom={{
