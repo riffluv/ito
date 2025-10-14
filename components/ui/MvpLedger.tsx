@@ -915,7 +915,7 @@ export function MvpLedger({
                   opacity: 1,
                   cursor: "not-allowed",
                 }}
-                sx={
+                css={
                   isClosing
                     ? {
                         "&::after": {

@@ -1098,7 +1098,7 @@ export default function MainMenu() {
                           </Text>
                         </HStack>
                         <Text {...DEVELOPER_NOTE_STYLES.text} textShadow="1px 1px 0px #000">
-                          "連想ワードだけで数字の大小をそろえる"という発想が面白く、
+                          &ldquo;連想ワードだけで数字の大小をそろえる&rdquo;という発想が面白く、
                           それをオンラインマルチプレイ向けに遊びやすく再構成しました。
                           同時ドラッグの共同編集、ホストの操作でカードが次々めくれる演出、
                           リアルタイム同期による一体感を目指しました。
