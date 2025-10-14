@@ -98,16 +98,16 @@ export const SOUND_CATEGORIES: SoundCategory[] = [
 ];
 
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
-  masterVolume: 0.85,
-  muted: false,
+  masterVolume: 1,
+  muted: true,
   successMode: "epic",
   categoryVolume: {
     ui: 1,
     notify: 1,
     drag: 1,
-    ambient: 0.2,
+    ambient: 0,
     system: 1,
     card: 1,
-    fanfare: 0.5,
+    fanfare: 1,
   },
 };
