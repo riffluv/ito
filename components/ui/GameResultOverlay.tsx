@@ -1,7 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
@@ -32,6 +32,23 @@ export function GameResultOverlay({
   const playSuccessEpic = useSoundEffect("clear_success2");
   const playFailure = useSoundEffect("clear_failure");
   const soundManager = useSoundManager();
+  const triggerBackgroundFx = useCallback(
+    (effect: "fireworks" | "meteors") => {
+      if (prefersReduced || typeof window === "undefined") return;
+      const bg = (window as any)?.bg;
+      if (!bg) return;
+      try {
+        if (effect === "fireworks") {
+          bg.launchFireworks?.();
+        } else {
+          bg.launchMeteors?.();
+        }
+      } catch (error) {
+        console.warn(`[GameResultOverlay] bg.${effect} failed`, error);
+      }
+    },
+    [prefersReduced]
+  );
 
   useEffect(() => {
     // Get fresh settings from localStorage
@@ -226,6 +243,7 @@ export function GameResultOverlay({
         },
         "-=0.2"
       )
+      .call(() => triggerBackgroundFx("meteors"), undefined, ">")
 
       // Phase 4: 激しい振動（地震のような）
       .to(overlay, {
@@ -518,6 +536,7 @@ export function GameResultOverlay({
         },
         0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
       )
+      .call(() => triggerBackgroundFx("fireworks"), undefined, ">")
 
       // Phase 4: 派手な跳ね演出 + 黄金演出の連動
       .to(text, {
@@ -660,7 +679,7 @@ export function GameResultOverlay({
         }
       });
     };
-  }, [failed, mode, prefersReduced]);
+  }, [failed, mode, prefersReduced, triggerBackgroundFx]);
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
   const subtext = failed ? FAILURE_SUBTEXT : VICTORY_SUBTEXT;

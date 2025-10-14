@@ -238,7 +238,6 @@ export async function createDragonQuestBackground(
   const meteors: Meteor[] = [];
 
   const launchFirework = (startX: number, startY: number, color: number) => {
-    console.log('🚀 launchFirework:', { startX, startY, color, containerChildren: fireworksContainer.children.length });
     const fw = new pixi.Graphics();
     fw.circle(0, 0, 4);
     fw.fill({ color, alpha: 1 });
@@ -256,7 +255,6 @@ export async function createDragonQuestBackground(
       exploded: false,
       color,
     });
-    console.log('🚀 Firework added! Total:', fireworks.length);
   };
 
   const explodeFirework = (fw: Firework) => {
@@ -286,8 +284,6 @@ export async function createDragonQuestBackground(
   };
 
   const launchMeteor = (startX: number, startY: number, targetX: number, targetY: number, size: number) => {
-    console.log('☄️ launchMeteor:', { startX, startY, targetX, targetY, size });
-
     // 隕石本体
     const meteor = new pixi.Graphics();
     meteor.circle(0, 0, size);
@@ -320,12 +316,9 @@ export async function createDragonQuestBackground(
       rotation,
       size,
     });
-
-    console.log('☄️ Meteor added! Total:', meteors.length);
   };
 
   const triggerMeteors = () => {
-    console.log('☄️ triggerMeteors called!');
     const width = app.screen.width;
     const height = app.screen.height;
 
@@ -344,7 +337,6 @@ export async function createDragonQuestBackground(
   };
 
   const triggerFireworks = () => {
-    console.log('🎆 triggerFireworks called!', { width: app.screen.width, height: app.screen.height, fireworksCount: fireworks.length });
     const width = app.screen.width;
     const height = app.screen.height;
 
@@ -354,7 +346,6 @@ export async function createDragonQuestBackground(
         const x = width * 0.15 + Math.random() * width * 0.1;
         const y = height * 0.75;
         const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
-        console.log(`🎆 Launching firework ${i} from LEFT:`, { x, y, color });
         launchFirework(x, y, color);
       }, i * 120);
     }
@@ -461,9 +452,6 @@ export async function createDragonQuestBackground(
     }
 
     // 花火アニメーション
-    if (fireworks.length > 0 && Math.random() < 0.1) {
-      console.log('🎆 Animating fireworks:', fireworks.length);
-    }
     for (let i = fireworks.length - 1; i >= 0; i--) {
       const fw = fireworks[i];
       if (!fw.sprite) continue;
