@@ -70,11 +70,10 @@ export function SoundSettingsPanel() {
       if (value > 0.001) {
         setBgmEnabled(true);
         setLastBgmVolume(value);
-        setBgmVolume(value);
       } else {
         setBgmEnabled(false);
-        setBgmVolume((prev) => (prev > 0.001 ? prev : lastBgmVolume || 0.1));
       }
+      setBgmVolume(value);
       return;
     }
 

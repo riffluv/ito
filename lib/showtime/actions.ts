@@ -42,15 +42,12 @@ const backgroundFireworks: ActionExecutor<ShowtimeContext, { delayMs?: number }>
   params
 ) => {
   if (!ensureClient()) return;
-  console.log('🎆 backgroundFireworks action triggered!', { params, hasBg: !!window.bg, hasLaunchFireworks: !!window.bg?.launchFireworks });
   if (params?.delayMs) {
     await wait(params.delayMs);
   }
   try {
     window.bg?.launchFireworks();
-    console.log('🎆 window.bg.launchFireworks() called successfully');
   } catch (error) {
-    console.error('🎆 launchFireworks failed:', error);
     logWarn(SCOPE, "bg.launchFireworks failed", error);
   }
 };
@@ -59,15 +56,12 @@ const backgroundMeteors: ActionExecutor<ShowtimeContext, { delayMs?: number }> =
   params
 ) => {
   if (!ensureClient()) return;
-  console.log('☄️ backgroundMeteors action triggered!', { params, hasBg: !!window.bg, hasLaunchMeteors: !!window.bg?.launchMeteors });
   if (params?.delayMs) {
     await wait(params.delayMs);
   }
   try {
     window.bg?.launchMeteors();
-    console.log('☄️ window.bg.launchMeteors() called successfully');
   } catch (error) {
-    console.error('☄️ launchMeteors failed:', error);
     logWarn(SCOPE, "bg.launchMeteors failed", error);
   }
 };
