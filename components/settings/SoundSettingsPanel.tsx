@@ -2,7 +2,7 @@
 import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 type AdjustableCategory = "ambient" | "notify" | "ui" | "fanfare";
 
@@ -17,7 +17,15 @@ export function SoundSettingsPanel() {
 
   const [masterVolume, setMasterVolume] = useState(snapshot.masterVolume);
   const [muted, setMuted] = useState(snapshot.muted);
-  const [bgmVolume, setBgmVolume] = useState(snapshot.categoryVolume.ambient);
+  const initialAmbient = snapshot.categoryVolume.ambient;
+  const fallbackBgm = initialAmbient > 0.001 ? initialAmbient : 0.1;
+  const [bgmVolume, setBgmVolume] = useState(fallbackBgm);
+  const [bgmEnabled, setBgmEnabled] = useState(
+    snapshot.categoryVolume.ambient > 0.001
+  );
+  const [lastBgmVolume, setLastBgmVolume] = useState(
+    snapshot.categoryVolume.ambient > 0.001 ? snapshot.categoryVolume.ambient : 0.1
+  );
   const [sfxVolume, setSfxVolume] = useState(snapshot.categoryVolume.ui);
   const [notifyVolume, setNotifyVolume] = useState(snapshot.categoryVolume.notify);
   const [fanfareVolume, setFanfareVolume] = useState(
@@ -30,7 +38,11 @@ export function SoundSettingsPanel() {
     const current = soundManager?.getSettings() ?? soundSettings;
     setMasterVolume(current.masterVolume);
     setMuted(current.muted);
-    setBgmVolume(current.categoryVolume.ambient);
+    const ambientVolume = current.categoryVolume.ambient;
+    const hasAmbient = ambientVolume > 0.001;
+    setBgmEnabled(hasAmbient);
+    setLastBgmVolume((prev) => (hasAmbient ? ambientVolume : prev || 0.1));
+    setBgmVolume((prev) => (hasAmbient ? ambientVolume : prev || 0.1));
     setSfxVolume(current.categoryVolume.ui);
     setNotifyVolume(current.categoryVolume.notify);
     setFanfareVolume(current.categoryVolume.fanfare ?? 1);
@@ -55,6 +67,14 @@ export function SoundSettingsPanel() {
     if (!soundManager) return;
     if (category === "ambient") {
       soundManager.setCategoryVolume("ambient", value);
+      if (value > 0.001) {
+        setBgmEnabled(true);
+        setLastBgmVolume(value);
+        setBgmVolume(value);
+      } else {
+        setBgmEnabled(false);
+        setBgmVolume((prev) => (prev > 0.001 ? prev : lastBgmVolume || 0.1));
+      }
       return;
     }
 
@@ -82,64 +102,93 @@ export function SoundSettingsPanel() {
     soundManager?.setSuccessMode(mode);
   };
 
+  const toggleBgm = () => {
+    if (!soundManager) return;
+    if (bgmEnabled) {
+      const stored = bgmVolume > 0.001 ? bgmVolume : lastBgmVolume || 0.1;
+      setLastBgmVolume(stored);
+      setBgmEnabled(false);
+      setBgmVolume(stored);
+      soundManager.setCategoryVolume("ambient", 0);
+      return;
+    }
+
+    const restore = lastBgmVolume > 0.001 ? lastBgmVolume : 0.1;
+    setBgmEnabled(true);
+    setLastBgmVolume(restore);
+    setBgmVolume(restore);
+    soundManager.setCategoryVolume("ambient", restore);
+  };
+
   const renderSlider = (
     label: string,
     value: number,
     onChange: (val: number) => void,
-  ) => (
-    <Box>
-      <HStack justify="space-between" mb="6px">
-        <Text
-          fontWeight="bold"
-          fontSize="13px"
-          fontFamily="monospace"
-          textShadow="1px 1px 0px #000"
-          letterSpacing="0.01em"
-        >
-          {label}
-        </Text>
-        <Box
-          px="7px"
-          py="1px"
-          bg={UI_TOKENS.COLORS.panelBg}
-          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
-          borderRadius={0}
-          boxShadow="inset 0 1px 2px rgba(0,0,0,0.4)"
-        >
+    options?: {
+      accessory?: ReactNode;
+      disabled?: boolean;
+    }
+  ) => {
+    const sliderDisabled = options?.disabled ?? false;
+    return (
+      <Box>
+        <HStack justify="space-between" mb="6px">
           <Text
-            fontSize="11px"
-            fontFamily="monospace"
             fontWeight="bold"
+            fontSize="13px"
+            fontFamily="monospace"
             textShadow="1px 1px 0px #000"
+            letterSpacing="0.01em"
+            opacity={sliderDisabled ? 0.6 : 1}
           >
-            {Math.round(value * 100)}%
+            {label}
           </Text>
-        </Box>
-      </HStack>
+          <HStack gap="8px">
+            {options?.accessory}
+            <Box
+              px="7px"
+              py="1px"
+              bg={UI_TOKENS.COLORS.panelBg}
+              border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha60}`}
+              borderRadius={0}
+              boxShadow="inset 0 1px 2px rgba(0,0,0,0.4)"
+              opacity={sliderDisabled ? 0.6 : 1}
+            >
+              <Text
+                fontSize="11px"
+                fontFamily="monospace"
+                fontWeight="bold"
+                textShadow="1px 1px 0px #000"
+              >
+                {Math.round(value * 100)}%
+              </Text>
+            </Box>
+          </HStack>
+        </HStack>
 
-      {/* ドラクエ風カスタムスライダー */}
-      <Box position="relative" py="4px">
-        {/* スライダーレール（外枠） */}
-        <Box
-          position="relative"
-          h="11px"
-          bg={UI_TOKENS.COLORS.panelBg}
-          border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow="inset 0.5px 1px 3px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1), inset -0.5px 0 2px rgba(0,0,0,0.2)"
-        >
-          {/* 塗りつぶしバー（ゴールド + ノイズ風ムラ） */}
+        {/* ドラゴンクエスト風カスタムスライダー */}
+        <Box position="relative" py="4px" opacity={sliderDisabled ? 0.55 : 1}>
+          {/* スライダーのレール（背景） */}
           <Box
-            position="absolute"
-            top="0"
-            left="0"
-            h="100%"
-            w={`${value * 100}%`}
-            bg={UI_TOKENS.COLORS.dqGold}
-            boxShadow="inset 0 -1px 0 rgba(0,0,0,0.35), inset 0.5px 1px 0 rgba(255,255,255,0.4), inset -1px 0 1px rgba(0,0,0,0.15)"
-            transition="width 0.08s cubic-bezier(.2,1,.3,1)"
-            css={{
-              backgroundImage: `linear-gradient(
+            position="relative"
+            h="11px"
+            bg={UI_TOKENS.COLORS.panelBg}
+            border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+            borderRadius={0}
+            boxShadow="inset 0.5px 1px 3px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1), inset -0.5px 0 2px rgba(0,0,0,0.2)"
+          >
+            {/* 塗りつぶしバー（ゴールド + ノイズテクスチャ） */}
+            <Box
+              position="absolute"
+              top="0"
+              left="0"
+              h="100%"
+              w={`${value * 100}%`}
+              bg={UI_TOKENS.COLORS.dqGold}
+              boxShadow="inset 0 -1px 0 rgba(0,0,0,0.35), inset 0.5px 1px 0 rgba(255,255,255,0.4), inset -1px 0 1px rgba(0,0,0,0.15)"
+              transition="width 0.08s cubic-bezier(.2,1,.3,1)"
+              css={{
+                backgroundImage: `linear-gradient(
                 135deg,
                 rgba(255,255,255,0.08) 0%,
                 transparent 25%,
@@ -147,43 +196,104 @@ export function SoundSettingsPanel() {
                 transparent 75%,
                 rgba(255,255,255,0.06) 100%
               )`,
-              backgroundSize: "8px 8px",
+                backgroundSize: "8px 8px",
+              }}
+            />
+          </Box>
+
+          {/* HTMLスライダー（見た目は透明） */}
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={value}
+            onChange={(event) => onChange(parseFloat(event.target.value))}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0,
+              cursor: sliderDisabled ? "not-allowed" : "pointer",
+              margin: 0,
+              padding: 0,
             }}
+            disabled={sliderDisabled}
           />
         </Box>
-
-        {/* HTMLスライダー（透明で上に重ねる） */}
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={value}
-          onChange={(event) => onChange(parseFloat(event.target.value))}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            opacity: 0,
-            cursor: "pointer",
-            margin: 0,
-            padding: 0,
-          }}
-        />
       </Box>
-    </Box>
-  );
+    );
+  };
+
+
 
   return (
     <Stack gap="11px" color="white" fontFamily="monospace">
       {renderSlider("全体音量", masterVolume, (value) => applyMasterVolume(value))}
 
-      {renderSlider("BGM", bgmVolume, (value) => {
-        setBgmVolume(value);
-        applyCategoryVolume("ambient", value);
-      })}
+      {renderSlider(
+        "BGM",
+        bgmVolume,
+        (value) => {
+          applyCategoryVolume("ambient", value);
+        },
+        {
+          accessory: (
+            <Box
+              as="button"
+              onClick={toggleBgm}
+              px="12px"
+              py="3px"
+              minW="56px"
+              bg={bgmEnabled ? UI_TOKENS.COLORS.dqGold : UI_TOKENS.COLORS.panelBg}
+              color={bgmEnabled ? "black" : "white"}
+              borderRadius={0}
+              border={`2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+              fontWeight="bold"
+              fontSize="11px"
+              cursor="pointer"
+              boxShadow={
+                bgmEnabled
+                  ? "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+                  : "2.5px 2px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)"
+              }
+              transition="all 0.18s cubic-bezier(.2,1,.3,1)"
+              transform={bgmEnabled ? "translate(0.5px, -0.5px)" : "translate(0, 0)"}
+              textShadow={bgmEnabled ? "none" : "1px 1px 0px #000"}
+              css={
+                bgmEnabled
+                  ? {
+                      backgroundImage: `linear-gradient(
+                        135deg,
+                        rgba(255,255,255,0.08) 0%,
+                        transparent 25%,
+                        rgba(0,0,0,0.05) 50%,
+                        transparent 75%,
+                        rgba(255,255,255,0.06) 100%
+                      )`,
+                      backgroundSize: "8px 8px",
+                    }
+                  : {}
+              }
+              _hover={{
+                transform: "translate(0, -1px)",
+                boxShadow: bgmEnabled
+                  ? "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 0 rgba(255,255,255,0.35), inset -0.5px -1px 1px rgba(0,0,0,0.15)"
+                  : "3px 3px 0 rgba(0,0,0,0.4), inset 0.5px 1px 3px rgba(0,0,0,0.3)",
+              }}
+              _active={{
+                transform: "translate(0, 0)",
+                boxShadow: "1.5px 1px 0 rgba(0,0,0,0.5), inset 0.5px 1px 3px rgba(0,0,0,0.4)",
+              }}
+            >
+              {bgmEnabled ? "ON" : "OFF"}
+            </Box>
+          ),
+          disabled: !bgmEnabled,
+        }
+      )}
 
       {renderSlider("効果音", sfxVolume, (value) => {
         setSfxVolume(value);
@@ -341,3 +451,6 @@ export function SoundSettingsPanel() {
     </Stack>
   );
 }
+
+
+

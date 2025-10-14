@@ -78,6 +78,8 @@ export class SoundManager {
   private settings: SoundSettings = cloneSettings(DEFAULT_SOUND_SETTINGS);
   private unlockAttached = false;
   private readonly unlockHandler = () => void this.tryUnlockContext();
+  private ambientDuckAmount = 1;
+  private ambientDuckTimeout: number | null = null;
 
   constructor() {
     if (!isBrowser()) return;
@@ -134,6 +136,10 @@ export class SoundManager {
 
     if (definition.stopPrevious) {
       this.stopHandles.get(soundId)?.();
+    }
+
+    if (definition.category !== "ambient") {
+      this.triggerAmbientDuck();
     }
 
     const playbackRate = clamp(
@@ -267,6 +273,11 @@ export class SoundManager {
     this.listeners.clear();
     this.pendingLoads.clear();
     this.missingAssets.clear();
+    if (this.ambientDuckTimeout !== null) {
+      window.clearTimeout(this.ambientDuckTimeout);
+      this.ambientDuckTimeout = null;
+    }
+    this.ambientDuckAmount = 1;
     if (this.context) {
       try {
         this.context.close();
@@ -480,17 +491,40 @@ export class SoundManager {
     this.emit({ type: "settings", settings: this.getSettings() });
   }
 
-  private applyGainTargets() {
+  private applyGainTargets(rampSeconds = 0.05) {
     if (!this.context || !this.masterGain) return;
     const now = this.context.currentTime;
     const masterTarget = this.settings.muted ? 0 : this.settings.masterVolume;
     this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.linearRampToValueAtTime(masterTarget, now + 0.05);
+    this.masterGain.gain.linearRampToValueAtTime(masterTarget, now + rampSeconds);
     this.categoryGains.forEach((gain, category) => {
-      const target = this.settings.categoryVolume[category] ?? 1;
+      const target = this.getCategoryTarget(category);
       gain.gain.cancelScheduledValues(now);
-      gain.gain.linearRampToValueAtTime(target, now + 0.05);
+      gain.gain.linearRampToValueAtTime(target, now + rampSeconds);
     });
+  }
+
+  private getCategoryTarget(category: SoundCategory) {
+    const base = this.settings.categoryVolume[category] ?? 1;
+    if (category === "ambient") {
+      return base * this.ambientDuckAmount;
+    }
+    return base;
+  }
+
+  private triggerAmbientDuck() {
+    if (!isBrowser()) return;
+    if (this.settings.categoryVolume.ambient <= 0) return;
+    this.ambientDuckAmount = 0.5;
+    this.applyGainTargets(0.12);
+    if (this.ambientDuckTimeout !== null) {
+      window.clearTimeout(this.ambientDuckTimeout);
+    }
+    this.ambientDuckTimeout = window.setTimeout(() => {
+      this.ambientDuckAmount = 1;
+      this.applyGainTargets(0.12);
+      this.ambientDuckTimeout = null;
+    }, 240);
   }
 
   private handleVisibilityChange = () => {
