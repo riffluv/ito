@@ -38,6 +38,7 @@ declare global {
     bg?: {
       lightSweep: () => void;
       launchFireworks: () => void;
+      launchMeteors: () => void;
       setQuality: (quality: BackgroundQuality) => void;
       getQuality: () => BackgroundQuality;
       getRenderer: () => "dom" | "pixi";
@@ -52,6 +53,7 @@ const ensureGlobalBackground = () => {
     window.bg = {
       lightSweep: () => {},
       launchFireworks: () => {},
+      launchMeteors: () => {},
       setQuality: () => {},
       getQuality: () => "low",
       getRenderer: () => "dom",
@@ -65,6 +67,7 @@ const updateGlobalBackground = (payload: {
   quality: BackgroundQuality;
   onLightSweep?: () => void;
   onLaunchFireworks?: () => void;
+  onLaunchMeteors?: () => void;
   onSetQuality?: (quality: BackgroundQuality) => void;
   onPointerGlow?: (active: boolean) => void;
 }) => {
@@ -75,6 +78,7 @@ const updateGlobalBackground = (payload: {
   window.bg = {
     lightSweep: payload.onLightSweep ?? noop,
     launchFireworks: payload.onLaunchFireworks ?? noop,
+    launchMeteors: payload.onLaunchMeteors ?? noop,
     setQuality: payload.onSetQuality ?? noop,
     getQuality: () => payload.quality,
     getRenderer: () => payload.renderer,
@@ -388,6 +392,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           quality: effectiveQuality,
           onLightSweep: () => controller.lightSweep(),
           onLaunchFireworks: () => controller.launchFireworks(),
+          onLaunchMeteors: () => controller.launchMeteors(),
         });
       } catch (error) {
         logPixiBackground("error", "dragon-quest-init-failed", error);
