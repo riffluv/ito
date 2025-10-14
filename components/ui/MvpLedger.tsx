@@ -556,7 +556,6 @@ export function MvpLedger({
                     px={{ base: "11px", md: "15px" }}
                     py={{ base: "11px", md: "13px" }}
                     borderBottom="1px solid rgba(255,255,255,0.08)"
-                    boxShadow="inset 0 -1px 0 rgba(0,0,0,0.15)"
                     border={
                       mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
                         ? mvpStats.isAllTie
@@ -566,15 +565,18 @@ export function MvpLedger({
                           : "2px solid rgba(255,215,0,0.85)"
                         : "2px solid transparent"
                     }
-                    boxShadow={
+                    boxShadow={[
+                      "inset 0 -1px 0 rgba(0,0,0,0.15)",
                       mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
                         ? mvpStats.isAllTie
                           ? "0 0 19px rgba(59,130,246,0.52), inset 0 1px 0 rgba(255,255,255,0.16)"
                           : mvpStats.isTie
                           ? "0 0 17px rgba(34,197,94,0.48), inset 0 1px 0 rgba(255,255,255,0.14)"
                           : "0 0 18px rgba(255,215,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12)"
-                        : "none"
-                    }
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                     position="relative"
                     _hover={{
                       bg: mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
