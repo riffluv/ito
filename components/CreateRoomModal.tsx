@@ -23,21 +23,10 @@ import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import * as PIXI from "pixi.js";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
+import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
 // 共通モーダルスタイル定数（部屋作成 → 完了モーダルのサイズ統一）
 // 「人の手」デザイン：角丸3px、影の多層、非対称パディング
-const MODAL_WRAPPER_STYLES = {
-  background: "transparent",
-  border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-  borderRadius: "3px", // 均一ゼロ→微妙な角丸
-  boxShadow: "0 1px 0 rgba(255,255,255,.08), 0 14px 28px -12px rgba(0,0,0,.65)", // 多層影
-  maxWidth: "540px",
-  width: "90vw",
-  padding: 0,
-  overflow: "hidden",
-  position: "relative" as const,
-};
-
 // 非対称パディング（上下で微差）
 const MODAL_HEADER_PADDING = "22px 24px 19px"; // 上22 左右24 下19
 const MODAL_BODY_PADDING = "24px 26px"; // 縦24 横26
@@ -460,7 +449,7 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           ref={modalRef}
-          css={MODAL_WRAPPER_STYLES}
+          css={MODAL_FRAME_STYLES}
         >
           {/* Close button - ドラクエ風 */}
           <IconButtonDQ

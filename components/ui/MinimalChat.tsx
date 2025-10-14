@@ -14,6 +14,7 @@ import React from "react";
 import type { PlayerDoc } from "@/lib/types";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { gsap } from "gsap";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 // 戦績ボタン用アンビエント効果（高頻度版）
 const ledgerGlint = keyframes`
@@ -53,6 +54,7 @@ export default function MinimalChat({
   const prefersReducedMotion = useReducedMotionPreference();
   const [ambientPhase, setAmbientPhase] = React.useState<0 | 1>(0);
   const chatPanelRef = React.useRef<HTMLDivElement>(null);
+  const playLedgerOpen = useSoundEffect("ledger_open");
 
   // アンビエント効果のフェーズ切り替え（高頻度: 800ms）
   React.useEffect(() => {
@@ -163,7 +165,10 @@ export default function MinimalChat({
         >
           <Box
             as="button"
-            onClick={onOpenLedger}
+            onClick={() => {
+              playLedgerOpen();
+              onOpenLedger();
+            }}
             display="flex"
             alignItems="center"
             gap="8px"

@@ -4,16 +4,18 @@ import { SoundSettingsPanel } from "@/components/settings/SoundSettingsPanel";
 import { notify } from "@/components/ui/notify";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
-import { useEffect, useState as useLocalState, useState, useRef } from "react";
+import { useEffect, useState as useLocalState, useState, useRef, useCallback } from "react";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import * as PIXI from "pixi.js";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
+import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
 type BackgroundOption = "css" | "pixi-simple" | "pixi-dq";
 const normalizeBackgroundOption = (
@@ -82,6 +84,25 @@ export function SettingsModal({
   );
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
+  const playSettingsOpen = useSoundEffect("settings_open");
+  const playSettingsClose = useSoundEffect("settings_close");
+  const closeOnceRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      closeOnceRef.current = false;
+      playSettingsOpen();
+    } else {
+      closeOnceRef.current = false;
+    }
+  }, [isOpen, playSettingsOpen]);
+
+  const closeWithSound = useCallback(() => {
+    if (closeOnceRef.current) return;
+    closeOnceRef.current = true;
+    playSettingsClose();
+    onClose();
+  }, [onClose, playSettingsClose]);
 
   const SOUND_FEATURE_LOCKED = false;
   const soundLockMessage =
@@ -256,7 +277,7 @@ export function SettingsModal({
         }
       } catch {}
       notify({ title: "設定を保存しました", type: "success" });
-      onClose();
+      closeWithSound();
     } catch (err: any) {
       notify({
         title: "設定の保存に失敗しました",
@@ -347,7 +368,11 @@ export function SettingsModal({
   return (
     <Dialog.Root
       open={isOpen}
-      onOpenChange={(details) => !details.open && onClose()}
+      onOpenChange={(details) => {
+        if (!details.open) {
+          closeWithSound();
+        }
+      }}
     >
       <Dialog.Backdrop
         css={{
@@ -360,15 +385,7 @@ export function SettingsModal({
           ref={modalRef}
           data-pixi-target="settings-modal"
           css={{
-            background: "transparent",
-            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-            borderRadius: "0",
-            boxShadow: "none",
-            maxWidth: "480px",
-            width: "90vw",
-            padding: 0,
-            overflow: "hidden",
-            position: "relative",
+            ...MODAL_FRAME_STYLES,
           }}
         >
           {/* Close button - 統一パターン */}
@@ -435,9 +452,8 @@ export function SettingsModal({
             </Text>
           </Box>
 
-          <Dialog.Body px={6} pb={2} position="relative" zIndex={20}>
-            {/* タブ切り替え */}
-            <HStack gap={3} mb={4} justify="center">
+          <Dialog.Body px={6} pb={4} position="relative" zIndex={20}>
+            <HStack gap={3} justify="center" mt={3} mb={3}>
               {[
                 { key: "game", label: "Game Settings" },
                 { key: "graphics", label: "Graphics Settings" },
@@ -699,7 +715,7 @@ export function SettingsModal({
             )}
 
             {activeTab === "graphics" && (
-              <Stack gap={6}>
+              <Stack gap={6} mt={4}>
                 {/* グラフィック設定の説明は冗長なので削除 */}
                 {/* サブタブ（背景/アニメ） */}
                 <HStack gap={3} justify="center">
@@ -1140,7 +1156,7 @@ export function SettingsModal({
           >
             <HStack justify="space-between" gap={3}>
               <button
-                onClick={onClose}
+                onClick={closeWithSound}
                 style={{
                   minWidth: "120px",
                   height: "40px",

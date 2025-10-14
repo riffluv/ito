@@ -19,7 +19,13 @@ export type SoundId =
   | "result_failure"
   | "notify_warning"
   | "round_start"
-  | "order_confirm";
+  | "order_confirm"
+  | "clue_decide"
+  | "ledger_open"
+  | "ledger_close"
+  | "settings_open"
+  | "settings_close"
+  | "bgm1";
 
 export type Range = {
   min: number;

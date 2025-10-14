@@ -59,6 +59,7 @@ import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSoundManager } from "@/lib/audio/SoundProvider";
 
 const ROOM_CORE_ASSETS = [
   "/images/flag.webp",
@@ -109,10 +110,19 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
+  const soundManager = useSoundManager();
   useAssetPreloader(ROOM_CORE_ASSETS);
   useEffect(() => {
     initMetricsExport();
   }, []);
+
+  useEffect(() => {
+    if (!soundManager) return;
+    void soundManager.play("bgm1");
+    return () => {
+      soundManager.stop("bgm1");
+    };
+  }, [soundManager]);
 
   useEffect(() => {
     const prefetch = async () => {
