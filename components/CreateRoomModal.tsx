@@ -24,6 +24,72 @@ import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import * as PIXI from "pixi.js";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 
+// 共通モーダルスタイル定数（部屋作成 → 完了モーダルのサイズ統一）
+// 「人の手」デザイン：角丸3px、影の多層、非対称パディング
+const MODAL_WRAPPER_STYLES = {
+  background: "transparent",
+  border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+  borderRadius: "3px", // 均一ゼロ→微妙な角丸
+  boxShadow: "0 1px 0 rgba(255,255,255,.08), 0 14px 28px -12px rgba(0,0,0,.65)", // 多層影
+  maxWidth: "540px",
+  width: "90vw",
+  padding: 0,
+  overflow: "hidden",
+  position: "relative" as const,
+};
+
+// 非対称パディング（上下で微差）
+const MODAL_HEADER_PADDING = "22px 24px 19px"; // 上22 左右24 下19
+const MODAL_BODY_PADDING = "24px 26px"; // 縦24 横26
+const MODAL_FOOTER_PADDING = "18px 24px 22px"; // 上18 左右24 下22
+
+// 手癖イージング（人の手デザイン）
+const HAND_EASING = "cubic-bezier(.2,1,.3,1)";
+const HAND_TRANSITION = `180ms ${HAND_EASING}`;
+
+// 共通ボタンスタイル（物理感のある押し込み）
+const getHandButtonStyle = (variant: "primary" | "secondary" = "secondary") => ({
+  borderRadius: "3px",
+  fontWeight: "bold" as const,
+  fontSize: "17px",
+  letterSpacing: "0.01em",
+  fontFamily: "monospace",
+  border: "3px solid rgba(255,255,255,0.9)",
+  background: variant === "primary" ? "var(--colors-richBlack-600)" : "transparent",
+  color: "white",
+  cursor: "pointer" as const,
+  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+  transition: `all ${HAND_TRANSITION}`,
+  boxShadow: "2px 3px 0 rgba(0,0,0,0.72)",
+  transform: "translate(.5px,-.5px)",
+});
+
+// 共通ボタンハンドラー（ホバー・押し込み効果）
+const handButtonHandlers = {
+  onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.transform = "translate(0,-1px)";
+    e.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
+    e.currentTarget.style.background = "white";
+    e.currentTarget.style.color = "black";
+    e.currentTarget.style.textShadow = "none";
+  },
+  onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>, variant: "primary" | "secondary" = "secondary") => {
+    e.currentTarget.style.transform = "translate(.5px,-.5px)";
+    e.currentTarget.style.boxShadow = "2px 3px 0 rgba(0,0,0,0.72)";
+    e.currentTarget.style.background = variant === "primary" ? "var(--colors-richBlack-600)" : "transparent";
+    e.currentTarget.style.color = "white";
+    e.currentTarget.style.textShadow = "0 1px 2px rgba(0,0,0,0.6)";
+  },
+  onMouseDown: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.transform = "translate(0,0)";
+    e.currentTarget.style.boxShadow = "1px 2px 0 rgba(0,0,0,0.85)";
+  },
+  onMouseUp: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.transform = "translate(0,-1px)";
+    e.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
+  },
+};
+
 export function CreateRoomModal({
   isOpen,
   onClose,
@@ -394,17 +460,7 @@ export function CreateRoomModal({
       <Dialog.Positioner>
         <Dialog.Content
           ref={modalRef}
-          css={{
-            background: "transparent",
-            border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-            borderRadius: 0,
-            boxShadow: "none",
-            maxWidth: "480px",
-            width: "90vw",
-            padding: 0,
-            overflow: "hidden",
-            position: "relative",
-          }}
+          css={MODAL_WRAPPER_STYLES}
         >
           {/* Close button - ドラクエ風 */}
           <IconButtonDQ
@@ -437,7 +493,7 @@ export function CreateRoomModal({
 
           {/* Header - ドラクエ風 */}
           <Box
-            p={6}
+            p={MODAL_HEADER_PADDING}
             position="relative"
             zIndex={20}
             css={{
@@ -472,7 +528,7 @@ export function CreateRoomModal({
 
           {/* Form Content - ドラクエ風 */}
           {isSuccess ? (
-            <Box px={6} py={6} position="relative" zIndex={20}>
+            <Box p={MODAL_BODY_PADDING} position="relative" zIndex={20}>
               <VStack gap={4} align="stretch">
                 <Text
                   fontSize="sm"
@@ -508,43 +564,45 @@ export function CreateRoomModal({
                   style={{
                     width: "100%",
                     height: "48px",
-                    borderRadius: 0,
+                    borderRadius: "3px", // 角丸追加
                     border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
                     background: inviteCopied ? "white" : "transparent",
                     color: inviteCopied ? "black" : "white",
                     fontFamily: "monospace",
                     fontWeight: "bold",
-                    fontSize: "1rem",
-                    padding: "0 16px",
+                    fontSize: "17px", // 奇数サイズ
+                    letterSpacing: "0.02em", // 字間追加
+                    padding: "0 17px", // 奇数パディング
                     cursor: "pointer",
                     textShadow: inviteCopied ? "none" : "0 2px 4px rgba(0,0,0,0.8)",
-                    transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: "2px 2px 0 rgba(0,0,0,0.8)",
+                    transition: "all 180ms cubic-bezier(.2,1,.3,1)", // 手癖カーブ
+                    boxShadow: "2px 3px 0 rgba(0,0,0,0.72)", // 微妙にずらす
+                    transform: "translate(.5px,-.5px)", // 初期位置微調整
                     outline: "none",
                   }}
                   onMouseEnter={(event) => {
                     if (!inviteCopied) {
                       event.currentTarget.style.background = "white";
                       event.currentTarget.style.color = "black";
-                      event.currentTarget.style.transform = "translateY(-2px)";
-                      event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                      event.currentTarget.style.transform = "translate(0,-1px)"; // 浮き上がり
+                      event.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
                     }
                   }}
                   onMouseLeave={(event) => {
                     if (!inviteCopied) {
                       event.currentTarget.style.background = "transparent";
                       event.currentTarget.style.color = "white";
-                      event.currentTarget.style.transform = "translateY(0)";
-                      event.currentTarget.style.boxShadow = "2px 2px 0 rgba(0,0,0,0.8)";
+                      event.currentTarget.style.transform = "translate(.5px,-.5px)"; // 元の位置
+                      event.currentTarget.style.boxShadow = "2px 3px 0 rgba(0,0,0,0.72)";
                     }
                   }}
                   onMouseDown={(event) => {
-                    event.currentTarget.style.transform = "translateY(1px)";
-                    event.currentTarget.style.boxShadow = "1px 1px 0 rgba(0,0,0,0.8)";
+                    event.currentTarget.style.transform = "translate(0,0)"; // 押し込み
+                    event.currentTarget.style.boxShadow = "1px 2px 0 rgba(0,0,0,0.85)";
                   }}
                   onMouseUp={(event) => {
-                    event.currentTarget.style.transform = inviteCopied ? "translateY(0)" : "translateY(-2px)";
-                    event.currentTarget.style.boxShadow = "3px 3px 0 rgba(0,0,0,0.8)";
+                    event.currentTarget.style.transform = inviteCopied ? "translate(0,0)" : "translate(0,-1px)";
+                    event.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
                   }}
                 >
                   {inviteCopied ? "✓ コピーしました！" : "◆ リンクを コピー"}
@@ -552,7 +610,7 @@ export function CreateRoomModal({
               </VStack>
             </Box>
           ) : (
-            <Box px={6} py={6} position="relative" zIndex={20}>
+            <Box p={MODAL_BODY_PADDING} position="relative" zIndex={20}>
               <form
                 autoComplete="off"
                 onSubmit={(event) => event.preventDefault()}
@@ -792,7 +850,7 @@ export function CreateRoomModal({
 
           {/* Footer - ドラクエ風 */}
           <Box
-            p={4}
+            p={MODAL_FOOTER_PADDING}
             pt={0}
             position="relative"
             zIndex={20}
