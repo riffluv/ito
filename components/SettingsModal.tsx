@@ -76,7 +76,7 @@ export function SettingsModal({
 
   // 背景設定のstate（localStorageから読み込み）
   const [backgroundType, setBackgroundType] =
-    useLocalState<BackgroundOption>("css");
+    useLocalState<BackgroundOption>("pixi-dq");
   const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">(
     "background"
   );
@@ -173,7 +173,12 @@ export function SettingsModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      setBackgroundType(normalizeBackgroundOption(saved));
+      if (saved) {
+        setBackgroundType(normalizeBackgroundOption(saved));
+      } else {
+        localStorage.setItem("backgroundType", "pixi-dq");
+        setBackgroundType("pixi-dq");
+      }
     } catch {
       // noop
     }

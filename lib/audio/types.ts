@@ -94,7 +94,7 @@ export const SOUND_CATEGORIES: SoundCategory[] = [
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
   masterVolume: 0.85,
   muted: false,
-  successMode: "normal",
+  successMode: "epic",
   categoryVolume: {
     ui: 1,
     notify: 1,
