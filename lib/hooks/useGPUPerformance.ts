@@ -48,7 +48,7 @@ function classifyCapability(rendererRaw: string | null): GPUCapability {
 }
 
 export function useGPUPerformance(): GPUPerformanceHook {
-  const [gpuCapability, setGpuCapability] = useState<GPUCapability>("low");
+  const [gpuCapability, setGpuCapability] = useState<GPUCapability>("high");
   const [animationMode, setAnimationModeState] = useState<AnimationMode>(() => {
     if (typeof window === "undefined") return "3d";
     try {

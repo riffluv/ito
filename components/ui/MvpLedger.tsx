@@ -136,6 +136,8 @@ export function MvpLedger({
   }, [mvpVotes, sortedPlayers, myId]);
 
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const handleVote = useCallback(
     async (votedPlayerId: string) => {
@@ -169,6 +171,47 @@ export function MvpLedger({
     },
     [myId, roomId, mvpStats.myVote, pendingTarget, validTargets, sortedPlayers]
   );
+
+  const handleCloseClick = useCallback(() => {
+    if (isClosing) return; // クールダウン中は何もしない
+
+    const button = closeButtonRef.current;
+    if (button && !prefersReduced) {
+      setIsClosing(true);
+
+      // ハイライト流れアニメーション
+      const highlight = document.createElement("div");
+      highlight.style.cssText = `
+        position: absolute;
+        top: 0;
+        right: 100%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+        pointer-events: none;
+      `;
+      button.style.position = "relative";
+      button.style.overflow = "hidden";
+      button.appendChild(highlight);
+
+      gsap.to(highlight, {
+        right: "-50%",
+        duration: 0.25,
+        ease: "power2.out",
+        onComplete: () => {
+          highlight.remove();
+        },
+      });
+
+      // クールダウン終了後に実際のクローズ処理
+      setTimeout(() => {
+        setIsClosing(false);
+        onClose();
+      }, 280);
+    } else {
+      onClose();
+    }
+  }, [isClosing, onClose, prefersReduced]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -222,6 +265,24 @@ export function MvpLedger({
       rowRefs.current = [];
     }
   }, [isOpen]);
+
+  // Escキー対応
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCloseClick();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleCloseClick]);
 
   // Pixi背景の描画とDOM同期
   useEffect(() => {
@@ -397,8 +458,17 @@ export function MvpLedger({
               variant="ghost"
               size="lg"
               color="white"
-              _hover={{ bg: "rgba(255,255,255,0.15)" }}
-              _active={{ bg: "rgba(255,255,255,0.25)" }}
+              minW="40px"
+              minH="40px"
+              transition="180ms cubic-bezier(.2,1,.3,1)"
+              _hover={{
+                bg: "rgba(255,255,255,0.15)",
+                transform: "translateY(-1px)",
+              }}
+              _active={{
+                bg: "rgba(255,255,255,0.25)",
+                transform: "translateY(1px)",
+              }}
               onClick={onClose}
             />
           </Flex>
@@ -420,15 +490,15 @@ export function MvpLedger({
               gridTemplateColumns={columnTemplate}
               gap={{ base: "7px", md: "11px" }}
               px={{ base: "11px", md: "15px" }}
-              pb="9px"
+              pb="11px"
               borderBottom="2px solid rgba(255,255,255,0.85)"
               alignItems="center"
             >
-              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">NO</Flex>
-              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
-              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
-              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
-              <Box textAlign="right" justifySelf="end" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.05em" color="white" textShadow="1px 1px 0 rgba(0,0,0,0.7)" pr={{ base: "8px", md: "12px" }}>数字</Box>
+              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.03em" color="rgba(255,255,255,0.95)" textShadow="1px 1px 0 rgba(0,0,0,0.7)">NO</Flex>
+              <Flex justify="center" align="center" justifySelf="center" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.03em" color="rgba(255,255,255,0.95)" textShadow="1px 1px 0 rgba(0,0,0,0.7)">{/* アバター */}</Flex>
+              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.03em" color="rgba(255,255,255,0.95)" textShadow="1px 1px 0 rgba(0,0,0,0.7)">なかま</Box>
+              <Box textAlign="left" justifySelf="start" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.03em" color="rgba(255,255,255,0.95)" textShadow="1px 1px 0 rgba(0,0,0,0.7)">連想語</Box>
+              <Box textAlign="right" justifySelf="end" w="100%" fontSize={{ base: "13px", md: "15px" }} fontWeight={700} letterSpacing="0.03em" color="rgba(255,255,255,0.95)" textShadow="1px 1px 0 rgba(0,0,0,0.7)" pr={{ base: "8px", md: "12px" }}>数字</Box>
               <Flex
                 justify="center"
                 align="center"
@@ -436,8 +506,8 @@ export function MvpLedger({
                 w={voteControlWidth}
                 fontSize={{ base: "13px", md: "15px" }}
                 fontWeight={700}
-                letterSpacing="0.05em"
-                color="white"
+                letterSpacing="0.03em"
+                color="rgba(255,255,255,0.95)"
                 textShadow="1px 1px 0 rgba(0,0,0,0.7)"
               >
                 MVP
@@ -446,7 +516,7 @@ export function MvpLedger({
 
             {/* 表データ */}
             <Box
-              mt="7px"
+              mt="9px"
               flex="1"
               overflowY="auto"
               pr={{ base: "3px", md: "6px" }}
@@ -462,7 +532,7 @@ export function MvpLedger({
                 },
               }}
             >
-              <Stack gap={{ base: "5px", md: "7px" }}>
+              <Stack gap={{ base: "0", md: "0" }}>
                 {sortedPlayers.map((player, index) => (
                   <Box
                     key={player.id}
@@ -484,7 +554,9 @@ export function MvpLedger({
                     }
                     borderRadius="0"
                     px={{ base: "11px", md: "15px" }}
-                    py={{ base: "7px", md: "9px" }}
+                    py={{ base: "11px", md: "13px" }}
+                    borderBottom="1px solid rgba(255,255,255,0.08)"
+                    boxShadow="inset 0 -1px 0 rgba(0,0,0,0.15)"
                     border={
                       mvpStats.allVoted && mvpStats.mvpIds.includes(player.id)
                         ? mvpStats.isAllTie
@@ -571,6 +643,7 @@ export function MvpLedger({
                       fontSize={{ base: "14px", md: "15px" }}
                       fontWeight={700}
                       letterSpacing="0.03em"
+                      color="rgba(255,255,255,0.94)"
                       textShadow="1px 1px 0 rgba(0,0,0,0.6)"
                       overflow="hidden"
                       textOverflow="ellipsis"
@@ -586,23 +659,27 @@ export function MvpLedger({
                       w="100%"
                       fontSize={{ base: "13px", md: "14px" }}
                       fontWeight={600}
+                      color="rgba(255,255,255,0.91)"
                       textShadow="1px 1px 0 rgba(0,0,0,0.5)"
                       overflow="hidden"
                       textOverflow="ellipsis"
                       whiteSpace="nowrap"
+                      title={player.clue1?.trim() || ""}
                     >
                       {player.clue1?.trim() ? player.clue1 : "――"}
                     </Box>
 
-                    {/* 数字（右揃え） */}
+                    {/* 数字（右揃え + tabular-nums） */}
                     <Box
                       textAlign="right"
                       justifySelf="end"
                       w="100%"
                       fontSize={{ base: "15px", md: "17px" }}
                       fontWeight={700}
+                      color="rgba(255,255,255,0.96)"
                       textShadow="1px 1px 0 rgba(0,0,0,0.7)"
                       pr={{ base: "8px", md: "12px" }}
+                      fontVariantNumeric="tabular-nums"
                     >
                       {typeof player.number === "number" ? player.number : "?"}
                     </Box>
@@ -652,33 +729,48 @@ export function MvpLedger({
                         <>
                           {player.id !== myId ? (
                             mvpStats.myVote ? (
-                              <Text
-                                fontSize={{ base: "10px", md: "11px" }}
-                                color={mvpStats.myVote === player.id ? "#FFD700" : "rgba(255,255,255,0.3)"}
-                                fontWeight={700}
-                                letterSpacing="0.02em"
-                                display="inline-flex"
-                                justifyContent="center"
-                                textAlign="center"
-                                w="100%"
-                              >
-                                {mvpStats.myVote === player.id ? "✓投票済" : "―"}
-                              </Text>
+                              mvpStats.myVote === player.id ? (
+                                <Box
+                                  fontSize={{ base: "18px", md: "20px" }}
+                                  fontWeight={900}
+                                  display="inline-flex"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                  w={{ base: "28px", md: "32px" }}
+                                  h={{ base: "28px", md: "32px" }}
+                                  bg="rgba(255,215,0,0.22)"
+                                  border="2px solid rgba(255,215,0,0.75)"
+                                  borderRadius="0"
+                                  color="#FFD700"
+                                  textShadow="0 1px 2px rgba(0,0,0,0.7)"
+                                  boxShadow="inset 0 1px 0 rgba(255,255,255,0.12), 0 0 8px rgba(255,215,0,0.35)"
+                                >
+                                  ✓
+                                </Box>
+                              ) : (
+                                <Text
+                                  fontSize={{ base: "10px", md: "11px" }}
+                                  color="rgba(255,255,255,0.3)"
+                                  fontWeight={700}
+                                >
+                                  ―
+                                </Text>
+                              )
                             ) : (
                               <Button
                                 size="xs"
                                 variant="ghost"
-                                border="2px solid rgba(255,255,255,0.5)"
+                                border="2px solid rgba(255,255,255,0.72)"
                                 borderRadius="0"
-                                px={{ base: "9px", md: "12px" }}
-                                py={{ base: "4px", md: "5px" }}
-                                minH="auto"
+                                px={{ base: "11px", md: "14px" }}
+                                py={{ base: "5px", md: "6px" }}
+                                minH={{ base: "28px", md: "32px" }}
                                 h="auto"
                                 w="auto"
                                 fontSize={{ base: "9px", md: "10px" }}
-                                letterSpacing="0.02em"
+                                letterSpacing="0.03em"
                                 fontWeight={700}
-                                color="white"
+                                color="rgba(255,255,255,0.95)"
                                 bg="transparent"
                                 textShadow="1px 1px 0 rgba(0,0,0,0.6)"
                                 onClick={() => handleVote(player.id)}
@@ -687,10 +779,13 @@ export function MvpLedger({
                                 _hover={{
                                   bg: "rgba(255,255,255,0.15)",
                                   transform: "translateY(-1px)",
+                                  borderColor: "rgba(255,255,255,0.88)",
+                                  boxShadow: "inset 0 0 12px rgba(255,255,255,0.22), 0 0 8px rgba(255,255,255,0.18)",
                                 }}
                                 _active={{
                                   bg: "rgba(255,255,255,0.25)",
-                                  transform: "translateY(0)",
+                                  transform: "translateY(1px)",
+                                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.35)",
                                 }}
                               >
                                 投票
@@ -710,8 +805,8 @@ export function MvpLedger({
 
           {/* フッター */}
           <Flex
-            justify="space-between"
-            align="center"
+            direction="column"
+            gap="11px"
             px={{ base: "19px", md: "27px" }}
             py={{ base: "11px", md: "13px" }}
             borderTop="none"
@@ -720,59 +815,112 @@ export function MvpLedger({
             bg="transparent"
             zIndex={20}
           >
-            <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85}>
-              {mvpStats.allVoted ? (
-                mvpStats.isAllTie ? (
-                  <>
-                    🌟 全員同点！ みんな最高！
-                  </>
-                ) : mvpStats.isTie ? (
-                  <>
-                    ✨ 同点！{" "}
-                    {mvpStats.mvpIds
-                      .map(id => sortedPlayers.find(p => p.id === id)?.name)
-                      .filter(Boolean)
-                      .join(" & ")}{" "}
-                    が同率トップ！
-                  </>
+            {/* MVP投票状況 */}
+            <Box w="100%">
+              <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85} mb={mvpStats.allVoted ? 0 : "7px"}>
+                {mvpStats.allVoted ? (
+                  mvpStats.isAllTie ? (
+                    <>
+                      🌟 全員同点！ みんな最高！
+                    </>
+                  ) : mvpStats.isTie ? (
+                    <>
+                      ✨ 同点！{" "}
+                      {mvpStats.mvpIds
+                        .map(id => sortedPlayers.find(p => p.id === id)?.name)
+                        .filter(Boolean)
+                        .join(" & ")}{" "}
+                      が同率トップ！
+                    </>
+                  ) : (
+                    <>
+                      {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name ? (
+                        <>🏆 {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name} がMVPに選ばれました！</>
+                      ) : (
+                        <>👋 MVPは去っていきました...</>
+                      )}
+                    </>
+                  )
                 ) : (
                   <>
-                    {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name ? (
-                      <>🏆 {sortedPlayers.find(p => p.id === mvpStats.mvpIds[0])?.name} がMVPに選ばれました！</>
-                    ) : (
-                      <>👋 MVPは去っていきました...</>
-                    )}
+                    MVP投票: {mvpStats.totalVoters}/{mvpStats.totalPlayers}人完了
+                    {mvpStats.totalPlayers > 0 && " ※全員投票でMVPが決定します"}
                   </>
-                )
-              ) : (
-                <>
-                  MVP投票: {mvpStats.totalVoters}/{mvpStats.totalPlayers}人完了
-                  {mvpStats.totalPlayers > 0 && " ※全員投票でMVPが決定します"}
-                </>
+                )}
+              </Text>
+              {!mvpStats.allVoted && mvpStats.totalPlayers > 0 && (
+                <Box
+                  position="relative"
+                  h="5px"
+                  bg="rgba(0,0,0,0.35)"
+                  border="1px solid rgba(255,255,255,0.18)"
+                  overflow="hidden"
+                >
+                  <Box
+                    position="absolute"
+                    top={0}
+                    left={0}
+                    h="100%"
+                    w={`${(mvpStats.totalVoters / mvpStats.totalPlayers) * 100}%`}
+                    bg="linear-gradient(90deg, rgba(255,215,0,0.75), rgba(255,165,0,0.85))"
+                    transition="width 320ms cubic-bezier(.2,1,.3,1)"
+                    boxShadow="inset 0 1px 0 rgba(255,255,255,0.22), 0 0 8px rgba(255,215,0,0.45)"
+                  />
+                </Box>
               )}
-            </Text>
-            <Button
-              size="sm"
-              variant="ghost"
-              color="white"
-              border="3px solid rgba(255,255,255,0.9)"
-              borderRadius="0"
-              px={6}
-              fontWeight={700}
-              letterSpacing="0.05em"
-              textShadow="1px 1px 0 rgba(0,0,0,0.6)"
-              onClick={onClose}
-              _hover={{
-                bg: "rgba(255,255,255,0.15)",
-                transform: "translateY(-1px)",
-              }}
-              _active={{
-                bg: "rgba(255,255,255,0.25)",
-                transform: "translateY(1px)",
-              }}
-            >
-              次の冒険へ ▶
-            </Button>
+            </Box>
+
+            {/* 次の冒険へボタン */}
+            <Flex justify="flex-end" w="100%">
+              <Button
+                ref={closeButtonRef}
+                size="sm"
+                variant="ghost"
+                color="white"
+                border="3px solid rgba(255,255,255,0.9)"
+                borderRadius="0"
+                px={6}
+                fontWeight={700}
+                letterSpacing="0.05em"
+                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                onClick={handleCloseClick}
+                disabled={isClosing}
+                position="relative"
+                overflow="hidden"
+                transition="180ms cubic-bezier(.2,1,.3,1)"
+                _hover={{
+                  bg: isClosing ? "transparent" : "rgba(255,255,255,0.15)",
+                  transform: isClosing ? "none" : "translateY(-1px)",
+                }}
+                _active={{
+                  bg: isClosing ? "transparent" : "rgba(255,255,255,0.25)",
+                  transform: isClosing ? "none" : "translateY(1px)",
+                }}
+                _disabled={{
+                  opacity: 1,
+                  cursor: "not-allowed",
+                }}
+                sx={
+                  isClosing
+                    ? {
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background:
+                            "repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 10px, transparent 10px, transparent 20px)",
+                          pointerEvents: "none",
+                        },
+                      }
+                    : {}
+                }
+              >
+                次の冒険へ ▶
+              </Button>
+            </Flex>
           </Flex>
         </Flex>
       </Flex>

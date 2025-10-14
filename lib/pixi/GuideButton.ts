@@ -440,7 +440,7 @@ export function createSpaceGuide(): GuideButton {
     description: 'で入力',
     arrowDirection: 'down',
     keyColor: 0xfcda6c, // ゴールド
-    particleColor: 0xfcda6c,
+    particleColor: 0xffa726, // 線香花火風オレンジ（矢印と差別化）
   });
 }
 
@@ -453,6 +453,6 @@ export function createSubmitEGuide(): GuideButton {
     description: '/ ドラッグ',
     arrowDirection: 'up',
     keyColor: 0x6cc6fc, // ブルー
-    particleColor: 0x6cc6fc,
+    particleColor: 0xffa726, // 線香花火風オレンジ（矢印と差別化）
   });
 }
