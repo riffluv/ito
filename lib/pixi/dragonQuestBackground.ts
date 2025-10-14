@@ -454,7 +454,11 @@ export async function createDragonQuestBackground(
     // 花火アニメーション
     for (let i = fireworks.length - 1; i >= 0; i--) {
       const fw = fireworks[i];
-      if (!fw.sprite) continue;
+      if (!fw.sprite) {
+        // spriteがnullなら配列から削除
+        fireworks.splice(i, 1);
+        continue;
+      }
 
       if (fw.phase === "launch") {
         fw.x += fw.vx;
@@ -465,8 +469,8 @@ export async function createDragonQuestBackground(
         fw.sprite.x = fw.x;
         fw.sprite.y = fw.y;
 
-        // 頂点に達したら爆発
-        if (fw.vy > 0 && !fw.exploded) {
+        // 頂点に達したら爆発（vyが正になるか、ライフが0.3以下で強制爆発）
+        if ((fw.vy >= -0.5 || fw.life <= 0.3) && !fw.exploded) {
           explodeFirework(fw);
           fw.sprite.destroy();
           fireworks.splice(i, 1);
@@ -482,12 +486,12 @@ export async function createDragonQuestBackground(
         fw.sprite.x = fw.x;
         fw.sprite.y = fw.y;
         fw.sprite.alpha = Math.max(0, fw.life);
-      }
 
-      // ライフが尽きたら削除
-      if (fw.life <= 0) {
-        fw.sprite.destroy();
-        fireworks.splice(i, 1);
+        // ライフが尽きたら削除
+        if (fw.life <= 0) {
+          fw.sprite.destroy();
+          fireworks.splice(i, 1);
+        }
       }
     }
 
@@ -520,15 +524,15 @@ export async function createDragonQuestBackground(
         frameId = null;
       }
       particles.forEach((particle) => {
-        particle.sprite.destroy();
+        particle.sprite?.destroy();
       });
       fireworks.forEach((fw) => {
-        fw.sprite.destroy();
+        fw.sprite?.destroy();
       });
       fireworks.length = 0;
       meteors.forEach((m) => {
-        m.sprite.destroy();
-        m.trail.destroy();
+        m.sprite?.destroy();
+        m.trail?.destroy();
       });
       meteors.length = 0;
       if (typeof window !== "undefined") {
