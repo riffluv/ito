@@ -7,15 +7,25 @@ type RevealContext = {
 export const roundRevealScenario: Scenario<RevealContext> = [
   {
     action: "log",
-    params: (ctx) => ({
-      level: "info",
-      message: "round-reveal",
-      data: { success: ctx.success },
-    }),
+    params: (ctx) => {
+      console.log('🎆 [roundReveal] Context:', ctx);
+      console.log('🎆 [roundReveal] success value:', ctx.success, 'type:', typeof ctx.success, 'is true?', ctx.success === true);
+      return {
+        level: "info",
+        message: "round-reveal",
+        data: { success: ctx.success },
+      };
+    },
     fireAndForget: true,
   },
   {
     action: "background.lightSweep",
+  },
+  {
+    action: "background.fireworks",
+    when: (ctx) => ctx.success === true,
+    delayMs: 100,
+    fireAndForget: true,
   },
   {
     action: "audio.play",
