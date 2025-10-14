@@ -96,7 +96,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     reducedMotion || gpuCapability === "low" || effectiveMode === "simple";
 
   const [backgroundType, setBackgroundType] =
-    useState<BackgroundType>("css");
+    useState<BackgroundType>("pixi-dq");
 
   useEffect(() => {
     ensureGlobalBackground();
@@ -105,7 +105,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("backgroundType");
-      setBackgroundType(normalizeBackgroundType(saved));
+      if (saved) {
+        setBackgroundType(normalizeBackgroundType(saved));
+      } else {
+        localStorage.setItem("backgroundType", "pixi-dq");
+        setBackgroundType("pixi-dq");
+      }
     } catch {
       // noop
     }
