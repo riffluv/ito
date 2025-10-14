@@ -77,7 +77,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     id: "clear_success2",
     category: "fanfare",
     preload: { link: true, decode: true },
-    variants: [{ src: "result/clear_success2.mp3", gainMultiplier: 0.4 }],
+    variants: [{ src: "result/clear_success2.mp3" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration (epic)",
