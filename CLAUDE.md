@@ -1,116 +1,84 @@
-# 🎯 Claude Code 指示書
+## プロジェクト概要（2025-10 時点）
 
-## 📋 **プロジェクト概要**
+- タイトル: **序の紋章 III（オンライン連想ゲーム）**
+- 状態: 本番運用中。Pixi.js/GSAP を活用した HD-2D 風演出が特徴。
+- 目的: 次のエージェント（Claude Code）が素早く把握し、既存コンセプトを崩さず改善を続けられるようにする。
 
-**Online ITO - ドラクエ風数字カードゲーム**
+### 技術スタック
+- Next.js 14 App Router（`app/`）
+- Firebase: Firestore + RTDB Presence + Auth
+- Pixi.js 8（HUD/背景）、GSAP 3（タイムライン）
+- Chakra UI v3（DOM レイヤー）
+- Stripe 決済基盤（Checkout + Webhook）
 
-このプロジェクトは**完成・デプロイ済み**のオンラインマルチプレイヤーカードゲームです。
-- **公開URL**: https://numberlink.vercel.app/
-- **技術スタック**: Next.js 14 + Firebase Firestore + Vercel
-- **デザインテーマ**: ドラゴンクエスト風レトロゲームUI
-- **プレイ人数**: 2-6人のリアルタイム対戦
+### 優先ポリシー
+- **ダークモード固定**（ライトテーマは完全に撤廃済み）
+- **2クリックでゲーム開始できる導線を維持**
+- **Pixi 背景で世界観を統一**（ゲーム本編・モーダル・ローディング）
+- **prefers-reduced-motion を尊重**（Pixi 演出も抑制）
+- **回答／コメントはすべて日本語**（プロジェクト方針）
+- **Web検索は Codex CLI 内蔵 WebSearch を利用（gemini/brave 禁止）**
 
+## 参照ファイル
 
-## 📚 **主要ドキュメント**
+| 用途 | ファイル |
+| --- | --- |
+| 全体方針/ルール | `AGENTS.md`（必読） |
+| Pixi HUD 展開タスク | `pixi-hud-instructions.md` |
+| デザイン数値・スタイル規則 | `万能デザイン指示書.md` |
+| ゲーム仕様 | `docs/GAME_LOGIC_OVERVIEW.md` |
+| Stripe 設定 | `docs/stripe-integration-foundation.md` |
+| パフォーマンス指針 | `docs/perf-metrics-dashboard.md`, `docs/performance-report.md` |
 
-### **最優先参照ファイル**
+## 現在進行中のテーマ
 
-- **`CLAUDE.md`** ← この指示書（現在のファイル）
-- **`docs/GAME_LOGIC_OVERVIEW.md`** ← ゲーム仕様・ロジック詳細
-- **`claudedocs/vercel-firebase-setup.md`** ← デプロイ・環境設定手順
-- **`AIdesign/`** ← AIデザイン分析・UI/UX特徴資料
+1. **Pixi HUD の全モーダル／ローディングへの展開**  
+   - すでに `SettingsModal`, `VictoryHighlightLayer` で実績あり。
+   - 作業基準: `pixi-hud-instructions.md`
 
-### **完成済み主要機能**
+2. **メインメニューのビジュアル刷新（UX維持）**  
+   - Pixi 背景（山の景色）をデフォルトに。  
+   - ただし「ロビー＝同一画面で即プレイ可能」を崩さない。
 
-✅ **リアルタイム対戦システム** - Firebase Firestoreによる同期  
-✅ **ドラクエ風UI統一** - 全コンポーネントでデザイン統一完了  
-✅ **GSAP アニメーション** - 成功/失敗演出、フェーズ遷移  
-✅ **チャット機能** - ドラクエ風一行チャット  
-✅ **レスポンシブ対応** - PC・スマホ・タブレット対応  
-✅ **Vercel本番デプロイ** - 環境変数設定・Firebase連携完了
+3. **勝敗演出の PixiPlugin 強化**  
+   - `GameResultOverlay.tsx` で光の帯を同期。  
+   - ローディング画面 `DragonQuestLoading.tsx` も Pixi 背景を追加予定。
 
+## コードスタイルと注意点
 
-## 🚨 **重要: テーマシステム決定事項**
+- Pixi オブジェクトは必ず destroy でクリーンアップ。  
+- GSAP の duration/ease は “偶数・5刻みを避ける” ルール（指示書参照）。  
+- 新規演出は reduced-motion に対応。  
+- DOM で描くもの（テキスト、フォーム）と Pixi 背景を混同しない。  
+- 既存の Stripe / Firebase フローを破壊しない（本番仕様）。  
+- PR レンジ感：クラシックUI → Pixi への移行は段階的に。無闇にフルリプレイスしない。
 
-### **ダークモード固定決定**
+## よくあるタスクのパターン
 
-**2025-09-01に変更**: このプロジェクトは**ダークモード専用**に確定しました。
+1. Pixi 背景を追加する場合:  
+   - `usePixiHudLayer` でレイヤー作成 → `usePixiLayerLayout` で DOM と同期 → GSAP で演出。
+2. ボタンや枠の調整:  
+   - `components/ui/AppButton.tsx` や `theme/` 配下のレシピを編集。
+3. プレイフロー改善:  
+   - `app/page.tsx` （ロビー兼メインメニュー）と `components/ui/MiniHandDock.tsx` が中心。
+4. ストライプ関連:  
+   - `app/api/stripe/*` と `lib/stripe/*` を参照。sandbox でテストする際は環境変数に注意。
 
-#### **重要な決定理由**
-- 黒ベースのデザインでゲーム画面が引き締まって見える
-- 長時間プレイでも目に優しい
-- 保守性の向上（テーマ切り替えロジック除去）
-- 今後のエージェント作業での一貫性確保
+## 作業フロー（Claude Code 推奨）
 
-#### **⚠️ 将来のエージェント向け重要警告**
+1. 目的のファイル・方針を `AGENTS.md` / `pixi-hud-instructions.md` で確認。
+2. 実装前に `prefers-reduced-motion` や Pixi 背景の負荷影響を考慮。
+3. 実装後は `npm run lint` / `npm run build` を必ず通す。
+4. 表示確認は内蔵ブラウザ機能（Playwright preview 等）で Pixi 背景が描画されるかチェック。
 
-**絶対に以下を行わないでください:**
+## 禁止事項／NG 例
 
-1. **`_light` プロパティの再導入**
-   - すべて除去済み。再追加は UI 破綻を引き起こします
-   - `theme/index.ts`, `theme/recipes/*.ts` から完全除去済み
+- ライトモード復活・ `_light` トークン再導入。  
+- Pixi 背景の削除（デフォルト設定を CSS に戻す）。  
+- 追加CLI（gemini, brave-search 等）の使用。  
+- Stripe Webhook の削除や未検証の API 変更。  
+- 2クリック導線を崩すようなメインメニュー分割。  
 
-2. **ライトモード機能の復活**
-   - `next-themes` プロバイダーは意図的に除去済み
-   - `ThemeToggle` コンポーネントは無効化済み
+## 最後に
 
-3. **条件付きテーマトークンの使用**
-   ```typescript
-   // ❌ 絶対に使用禁止
-   bg: { base: "gray.900", _light: "white" }
-   
-   // ✅ 正しい形式（ダークモード固定）
-   bg: "gray.900"
-   ```
-
-#### **現在の実装状態**
-- ✅ `theme/semantic/colors.ts`: 全semantic tokensでダークモード専用色を定義
-- ✅ `theme/recipes/button.recipe.ts`: 全variantでダークモード専用
-- ✅ `components/site/Hero.tsx`: bgGradientダークモード固定  
-- ✅ `components/site/LobbySkeletons.tsx`: skeleton colorダークモード固定
-- ✅ `app/providers.tsx`: DarkModeOnlyBridge実装
-- ✅ `components/site/ThemeToggle.tsx`: 機能無効化済み
-
-#### **質問時の対応**
-もしユーザーからライトモード関連の要求があった場合:
-
-1. この決定事項セクションを参照
-2. ダークモード固定の理由を説明  
-3. UI破綻リスクを警告
-4. 代替提案（コントラスト調整など）を提示
-
-**この決定は最終確定です。変更には十分な理由が必要です。**
-
-## 🎮 **ゲームの特徴**
-
-### **ドラゴンクエスト風デザイン統一**
-- **リッチブラック背景** (`rgba(8,9,15,0.9)`)
-- **太い白枠** (`3px solid rgba(255,255,255,0.9)`)
-- **角ばったデザイン** (`borderRadius: 0`)
-- **monospaceフォント** + **textShadow**
-- **立体感のあるboxShadow**
-
-### **プレイフロー**
-1. **名前設定** → **ルーム作成/参加** 
-2. **待機室** → **ゲーム開始** (ホスト操作)
-3. **数字配布** → **お題表示** → **連想ワード入力**
-4. **カード提出** → **並び替え** → **結果判定**
-5. **GSAP演出** → **次ラウンドorゲーム終了**
-
-### **技術的特徴**
-- **Firestore** でリアルタイム同期
-- **匿名認証** でシンプルログイン
-- **GSAP** で高品質アニメーション
-- **dnd-kit** でドラッグ&ドロップ
-- **Chakra UI v3** でコンポーネント設計
-
-## 🚀 **今後の開発について**
-
-**このプロジェクトは完成・デプロイ済み**です。今後の作業は：
-- 新機能追加・拡張
-- UI/UX改善
-- パフォーマンス最適化
-- バグ修正・メンテナンス
-
-**既存機能は十分にテスト済み**のため、破壊的変更は避けてください。
-
+このプロジェクトは Pixi と GSAP を駆使したリッチなオンラインカードゲームです。既存の世界観や UX を維持しつつ、演出と操作性を磨いていくことが主な役割になります。疑問点があれば `AGENTS.md` と関連ドキュメントを優先的に参照し、プロジェクト方針に沿った貢献をお願いします。よろしくお願いします！
