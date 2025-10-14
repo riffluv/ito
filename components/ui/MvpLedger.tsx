@@ -138,6 +138,14 @@ export function MvpLedger({
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const voteProgress =
+    mvpStats.totalPlayers > 0
+      ? Math.min(
+          Math.max(mvpStats.totalVoters / mvpStats.totalPlayers, 0),
+          1
+        )
+      : 0;
+  const voteProgressPercent = Math.round(voteProgress * 100);
 
   const handleVote = useCallback(
     async (votedPlayerId: string) => {
@@ -819,7 +827,7 @@ export function MvpLedger({
           >
             {/* MVP投票状況 */}
             <Box w="100%">
-              <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85} mb={mvpStats.allVoted ? 0 : "7px"}>
+              <Text textShadow="1px 1px 0 rgba(0,0,0,0.6)" opacity={0.85} mb="7px">
                 {mvpStats.allVoted ? (
                   mvpStats.isAllTie ? (
                     <>
@@ -850,26 +858,31 @@ export function MvpLedger({
                   </>
                 )}
               </Text>
-              {!mvpStats.allVoted && mvpStats.totalPlayers > 0 && (
+              <Box
+                position="relative"
+                h="5px"
+                bg="rgba(0,0,0,0.35)"
+                border="1px solid rgba(255,255,255,0.18)"
+                overflow="hidden"
+                opacity={
+                  mvpStats.allVoted || mvpStats.totalPlayers <= 0 ? 0 : 1
+                }
+                pointerEvents="none"
+                transition="opacity 260ms ease"
+                aria-hidden="true"
+              >
                 <Box
-                  position="relative"
-                  h="5px"
-                  bg="rgba(0,0,0,0.35)"
-                  border="1px solid rgba(255,255,255,0.18)"
-                  overflow="hidden"
-                >
-                  <Box
-                    position="absolute"
-                    top={0}
-                    left={0}
-                    h="100%"
-                    w={`${(mvpStats.totalVoters / mvpStats.totalPlayers) * 100}%`}
-                    bg="linear-gradient(90deg, rgba(255,215,0,0.75), rgba(255,165,0,0.85))"
-                    transition="width 320ms cubic-bezier(.2,1,.3,1)"
-                    boxShadow="inset 0 1px 0 rgba(255,255,255,0.22), 0 0 8px rgba(255,215,0,0.45)"
-                  />
-                </Box>
-              )}
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  h="100%"
+                  w={`${voteProgressPercent}%`}
+                  minW={voteProgressPercent > 0 ? "1%" : "0"}
+                  bg="linear-gradient(90deg, rgba(255,215,0,0.75), rgba(255,165,0,0.85))"
+                  transition="width 320ms cubic-bezier(.2,1,.3,1)"
+                  boxShadow="inset 0 1px 0 rgba(255,255,255,0.22), 0 0 8px rgba(255,215,0,0.45)"
+                />
+              </Box>
             </Box>
 
             {/* 次の冒険へボタン */}
