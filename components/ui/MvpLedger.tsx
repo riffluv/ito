@@ -22,6 +22,7 @@ import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import * as PIXI from "pixi.js";
 import { drawBattleRecordsBoard, createBattleRecordsAmbient } from "@/lib/pixi/battleRecordsBackground";
 import type { BattleRecordsAmbient } from "@/lib/pixi/battleRecordsAmbient";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 interface LedgerPlayer extends PlayerDoc {
   id: string;
@@ -137,6 +138,7 @@ export function MvpLedger({
 
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const playLedgerClose = useSoundEffect("ledger_close");
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const voteProgress =
     mvpStats.totalPlayers > 0
@@ -183,6 +185,8 @@ export function MvpLedger({
   const handleCloseClick = useCallback(() => {
     if (isClosing) return; // クールダウン中は何もしない
 
+    playLedgerClose();
+
     const button = closeButtonRef.current;
     if (button && !prefersReduced) {
       setIsClosing(true);
@@ -219,7 +223,13 @@ export function MvpLedger({
     } else {
       onClose();
     }
-  }, [isClosing, onClose, prefersReduced]);
+  }, [isClosing, onClose, playLedgerClose, prefersReduced]);
+
+  const handleOverlayClose = useCallback(() => {
+    if (isClosing) return;
+    playLedgerClose();
+    onClose();
+  }, [isClosing, onClose, playLedgerClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -388,7 +398,7 @@ export function MvpLedger({
         zIndex={100}
         bg="rgba(8, 9, 15, 0.88)"
         backdropFilter="blur(6px)"
-        onClick={onClose}
+        onClick={handleOverlayClose}
       />
       <Flex
         position="fixed"
@@ -477,7 +487,7 @@ export function MvpLedger({
                 bg: "rgba(255,255,255,0.25)",
                 transform: "translateY(1px)",
               }}
-              onClick={onClose}
+              onClick={handleCloseClick}
             />
           </Flex>
 

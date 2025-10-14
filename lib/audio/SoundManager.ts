@@ -248,6 +248,13 @@ export class SoundManager {
     this.applyGainTargets();
   }
 
+  stop(soundId: SoundId) {
+    const stopHandle = this.stopHandles.get(soundId);
+    if (!stopHandle) return;
+    stopHandle();
+    this.stopHandles.delete(soundId);
+  }
+
   destroy() {
     if (!isBrowser()) return;
     document.removeEventListener(

@@ -538,6 +538,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             : "カードを場に出せません";
     const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
 
+    const playClueDecide = useSoundEffect("clue_decide");
+    const playLedgerOpen = useSoundEffect("ledger_open");
     const playOrderConfirm = useSoundEffect("order_confirm");
     const playCardPlace = useSoundEffect("card_place");
     const playCardDeal = useSoundEffect("card_deal");
@@ -549,6 +551,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     if (!canDecide || !me?.id) return;
 
     try {
+      playClueDecide();
       await updateClue1(roomId, me.id, trimmedText);
       setInlineFeedback({
         message: "連想ワードを保存しました",
@@ -573,7 +576,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         });
       }
     }
-  }, [canDecide, me?.id, roomId, trimmedText]);
+  }, [canDecide, me?.id, playClueDecide, roomId, trimmedText]);
 
   // ⚡ PERFORMANCE: useCallbackでメモ化
   const handleClear = React.useCallback(async () => {
@@ -1419,7 +1422,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               <Tooltip content="冒険の記録を見る" showArrow openDelay={180}>
                 <IconButton
                   aria-label="記録簿"
-                  onClick={onOpenLedger}
+                  onClick={() => {
+                    playLedgerOpen();
+                    onOpenLedger();
+                  }}
                   size="xs"
                   w="40px"
                   h="40px"
@@ -1679,6 +1685,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
 
 
 
