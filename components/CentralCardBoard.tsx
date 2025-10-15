@@ -62,6 +62,7 @@ interface CentralCardBoardProps {
   displayMode?: "full" | "minimal";
   slotCount?: number;
   topic?: string | null;
+  revealedAt?: unknown;
 }
 
 interface SlotDescriptorBase {
@@ -523,6 +524,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   orderNumbers = {},
   displayMode = "full",
   slotCount,
+  revealedAt,
 }) => {
   const playerMap = useMemo(() => {
     const map = new Map<string, PlayerDoc & { id: string }>();
@@ -1409,7 +1411,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         )}
       </Box>
 
-      {roomStatus === "finished" && <GameResultOverlay failed={failed} mode="overlay" />}
+      {roomStatus === "finished" && (
+        <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
+      )}
     </Box>
   );
 };

@@ -14,11 +14,13 @@ const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
 interface GameResultOverlayProps {
   failed?: boolean;
   mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
+  revealedAt?: unknown;
 }
 
 export function GameResultOverlay({
   failed,
   mode = "overlay",
+  revealedAt,
 }: GameResultOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -50,27 +52,61 @@ export function GameResultOverlay({
     [prefersReduced]
   );
 
+  const resolveRevealTimestamp = useCallback((): number | null => {
+    if (!revealedAt) return null;
+    if (typeof revealedAt === "number") return revealedAt;
+    if (revealedAt instanceof Date) return revealedAt.getTime();
+    if (typeof revealedAt === "object") {
+      const value: any = revealedAt;
+      if (typeof value.toMillis === "function") {
+        try {
+          return value.toMillis();
+        } catch {
+          return null;
+        }
+      }
+      if (typeof value.seconds === "number" && typeof value.nanoseconds === "number") {
+        return value.seconds * 1000 + Math.floor(value.nanoseconds / 1_000_000);
+      }
+    }
+    return null;
+  }, [revealedAt]);
+
+  const playbackKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
-    // Get fresh settings from localStorage
     const currentSettings = soundManager?.getSettings();
     const successMode = currentSettings?.successMode ?? "normal";
+    const timestamp = resolveRevealTimestamp();
+    const key = `${mode}:${failed ? "fail" : successMode}:${timestamp ?? "none"}`;
+
+    if (playbackKeyRef.current === key) {
+      return;
+    }
+
+    playbackKeyRef.current = key;
+
+    const now = Date.now();
+    const isFreshReveal = timestamp == null || now - timestamp <= 6000;
+    if (!isFreshReveal) {
+      return;
+    }
 
     if (mode !== "overlay") {
       if (failed) {
         playFailure();
+      } else if (successMode === "epic") {
+        playSuccessEpic();
       } else {
-        if (successMode === "epic") {
-          playSuccessEpic();
-        } else {
-          playSuccessNormal();
-        }
+        playSuccessNormal();
       }
       return;
     }
+
     if (!failed && successMode === "epic") {
       playSuccessEpic();
     }
-  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, soundManager]);
+  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, resolveRevealTimestamp, soundManager]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
