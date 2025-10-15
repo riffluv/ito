@@ -101,7 +101,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     useAnimationSettings();
 
   const isLowPowerDevice =
-    reducedMotion || gpuCapability === "low" || effectiveMode === "simple";
+    reducedMotion || gpuCapability === "low";
 
   const [backgroundType, setBackgroundType] =
     useState<BackgroundType>("pixi-dq");

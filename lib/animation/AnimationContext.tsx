@@ -220,6 +220,12 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
       setSupports3D(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (animationMode === "simple" && force3DTransforms) {
+      setForce3DTransforms(false);
+    }
+  }, [animationMode, force3DTransforms, setForce3DTransforms]);
   useEffect(() => {
     if (force3DTransforms) return;
     if (typeof window === "undefined") return;
@@ -238,12 +244,13 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
   // 機能ガード後の適用モード
   const appliedMode: "3d" | "simple" = useMemo(() => {
-    if (force3DTransforms) return "3d";
     if (reducedMotion) return "simple";
+    if (animationMode === "simple") return "simple";
+    if (force3DTransforms) return "3d";
     const base = effectiveMode; // auto��high�Ȃ�3d, low�Ȃ�simple
     if (base === "3d" && supports3D === false) return "simple";
     return base;
-  }, [effectiveMode, force3DTransforms, reducedMotion, supports3D]);
+  }, [animationMode, effectiveMode, force3DTransforms, reducedMotion, supports3D]);
 
   return (
     <AnimationContext.Provider
