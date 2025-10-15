@@ -62,6 +62,19 @@ const nextConfig = {
   },
 };
 
+if (!process.env.STRIPE_SECRET_KEY?.trim()) {
+  console.warn("[stripe] STRIPE_SECRET_KEY is not set. Stripe checkout API routes will respond with 503 until configured.");
+}
+
+if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim()) {
+  console.warn("[stripe] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Client-side Stripe UI will remain disabled.");
+}
+
+if (process.env.NEXT_PUBLIC_STRIPE_UI_ENABLED !== "1") {
+  console.warn("[stripe] NEXT_PUBLIC_STRIPE_UI_ENABLED is not '1'. Supporter UI will stay hidden.");
+}
+
+
 // Bundle分析を有効化（ANALYZE=true npm run buildで実行）
 const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",

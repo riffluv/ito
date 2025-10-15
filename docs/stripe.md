@@ -1,11 +1,11 @@
-# Stripe 決済基盤セットアップ
+# Stripe ���ϊ�ՃZ�b�g�A�b�v
 
-このドキュメントは序の紋章III（Next.js）プロジェクトで Stripe を安全に運用するための基本手順をまとめたものです。
+���̃h�L�������g�͏��̖��III�iNext.js�j�v���W�F�N�g�� Stripe �����S�ɉ^�p���邽�߂̊�{�菇���܂Ƃ߂����̂ł��B
 
-## 必須環境変数
-`.env.local` に以下を設定してください。
+## �K�{���ϐ�
+.env.local �Ɉȉ���ݒ肵�Ă��������B
 
-```
+`
 STRIPE_SECRET_KEY=sk_live_xxx
 STRIPE_PUBLISHABLE_KEY=pk_live_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
@@ -16,7 +16,13 @@ STRIPE_DONATION_PRODUCT_NAME=Sei no Monshou III Support
 STRIPE_PRICE_DONATION_SUPPORTER=price_xxx
 STRIPE_PRICE_DONATION_CHAMPION=price_xxx
 STRIPE_PRICE_DONATION_LEGEND=price_xxx
-```
+`
+
+`
+NEXT_PUBLIC_STRIPE_UI_ENABLED=0
+`
+
+> 反響が集まるまでは 0 (非表示) のままで運用し、公開強化のタイミングで 1 に切り替えてください。公開鍵が未設定の場合は自動的に非表示になります。
 
 必要に応じて以下を上書きできます。
 

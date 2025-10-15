@@ -192,6 +192,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const joinCounterRef = useRef(0);
   const previousRoundRef = useRef<number | null>(null);
   const previousStatusRef = useRef<string | null>(null);
+  const initialStatusHydratedRef = useRef(false);
+  const lastRevealTsRef = useRef<number | null>(null);
   const [joinVersion, setJoinVersion] = useState(0);
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
@@ -683,18 +685,49 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     if (!room) {
       previousStatusRef.current = null;
+      initialStatusHydratedRef.current = false;
+      lastRevealTsRef.current = null;
       return;
     }
     const status = room.status ?? null;
     const prev = previousStatusRef.current;
+    const revealedAt = room.result?.revealedAt;
+    const revealedMs = (() => {
+      if (!revealedAt) return null;
+      if (
+        typeof revealedAt === "object" &&
+        typeof (revealedAt as any).toMillis === "function"
+      ) {
+        try {
+          return (revealedAt as any).toMillis();
+        } catch {
+          return null;
+        }
+      }
+      if (revealedAt instanceof Date) {
+        return revealedAt.getTime();
+      }
+      return null;
+    })();
+    if (!initialStatusHydratedRef.current) {
+      previousStatusRef.current = status;
+      initialStatusHydratedRef.current = true;
+      lastRevealTsRef.current = revealedMs;
+      return;
+    }
     if (status && prev !== status) {
-      if (status === "reveal" || status === "finished") {
+      const isFreshReveal =
+        revealedMs === null || revealedMs !== lastRevealTsRef.current;
+      if ((status === "reveal" || status === "finished") && isFreshReveal) {
         void showtime.play("round:reveal", {
           success: room.result?.success ?? null,
         });
       }
     }
     previousStatusRef.current = status;
+    if (revealedMs !== null) {
+      lastRevealTsRef.current = revealedMs;
+    }
   }, [room?.status, room?.result?.success]);
 
   // canStartSorting 縺ｯ eligibleIds 螳夂ｾｩ蠕後↓遘ｻ蜍・

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripeClient, type Stripe } from "@/lib/stripe/client";
+import {
+  getStripeClient,
+  isStripeConfigured,
+  type Stripe,
+} from "@/lib/stripe/client";
 import {
   assertAllowedPriceId,
   assertAllowedReturnUrl,
@@ -10,6 +14,13 @@ import { ZodError } from "zod";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Please try again later." },
+      { status: 503 }
+    );
+  }
+
   let payload;
   try {
     payload = parseCheckoutBody(await request.json());
@@ -46,7 +57,10 @@ export async function POST(request: NextRequest) {
     stripe = getStripeClient();
   } catch (error) {
     console.error("[stripe] Stripe client initialization failed", error);
-    return NextResponse.json({ error: "Stripe client not configured" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Stripe backend is not ready. Please contact the administrator." },
+      { status: 503 }
+    );
   }
 
   try {

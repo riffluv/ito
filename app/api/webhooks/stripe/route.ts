@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getStripeClient } from "@/lib/stripe/client";
+import { getStripeClient, isStripeConfigured } from "@/lib/stripe/client";
 import { handleStripeEvent } from "@/lib/stripe/webhookHandlers";
 import { recordStripeEvent } from "@/lib/server/stripeEventStore";
 import { logError, logWarn } from "@/lib/utils/log";
@@ -23,6 +23,13 @@ function badRequest(message: string, detail?: unknown) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Webhook skipped." },
+      { status: 503 }
+    );
+  }
+
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
     return badRequest("Missing stripe-signature header");
@@ -43,7 +50,10 @@ export async function POST(request: NextRequest) {
     client = getStripeClient();
   } catch (error) {
     logError("stripe", "webhook client init failed", error);
-    return NextResponse.json({ error: "Stripe secret not configured" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Stripe backend is not ready. Please configure credentials." },
+      { status: 503 }
+    );
   }
 
   let event: Stripe.Event;

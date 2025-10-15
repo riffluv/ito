@@ -41,6 +41,7 @@ import { gsap } from "gsap";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SupporterCTA } from "@/components/site/SupporterCTA";
 
 // ナイトキャラ
 function KnightCharacter() {
@@ -1160,6 +1161,7 @@ export default function MainMenu() {
                       </VStack>
                     </Box>
                   </VStack>
+                  <SupporterCTA />
 
                   {/* テスト用ローディングアニメーション */}
                   <Box
