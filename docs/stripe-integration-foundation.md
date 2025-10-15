@@ -16,6 +16,7 @@
 | `STRIPE_SECRET_KEY` | Stripe Secret Key | 本番・テストで切り替え見込み。環境毎に設定。 |
 | `STRIPE_WEBHOOK_SECRET` | Webhook 署名検証用 | `stripe listen` などで取得。 |
 | `STRIPE_PUBLISHABLE_KEY` | フロント用公開キー | UI 実装時に使用予定だが明記しておく。 |
+| NEXT_PUBLIC_STRIPE_UI_ENABLED | UI 表示のオン/オフ | 0: 非表示 / 1: 表示 |
 | `STRIPE_PRICE_LOOKUP` | 課金アイテムの Price ID | 投げ銭やスキンごとに複数用意する想定（例: `STRIPE_PRICE_DONATION_500` など）。 |
 
 ※ `.env.local.example` を用意している場合は上記を追記すること。

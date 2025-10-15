@@ -565,7 +565,10 @@ export class SoundManager {
       document.visibilityState === "visible" &&
       this.context.state === "suspended"
     ) {
-      this.context.resume().catch(() => undefined);
+      this.context
+        .resume()
+        .then(() => this.flushPendingPlays())
+        .catch(() => undefined);
     }
   };
 
@@ -595,6 +598,7 @@ export class SoundManager {
     }
     await this.resumeContext();
     if (this.context && this.context.state === "running") {
+      await this.flushPendingPlays();
       this.detachUnlockHandlers();
     }
   }

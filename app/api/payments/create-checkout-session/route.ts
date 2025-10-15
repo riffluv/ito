@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { randomUUID } from "node:crypto";
-import { getStripeClient } from "@/lib/stripe/client";
+import { getStripeClient, isStripeConfigured } from "@/lib/stripe/client";
 import {
   allowPromotionCodes,
   billingAddressCollection,
@@ -21,6 +21,13 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Please try again later." },
+      { status: 503 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parseResult = createCheckoutSessionSchema.safeParse(body);
 
@@ -94,7 +101,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url }, { status: 201 });
   } catch (error) {
     console.error("[stripe] Failed to create checkout session", error);
-    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Stripe backend is not ready. Please contact the administrator." },
+      { status: 503 }
+    );
   }
 }
 
