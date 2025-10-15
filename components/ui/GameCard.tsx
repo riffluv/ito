@@ -88,7 +88,7 @@ export function GameCard({
   }, []);
 
   useEffect(() => {
-    if (variant !== "flip") {
+    if (!allow3d) {
       previousFlipRef.current = flipped;
       return;
     }
@@ -121,69 +121,78 @@ export function GameCard({
 
   const mergeShadow = (core: string) =>
     boundaryRing ? `${boundaryRing}, ${core}` : core;
-  // 3Dフリップカード実装
-  if (variant === "flip") {
-    const { effectiveMode, reducedMotion } = useAnimationSettings();
-    const prefersSimple = reducedMotion || effectiveMode === "simple";
 
-    useEffect(() => {
-      return () => {
-        if (flipTweenRef.current) {
-          flipTweenRef.current.kill();
-          flipTweenRef.current = null;
-        }
-      };
-    }, []);
-
-    useLayoutEffect(() => {
-      const el = threeDContainerRef.current;
-      if (!el) return;
-
-      const resetTween = () => {
-        if (flipTweenRef.current) {
-          flipTweenRef.current.kill();
-          flipTweenRef.current = null;
-        }
-      };
-
-      if (prefersSimple) {
-        resetTween();
-        el.style.transform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
-        el.style.transition = "transform 120ms ease-out";
-        return;
+  const { effectiveMode, reducedMotion } = useAnimationSettings();
+  const prefersSimple = reducedMotion || effectiveMode === "simple";
+  const allow3d = variant === "flip" && !prefersSimple;
+  // 3D flip animation handlers
+  useEffect(() => {
+    return () => {
+      if (flipTweenRef.current) {
+        flipTweenRef.current.kill();
+        flipTweenRef.current = null;
       }
+    };
+  }, []);
 
-      el.style.transition = "";
+  useEffect(() => {
+    if (!allow3d) {
+      previousFlipRef.current = flipped;
+      return;
+    }
+    if (flipped !== previousFlipRef.current) {
+      playCardFlip();
+    }
+    previousFlipRef.current = flipped;
+  }, [allow3d, flipped, playCardFlip]);
 
-      if (!gsapInitialisedRef.current) {
-        gsap.set(el, {
-          rotateY: flipped ? 180 : 0,
-          transformPerspective: 1000,
-          transformOrigin: "center center",
-        });
-        gsapInitialisedRef.current = true;
+  useLayoutEffect(() => {
+    const el = threeDContainerRef.current;
+    if (!el) return;
+
+    const resetTween = () => {
+      if (flipTweenRef.current) {
+        flipTweenRef.current.kill();
+        flipTweenRef.current = null;
       }
+    };
 
+    if (!allow3d) {
       resetTween();
-      flipTweenRef.current = gsap.to(el, {
-        duration: isResultPreset ? 0.28 : 0.35,
+      el.style.transform = "";
+      el.style.transition = "";
+      gsapInitialisedRef.current = false;
+      return;
+    }
+
+    el.style.transition = "";
+
+    if (!gsapInitialisedRef.current) {
+      gsap.set(el, {
         rotateY: flipped ? 180 : 0,
-        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-        overwrite: "auto",
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
+      gsapInitialisedRef.current = true;
+    }
 
-      return () => {
-        resetTween();
-      };
-    }, [flipped, isResultPreset, prefersSimple]);
+    resetTween();
+    flipTweenRef.current = gsap.to(el, {
+      duration: isResultPreset ? 0.28 : 0.35,
+      rotateY: flipped ? 180 : 0,
+      ease: isResultPreset ? "back.out(1.65)" : "power2.out",
+      overwrite: "auto",
+      transformPerspective: 1000,
+      transformOrigin: "center center",
+    });
 
+    return () => {
+      resetTween();
+    };
+  }, [allow3d, flipped, isResultPreset]);
+
+  if (allow3d) {
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
-
-    const backNumberFontSize = getNumberFontSize(
-      typeof number === "number" ? number : null
-    );
 
     return (
       <Box
@@ -224,7 +233,7 @@ export function GameCard({
             willChange: "transform",
           }}
         >
-          {/* FRONT SIDE - ?????? */}
+          {/* FRONT SIDE */}
           <Box position="absolute" width="100%" height="100%" bg="transparent" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(0)", willChange: "auto" }}>
             <CardFaceFront
               index={typeof index === "number" ? index : null}
@@ -240,7 +249,7 @@ export function GameCard({
             />
           </Box>
 
-          {/* BACK SIDE - ??? */}
+          {/* BACK SIDE */}
           <Box position="absolute" width="100%" height="100%" bg="transparent" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(0)", willChange: "auto" }}>
             <CardFaceBack
               index={typeof index === "number" ? index : null}
@@ -259,8 +268,6 @@ export function GameCard({
       </Box>
     );
   }
-
-  // フラットバリアント（2D表示）
   const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
   const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
   const hoveredBoxShadow = UI_TOKENS.SHADOWS.cardHover;
