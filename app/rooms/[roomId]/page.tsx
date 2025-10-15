@@ -718,14 +718,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (status && prev !== status) {
       const isFreshReveal =
         revealedMs === null || revealedMs !== lastRevealTsRef.current;
-      if ((status === "reveal" || status === "finished") && isFreshReveal) {
+      const shouldPlay =
+        (status === "reveal" && isFreshReveal) ||
+        (status === "finished" && prev === "reveal");
+      if (shouldPlay) {
         void showtime.play("round:reveal", {
           success: room.result?.success ?? null,
         });
       }
     }
     previousStatusRef.current = status;
-    if (revealedMs !== null) {
+    if (revealedMs !== null && revealedMs !== lastRevealTsRef.current) {
       lastRevealTsRef.current = revealedMs;
     }
   }, [room?.status, room?.result?.success]);
