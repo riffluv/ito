@@ -5,6 +5,7 @@ import {
   CHAT_FAB_OFFSET_MOBILE,
   CHAT_PANEL_BOTTOM_DESKTOP,
   CHAT_PANEL_BOTTOM_MOBILE,
+  SAFE_AREA_INSET,
 } from "@/lib/ui/layout";
 import { Box, Image } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
@@ -123,8 +124,8 @@ export default function MinimalChat({
       {/* チャットトグルボタン */}
       <Box
         position="fixed"
-        // さらに外側（画面の右端に寄せる）
-        right={{ base: 3, md: 5 }}
+        // 16:9 安全領域内に配置（据え置きゲーム機風UI）
+        right={{ base: SAFE_AREA_INSET.MOBILE, md: SAFE_AREA_INSET.DESKTOP }}
         bottom={{ base: CHAT_FAB_OFFSET_MOBILE, md: CHAT_FAB_OFFSET_DESKTOP }}
         zIndex={20}
       >
@@ -152,7 +153,8 @@ export default function MinimalChat({
       {onOpenLedger && (
         <Box
           position="fixed"
-          right={{ base: 3, md: 5 }}
+          // 16:9 安全領域内に配置（据え置きゲーム機風UI）
+          right={{ base: SAFE_AREA_INSET.MOBILE, md: SAFE_AREA_INSET.DESKTOP }}
           bottom={{
             base: `calc(${CHAT_FAB_OFFSET_MOBILE} - 58px)`,
             md: `calc(${CHAT_FAB_OFFSET_DESKTOP} - 62px)`,
@@ -264,7 +266,8 @@ export default function MinimalChat({
         <Box
           ref={chatPanelRef}
           position="fixed"
-          right={{ base: 3, md: 5 }}
+          // 16:9 安全領域内に配置（据え置きゲーム機風UI）
+          right={{ base: SAFE_AREA_INSET.MOBILE, md: SAFE_AREA_INSET.DESKTOP }}
           bottom={{
             base: CHAT_PANEL_BOTTOM_MOBILE,
             md: CHAT_PANEL_BOTTOM_DESKTOP,

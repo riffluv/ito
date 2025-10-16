@@ -1,6 +1,7 @@
 "use client";
 import { AppIconButton } from "@/components/ui/AppIconButton";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { SAFE_AREA_INSET } from "@/lib/ui/layout";
 import { Box } from "@chakra-ui/react";
 import { FiLogOut, FiSettings } from "react-icons/fi";
 
@@ -53,7 +54,8 @@ export function Hud({
       display="flex"
       justifyContent="space-between"
       alignItems="center"
-      px={6}
+      // 16:9 安全領域対応：左右にインセットを適用
+      px={{ base: SAFE_AREA_INSET.MOBILE, md: SAFE_AREA_INSET.DESKTOP }}
       bg={UI_TOKENS.COLORS.panelBg}
       borderBottom={`2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
       backdropFilter="blur(8px)"
@@ -84,7 +86,7 @@ export function Hud({
         display="flex"
         alignItems="center"
         gap={{ base: 3, md: 5 }} // ガイドライン: リズム感 (3 != 5)
-        transform="translateX(4px)" // ガイドライン: 軽い右シフトで非対称
+        // 16:9 安全領域対応：右シフトを削除（px で既に内側に配置済み）
       >
         <Box
           bg="bgPanel" // obsidian.800 - ガイドライン準拠
