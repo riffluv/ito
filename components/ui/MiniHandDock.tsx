@@ -33,6 +33,7 @@ import {
 import { logInfo } from "@/lib/utils/log";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { toastIds } from "@/lib/ui/toastIds";
+import { SAFE_AREA_INSET } from "@/lib/ui/layout";
 import {
   Box,
   Dialog,
@@ -1361,12 +1362,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       <Box
         position="fixed"
         bottom={{ base: "16px", md: "20px" }}
-        right={{ base: "16px", md: "24px" }}
+        right={{ base: "32px", md: "32px" }}
         zIndex={50}
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             bottom: "14px",
-            right: "20px",
+            right: "32px",
           },
         }}
       >
