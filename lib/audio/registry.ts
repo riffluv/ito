@@ -10,6 +10,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "ui_click",
     category: "ui",
+    preload: { link: true, decode: true },
     variants: [{ src: "ui/ui_click" }],
     playbackRateRange: { min: 0.96, max: 1.04 },
     gainDbRange: { min: -5, max: -3 },
@@ -96,6 +97,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "drag_pickup",
     category: "drag",
+    preload: { link: true, decode: true },
     variants: [{ src: "dnd/drag_pickup" }],
     playbackRateRange: { min: 0.94, max: 1.02 },
     gainDbRange: { min: -5, max: -3 },
@@ -104,6 +106,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "drop_success",
     category: "drag",
+    preload: { link: true, decode: true },
     variants: [{ src: "dnd/drop_success" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -5, max: -2.5 },
@@ -112,6 +115,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "drop_invalid",
     category: "drag",
+    preload: { link: true, decode: true },
     variants: [{ src: "dnd/drop_invalid" }],
     playbackRateRange: { min: 0.95, max: 1.05 },
     gainDbRange: { min: -6.5, max: -4 },
@@ -121,6 +125,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_success",
     category: "notify",
+    preload: { link: true, decode: true },
     variants: [{ src: "notify/notify_success" }],
     playbackRateRange: { min: 0.97, max: 1.02 },
     gainDbRange: { min: -5, max: -3 },
@@ -129,6 +134,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_error",
     category: "notify",
+    preload: { link: true, decode: true },
     variants: [{ src: "notify/notify_error" }],
     playbackRateRange: { min: 0.9, max: 1.02 },
     gainDbRange: { min: -5, max: -3 },
@@ -156,6 +162,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "notify_warning",
     category: "notify",
+    preload: { link: true, decode: true },
     variants: [{ src: "notify/notify_warning" }],
     playbackRateRange: { min: 0.96, max: 1.04 },
     gainDbRange: { min: -5, max: -3 },
@@ -219,7 +226,6 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "bgm1",
     category: "ambient",
-    preload: { link: true, decode: true },
     variants: [{ src: "ambient/bgm1.mp3" }],
     loop: true,
     stopPrevious: true,
