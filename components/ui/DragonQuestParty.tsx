@@ -30,6 +30,12 @@ const headerGlint = keyframes`
   100% { transform: translateX(140%) rotate(9deg); opacity: 0; }
 `;
 
+const pulseSweep = keyframes`
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+`;
+
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 
@@ -430,10 +436,11 @@ export function DragonQuestParty({
             },
           }}
         >
-          <img
+          <Box
+            as="img"
             src="/images/flag.webp"
             alt="party emblem"
-            style={{
+            css={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
