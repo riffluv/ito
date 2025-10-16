@@ -35,23 +35,20 @@ export type PartyStatusTone =
   | "finished"
   | "default";
 
-const CARD_BACKGROUND =
-  "linear-gradient(142deg, rgba(17,27,40,0.91) 0%, rgba(13,21,36,0.94) 38%, rgba(9,16,29,0.96) 68%, rgba(6,13,23,0.97) 100%)";
-const CARD_HOVER_BACKGROUND =
-  "linear-gradient(148deg, rgba(26,36,53,0.95) 0%, rgba(21,31,47,0.97) 41%, rgba(17,27,41,0.98) 72%, rgba(14,24,37,0.99) 100%)";
-const CARD_BOX_SHADOW =
-  "0 2px 4px rgba(0,0,0,0.3), 0 6px 12px rgba(0,0,0,0.5), 0 12px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.8)";
-const CARD_HOVER_BOX_SHADOW =
-  "0 4px 8px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.6), 0 16px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.9)";
+// HD-2D風：独立カードでシームレス
+const CARD_BACKGROUND = "rgba(12,16,24,0.75)";
+const CARD_HOVER_BACKGROUND = "rgba(18,24,34,0.82)";
+const CARD_BOX_SHADOW = "0 1px 3px rgba(0,0,0,0.18), inset 0 0.5px 0 rgba(255,255,255,0.06)";
+const CARD_HOVER_BOX_SHADOW = "0 2px 6px rgba(0,0,0,0.24), inset 0 0.5px 0 rgba(255,255,255,0.1)";
 const CARD_FLASH_SHADOW =
-  "0 6px 12px rgba(255,255,255,0.3), 0 12px 24px rgba(255,255,255,0.2), 0 18px 36px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.4)";
-const CLUE_FLASH_BRIGHTNESS = 1.4;
-const CARD_HEIGHT = "56px";
-const CARD_HEIGHT_DPI125 = "50px";
-const CARD_AVATAR_SIZE = "44px";
-const CARD_AVATAR_SIZE_DPI125 = "38px";
-const CARD_RADIUS = "4px";
-const CARD_HOVER_LIFT = "-3px";
+  "0 2px 8px rgba(255,255,255,0.25), 0 4px 12px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.4)";
+const CLUE_FLASH_BRIGHTNESS = 1.28;
+const CARD_HEIGHT = "52px";
+const CARD_HEIGHT_DPI125 = "46px";
+const CARD_AVATAR_SIZE = "38px";
+const CARD_AVATAR_SIZE_DPI125 = "34px";
+const CARD_RADIUS = "3px";
+const CARD_HOVER_LIFT = "-1.5px";
 const actionableHoverStyle = {
   bg: CARD_HOVER_BACKGROUND,
   transform: `translateY(${CARD_HOVER_LIFT})`,
@@ -60,8 +57,8 @@ const actionableHoverStyle = {
 
 const passiveHoverStyle = {
   bg: CARD_HOVER_BACKGROUND,
-  transform: "translateY(-1px)",
-  boxShadow: "0 6px 18px rgba(0,0,0,0.55)",
+  transform: "translateY(-0.5px)",
+  boxShadow: "0 4px 10px rgba(0,0,0,0.32)",
 } as const;
 
 type PartyMemberCardProps = {
@@ -276,55 +273,30 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       data-player-id={player.id}
       display="grid"
       gridTemplateColumns="auto 1fr auto"
-      columnGap="8px"
-      rowGap="2px"
+      columnGap="11px"
+      rowGap="3px"
       alignItems="center"
       borderRadius={CARD_RADIUS}
       minH={CARD_HEIGHT}
       border="1px solid"
-      borderColor="borderSubtle"
+      borderColor="rgba(255,255,255,0.08)"
       bg={CARD_BACKGROUND}
-      boxShadow="card"
-      px="12px"
-      py="5px"
-      transition="transform 0.16s var(--chakra-easings-stateInOut, cubic-bezier(0.3, 0.7, 0.4, 1.1)), box-shadow 0.16s var(--chakra-easings-stateInOut, cubic-bezier(0.3, 0.7, 0.4, 1.1)), background 0.16s ease"
+      boxShadow={CARD_BOX_SHADOW}
+      px="13px"
+      py="7px"
+      transition="transform 180ms cubic-bezier(.2,1,.3,1), box-shadow 180ms cubic-bezier(.2,1,.3,1), background 180ms ease"
       css={{
         cursor: canTransfer ? "pointer" : "default",
         pointerEvents: "auto",
-        backdropFilter: "blur(8px) saturate(1.2)",
+        backdropFilter: "blur(8px) saturate(1.12)",
         position: "relative",
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
           minHeight: CARD_HEIGHT_DPI125,
-          paddingLeft: "10px",
-          paddingRight: "10px",
-          paddingTop: "4px",
-          paddingBottom: "4px",
-          columnGap: "6px",
-        },
-        "&::before": {
-          content: "''",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "2px",
-          background:
-            "linear-gradient(87deg, rgba(115,155,195,0.14) 0%, rgba(175,195,215,0.38) 18%, rgba(215,235,250,0.68) 39%, rgba(188,208,228,0.46) 61%, rgba(125,165,205,0.17) 100%)",
-          pointerEvents: "none",
-          filter: "blur(0.6px)",
-        },
-        "&::after": {
-          content: "''",
-          position: "absolute",
-          bottom: -3,
-          left: "2px",
-          right: "2px",
-          height: "5px",
-          background:
-            "linear-gradient(92deg, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.72) 19%, rgba(0,0,0,0.92) 47%, rgba(0,0,0,0.78) 76%, rgba(0,0,0,0.52) 100%)",
-          opacity: 0.9,
-          filter: "blur(1.5px)",
-          pointerEvents: "none",
+          paddingLeft: "11px",
+          paddingRight: "11px",
+          paddingTop: "6px",
+          paddingBottom: "6px",
+          columnGap: "9px",
         },
       }}
       _hover={hoverStyle}
@@ -353,23 +325,13 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         alignItems="center"
         justifyContent="center"
         position="relative"
+        borderRadius="2px"
+        border="1px solid rgba(255,255,255,0.18)"
+        bg="rgba(6,10,18,0.6)"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             width: CARD_AVATAR_SIZE_DPI125,
             height: CARD_AVATAR_SIZE_DPI125,
-          },
-          clipPath:
-            "polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)",
-          "&::before": {
-            content: "''",
-            position: "absolute",
-            inset: "-2px",
-            background:
-              "linear-gradient(135deg, rgba(100,150,220,0.6) 0%, rgba(60,90,140,0.4) 50%, rgba(30,50,80,0.6) 100%)",
-            clipPath:
-              "polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)",
-            zIndex: -1,
-            filter: "blur(1px)",
           },
         }}
       >
@@ -378,46 +340,36 @@ export const PartyMemberCard = memo(function PartyMemberCard({
             src={player.avatar}
             alt="avatar"
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
               width: "100%",
               height: "100%",
               objectFit: "cover",
               filter:
-                "drop-shadow(0 2px 4px rgba(0,0,0,0.8)) drop-shadow(0 4px 8px rgba(0,0,0,0.6)) contrast(1.15) saturate(1.1)",
+                "drop-shadow(0 1px 2px rgba(0,0,0,0.6)) contrast(1.08) saturate(1.05)",
             }}
           />
         ) : (
           <Text
-            fontSize="2xl"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.7))"
-            position="absolute"
-            top="50%"
-            left="50%"
-            transform="translate(-50%, -50%)"
+            fontSize="xl"
+            filter="drop-shadow(0 1px 3px rgba(0,0,0,0.7))"
           >
             {player.avatar || "⚔️"}
           </Text>
         )}
       </Box>
 
-      <Box display="flex" alignItems="center" gap={1} minW={0} lineHeight="1">
-        {isTransferPending && (
-          <Spinner size="xs" color="accent" />
-        )}
+      <Box display="flex" alignItems="center" gap="6px" minW={0} lineHeight="1">
+        {isTransferPending && <Spinner size="xs" color="accent" />}
         <Text
-          fontSize="md"
-          fontWeight="bold"
-          color={isHost ? "highlight" : "textPrimary"}
-          textShadow="0 2px 4px rgba(0,0,0,0.9)"
+          fontSize="15px"
+          fontWeight="600"
+          color={isHost ? "rgba(255,220,140,0.95)" : "rgba(255,255,255,0.92)"}
+          textShadow="0 1px 3px rgba(0,0,0,0.8)"
           fontFamily="system-ui"
           truncate
           title={`${isHost ? "ホスト: " : ""}${player.name}`}
           css={{
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              fontSize: "14px",
+              fontSize: "13px",
             },
           }}
         >
@@ -430,51 +382,31 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         alignSelf="start"
         display="inline-flex"
         alignItems="center"
-        gap="1"
-        px="7px"
-        py="2px"
-        position="relative"
+        gap="4px"
+        px="6px"
+        py="3px"
+        borderRadius="2px"
         css={{
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            paddingLeft: "6px",
-            paddingRight: "6px",
-            paddingTop: "1px",
-            paddingBottom: "1px",
+            paddingLeft: "5px",
+            paddingRight: "5px",
+            paddingTop: "2px",
+            paddingBottom: "2px",
           },
-          background: `linear-gradient(135deg, ${
+          background:
             statusMeta.tone === "submitted"
-              ? "rgba(22, 163, 74, 0.25) 0%, rgba(21, 128, 61, 0.35) 100%"
+              ? "rgba(34, 197, 94, 0.18)"
               : statusMeta.tone === "clue-entered"
-              ? "rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.35) 100%"
-              : "rgba(60, 60, 80, 0.25) 0%, rgba(40, 40, 60, 0.35) 100%"
-          })`,
+              ? "rgba(245, 158, 11, 0.18)"
+              : "rgba(100, 116, 139, 0.15)",
           border: "1px solid",
           borderColor:
             statusMeta.tone === "submitted"
-              ? "rgba(34, 197, 94, 0.5)"
+              ? "rgba(34, 197, 94, 0.35)"
               : statusMeta.tone === "clue-entered"
-              ? "rgba(245, 158, 11, 0.5)"
-              : "rgba(100, 116, 139, 0.4)",
-          borderRadius: "2px",
-          clipPath:
-            "polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px)",
-          boxShadow:
-            "0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3)",
-          "&::before": {
-            content: "''",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "1px",
-            background:
-              statusMeta.tone === "submitted"
-                ? "linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.8) 50%, transparent 100%)"
-                : statusMeta.tone === "clue-entered"
-                ? "linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.8) 50%, transparent 100%)"
-                : "linear-gradient(90deg, transparent 0%, rgba(150, 160, 180, 0.6) 50%, transparent 100%)",
-            pointerEvents: "none",
-          },
+              ? "rgba(245, 158, 11, 0.35)"
+              : "rgba(100, 116, 139, 0.25)",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
         }}
       >
         <Box
@@ -484,19 +416,18 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           css={{
             filter:
               statusMeta.tone === "submitted"
-                ? "drop-shadow(0 0 3px rgba(34, 197, 94, 0.8))"
+                ? "drop-shadow(0 0 2px rgba(34, 197, 94, 0.6))"
                 : statusMeta.tone === "clue-entered"
-                ? "drop-shadow(0 0 3px rgba(245, 158, 11, 0.8))"
-                : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6))",
+                ? "drop-shadow(0 0 2px rgba(245, 158, 11, 0.6))"
+                : "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5))",
           }}
         >
           {statusMeta.icon}
         </Box>
         <Text
-          fontSize="2xs"
-          fontWeight="bold"
-          letterSpacing="0.5px"
-          textTransform="uppercase"
+          fontSize="11px"
+          fontWeight="600"
+          letterSpacing="0.02em"
           css={{
             color:
               statusMeta.tone === "submitted"
@@ -505,43 +436,40 @@ export const PartyMemberCard = memo(function PartyMemberCard({
                 ? "#FCD34D"
                 : "#CBD5E1",
             textShadow:
-              statusMeta.tone === "submitted"
-                ? "0 0 8px rgba(34, 197, 94, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8)"
-                : statusMeta.tone === "clue-entered"
-                ? "0 0 8px rgba(245, 158, 11, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8)"
-                : "0 1px 2px rgba(0, 0, 0, 0.8)",
+              statusMeta.tone === "submitted" || statusMeta.tone === "clue-entered"
+                ? "0 0 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.8)"
+                : "0 1px 2px rgba(0, 0, 0, 0.7)",
           }}
         >
           {statusMeta.status}
         </Text>
       </Box>
 
-      <Box gridColumn="2 / span 2" display="flex" flexDirection="column" gap="2px" minW={0}>
+      <Box gridColumn="2 / span 2" display="flex" flexDirection="column" gap="3px" minW={0}>
         <Text
-          fontSize="2xs"
-          color="textMuted"
+          fontSize="11px"
+          color="rgba(200,210,220,0.72)"
           fontStyle={clueRevealed && trimmedClue ? "italic" : "normal"}
-          lineHeight="1.1"
+          lineHeight="1.2"
           truncate
           title={clueTitle}
         >
           {clueDisplay}
         </Text>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap="7px">
           <Box
             flex={1}
-            h="10px"
-            minH="10px"
-            bg="linear-gradient(180deg, rgba(5,8,15,0.98) 0%, rgba(10,15,25,0.96) 35%, rgba(18,25,38,0.94) 100%)"
-            borderRadius="2px"
+            h="6px"
+            minH="6px"
+            bg="rgba(8,12,18,0.85)"
+            borderRadius="1px"
             overflow="hidden"
-            border="1px solid"
-            borderColor="rgba(80,110,150,0.35)"
+            border="1px solid rgba(80,110,150,0.22)"
             position="relative"
-            maxW="148px"
+            maxW="138px"
             css={{
               boxShadow:
-                "inset 0 2px 4px rgba(0,0,0,0.8), inset 0 -1px 2px rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.6)",
+                "inset 0 1px 2px rgba(0,0,0,0.6), 0 0.5px 1px rgba(0,0,0,0.4)",
             }}
           >
             <Box
@@ -549,29 +477,20 @@ export const PartyMemberCard = memo(function PartyMemberCard({
               width={gaugeFillWidth}
               bg={
                 isSubmitted
-                  ? "linear-gradient(90deg, #16A34A 0%, #22C55E 45%, #15803D 90%)"
+                  ? "#22C55E"
                   : hasClue
-                  ? "linear-gradient(90deg, #D97706 0%, #F59E0B 45%, #B45309 90%)"
+                  ? "#F59E0B"
                   : "transparent"
               }
               transition="all 0.35s cubic-bezier(0.32, 0.94, 0.44, 1)"
               position="relative"
               css={{
                 boxShadow: isSubmitted
-                  ? "0 0 8px rgba(34,197,94,0.7), 0 0 16px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.3)"
+                  ? "0 0 4px rgba(34,197,94,0.5), inset 0 0.5px 0 rgba(255,255,255,0.2)"
                   : hasClue
-                  ? "0 0 8px rgba(245,158,11,0.6), 0 0 16px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.25)"
+                  ? "0 0 4px rgba(245,158,11,0.4), inset 0 0.5px 0 rgba(255,255,255,0.18)"
                   : "none",
               }}
-            />
-            <Box
-              position="absolute"
-              top="0"
-              left="0"
-              right="0"
-              height="40%"
-              bg="linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.18) 60%, transparent 100%)"
-              pointerEvents="none"
             />
             {isSubmitted && (
               <Box
@@ -580,9 +499,9 @@ export const PartyMemberCard = memo(function PartyMemberCard({
                 left="0"
                 right="0"
                 bottom="0"
-                bg="linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)"
+                bg="linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)"
                 css={{
-                  animation: "pulse-sweep 2s ease-in-out infinite",
+                  animation: "pulse-sweep 2.1s ease-in-out infinite",
                   "@keyframes pulse-sweep": {
                     "0%": { transform: "translateX(-100%)" },
                     "50%": { transform: "translateX(100%)" },
@@ -592,31 +511,22 @@ export const PartyMemberCard = memo(function PartyMemberCard({
                 pointerEvents="none"
               />
             )}
-            <Box
-              position="absolute"
-              bottom="0"
-              left="0"
-              right="0"
-              height="2px"
-              bg="linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0.4) 100%)"
-              pointerEvents="none"
-            />
           </Box>
 
           <Box
-            minW="30px"
-            h="18px"
+            minW="26px"
+            h="16px"
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
             <Text
-              fontSize="2xs"
-              color="highlight"
-              textShadow="0 2px 4px rgba(0,0,0,0.7)"
+              fontSize="11px"
+              color="rgba(180,220,255,0.92)"
+              textShadow="0 1px 3px rgba(0,0,0,0.7)"
               fontFamily="mono"
-              fontWeight="bold"
-              letterSpacing="0.4px"
+              fontWeight="700"
+              letterSpacing="0.02em"
               textAlign="center"
               opacity={revealNumber ? 1 : 0}
               transition="opacity 0.24s ease"
