@@ -35,13 +35,13 @@ export type PartyStatusTone =
   | "finished"
   | "default";
 
-// HD-2D風：独立カードでシームレス
-const CARD_BACKGROUND = "rgba(12,16,24,0.75)";
-const CARD_HOVER_BACKGROUND = "rgba(18,24,34,0.82)";
-const CARD_BOX_SHADOW = "0 1px 3px rgba(0,0,0,0.18), inset 0 0.5px 0 rgba(255,255,255,0.06)";
-const CARD_HOVER_BOX_SHADOW = "0 2px 6px rgba(0,0,0,0.24), inset 0 0.5px 0 rgba(255,255,255,0.1)";
+// HD-2D風：別次元の透明シームレス
+const CARD_BACKGROUND = "transparent";
+const CARD_HOVER_BACKGROUND = "rgba(255,255,255,0.03)";
+const CARD_BOX_SHADOW = "none";
+const CARD_HOVER_BOX_SHADOW = "0 1px 3px rgba(0,0,0,0.1)";
 const CARD_FLASH_SHADOW =
-  "0 2px 8px rgba(255,255,255,0.25), 0 4px 12px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.4)";
+  "0 2px 8px rgba(255,255,255,0.3), 0 4px 16px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.5)";
 const CLUE_FLASH_BRIGHTNESS = 1.28;
 const CARD_HEIGHT = "52px";
 const CARD_HEIGHT_DPI125 = "46px";
@@ -278,8 +278,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       alignItems="center"
       borderRadius={CARD_RADIUS}
       minH={CARD_HEIGHT}
-      border="1px solid"
-      borderColor="rgba(255,255,255,0.08)"
+      border="none"
       bg={CARD_BACKGROUND}
       boxShadow={CARD_BOX_SHADOW}
       px="13px"
@@ -288,7 +287,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       css={{
         cursor: canTransfer ? "pointer" : "default",
         pointerEvents: "auto",
-        backdropFilter: "blur(8px) saturate(1.12)",
+        backdropFilter: "blur(16px) saturate(1.2)",
         position: "relative",
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
           minHeight: CARD_HEIGHT_DPI125,
