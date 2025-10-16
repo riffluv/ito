@@ -372,13 +372,14 @@ export function DragonQuestParty({
         bg="rgba(12,14,20,0.85)"
         border="1px solid"
         borderColor="borderDefault"
-        borderRadius="md"
+        borderRadius="0"
         boxShadow="panel"
         css={{
           pointerEvents: "auto",
           backdropFilter: "blur(4px)",
           position: "relative",
-          overflow: "hidden",
+          overflow: "visible",
+          clipPath: "polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, 0% 100%, 0% 12px)",
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             paddingLeft: "12px",
             paddingRight: "12px",
