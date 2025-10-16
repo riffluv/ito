@@ -436,11 +436,10 @@ export function DragonQuestParty({
             },
           }}
         >
-          <Box
-            as="img"
+          <img
             src="/images/flag.webp"
             alt="party emblem"
-            css={{
+            style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
