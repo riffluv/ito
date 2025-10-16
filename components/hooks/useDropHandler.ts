@@ -5,6 +5,7 @@ import {
 } from "@/lib/game/room";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 interface UseDropHandlerProps {
   roomId: string;
@@ -27,6 +28,8 @@ export function useDropHandler({
   hasNumber,
   mePlaced,
 }: UseDropHandlerProps) {
+  const playCardPlace = useSoundEffect("card_place");
+  const playDropInvalid = useSoundEffect("drop_invalid");
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
 
@@ -60,16 +63,19 @@ export function useDropHandler({
     setIsOver(false);
 
     if (!canDrop) {
+      playDropInvalid();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
 
     if (pid !== meId) {
+      playDropInvalid();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
 
     if (!me || typeof me.number !== "number") {
+      playDropInvalid();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
@@ -85,8 +91,10 @@ export function useDropHandler({
         return;
       }
       setPending((p) => (p.includes(pid) ? p : [...p, pid]));
+      playCardPlace();
       notify({ title: "カードを場に置きました", type: "success" });
     } catch (err: any) {
+      playDropInvalid();
       notify({
         title: "配置に失敗しました",
         description: err?.message,
@@ -104,16 +112,19 @@ export function useDropHandler({
     setIsOver(false);
 
     if (!canDrop) {
+      playDropInvalid();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
 
     if (pid !== meId) {
+      playDropInvalid();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
 
     if (!me || typeof me.number !== "number") {
+      playDropInvalid();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
@@ -141,11 +152,13 @@ export function useDropHandler({
         });
         return;
       }
+      playCardPlace();
       notify({ title: "カードをその位置に置きました", type: "success" });
     } catch (err: any) {
       if (previous !== null) {
         setPending(previous);
       }
+      playDropInvalid();
       notify({
         title: "配置に失敗しました",
         description: err?.message,
