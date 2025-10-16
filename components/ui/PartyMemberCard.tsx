@@ -5,6 +5,7 @@ import { Box, Spinner, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { keyframes } from "@emotion/react";
 import {
   memo,
   useCallback,
@@ -13,6 +14,12 @@ import {
   useRef,
   useState,
 } from "react";
+
+const pulseSweep = keyframes`
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+`;
 
 export type PartyMember = {
   id: string;
@@ -335,10 +342,11 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         }}
       >
         {player.avatar?.startsWith("/avatars/") ? (
-          <img
+          <Box
+            as="img"
             src={player.avatar}
             alt="avatar"
-            style={{
+            css={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
@@ -500,12 +508,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
                 bottom="0"
                 bg="linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)"
                 css={{
-                  animation: "pulse-sweep 2.1s ease-in-out infinite",
-                  "@keyframes pulse-sweep": {
-                    "0%": { transform: "translateX(-100%)" },
-                    "50%": { transform: "translateX(100%)" },
-                    "100%": { transform: "translateX(-100%)" },
-                  },
+                  animation: `${pulseSweep} 2.1s ease-in-out infinite`,
                 }}
                 pointerEvents="none"
               />
