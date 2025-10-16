@@ -110,14 +110,14 @@ export default function MinimalChat({
   // 低スペック対応: prefersReducedMotionの時は静的な切り替え（常に明るめ）
   const glowOpacity = prefersReducedMotion
     ? ambientPhase === 1
-      ? 0.5
-      : 0.35
-    : 0.8; // 常時明るめに
+      ? 0.36
+      : 0.24
+    : 0.55;
   const glowShift = prefersReducedMotion
     ? ambientPhase === 1
-      ? "translateX(30%) rotate(12deg)"
-      : "translateX(-30%) rotate(12deg)"
-    : "translateX(-120%) rotate(12deg)";
+      ? "translateX(24%) rotate(12deg)"
+      : "translateX(-24%) rotate(12deg)"
+    : "translateX(-90%) rotate(12deg)";
 
   return (
     <>
@@ -179,7 +179,7 @@ export default function MinimalChat({
             px="14px"
             border="3px solid rgba(214,177,117,0.9)"
             borderRadius="0"
-            background="linear-gradient(180deg, rgba(20,23,34,0.98) 0%, rgba(12,14,20,1) 100%)"
+            background="linear-gradient(180deg, rgba(24,26,36,0.96) 0%, rgba(10,12,18,0.98) 100%)"
             fontFamily="monospace"
             fontSize="15px"
             fontWeight="700"
@@ -187,32 +187,29 @@ export default function MinimalChat({
             color="white"
             textShadow="2px 2px 0 rgba(0,0,0,0.9)"
             boxShadow={`
-              inset 0 2px 0 rgba(255,255,255,0.12),
-              inset 0 -2px 0 rgba(0,0,0,0.5),
-              0 4px 8px rgba(0,0,0,0.4),
-              2px 2px 0 rgba(0,0,0,0.8)
+              inset 0 1px 0 rgba(255,255,255,0.12),
+              inset 0 -1px 0 rgba(0,0,0,0.45),
+              0 8px 16px rgba(0,0,0,0.48)
             `}
             transition={`transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
             cursor="pointer"
             position="relative"
             overflow="hidden"
             _hover={{
-              background: "linear-gradient(180deg, rgba(25,28,39,0.98) 0%, rgba(15,17,23,1) 100%)",
-              transform: "translateY(-1px)",
+              background: "linear-gradient(180deg, rgba(28,31,44,0.98) 0%, rgba(15,17,25,1) 100%)",
+              transform: "translateY(-0.5px)",
               boxShadow: `
-                inset 0 2px 0 rgba(255,255,255,0.15),
-                inset 0 -2px 0 rgba(0,0,0,0.6),
-                0 6px 12px rgba(0,0,0,0.5),
-                2px 2px 0 rgba(0,0,0,0.9)
+                inset 0 1px 0 rgba(255,255,255,0.16),
+                inset 0 -1px 0 rgba(0,0,0,0.4),
+                0 10px 18px rgba(0,0,0,0.5)
               `,
             }}
             _active={{
               transform: "translateY(0)",
               boxShadow: `
-                inset 0 1px 0 rgba(255,255,255,0.08),
-                inset 0 -1px 0 rgba(0,0,0,0.4),
-                0 2px 4px rgba(0,0,0,0.3),
-                1px 1px 0 rgba(0,0,0,0.7)
+                inset 0 1px 0 rgba(255,255,255,0.1),
+                inset 0 -1px 0 rgba(0,0,0,0.35),
+                0 3px 6px rgba(0,0,0,0.32)
               `,
             }}
             css={{
@@ -220,9 +217,9 @@ export default function MinimalChat({
               "&::before": {
                 content: '""',
                 position: "absolute",
-                inset: "-40%",
+                inset: "-32%",
                 background:
-                  "radial-gradient(circle at 20% 20%, rgba(214,177,117,0.35), transparent 60%)",
+                  "radial-gradient(circle at 18% 22%, rgba(214,177,117,0.28), transparent 62%)",
                 transform: glowShift,
                 ...(prefersReducedMotion
                   ? {
@@ -234,7 +231,7 @@ export default function MinimalChat({
                     }),
                 pointerEvents: "none",
                 mixBlendMode: "screen",
-                opacity: glowOpacity,
+                opacity: prefersReducedMotion ? glowOpacity : glowOpacity * 0.85,
               },
               // ベース光（常時点灯）
               "&::after": {
@@ -242,10 +239,10 @@ export default function MinimalChat({
                 position: "absolute",
                 inset: 0,
                 background:
-                  "radial-gradient(circle at 50% 50%, rgba(214,177,117,0.08), transparent 80%)",
+                  "radial-gradient(circle at 50% 50%, rgba(214,177,117,0.06), transparent 78%)",
                 pointerEvents: "none",
                 mixBlendMode: "screen",
-                opacity: 1,
+                opacity: 0.7,
               },
             }}
           >
