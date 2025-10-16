@@ -368,23 +368,23 @@ export function DragonQuestParty({
         gap={2}
         minW={0}
         px="14px"
-        py="11px"
-        bg="rgba(12,14,20,0.85)"
+        py="8px"
+        bg="rgba(12,14,20,0.45)"
         border="1px solid"
-        borderColor="borderDefault"
+        borderColor="rgba(255,255,255,0.12)"
         borderRadius="0"
-        boxShadow="panel"
+        boxShadow="0 2px 6px rgba(0,0,0,0.15)"
         css={{
           pointerEvents: "auto",
-          backdropFilter: "blur(4px)",
+          backdropFilter: "blur(16px) saturate(1.25)",
           position: "relative",
           overflow: "visible",
           clipPath: "polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, 0% 100%, 0% 12px)",
           [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
             paddingLeft: "12px",
             paddingRight: "12px",
-            paddingTop: "9px",
-            paddingBottom: "9px",
+            paddingTop: "7px",
+            paddingBottom: "7px",
             gap: "6px",
           },
           ...(prefersReducedMotion
