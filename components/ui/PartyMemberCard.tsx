@@ -42,11 +42,11 @@ export type PartyStatusTone =
   | "finished"
   | "default";
 
-// HD-2D風：別次元の透明シームレス
-const CARD_BACKGROUND = "transparent";
-const CARD_HOVER_BACKGROUND = "rgba(255,255,255,0.03)";
-const CARD_BOX_SHADOW = "none";
-const CARD_HOVER_BOX_SHADOW = "0 1px 3px rgba(0,0,0,0.1)";
+// HD-2D風：部屋名と統一感のある背景
+const CARD_BACKGROUND = "rgba(12,14,20,0.35)";
+const CARD_HOVER_BACKGROUND = "rgba(18,24,34,0.45)";
+const CARD_BOX_SHADOW = "0 1px 4px rgba(0,0,0,0.12)";
+const CARD_HOVER_BOX_SHADOW = "0 2px 6px rgba(0,0,0,0.18)";
 const CARD_FLASH_SHADOW =
   "0 2px 8px rgba(255,255,255,0.3), 0 4px 16px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.5)";
 const CLUE_FLASH_BRIGHTNESS = 1.28;
@@ -285,7 +285,8 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       alignItems="center"
       borderRadius={CARD_RADIUS}
       minH={CARD_HEIGHT}
-      border="none"
+      border="1px solid"
+      borderColor="rgba(255,255,255,0.08)"
       bg={CARD_BACKGROUND}
       boxShadow={CARD_BOX_SHADOW}
       px="13px"
@@ -294,7 +295,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       css={{
         cursor: canTransfer ? "pointer" : "default",
         pointerEvents: "auto",
-        backdropFilter: "blur(16px) saturate(1.2)",
+        backdropFilter: "blur(12px) saturate(1.18)",
         position: "relative",
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
           minHeight: CARD_HEIGHT_DPI125,
@@ -342,11 +343,10 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         }}
       >
         {player.avatar?.startsWith("/avatars/") ? (
-          <Box
-            as="img"
+          <img
             src={player.avatar}
             alt="avatar"
-            css={{
+            style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
