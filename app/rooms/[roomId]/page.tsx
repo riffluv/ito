@@ -299,7 +299,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     const lastSeenMs = toMillis(hostPlayer.lastSeen);
     if (lastSeenMs > 0) {
       const elapsed = Date.now() - lastSeenMs;
-      if (elapsed <= 15000) {
+      if (elapsed <= 60000) {
         return false;
       }
     }
@@ -750,18 +750,23 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.round, uid, roomId, seenRound]);
 
-  // 繝励Ξ繧ｼ繝ｳ繧ｹ: 繝上・繝医ン繝ｼ繝医〒lastSeen譖ｴ譁ｰ・・resence譛ｪ蟇ｾ蠢懃腸蠅・・縺ｿ・・
+  // プレゼンス: presence が有効でも lastSeen を一定間隔で更新してフェイルオーバー判定を維持
   useEffect(() => {
-    if (!uid || presenceSupported()) {
-      return () => undefined;
+    if (!uid) {
+      return;
     }
-
-    const tick = () => updateLastSeen(roomId, uid).catch(() => void 0);
-    const intervalId = setInterval(tick, 30000);
+    const supported = presenceSupported();
+    const intervalMs = supported ? 45000 : 30000;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      updateLastSeen(roomId, uid).catch(() => void 0);
+    };
     tick();
-
+    const intervalId = window.setInterval(tick, intervalMs);
     return () => {
-      clearInterval(intervalId);
+      cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [uid, roomId]);
 

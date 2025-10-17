@@ -40,7 +40,7 @@ export function useParticipants(
   uid: string | null
 ): ParticipantsState {
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
-  const [onlineUids, setOnlineUids] = useState<string[] | undefined>([]);
+  const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
