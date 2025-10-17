@@ -26,7 +26,19 @@ declare global {
 
 type Subscriber = (event: SoundEvent) => void;
 
-type PendingLoad = Promise<{ buffer: AudioBuffer; url: string } | null>;
+type PendingLoad = Promise<{ buffer: AudioBuffer; url: string }>;
+
+class SoundAssetError extends Error {
+  constructor(
+    public url: string,
+    public permanent: boolean,
+    message: string,
+    public cause?: unknown
+  ) {
+    super(message);
+    this.name = "SoundAssetError";
+  }
+}
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -397,12 +409,27 @@ export class SoundManager {
     const candidates = buildCandidateUrls(variant.src);
     for (const url of candidates) {
       if (this.missingAssets.has(url)) continue;
-      const asset = await this.fetchBuffer(url);
-      if (asset) {
+      try {
+        const asset = await this.fetchBuffer(url);
         return asset;
+      } catch (error) {
+        if (error instanceof SoundAssetError) {
+          if (error.permanent) {
+            this.missingAssets.add(url);
+            this.emit({ type: "missing", soundId: definition.id, attemptedUrl: url });
+          } else {
+            console.warn(
+              `[SoundManager] Transient audio load failure for ${definition.id} (${url})`,
+              error.cause ?? error
+            );
+          }
+        } else {
+          console.warn(
+            `[SoundManager] Unexpected audio load error for ${definition.id} (${url})`,
+            error
+          );
+        }
       }
-      this.missingAssets.add(url);
-      this.emit({ type: "missing", soundId: definition.id, attemptedUrl: url });
     }
     console.warn(
       `[SoundManager] No audio file resolved for ${definition.id}. Tried: ${candidates.join(", ")}`
@@ -423,22 +450,38 @@ export class SoundManager {
 
     const loader: PendingLoad = (async () => {
       const context = this.ensureContext();
-      if (!context) return null;
+      if (!context) {
+        throw new SoundAssetError(url, false, "Audio context is not available");
+      }
       try {
         const response = await fetch(url, { cache: "force-cache" });
         if (!response.ok) {
-          return null;
+          const permanent = response.status === 404 || response.status === 410;
+          throw new SoundAssetError(
+            url,
+            permanent,
+            `Failed to fetch audio asset (status: ${response.status})`
+          );
         }
         const arrayBuffer = await response.arrayBuffer();
-        const decoded = await context.decodeAudioData(arrayBuffer.slice(0));
-        this.buffers.set(url, decoded);
-        return { buffer: decoded, url };
+        try {
+          const decoded = await context.decodeAudioData(arrayBuffer.slice(0));
+          this.buffers.set(url, decoded);
+          return { buffer: decoded, url };
+        } catch (decodeError) {
+          const permanent = this.isDecodePermanent(decodeError);
+          throw new SoundAssetError(
+            url,
+            permanent,
+            "Failed to decode audio data",
+            decodeError
+          );
+        }
       } catch (error) {
-        console.warn(
-          `[_SoundManager] Failed to load sound asset at ${url}`,
-          error
-        );
-        return null;
+        if (error instanceof SoundAssetError) {
+          throw error;
+        }
+        throw new SoundAssetError(url, false, "Unexpected audio load error", error);
       } finally {
         this.pendingLoads.delete(url);
       }
@@ -446,6 +489,21 @@ export class SoundManager {
 
     this.pendingLoads.set(url, loader);
     return loader;
+  }
+
+  private isDecodePermanent(error: unknown): boolean {
+    if (!error || typeof error !== "object") return false;
+    const name = (error as any).name;
+    if (name === "NotSupportedError" || name === "EncodingError") {
+      return true;
+    }
+    const message = typeof (error as any).message === "string" ? (error as any).message.toLowerCase() : "";
+    if (!message) return false;
+    return (
+      message.includes("unsupported") ||
+      message.includes("unknown content type") ||
+      message.includes("invalid audio data")
+    );
   }
 
   private restoreSettings(): SoundSettings {
