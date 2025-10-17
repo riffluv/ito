@@ -47,7 +47,6 @@ import {
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import React from "react";
-import { FaDice, FaRedo, FaRegCreditCard } from "react-icons/fa";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
@@ -57,6 +56,23 @@ import { KEYBOARD_KEYS } from "./hints/constants";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
+
+type HostPanelIconProps = {
+  src: string;
+  alt: string;
+};
+
+const HostPanelIcon = ({ src, alt }: HostPanelIconProps) => (
+  <Image
+    src={src}
+    alt={alt}
+    width={64}
+    height={64}
+    sizes="20px"
+    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+    priority={false}
+  />
+);
 
 // ========================================
 // 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
@@ -1261,7 +1277,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   effectiveDefaultTopicType === "カスタム" ? (
                     <FiEdit2 />
                   ) : (
-                    <FaRegCreditCard />
+                    <HostPanelIcon src="/images/ui/shuffle.webp" alt="Shuffle topic" />
                   )
                 }
                 isLoading={topicActionLoading}
@@ -1298,7 +1314,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <Tooltip content="数字を配り直す" showArrow openDelay={220}>
               <OctopathDockButton
                 compact
-                icon={<FaDice />}
+                icon={<HostPanelIcon src="/images/ui/deal.webp" alt="Deal numbers" />}
                 isLoading={dealActionLoading}
                 disabled={dealActionLoading || isGameFinished}
                 onClick={async () => {
@@ -1317,7 +1333,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
               <OctopathDockButton
                 compact
-                icon={<FaRedo />}
+                icon={<HostPanelIcon src="/images/ui/reset.webp" alt="Reset game" />}
                 isLoading={isResetting}
                 disabled={isResetting}
                 onClick={async () => {
