@@ -762,30 +762,38 @@ export function GameResultOverlay({
       />
 
       {/* 放射状ライン（8本）*/}
-      {[...Array(8)].map((_, i) => {
-        // 完璧な45度刻みを避け、微妙にずらす（AI感駆除）
-        const baseAngles = [0, 43, 88, 137, 178, 223, 271, 316];
-        const angle = baseAngles[i];
-        return (
-          <Box
-            key={i}
-            ref={(el: HTMLDivElement | null) => {
-              linesRef.current[i] = el;
-            }}
-            position="fixed"
-            top="50%"
-            left="50%"
-            width="200vw"
-            height="6px"
-            bg="linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, transparent)"
-            transformOrigin="left center"
-            transform={`rotate(${angle}deg)`}
-            opacity={0}
-            zIndex={9998}
-            pointerEvents="none"
-          />
-        );
-      })}
+      <Box
+        position="fixed"
+        inset={0}
+        overflow="hidden"
+        pointerEvents="none"
+        zIndex={9998}
+      >
+        {[...Array(8)].map((_, i) => {
+          // 45度刻みを少しずらしてAI的な演出にする
+          const baseAngles = [0, 43, 88, 137, 178, 223, 271, 316];
+          const angle = baseAngles[i];
+          return (
+            <Box
+              key={i}
+              ref={(el: HTMLDivElement | null) => {
+                linesRef.current[i] = el;
+              }}
+              position="absolute"
+              top="50%"
+              left="50%"
+              width="140vmax"
+              height="6px"
+              bg="linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, transparent)"
+              transformOrigin="0% 50%"
+              transform={`translateY(-50%) rotate(${angle}deg)`}
+              opacity={0}
+              pointerEvents="none"
+              style={{ contain: "layout paint" }}
+            />
+          );
+        })}
+      </Box>
 
       <Box
         ref={overlayRef}
