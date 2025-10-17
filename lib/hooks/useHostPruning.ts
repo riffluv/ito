@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { User } from "firebase/auth";
 import type { PlayerDoc } from "@/lib/types";
-import { toMillis } from "@/lib/time";
 import { logInfo, logError } from "@/lib/utils/log";
+import { PRESENCE_STALE_MS } from "@/lib/constants/presence";
 
 interface UseHostPruningParams {
   isHost: boolean;
@@ -11,6 +11,7 @@ interface UseHostPruningParams {
   roomId: string;
   players: (PlayerDoc & { id: string })[];
   onlineUids: string[] | undefined;
+  presenceReady: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function useHostPruning({
   roomId,
   players,
   onlineUids,
+  presenceReady,
 }: UseHostPruningParams) {
   const pruneRef = useRef<{
     key: string;
@@ -35,12 +37,13 @@ export function useHostPruning({
   useEffect(() => {
     if (!isHost) return;
     if (!uid || !user) return;
+    if (!presenceReady) return;
     if (!Array.isArray(onlineUids)) return;
     if (onlineUids.length === 0) return;
     if (!players.length) return;
 
-    const OFFLINE_GRACE_MS = 8_000;
-    const LAST_SEEN_THRESHOLD_MS = 30_000;
+    const OFFLINE_GRACE_MS = Math.min(8_000, Math.floor(PRESENCE_STALE_MS / 2));
+    const STALE_THRESHOLD_MS = PRESENCE_STALE_MS;
     const now = Date.now();
     const onlineSet = new Set(onlineUids);
 
@@ -66,7 +69,6 @@ export function useHostPruning({
 
     const readyIds: string[] = [];
     for (const p of candidates) {
-      const last = toMillis(p.lastSeen);
       const existing = offlineSinceRef.current.get(p.id);
       if (!existing) {
         offlineSinceRef.current.set(p.id, now);
@@ -74,11 +76,7 @@ export function useHostPruning({
       }
       const offlineDuration = now - existing;
       if (offlineDuration < OFFLINE_GRACE_MS) continue;
-      const staleByLastSeen =
-        last > 0 ? now - last >= LAST_SEEN_THRESHOLD_MS : false;
-      if (!staleByLastSeen && offlineDuration < LAST_SEEN_THRESHOLD_MS) {
-        continue;
-      }
+      if (offlineDuration < STALE_THRESHOLD_MS) continue;
       readyIds.push(p.id);
     }
 
@@ -114,5 +112,5 @@ export function useHostPruning({
         readyIds.forEach((id) => offlineSinceRef.current.delete(id));
       }
     })();
-  }, [isHost, uid, user, onlineUids, players, roomId]);
+  }, [isHost, uid, user, onlineUids, players, roomId, presenceReady]);
 }

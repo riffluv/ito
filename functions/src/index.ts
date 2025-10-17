@@ -1,3 +1,8 @@
+import {
+  MAX_CLOCK_SKEW_MS,
+  PRESENCE_CLEANUP_INTERVAL_MS,
+  PRESENCE_STALE_MS,
+} from "@/lib/constants/presence";
 import { leaveRoomServer } from "@/lib/server/roomActions";
 import { systemMessagePlayerJoined } from "@/lib/server/systemMessages";
 import * as admin from "firebase-admin";
@@ -16,17 +21,7 @@ const rtdb = admin.database ? admin.database() : (null as any);
 // 以降の定期ジョブ/トリガは早期 return して何もしない
 const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 
-const PRESENCE_STALE_THRESHOLD_MS = Number(
-  process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
-    process.env.PRESENCE_STALE_MS ||
-    90_000
-);
-
-const MAX_CLOCK_SKEW_MS = Number(
-  process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
-    process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
-    30_000
-);
+const PRESENCE_STALE_THRESHOLD_MS = PRESENCE_STALE_MS;
 
 const DEBUG_LOGGING_ENABLED =
   process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
@@ -276,7 +271,7 @@ export const cleanupGhostRooms = functions.pubsub
       Number(process.env.GHOST_STALE_LASTSEEN_MS) || 10 * 60 * 1000; // 10min
     const ROOM_MIN_AGE_MS =
       Number(process.env.GHOST_ROOM_MIN_AGE_MS) || 30 * 60 * 1000; // 30min
-    const PRESENCE_STALE_MS = Number(process.env.PRESENCE_STALE_MS) || 90_000; // 90s
+    const stalePresenceMs = PRESENCE_STALE_THRESHOLD_MS;
 
     // Process in small chunks to limit costs
     const roomsSnap = await dbi.collection("rooms").select().limit(100).get();
@@ -315,8 +310,8 @@ export const cleanupGhostRooms = functions.pubsub
                   return true;
                 const ts = typeof c?.ts === "number" ? c.ts : 0;
                 if (!ts) return false;
-                if (ts - nowLocal > PRESENCE_STALE_MS) return false;
-                return nowLocal - ts <= PRESENCE_STALE_MS;
+                if (ts - nowLocal > stalePresenceMs) return false;
+                return nowLocal - ts <= stalePresenceMs;
               });
               if (online) presenceCount++;
             }
@@ -375,6 +370,69 @@ export const cleanupGhostRooms = functions.pubsub
       } catch (err) {
         console.error("Failed to clean up ghost rooms", err);
       }
+    }
+    return null;
+  });
+
+export const presenceCleanup = functions.pubsub
+  .schedule("every 1 minutes")
+  .onRun(async () => {
+    if (EMERGENCY_STOP) return null;
+    if (!rtdb) return null;
+    const now = Date.now();
+    const maxRemovals = Math.max(
+      200,
+      Math.ceil(PRESENCE_CLEANUP_INTERVAL_MS / 1_000) * 10
+    );
+    const maxRooms = 200;
+    const snapshot = await rtdb.ref("presence").get();
+    if (!snapshot.exists()) return null;
+
+    let removed = 0;
+    let visitedRooms = 0;
+    const removals: Promise<unknown>[] = [];
+
+    snapshot.forEach((roomSnap: admin.database.DataSnapshot) => {
+      if (removed >= maxRemovals || visitedRooms >= maxRooms) {
+        return true;
+      }
+      visitedRooms += 1;
+      const roomId = roomSnap.key;
+      if (!roomId) return undefined;
+      const roomVal = roomSnap.val() as Record<string, any>;
+      Object.entries(roomVal || {}).forEach(([uid, conns]) => {
+        if (removed >= maxRemovals) return;
+        if (!conns || typeof conns !== "object") return;
+        Object.entries(conns as Record<string, any>).forEach(
+          ([connId, payload]: [string, any]) => {
+            if (removed >= maxRemovals) return;
+            if (isPresenceConnActive(payload, now)) return;
+            removed += 1;
+            removals.push(
+              rtdb
+                .ref(`presence/${roomId}/${uid}/${connId}`)
+                .remove()
+                .catch((error: unknown) =>
+                  console.warn("presenceCleanup remove failed", {
+                    roomId,
+                    uid,
+                    connId,
+                    error,
+                  })
+                )
+            );
+          }
+        );
+      });
+      return undefined;
+    });
+
+    if (removals.length > 0) {
+      await Promise.all(removals);
+      logDebug("presence", "cleanup-removed", {
+        count: removals.length,
+        visitedRooms,
+      });
     }
     return null;
   });

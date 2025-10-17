@@ -18,6 +18,7 @@ export type RoomState = {
   players: (PlayerDoc & { id: string })[];
   loading: boolean;
   onlineUids?: string[];
+  presenceReady: boolean;
   onlinePlayers: (PlayerDoc & { id: string })[];
   isMember: boolean;
   isHost: boolean;
@@ -186,6 +187,7 @@ export function useRoomState(
   const {
     players: fetchedPlayers,
     onlineUids,
+    presenceReady,
     participants,
     detach,
     loading: partLoading,
@@ -381,11 +383,21 @@ export function useRoomState(
       players,
       loading,
       onlineUids,
+      presenceReady,
       onlinePlayers,
       isMember,
       isHost,
     }),
-    [room, players, loading, onlineUids, onlinePlayers, isMember, isHost]
+    [
+      room,
+      players,
+      loading,
+      onlineUids,
+      presenceReady,
+      onlinePlayers,
+      isMember,
+      isHost,
+    ]
   );
 
   const detachNow = detach;

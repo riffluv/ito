@@ -27,10 +27,12 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
   setPlayerName,
-  updateLastSeen,
 } from "@/lib/firebase/players";
+import {
+  PRESENCE_STALE_MS,
+} from "@/lib/constants/presence";
 import { useAssetPreloader } from "@/hooks/useAssetPreloader";
-import { forceDetachAll, presenceSupported } from "@/lib/firebase/presence";
+import { forceDetachAll } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
@@ -46,7 +48,6 @@ import {
   getRoomServiceErrorCode,
   joinRoomFully,
 } from "@/lib/services/roomService";
-import { toMillis } from "@/lib/time";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
@@ -166,6 +167,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     room,
     players,
     onlineUids,
+    presenceReady,
     onlinePlayers,
     loading,
     isHost,
@@ -197,10 +199,20 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [joinVersion, setJoinVersion] = useState(0);
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+  const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
+  const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
   const onlineUidSignature = useMemo(
     () => (Array.isArray(onlineUids) ? onlineUids.join(",") : "_"),
     [onlineUids]
   );
+  useEffect(() => {
+    if (!presenceReady) return;
+    if (!Array.isArray(onlineUids)) return;
+    const nowTs = Date.now();
+    for (const uid of onlineUids) {
+      presenceLastSeenRef.current.set(uid, nowTs);
+    }
+  }, [presenceReady, onlineUidSignature]);
 
   // 笞｡ PERFORMANCE: room蜈ｨ菴薙〒縺ｯ縺ｪ縺丞ｿ・ｦ√↑繝励Ο繝代ユ繧｣縺縺醍屮隕・
   useEffect(() => {
@@ -283,28 +295,25 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!stableHostId) {
       return true;
     }
-    if (uid && stableHostId === uid) {
+    if (!presenceReady) {
       return false;
     }
-    if (onlinePlayers.some((p) => p.id === stableHostId)) {
+    if (uid && stableHostId === uid) {
       return false;
     }
     if (Array.isArray(onlineUids) && onlineUids.includes(stableHostId)) {
       return false;
     }
-    const hostPlayer = players.find((p) => p.id === stableHostId);
-    if (!hostPlayer) {
-      return true;
+    const lastSeenTs = presenceLastSeenRef.current.get(stableHostId);
+    if (!lastSeenTs) {
+      return false;
     }
-    const lastSeenMs = toMillis(hostPlayer.lastSeen);
-    if (lastSeenMs > 0) {
-      const elapsed = Date.now() - lastSeenMs;
-      if (elapsed <= 60000) {
-        return false;
-      }
+    const elapsed = Date.now() - lastSeenTs;
+    if (elapsed < HOST_UNAVAILABLE_GRACE_MS) {
+      return false;
     }
     return true;
-  }, [stableHostId, uid, onlinePlayers, onlineUids, players]);
+  }, [stableHostId, uid, onlineUidSignature, presenceReady]);
 
   const isSoloMember = useMemo(
     () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
@@ -324,24 +333,29 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
 
     const onlineSet = new Set(Array.isArray(onlineUids) ? onlineUids : []);
+    const now = Date.now();
     const inputs = players.map((player) => {
       const joinedAt =
         playerJoinOrderRef.current.get(player.id) ?? Number.MAX_SAFE_INTEGER;
-      const lastSeenMs = toMillis(player.lastSeen);
-      const lastSeenAt = lastSeenMs > 0 ? lastSeenMs : null;
+      const lastPresence = presenceLastSeenRef.current.get(player.id) ?? null;
+      const isOnline =
+        !presenceReady ||
+        onlineSet.has(player.id) ||
+        (lastPresence !== null && now - lastPresence < HOST_UNAVAILABLE_GRACE_MS);
+      const lastSeenAt = lastPresence ?? null;
       return {
         id: player.id,
         joinedAt,
         orderIndex:
           typeof player.orderIndex === "number" ? player.orderIndex : null,
         lastSeenAt,
-        isOnline: onlineSet.has(player.id),
+        isOnline,
         name: player.name ?? null,
       };
     });
 
     return selectHostCandidate(inputs) ?? null;
-  }, [room?.id, players, onlineUids, lastKnownHostId, joinVersion]);
+  }, [room?.id, players, onlineUidSignature, lastKnownHostId, joinVersion, presenceReady]);
 
   // 驟榊ｸ・ｼ泌・: 謨ｰ蟄励′譚･縺溽椪髢薙↓霆ｽ縺上・繝・・・・iamondNumberCard逕ｨ・・
   const [pop, setPop] = useState(false);
@@ -608,18 +622,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const previousHostStillMember = useMemo(() => {
     if (!lastKnownHostId) return false;
     if (uid && lastKnownHostId === uid) return false;
-    if (Array.isArray(onlinePlayers) && onlinePlayers.some((p) => p.id === lastKnownHostId)) {
-      return true;
-    }
+    const hostPlayerExists = players.some((p) => p.id === lastKnownHostId);
+    if (!hostPlayerExists) return false;
+    if (!presenceReady) return true;
     if (Array.isArray(onlineUids) && onlineUids.includes(lastKnownHostId)) {
       return true;
     }
-    const hostPlayer = players.find((p) => p.id === lastKnownHostId);
-    if (!hostPlayer) return false;
-    const lastSeenMs = toMillis(hostPlayer.lastSeen);
-    if (lastSeenMs <= 0) return false;
-    return Date.now() - lastSeenMs < 120000;
-  }, [lastKnownHostId, players, onlinePlayers, onlineUids]);
+    return false;
+  }, [lastKnownHostId, players, onlineUids, uid, presenceReady]);
 
   useHostClaim({
     roomId,
@@ -750,26 +760,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.round, uid, roomId, seenRound]);
 
-  // プレゼンス: presence が有効でも lastSeen を一定間隔で更新してフェイルオーバー判定を維持
-  useEffect(() => {
-    if (!uid) {
-      return;
-    }
-    const supported = presenceSupported();
-    const intervalMs = supported ? 45000 : 30000;
-    let cancelled = false;
-    const tick = () => {
-      if (cancelled) return;
-      updateLastSeen(roomId, uid).catch(() => void 0);
-    };
-    tick();
-    const intervalId = window.setInterval(tick, intervalMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [uid, roomId]);
-
   // 繝帙せ繝亥髄縺代ヨ繝ｼ繧ｹ繝・ 騾｣諠ｳ繝ｯ繝ｼ繝牙ｮ御ｺ・夂衍・医Δ繝ｼ繝峨＃縺ｨ縺ｫ繝｡繝・そ繝ｼ繧ｸ蟾ｮ縺玲崛縺医・荳蠎ｦ縺縺托ｼ・
   useEffect(() => {
     if (!isHost || !allCluesReady) {
@@ -834,6 +824,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
     players,
     onlineUids,
+    presenceReady,
   });
 
   // 陦ｨ遉ｺ蜷阪′螟峨ｏ縺｣縺溘ｉ縲∝・螳､荳ｭ縺ｮ閾ｪ蛻・・繝励Ξ繧､繝､繝ｼDoc縺ｫ繧ょ渚譏
