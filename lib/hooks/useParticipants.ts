@@ -6,7 +6,9 @@ import {
   presenceSupported,
   subscribePresence,
 } from "@/lib/firebase/presence";
-import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import {
+  PRESENCE_HEARTBEAT_MS,
+} from "@/lib/constants/presence";
 import type { PlayerDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -20,20 +22,13 @@ import { unstable_batchedUpdates } from "react-dom";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
-  onlineUids?: string[]; // undefined の場合はpresence未対応 → lastSeen等のフォールバックを検討
+  onlineUids?: string[]; // presenceReady=false の間は undefined
+  presenceReady: boolean;
   participants: (PlayerDoc & { id: string })[]; // players ∩ online
   detach: () => Promise<void> | void; // 明示的退出時に使用
   loading: boolean;
   error: Error | null;
 };
-
-const disableFsFallback =
-  (process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK || "")
-    .toString()
-    .toLowerCase() === "1" ||
-  (process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK || "")
-    .toString()
-    .toLowerCase() === "true";
 
 export function useParticipants(
   roomId: string,
@@ -41,6 +36,7 @@ export function useParticipants(
 ): ParticipantsState {
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
+  const [presenceReady, setPresenceReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
@@ -164,19 +160,59 @@ export function useParticipants(
     };
   }, [roomId]);
 
+  const presenceHydratedRef = useRef(false);
+  const presenceHydrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
   // RTDB: presence 購読
   useEffect(() => {
-    if (!presenceSupported()) {
-      setOnlineUids(disableFsFallback ? [] : undefined);
+    presenceHydratedRef.current = false;
+    if (presenceHydrationTimerRef.current) {
+      clearTimeout(presenceHydrationTimerRef.current);
+      presenceHydrationTimerRef.current = null;
+    }
+    if (!roomId || !presenceSupported()) {
+      setPresenceReady(false);
+      setOnlineUids(undefined);
       return;
     }
-    if (!roomId) return;
+    const markReady = (uids: string[]) => {
+      presenceHydratedRef.current = true;
+      setOnlineUids(uids);
+      setPresenceReady(true);
+      setMetric(
+        "participants",
+        "onlineCount",
+        Array.isArray(uids) ? uids.length : 0
+      );
+    };
     const off = subscribePresence(roomId, (uids) => {
       logDebug("presence", "update", { roomId, uids });
-      setOnlineUids(uids);
-      setMetric("participants", "onlineCount", Array.isArray(uids) ? uids.length : 0);
+      if (!presenceHydratedRef.current && uids.length === 0) {
+        if (!presenceHydrationTimerRef.current) {
+          presenceHydrationTimerRef.current = setTimeout(() => {
+            presenceHydrationTimerRef.current = null;
+            markReady([]);
+          }, PRESENCE_HEARTBEAT_MS);
+        }
+        return;
+      }
+      if (presenceHydrationTimerRef.current) {
+        clearTimeout(presenceHydrationTimerRef.current);
+        presenceHydrationTimerRef.current = null;
+      }
+      markReady(uids);
     });
-    return () => off();
+    return () => {
+      if (presenceHydrationTimerRef.current) {
+        clearTimeout(presenceHydrationTimerRef.current);
+        presenceHydrationTimerRef.current = null;
+      }
+      setPresenceReady(false);
+      setOnlineUids(undefined);
+      off();
+    };
   }, [roomId]);
 
   // 自分の presence アタッチ/デタッチ
@@ -213,23 +249,27 @@ export function useParticipants(
   }, []);
 
   const participants = useMemo(() => {
-    // presence 未対応/利用不可時: lastSeen を用いた近似で“実活動中”のみ表示
-    if (!Array.isArray(onlineUids) || onlineUids.length === 0) {
-      if (disableFsFallback) {
-        return players;
-      }
-      const now = Date.now();
-      return players.filter((p) =>
-        isActive((p as any).lastSeen, now, ACTIVE_WINDOW_MS)
-      );
+    if (!presenceReady || !Array.isArray(onlineUids)) {
+      return players;
+    }
+    if (onlineUids.length === 0) {
+      return [];
     }
     const set = new Set(onlineUids);
     return players.filter((p) => set.has(p.id));
-  }, [players, Array.isArray(onlineUids) ? onlineUids.join(",") : "_"]);
+  }, [
+    players,
+    presenceReady,
+    Array.isArray(onlineUids) ? onlineUids.join(",") : "_",
+  ]);
 
   useEffect(() => {
     setMetric("participants", "activeCount", participants.length);
   }, [participants.length]);
+
+  useEffect(() => {
+    setMetric("participants", "presenceReady", presenceReady ? 1 : 0);
+  }, [presenceReady]);
 
   const detach = async () => {
     try {
@@ -239,5 +279,13 @@ export function useParticipants(
     } catch {}
   };
 
-  return { players, onlineUids, participants, detach, loading, error };
+  return {
+    players,
+    onlineUids,
+    presenceReady,
+    participants,
+    detach,
+    loading,
+    error,
+  };
 }

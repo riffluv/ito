@@ -1,4 +1,10 @@
-import { firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import { auth, firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import {
+  PRESENCE_HEARTBEAT_MS,
+  PRESENCE_HEARTBEAT_RETRY_DELAYS_MS,
+  PRESENCE_STALE_MS,
+} from "@/lib/constants/presence";
+import { incrementPresenceMetric, setPresenceMetric } from "@/lib/utils/metrics";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import {
   get,
@@ -14,6 +20,7 @@ import {
   update,
   type Database,
 } from "firebase/database";
+import type { Unsubscribe } from "firebase/auth";
 
 // ルーム配下: presence/<roomId>/<uid>/<connId> = { online: true, ts }
 // 同一uidの複数タブでも衝突しないよう、接続単位で管理する
@@ -34,27 +41,6 @@ export function presenceSupported(): boolean {
   return !!(firebaseEnabled && rtdb);
 }
 
-// presence の心拍とオフライン判定
-// ENVで上書き可能（NEXT_PUBLIC_*）にしつつ、デフォルトは厳しめの値に最適化
-const ENV_HEARTBEAT = Number(
-  (process.env.NEXT_PUBLIC_PRESENCE_HEARTBEAT_MS || "").toString()
-);
-export const PRESENCE_HEARTBEAT_MS =
-  Number.isFinite(ENV_HEARTBEAT) && ENV_HEARTBEAT > 0 ? ENV_HEARTBEAT : 20_000; // 20s
-
-const ENV_STALE = Number(
-  (process.env.NEXT_PUBLIC_PRESENCE_STALE_MS || "").toString()
-);
-export const PRESENCE_STALE_MS =
-  Number.isFinite(ENV_STALE) && ENV_STALE > 0 ? ENV_STALE : 45_000; // 45s
-
-// クライアント時計ずれが大きい端末の未来時刻を無視するための上限（ENV上書き可）
-const ENV_SKEW = Number(
-  (process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS || "").toString()
-);
-export const MAX_CLOCK_SKEW_MS =
-  Number.isFinite(ENV_SKEW) && ENV_SKEW > 0 ? ENV_SKEW : 30_000; // 30s
-
 const presenceLog = (action: string, detail?: Record<string, unknown>) =>
   logInfo("presence", action, detail);
 const presenceWarn = (action: string, detail?: Record<string, unknown>) =>
@@ -72,11 +58,11 @@ export function isPresenceConnectionActive(
   if (!conn) return false;
   const onlineFlag = (conn as PresenceConn | Record<string, any>)?.online;
   if (onlineFlag === false) return false;
-  if (onlineFlag === true && typeof (conn as any)?.ts !== "number") return true;
-  const ts = toNumber((conn as any)?.ts);
-  if (!ts) return false;
-  if (ts - now > MAX_CLOCK_SKEW_MS) return false;
-  return now - ts <= PRESENCE_STALE_MS;
+  const offlineAt = toNumber((conn as any)?.offlineAt);
+  if (offlineAt && now - offlineAt > PRESENCE_STALE_MS * 2) {
+    return false;
+  }
+  return true;
 }
 
 async function cleanupResidualConnections(
@@ -95,7 +81,9 @@ async function cleanupResidualConnections(
     for (const [connId, payload] of Object.entries(val)) {
       if (keepConnId && connId === keepConnId) continue;
       if (!payload) continue;
-      if (payload.online === true && isPresenceConnectionActive(payload, now)) continue;
+      if (payload.online === true) continue;
+      const offlineAt = toNumber((payload as any)?.offlineAt);
+      if (!offlineAt || now - offlineAt <= PRESENCE_STALE_MS * 2) continue;
       const targetRef = ref(db, CONN_PATH(roomId, uid, connId));
       tasks.push(remove(targetRef).catch((err) => {
         presenceWarn("cleanup-remove-failed", { roomId, uid, connId, error: err });
@@ -110,110 +98,293 @@ async function cleanupResidualConnections(
 export async function attachPresence(roomId: string, uid: string) {
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
-  // 接続状態を監視し、接続ごとに push で一意キーを作成
   const connectedRef = ref(db, "/.info/connected");
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+  const attachRetryDelays = [0, ...PRESENCE_HEARTBEAT_RETRY_DELAYS_MS];
+
   let meConnPath: string | null = null;
   let meConnId: string | null = null;
-  let heartbeat: ReturnType<typeof setInterval> | null = null;
+  let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatInFlight = false;
+  let heartbeatRetryIndex = 0;
+  let disposed = false;
+  let cachedToken: string | null = null;
+  const teardownCallbacks: Array<() => void> = [];
+  const eventTeardownCallbacks: Array<() => void> = [];
 
-  const startHeartbeat = (path: string, connId: string) => {
-    if (heartbeat) {
-      try {
-        clearInterval(heartbeat);
-      } catch {}
-      heartbeat = null;
-    }
-    const meConnRef = ref(db, path);
-    heartbeat = setInterval(() => {
-      try {
-        // サーバ時刻で更新（ローカル時計への依存を排除）
-        update(meConnRef, {
-          ts: serverTimestamp() as any,
-          online: true,
-        }).catch((err) => {
-          presenceWarn("heartbeat-update-failed", {
-            roomId,
-            uid,
-            connId,
-            error: err,
-          });
-        });
-      } catch (err) {
-        presenceWarn("heartbeat-update-error", {
-          roomId,
-          uid,
-          connId,
-          error: err,
-        });
-      }
-    }, PRESENCE_HEARTBEAT_MS);
+  const clearHeartbeatTimer = () => {
+    if (!heartbeatTimer) return;
+    try {
+      clearTimeout(heartbeatTimer);
+    } catch {}
+    heartbeatTimer = null;
   };
 
-  const stopHeartbeat = () => {
-    if (heartbeat) {
-      try {
-        clearInterval(heartbeat);
-      } catch {}
-      heartbeat = null;
+  const scheduleNextHeartbeat = (delay: number) => {
+    if (disposed) return;
+    clearHeartbeatTimer();
+    heartbeatTimer = setTimeout(() => {
+      heartbeatTimer = null;
+      void sendHeartbeat("timer");
+    }, delay);
+  };
+
+  const refreshToken = async () => {
+    if (!auth?.currentUser) {
+      cachedToken = null;
+      return;
     }
+    try {
+      cachedToken = await auth.currentUser.getIdToken();
+    } catch (error) {
+      cachedToken = null;
+      presenceWarn("token-refresh-failed", { roomId, uid, error });
+    }
+  };
+
+  const authUnsubscribe: Unsubscribe | null = auth
+    ? auth.onIdTokenChanged((user) => {
+        if (!user) {
+          cachedToken = null;
+          return;
+        }
+        user
+          .getIdToken()
+          .then((token) => {
+            cachedToken = token;
+          })
+          .catch((error) => {
+            cachedToken = null;
+            presenceWarn("token-update-error", { roomId, uid, error });
+          });
+      })
+    : null;
+  if (authUnsubscribe) {
+    teardownCallbacks.push(authUnsubscribe);
+    void refreshToken();
+  }
+
+  const sendBeaconHeartbeat = (reason: string) => {
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.sendBeacon !== "function"
+    ) {
+      return false;
+    }
+    if (!meConnId || !cachedToken) return false;
+    if (typeof location === "undefined") return false;
+    const payload = JSON.stringify({
+      roomId,
+      uid,
+      connId: meConnId,
+      token: cachedToken,
+      reason,
+    });
+    try {
+      const ok = navigator.sendBeacon(
+        `${location.origin}/api/presence/heartbeat`,
+        payload
+      );
+      if (ok) incrementPresenceMetric("beacon.sent");
+      else incrementPresenceMetric("beacon.dropped");
+      return ok;
+    } catch (error) {
+      incrementPresenceMetric("beacon.error");
+      presenceWarn("beacon-send-failed", { roomId, uid, connId: meConnId, error });
+      return false;
+    }
+  };
+
+  const sendHeartbeat = async (reason: string) => {
+    if (disposed) return;
+    if (!meConnPath) return;
+    if (heartbeatInFlight) return;
+    heartbeatInFlight = true;
+    const meConnRef = ref(db, meConnPath);
+    try {
+      await update(meConnRef, {
+        ts: serverTimestamp() as any,
+        online: true,
+      });
+      incrementPresenceMetric("heartbeat.ok");
+      presenceLog("heartbeat", { roomId, uid, connId: meConnId, reason });
+      heartbeatRetryIndex = 0;
+      scheduleNextHeartbeat(PRESENCE_HEARTBEAT_MS);
+    } catch (error) {
+      incrementPresenceMetric("heartbeat.fail");
+      presenceWarn("heartbeat-update-failed", {
+        roomId,
+        uid,
+        connId: meConnId,
+        reason,
+        attempt: heartbeatRetryIndex,
+        error,
+      });
+      const retryDelay =
+        PRESENCE_HEARTBEAT_RETRY_DELAYS_MS[
+          Math.min(
+            heartbeatRetryIndex,
+            PRESENCE_HEARTBEAT_RETRY_DELAYS_MS.length - 1
+          )
+        ] ?? PRESENCE_HEARTBEAT_MS;
+      heartbeatRetryIndex = Math.min(
+        heartbeatRetryIndex + 1,
+        PRESENCE_HEARTBEAT_RETRY_DELAYS_MS.length
+      );
+      scheduleNextHeartbeat(retryDelay);
+    } finally {
+      heartbeatInFlight = false;
+    }
+  };
+
+  const triggerImmediateHeartbeat = (reason: string) => {
+    if (disposed) return;
+    clearHeartbeatTimer();
+    void sendHeartbeat(reason);
+  };
+
+  const registerVisibilityFallbacks = () => {
+    detachEventListeners();
+    if (typeof document !== "undefined") {
+      const visibilityHandler = () => {
+        if (!meConnId) return;
+        triggerImmediateHeartbeat(
+          document.visibilityState === "visible"
+            ? "visibility-visible"
+            : "visibility-hidden"
+        );
+      };
+      document.addEventListener("visibilitychange", visibilityHandler, {
+        passive: true,
+      });
+      eventTeardownCallbacks.push(() =>
+        document.removeEventListener("visibilitychange", visibilityHandler)
+      );
+    }
+    if (typeof window !== "undefined") {
+      const unloadHandler = () => {
+        if (sendBeaconHeartbeat("unload")) return;
+        triggerImmediateHeartbeat("unload");
+      };
+      window.addEventListener("pagehide", unloadHandler);
+      window.addEventListener("beforeunload", unloadHandler);
+      eventTeardownCallbacks.push(() => {
+        window.removeEventListener("pagehide", unloadHandler);
+        window.removeEventListener("beforeunload", unloadHandler);
+      });
+    }
+  };
+
+  const detachEventListeners = () => {
+    for (const callback of eventTeardownCallbacks.splice(0)) {
+      try {
+        callback();
+      } catch {}
+    }
+  };
+
+  const detachListeners = () => {
+    detachEventListeners();
+    for (const callback of teardownCallbacks.splice(0)) {
+      try {
+        callback();
+      } catch {}
+    }
+  };
+
+  const executeWithBackoff = async <T>(
+    label: string,
+    task: () => Promise<T>,
+    context: Record<string, unknown>
+  ): Promise<T> => {
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < attachRetryDelays.length; attempt += 1) {
+      const delay = attachRetryDelays[attempt] ?? 0;
+      if (delay > 0) {
+        await wait(delay);
+      }
+      try {
+        const result = await task();
+        if (attempt > 0) {
+          presenceLog(`${label}-retry-success`, { ...context, attempt });
+        }
+        return result;
+      } catch (error) {
+        lastError = error;
+        if (attempt === attachRetryDelays.length - 1) {
+          presenceError(`${label}-failed`, { ...context, error });
+          throw error;
+        }
+        presenceWarn(`${label}-retry`, { ...context, attempt, error });
+      }
+    }
+    throw lastError ?? new Error(`${label}-failed`);
   };
 
   const connectedHandler = async (snap: any) => {
     const isConnected = !!snap.val();
-    if (isConnected) {
-      // 新しい接続ノードを作成
-      const baseRef = ref(db, ROOM_PATH(roomId) + "/" + uid);
-      const meRef = push(baseRef);
-      const connId = meRef.key;
-      meConnPath = connId ? CONN_PATH(roomId, uid, connId) : null;
-      meConnId = connId ?? null;
-      presenceLog("connected", { roomId, uid, connId });
-      if (!connId || !meConnPath) {
-        presenceWarn("missing-connid", { roomId, uid });
-        return;
-      }
-      try {
-        await onDisconnect(meRef).set({
+    if (!isConnected) {
+      presenceLog("connection-offline", { roomId, uid, connId: meConnId });
+      clearHeartbeatTimer();
+      detachEventListeners();
+      meConnPath = null;
+      meConnId = null;
+      setPresenceMetric("connId", null);
+      return;
+    }
+
+    incrementPresenceMetric("connection.open");
+    const baseRef = ref(db, ROOM_PATH(roomId) + "/" + uid);
+    const meRef = push(baseRef);
+    const connId = meRef.key;
+    meConnPath = connId ? CONN_PATH(roomId, uid, connId) : null;
+    meConnId = connId ?? null;
+    setPresenceMetric("connId", meConnId || null);
+    presenceLog("connected", { roomId, uid, connId });
+    if (!connId || !meConnPath) {
+      presenceWarn("missing-connid", { roomId, uid });
+      return;
+    }
+
+    const context = { roomId, uid, connId };
+    await executeWithBackoff(
+      "ondisconnect-set",
+      () =>
+        onDisconnect(meRef).set({
           online: false,
           ts: serverTimestamp() as any,
           offlineAt: serverTimestamp() as any,
-        });
-        presenceLog("ondisconnect-armed", { roomId, uid, connId });
-      } catch (err) {
-        presenceWarn("ondisconnect-arm-failed", {
-          roomId,
-          uid,
-          connId,
-          error: err,
-        });
-      }
-      try {
-        await set(meRef, {
+        }),
+      context
+    );
+
+    await executeWithBackoff(
+      "presence-initial",
+      () =>
+        set(meRef, {
           online: true,
           ts: serverTimestamp() as any,
           connectedAt: serverTimestamp() as any,
-        });
-      } catch (err) {
-        presenceError("initial-set-failed", { roomId, uid, connId, error: err });
-      }
-      startHeartbeat(meConnPath, connId);
-      cleanupResidualConnections(db, roomId, uid, connId).catch(() => {});
-    } else {
-      // 切断検知: ハートビート停止（onDisconnect がサーバ側で削除する）
-      presenceLog("connection-offline", { roomId, uid, connId: meConnId });
-      stopHeartbeat();
-    }
+        }),
+      context
+    );
+
+    registerVisibilityFallbacks();
+    triggerImmediateHeartbeat("initial");
+    cleanupResidualConnections(db, roomId, uid, connId).catch(() => {});
   };
 
   onRtdbValue(connectedRef, connectedHandler);
 
-  // 明示的に解除するための関数を返す
   return async () => {
+    disposed = true;
     presenceLog("detach", { uid, roomId, connId: meConnId });
     try {
       off(connectedRef, "value", connectedHandler as any);
     } catch {}
-    stopHeartbeat();
+    clearHeartbeatTimer();
+    detachListeners();
     try {
       if (meConnPath) {
         await remove(ref(db, meConnPath));
@@ -250,6 +421,7 @@ export async function attachPresence(roomId: string, uid: string) {
     }
     meConnPath = null;
     meConnId = null;
+    setPresenceMetric("connId", null);
   };
 }
 
@@ -260,6 +432,7 @@ export function subscribePresence(
   if (!presenceSupported()) return () => {};
   const db = rtdb!;
   const roomRef = ref(db, ROOM_PATH(roomId));
+  let lastSnapshot: { uids: string[]; raw: PresenceRoomMap } | null = null;
   const handler = (snap: any) => {
     const val = (snap.val() || {}) as PresenceRoomMap;
     const now = Date.now();
@@ -269,12 +442,14 @@ export function subscribePresence(
         isPresenceConnectionActive(conn as any, now)
       );
     });
+    lastSnapshot = { uids, raw: val };
     cb(uids, val as any);
   };
-  const onErr = () => {
-    // 読み取り権限エラーや一時的な接続エラー時は空扱いにして継続
+  const onErr = (error: unknown) => {
+    presenceWarn("subscribe-error", { roomId, error });
+    if (!lastSnapshot) return;
     try {
-      cb([], {} as any);
+      cb(lastSnapshot.uids, lastSnapshot.raw);
     } catch {}
   };
   onValue(roomRef, handler, onErr as any);

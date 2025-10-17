@@ -1,5 +1,9 @@
 import { FieldValue } from "firebase-admin/firestore";
 import type { Database } from "firebase-admin/database";
+import {
+  MAX_CLOCK_SKEW_MS,
+  PRESENCE_STALE_MS,
+} from "@/lib/constants/presence";
 import { getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { logWarn, logDebug } from "@/lib/utils/log";
 import {
@@ -11,18 +15,6 @@ import {
   systemMessageHostTransferred,
   systemMessagePlayerLeft,
 } from "@/lib/server/systemMessages";
-
-const PRESENCE_STALE_MS = Number(
-  process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
-    process.env.PRESENCE_STALE_MS ||
-    300_000
-);
-
-const MAX_CLOCK_SKEW_MS = Number(
-  process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
-    process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
-    120_000
-);
 
 function sanitizeServerText(input: unknown, maxLength = 500): string {
   if (typeof input !== "string") return "";
@@ -232,24 +224,12 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       } catch {}
     }
 
-    const playerInputs = buildHostPlayerInputsFromSnapshots({
+  const playerInputs = buildHostPlayerInputsFromSnapshots({
       docs: canonicalDocs,
       getJoinedAt: (doc) => (doc.createTime ? doc.createTime.toMillis() : null),
       getOrderIndex: (doc) => {
         const data = doc.data() as any;
         return typeof data?.orderIndex === "number" ? data.orderIndex : null;
-      },
-      getLastSeenAt: (doc) => {
-        const data = doc.data() as any;
-        const raw = data?.lastSeen;
-        if (raw && typeof raw.toMillis === "function") {
-          try {
-            return raw.toMillis();
-          } catch {
-            return null;
-          }
-        }
-        return null;
       },
       getName: (doc) => {
         const data = doc.data() as any;
@@ -407,18 +387,6 @@ export async function leaveRoomServer(
         getOrderIndex: (doc) => {
           const data = doc.data() as any;
           return typeof data?.orderIndex === "number" ? data.orderIndex : null;
-        },
-        getLastSeenAt: (doc) => {
-          const data = doc.data() as any;
-          const raw = data?.lastSeen;
-          if (raw && typeof raw.toMillis === "function") {
-            try {
-              return raw.toMillis();
-            } catch {
-              return null;
-            }
-          }
-          return null;
         },
         getName: (doc) => {
           const data = doc.data() as any;

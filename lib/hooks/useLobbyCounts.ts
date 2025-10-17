@@ -1,11 +1,11 @@
 "use client";
 import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import { presenceSupported } from "@/lib/firebase/presence";
 import {
   MAX_CLOCK_SKEW_MS,
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_STALE_MS,
-  presenceSupported,
-} from "@/lib/firebase/presence";
+} from "@/lib/constants/presence";
 import { ACTIVE_WINDOW_MS } from "@/lib/time";
 import {
   handleFirebaseQuotaError,
