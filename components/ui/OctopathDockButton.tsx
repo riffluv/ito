@@ -18,6 +18,7 @@ export type OctopathDockButtonProps = ButtonProps & {
   icon?: ReactNode;
   isLoading?: boolean;
   compact?: boolean;
+  iconBoxSize?: number;
 };
 
 const dockGlint = keyframes`
@@ -31,7 +32,17 @@ const dockGlint = keyframes`
 
 export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButtonProps>(
   (
-    { label, subLabel, icon, isLoading = false, disabled, minW, compact = false, ...rest },
+    {
+      label,
+      subLabel,
+      icon,
+      isLoading = false,
+      disabled,
+      minW,
+      compact = false,
+      iconBoxSize,
+      ...rest
+    },
     ref
   ) => {
     const finalDisabled = Boolean(disabled || isLoading);
@@ -39,6 +50,7 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
 
     const baseMinW = minW ?? (compact ? "52px" : "220px");
     const baseMinH = compact ? "40px" : "48px";
+    const resolvedIconSize = iconBoxSize ?? (compact ? 18 : 20);
 
     return (
       <ChakraButton
@@ -117,8 +129,8 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
               display="flex"
               alignItems="center"
               justifyContent="center"
-              w={compact ? "18px" : "20px"}
-              h={compact ? "18px" : "20px"}
+              w={`${resolvedIconSize}px`}
+              h={`${resolvedIconSize}px`}
               flexShrink={0}
             >
               {icon}
