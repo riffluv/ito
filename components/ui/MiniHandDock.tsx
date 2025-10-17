@@ -1273,6 +1273,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             >
               <OctopathDockButton
                 compact
+                iconBoxSize={26}
                 icon={
                   effectiveDefaultTopicType === "カスタム" ? (
                     <FiEdit2 />
@@ -1314,6 +1315,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <Tooltip content="数字を配り直す" showArrow openDelay={220}>
               <OctopathDockButton
                 compact
+                iconBoxSize={26}
                 icon={<HostPanelIcon src="/images/ui/deal.webp" alt="Deal numbers" />}
                 isLoading={dealActionLoading}
                 disabled={dealActionLoading || isGameFinished}
@@ -1333,6 +1335,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
               <OctopathDockButton
                 compact
+                iconBoxSize={26}
                 icon={<HostPanelIcon src="/images/ui/reset.webp" alt="Reset game" />}
                 isLoading={isResetting}
                 disabled={isResetting}
