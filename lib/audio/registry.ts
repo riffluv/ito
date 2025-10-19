@@ -73,7 +73,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration (normal)",
     stopPrevious: true,
-    duck: { amount: 0.15, releaseMs: 4200 },
+    duck: { amount: 0.15, releaseMs: 6000 },
   }),
   createDefinition({
     id: "clear_success2",
@@ -84,7 +84,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration (epic)",
     stopPrevious: true,
-    duck: { amount: 0.15, releaseMs: 4500 },
+    duck: { amount: 0.15, releaseMs: 6000 },
   }),
   createDefinition({
     id: "clear_failure",
@@ -95,7 +95,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2.5, max: -0.5 },
     note: "Failure animation sting",
     stopPrevious: true,
-    duck: { amount: 0.2, releaseMs: 3600 },
+    duck: { amount: 0.2, releaseMs: 6000 },
   }),
   createDefinition({
     id: "drag_pickup",
