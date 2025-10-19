@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  announceServiceWorkerUpdate,
+  clearWaitingServiceWorker,
+  consumePendingReloadFlag,
+  getWaitingServiceWorker,
+} from "@/lib/serviceWorker/updateChannel";
 
 const SW_PATH = "/sw.js";
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "dev";
+const APP_VERSION =
+  process.env.NEXT_PUBLIC_APP_VERSION ??
+  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+  "dev";
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
 const shouldRegister = () => {
@@ -11,6 +20,33 @@ const shouldRegister = () => {
     return false;
   }
   return typeof window !== "undefined" && "serviceWorker" in navigator;
+};
+
+let controllerChangeBound = false;
+
+const bindControllerChangeListener = () => {
+  if (controllerChangeBound) return;
+  controllerChangeBound = true;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (consumePendingReloadFlag()) {
+      window.location.reload();
+    }
+  });
+};
+
+const handleWaitingRegistration = (registration: ServiceWorkerRegistration) => {
+  const { waiting } = registration;
+  if (!waiting) {
+    return;
+  }
+  announceServiceWorkerUpdate(registration);
+  const stateChangeHandler = () => {
+    if (waiting.state === "activated" || waiting.state === "redundant") {
+      clearWaitingServiceWorker();
+      waiting.removeEventListener("statechange", stateChangeHandler);
+    }
+  };
+  waiting.addEventListener("statechange", stateChangeHandler);
 };
 
 const registerServiceWorker = async () => {
@@ -25,12 +61,11 @@ const registerServiceWorker = async () => {
       scope: "/",
     });
 
-    let hasRefreshed = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (hasRefreshed) return;
-      hasRefreshed = true;
-      window.location.reload();
-    });
+    bindControllerChangeListener();
+
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      handleWaitingRegistration(registration);
+    }
 
     registration.addEventListener("updatefound", () => {
       const installingWorker = registration.installing;
@@ -42,9 +77,7 @@ const registerServiceWorker = async () => {
           return;
         }
         if (navigator.serviceWorker.controller) {
-          installingWorker.postMessage({ type: "SKIP_WAITING" });
-          // eslint-disable-next-line no-console
-          console.info("新しいバージョンを適用中です。まもなく再読み込みします。");
+          handleWaitingRegistration(registration);
         } else {
           registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
         }
@@ -61,6 +94,11 @@ const registerServiceWorker = async () => {
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     registerServiceWorker();
+    // ページ再マウント時に古い待機Registrationが残っていれば反映する
+    const existing = getWaitingServiceWorker();
+    if (existing) {
+      announceServiceWorkerUpdate(existing);
+    }
   }, []);
 
   return null;

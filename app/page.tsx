@@ -42,6 +42,7 @@ import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SupporterCTA } from "@/components/site/SupporterCTA";
+import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 
 // ナイトキャラ
 function KnightCharacter() {
@@ -1255,6 +1256,23 @@ export default function MainMenu() {
                     >
                       ローディングテスト
                     </AppButton>
+
+                    <Box
+                      mt={3}
+                      pl={1}
+                      display="flex"
+                      flexDirection="column"
+                      gap={2}
+                    >
+                      <Text
+                        fontSize="xs"
+                        color="rgba(255,255,255,0.7)"
+                        fontFamily="monospace"
+                      >
+                        ▼ バージョンアップ通知（プレビュー）
+                      </Text>
+                      <UpdateAvailableBadge preview />
+                    </Box>
                   </Box>
                 </VStack>
               </Box>
