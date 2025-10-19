@@ -59,16 +59,16 @@ function KnightCharacter() {
         // Dragon Quest-style: pixel art friendly size
         imageRendering: "pixelated", // Keep crisp pixel art
         "@container (max-width: 600px)": {
-          width: "3.5rem", // 56px for mobile
-          height: "3.5rem",
+          width: scaleForDpi("3.5rem"), // 56px for mobile
+          height: scaleForDpi("3.5rem"),
         },
         "@container (min-width: 600px) and (max-width: 900px)": {
-          width: "4.5rem", // 72px for tablet
-          height: "4.5rem",
+          width: scaleForDpi("4.5rem"), // 72px for tablet
+          height: scaleForDpi("4.5rem"),
         },
         "@container (min-width: 900px)": {
-          width: "6rem", // 96px for desktop
-          height: "6rem",
+          width: scaleForDpi("6rem"), // 96px for desktop
+          height: scaleForDpi("6rem"),
         },
       }}
     />
@@ -107,6 +107,8 @@ const DEVELOPER_NOTE_STYLES = {
     lineHeight: "1.7",
   },
 } as const;
+
+const scaleForDpi = (value: string) => `calc(${value} * var(--dpi-scale))`;
 
 export default function MainMenu() {
   const router = useRouter();
@@ -520,25 +522,37 @@ export default function MainMenu() {
       <Box
         position="relative"
         overflow="hidden"
-        pt={{ base: "5.3rem", md: "6.1rem", lg: "8.3rem" }}
+        pt={{
+          base: scaleForDpi("5.3rem"),
+          md: scaleForDpi("6.1rem"),
+          lg: scaleForDpi("8.3rem"),
+        }}
         css={{
           background: "linear-gradient(to bottom, rgba(8,9,15,0.95) 0%, rgba(8,9,15,0.9) 100%)",
           containerType: "inline-size",
           // DPI scaling optimization
           "@container (max-width: 600px)": {
-            paddingTop: "5rem", // 80px at 100% = 100px at 125%
+            paddingTop: scaleForDpi("5rem"), // 80px at 100% = 100px at 125%
           },
           "@container (min-width: 600px) and (max-width: 900px)": {
-            paddingTop: "6rem", // 96px at 100% = 120px at 125%
+            paddingTop: scaleForDpi("6rem"), // 96px at 100% = 120px at 125%
           },
           "@container (min-width: 900px)": {
-            paddingTop: "8rem", // 128px at 100% = 160px at 125%
+            paddingTop: scaleForDpi("8rem"), // 128px at 100% = 160px at 125%
           },
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
-          <VStack gap={{ base: "4.2rem", lg: "5.3rem" }} align="center">
-            <VStack gap="2.1rem" align="center" textAlign="center" maxW="4xl">
+          <VStack
+            gap={{ base: scaleForDpi("4.2rem"), lg: scaleForDpi("5.3rem") }}
+            align="center"
+          >
+            <VStack
+              gap={scaleForDpi("2.1rem")}
+              align="center"
+              textAlign="center"
+              maxW="4xl"
+            >
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
                 <HStack
@@ -551,7 +565,11 @@ export default function MainMenu() {
                   <KnightCharacter />
                   <Heading
                     ref={titleRef}
-                    fontSize={{ base: "1.9rem", md: "3.1rem", lg: "3.9rem" }}
+                    fontSize={{
+                      base: scaleForDpi("1.9rem"),
+                      md: scaleForDpi("3.1rem"),
+                      lg: scaleForDpi("3.9rem"),
+                    }}
                     fontWeight={900}
                     lineHeight="0.87"
                     letterSpacing="0.051em"
@@ -566,13 +584,13 @@ export default function MainMenu() {
                       filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
                       // DPI scaling font optimization
                       "@container (max-width: 600px)": {
-                        fontSize: "2rem", // 32px base
+                        fontSize: scaleForDpi("2rem"), // 32px base
                       },
                       "@container (min-width: 600px) and (max-width: 900px)": {
-                        fontSize: "3.5rem", // 56px base
+                        fontSize: scaleForDpi("3.5rem"), // 56px base
                       },
                       "@container (min-width: 900px)": {
-                        fontSize: "4.5rem", // 72px base
+                        fontSize: scaleForDpi("4.5rem"), // 72px base
                       },
                     }}
                   >
@@ -580,7 +598,11 @@ export default function MainMenu() {
                   </Heading>
                 </HStack>
                 <Text
-                  fontSize={{ base: "1.3rem", md: "1.6rem", lg: "1.9rem" }}
+                  fontSize={{
+                    base: scaleForDpi("1.3rem"),
+                    md: scaleForDpi("1.6rem"),
+                    lg: scaleForDpi("1.9rem"),
+                  }}
                   color="rgba(255,255,255,0.85)"
                   fontWeight={500}
                   lineHeight="1.43"
@@ -591,15 +613,15 @@ export default function MainMenu() {
                   css={{
                     // DPI scaling subtitle optimization
                     "@container (max-width: 600px)": {
-                      fontSize: "1.125rem", // 18px base for mobile readability
+                      fontSize: scaleForDpi("1.125rem"), // 18px base for mobile readability
                       lineHeight: "1.5",
                     },
                     "@container (min-width: 600px) and (max-width: 900px)": {
-                      fontSize: "1.375rem", // 22px base for tablet
+                      fontSize: scaleForDpi("1.375rem"), // 22px base for tablet
                       lineHeight: "1.45",
                     },
                     "@container (min-width: 900px)": {
-                      fontSize: "1.75rem", // 28px base for desktop
+                      fontSize: scaleForDpi("1.75rem"), // 28px base for desktop
                       lineHeight: "1.4",
                     },
                   }}
@@ -618,30 +640,30 @@ export default function MainMenu() {
               </Box>
 
               <VStack
-                gap="1.6rem"
+                gap={scaleForDpi("1.6rem")}
                 align="center"
                 css={{
                   // DPI scaling button group optimization
                   "@container (max-width: 600px)": {
-                    gap: "1.1rem", // 17.6px gap for mobile
+                    gap: scaleForDpi("1.1rem"), // 17.6px gap for mobile
                   },
                   "@container (min-width: 600px)": {
-                    gap: "1.6rem", // 25.6px gap for larger screens
+                    gap: scaleForDpi("1.6rem"), // 25.6px gap for larger screens
                   },
                 }}
               >
                 <HStack
-                  gap="1.1rem"
+                  gap={scaleForDpi("1.1rem")}
                   flexWrap="wrap"
                   justify={{ base: "center", md: "flex-end" }}
                   css={{
                     // Ensure minimum touch target size (44px)
                     "& button": {
-                      minHeight: "2.75rem", // 44px minimum for touch accessibility
-                      minWidth: "2.75rem",
+                      minHeight: scaleForDpi("2.75rem"), // 44px minimum for touch accessibility
+                      minWidth: scaleForDpi("2.75rem"),
                       "@container (max-width: 600px)": {
-                        minHeight: "3rem", // 48px for better mobile UX
-                        fontSize: "0.9rem", // Slightly smaller text on mobile
+                        minHeight: scaleForDpi("3rem"), // 48px for better mobile UX
+                        fontSize: scaleForDpi("0.9rem"), // Slightly smaller text on mobile
                       },
                     },
                   }}
@@ -651,7 +673,11 @@ export default function MainMenu() {
                     visual="solid"
                     palette="brand"
                     onClick={openCreateFlow}
-                    css={{ px: "22px", py: "13px", mr: "0.7rem" }}
+                    css={{
+                      px: scaleForDpi("22px"),
+                      py: scaleForDpi("13px"),
+                      mr: scaleForDpi("0.7rem"),
+                    }}
                   >
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
@@ -660,7 +686,10 @@ export default function MainMenu() {
                     size="md"
                     visual="outline"
                     palette="gray"
-                    css={{ px: "17px", py: "11px" }}
+                    css={{
+                      px: scaleForDpi("17px"),
+                      py: scaleForDpi("11px"),
+                    }}
                     onClick={async () => {
                       try {
                         await transition.navigateWithTransition("/rules", {
@@ -705,34 +734,34 @@ export default function MainMenu() {
       {/* ルーム一覧 */}
       <Container
         maxW="7xl"
-        py={{ base: "3.1rem", md: "4.3rem" }}
+        py={{ base: scaleForDpi("3.1rem"), md: scaleForDpi("4.3rem") }}
         css={{
           // DPI scaling container optimization
           "@container (max-width: 600px)": {
-            paddingTop: "2.5rem", // 40px base for mobile
-            paddingBottom: "2.5rem",
+            paddingTop: scaleForDpi("2.5rem"), // 40px base for mobile
+            paddingBottom: scaleForDpi("2.5rem"),
           },
           "@container (min-width: 600px) and (max-width: 900px)": {
-            paddingTop: "3rem", // 48px base for tablet
-            paddingBottom: "3rem",
+            paddingTop: scaleForDpi("3rem"), // 48px base for tablet
+            paddingBottom: scaleForDpi("3rem"),
           },
           "@container (min-width: 900px)": {
-            paddingTop: "4rem", // 64px base for desktop
-            paddingBottom: "4rem",
+            paddingTop: scaleForDpi("4rem"), // 64px base for desktop
+            paddingBottom: scaleForDpi("4rem"),
           },
         }}
       >
         <Grid
           templateColumns={{ base: "1fr", xl: "1fr 340px" }}
-          gap={{ base: "2.1rem", xl: "3.2rem" }}
+          gap={{ base: scaleForDpi("2.1rem"), xl: scaleForDpi("3.2rem") }}
           alignItems="start"
           css={{
             // DPI scaling grid optimization
             "@container (max-width: 600px)": {
-              gap: "1.5rem", // 24px gap for mobile
+              gap: scaleForDpi("1.5rem"), // 24px gap for mobile
             },
             "@container (min-width: 600px)": {
-              gap: "2rem", // 32px gap for larger screens
+              gap: scaleForDpi("2rem"), // 32px gap for larger screens
             },
           }}
         >

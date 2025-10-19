@@ -88,6 +88,7 @@
 
     /* スケール（ブラウザズーム/DPIに応じた微調整） */
     --adaptive-scale: clamp(0.95, 1vw + 0.25rem, 1.1);
+    --dpi-scale: 1;
 
     /* Colors (sync with UI_TOKENS for CSS usage) */
     --white-a95: rgba(255,255,255,0.95);
@@ -106,6 +107,7 @@
   /* 125% DPI 以上（Windows/Chrome 環境の実運用を想定） */
   @media (resolution >= 1.25dppx), (resolution >= 120dpi) {
     :root {
+      --dpi-scale: 0.92;
       --adaptive-scale: 0.92;
       --card-gap:     clamp(0.25rem, 1cqi, 0.75rem);
       --card-padding: clamp(0.5rem,  2cqi, 1rem);
@@ -118,6 +120,7 @@
   /* 150% DPI 以上 */
   @media (resolution >= 1.5dppx), (resolution >= 144dpi) {
     :root {
+      --dpi-scale: 0.88;
       --adaptive-scale: 0.88;
       --card-gap:     clamp(0.2rem, 0.9cqi, 0.6rem);
       --card-padding: clamp(0.4rem, 1.8cqi, 0.8rem);
