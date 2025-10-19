@@ -118,6 +118,82 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     initMetricsExport();
   }, []);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let disposed = false;
+    const rafIds: number[] = [];
+    let gsapModule: typeof import("gsap") | null = null;
+    let pixiModule: typeof import("pixi.js") | null = null;
+
+    const ensureModules = async () => {
+      if (!gsapModule) {
+        try {
+          gsapModule = await import("gsap");
+        } catch {
+          gsapModule = null;
+        }
+      }
+      if (!pixiModule) {
+        try {
+          pixiModule = await import("pixi.js");
+        } catch {
+          pixiModule = null;
+        }
+      }
+    };
+
+    const pumpFrames = (remaining: number) => {
+      if (disposed || remaining <= 0) return;
+      const id = requestAnimationFrame(() => {
+        if (gsapModule) {
+          gsapModule.gsap.ticker.tick();
+        }
+        if (pixiModule) {
+          pixiModule.Ticker.shared.update();
+        }
+        pumpFrames(remaining - 1);
+      });
+      rafIds.push(id);
+    };
+
+    const runWarmup = async () => {
+      if (document.visibilityState !== "visible") return;
+      await ensureModules();
+      if (disposed) return;
+      if (soundManager) {
+        void soundManager.warmup().catch(() => undefined);
+      }
+      if (gsapModule) {
+        gsapModule.gsap.ticker.wake();
+        gsapModule.gsap.ticker.tick();
+      }
+      if (pixiModule) {
+        pixiModule.Ticker.shared.autoStart = true;
+        pixiModule.Ticker.shared.start();
+        pixiModule.Ticker.shared.update();
+      }
+      pumpFrames(3);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      void runWarmup();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange, {
+      passive: true,
+    });
+
+    if (document.visibilityState === "visible") {
+      void runWarmup();
+    }
+
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      rafIds.forEach((id) => cancelAnimationFrame(id));
+    };
+  }, [soundManager]);
 
   const shouldPlayBgm =
     !!soundManager &&

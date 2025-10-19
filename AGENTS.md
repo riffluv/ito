@@ -1,69 +1,61 @@
-## プロジェクト概要
+# プロジェクト概要
 
 - タイトル: **序の紋章 III（オンライン版）**
-- 目的: 「ito」ライクな連想ゲームを、Pixi.js/GSAP 演出と Firebase リアルタイム同期で実現。
-- 状態: 本番コードベース。UI/UX の磨き込みと Pixi 背景統一を進めている。
-- 優先事項:  
-  1. **UX を壊さずに演出を強化**（Pixi HUD、GSAP）  
-  2. **2 クリックでゲーム参加できる導線を保持**（メインメニューがロビーを兼ねる）  
-  3. **収益化の基盤（Stripe）と勝敗演出をブラッシュアップ**  
+- 目的: 「ito」ライクな協力推理ゲームを、Pixi.js/GSAP による演出と Firebase（Firestore + RTDB + Auth + Functions）でリアルタイム同期させる。
+- 技術スタック: Next.js 14 (App Router) / TypeScript / Chakra UI / Pixi.js 8 / GSAP 3 / Firebase / Stripe。
 
-## 技術スタックと主要ディレクトリ
+# 最近の大きな更新（2025-10）
 
-- Next.js 14.2 + App Router（`app/`）  
-- Firebase（Firestore + RTDB Presence + Auth）  
-- Pixi.js 8（HUD/背景演出）、GSAP 3（アニメーション）  
-- Chakra UI（DOM レイヤー）、TypeScript
-- 重要ディレクトリ
-  - `components/ui/` : 共通 UI、Pixi HUD 関連、モーダル類
-  - `components/settings/` : 設定モーダル（Pixi 背景あり）
-  - `lib/pixi/` : 背景や HUD のコントローラ
-  - `lib/audio/` : サウンド設定と SoundManager
-  - `lib/hooks/` : リアルタイム同期（useRoomState/useParticipants 等）
+1. **Presence 再設計（RTDB を authoritative に統一）**
+   - Firestore `lastSeen` 依存の 45 秒ハートビートを廃止し、`presence/<roomId>/<uid>/<connId>` を唯一のオンライン判定に。
+   - `attachPresence` は 20 秒心拍 + 指数バックオフ + `navigator.sendBeacon` フォールバック + `onDisconnect` を実装。
+   - Cloud Functions `presenceCleanup` は `online !== true` かつ `offlineAt` が十分古い接続だけ削除するよう調整。
 
-## デザイン・演出ガイドライン
+2. **クライアント Presence ハンドリング**
+   - `useParticipants` / `useRoomState` に `presenceReady` と初期ハイドレーション待機を追加。初回スナップショットが空でも即ホスト剥奪しない。
+   - `presenceLastSeenRef` を導入し、ホスト不在判定は「最後に確認できた時刻 + グレース（max(PRESENCE_STALE_MS, 60s)）」で評価。
 
-- **世界観**: HD-2D × ファンタジー。Pixi の光・山景色などで統一。  
-- **ボタン**: `AppButton` 使用。2025-10-14 時点で 3px 角丸と陰影あり。メインメニューでも同スタイルに寄せる。  
-- **モーダル**: DOM で骨格、Pixi HUD で背面演出。`VictoryHighlightLayer` や `SettingsModal` を参照。  
-- **ローディング/勝敗演出**: `DragonQuestLoading` や `GameResultOverlay` は DOM + GSAP 基本、PixiPlugin で光演出を追加中。  
-- **背景設定**: デフォルトは `pixi-dq`（山の景色）。設定モーダルから CSS 背景などに切り替え可。  
-- **サウンド**: `successMode` デフォルトは `epic`。`lib/audio/types.ts` の設定を参照。  
-- **UX ポリシー**: 「ログイン → ルーム一覧 → 入室」で 2 クリック以内を維持。メニュー刷新時も導線は変えない。  
+3. **可視化復帰時のウォームアップ**
+   - `SoundManager` に `warmup()` を追加し、AudioContext の再開＆pending play flush を即時実行可能に。
+   - ルームページで `visibilitychange` を監視し、タブ復帰時に `soundManager.warmup()`、GSAP/Pixi の ticker tick を数フレーム強制実行。放置後のラグを緩和。
 
-## 最近の取り組み（2025-10 時点）
+4. **テスト整備**
+   - Jest: `__tests__/presence.spec.ts` を刷新（RTDB フラグ判定・グレース時間を検証）。
+   - Playwright: `tests/presence-host.spec.ts` でホスト移譲・瞬断シナリオを自動確認。
+   - `npm run typecheck` も通過確認済み。
 
-- Pixi 背景を各モーダルへ展開するタスク進行中（`pixi-hud-instructions.md` 参照）。  
-- 戦績モーダルと勝敗演出に PixiPlugin を適用済み。光の帯は `VictoryHighlightLayer` で描画。  
-- メインメニューのボタン角丸調整、背景 Pixi 化検討中（UX を損なわない範囲で演出強化）。  
+# 現在の動作確認状況
 
-## 開発ルール
+- ローカル `npm run dev` + 複数ブラウザでの手動テストで、ホスト／メンバーが長時間の放置後も観戦落ちしないことを確認。
+- 放置後の復帰で音・アニメーションが鈍る問題はウォームアップ処理で大幅に緩和。
+- 低スペック環境スタッフとの手動テスト（ノート PC 2 台）でも完全同期を維持、落ち込みなし。
 
-### コードスタイル
-- 日本語コメントは最小限。命名はローマ字/英語。  
-- GSAP の duration / easing などは「偶数・5刻み回避」の独自ポリシーに従う（`万能デザイン指示書.md` 参照）。  
-- Pixi オブジェクト作成時は `destroy({ children: true })` を徹底しリークを防止。  
-- `prefers-reduced-motion` を尊重（Pixi 演出もオフにする）。  
+# 運用メモ
 
-### Search / CLI ポリシー（重要）
-- **回答は日本語限定。**  
-- Web検索は Codex CLI 内蔵の **WebSearch** を必ず使用。`gemini -p` や `brave-search` は禁止。  
-- 例外: ユーザーが明示的に外部 CLI を要求した場合のみ使用。  
-- 参照元は回答内に明示（URL か WebSearch 結果）。  
-- 外部 MCP: `serena`（http://127.0.0.1:24282）が利用可能。  
+- **デプロイ手順**
+  - Functions のみ更新: `firebase deploy --only functions`
+  - Hosting も含む場合: `firebase deploy --only hosting,functions`（または `firebase deploy`）
+  - Cloud Functions を更新しないと本番側が旧ロジックのままになるので注意。
 
-## 作業フロー
+- **ローカル開発**
+  - クライアントコードは `npm run dev` で即時反映。タブ復帰の挙動を見る際はブラウザをハードリロード。
+  - Cloud Functions の挙動まで確認したい場合は Firebase Emulator Suite を使うか、都度 `firebase deploy --only functions`。
 
-1. **仕様確認**: `万能デザイン指示書.md` → デザイン指針 / 数値規則が書かれている。  
-2. **タスク参照**: 新規 Pixi HUD 対応は `pixi-hud-instructions.md` を確認。  
-3. **実装**: Pixi レイヤー → DOM レイアウト同期 → GSAP/PixiPlugin で演出。  
-4. **テスト**: `prefers-reduced-motion` / メモリリーク / `npm run build` を必ず確認。  
+# 主要ディレクトリ
 
-## 補足
+- `app/rooms/[roomId]/page.tsx` … ルーム画面 UI/ゲーム進行。presence 監視、ウォームアップ処理を実装。
+- `lib/hooks/useRoomState.ts` / `useParticipants.ts` … プレイヤー・presence 状態管理。
+- `lib/firebase/presence.ts` … RTDB presence アタッチ／購読ロジック。
+- `lib/audio/SoundManager.ts` … Web Audio 管理。`warmup()` 追加済み。
+- `functions/src/index.ts` … Cloud Functions（presence cleanup / ghost room など）。
+- `lib/showtime/` … GSAP/Pixi を使った演出オーケストレーション。
+- `tests/presence-host.spec.ts` … Playwright テスト。
 
-- 主要な演出（Pixi 背景）は `usePixiHudLayer` + `usePixiLayerLayout` が基本パターン。  
-- Stripe 決済や Presence まわりは本番仕様なので、テスト時は環境変数に注意。  
-- メインメニュー刷新は UX 優先（操作回数を増やさずに見た目だけアップデート）。  
+# 次のエージェントへのヒント
 
-以上の方針を踏まえ、次のエージェントもすぐにプロジェクト全体を理解しスムーズに開発できるよう準備しています。困った場合は `pixi-hud-instructions.md` や `万能デザイン指示書.md` を参照のこと。  
+- プレゼンス関連は RTDB を唯一のソースとする設計が前提。`lastSeen` を復活させないこと。
+- Presence 判定は `presenceReady` が true になるまで待つ。初期ハイドレーションのバグに注意。
+- タブ放置後の復帰テストをする際は、コンソールログ（`[presence] update`、`[room-page]` 系）と Firebase Console の RTDB ノードを確認すると原因追跡しやすい。
+- 新たに演出を追加する場合は GSAP/Pixi の ticker を重複起動させないよう `showtime` 仕組みを活用する。
+- 何かトラブルがあれば `AGENTS.md` を更新してナレッジ共有してほしい。
 
