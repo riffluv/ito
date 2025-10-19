@@ -103,6 +103,15 @@ export class SoundManager {
     this.attachUnlockHandlers();
   }
 
+  async warmup(): Promise<void> {
+    if (!isBrowser()) return;
+    const context = this.ensureContext();
+    if (context) {
+      await this.resumeContext();
+    }
+    await this.flushPendingPlays();
+  }
+
   getSettings(): SoundSettings {
     return cloneSettings(this.settings);
   }
