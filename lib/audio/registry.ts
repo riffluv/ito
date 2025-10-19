@@ -95,7 +95,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2.5, max: -0.5 },
     note: "Failure animation sting",
     stopPrevious: true,
-    duck: { amount: 0.2, releaseMs: 6000 },
+    duck: { amount: 0.25, releaseMs: 1500 },
   }),
   createDefinition({
     id: "drag_pickup",
