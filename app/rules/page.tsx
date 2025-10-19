@@ -18,6 +18,8 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "@/components/ui/TransitionProvider";
 
+const scaleForDpi = (value: string) => `calc(${value} * var(--dpi-scale))`;
+
 export default function RulesPage() {
   const router = useRouter();
   const transition = useTransition();
@@ -27,10 +29,23 @@ export default function RulesPage() {
       bg="richBlack.900" // ドラクエ風リッチブラック背景
       position="relative"
     >
-      <Container maxW="4xl" py={{ base: "5.3rem", md: "6.1rem" }} position="relative">
+      <Container
+        maxW="4xl"
+        py={{ base: scaleForDpi("5.3rem"), md: scaleForDpi("6.1rem") }}
+        position="relative"
+      >
         {/* Hero Header */}
-        <VStack mb={{ base: "4.2rem", md: "5.3rem" }} align="stretch" gap="3.2rem">
-          <Flex justify="space-between" align="center" wrap="wrap" gap="1.1rem">
+        <VStack
+          mb={{ base: scaleForDpi("4.2rem"), md: scaleForDpi("5.3rem") }}
+          align="stretch"
+          gap={scaleForDpi("3.2rem")}
+        >
+          <Flex
+            justify="space-between"
+            align="center"
+            wrap="wrap"
+            gap={scaleForDpi("1.1rem")}
+          >
             <AppButton
               onClick={async () => {
                 try {
@@ -67,7 +82,7 @@ export default function RulesPage() {
                 boxShadow: "1px 1px 0 rgba(0,0,0,0.8), 2px 2px 0 rgba(0,0,0,0.6)"
               }}
             >
-              <HStack gap="0.4rem">
+              <HStack gap={scaleForDpi("0.4rem")}>
                 <BookOpen
                   size={14}
                   color="rgba(255,255,255,0.95)"
@@ -85,7 +100,7 @@ export default function RulesPage() {
             </Box>
           </Flex>
 
-          <VStack align="start" gap="1.6rem">
+          <VStack align="start" gap={scaleForDpi("1.6rem")}>
             <Heading
               size="4xl"
               fontWeight="bold"
@@ -94,8 +109,8 @@ export default function RulesPage() {
               textShadow="0 2px 4px rgba(0,0,0,0.8), 0 0 12px rgba(255,215,0,0.2)"
               letterSpacing="0.083em"
               textAlign="center"
-              mb="1.1rem"
-              pb="0.8rem"
+              mb={scaleForDpi("1.1rem")}
+              pb={scaleForDpi("0.8rem")}
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.2)",
               }}
@@ -104,7 +119,7 @@ export default function RulesPage() {
             </Heading>
             <HStack
               align="center"
-              gap="2.1rem"
+              gap={scaleForDpi("2.1rem")}
               flexWrap={{ base: "wrap", md: "nowrap" }}
               justify={{ base: "center", md: "center" }}
               w="100%"
@@ -133,7 +148,7 @@ export default function RulesPage() {
 
               {/* テキストボックス */}
               <Box
-                p="1.6rem"
+                p={scaleForDpi("1.6rem")}
                 bg="bgPanel"
                 border="borders.retrogame"
                 borderColor="whiteAlpha.90"
@@ -143,7 +158,10 @@ export default function RulesPage() {
                 minW={{ base: "100%", md: "0" }}
               >
                 <Text
-                  fontSize={{ base: "1.05rem", md: "1.17rem" }}
+                  fontSize={{
+                    base: scaleForDpi("1.05rem"),
+                    md: scaleForDpi("1.17rem"),
+                  }}
                   color="whiteAlpha.95"
                   fontFamily="monospace"
                   lineHeight="1.73"
@@ -168,7 +186,10 @@ export default function RulesPage() {
           </VStack>
         </VStack>
 
-        <VStack gap={{ base: "2.7rem", md: "3.2rem" }} align="stretch">
+        <VStack
+          gap={{ base: scaleForDpi("2.7rem"), md: scaleForDpi("3.2rem") }}
+          align="stretch"
+        >
           {/* ゲームの流れ */}
           <Box
             bg="bgPanel"
@@ -176,7 +197,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: "1.6rem", md: "2.1rem" }}
+            p={{ base: scaleForDpi("1.6rem"), md: scaleForDpi("2.1rem") }}
           >
             <Heading
               size="lg"
@@ -184,8 +205,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb="1.6rem"
-              pb="0.8rem"
+              mb={scaleForDpi("1.6rem")}
+              pb={scaleForDpi("0.8rem")}
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -222,8 +243,8 @@ export default function RulesPage() {
               ].map((step, index) => (
                 <List.Item key={index}>
                   <Box
-                    p="1.3rem"
-                    mb="1.1rem"
+                    p={scaleForDpi("1.3rem")}
+                    mb={scaleForDpi("1.1rem")}
                     border="borders.retrogameThin"
                     borderColor="whiteAlpha.60"
                     borderRadius={0}
@@ -238,7 +259,7 @@ export default function RulesPage() {
                       background: "linear-gradient(135deg, rgba(18,20,28,0.85) 0%, rgba(12,14,20,0.9) 100%)",
                     }}
                   >
-                    <VStack align="start" gap="0.55rem" flex={1}>
+                    <VStack align="start" gap={scaleForDpi("0.55rem")} flex={1}>
                       <Text
                         fontWeight="bold"
                         color="rgba(255,255,255,0.95)"
@@ -272,7 +293,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: "1.6rem", md: "2.1rem" }}
+            p={{ base: scaleForDpi("1.6rem"), md: scaleForDpi("2.1rem") }}
           >
             <Heading
               size="lg"
@@ -280,8 +301,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb="1.6rem"
-              pb="0.8rem"
+              mb={scaleForDpi("1.6rem")}
+              pb={scaleForDpi("0.8rem")}
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -328,7 +349,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: "1.6rem", md: "2.1rem" }}
+            p={{ base: scaleForDpi("1.6rem"), md: scaleForDpi("2.1rem") }}
           >
             <Heading
               size="lg"
@@ -336,8 +357,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb="1.6rem"
-              pb="0.8rem"
+              mb={scaleForDpi("1.6rem")}
+              pb={scaleForDpi("0.8rem")}
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -345,15 +366,21 @@ export default function RulesPage() {
               攻略のポイント
             </Heading>
 
-            <VStack gap={{ base: "2.1rem", md: "2.7rem" }} align="stretch">
+            <VStack
+              gap={{ base: scaleForDpi("2.1rem"), md: scaleForDpi("2.7rem") }}
+              align="stretch"
+            >
               <Box>
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb="1.1rem"
+                  mb={scaleForDpi("1.1rem")}
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  fontSize={{
+                    base: scaleForDpi("1.17rem"),
+                    md: scaleForDpi("1.3rem"),
+                  }}
                   letterSpacing="0.051em"
                 >
                   ルール（要点）
@@ -377,10 +404,13 @@ export default function RulesPage() {
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb="1.1rem"
+                  mb={scaleForDpi("1.1rem")}
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  fontSize={{
+                    base: scaleForDpi("1.17rem"),
+                    md: scaleForDpi("1.3rem"),
+                  }}
                   letterSpacing="0.051em"
                 >
                   コツ
@@ -404,10 +434,13 @@ export default function RulesPage() {
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb="1.1rem"
+                  mb={scaleForDpi("1.1rem")}
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  fontSize={{
+                    base: scaleForDpi("1.17rem"),
+                    md: scaleForDpi("1.3rem"),
+                  }}
                   letterSpacing="0.051em"
                 >
                   例
@@ -420,7 +453,7 @@ export default function RulesPage() {
                   bg="bgSubtle"
                   boxShadow="2px 2px 0 rgba(0,0,0,0.8), 3px 3px 0 rgba(0,0,0,0.6)"
                 >
-                  <VStack align="start" gap="0.8rem">
+                  <VStack align="start" gap={scaleForDpi("0.8rem")}>
                     <Text
                       color="white"
                       fontSize={{ base: "sm", md: "md" }}
