@@ -73,7 +73,7 @@ export const UNIFIED_LAYOUT = {
 
   // インタラクション要素
   BUTTON: {
-    MIN_HEIGHT: "clamp(36px, 3.5vh, 48px)",
+    MIN_HEIGHT: "clamp(48px, 5vh, 60px)",
   },
 
   // 🔄 BORDER MANAGEMENT SYSTEM - コンテキストアウェア設計

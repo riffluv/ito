@@ -121,8 +121,10 @@ const BOARD_FRAME_STYLES = {
   "@media (pointer: coarse) and (min-width: 768px)": {
     gap: "clamp(12px, 2.8vw, 24px)",
     padding: "clamp(12px, 2.8vw, 24px)",
-    touchAction: "manipulation",
+    touchAction: "none",
     overscrollBehavior: "contain",
+    WebkitTouchCallout: "none",
+    userSelect: "none",
   },
   [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
     gap: "10px",
@@ -1356,7 +1358,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         background: "transparent",
         position: "relative",
         "@media (pointer: coarse)": {
-          touchAction: "manipulation",
+          touchAction: "none",
+          WebkitTouchCallout: "none",
+          userSelect: "none",
+          overscrollBehavior: "contain",
         },
       }}
     >

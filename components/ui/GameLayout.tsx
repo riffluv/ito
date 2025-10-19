@@ -1,5 +1,6 @@
 "use client";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { setMetric } from "@/lib/utils/metrics";
 import { Box, useMediaQuery } from "@chakra-ui/react";
 import React, { ReactNode, lazy, Suspense } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
@@ -8,6 +9,9 @@ import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 const ThreeBackground = lazy(() =>
   import("./ThreeBackground").then((mod) => ({ default: mod.ThreeBackground }))
 );
+
+const SAFE_AREA_TOP = "env(safe-area-inset-top, 0px)";
+const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
 /**
  * GameLayout: 予測可能で安定したゲーム画面レイアウト
@@ -51,10 +55,10 @@ export function GameLayout({
   const shouldUseTouchTabletLayout =
     pointerProfile.isCoarsePointer && (isTabletViewport || isLargeTabletViewport);
   const handAreaBottomOffset = shouldUseTouchTabletLayout
-    ? "calc(env(safe-area-inset-bottom, 0px) + 96px)"
-    : undefined;
+    ? `calc(${SAFE_AREA_BOTTOM} + 96px)`
+    : SAFE_AREA_BOTTOM;
   const mainPaddingBottom = shouldUseTouchTabletLayout
-    ? `calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 96px)`
+    ? `calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 96px + ${SAFE_AREA_BOTTOM})`
     : undefined;
 
   React.useEffect(() => {
@@ -64,14 +68,93 @@ export function GameLayout({
     };
   }, []);
 
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const previousTouchAction = root.style.touchAction;
+    if (pointerProfile.isCoarsePointer) {
+      root.style.touchAction = "manipulation";
+    } else {
+      root.style.touchAction = previousTouchAction || "";
+    }
+    return () => {
+      root.style.touchAction = previousTouchAction;
+    };
+  }, [pointerProfile.isCoarsePointer]);
+
+  React.useEffect(() => {
+    if (!pointerProfile.isCoarsePointer || typeof document === "undefined") {
+      return;
+    }
+    let lastTouchTime = 0;
+    const handleTouchEnd = (event: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTouchTime <= 350) {
+        event.preventDefault();
+      }
+      lastTouchTime = now;
+    };
+    document.addEventListener("touchend", handleTouchEnd, { passive: false });
+    return () => {
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [pointerProfile.isCoarsePointer]);
+
+  React.useEffect(() => {
+    if (!pointerProfile.isCoarsePointer || typeof document === "undefined") {
+      return;
+    }
+    let totalTouches = 0;
+    let interactiveTouches = 0;
+    const listenerOptions: AddEventListenerOptions = {
+      passive: true,
+      capture: true,
+    };
+    const handleTouchStart = (event: TouchEvent) => {
+      totalTouches += 1;
+      if (!(event.target instanceof Element)) return;
+      const interactive = event.target.closest(
+        "button, [role='button'], a[href], [data-interactive='true']"
+      );
+      if (interactive) {
+        interactiveTouches += 1;
+      }
+    };
+    const flushMetrics = () => {
+      if (totalTouches === 0) return;
+      const misses = Math.max(totalTouches - interactiveTouches, 0);
+      const missRate = (misses / totalTouches) * 100;
+      setMetric("input", "touchSamples", totalTouches);
+      setMetric("input", "tapMissRate", Number(missRate.toFixed(2)));
+      totalTouches = 0;
+      interactiveTouches = 0;
+    };
+    document.addEventListener("touchstart", handleTouchStart, listenerOptions);
+    const intervalId = window.setInterval(flushMetrics, 8000);
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart, listenerOptions);
+      window.clearInterval(intervalId);
+      flushMetrics();
+    };
+  }, [pointerProfile.isCoarsePointer]);
+
   // === 没入型（Artifact風）バリアント ===
   if (variant === "immersive") {
     // ヘッダー高さ (DPIバリアント)
     const headerHeight = header ? "64px" : "0px";
     const headerDPI125 = header ? "56px" : "0px";
     const headerDPI150 = header ? "48px" : "0px";
-    const showSidebar = sidebar && !shouldUseTouchTabletLayout;
-    const showRightPanel = rightPanel && !shouldUseTouchTabletLayout;
+    const headerTotalHeight = header
+      ? `calc(${headerHeight} + ${SAFE_AREA_TOP})`
+      : SAFE_AREA_TOP;
+    const headerTotal125 = header
+      ? `calc(${headerDPI125} + ${SAFE_AREA_TOP})`
+      : SAFE_AREA_TOP;
+    const headerTotal150 = header
+      ? `calc(${headerDPI150} + ${SAFE_AREA_TOP})`
+      : SAFE_AREA_TOP;
+    const showSidebar = sidebar && (!shouldUseTouchTabletLayout || isTabletViewport || isLargeTabletViewport);
+    const showRightPanel = rightPanel && (!shouldUseTouchTabletLayout || isTabletViewport || isLargeTabletViewport);
 
     return (
       <>
@@ -100,7 +183,7 @@ export function GameLayout({
               top={0}
               left={0}
               right={0}
-              height={headerHeight}
+              height={headerTotalHeight}
               zIndex={UNIFIED_LAYOUT.Z_INDEX.HEADER}
               display="flex"
               alignItems="center"
@@ -110,12 +193,13 @@ export function GameLayout({
               borderBottomWidth="1px"
               borderColor="borderDefault"
               backdropFilter="blur(12px) saturate(1.2)"
+              paddingTop={SAFE_AREA_TOP}
               css={{
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                  height: headerDPI125,
+                  height: headerTotal125,
                 },
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-                  height: headerDPI150,
+                  height: headerTotal150,
                 },
               }}
             >
@@ -125,7 +209,7 @@ export function GameLayout({
 
           <Box
             position="absolute"
-            top={headerHeight}
+            top={headerTotalHeight}
             left={0}
             right={0}
             bottom={0}
@@ -136,11 +220,11 @@ export function GameLayout({
             css={{
               containerType: "inline-size",
               [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                top: headerDPI125,
+                top: headerTotal125,
               },
               "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
                 {
-                  top: headerDPI150,
+                  top: headerTotal150,
                 },
             }}
             >
@@ -154,7 +238,7 @@ export function GameLayout({
                 flexDirection="column"
                 overflowY={shouldUseTouchTabletLayout ? "auto" : "hidden"}
                 gap={shouldUseTouchTabletLayout ? { base: 4, md: 5 } : { base: 3, md: 4 }} // gap�k���ŗv�f�Ԃ��l�߂�
-                paddingBottom={shouldUseTouchTabletLayout ? mainPaddingBottom : 0}
+                paddingBottom={mainPaddingBottom ?? 0}
                 css={{
                   ...(shouldUseTouchTabletLayout && {
                     maxWidth: "min(1180px, 100%)",
@@ -230,24 +314,28 @@ export function GameLayout({
             position="fixed"
             left={0}
             right={0}
-            bottom={shouldUseTouchTabletLayout ? handAreaBottomOffset : { base: 4, md: 6 }}
+            bottom={handAreaBottomOffset}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
             p={0}
             display="flex"
             justifyContent="center"
             px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
           >
-            <Box w="100%" maxW={shouldUseTouchTabletLayout ? "min(1180px, 100%)" : "1440px"}>
+            <Box
+              w="100%"
+              maxW={shouldUseTouchTabletLayout ? "min(1180px, 100%)" : "1440px"}
+              pb={SAFE_AREA_BOTTOM}
+            >
               {handArea || <Box h="1px" />}
             </Box>
           </Box>
         </Box>
 
-        <Box display={shouldUseTouchTabletLayout ? "block" : "none"}>
-          <MobileBottomSheet
-            chatPanel={rightPanel}
-            sidebar={sidebar}
-            rightPanel={rightPanel}
+          <Box display={shouldUseTouchTabletLayout ? "block" : "none"}>
+            <MobileBottomSheet
+              chatPanel={rightPanel}
+              sidebar={sidebar}
+              rightPanel={rightPanel}
           />
         </Box>
       </>
@@ -299,6 +387,7 @@ export function GameLayout({
           display="flex"
           alignItems="center"
           px={{ base: 4, md: 8 }}
+          paddingTop={SAFE_AREA_TOP}
           boxShadow={`0 1px 0 ${UI_TOKENS.COLORS.whiteAlpha05}`}
         >
           {header}
@@ -350,6 +439,7 @@ export function GameLayout({
           gridArea="hand"
           bg="transparent"
           padding={{ base: 4, md: 6 }}
+          paddingBottom={shouldUseTouchTabletLayout ? `calc(${SAFE_AREA_BOTTOM} + 1rem)` : SAFE_AREA_BOTTOM}
           display="flex"
           alignItems="center"
           justifyContent="center"

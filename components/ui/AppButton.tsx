@@ -1,7 +1,7 @@
 "use client";
 
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import { UI_TOKENS } from "@/theme/layout";
+import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import {
   Button as ChakraButton,
   type ButtonProps,
@@ -311,6 +311,9 @@ export function AppButton({
     transition: `transform 180ms cubic-bezier(.2,1,.3,1), background 180ms cubic-bezier(.2,1,.3,1), box-shadow 180ms cubic-bezier(.2,1,.3,1)`,
     position: "relative",
     overflow: "hidden",
+    "@media (pointer: coarse)": {
+      minHeight: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
+    },
     "&:focus-visible": {
       outline: "2px solid rgba(124, 221, 255, 0.7)", // 指示書: 2-3pxが適切
       outlineOffset: "2px",
