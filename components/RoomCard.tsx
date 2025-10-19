@@ -3,7 +3,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { Lock, Play, UserCheck, Users } from "lucide-react";
-import { memo, useCallback, type KeyboardEvent, type PointerEvent } from "react";
+import { memo } from "react";
 
 type RoomCardProps = {
   id: string;
@@ -33,43 +33,12 @@ export const RoomCard = memo(function RoomCard({
   const isWaiting = status === "waiting";
   const locked = !!requiresPassword;
 
-  const handleCardClick = useCallback(() => {
-    if (!isWaiting) return;
-    onJoin(id);
-  }, [id, isWaiting, onJoin]);
-
-  const handleCardPointerDown = useCallback(
-    (event: PointerEvent<HTMLDivElement>) => {
-      if (!isWaiting) return;
-      if (event.button !== 0) return;
-      event.preventDefault();
-      onJoin(id);
-    },
-    [id, isWaiting, onJoin]
-  );
-
-  const handleCardKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (!isWaiting) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        onJoin(id);
-      }
-    },
-    [id, isWaiting, onJoin]
-  );
-
   return (
     <Box
       role="group"
       position="relative"
-      cursor={isWaiting ? "pointer" : "not-allowed"}
-      tabIndex={isWaiting ? 0 : -1}
-      aria-disabled={!isWaiting}
+      cursor={isWaiting ? "default" : "not-allowed"}
       data-locked={locked ? "true" : "false"}
-      onClick={handleCardClick}
-      onPointerDown={handleCardPointerDown}
-      onKeyDown={handleCardKeyDown}
       _hover={{}}
       css={{
         "&:hover .hover-decoration": {
