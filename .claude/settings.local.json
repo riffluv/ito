@@ -135,7 +135,8 @@
       "mcp__serena__write_memory",
       "Bash(sed:*)",
       "Bash(powershell:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

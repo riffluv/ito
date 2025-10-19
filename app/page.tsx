@@ -199,9 +199,9 @@ export default function MainMenu() {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.9,
-          ease: "back.out(1.15)",
-          delay: 0.25,
+          duration: 0.87,
+          ease: "back.out(1.17)",
+          delay: 0.23,
         }
       );
     }
@@ -520,7 +520,7 @@ export default function MainMenu() {
       <Box
         position="relative"
         overflow="hidden"
-        pt={{ base: 20, md: 24, lg: 32 }}
+        pt={{ base: "5.3rem", md: "6.1rem", lg: "8.3rem" }}
         css={{
           background: "linear-gradient(to bottom, rgba(8,9,15,0.95) 0%, rgba(8,9,15,0.9) 100%)",
           containerType: "inline-size",
@@ -537,8 +537,8 @@ export default function MainMenu() {
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
-          <VStack gap={{ base: 16, lg: 20 }} align="center">
-            <VStack gap={8} align="center" textAlign="center" maxW="4xl">
+          <VStack gap={{ base: "4.2rem", lg: "5.3rem" }} align="center">
+            <VStack gap="2.1rem" align="center" textAlign="center" maxW="4xl">
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
                 <HStack
@@ -551,10 +551,10 @@ export default function MainMenu() {
                   <KnightCharacter />
                   <Heading
                     ref={titleRef}
-                    fontSize={{ base: "3xl", md: "5xl", lg: "6xl" }}
+                    fontSize={{ base: "1.9rem", md: "3.1rem", lg: "3.9rem" }}
                     fontWeight={900}
-                    lineHeight={0.9}
-                    letterSpacing="0.05em"
+                    lineHeight="0.87"
+                    letterSpacing="0.051em"
                     color="fgEmphasized"
                     textShadow="3px 3px 0 rgba(0,0,0,0.8),
                                6px 6px 12px rgba(0,0,0,0.5),
@@ -580,11 +580,11 @@ export default function MainMenu() {
                   </Heading>
                 </HStack>
                 <Text
-                  fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}
+                  fontSize={{ base: "1.3rem", md: "1.6rem", lg: "1.9rem" }}
                   color="rgba(255,255,255,0.85)"
                   fontWeight={500}
-                  lineHeight={1.4}
-                  letterSpacing="0.02em"
+                  lineHeight="1.43"
+                  letterSpacing="0.021em"
                   maxW="3xl"
                   mx="auto"
                   textShadow="0 2px 4px rgba(0,0,0,0.6)"
@@ -618,20 +618,20 @@ export default function MainMenu() {
               </Box>
 
               <VStack
-                gap={6}
+                gap="1.6rem"
                 align="center"
                 css={{
                   // DPI scaling button group optimization
                   "@container (max-width: 600px)": {
-                    gap: "1rem", // 16px gap for mobile
+                    gap: "1.1rem", // 17.6px gap for mobile
                   },
                   "@container (min-width: 600px)": {
-                    gap: "1.5rem", // 24px gap for larger screens
+                    gap: "1.6rem", // 25.6px gap for larger screens
                   },
                 }}
               >
                 <HStack
-                  gap={4}
+                  gap="1.1rem"
                   flexWrap="wrap"
                   justify={{ base: "center", md: "flex-end" }}
                   css={{
@@ -651,14 +651,16 @@ export default function MainMenu() {
                     visual="solid"
                     palette="brand"
                     onClick={openCreateFlow}
+                    css={{ px: "22px", py: "13px", mr: "0.7rem" }}
                   >
                     <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
                   <AppButton
-                    size="lg"
+                    size="md"
                     visual="outline"
                     palette="gray"
+                    css={{ px: "17px", py: "11px" }}
                     onClick={async () => {
                       try {
                         await transition.navigateWithTransition("/rules", {
@@ -703,7 +705,7 @@ export default function MainMenu() {
       {/* ルーム一覧 */}
       <Container
         maxW="7xl"
-        py={{ base: 12, md: 16 }}
+        py={{ base: "3.1rem", md: "4.3rem" }}
         css={{
           // DPI scaling container optimization
           "@container (max-width: 600px)": {
@@ -722,7 +724,7 @@ export default function MainMenu() {
       >
         <Grid
           templateColumns={{ base: "1fr", xl: "1fr 340px" }}
-          gap={{ base: 8, xl: 12 }}
+          gap={{ base: "2.1rem", xl: "3.2rem" }}
           alignItems="start"
           css={{
             // DPI scaling grid optimization
