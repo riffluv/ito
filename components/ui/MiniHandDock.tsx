@@ -56,6 +56,7 @@ import { KEYBOARD_KEYS } from "./hints/constants";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
+import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 
 type HostPanelIconProps = {
   src: string;
@@ -1149,6 +1150,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           },
         }}
       >
+        <UpdateAvailableBadge />
+
         {/* 数字カード（大きく・モダン） */}
         <Box
           flexShrink={0}
