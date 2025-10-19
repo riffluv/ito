@@ -111,3 +111,10 @@
 - scaleForDpi(value) は calc(value * var(--dpi-scale, 1)) に展開され、100% DPI は 1 倍、125%/150% は app/globals.css のメディアクエリで設定した縮尺が適用される。
 - 高 DPI でも同じ見た目を維持したい余白・フォントだけに scaleForDpi() を使う。レイアウト幅で変化させたい要素は従来通り @container や Chakra のレスポンシブ props を利用する。
 - デザインを更新するときは 100% DPI 基準で値を決め、必要な箇所だけ scaleForDpi() を適用する。トークン（UNIFIED_LAYOUT や CSS の --card-*）を更新すると関連コンポーネントへ一括で反映できる。
+
+## 勝利演出メモ
+
+- 放射ラインは `components/ui/GameResultOverlay.tsx` の 8 本の `Box` を個別に `position="fixed"` で描画する構造を維持する。ラッパーで `overflow: hidden` を掛けると再び短くクリップされるので禁止。
+- ラインの長さは `width="200vw"`、`transformOrigin="left center"`、`transform={\`rotate(${angle}deg)\`}` を基本とし、GSAP 側の `scaleX` は旧値 (`LEFT/RIGHT 3.5`, `CENTER 4.0`) に合わせる。
+- デザイン調整を Claude Code に依頼するときは、放射ライン部分を巻き戻さないように注意メモを付ける。修正後に短くなった場合は該当ブロックを再度差し戻す。
+- 参考コミット: `1915dc01` (旧実装) と現在のブロックの差分を比較すると設計意図が把握しやすい。

@@ -763,7 +763,7 @@ export function GameResultOverlay({
 
       {/* 放射状ライン（8本）*/}
       {[...Array(8)].map((_, i) => {
-        // 45�x���݂��������炵��AI�I�ȉ��o�ɂ���
+        // 完璧な45度刻みを避け、微妙にずらす（AI感駆除）
         const baseAngles = [0, 43, 88, 137, 178, 223, 271, 316];
         const angle = baseAngles[i];
         return (
@@ -783,7 +783,6 @@ export function GameResultOverlay({
             opacity={0}
             zIndex={9998}
             pointerEvents="none"
-            style={{ contain: "layout paint" }}
           />
         );
       })}
