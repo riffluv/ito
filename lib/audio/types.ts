@@ -49,6 +49,11 @@ export type SoundPreloadOptions = {
   decode?: boolean;
 };
 
+export type SoundDuckOptions = {
+  amount?: number; // 0..1 (multiplier for ambient gain)
+  releaseMs?: number;
+};
+
 export type SoundDefinition = {
   id: SoundId;
   category: SoundCategory;
@@ -67,6 +72,7 @@ export type SoundDefinition = {
   /** Delay before playback in seconds. */
   minDelaySeconds?: number;
   maxDelaySeconds?: number;
+  duck?: SoundDuckOptions;
 };
 
 export type PlaybackOverrides = {
