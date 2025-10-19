@@ -92,6 +92,13 @@ NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE=1
 NEXT_PUBLIC_ENABLE_PWA=1
 ```
 
+### Stripe テストフロー
+
+- 各開発者は `.env.local` に Stripe テストキーと Price ID、Webhook Secret を設定する（共有秘密鍵の直接コミットは禁止）。
+- `stripe login` 実行後、`stripe listen --forward-to localhost:3000/api/webhooks/stripe` を起動してイベントをローカルに転送する。
+- `stripe trigger checkout.session.completed` を実行し、`lib/server/stripeCheckout.ts` が `stripe_checkout_sessions` と `stripe_checkout_entitlements` を更新するか確認する。
+- Firestore Emulator またはコンソールで生成されたドキュメントを確認し、証跡をスクリーンショットとして残す（共有先は別途 docs/STRIPE.md などを想定）。
+
 ### 3. Firebase設定
 
 1. [Firebase Console](https://console.firebase.google.com/) でプロジェクト作成
