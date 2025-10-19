@@ -27,10 +27,10 @@ export default function RulesPage() {
       bg="richBlack.900" // ドラクエ風リッチブラック背景
       position="relative"
     >
-      <Container maxW="4xl" py={{ base: 20, md: 24 }} position="relative">
+      <Container maxW="4xl" py={{ base: "5.3rem", md: "6.1rem" }} position="relative">
         {/* Hero Header */}
-        <VStack mb={{ base: 16, md: 20 }} align="stretch" gap={12}>
-          <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
+        <VStack mb={{ base: "4.2rem", md: "5.3rem" }} align="stretch" gap="3.2rem">
+          <Flex justify="space-between" align="center" wrap="wrap" gap="1.1rem">
             <AppButton
               onClick={async () => {
                 try {
@@ -38,7 +38,7 @@ export default function RulesPage() {
                     "/",
                     {
                       direction: "fade",
-                      duration: 0.8,
+                      duration: 0.83,
                       showLoading: true,
                       loadingSteps: [
                         { id: "return", message: "メインメニューに もどっています...", duration: 1000 },
@@ -67,7 +67,7 @@ export default function RulesPage() {
                 boxShadow: "1px 1px 0 rgba(0,0,0,0.8), 2px 2px 0 rgba(0,0,0,0.6)"
               }}
             >
-              <HStack gap={1.5}>
+              <HStack gap="0.4rem">
                 <BookOpen
                   size={14}
                   color="rgba(255,255,255,0.95)"
@@ -85,17 +85,17 @@ export default function RulesPage() {
             </Box>
           </Flex>
 
-          <VStack align="start" gap={6}>
+          <VStack align="start" gap="1.6rem">
             <Heading
               size="4xl"
               fontWeight="bold"
               color="rgba(255,255,255,0.95)"
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8), 0 0 12px rgba(255,215,0,0.2)"
-              letterSpacing="0.08em"
+              letterSpacing="0.083em"
               textAlign="center"
-              mb={4}
-              pb={3}
+              mb="1.1rem"
+              pb="0.8rem"
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.2)",
               }}
@@ -104,7 +104,7 @@ export default function RulesPage() {
             </Heading>
             <HStack
               align="center"
-              gap={8}
+              gap="2.1rem"
               flexWrap={{ base: "wrap", md: "nowrap" }}
               justify={{ base: "center", md: "center" }}
               w="100%"
@@ -133,7 +133,7 @@ export default function RulesPage() {
 
               {/* テキストボックス */}
               <Box
-                p={6}
+                p="1.6rem"
                 bg="bgPanel"
                 border="borders.retrogame"
                 borderColor="whiteAlpha.90"
@@ -143,13 +143,13 @@ export default function RulesPage() {
                 minW={{ base: "100%", md: "0" }}
               >
                 <Text
-                  fontSize={{ base: "md", md: "lg" }}
+                  fontSize={{ base: "1.05rem", md: "1.17rem" }}
                   color="whiteAlpha.95"
                   fontFamily="monospace"
-                  lineHeight="1.7"
+                  lineHeight="1.73"
                   textAlign="center"
                   textShadow="1px 1px 2px rgba(0,0,0,0.8)"
-                  letterSpacing="0.3px"
+                  letterSpacing="0.31px"
                 >
                   協力型のパーティーゲーム。
                   <br />
@@ -168,7 +168,7 @@ export default function RulesPage() {
           </VStack>
         </VStack>
 
-        <VStack gap={{ base: 10, md: 12 }} align="stretch">
+        <VStack gap={{ base: "2.7rem", md: "3.2rem" }} align="stretch">
           {/* ゲームの流れ */}
           <Box
             bg="bgPanel"
@@ -176,7 +176,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: 6, md: 8 }}
+            p={{ base: "1.6rem", md: "2.1rem" }}
           >
             <Heading
               size="lg"
@@ -184,8 +184,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb={6}
-              pb={3}
+              mb="1.6rem"
+              pb="0.8rem"
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -222,15 +222,15 @@ export default function RulesPage() {
               ].map((step, index) => (
                 <List.Item key={index}>
                   <Box
-                    p={5}
-                    mb={4}
+                    p="1.3rem"
+                    mb="1.1rem"
                     border="borders.retrogameThin"
                     borderColor="whiteAlpha.60"
                     borderRadius={0}
                     boxShadow="2px 2px 0 rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.4)"
-                    transition="all 0.18s ease"
+                    transition="all 0.18s cubic-bezier(.2,1,.3,1)"
                     _hover={{
-                      transform: `translateY(-${index % 2 === 0 ? '2' : '3'}px)`,
+                      transform: `translateY(-${index % 2 === 0 ? '2.3' : '3.1'}px)`,
                       boxShadow: "3px 3px 0 rgba(0,0,0,0.8), 0 6px 16px rgba(0,0,0,0.6)",
                       borderColor: "whiteAlpha.75",
                     }}
@@ -238,7 +238,7 @@ export default function RulesPage() {
                       background: "linear-gradient(135deg, rgba(18,20,28,0.85) 0%, rgba(12,14,20,0.9) 100%)",
                     }}
                   >
-                    <VStack align="start" gap={2} flex={1}>
+                    <VStack align="start" gap="0.55rem" flex={1}>
                       <Text
                         fontWeight="bold"
                         color="rgba(255,255,255,0.95)"
@@ -272,7 +272,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: 6, md: 8 }}
+            p={{ base: "1.6rem", md: "2.1rem" }}
           >
             <Heading
               size="lg"
@@ -280,8 +280,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb={6}
-              pb={3}
+              mb="1.6rem"
+              pb="0.8rem"
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -328,7 +328,7 @@ export default function RulesPage() {
             borderColor="whiteAlpha.90"
             borderRadius={0}
             boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
-            p={{ base: 6, md: 8 }}
+            p={{ base: "1.6rem", md: "2.1rem" }}
           >
             <Heading
               size="lg"
@@ -336,8 +336,8 @@ export default function RulesPage() {
               fontFamily="monospace"
               textShadow="0 2px 4px rgba(0,0,0,0.8)"
               textAlign="center"
-              mb={6}
-              pb={3}
+              mb="1.6rem"
+              pb="0.8rem"
               css={{
                 borderBottom: "2px solid rgba(255,255,255,0.15)",
               }}
@@ -345,16 +345,16 @@ export default function RulesPage() {
               攻略のポイント
             </Heading>
 
-            <VStack gap={{ base: 8, md: 10 }} align="stretch">
+            <VStack gap={{ base: "2.1rem", md: "2.7rem" }} align="stretch">
               <Box>
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb={4}
+                  mb="1.1rem"
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "lg", md: "xl" }}
-                  letterSpacing="0.05em"
+                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  letterSpacing="0.051em"
                 >
                   ルール（要点）
                 </Text>
@@ -377,11 +377,11 @@ export default function RulesPage() {
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb={4}
+                  mb="1.1rem"
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "lg", md: "xl" }}
-                  letterSpacing="0.05em"
+                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  letterSpacing="0.051em"
                 >
                   コツ
                 </Text>
@@ -404,11 +404,11 @@ export default function RulesPage() {
                 <Text
                   fontWeight="bold"
                   color="white"
-                  mb={4}
+                  mb="1.1rem"
                   fontFamily="monospace"
                   textShadow="2px 2px 0px #000"
-                  fontSize={{ base: "lg", md: "xl" }}
-                  letterSpacing="0.05em"
+                  fontSize={{ base: "1.17rem", md: "1.3rem" }}
+                  letterSpacing="0.051em"
                 >
                   例
                 </Text>
@@ -420,7 +420,7 @@ export default function RulesPage() {
                   bg="bgSubtle"
                   boxShadow="2px 2px 0 rgba(0,0,0,0.8), 3px 3px 0 rgba(0,0,0,0.6)"
                 >
-                  <VStack align="start" gap={3}>
+                  <VStack align="start" gap="0.8rem">
                     <Text
                       color="white"
                       fontSize={{ base: "sm", md: "md" }}
@@ -491,7 +491,7 @@ export default function RulesPage() {
                   "/",
                   {
                     direction: "fade",
-                    duration: 0.8,
+                    duration: 0.83,
                     showLoading: true,
                     loadingSteps: [
                       { id: "return", message: "メインメニューに もどっています...", duration: 1000 },
