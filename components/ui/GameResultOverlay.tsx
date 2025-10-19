@@ -1,7 +1,7 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Text, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
@@ -10,6 +10,71 @@ const VICTORY_TITLE = "🏆 勝利！";
 const FAILURE_TITLE = "💀 失敗…";
 const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
 const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
+
+const RAY_ANGLES = [0, 43, 88, 137, 178, 223, 271, 316] as const;
+const RAY_THICKNESS = 36;
+const RAY_LENGTH = 1900;
+const VIEWBOX_EXTENT = RAY_LENGTH * 3.5;
+
+interface VictoryBurstRaysProps {
+  registerRayRef: (index: number) => (node: SVGRectElement | null) => void;
+}
+
+function VictoryBurstRays({ registerRayRef }: VictoryBurstRaysProps) {
+  const gradientBaseId = useId();
+  const gradientId = `${gradientBaseId}-victory-ray`;
+  const filterId = `${gradientBaseId}-victory-glow`;
+
+  return (
+    <chakra.svg
+      aria-hidden="true"
+      position="fixed"
+      inset={0}
+      width="100%"
+      height="100%"
+      viewBox={`${-VIEWBOX_EXTENT} ${-VIEWBOX_EXTENT} ${VIEWBOX_EXTENT * 2} ${VIEWBOX_EXTENT * 2}`}
+      pointerEvents="none"
+      zIndex={9998}
+      style={{ overflow: "visible" }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" x2="100%" y1="50%" y2="50%">
+          <stop offset="0%" stopColor="#fffbe6" stopOpacity="1" />
+          <stop offset="22%" stopColor="#ffeeb3" stopOpacity="0.96" />
+          <stop offset="55%" stopColor="#ffd45c" stopOpacity="0.72" />
+          <stop offset="82%" stopColor="#ffb347" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+        <filter id={filterId} x="-80%" y="-160%" width="260%" height="420%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {RAY_ANGLES.map((angle, index) => (
+        <g key={angle} transform={`rotate(${angle})`}>
+          <rect
+            ref={registerRayRef(index)}
+            x={0}
+            y={-RAY_THICKNESS / 2}
+            width={RAY_LENGTH}
+            height={RAY_THICKNESS}
+            fill={`url(#${gradientId})`}
+            opacity={0}
+            filter={`url(#${filterId})`}
+            style={{
+              transformBox: "fill-box",
+              transformOrigin: "0% 50%",
+            }}
+          />
+        </g>
+      ))}
+    </chakra.svg>
+  );
+}
 
 interface GameResultOverlayProps {
   failed?: boolean;
@@ -26,7 +91,7 @@ export function GameResultOverlay({
   const textRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
-  const linesRef = useRef<(HTMLDivElement | null)[]>([]);
+  const linesRef = useRef<(SVGRectElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
@@ -73,6 +138,12 @@ export function GameResultOverlay({
   }, [revealedAt]);
 
   const playbackKeyRef = useRef<string | null>(null);
+  const registerLineRef = useCallback(
+    (index: number) => (node: SVGRectElement | null) => {
+      linesRef.current[index] = node;
+    },
+    []
+  );
 
   useEffect(() => {
     const currentSettings = soundManager?.getSettings();
@@ -107,6 +178,24 @@ export function GameResultOverlay({
       playSuccessEpic();
     }
   }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, resolveRevealTimestamp, soundManager]);
+
+  useEffect(() => {
+    if (mode !== "overlay" || typeof window === "undefined") {
+      return;
+    }
+    const root = document.documentElement;
+    const body = document.body;
+    const prevRootOverflow = root.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    return () => {
+      root.style.overflow = prevRootOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "overlay") return;
@@ -385,6 +474,14 @@ export function GameResultOverlay({
         rotation: 0,
         opacity: 1, // 勝利時は即座に表示
       });
+      linesRef.current.forEach((line) => {
+        if (line) {
+          gsap.set(line, {
+            transformOrigin: "0% 50%",
+            transformBox: "fill-box",
+          });
+        }
+      });
 
       // ====================================================
       // BOOST Phase 0: ホワイトフラッシュ（衝撃的開幕）
@@ -417,7 +514,7 @@ export function GameResultOverlay({
           line,
           { scaleX: 0, opacity: 1 },
           {
-            scaleX: 3.5,
+            scaleX: 4.6,
             opacity: 0,
             duration: 0.58,
             ease: "power3.out",
@@ -434,7 +531,7 @@ export function GameResultOverlay({
           line,
           { scaleX: 0, opacity: 1 },
           {
-            scaleX: 3.5,
+            scaleX: 4.6,
             opacity: 0,
             duration: 0.58,
             ease: "power3.out",
@@ -451,7 +548,7 @@ export function GameResultOverlay({
           line,
           { scaleX: 0, opacity: 1 },
           {
-            scaleX: 4,
+            scaleX: 5.4,
             opacity: 0,
             duration: 0.83,
             ease: "power4.out",
@@ -492,22 +589,24 @@ export function GameResultOverlay({
       tl.fromTo(
         overlay,
         {
-          x: -window.innerWidth - 500, // 画面左外
+          x: () => -window.innerWidth * 1.45 - 800, // 画面左外さらに遠くから突入
           opacity: 0,
-          scale: 0.5,
-          rotation: -25,
-          filter: "blur(20px) brightness(5)", // 超明るくブレながら
+          scale: 0.38,
+          rotation: -28,
+          skewX: -9,
+          filter: "blur(26px) brightness(5.2)", // 超明るくブレながら
         },
         {
           x: 0, // 中央に到着！
           opacity: 1,
-          scale: 1.3,
-          rotation: 5, // 少し回転しながら
-          filter: "blur(0px) brightness(1.5)",
-          duration: 0.42, // 0.5 → 0.4 → 0.42 に微調整！
+          scale: 1.35,
+          rotation: 7, // 少し回転しながら
+          skewX: 0,
+          filter: "blur(0px) brightness(1.55)",
+          duration: 0.46, // 滑空を少し長く
           ease: "power3.out",
         },
-        0.15 // ライン爆発と同時
+        0.12 // ライン爆発より一瞬早く突入開始
       )
       // 到着時の反動（ビシッ！）
       .to(overlay, {
@@ -741,85 +840,64 @@ export function GameResultOverlay({
   }
 
   return (
-    <Box
-      ref={containerRef}
-      position="absolute"
-      top="50%"
-      left="50%"
-      zIndex={10}
-      opacity={failed ? 0 : undefined}
-      style={failed ? { opacity: 0 } : undefined}
-    >
-      {/* ホワイトフラッシュ（全画面） */}
-      <Box
-        ref={flashRef}
-        position="fixed"
-        inset={0}
-        bg="white"
-        opacity={0}
-        pointerEvents="none"
-        zIndex={9999}
-      />
-
-      {/* 放射状ライン（8本）*/}
-      {[...Array(8)].map((_, i) => {
-        // 45�x���݂��������炵��AI�I�ȉ��o�ɂ���
-        const baseAngles = [0, 43, 88, 137, 178, 223, 271, 316];
-        const angle = baseAngles[i];
-        return (
+    <>
+      {mode === "overlay" && (
+        <>
           <Box
-            key={i}
-            ref={(el: HTMLDivElement | null) => {
-              linesRef.current[i] = el;
-            }}
+            ref={flashRef}
             position="fixed"
-            top="50%"
-            left="50%"
-            width="200vw"
-            height="6px"
-            bg="linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, transparent)"
-            transformOrigin="left center"
-            transform={`rotate(${angle}deg)`}
+            inset={0}
+            bg="white"
             opacity={0}
-            zIndex={9998}
             pointerEvents="none"
-            style={{ contain: "layout paint" }}
+            zIndex={9999}
           />
-        );
-      })}
+          <VictoryBurstRays registerRayRef={registerLineRef} />
+        </>
+      )}
 
       <Box
-        ref={overlayRef}
-        px={{ base: 6, md: 8 }}
-        py={{ base: 4, md: 5 }}
-        borderRadius={0}
-        fontWeight={800}
-        fontSize={{ base: "22px", md: "28px" }}
-        color="white"
-        letterSpacing={1}
-        border="3px solid"
-        borderColor={UI_TOKENS.COLORS.whiteAlpha90}
-        css={{
-          background: UI_TOKENS.COLORS.panelBg,
-          boxShadow:
-            "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
-        }}
+        ref={containerRef}
+        position="absolute"
+        top="50%"
+        left="50%"
+        zIndex={10}
+        opacity={failed ? 0 : undefined}
+        style={failed ? { opacity: 0 } : undefined}
       >
-        <Box ref={textRef} textAlign="center">
-          {title}
-          <Text
-            fontSize={{ base: "15px", md: "17px" }}
-            mt={2}
-            opacity={0.9}
-            fontFamily="monospace"
-            fontWeight={500}
-            letterSpacing="0.5px"
-            textShadow="1px 1px 0px #000"
-          >
-            {subtext}
-          </Text>
+        <Box
+          ref={overlayRef}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 4, md: 5 }}
+          borderRadius={0}
+          fontWeight={800}
+          fontSize={{ base: "22px", md: "28px" }}
+          color="white"
+          letterSpacing={1}
+          border="3px solid"
+          borderColor={UI_TOKENS.COLORS.whiteAlpha90}
+          css={{
+            background: UI_TOKENS.COLORS.panelBg,
+            boxShadow:
+              "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
+          }}
+        >
+          <Box ref={textRef} textAlign="center">
+            {title}
+            <Text
+              fontSize={{ base: "15px", md: "17px" }}
+              mt={2}
+              opacity={0.9}
+              fontFamily="monospace"
+              fontWeight={500}
+              letterSpacing="0.5px"
+              textShadow="1px 1px 0px #000"
+            >
+              {subtext}
+            </Text>
+          </Box>
         </Box>
       </Box>
-    </Box>
+    </>
   );
 }
