@@ -170,7 +170,7 @@ export class SoundManager {
     }
 
     if (definition.category !== "ambient") {
-      this.triggerAmbientDuck();
+      this.triggerAmbientDuck(definition.duck);
     }
 
     const playbackRate = clamp(
@@ -589,10 +589,12 @@ export class SoundManager {
     return base;
   }
 
-  private triggerAmbientDuck() {
+  private triggerAmbientDuck(options?: { amount?: number; releaseMs?: number }) {
     if (!isBrowser()) return;
     if (this.settings.categoryVolume.ambient <= 0) return;
-    this.ambientDuckAmount = 0.5;
+    const amount = clamp(options?.amount ?? 0.5, 0, 1);
+    const releaseMs = Math.max(0, options?.releaseMs ?? 240);
+    this.ambientDuckAmount = amount;
     this.applyGainTargets(0.12);
     if (this.ambientDuckTimeout !== null) {
       window.clearTimeout(this.ambientDuckTimeout);
@@ -601,7 +603,7 @@ export class SoundManager {
       this.ambientDuckAmount = 1;
       this.applyGainTargets(0.12);
       this.ambientDuckTimeout = null;
-    }, 240);
+    }, releaseMs);
   }
 
   private enqueuePendingPlay(soundId: SoundId, overrides?: PlaybackOverrides) {

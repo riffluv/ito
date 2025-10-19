@@ -73,6 +73,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration (normal)",
     stopPrevious: true,
+    duck: { amount: 0.15, releaseMs: 4200 },
   }),
   createDefinition({
     id: "clear_success2",
@@ -83,6 +84,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2, max: 0 },
     note: "Success celebration (epic)",
     stopPrevious: true,
+    duck: { amount: 0.15, releaseMs: 4500 },
   }),
   createDefinition({
     id: "clear_failure",
@@ -93,6 +95,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -2.5, max: -0.5 },
     note: "Failure animation sting",
     stopPrevious: true,
+    duck: { amount: 0.2, releaseMs: 3600 },
   }),
   createDefinition({
     id: "drag_pickup",
@@ -149,6 +152,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -0.5, max: 1.5 },
     minDelaySeconds: 0.05,
     note: "Short win jingle",
+    duck: { amount: 0.18, releaseMs: 3200 },
   }),
   createDefinition({
     id: "result_failure",
@@ -158,6 +162,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -0.5, max: 0.5 },
     minDelaySeconds: 0.05,
     note: "Short fail sting",
+    duck: { amount: 0.2, releaseMs: 3000 },
   }),
   createDefinition({
     id: "notify_warning",
@@ -177,6 +182,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
     gainDbRange: { min: -4, max: -2 },
     note: "Round intro fanfare",
     stopPrevious: true,
+    duck: { amount: 0.22, releaseMs: 2600 },
   }),
   createDefinition({
     id: "clue_decide",
