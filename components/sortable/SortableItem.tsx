@@ -42,6 +42,7 @@ export function SortableItem({
       {...attributes} 
       {...listeners}
       position="relative"
+      data-interactive="true"
       css={{
         // ドラッグ中の視覚効果
         // ドラッグ中のオリジナル要素は不可視（透明）に留める

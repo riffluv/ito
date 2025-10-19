@@ -1,5 +1,6 @@
 "use client";
 import { IconButton as CIconButton, useRecipe } from "@chakra-ui/react";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { buttonRecipe } from "../../theme/recipes/button.recipe";
 
 type Visual = "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
@@ -25,13 +26,22 @@ export function AppIconButton({
     variant: visual as any,
   });
 
+  const enforcedStyles = {
+    ...styles,
+    "@media (pointer: coarse)": {
+      ...(styles as any)?.["@media (pointer: coarse)"] ?? {},
+      minHeight: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
+      minWidth: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
+    },
+  } as Record<string, unknown>;
+
   const computedVariant = variant ?? visual ?? "ghost";
   const computedPalette = colorPalette ?? palette ?? ("brand" as any);
 
   return (
     <CIconButton
       aria-label={rest["aria-label"] || "icon button"}
-      {...(styles as any)}
+      {...(enforcedStyles as any)}
       variant={computedVariant}
       colorPalette={computedPalette as any}
       {...rest}
@@ -40,4 +50,3 @@ export function AppIconButton({
 }
 
 export default AppIconButton;
-

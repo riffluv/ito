@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { logDebug } from "@/lib/utils/log";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { SOUND_INDEX } from "./registry";
 import { buildCandidateUrls } from "./paths";
 import {
@@ -93,6 +94,12 @@ export class SoundManager {
   private ambientDuckAmount = 1;
   private ambientDuckTimeout: number | null = null;
   private pendingPlays: { soundId: SoundId; overrides?: PlaybackOverrides }[] = [];
+  private bootstrapTimestamp =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
+  private firstUnlockRecorded = false;
+  private firstPlayRecorded = false;
+  private lastVisibilityResumeAt: number | null = null;
+  private firstSoundAfterVisibilityRecorded = false;
 
   constructor() {
     if (!isBrowser()) return;
@@ -151,6 +158,29 @@ export class SoundManager {
 
     const context = this.ensureContext();
     if (!context || !this.masterGain) return;
+
+    const nowTimestamp =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    if (!internal) {
+      if (!this.firstPlayRecorded) {
+        setMetric(
+          "audio",
+          "firstSoundSinceBootMs",
+          Math.round(nowTimestamp - this.bootstrapTimestamp)
+        );
+        this.firstPlayRecorded = true;
+      }
+      if (
+        this.lastVisibilityResumeAt != null &&
+        !this.firstSoundAfterVisibilityRecorded
+      ) {
+        const delta = nowTimestamp - this.lastVisibilityResumeAt;
+        setMetric("audio", "lastVisibilityToSoundMs", Math.round(delta));
+        bumpMetric("audio", "visibilityToSoundSamples", 1);
+        this.firstSoundAfterVisibilityRecorded = true;
+      }
+    }
 
     await this.resumeContext();
 
@@ -248,6 +278,9 @@ export class SoundManager {
         `[SoundManager] ${soundId} loaded from ${url} has zero duration.`
       );
     }
+
+    bumpMetric("audio", "playCount", 1);
+    setMetric("audio", "lastSoundId", soundId);
   }
 
   setMuted(muted: boolean) {
@@ -624,6 +657,18 @@ export class SoundManager {
   }
 
   private handleVisibilityChange = () => {
+    if (typeof document === "undefined") return;
+    if (document.visibilityState === "hidden") {
+      this.lastVisibilityResumeAt = null;
+      this.firstSoundAfterVisibilityRecorded = false;
+      bumpMetric("audio", "visibilityHidden", 1);
+    } else if (document.visibilityState === "visible") {
+      this.lastVisibilityResumeAt =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      this.firstSoundAfterVisibilityRecorded = false;
+      bumpMetric("audio", "visibilityVisible", 1);
+    }
+
     if (!this.context) return;
     if (
       document.visibilityState === "hidden" &&
@@ -667,6 +712,17 @@ export class SoundManager {
     }
     await this.resumeContext();
     if (this.context && this.context.state === "running") {
+      if (!this.firstUnlockRecorded) {
+        const now =
+          typeof performance !== "undefined" ? performance.now() : Date.now();
+        setMetric(
+          "audio",
+          "firstUnlockMs",
+          Math.round(now - this.bootstrapTimestamp)
+        );
+        this.firstUnlockRecorded = true;
+      }
+      bumpMetric("audio", "unlocks", 1);
       await this.flushPendingPlays();
       this.detachUnlockHandlers();
     }

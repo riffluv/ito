@@ -12,8 +12,22 @@ import {
   MessageCircle,
   Users,
 } from "lucide-react";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+
+const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom, 0px)";
+const SAFE_AREA_TOP = "env(safe-area-inset-top, 0px)";
+const SHEET_HANDLE_HEIGHT = 72;
+const PARTIAL_HEIGHT_RATIO = 0.45;
+const FULL_HEIGHT_RATIO = 0.9;
+
+const getViewportHeight = () => {
+  if (typeof window === "undefined") return 0;
+  return window.visualViewport?.height ?? window.innerHeight;
+};
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
 /**
  * MobileBottomSheet: モバイル用ボトムシート実装
@@ -45,6 +59,7 @@ export function MobileBottomSheet({
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [contentType, setContentType] = useState<ContentType>("chat");
   const [isDragging, setIsDragging] = useState(false);
+  const [, setViewportTick] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -116,39 +131,63 @@ export function MobileBottomSheet({
     }
   })();
 
-  // シート高さ計算
-  const getSheetHeight = () => {
-    switch (sheetState) {
-      case "collapsed":
-        return 60;
-      case "partial":
-        return window.innerHeight * 0.4; // 40dvh相当
-      case "full":
-        return window.innerHeight * 0.8; // 80dvh相当
-      default:
-        return 60;
-    }
-  };
+  const getSheetHeight = useCallback(
+    (target: SheetState): number => {
+      const viewportHeight = getViewportHeight();
+      if (viewportHeight <= 0) {
+        if (target === "collapsed") return SHEET_HANDLE_HEIGHT;
+        return SHEET_HANDLE_HEIGHT * (target === "partial" ? 2.2 : 3);
+      }
+      if (target === "collapsed") {
+        return SHEET_HANDLE_HEIGHT;
+      }
+      if (target === "partial") {
+        const partial = viewportHeight * PARTIAL_HEIGHT_RATIO;
+        return Math.max(SHEET_HANDLE_HEIGHT * 2, partial);
+      }
+      const full = viewportHeight * FULL_HEIGHT_RATIO;
+      return Math.max(full, viewportHeight - SHEET_HANDLE_HEIGHT);
+    },
+    []
+  );
+
+  const getSheetOffset = useCallback(
+    (target: SheetState): number => {
+      const viewportHeight = getViewportHeight();
+      return clamp(
+        viewportHeight - getSheetHeight(target),
+        0,
+        Math.max(viewportHeight - SHEET_HANDLE_HEIGHT, 0)
+      );
+    },
+    [getSheetHeight]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const handleViewportChange = () => {
+      setViewportTick((tick) => tick + 1);
+      if (sheetRef.current) {
+        const y = getSheetOffset(sheetState);
+        gsap.set(sheetRef.current, { y });
+      }
+    };
+    viewport.addEventListener("resize", handleViewportChange);
+    viewport.addEventListener("scroll", handleViewportChange);
+    return () => {
+      viewport.removeEventListener("resize", handleViewportChange);
+      viewport.removeEventListener("scroll", handleViewportChange);
+    };
+  }, [getSheetOffset, sheetState]);
 
   // GSAPアニメーション - シート位置更新
   const animateSheet = (targetState: SheetState) => {
     if (!sheetRef.current) return;
-
-    const height = (() => {
-      switch (targetState) {
-        case "collapsed":
-          return 60;
-        case "partial":
-          return window.innerHeight * 0.4;
-        case "full":
-          return window.innerHeight * 0.8;
-        default:
-          return 60;
-      }
-    })();
-
+    const targetOffset = getSheetOffset(targetState);
     gsap.to(sheetRef.current, {
-      y: window.innerHeight - height,
+      y: targetOffset,
       duration: 0.4,
       ease: "back.out(1.2)",
     });
@@ -200,15 +239,12 @@ export function MobileBottomSheet({
     if (!isDragging || !sheetRef.current) return;
 
     const deltaY = e.clientY - dragStartY.current;
-    const currentHeight = getSheetHeight();
-    const newY = Math.max(
-      window.innerHeight - window.innerHeight * 0.8,
-      Math.min(
-        window.innerHeight - 60,
-        window.innerHeight - currentHeight + deltaY
-      )
-    );
-
+    const viewportHeight = getViewportHeight();
+    const currentHeight = getSheetHeight(sheetState);
+    const minY = getSheetOffset("full");
+    const maxY = getSheetOffset("collapsed");
+    const proposedY = viewportHeight - currentHeight + deltaY;
+    const newY = clamp(proposedY, minY, maxY);
     gsap.set(sheetRef.current, { y: newY });
   };
 
@@ -227,20 +263,44 @@ export function MobileBottomSheet({
       } else if (sheetState === "partial") {
         setSheetState("full");
       }
-    } else if (velocity > 0.5 || deltaY > 50) {
+      if (sheetRef.current) {
+        sheetRef.current.releasePointerCapture(e.pointerId);
+      }
+      return;
+    }
+
+    if (velocity > 0.5 || deltaY > 50) {
       // 下方向
       if (sheetState === "full") {
         setSheetState("partial");
       } else if (sheetState === "partial") {
         setSheetState("collapsed");
       }
-    } else {
-      // 元の位置に戻す
-      animateSheet(sheetState);
+      if (sheetRef.current) {
+        sheetRef.current.releasePointerCapture(e.pointerId);
+      }
+      return;
     }
 
     if (sheetRef.current) {
       sheetRef.current.releasePointerCapture(e.pointerId);
+      const currentY =
+        (gsap.getProperty(sheetRef.current, "y") as number) ??
+        getSheetOffset(sheetState);
+      const collapsedThreshold =
+        (getSheetOffset("collapsed") + getSheetOffset("partial")) / 2;
+      const fullThreshold =
+        (getSheetOffset("full") + getSheetOffset("partial")) / 2;
+
+      if (currentY <= fullThreshold) {
+        setSheetState("full");
+      } else if (currentY >= collapsedThreshold) {
+        setSheetState("collapsed");
+      } else {
+        setSheetState("partial");
+      }
+    } else {
+      animateSheet(sheetState);
     }
   };
 
@@ -258,13 +318,18 @@ export function MobileBottomSheet({
     }
   };
 
+  const contentHeight = Math.max(
+    getSheetHeight(sheetState) - SHEET_HANDLE_HEIGHT,
+    0
+  );
+
   // 状態変更時のアニメーション実行
   useEffect(() => {
     if (prefersReduced) {
       // 最小限の状態にセット
       if (sheetRef.current)
         gsap.set(sheetRef.current, {
-          y: window.innerHeight - getSheetHeight(),
+          y: getSheetOffset(sheetState),
         });
       if (overlayRef.current)
         gsap.set(overlayRef.current, {
@@ -280,13 +345,13 @@ export function MobileBottomSheet({
         setTimeout(() => animateContent(), 100);
       }
     }
-  }, [sheetState, prefersReduced]);
+  }, [sheetState, prefersReduced, getSheetOffset]);
 
   // 初期化時のポジション設定
   useEffect(() => {
     if (sheetRef.current) {
       gsap.set(sheetRef.current, {
-        y: window.innerHeight - 60,
+        y: getSheetOffset("collapsed"),
       });
     }
     if (overlayRef.current) {
@@ -315,7 +380,7 @@ export function MobileBottomSheet({
         // ignore
       }
     };
-  }, []);
+  }, [getSheetOffset]);
 
   // アクティブボタンのスタイル
   const getButtonStyle = (type: ContentType) => ({
@@ -334,6 +399,8 @@ export function MobileBottomSheet({
       right="0"
       zIndex="modal"
       pointerEvents="none" // 背景部分はクリック不可
+      paddingBottom={SAFE_AREA_BOTTOM}
+      paddingTop={SAFE_AREA_TOP}
     >
       {/* オーバーレイ (フルスクリーン時) */}
       <Box
@@ -360,10 +427,12 @@ export function MobileBottomSheet({
           borderRight: `1px solid ${borderColorVar}`,
           boxShadow: UNIFIED_LAYOUT.ELEVATION.PANEL.DISTINCT,
           pointerEvents: "auto",
-          minHeight: "60px",
+          minHeight: `${SHEET_HANDLE_HEIGHT}px`,
           maxHeight: "80dvh",
           position: "absolute",
           width: "100%",
+          paddingBottom: SAFE_AREA_BOTTOM,
+          touchAction: "none",
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -391,7 +460,7 @@ export function MobileBottomSheet({
         </Box>
         {/* ドラッグハンドル */}
         <Flex
-          h="60px"
+          h={`${SHEET_HANDLE_HEIGHT}px`}
           align="center"
           justify="space-between"
           px={4}
@@ -399,6 +468,8 @@ export function MobileBottomSheet({
             sheetState !== "collapsed" ? `1px solid ${borderColorVar}` : "none"
           }
           cursor={isDragging ? "grabbing" : "grab"}
+          data-interactive="true"
+          css={{ touchAction: "none", WebkitUserSelect: "none" }}
         >
           {/* ドラッグインジケーター */}
           <Box
@@ -480,11 +551,20 @@ export function MobileBottomSheet({
           <Box
             ref={contentRef}
             style={{
-              height: `calc(${getSheetHeight()}px - 60px)`,
+              height: `${contentHeight}px`,
               overflow: "hidden",
+              touchAction: "auto",
             }}
           >
-            <Box h="100%" overflow="auto" bg="inherit">
+            <Box
+              h="100%"
+              overflow="auto"
+              bg="inherit"
+              css={{
+                overscrollBehaviorY: "contain",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               {renderContent()}
             </Box>
           </Box>
