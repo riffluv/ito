@@ -1,8 +1,9 @@
 import { getAdminDb } from "@/lib/server/firebaseAdmin";
 import { getStripeClient } from "@/lib/stripe/client";
-import { logInfo, logWarn } from "@/lib/utils/log";
+import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import Stripe from "stripe";
+import * as Sentry from "@sentry/nextjs";
 
 type EventContext = {
   id: string;
@@ -153,141 +154,160 @@ export async function applyCheckoutFulfillment(
   session: Stripe.Checkout.Session,
   context: EventContext
 ): Promise<void> {
-  const fullSession = await retrieveCheckoutSession(session.id);
-  const metadata = normalizeMetadata(fullSession.metadata);
-  const lineItems = mapLineItems(fullSession);
-  const beneficiary = resolveBeneficiary(fullSession, metadata);
+  try {
+    const fullSession = await retrieveCheckoutSession(session.id);
+    const metadata = normalizeMetadata(fullSession.metadata);
+    const lineItems = mapLineItems(fullSession);
+    const beneficiary = resolveBeneficiary(fullSession, metadata);
 
-  const paymentStatus =
-    fullSession.payment_status ?? session.payment_status ?? "unpaid";
-  const isPaid =
-    paymentStatus === "paid" || paymentStatus === "no_payment_required";
-  const db = getAdminDb();
+    const paymentStatus =
+      fullSession.payment_status ?? session.payment_status ?? "unpaid";
+    const isPaid =
+      paymentStatus === "paid" || paymentStatus === "no_payment_required";
+    const db = getAdminDb();
 
-  if (!isPaid) {
-    logInfo("stripe", "checkout session not yet paid, skipping fulfillment", {
-      sessionId: fullSession.id,
-      paymentStatus,
-      eventId: context.id,
-    });
-  }
-
-  const amountTotal = fullSession.amount_total ?? null;
-  const totalQuantity = lineItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  await db.runTransaction(async (tx) => {
-    const sessionsRef = db.collection(CHECKOUT_COLLECTION).doc(fullSession.id);
-    const entitlementRef = db
-      .collection(ENTITLEMENT_COLLECTION)
-      .doc(fullSession.id);
-    const sessionSnap = await tx.get(sessionsRef);
-    const createdAt =
-      timestampFromSeconds(fullSession.created) ??
-      timestampFromSeconds(session.created) ??
-      Timestamp.now();
-
-    const customerId = (() => {
-      if (typeof fullSession.customer === "string") return fullSession.customer;
-      if (fullSession.customer && typeof fullSession.customer === "object") {
-        return fullSession.customer.id;
-      }
-      return null;
-    })();
-
-    const baseDoc: SessionDocUpdate = omitUndefined({
-      amountSubtotal: fullSession.amount_subtotal ?? null,
-      amountTotal,
-      currency: fullSession.currency ?? null,
-      customerId,
-      customerEmail:
-        fullSession.customer_details?.email ??
-        fullSession.customer_email ??
-        null,
-      clientReferenceId: fullSession.client_reference_id ?? null,
-      paymentStatus,
-      status: fullSession.status ?? session.status ?? null,
-      mode: fullSession.mode,
-      livemode: fullSession.livemode,
-      metadata,
-      lineItems,
-      quantityTotal: totalQuantity,
-      beneficiary: beneficiary ?? null,
-      paymentIntentId:
-        typeof fullSession.payment_intent === "string"
-          ? fullSession.payment_intent
-          : (fullSession.payment_intent?.id ?? null),
-      subscriptionId:
-        typeof fullSession.subscription === "string"
-          ? fullSession.subscription
-          : (fullSession.subscription?.id ?? null),
-      updatedAt: FieldValue.serverTimestamp(),
-      lastEvent: buildEventInfo(context),
-    });
-
-    if (!sessionSnap.exists) {
-      baseDoc.createdAt = createdAt;
-      baseDoc.firstEventId = context.id;
+    if (!isPaid) {
+      logInfo("stripe", "checkout session not yet paid, skipping fulfillment", {
+        sessionId: fullSession.id,
+        paymentStatus,
+        eventId: context.id,
+      });
     }
 
-    const existingData = sessionSnap.data() as
-      | Record<string, unknown>
-      | undefined;
-    const existingFulfillmentRaw = existingData?.["fulfillment"];
-    const existingFulfillment =
-      existingFulfillmentRaw && typeof existingFulfillmentRaw === "object"
-        ? (existingFulfillmentRaw as Record<string, unknown>)
-        : undefined;
-    const alreadyFulfilled = existingFulfillment?.["status"] === "fulfilled";
+    const amountTotal = fullSession.amount_total ?? null;
+    const totalQuantity = lineItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    if (isPaid && !alreadyFulfilled) {
-      baseDoc.fulfillment = omitUndefined({
-        status: "fulfilled",
-        completedAt: FieldValue.serverTimestamp(),
-        version: FULFILLMENT_VERSION,
-        beneficiary,
+    await db.runTransaction(async (tx) => {
+      const sessionsRef = db.collection(CHECKOUT_COLLECTION).doc(fullSession.id);
+      const entitlementRef = db
+        .collection(ENTITLEMENT_COLLECTION)
+        .doc(fullSession.id);
+      const sessionSnap = await tx.get(sessionsRef);
+      const createdAt =
+        timestampFromSeconds(fullSession.created) ??
+        timestampFromSeconds(session.created) ??
+        Timestamp.now();
+
+      const customerId = (() => {
+        if (typeof fullSession.customer === "string") return fullSession.customer;
+        if (fullSession.customer && typeof fullSession.customer === "object") {
+          return fullSession.customer.id;
+        }
+        return null;
+      })();
+
+      const baseDoc: SessionDocUpdate = omitUndefined({
+        amountSubtotal: fullSession.amount_subtotal ?? null,
         amountTotal,
         currency: fullSession.currency ?? null,
+        customerId,
+        customerEmail:
+          fullSession.customer_details?.email ??
+          fullSession.customer_email ??
+          null,
+        clientReferenceId: fullSession.client_reference_id ?? null,
+        paymentStatus,
+        status: fullSession.status ?? session.status ?? null,
+        mode: fullSession.mode,
+        livemode: fullSession.livemode,
+        metadata,
+        lineItems,
+        quantityTotal: totalQuantity,
+        beneficiary: beneficiary ?? null,
+        paymentIntentId:
+          typeof fullSession.payment_intent === "string"
+            ? fullSession.payment_intent
+            : (fullSession.payment_intent?.id ?? null),
+        subscriptionId:
+          typeof fullSession.subscription === "string"
+            ? fullSession.subscription
+            : (fullSession.subscription && typeof fullSession.subscription === "object"
+                ? fullSession.subscription.id
+                : null),
+        lastEvent: buildEventInfo(context),
       });
 
-      if (beneficiary) {
-        const entitlementDoc = omitUndefined({
+      if (!sessionSnap.exists) {
+        baseDoc.createdAt = createdAt;
+        baseDoc.firstEventId = context.id;
+      }
+
+      const existingData = sessionSnap.data() as
+        | Record<string, unknown>
+        | undefined;
+      const existingFulfillmentRaw = existingData?.["fulfillment"];
+      const existingFulfillment =
+        existingFulfillmentRaw && typeof existingFulfillmentRaw === "object"
+          ? (existingFulfillmentRaw as Record<string, unknown>)
+          : undefined;
+      const alreadyFulfilled = existingFulfillment?.["status"] === "fulfilled";
+
+      if (isPaid && !alreadyFulfilled) {
+        baseDoc.fulfillment = omitUndefined({
+          status: "fulfilled",
+          completedAt: FieldValue.serverTimestamp(),
           version: FULFILLMENT_VERSION,
-          sessionId: fullSession.id,
-          status: "granted",
-          grantedAt: FieldValue.serverTimestamp(),
-          event: buildEventInfo(context),
           beneficiary,
           amountTotal,
           currency: fullSession.currency ?? null,
-          tierId: metadata.tierId ?? null,
-          quantity: totalQuantity,
-          clientReferenceId: fullSession.client_reference_id ?? null,
-          metadata,
-          lineItems,
         });
-        tx.set(entitlementRef, entitlementDoc, { merge: true });
-      } else {
-        logWarn("stripe", "fulfilled checkout session without beneficiary", {
-          sessionId: fullSession.id,
-          eventId: context.id,
+
+        if (beneficiary) {
+          const entitlementDoc = omitUndefined({
+            version: FULFILLMENT_VERSION,
+            sessionId: fullSession.id,
+            status: "granted",
+            grantedAt: FieldValue.serverTimestamp(),
+            event: buildEventInfo(context),
+            beneficiary,
+            amountTotal,
+            currency: fullSession.currency ?? null,
+            tierId: metadata.tierId ?? null,
+            quantity: totalQuantity,
+            clientReferenceId: fullSession.client_reference_id ?? null,
+            metadata,
+            lineItems,
+          });
+          tx.set(entitlementRef, entitlementDoc, { merge: true });
+        } else {
+          logWarn("stripe", "fulfilled checkout session without beneficiary", {
+            sessionId: fullSession.id,
+            eventId: context.id,
+          });
+        }
+      } else if (!isPaid && !alreadyFulfilled) {
+        baseDoc.fulfillment = omitUndefined({
+          status: "pending",
+          version: FULFILLMENT_VERSION,
         });
       }
-    } else if (!isPaid && !alreadyFulfilled) {
-      baseDoc.fulfillment = omitUndefined({
-        status: "pending",
-        version: FULFILLMENT_VERSION,
+
+      tx.set(sessionsRef, baseDoc, { merge: true });
+    });
+
+    if (isPaid) {
+      logInfo("stripe", "checkout session fulfilled", {
+        sessionId: session.id,
+        beneficiary,
+        amountTotal,
       });
     }
-
-    tx.set(sessionsRef, baseDoc, { merge: true });
-  });
-
-  if (isPaid) {
-    logInfo("stripe", "checkout session fulfilled", {
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "checkout-fulfillment-failed", {
       sessionId: session.id,
-      beneficiary,
-      amountTotal,
+      eventId: context.id,
+      error: err,
     });
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: {
+        phase: "applyCheckoutFulfillment",
+        sessionId: session.id,
+        eventId: context.id,
+      },
+    });
+    throw err;
   }
 }
 
@@ -296,56 +316,76 @@ export async function markCheckoutSessionFailed(
   context: EventContext,
   reason: string
 ): Promise<void> {
-  const fullSession = await retrieveCheckoutSession(session.id);
-  const metadata = normalizeMetadata(fullSession.metadata);
-  const lineItems = mapLineItems(fullSession);
-  const db = getAdminDb();
+  try {
+    const fullSession = await retrieveCheckoutSession(session.id);
+    const metadata = normalizeMetadata(fullSession.metadata);
+    const lineItems = mapLineItems(fullSession);
+    const db = getAdminDb();
 
-  await db.runTransaction(async (tx) => {
-    const sessionsRef = db.collection(CHECKOUT_COLLECTION).doc(fullSession.id);
-    const entitlementRef = db
-      .collection(ENTITLEMENT_COLLECTION)
-      .doc(fullSession.id);
-    const baseDoc: SessionDocUpdate = omitUndefined({
-      paymentStatus:
-        fullSession.payment_status ?? session.payment_status ?? null,
-      status: fullSession.status ?? session.status ?? null,
-      updatedAt: FieldValue.serverTimestamp(),
-      lastEvent: buildEventInfo(context),
-      failure: omitUndefined({
-        reason,
-        recordedAt: FieldValue.serverTimestamp(),
-      }),
-      metadata,
-      lineItems,
-    });
-
-    baseDoc.fulfillment = omitUndefined({
-      status: "failed",
-      version: FULFILLMENT_VERSION,
-      failedAt: FieldValue.serverTimestamp(),
-      failureReason: reason,
-    });
-
-    tx.set(sessionsRef, baseDoc, { merge: true });
-
-    const entitlementSnap = await tx.get(entitlementRef);
-    if (entitlementSnap.exists) {
-      tx.set(
-        entitlementRef,
-        omitUndefined({
-          status: "revoked",
-          revokedAt: FieldValue.serverTimestamp(),
-          revokeReason: reason,
-          event: buildEventInfo(context),
+    await db.runTransaction(async (tx) => {
+      const sessionsRef = db.collection(CHECKOUT_COLLECTION).doc(fullSession.id);
+      const entitlementRef = db
+        .collection(ENTITLEMENT_COLLECTION)
+        .doc(fullSession.id);
+      const baseDoc: SessionDocUpdate = omitUndefined({
+        paymentStatus:
+          fullSession.payment_status ?? session.payment_status ?? null,
+        status: fullSession.status ?? session.status ?? null,
+        updatedAt: FieldValue.serverTimestamp(),
+        lastEvent: buildEventInfo(context),
+        failure: omitUndefined({
+          reason,
+          recordedAt: FieldValue.serverTimestamp(),
         }),
-        { merge: true }
-      );
-    }
-  });
+        metadata,
+        lineItems,
+      });
 
-  logWarn("stripe", "checkout session marked as failed", {
-    sessionId: session.id,
-    reason,
-  });
+      baseDoc.fulfillment = omitUndefined({
+        status: "failed",
+        version: FULFILLMENT_VERSION,
+        failedAt: FieldValue.serverTimestamp(),
+        failureReason: reason,
+      });
+
+      tx.set(sessionsRef, baseDoc, { merge: true });
+
+      const entitlementSnap = await tx.get(entitlementRef);
+      if (entitlementSnap.exists) {
+        tx.set(
+          entitlementRef,
+          omitUndefined({
+            status: "revoked",
+            revokedAt: FieldValue.serverTimestamp(),
+            revokeReason: reason,
+            event: buildEventInfo(context),
+          }),
+          { merge: true }
+        );
+      }
+    });
+
+    logWarn("stripe", "checkout session marked as failed", {
+      sessionId: session.id,
+      reason,
+    });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "checkout-mark-failed", {
+      sessionId: session.id,
+      eventId: context.id,
+      reason,
+      error: err,
+    });
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: {
+        phase: "markCheckoutSessionFailed",
+        sessionId: session.id,
+        eventId: context.id,
+        reason,
+      },
+    });
+    throw err;
+  }
 }

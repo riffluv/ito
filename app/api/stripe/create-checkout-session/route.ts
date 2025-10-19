@@ -9,6 +9,8 @@ import {
   assertAllowedReturnUrl,
   parseCheckoutBody,
 } from "@/lib/stripe/helpers";
+import { logError } from "@/lib/utils/log";
+import * as Sentry from "@sentry/nextjs";
 import { ZodError } from "zod";
 
 export const runtime = "nodejs";
@@ -56,7 +58,12 @@ export async function POST(request: NextRequest) {
   try {
     stripe = getStripeClient();
   } catch (error) {
-    console.error("[stripe] Stripe client initialization failed", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "checkout client init failed", err);
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: { phase: "create-checkout-session:init" },
+    });
     return NextResponse.json(
       { error: "Stripe backend is not ready. Please contact the administrator." },
       { status: 503 }
@@ -79,7 +86,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url }, { status: 201 });
   } catch (error) {
-    console.error("[stripe] Failed to create checkout session", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "checkout session creation failed", {
+      priceId,
+      error: err,
+    });
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: {
+        phase: "create-checkout-session:create",
+        priceId,
+        successUrl,
+        cancelUrl,
+      },
+    });
     return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 }

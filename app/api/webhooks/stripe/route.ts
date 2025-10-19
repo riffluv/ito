@@ -4,6 +4,7 @@ import { getStripeClient, isStripeConfigured } from "@/lib/stripe/client";
 import { handleStripeEvent } from "@/lib/stripe/webhookHandlers";
 import { recordStripeEvent } from "@/lib/server/stripeEventStore";
 import { logError, logWarn } from "@/lib/utils/log";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,12 @@ export async function POST(request: NextRequest) {
   try {
     secret = getWebhookSecret();
   } catch (error) {
-    logError("stripe", "webhook secret missing", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "webhook secret missing", err);
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: { phase: "webhook:get-secret" },
+    });
     return NextResponse.json({ error: "Stripe webhook secret not configured" }, { status: 500 });
   }
 
@@ -49,7 +55,12 @@ export async function POST(request: NextRequest) {
   try {
     client = getStripeClient();
   } catch (error) {
-    logError("stripe", "webhook client init failed", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "webhook client init failed", err);
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: { phase: "webhook:get-client" },
+    });
     return NextResponse.json(
       { error: "Stripe backend is not ready. Please configure credentials." },
       { status: 503 }
@@ -70,13 +81,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
   } catch (error) {
-    logError("stripe", "failed to persist webhook event", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "failed to persist webhook event", err);
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: { phase: "webhook:persist-event", eventId: event.id, eventType: event.type },
+    });
   }
 
   try {
     await handleStripeEvent(event);
   } catch (error) {
-    logError("stripe", "handler failed", { type: event.type, error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logError("stripe", "handler failed", { type: event.type, error: err });
+    Sentry.captureException(err, {
+      tags: { scope: "stripe" },
+      extra: { phase: "webhook:handler", eventType: event.type, eventId: event.id },
+    });
     return NextResponse.json({ error: "Handler failure" }, { status: 500 });
   }
 
