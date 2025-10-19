@@ -45,6 +45,7 @@ import { REVEAL_FIRST_DELAY, REVEAL_LINGER, REVEAL_STEP_DELAY } from "@/lib/ui/m
 import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
+import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 
 interface CentralCardBoardProps {
   roomId: string;
@@ -116,6 +117,12 @@ const BOARD_FRAME_STYLES = {
         maxWidth: UNIFIED_LAYOUT.DPI_150.CARD.WIDTH.md,
       },
     },
+  },
+  "@media (pointer: coarse) and (min-width: 768px)": {
+    gap: "clamp(12px, 2.8vw, 24px)",
+    padding: "clamp(12px, 2.8vw, 24px)",
+    touchAction: "manipulation",
+    overscrollBehavior: "contain",
   },
   [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
     gap: "10px",
@@ -651,16 +658,41 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       : { duration: 220, easing: UI_TOKENS.EASING.standard };
   }, [magnetState.shouldSnap, prefersReducedMotion]);
 
+  const pointerProfile = usePointerProfile();
+
+  const mouseSensorOptions = useMemo(() => (
+    pointerProfile.isCoarsePointer
+      ? {
+          activationConstraint: {
+            distance: 6,
+          },
+        }
+      : {
+          activationConstraint: {
+            distance: 2,
+          },
+        }
+  ), [pointerProfile.isCoarsePointer]);
+
+  const touchSensorOptions = useMemo(() => (
+    pointerProfile.isTouchOnly
+      ? {
+          activationConstraint: {
+            delay: 45,
+            tolerance: 26,
+          },
+        }
+      : {
+          activationConstraint: {
+            delay: 160,
+            tolerance: 8,
+          },
+        }
+  ), [pointerProfile.isTouchOnly]);
+
   const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: 4 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 150,
-        tolerance: 8,
-      },
-    }),
+    useSensor(MouseSensor, mouseSensorOptions),
+    useSensor(TouchSensor, touchSensorOptions),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -1323,6 +1355,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       css={{
         background: "transparent",
         position: "relative",
+        "@media (pointer: coarse)": {
+          touchAction: "manipulation",
+        },
       }}
     >
       <VisuallyHidden aria-live="polite">

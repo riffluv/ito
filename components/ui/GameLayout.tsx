@@ -1,8 +1,9 @@
 "use client";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
-import { Box } from "@chakra-ui/react";
+import { Box, useMediaQuery } from "@chakra-ui/react";
 import React, { ReactNode, lazy, Suspense } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
+import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 // ⚡ PERFORMANCE: Three.js を遅延ロード
 const ThreeBackground = lazy(() =>
   import("./ThreeBackground").then((mod) => ({ default: mod.ThreeBackground }))
@@ -44,6 +45,18 @@ export function GameLayout({
   variant = "classic",
 }: GameLayoutProps) {
   // ゲーム画面でのみbodyスクロールを無効化
+  const pointerProfile = usePointerProfile();
+  const [isTabletViewport] = useMediaQuery(["(min-width: 768px) and (max-width: 1180px)"]);
+  const [isLargeTabletViewport] = useMediaQuery(["(min-width: 1181px) and (max-width: 1366px)"]);
+  const shouldUseTouchTabletLayout =
+    pointerProfile.isCoarsePointer && (isTabletViewport || isLargeTabletViewport);
+  const handAreaBottomOffset = shouldUseTouchTabletLayout
+    ? "calc(env(safe-area-inset-bottom, 0px) + 96px)"
+    : undefined;
+  const mainPaddingBottom = shouldUseTouchTabletLayout
+    ? `calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 96px)`
+    : undefined;
+
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -57,6 +70,8 @@ export function GameLayout({
     const headerHeight = header ? "64px" : "0px";
     const headerDPI125 = header ? "56px" : "0px";
     const headerDPI150 = header ? "48px" : "0px";
+    const showSidebar = sidebar && !shouldUseTouchTabletLayout;
+    const showRightPanel = rightPanel && !shouldUseTouchTabletLayout;
 
     return (
       <>
@@ -90,7 +105,7 @@ export function GameLayout({
               display="flex"
               alignItems="center"
               justifyContent="space-between"
-              px={{ base: 4, md: 8 }}
+              px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
               bg="surfaceSubtle"
               borderBottomWidth="1px"
               borderColor="borderDefault"
@@ -114,7 +129,7 @@ export function GameLayout({
             left={0}
             right={0}
             bottom={0}
-            overflow="hidden"
+            overflow={shouldUseTouchTabletLayout ? "visible" : "hidden"}
             display="flex"
             flexDirection="column"
             alignItems="center"
@@ -132,13 +147,21 @@ export function GameLayout({
               <Box
                 w="100%"
                 h="100%"
-                px={{ base: 4, md: 8 }}
-                py={{ base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
+                px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
+                py={shouldUseTouchTabletLayout ? { base: 4, md: 5 } : { base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
                 position="relative"
                 display="flex"
                 flexDirection="column"
-                gap={{ base: 3, md: 4 }} // gap縮小で要素間を詰める
+                overflowY={shouldUseTouchTabletLayout ? "auto" : "hidden"}
+                gap={shouldUseTouchTabletLayout ? { base: 4, md: 5 } : { base: 3, md: 4 }} // gap�k���ŗv�f�Ԃ��l�߂�
+                paddingBottom={shouldUseTouchTabletLayout ? mainPaddingBottom : 0}
                 css={{
+                  ...(shouldUseTouchTabletLayout && {
+                    maxWidth: "min(1180px, 100%)",
+                    marginInline: "auto",
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehaviorY: "contain",
+                  }),
                   // DPI 150%対応：更なるコンパクト化
                   "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
                     {
@@ -154,7 +177,7 @@ export function GameLayout({
           </Box>
 
           {/* 左レール（なかま） */}
-          {sidebar && (
+          {showSidebar && (
             <Box
               position="fixed"
               top={{ base: "80px", md: "100px" }}
@@ -173,7 +196,7 @@ export function GameLayout({
           )}
 
           {/* 右レール（チャット） */}
-          {rightPanel && (
+          {showRightPanel && (
             <Box
               position="fixed"
               top={{ base: `calc(${headerHeight} + 8px)`, md: `calc(${headerHeight} + 12px)` }}
@@ -207,20 +230,20 @@ export function GameLayout({
             position="fixed"
             left={0}
             right={0}
-            bottom={{ base: 4, md: 6 }}
+            bottom={shouldUseTouchTabletLayout ? handAreaBottomOffset : { base: 4, md: 6 }}
             zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
             p={0}
             display="flex"
             justifyContent="center"
-            px={{ base: 4, md: 8 }}
+            px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
           >
-            <Box w="100%" maxW="1440px">
+            <Box w="100%" maxW={shouldUseTouchTabletLayout ? "min(1180px, 100%)" : "1440px"}>
               {handArea || <Box h="1px" />}
             </Box>
           </Box>
         </Box>
 
-        <Box display="none">
+        <Box display={shouldUseTouchTabletLayout ? "block" : "none"}>
           <MobileBottomSheet
             chatPanel={rightPanel}
             sidebar={sidebar}
