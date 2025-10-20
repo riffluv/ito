@@ -352,7 +352,7 @@ export async function joinRoomFully({
       );
       await addDoc(collection(db!, "rooms", roomId, "chat"), {
         sender: "system",
-        text: `${displayName || "����"} ���񂪎Q�����܂���`,
+        text: `${displayName || "匿名"} さんが参加しました`,
         createdAt: serverTimestamp(),
       } as any);
     } catch {}

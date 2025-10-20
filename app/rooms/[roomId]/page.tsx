@@ -347,7 +347,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
 
   const handleRoomPasswordCancel = useCallback(() => {
-    notify({ title: "繝ｭ繝薙・縺ｫ謌ｻ繧翫∪縺励◆", type: "info" });
+    notify({ title: "ロビーに戻りました", type: "info" });
     router.push("/");
   }, [router]);
 
@@ -648,7 +648,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         notify({
           title: isInProgress
             ? "\u307e\u3060\u30b2\u30fc\u30e0\u304c\u9032\u884c\u4e2d\u3067\u3059"
-            : "蜿ょ刈繝ｪ繝医Λ繧､縺ｫ螟ｱ謨励＠縺ｾ縺励◆",
+            : "再参加に失敗しました",
           description: isInProgress
             ? "\u30db\u30b9\u30c8\u304c\u30ea\u30bb\u30c3\u30c8\u3057\u305f\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044"
             : fallbackDescription,
@@ -1016,9 +1016,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           duration: 0.8,
           showLoading: true,
           loadingSteps: [
-            { id: "error", message: "繧ｨ繝ｩ繝ｼ縺檎匱逕溘＠縺ｾ縺励◆...", duration: 800 },
-            { id: "return", message: "繝ｭ繝薙・縺ｫ謌ｻ繧翫∪縺・..", duration: 800 },
-            { id: "complete", message: "螳御ｺ・縺励∪縺励◆!", duration: 400 },
+            { id: "error", message: "エラーが発生しました...", duration: 800 },
+            { id: "return", message: "ロビーに戻ります...", duration: 800 },
+            { id: "complete", message: "完了しました!", duration: 400 },
           ],
         });
       } else {
@@ -1252,7 +1252,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         px={4}
       >
         <Text>
-          Firebase險ｭ螳壹′隕九▽縺九ｊ縺ｾ縺帙ｓ縲Ａ.env.local` 繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲・
+          Firebase が無効になっています。.env.local を設定してから再度お試しください。
         </Text>
       </Box>
     );
@@ -1742,7 +1742,7 @@ export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params?.roomId;
   if (!roomId) {
-    return <div>繝ｫ繝ｼ繝ID縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ</div>;
+    return <div>ルームIDが見つかりません</div>;
   }
   return <RoomPageContent roomId={roomId} />;
 }

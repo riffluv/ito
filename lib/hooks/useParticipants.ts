@@ -40,6 +40,10 @@ export function useParticipants(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
+  const activePresenceRef = useRef<{ roomId: string | null; uid: string | null }>({
+    roomId: null,
+    uid: null,
+  });
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
@@ -217,21 +221,57 @@ export function useParticipants(
 
   // 自分の presence アタッチ/デタッチ
   useEffect(() => {
-    if (!presenceSupported()) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        if (uid) {
-          if (!detachRef.current) {
-            const detach = await attachPresence(roomId, uid);
-            if (!cancelled) detachRef.current = detach;
+    if (!presenceSupported()) {
+      if (detachRef.current) {
+        try {
+          const maybePromise = detachRef.current();
+          if (maybePromise && typeof (maybePromise as Promise<void>).then === "function") {
+            (maybePromise as Promise<void>).catch(() => void 0);
           }
-        } else if (detachRef.current) {
+        } catch {}
+        detachRef.current = null;
+      }
+      activePresenceRef.current = { roomId: null, uid: null };
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const prev = activePresenceRef.current;
+      const roomChanged = prev.roomId !== (roomId ?? null);
+      const uidChanged = prev.uid !== (uid ?? null);
+
+      if (detachRef.current && (roomChanged || uidChanged || !roomId || !uid)) {
+        try {
           await detachRef.current();
-          if (!cancelled) detachRef.current = null;
+        } catch {}
+        if (!cancelled) {
+          detachRef.current = null;
         }
-      } catch {}
+      }
+
+      if (!roomId || !uid) {
+        if (!cancelled) {
+          activePresenceRef.current = { roomId: roomId ?? null, uid: uid ?? null };
+        }
+        return;
+      }
+
+      if (!detachRef.current) {
+        try {
+          const detach = await attachPresence(roomId, uid);
+          if (cancelled) {
+            try {
+              await detach();
+            } catch {}
+            return;
+          }
+          detachRef.current = detach;
+          activePresenceRef.current = { roomId, uid };
+        } catch {}
+      }
     })();
+
     return () => {
       cancelled = true;
     };
