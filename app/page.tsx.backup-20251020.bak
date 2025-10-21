@@ -41,7 +41,6 @@ import { gsap } from "gsap";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
 import { SupporterCTA } from "@/components/site/SupporterCTA";
 import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 
@@ -89,6 +88,7 @@ type WindowWithIdleCallback = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
+// 開発者メモボックスの共通スタイル定数
 const DEVELOPER_NOTE_STYLES = {
   box: {
     p: 4,
@@ -519,47 +519,37 @@ export default function MainMenu() {
   };
 
   return (
-    <Box position="relative" minH="100dvh" color="white">
-      <RichBlackBackground />
+    <Box bg="canvasBg" minH="100dvh">
       <Box
         position="relative"
-        zIndex={1}
         overflow="hidden"
         pt={{
-          base: scaleForDpi("4.6rem"),
-          md: scaleForDpi("5.2rem"),
-          lg: scaleForDpi("6.1rem"),
-        }}
-        pb={{
-          base: scaleForDpi("3.8rem"),
-          md: scaleForDpi("4.7rem"),
-          lg: scaleForDpi("5.4rem"),
+          base: scaleForDpi("5.3rem"),
+          md: scaleForDpi("6.1rem"),
+          lg: scaleForDpi("8.3rem"),
         }}
         css={{
-          background: "linear-gradient(to bottom, rgba(5,7,12,0.78) 0%, rgba(5,7,12,0.58) 100%)",
+          background: "linear-gradient(to bottom, rgba(8,9,15,0.95) 0%, rgba(8,9,15,0.9) 100%)",
           containerType: "inline-size",
           // DPI scaling optimization
           "@container (max-width: 600px)": {
-            paddingTop: scaleForDpi("4.4rem"),
-            paddingBottom: scaleForDpi("3.4rem"),
+            paddingTop: scaleForDpi("5rem"), // 80px at 100% = 100px at 125%
           },
           "@container (min-width: 600px) and (max-width: 900px)": {
-            paddingTop: scaleForDpi("5.1rem"),
-            paddingBottom: scaleForDpi("4.2rem"),
+            paddingTop: scaleForDpi("6rem"), // 96px at 100% = 120px at 125%
           },
           "@container (min-width: 900px)": {
-            paddingTop: scaleForDpi("6rem"),
-            paddingBottom: scaleForDpi("4.9rem"),
+            paddingTop: scaleForDpi("8rem"), // 128px at 100% = 160px at 125%
           },
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
           <VStack
-            gap={{ base: scaleForDpi("3.6rem"), lg: scaleForDpi("4.6rem") }}
+            gap={{ base: scaleForDpi("4.2rem"), lg: scaleForDpi("5.3rem") }}
             align="center"
           >
             <VStack
-              gap={scaleForDpi("1.9rem")}
+              gap={scaleForDpi("2.1rem")}
               align="center"
               textAlign="center"
               maxW="4xl"
@@ -568,14 +558,12 @@ export default function MainMenu() {
                 {/* 騎士とタイトルのメインビジュアル */}
                 <HStack
                   justify="center"
-                  align="flex-end"
-                  gap={{ base: 3, md: 5 }}
-                  mb={scaleForDpi("1.4rem")}
+                  align="center"
+                  gap={{ base: 4, md: 6 }}
+                  mb={6}
                   flexWrap={{ base: "wrap", md: "nowrap" }}
                 >
-                  <Box transform="translateY(2px)">
-                    <KnightCharacter />
-                  </Box>
+                  <KnightCharacter />
                   <Heading
                     ref={titleRef}
                     fontSize={{
@@ -584,15 +572,17 @@ export default function MainMenu() {
                       lg: scaleForDpi("3.9rem"),
                     }}
                     fontWeight={900}
-                    lineHeight="0.9"
-                    letterSpacing="0.045em"
+                    lineHeight="0.87"
+                    letterSpacing="0.051em"
                     color="fgEmphasized"
-                    textShadow="0 2px 6px rgba(0,0,0,0.55)"
+                    textShadow="3px 3px 0 rgba(0,0,0,0.8),
+                               6px 6px 12px rgba(0,0,0,0.5),
+                               0 0 20px rgba(255,215,0,0.3)"
                     fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
                     css={{
-                      WebkitTextStroke: "0.3px rgba(255,255,255,0.18)",
+                      WebkitTextStroke: "1px rgba(255,255,255,0.2)",
                       textTransform: "none",
-                      filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
+                      filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
                       // DPI scaling font optimization
                       "@container (max-width: 600px)": {
                         fontSize: scaleForDpi("2rem"), // 32px base
@@ -608,10 +598,6 @@ export default function MainMenu() {
                     序の紋章III
                   </Heading>
                 </HStack>
-                <Box mt={scaleForDpi("0.35rem")} mb={scaleForDpi("0.6rem")}>
-                  <Box h="1px" bg="rgba(255,215,0,0.18)" />
-                  <Box h="1px" bg="rgba(0,0,0,0.6)" transform="translateY(-1px)" />
-                </Box>
                 <Text
                   fontSize={{
                     base: scaleForDpi("1.3rem"),
@@ -620,11 +606,11 @@ export default function MainMenu() {
                   }}
                   color="rgba(255,255,255,0.85)"
                   fontWeight={500}
-                  lineHeight="1.37"
-                  letterSpacing="0.018em"
+                  lineHeight="1.43"
+                  letterSpacing="0.021em"
                   maxW="3xl"
                   mx="auto"
-                  textShadow="0 2px 4px rgba(0,0,0,0.5)"
+                  textShadow="0 2px 4px rgba(0,0,0,0.6)"
                   css={{
                     // DPI scaling subtitle optimization
                     "@container (max-width: 600px)": {
@@ -647,8 +633,7 @@ export default function MainMenu() {
                     display={{ base: "block", md: "inline" }}
                     color="rgba(255,255,255,0.95)"
                     fontWeight={600}
-                    ml={{ md: 2 }}
-                    letterSpacing="0.012em"
+                    ml={{ md: 3 }}
                   >
                     協力して正しい順に並べよう
                   </Box>
@@ -658,12 +643,31 @@ export default function MainMenu() {
               <VStack
                 gap={scaleForDpi("1.6rem")}
                 align="center"
-                w="100%"
                 css={{
+                  // DPI scaling button group optimization
                   "@container (max-width: 600px)": {
-                    gap: scaleForDpi("1.1rem"),
+                    gap: scaleForDpi("1.1rem"), // 17.6px gap for mobile
+                  },
+                  "@container (min-width: 600px)": {
+                    gap: scaleForDpi("1.6rem"), // 25.6px gap for larger screens
                   },
                 }}
+              >
+                <HStack
+                  gap={scaleForDpi("1.1rem")}
+                  flexWrap="wrap"
+                  justify={{ base: "center", md: "flex-end" }}
+                  css={{
+                    // Ensure minimum touch target size (44px)
+                    "& button": {
+                      minHeight: scaleForDpi("2.75rem"), // 44px minimum for touch accessibility
+                      minWidth: scaleForDpi("2.75rem"),
+                      "@container (max-width: 600px)": {
+                        minHeight: scaleForDpi("3rem"), // 48px for better mobile UX
+                        fontSize: scaleForDpi("0.9rem"), // Slightly smaller text on mobile
+                      },
+                    },
+                  }}
                 >
                   <AppButton
                     size="lg"
@@ -671,44 +675,20 @@ export default function MainMenu() {
                     palette="brand"
                     onClick={openCreateFlow}
                     css={{
-                      px: scaleForDpi("25px"),
+                      px: scaleForDpi("22px"),
                       py: scaleForDpi("13px"),
-                      fontSize: scaleForDpi("1.04rem"),
-                      boxShadow: "2px 3px 0 rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
-                      transform: "translateY(-0.5px)",
-                      "&:hover": {
-                        boxShadow: "2px 4px 0 rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.11)",
-                      },
-                      "&:active": {
-                        transform: "translateY(0.2px)",
-                        boxShadow: "1px 2px 0 rgba(0,0,0,0.4)",
-                      },
+                      mr: scaleForDpi("0.7rem"),
                     }}
                   >
-                    <Plus size={20} style={{ marginRight: "10px" }} />
+                    <Plus size={20} style={{ marginRight: "8px" }} />
                     新しいルームを作成
                   </AppButton>
-                <HStack
-                  gap={scaleForDpi("1rem")}
-                  flexWrap="wrap"
-                  justify="center"
-                  css={{
-                    "& button": {
-                      minHeight: scaleForDpi("2.75rem"),
-                      minWidth: scaleForDpi("2.75rem"),
-                      "@container (max-width: 600px)": {
-                        minHeight: scaleForDpi("3rem"),
-                        fontSize: scaleForDpi("0.9rem"),
-                      },
-                    },
-                  }}
-                >
                   <AppButton
                     size="md"
                     visual="outline"
                     palette="gray"
                     css={{
-                      px: scaleForDpi("18px"),
+                      px: scaleForDpi("17px"),
                       py: scaleForDpi("11px"),
                     }}
                     onClick={async () => {
@@ -742,21 +722,8 @@ export default function MainMenu() {
                     }}
                     onMouseEnter={() => router.prefetch("/rules")}
                   >
-                    <BookOpen size={18} style={{ marginRight: "8px" }} />
+                    <BookOpen size={20} style={{ marginRight: "8px" }} />
                     ルールを見る
-                  </AppButton>
-                  <AppButton
-                    size="md"
-                    visual={displayName ? "outline" : "solid"}
-                    palette={displayName ? "gray" : "brand"}
-                    onClick={openNameChange}
-                    css={{
-                      px: scaleForDpi("18px"),
-                      py: scaleForDpi("11px"),
-                    }}
-                  >
-                    <User size={18} style={{ marginRight: "8px" }} />
-                    {displayName ? "プレイヤー設定" : "名前を設定"}
                   </AppButton>
                 </HStack>
               </VStack>
@@ -787,7 +754,7 @@ export default function MainMenu() {
       >
         <Grid
           templateColumns={{ base: "1fr", xl: "1fr 340px" }}
-          gap={scaleForDpi("2.1rem")}
+          gap={{ base: scaleForDpi("2.1rem"), xl: scaleForDpi("3.2rem") }}
           alignItems="start"
           css={{
             // DPI scaling grid optimization
@@ -1105,6 +1072,7 @@ export default function MainMenu() {
           </GridItem>
           <GridItem display={{ base: "none", xl: "block" }}>
             <VStack gap={6} align="stretch">
+              {/* 開発者メモ */}
               <Box
                 bg="bgPanel"
                 border="borders.retrogame"
@@ -1128,12 +1096,15 @@ export default function MainMenu() {
                       justifyContent="center"
                       boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
                     >
-                      <Image
+                      <img
                         src="/images/hanepen1.webp"
                         alt="羽ペン"
-                        w="20px"
-                        h="20px"
-                        filter="brightness(0) invert(1)"
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          filter: "brightness(0) invert(1)",
+                          objectFit: "contain",
+                        }}
                       />
                     </Box>
                     <Text
@@ -1160,7 +1131,10 @@ export default function MainMenu() {
                           </Text>
                         </HStack>
                         <Text {...DEVELOPER_NOTE_STYLES.text} textShadow="1px 1px 0px #000">
-                          “連想ワードだけで数字の大小をそろえる”という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
+                          &ldquo;連想ワードだけで数字の大小をそろえる&rdquo;という発想が面白く、
+                          それをオンラインマルチプレイ向けに遊びやすく再構成しました。
+                          同時ドラッグの共同編集、ホストの操作でカードが次々めくれる演出、
+                          リアルタイム同期による一体感を目指しました。
                         </Text>
                       </VStack>
                     </Box>
@@ -1170,7 +1144,7 @@ export default function MainMenu() {
                       border="2px solid rgba(34,197,94,0.3)"
                       css={{
                         borderLeft: "3px solid transparent",
-                        borderImage: "linear-gradient(to bottom, rgba(34,197,94,0.95), rgba(34,197,94,0.5)) 1",
+                        borderImage: "linear-gradient(to bottom, rgba(34,197,94,0.95), rgba(34,197,94,0.5)) 1"
                       }}
                     >
                       <VStack gap={2} align="start">
@@ -1183,7 +1157,8 @@ export default function MainMenu() {
                           </Text>
                         </HStack>
                         <Text {...DEVELOPER_NOTE_STYLES.text}>
-                          ブラウザだけで遊べる完全オリジナル作品です。同期実験中のため、不具合を見つけたら気軽に知らせてください。
+                          本作は公式とは無関係のオリジナル作品です。
+                          「ブラウザでここまでできるの!?」を目指しています。
                         </Text>
                       </VStack>
                     </Box>
@@ -1193,7 +1168,7 @@ export default function MainMenu() {
                       border="2px solid rgba(147,51,234,0.3)"
                       css={{
                         borderLeft: "3px solid transparent",
-                        borderImage: "linear-gradient(to bottom, rgba(147,51,234,0.95), rgba(147,51,234,0.5)) 1",
+                        borderImage: "linear-gradient(to bottom, rgba(147,51,234,0.95), rgba(147,51,234,0.5)) 1"
                       }}
                     >
                       <VStack gap={2} align="start">
@@ -1208,93 +1183,98 @@ export default function MainMenu() {
                           </Text>
                         </HStack>
                         <VStack gap={1.5} align="start" pl={2}>
-                          <Text {...DEVELOPER_NOTE_STYLES.text}>・ちゃんと寝る</Text>
-                          <Text {...DEVELOPER_NOTE_STYLES.text}>・コーヒーを控える（最重要）</Text>
+                          <Text {...DEVELOPER_NOTE_STYLES.text}>
+                            ・ちゃんと寝る
+                          </Text>
+                          <Text {...DEVELOPER_NOTE_STYLES.text}>
+                            ・コーヒーを辞める（最重要）
+                          </Text>
                         </VStack>
                       </VStack>
                     </Box>
                   </VStack>
-                </VStack>
-              </Box>
-              <SupporterCTA />
+                  <SupporterCTA />
 
-              <Box
-                mt={4}
-                pt={4}
-                borderTop="1px solid rgba(255,255,255,0.2)"
-              >
-                <Text
-                  fontSize="sm"
-                  color="white"
-                  fontFamily="monospace"
-                  fontWeight={600}
-                  mb={2}
-                >
-                  🛠️ 開発テスト
-                </Text>
-                <AppButton
-                  size="sm"
-                  visual="outline"
-                  palette="gray"
-                  onClick={async () => {
-                    await transition.navigateWithTransition(
-                      window.location.pathname,
-                      {
-                        direction: "fade",
-                        duration: 0.8,
-                        showLoading: true,
-                        loadingSteps: [
-                          {
-                            id: "firebase",
-                            message: "せつぞく中です...",
-                            duration: 1500,
-                          },
-                          {
-                            id: "room",
-                            message:
-                              "ルームの じょうほうを とくていしています...",
-                            duration: 2000,
-                          },
-                          {
-                            id: "player",
-                            message: "プレイヤーを とうろくしています...",
-                            duration: 1800,
-                          },
-                          {
-                            id: "ready",
-                            message: "じゅんび かんりょう！",
-                            duration: 1000,
-                          },
-                        ],
-                      }
-                    );
-                  }}
-                  css={{
-                    width: "100%",
-                    fontSize: "xs",
-                    fontFamily: "monospace",
-                    height: "28px",
-                  }}
-                >
-                  ローディングテスト
-                </AppButton>
-
-                <Box
-                  mt={3}
-                  pl={1}
-                  display="flex"
-                  flexDirection="column"
-                  gap={2}
-                >
-                  <Text
-                    fontSize="xs"
-                    color="rgba(255,255,255,0.7)"
-                    fontFamily="monospace"
+                  {/* テスト用ローディングアニメーション */}
+                  <Box
+                    mt={4}
+                    pt={4}
+                    borderTop="1px solid rgba(255,255,255,0.2)"
                   >
-                    ▼ バージョンアップ通知（プレビュー）
-                  </Text>
-                  <UpdateAvailableBadge preview />
-                </Box>
+                    <Text
+                      fontSize="sm"
+                      color="white"
+                      fontFamily="monospace"
+                      fontWeight={600}
+                      mb={2}
+                    >
+                      🛠️ 開発テスト
+                    </Text>
+                    <AppButton
+                      size="sm"
+                      visual="outline"
+                      palette="gray"
+                      onClick={async () => {
+                        await transition.navigateWithTransition(
+                          window.location.pathname,
+                          {
+                            direction: "fade",
+                            duration: 0.8,
+                            showLoading: true,
+                            loadingSteps: [
+                              {
+                                id: "firebase",
+                                message: "せつぞく中です...",
+                                duration: 1500,
+                              },
+                              {
+                                id: "room",
+                                message:
+                                  "ルームの じょうほうを とくていしています...",
+                                duration: 2000,
+                              },
+                              {
+                                id: "player",
+                                message: "プレイヤーを とうろくしています...",
+                                duration: 1800,
+                              },
+                              {
+                                id: "ready",
+                                message: "じゅんび かんりょう！",
+                                duration: 1000,
+                              },
+                            ],
+                          }
+                        );
+                      }}
+                      css={{
+                        width: "100%",
+                        fontSize: "xs",
+                        fontFamily: "monospace",
+                        height: "28px",
+                      }}
+                    >
+                      ローディングテスト
+                    </AppButton>
+
+                    <Box
+                      mt={3}
+                      pl={1}
+                      display="flex"
+                      flexDirection="column"
+                      gap={2}
+                    >
+                      <Text
+                        fontSize="xs"
+                        color="rgba(255,255,255,0.7)"
+                        fontFamily="monospace"
+                      >
+                        ▼ バージョンアップ通知（プレビュー）
+                      </Text>
+                      <UpdateAvailableBadge preview />
+                    </Box>
+                  </Box>
+                </VStack>
               </Box>
             </VStack>
           </GridItem>
