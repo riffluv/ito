@@ -61,7 +61,6 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
-import { applyServiceWorkerUpdate, getWaitingServiceWorker } from "@/lib/serviceWorker/updateChannel";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 
 const ROOM_CORE_ASSETS = [
@@ -445,26 +444,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   // pruneRef, offlineSinceRef 縺ｯ useHostPruning 蜀・↓遘ｻ蜍・
   const forcedExitScheduledRef = useRef(false); // 莉悶・蝣ｴ謇縺ｧ繧ゆｽｿ繧上ｌ縺ｦ縺・ｋ縺溘ａ谿九☆
   const forcedExitRecoveryPendingRef = useRef(false);
-  // Soft規定: 更新フェーズ宣言中に自端末が間に合わなければ一時観戦へ退避
-  useEffect(() => {
-    const required = (room as any)?.requiredSwVersion as string | undefined;
-    const phase = (room as any)?.updatePhase as ('required'|'done'|undefined);
-    if (!required || phase !== 'required') return;
-    // 1) 待機SWがあれば即適用
-    try {
-      const waiting = typeof window !== 'undefined' ? getWaitingServiceWorker() : null;
-      if (waiting && required !== APP_VERSION) {
-        applyServiceWorkerUpdate();
-      }
-    } catch {}
-    // 2) 最大3秒待っても一致しなければ観戦に退避
-    const t = setTimeout(() => {
-      try {
-        if (required !== APP_VERSION) setForcedExitReason('version-mismatch');
-      } catch {}
-    }, 3100);
-    return () => { try { clearTimeout(t); } catch {} };
-  }, [room?.id, (room as any)?.updatePhase, (room as any)?.requiredSwVersion]);
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [uid, roomId]
@@ -1520,7 +1499,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 fontWeight={700}
                 textShadow="2px 2px 0 rgba(0,0,0,0.8)"
               >
-                最新版に更新して再参加してね！
+                アップデートがあります。アップデートしてください！
               </Text>
               <Text
                 fontSize={{ base: "sm", md: "md" }}
@@ -1528,7 +1507,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 lineHeight={1.7}
                 mt={1}
               >
-                左下の「今すぐ更新」を押すとすぐ揃うよ。
+                下の「今すぐ更新」ボタンを押してページを更新してください。
               </Text>
             </>
           ) : (
@@ -1558,18 +1537,50 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         gap={3}
         justifyContent="center"
       >
-        <AppButton
-          palette="gray"
-          visual="outline"
-          size="md"
-          onClick={handleRetryJoin}
-          disabled={!waitingToRejoin}
-        >
-          席に戻れるか試す
-        </AppButton>
-        <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
-          ロビーへ戻る
-        </AppButton>
+        {spectatorReason === "version-mismatch" ? (
+          <>
+            <AppButton
+              palette="brand"
+              size="md"
+              onClick={() => {
+                try {
+                  window.location.reload();
+                } catch {
+                  // ignore
+                }
+              }}
+            >
+              今すぐ更新
+            </AppButton>
+            <AppButton
+              palette="gray"
+              visual="outline"
+              size="md"
+              onClick={handleRetryJoin}
+              disabled={!waitingToRejoin}
+            >
+              席に戻れるか試す
+            </AppButton>
+            <AppButton palette="gray" size="md" onClick={handleForcedExitLeaveNow}>
+              ロビーへ戻る
+            </AppButton>
+          </>
+        ) : (
+          <>
+            <AppButton
+              palette="gray"
+              visual="outline"
+              size="md"
+              onClick={handleRetryJoin}
+              disabled={!waitingToRejoin}
+            >
+              席に戻れるか試す
+            </AppButton>
+            <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
+              ロビーへ戻る
+            </AppButton>
+          </>
+        )}
       </Box>
     </Box>
   ) : null;
