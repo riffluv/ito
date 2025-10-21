@@ -1385,6 +1385,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       submittedPlayerIds={submittedPlayerIds}
       fallbackNames={fallbackNames}
       displayRoomName={displayRoomName}
+      suspendTransientUpdates={joinStatus === "joining" || joinStatus === "retrying" || loading}
     />
   );
 

@@ -52,6 +52,7 @@ interface DragonQuestPartyProps {
   submittedPlayerIds?: string[]; // 「提出済み」扱いにするプレイヤーID
   fallbackNames?: Record<string, string>;
   displayRoomName?: string; // ルーム名表示用
+  suspendTransientUpdates?: boolean;
 }
 
 const PANEL_WIDTH = { base: "232px", md: "268px" };
@@ -74,6 +75,7 @@ export function DragonQuestParty({
   submittedPlayerIds,
   fallbackNames,
   displayRoomName,
+  suspendTransientUpdates = false,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hostOverride, setHostOverride] = useState<
@@ -84,13 +86,25 @@ export function DragonQuestParty({
   const [ambientPhase, setAmbientPhase] = useState<0 | 1>(0);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [enableScroll, setEnableScroll] = useState(false);
+
+  const lastStablePlayersRef = useRef<PartyMember[]>(players);
+  useEffect(() => {
+    if (players.length > 0 || !suspendTransientUpdates) {
+      lastStablePlayersRef.current = players;
+    }
+  }, [players, suspendTransientUpdates]);
+
+  const effectivePlayers =
+    suspendTransientUpdates && players.length === 0
+      ? lastStablePlayersRef.current
+      : players;
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
   // - 3) onlineUids
   // - 4) players
   // - hostId は常に含める
-  const byId = new Map(players.map((p) => [p.id, p] as const));
+  const byId = new Map(effectivePlayers.map((p) => [p.id, p] as const));
   let displayedIds: string[];
   if (Array.isArray(roundIds) && roundIds.length > 0) {
     displayedIds = Array.from(new Set(roundIds));
@@ -99,7 +113,7 @@ export function DragonQuestParty({
   } else if (Array.isArray(onlineUids) && onlineUids.length > 0) {
     displayedIds = Array.from(new Set(onlineUids));
   } else {
-    displayedIds = players.map((p) => p.id);
+    displayedIds = effectivePlayers.map((p) => p.id);
   }
   if (hostId && !displayedIds.includes(hostId)) {
     displayedIds = [hostId, ...displayedIds];
