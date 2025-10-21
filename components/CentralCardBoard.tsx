@@ -1252,6 +1252,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             }
 
             let previousPending: string[] | undefined;
+            let insertedPending = false;
+            let didPlaySound = false;
+            const playOnce = () => {
+              if (didPlaySound) return;
+              didPlaySound = true;
+              playCardPlace();
+            };
             if (!alreadyInProposal) {
               updatePendingState((prev) => {
                 previousPending = prev.slice();
@@ -1262,21 +1269,31 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   next.length = slotIndex + 1;
                 }
                 next[slotIndex] = activePlayerId;
+                insertedPending = true;
                 return next;
               });
             }
 
             try {
               if (alreadyInProposal) {
-                await moveCardInProposalToPosition(roomId, activePlayerId, slotIndex);
-                playCardPlace();
-                return;
-              } else {
-                const result = await addCardToProposalAtPosition(
+                const movePromise = moveCardInProposalToPosition(
                   roomId,
                   activePlayerId,
                   slotIndex
                 );
+                playOnce();
+                await movePromise;
+                return;
+              } else {
+                const request = addCardToProposalAtPosition(
+                  roomId,
+                  activePlayerId,
+                  slotIndex
+                );
+                if (insertedPending) {
+                  playOnce();
+                }
+                const result = await request;
                 if (result === "noop") {
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
@@ -1290,8 +1307,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   playDropInvalid();
                   return;
                 }
+                playOnce();
               }
-              playCardPlace();
               return;
             } catch (error) {
               logError("central-card-board", "add-card-to-proposal", error);
