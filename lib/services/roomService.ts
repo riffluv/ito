@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  runTransaction,
   query,
   serverTimestamp,
   setDoc,
@@ -265,24 +266,33 @@ export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
 
 export async function addLateJoinerToDeal(roomId: string, uid: string) {
   const roomRef = doc(db!, "rooms", roomId);
-  const snap = await getDoc(roomRef);
-  if (!snap.exists()) return;
-  const data = snap.data() as RoomDoc & any;
-  const deal = data?.deal || null;
-  const playersArr: string[] = Array.isArray(deal?.players)
-    ? (deal.players as string[])
-    : [];
-  if (!playersArr.includes(uid)) playersArr.push(uid);
+  await runTransaction(db!, async (tx) => {
+    const snap = await tx.get(roomRef);
+    if (!snap.exists()) return;
+    const data = snap.data() as RoomDoc & any;
+    const deal = data?.deal || null;
+    const currentPlayers: string[] = Array.isArray(deal?.players)
+      ? [...(deal.players as string[])]
+      : [];
 
-  const patch: any = { deal: { ...(deal || {}), players: playersArr } };
-  if (data?.status === "clue") {
-    const total =
-      typeof data?.order?.total === "number"
-        ? data.order.total + 1
-        : playersArr.length;
-    patch.order = { ...(data?.order || {}), total };
-  }
-  await updateDoc(roomRef, patch);
+    if (currentPlayers.includes(uid)) {
+      return;
+    }
+
+    currentPlayers.push(uid);
+
+    const patch: Record<string, any> = {
+      deal: { ...(deal || {}), players: currentPlayers },
+    };
+
+    if (data?.order) {
+      patch.order = { ...(data.order || {}), total: currentPlayers.length };
+    } else if (data?.status === "clue") {
+      patch.order = { total: currentPlayers.length };
+    }
+
+    tx.update(roomRef, patch);
+  });
 }
 
 export async function assignNumberIfNeeded(
