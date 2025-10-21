@@ -1344,7 +1344,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 disabled={isResetting}
                 onClick={async () => {
                   if (isResetting) return;
-                  await resetGame({ playSound: !isGameFinished });
+                  await resetGame({ playSound: true });
                 }}
               />
             </Tooltip>
