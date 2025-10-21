@@ -61,6 +61,8 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
+import { applyServiceWorkerUpdate, getWaitingServiceWorker } from "@/lib/serviceWorker/updateChannel";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 
 const ROOM_CORE_ASSETS = [
   "/images/flag.webp",
@@ -437,12 +439,32 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [pop, setPop] = useState(false);
   const [redirectGuard, setRedirectGuard] = useState(true);
   const [forcedExitReason, setForcedExitReason] = useState<
-    "game-in-progress" | null
+    "game-in-progress" | "version-mismatch" | null
   >(null);
   // hostClaimAttemptRef, hostClaimTimerRef 縺ｯ useHostClaim 蜀・↓遘ｻ蜍・
   // pruneRef, offlineSinceRef 縺ｯ useHostPruning 蜀・↓遘ｻ蜍・
   const forcedExitScheduledRef = useRef(false); // 莉悶・蝣ｴ謇縺ｧ繧ゆｽｿ繧上ｌ縺ｦ縺・ｋ縺溘ａ谿九☆
   const forcedExitRecoveryPendingRef = useRef(false);
+  // Soft規定: 更新フェーズ宣言中に自端末が間に合わなければ一時観戦へ退避
+  useEffect(() => {
+    const required = (room as any)?.requiredSwVersion as string | undefined;
+    const phase = (room as any)?.updatePhase as ('required'|'done'|undefined);
+    if (!required || phase !== 'required') return;
+    // 1) 待機SWがあれば即適用
+    try {
+      const waiting = typeof window !== 'undefined' ? getWaitingServiceWorker() : null;
+      if (waiting && required !== APP_VERSION) {
+        applyServiceWorkerUpdate();
+      }
+    } catch {}
+    // 2) 最大3秒待っても一致しなければ観戦に退避
+    const t = setTimeout(() => {
+      try {
+        if (required !== APP_VERSION) setForcedExitReason('version-mismatch');
+      } catch {}
+    }, 3100);
+    return () => { try { clearTimeout(t); } catch {} };
+  }, [room?.id, (room as any)?.updatePhase, (room as any)?.requiredSwVersion]);
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [uid, roomId]
@@ -582,7 +604,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const canAccess = isMember || isHost;
   const isSpectatorMode =
     (!canAccess && room?.status !== "waiting") ||
-    forcedExitReason === "game-in-progress";
+    !!forcedExitReason;
+
+  // 観戦理由の判定（文言出し分け用）
+  const spectatorReason: "version-mismatch" | "mid-game" | null = (() => {
+    if (forcedExitReason === "version-mismatch") return "version-mismatch";
+    if (!canAccess && room?.status !== "waiting") return "mid-game";
+    return null;
+  })();
   // 笞｡ PERFORMANCE: 37陦後・蠑ｷ蛻ｶ騾蜃ｺ蜃ｦ逅・ｒ繧ｫ繧ｹ繧ｿ繝繝輔ャ繧ｯ蛹・
   useForcedExit({
     uid,
@@ -1484,21 +1513,43 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           ▼ 観戦中 ▼
         </Text>
         <Box textAlign="center">
-          <Text
-            fontSize={{ base: "md", md: "lg" }}
-            fontWeight={700}
-            textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-          >
-            席は埋まっています
-          </Text>
-          <Text
-            fontSize={{ base: "sm", md: "md" }}
-            color={UI_TOKENS.COLORS.whiteAlpha80}
-            lineHeight={1.7}
-            mt={1}
-          >
-            ホストがリセットすれば再び席に戻れるよ！それまではゲームを観戦しよう！
-          </Text>
+          {spectatorReason === "version-mismatch" ? (
+            <>
+              <Text
+                fontSize={{ base: "md", md: "lg" }}
+                fontWeight={700}
+                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              >
+                最新版に更新して再参加してね！
+              </Text>
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+                lineHeight={1.7}
+                mt={1}
+              >
+                左下の「今すぐ更新」を押すとすぐ揃うよ。
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                fontSize={{ base: "md", md: "lg" }}
+                fontWeight={700}
+                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              >
+                いまゲームの最中だよ
+              </Text>
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+                lineHeight={1.7}
+                mt={1}
+              >
+                このラウンドが終わったら参加できるよ。まずは観戦しよう！
+              </Text>
+            </>
+          )}
         </Box>
       </Box>
       <Box
@@ -1747,3 +1798,4 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+

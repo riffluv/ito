@@ -33,6 +33,8 @@ export type PresenceConn = {
   ts?: any;
   offlineAt?: any;
   connectedAt?: any;
+  swVersion?: string | null;
+  swReadyAt?: any;
 };
 export type PresenceUserMap = Record<string, PresenceConn>; // connId -> PresenceConn
 export type PresenceRoomMap = Record<string, PresenceUserMap>; // uid -> PresenceUserMap
@@ -203,10 +205,16 @@ export async function attachPresence(roomId: string, uid: string) {
     heartbeatInFlight = true;
     const meConnRef = ref(db, meConnPath);
     try {
-      await update(meConnRef, {
+      const __payload: Record<string, any> = {
         ts: serverTimestamp() as any,
         online: true,
-      });
+      };
+      try {
+        const ver = (process as any)?.env?.NEXT_PUBLIC_APP_VERSION ||
+          (process as any)?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev';
+        __payload.swVersion = ver;
+      } catch {}
+      await update(meConnRef, __payload);
       incrementPresenceMetric("heartbeat.ok");
       presenceLog("heartbeat", { roomId, uid, connId: meConnId, reason });
       heartbeatRetryIndex = 0;
@@ -369,6 +377,25 @@ export async function attachPresence(roomId: string, uid: string) {
         }),
       context
     );
+
+    // 現行アプリ版を presence に記録（best-effort）
+    try {
+      const version = ((): string => {
+        try {
+          return (
+            (process as any)?.env?.NEXT_PUBLIC_APP_VERSION ||
+            (process as any)?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+            'dev'
+          );
+        } catch {
+          return 'dev';
+        }
+      })();
+      await update(meRef, {
+        swVersion: version,
+        swReadyAt: serverTimestamp() as any,
+      });
+    } catch {}
 
     registerVisibilityFallbacks();
     triggerImmediateHeartbeat("initial");

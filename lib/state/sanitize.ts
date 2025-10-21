@@ -73,6 +73,15 @@ export function sanitizeRoom(input: any): RoomDoc {
         return acc;
       }, {});
     })(),
+    // バージョン同期用フィールド（存在しなくても良い）
+    updatePhase: (() => {
+      const p = input?.updatePhase;
+      return p === 'required' || p === 'done' ? p : undefined;
+    })(),
+    requiredSwVersion: (() => {
+      const v = input?.requiredSwVersion;
+      return typeof v === 'string' && v ? v : undefined;
+    })(),
   };
 }
 

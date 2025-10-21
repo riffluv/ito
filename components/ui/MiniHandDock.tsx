@@ -45,7 +45,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
@@ -57,6 +57,8 @@ import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
 import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
+import { subscribePresence } from "@/lib/firebase/presence";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 
 type HostPanelIconProps = {
   src: string;
@@ -338,6 +340,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [text, setText] = React.useState<string>(me?.clue1 || "");
   const deferredText = React.useDeferredValue(text);
   const [isRestarting, setIsRestarting] = React.useState(false);
+  const [versionAlignOpen, setVersionAlignOpen] = React.useState(false);
+  const [versionAlignReady, setVersionAlignReady] = React.useState(0);
+  const [versionAlignTotal, setVersionAlignTotal] = React.useState(0);
+  const [versionAlignRemain, setVersionAlignRemain] = React.useState(0);
   const [quickStartPending, setQuickStartPending] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
@@ -823,6 +829,76 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
     let success = false;
     try {
+      // --- Soft規定: 開始直前のバージョンそろえ（必要なときだけ最大3秒） ---
+      try {
+        // 0) 事前チェック：全員すでに最新ならスキップ（オーバーレイも updatePhase も立てない）
+        let needAlign = true;
+        await new Promise<void>((resolve) => {
+          let done = false;
+          const unsubscribe = subscribePresence(roomId, (_uids, raw) => {
+            if (done) return;
+            done = true;
+            try {
+              const val = (raw || {}) as any;
+              const uids = Array.isArray(onlineUids) && onlineUids.length > 0 ? onlineUids : Object.keys(val || {});
+              const total = uids.length;
+              const req = APP_VERSION;
+              let allReady = true;
+              for (const uid of uids) {
+                const conns: any = (val as any)[uid] || {};
+                const ok = Object.values(conns).some((c: any) => c && c.online === true && c.swVersion === req);
+                if (!ok) { allReady = false; break; }
+              }
+              needAlign = !allReady;
+            } catch { needAlign = true; }
+            try { unsubscribe(); } catch {}
+            resolve();
+          });
+          // 念のためタイムアウト（200ms）
+          setTimeout(() => { if (!done) { try { unsubscribe(); } catch {}; resolve(); } }, 200);
+        });
+
+        if (needAlign) {
+          if (db) {
+            await updateDoc(doc(db, "rooms", roomId), {
+              updatePhase: "required",
+              requiredSwVersion: APP_VERSION,
+              lastActiveAt: serverTimestamp() as any,
+            } as any);
+          }
+          setVersionAlignOpen(true);
+          const waitMs = 3000;
+          const startedAt = Date.now();
+          setVersionAlignRemain(Math.ceil(waitMs / 1000));
+          const unsubscribe = subscribePresence(roomId, (_uids, raw) => {
+            try {
+              const val = (raw || {}) as any;
+              const uids = Array.isArray(onlineUids) && onlineUids.length > 0 ? onlineUids : Object.keys(val || {});
+              const total = uids.length;
+              let ready = 0;
+              const req = APP_VERSION;
+              for (const uid of uids) {
+                const conns: any = (val as any)[uid] || {};
+                const ok = Object.values(conns).some((c: any) => c && c.online === true && c.swVersion === req);
+                if (ok) ready += 1;
+              }
+              setVersionAlignTotal(total);
+              setVersionAlignReady(ready);
+              const remain = Math.max(0, waitMs - (Date.now() - startedAt));
+              setVersionAlignRemain(Math.ceil(remain / 1000));
+            } catch {}
+          });
+          await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+          try { unsubscribe(); } catch {}
+          setVersionAlignOpen(false);
+          try {
+            if (db) {
+              await updateDoc(doc(db, "rooms", roomId), { updatePhase: "done" } as any);
+            }
+          } catch {}
+        }
+      } catch {}
+      // --- /バージョンそろえ ---
       if (effectiveType === "カスタム") {
         if (shouldPlaySound) {
           playOrderConfirm();
@@ -1352,6 +1428,31 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         )}
       </Flex>
 
+      {isHost && versionAlignOpen && (
+        <Box
+          position="fixed"
+          left="50%"
+          top="46%"
+          transform="translate(-50%, -50%)"
+          zIndex={200}
+          bg="rgba(10,12,18,0.8)"
+          border="1px solid rgba(255,255,255,0.16)"
+          boxShadow="4px 4px 0 rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.08)"
+          borderRadius="6px"
+          px="18px"
+          py="14px"
+        >
+          <VStack gap={2} align="center">
+            <Text color="white" fontFamily="'Courier New', monospace" fontWeight="700" fontSize="15px">
+              更新をそろえています… {versionAlignReady}/{versionAlignTotal} 端末
+            </Text>
+            <Text color="white" opacity={0.85} fontFamily="'Courier New', monospace" fontSize="13px">
+              残り {versionAlignRemain} 秒
+            </Text>
+          </VStack>
+        </Box>
+      )}
+
       {/* フィードバックメッセージ (中央入力エリアの上) */}
       {inlineFeedback && (
         <Text
@@ -1708,6 +1809,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
 
 
 
