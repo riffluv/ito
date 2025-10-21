@@ -862,8 +862,10 @@ export function GameResultOverlay({
         top="50%"
         left="50%"
         zIndex={10}
-        opacity={failed ? 0 : undefined}
-        style={failed ? { opacity: 0 } : undefined}
+        // 初期ペイント時のチラ見え防止（右下に一瞬出ないよう中央原点＆非表示）
+        transform="translate(-50%, -50%)"
+        opacity={0}
+        pointerEvents="none"
       >
         <Box
           ref={overlayRef}
@@ -881,6 +883,8 @@ export function GameResultOverlay({
             boxShadow:
               "3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)",
           }}
+          // 初期は非表示（GSAPで表示を制御）
+          opacity={0}
         >
           <Box ref={textRef} textAlign="center">
             {title}
