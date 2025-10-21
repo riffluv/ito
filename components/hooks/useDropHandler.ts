@@ -55,7 +55,7 @@ export function useDropHandler({
     return [...base, ...extra];
   }, [orderList?.join(","), pending.join(",")]);
 
-  const onDrop = async (e: React.DragEvent) => {
+  const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const pid = e.dataTransfer.getData("text/plain");
     if (!pid) return;
@@ -89,51 +89,54 @@ export function useDropHandler({
       didPlaySound = true;
       playCardPlace();
     };
-    try {
-      setPending((prev) => {
-        previousPending = prev.slice();
-        if (prev.includes(pid)) {
-          return prev;
-        }
-        inserted = true;
-        return [...prev, pid];
-      });
 
-      const request = addCardToProposal(roomId, meId);
-      if (inserted) {
-        playOnce();
+    setPending((prev) => {
+      previousPending = prev.slice();
+      if (prev.includes(pid)) {
+        return prev;
       }
-      const result = await request;
-      if (result === "noop") {
-        if (inserted && previousPending) {
+      inserted = true;
+      return [...prev, pid];
+    });
+
+    const request = addCardToProposal(roomId, meId);
+    if (inserted) {
+      playOnce();
+    }
+
+    request
+      .then((result) => {
+        if (result === "noop") {
+          if (inserted && previousPending) {
+            const snapshot = previousPending.slice();
+            setPending(() => snapshot);
+          }
+          playDropInvalid();
+          notify({
+            title: "カードは既に提出済みです",
+            type: "info",
+          });
+          return;
+        }
+        playOnce();
+        notify({ title: "カードを場に置きました", type: "success" });
+      })
+      .catch((err: any) => {
+        if (previousPending && inserted) {
           const snapshot = previousPending.slice();
           setPending(() => snapshot);
         }
         playDropInvalid();
         notify({
-          title: "カードは既に提出済みです",
-          type: "info",
+          title: "配置に失敗しました",
+          description: err?.message,
+          type: "error",
         });
-        return;
-      }
-      playOnce();
-      notify({ title: "カードを場に置きました", type: "success" });
-    } catch (err: any) {
-      if (previousPending && inserted) {
-        const snapshot = previousPending.slice();
-        setPending(() => snapshot);
-      }
-      playDropInvalid();
-      notify({
-        title: "配置に失敗しました",
-        description: err?.message,
-        type: "error",
       });
-    }
   };
 
   // Sort-submit mode: position drop handler (simplified)
-  const onDropAtPosition = async (e: React.DragEvent, targetIndex: number) => {
+  const onDropAtPosition = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
     const pid = e.dataTransfer.getData("text/plain");
     if (!pid) return;
@@ -167,50 +170,53 @@ export function useDropHandler({
       didPlaySound = true;
       playCardPlace();
     };
-    try {
-      // Optimistic update at target index
-      setPending((prev) => {
-        previous = prev.slice();
-        const next = [...prev];
-        const exist = next.indexOf(pid);
-        if (exist >= 0) next.splice(exist, 1);
-        if (targetIndex >= next.length) next.length = targetIndex + 1;
-        next[targetIndex] = pid;
-        inserted = true;
-        return next;
-      });
-      const request = addCardToProposalAtPosition(roomId, meId, targetIndex);
-      if (inserted) {
+
+    setPending((prev) => {
+      previous = prev.slice();
+      const next = [...prev];
+      const exist = next.indexOf(pid);
+      if (exist >= 0) next.splice(exist, 1);
+      if (targetIndex >= next.length) next.length = targetIndex + 1;
+      next[targetIndex] = pid;
+      inserted = true;
+      return next;
+    });
+
+    const request = addCardToProposalAtPosition(roomId, meId, targetIndex);
+    if (inserted) {
+      playOnce();
+    }
+
+    request
+      .then((result) => {
+        if (result === "noop") {
+          if (inserted) {
+            const snapshot = previous ? previous.slice() : [];
+            setPending(() => snapshot);
+          }
+          notify({
+            title: "その位置には置けません",
+            description: "別の位置を選ぶか、既存のカードを動かしてください。",
+            type: "info",
+          });
+          playDropInvalid();
+          return;
+        }
         playOnce();
-      }
-      const result = await request;
-      if (result === "noop") {
-        if (inserted) {
-          const snapshot = previous ? previous.slice() : [];
+        notify({ title: "カードをその位置に置きました", type: "success" });
+      })
+      .catch((err: any) => {
+        if (previous !== null && inserted) {
+          const snapshot = previous.slice();
           setPending(() => snapshot);
         }
-        notify({
-          title: "その位置には置けません",
-          description: "別の位置を選ぶか、既存のカードを動かしてください。",
-          type: "info",
-        });
         playDropInvalid();
-        return;
-      }
-      playOnce();
-      notify({ title: "カードをその位置に置きました", type: "success" });
-    } catch (err: any) {
-      if (previous !== null && inserted) {
-        const snapshot = previous.slice();
-        setPending(() => snapshot);
-      }
-      playDropInvalid();
-      notify({
-        title: "配置に失敗しました",
-        description: err?.message,
-        type: "error",
+        notify({
+          title: "配置に失敗しました",
+          description: err?.message,
+          type: "error",
+        });
       });
-    }
   };
 
   return {
