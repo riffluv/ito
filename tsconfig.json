@@ -36,6 +36,10 @@
     "**/*.stories.ts",
     ".storybook",
     "server/**/*.ts",
-    "server/**/*.js"
+    "server/**/*.js",
+    "__tests__/**/*",
+    "tests/**/*",
+    "test-results/**/*",
+    "playwright/**/*"
   ]
 }

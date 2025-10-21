@@ -19,7 +19,24 @@ const nextConfig = {
       "firebase/auth",
     ],
   },
-  webpack: (config, { isServer, webpack }) => {
+  webpack: (config, { isServer, webpack, dev }) => {
+    if (dev) {
+      const ignoredPatterns = [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/.next/**",
+        "**/public/images/**",
+        "**/public/sfx/**",
+        "**/public/design/**",
+        "**/test-results/**",
+        "**/coverage/**",
+      ];
+      config.watchOptions = {
+        ...(config.watchOptions || {}),
+        ignored: ignoredPatterns,
+      };
+    }
+
     if (!isServer) {
       config.resolve = config.resolve || {};
       config.resolve.alias = {
