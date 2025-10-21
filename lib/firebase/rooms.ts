@@ -6,6 +6,7 @@ import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getDoc,
@@ -93,6 +94,91 @@ export async function transferHost(roomId: string, newHostId: string) {
     throw new Error(result.code);
   }
 }
+
+async function applyClientSideLeaveFallback(roomId: string, userId: string) {
+  if (!db) return;
+  const roomRef = doc(db, "rooms", roomId);
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as any;
+      const updates: Record<string, any> = {};
+
+      let dealPlayersChanged = false;
+      if (data?.deal && Array.isArray(data.deal.players)) {
+        const filteredPlayers = (data.deal.players as string[]).filter(
+          (pid) => pid !== userId
+        );
+        if (filteredPlayers.length !== data.deal.players.length) {
+          updates.deal = { ...data.deal, players: filteredPlayers };
+          dealPlayersChanged = true;
+        }
+      }
+
+      if (data?.order) {
+        const nextOrder: Record<string, any> = { ...data.order };
+        let orderChanged = false;
+
+        if (Array.isArray(data.order.list)) {
+          const filteredList = (data.order.list as string[]).filter(
+            (pid) => pid !== userId
+          );
+          if (filteredList.length !== data.order.list.length) {
+            nextOrder.list = filteredList;
+            orderChanged = true;
+          }
+        }
+
+        if (Array.isArray(data.order.proposal)) {
+          const filteredProposal = (data.order.proposal as (string | null)[]).filter(
+            (pid) => pid !== userId
+          );
+          if (filteredProposal.length !== data.order.proposal.length) {
+            nextOrder.proposal = filteredProposal;
+            orderChanged = true;
+          }
+        }
+
+        if (
+          dealPlayersChanged &&
+          updates.deal &&
+          Array.isArray((updates.deal as any).players)
+        ) {
+          nextOrder.total = (updates.deal as any).players.length;
+          orderChanged = true;
+        }
+
+        if (orderChanged) {
+          updates.order = nextOrder;
+        }
+      } else if (
+        dealPlayersChanged &&
+        updates.deal &&
+        Array.isArray((updates.deal as any).players)
+      ) {
+        // order が存在しない場合でも total を揃えておく（古いクライアント向け）
+        updates.order = {
+          list: [],
+          proposal: [],
+          total: (updates.deal as any).players.length,
+        };
+      }
+
+      if (data?.hostId === userId) {
+        updates.hostId = "";
+        updates.hostName = deleteField();
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updates.lastActiveAt = serverTimestamp();
+        tx.update(roomRef, updates);
+      }
+    });
+  } catch (error) {
+    logWarn("rooms", "leave-room-fallback-failed", { roomId, userId, error });
+  }
+}
 export async function leaveRoom(
   roomId: string,
   userId: string,
@@ -125,27 +211,33 @@ export async function leaveRoom(
       logWarn("rooms", "leave-room-token-failed", error);
     }
 
-    if (!token) {
+    let serverHandled = false;
+
+    if (token) {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/leave`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: userId, token, displayName }),
+          keepalive: true,
+        });
+        serverHandled = response.ok;
+        if (!response.ok) {
+          logWarn("rooms", "leave-room-server-failed", {
+            roomId,
+            userId,
+            status: response.status,
+          });
+        }
+      } catch (error) {
+        logWarn("rooms", "leave-room-server-error", error);
+      }
+    } else {
       logWarn("rooms", "leave-room-missing-token", { roomId, userId });
-      return;
     }
 
-    try {
-      const response = await fetch(`/api/rooms/${roomId}/leave`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: userId, token, displayName }),
-        keepalive: true,
-      });
-      if (!response.ok) {
-        logWarn("rooms", "leave-room-server-failed", {
-          roomId,
-          userId,
-          status: response.status,
-        });
-      }
-    } catch (error) {
-      logWarn("rooms", "leave-room-server-error", error);
+    if (!serverHandled) {
+      await applyClientSideLeaveFallback(roomId, userId);
     }
   } finally {
     releaseLeaveLock(roomId, userId);

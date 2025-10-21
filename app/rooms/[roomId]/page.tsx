@@ -276,6 +276,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [joinVersion, setJoinVersion] = useState(0);
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+  const requiredSwVersion = useMemo(() => {
+    const raw = room?.requiredSwVersion;
+    if (typeof raw !== "string") return "";
+    return raw.trim();
+  }, [room?.requiredSwVersion]);
+  const versionMismatch = useMemo(() => {
+    if (!requiredSwVersion) return false;
+    return requiredSwVersion !== APP_VERSION;
+  }, [requiredSwVersion]);
+  const versionMismatchHandledRef = useRef(false);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
   const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
   const onlineUidSignature = useMemo(
@@ -458,6 +468,55 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [rejoinSessionKey, uid]);
 
+  useEffect(() => {
+    if (!versionMismatch) {
+      versionMismatchHandledRef.current = false;
+      if (forcedExitReason === "version-mismatch") {
+        setForcedExitReason(null);
+        if (leavingRef.current) {
+          leavingRef.current = false;
+        }
+      }
+      return;
+    }
+    if (!uid) return;
+    if (versionMismatchHandledRef.current) return;
+    versionMismatchHandledRef.current = true;
+    setPendingRejoinFlag();
+    setForcedExitReason("version-mismatch");
+    leavingRef.current = true;
+
+    void (async () => {
+      try {
+        await detachNow();
+      } catch (error) {
+        logError("room-page", "version-mismatch-detach-now", error);
+      }
+
+      try {
+        await forceDetachAll(roomId, uid);
+      } catch (error) {
+        logError("room-page", "version-mismatch-force-detach-all", error);
+      }
+
+      try {
+        await leaveRoomAction(roomId, uid, displayName);
+      } catch (error) {
+        logError("room-page", "version-mismatch-leave-room-action", error);
+      }
+    })();
+  }, [
+    versionMismatch,
+    uid,
+    detachNow,
+    roomId,
+    displayName,
+    setPendingRejoinFlag,
+    setForcedExitReason,
+    forcedExitReason,
+    leavingRef,
+  ]);
+
   const executeForcedExit = useCallback(async () => {
     if (!uid) return;
 
@@ -580,14 +639,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 蜈･螳､繧ｬ繝ｼ繝・ 閾ｪ蛻・′繝｡繝ｳ繝舌・縺ｧ縺ｪ縺・ｴ蜷医∝ｾ・ｩ滉ｸｭ莉･螟悶・驛ｨ螻九↓縺ｯ蜈･繧後↑縺・
   // 縺溘□縺励√・繧ｹ繝医・蟶ｸ縺ｫ繧｢繧ｯ繧ｻ繧ｹ蜿ｯ閭ｽ
-  const canAccess = isMember || isHost;
+  const canAccess = (isMember || isHost) && !versionMismatch;
   const isSpectatorMode =
     (!canAccess && room?.status !== "waiting") ||
+    versionMismatch ||
     !!forcedExitReason;
 
   // 観戦理由の判定（文言出し分け用）
   const spectatorReason: "version-mismatch" | "mid-game" | null = (() => {
-    if (forcedExitReason === "version-mismatch") return "version-mismatch";
+    if (versionMismatch || forcedExitReason === "version-mismatch") {
+      return "version-mismatch";
+    }
     if (!canAccess && room?.status !== "waiting") return "mid-game";
     return null;
   })();
@@ -614,6 +676,18 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const handleRetryJoin = useCallback(async () => {
     if (!uid) return;
+    if (versionMismatch) {
+      try {
+        notify({
+          title: "最新バージョンに更新してください",
+          description: "ページを更新してから再参加してください",
+          type: "warning",
+        });
+      } catch (notifyError) {
+        logDebug("room-page", "notify-version-mismatch-retry", notifyError);
+      }
+      return;
+    }
 
     setPendingRejoinFlag();
 
@@ -666,7 +740,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
       }
     }
-  }, [uid, roomId, displayName, setPendingRejoinFlag]);
+  }, [uid, roomId, displayName, setPendingRejoinFlag, versionMismatch]);
 
   useEffect(() => {
     if (!forcedExitReason) return;
@@ -1557,7 +1631,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin}
+              disabled={!waitingToRejoin || versionMismatch}
             >
               席に戻れるか試す
             </AppButton>
@@ -1572,7 +1646,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin}
+              disabled={!waitingToRejoin || versionMismatch}
             >
               席に戻れるか試す
             </AppButton>
