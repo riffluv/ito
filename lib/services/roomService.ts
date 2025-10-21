@@ -130,6 +130,11 @@ export async function ensureMember({
     const isHost =
       typeof room?.hostId === "string" && room.hostId.trim() === uid;
     if (!isHost && status && status !== "waiting") {
+      logWarn("roomService", "ensureMember-blocked-in-progress", {
+        roomId,
+        uid,
+        status,
+      });
       return { joined: false, reason: "inProgress" } as const;
     }
 
@@ -199,6 +204,11 @@ export async function ensureMember({
       joinedAt: serverTimestamp(),
     };
     await setDoc(meRef, p);
+    logWarn("roomService", "ensureMember-created-player", {
+      roomId,
+      uid,
+      status,
+    });
     registerAvatarUsage(roomId, selectedAvatar);
     return { joined: true } as const;
   }
@@ -217,6 +227,11 @@ export async function ensureMember({
   }
   try {
     await updateDoc(meRef, patch);
+    logWarn("roomService", "ensureMember-updated-existing", {
+      roomId,
+      uid,
+      patchKeys: Object.keys(patch),
+    });
   } catch (error) {
     logWarn("roomService", "ensure-member-update-existing-failed", {
       roomId,
@@ -338,6 +353,10 @@ export async function joinRoomFully({
   const created = await ensureMember({ roomId, uid, displayName });
   const inProgress = (created as { reason?: string }).reason === "inProgress";
   if (inProgress) {
+    logWarn("roomService", "joinRoomFully-blocked-in-progress", {
+      roomId,
+      uid,
+    });
     throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
 

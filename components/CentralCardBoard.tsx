@@ -1164,7 +1164,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [resetMagnet, setIsOver]);
 
   const onDragEnd = useCallback(
-    async (event: DragEndEvent) => {
+    (event: DragEndEvent) => {
       const { active, over } = event;
       const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
       if (activeRect) {
@@ -1206,7 +1206,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
             return;
           }
-          await returnCardToWaiting(activePlayerId);
+          returnCardToWaiting(activePlayerId).catch((error) => {
+            logError("central-card-board", "return-card-to-waiting", error);
+            playDropInvalid();
+            const message =
+              error instanceof Error
+                ? error.message
+                : error != null
+                  ? String(error)
+                  : "";
+            notify({
+              title: "カードを戻せませんでした",
+              description: message || undefined,
+              type: "error",
+            });
+          });
           return;
         }
 
@@ -1230,7 +1244,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
             return;
           }
-          await returnCardToWaiting(activePlayerId);
+          returnCardToWaiting(activePlayerId).catch((error) => {
+            logError("central-card-board", "return-card-to-waiting", error);
+            playDropInvalid();
+            const message =
+              error instanceof Error
+                ? error.message
+                : error != null
+                  ? String(error)
+                  : "";
+            notify({
+              title: "カードを戻せませんでした",
+              description: message || undefined,
+              type: "error",
+            });
+          });
           return;
         }
 
@@ -1274,26 +1302,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
-            try {
-              if (alreadyInProposal) {
-                const movePromise = moveCardInProposalToPosition(
-                  roomId,
-                  activePlayerId,
-                  slotIndex
-                );
-                playOnce();
-                await movePromise;
-                return;
-              } else {
-                const request = addCardToProposalAtPosition(
-                  roomId,
-                  activePlayerId,
-                  slotIndex
-                );
-                if (insertedPending) {
-                  playOnce();
-                }
-                const result = await request;
+            if (alreadyInProposal) {
+              playOnce();
+              moveCardInProposalToPosition(roomId, activePlayerId, slotIndex).catch((error) => {
+                logError("central-card-board", "move-card-in-proposal", error);
+                playDropInvalid();
+              });
+              return;
+            }
+
+            const request = addCardToProposalAtPosition(roomId, activePlayerId, slotIndex);
+            if (insertedPending) {
+              playOnce();
+            }
+            request
+              .then((result) => {
                 if (result === "noop") {
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
@@ -1308,17 +1331,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   return;
                 }
                 playOnce();
-              }
-              return;
-            } catch (error) {
-              logError("central-card-board", "add-card-to-proposal", error);
-              if (previousPending !== undefined) {
-                const snapshot = previousPending.slice();
-                updatePendingState(() => snapshot);
-              }
-              playDropInvalid();
-              return;
-            }
+              })
+              .catch((error) => {
+                logError("central-card-board", "add-card-to-proposal", error);
+                if (previousPending !== undefined) {
+                  const snapshot = previousPending.slice();
+                  updatePendingState(() => snapshot);
+                }
+                playDropInvalid();
+              });
+            return;
           }
           return;
         }
@@ -1329,12 +1351,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             playDropInvalid();
             return;
           }
-          try {
-            await moveCardInProposalToPosition(roomId, activePlayerId, targetIndex);
-            playCardPlace();
-          } catch {
+          playCardPlace();
+          moveCardInProposalToPosition(roomId, activePlayerId, targetIndex).catch((error) => {
+            logError("central-card-board", "move-card-in-proposal", error);
             playDropInvalid();
-          }
+          });
         }
       } finally {
         magnetStateRef.current = magnetResult;
