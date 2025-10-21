@@ -67,6 +67,9 @@ export type RoomDoc = {
   round?: number;
   // MVP投票 (記録簿内で完結)
   mvpVotes?: Record<string, string> | null; // { voterId: votedPlayerId }
+  // --- Version Align (PWA update) ---
+  updatePhase?: 'required' | 'done' | undefined;
+  requiredSwVersion?: string | undefined;
 };
 
 export type PlayerDoc = {

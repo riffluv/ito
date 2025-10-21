@@ -83,6 +83,22 @@ const registerServiceWorker = async () => {
         }
       });
     });
+
+    // タブが非表示の間に待機SWがあれば自動適用（Soft規定の最適化）
+    if (typeof document !== "undefined") {
+      const visHandler = () => {
+        try {
+          if (document.visibilityState === "hidden") {
+            const waiting = getWaitingServiceWorker();
+            if (waiting) {
+              // best-effort: 自動適用（失敗しても黙殺）
+              try { waiting.waiting?.postMessage({ type: "SKIP_WAITING" }); } catch {}
+            }
+          }
+        } catch {}
+      };
+      document.addEventListener("visibilitychange", visHandler);
+    }
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
