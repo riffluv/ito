@@ -136,7 +136,8 @@
       "Bash(sed:*)",
       "Bash(powershell:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(git log -10 --pretty=format:\"%h|%ad|%s\" --date=short)"
     ],
     "deny": [],
     "ask": []

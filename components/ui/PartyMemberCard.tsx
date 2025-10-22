@@ -68,6 +68,16 @@ const passiveHoverStyle = {
   boxShadow: "0 4px 10px rgba(0,0,0,0.32)",
 } as const;
 
+const resetCardVisualState = (node: HTMLDivElement) => {
+  gsap.set(node, {
+    background: CARD_BACKGROUND,
+    boxShadow: CARD_BOX_SHADOW,
+    filter: "brightness(1)",
+    transform: "scale(1)",
+    clearProps: "filter,transform",
+  });
+};
+
 type PartyMemberCardProps = {
   player: PartyMember;
   roomStatus: string;
@@ -240,6 +250,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       const timeline = runClueFlash(node);
       return () => {
         timeline.kill();
+        resetCardVisualState(node);
       };
     }
   }, [prefersReducedMotion, trimmedClue]);
@@ -254,6 +265,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       const timeline = runSubmitFlash(node);
       return () => {
         timeline.kill();
+        resetCardVisualState(node);
       };
     }
   }, [prefersReducedMotion, isSubmitted]);
