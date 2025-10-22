@@ -147,6 +147,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "result_victory",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "result/result_victory" }],
     playbackRateRange: { min: 0.98, max: 1.02 },
     gainDbRange: { min: -0.5, max: 1.5 },
@@ -157,6 +158,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "result_failure",
     category: "fanfare",
+    preload: { link: true, decode: true },
     variants: [{ src: "result/result_failure" }],
     playbackRateRange: { min: 0.95, max: 1.02 },
     gainDbRange: { min: -0.5, max: 0.5 },
@@ -232,6 +234,7 @@ export const SOUND_LIBRARY: SoundDefinition[] = [
   createDefinition({
     id: "bgm1",
     category: "ambient",
+    preload: { link: true, decode: true },
     variants: [{ src: "ambient/bgm1.mp3" }],
     loop: true,
     stopPrevious: true,
