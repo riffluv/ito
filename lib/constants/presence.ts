@@ -21,7 +21,7 @@ export const PRESENCE_HEARTBEAT_MS = pickMs(
 export const PRESENCE_STALE_MS = (() => {
   const resolved = pickMs(
     ["NEXT_PUBLIC_PRESENCE_STALE_MS", "PRESENCE_STALE_MS"],
-    45_000
+    120_000
   );
   const minValue = PRESENCE_HEARTBEAT_MS + 5_000;
   return resolved < minValue ? minValue : resolved;

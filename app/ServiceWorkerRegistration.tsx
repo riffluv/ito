@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import {
   announceServiceWorkerUpdate,
+  applyServiceWorkerUpdate,
   clearWaitingServiceWorker,
   consumePendingReloadFlag,
   getWaitingServiceWorker,
@@ -91,8 +92,14 @@ const registerServiceWorker = async () => {
           if (document.visibilityState === "hidden") {
             const waiting = getWaitingServiceWorker();
             if (waiting) {
-              // best-effort: 自動適用（失敗しても黙殺）
-              try { waiting.waiting?.postMessage({ type: "SKIP_WAITING" }); } catch {}
+              const applied = applyServiceWorkerUpdate();
+              if (!applied) {
+                try {
+                  waiting.waiting?.postMessage({ type: "SKIP_WAITING" });
+                } catch {
+                  /* no-op */
+                }
+              }
             }
           }
         } catch {}
