@@ -526,40 +526,40 @@ export default function MainMenu() {
         zIndex={1}
         overflow="hidden"
         pt={{
-          base: scaleForDpi("4.6rem"),
-          md: scaleForDpi("5.2rem"),
-          lg: scaleForDpi("6.1rem"),
+          base: scaleForDpi("5.7rem"),
+          md: scaleForDpi("7.3rem"),
+          lg: scaleForDpi("9.1rem"),
         }}
         pb={{
-          base: scaleForDpi("3.8rem"),
-          md: scaleForDpi("4.7rem"),
-          lg: scaleForDpi("5.4rem"),
+          base: scaleForDpi("2.3rem"),
+          md: scaleForDpi("3.1rem"),
+          lg: scaleForDpi("4.3rem"),
         }}
         css={{
-          background: "linear-gradient(to bottom, rgba(5,7,12,0.78) 0%, rgba(5,7,12,0.58) 100%)",
+          // グラスモーフィズム: 魔法の結晶風vignette（Pixi背景を透かす）
+          background: "radial-gradient(ellipse 76% 58% at center 32%, transparent 0%, rgba(8,12,18,0.12) 42%, rgba(6,9,15,0.35) 78%, rgba(4,6,11,0.48) 100%)",
           containerType: "inline-size",
-          // DPI scaling optimization
           "@container (max-width: 600px)": {
-            paddingTop: scaleForDpi("4.4rem"),
-            paddingBottom: scaleForDpi("3.4rem"),
+            paddingTop: scaleForDpi("5.1rem"),
+            paddingBottom: scaleForDpi("2.1rem"),
           },
           "@container (min-width: 600px) and (max-width: 900px)": {
-            paddingTop: scaleForDpi("5.1rem"),
-            paddingBottom: scaleForDpi("4.2rem"),
+            paddingTop: scaleForDpi("6.4rem"),
+            paddingBottom: scaleForDpi("2.8rem"),
           },
           "@container (min-width: 900px)": {
-            paddingTop: scaleForDpi("6rem"),
-            paddingBottom: scaleForDpi("4.9rem"),
+            paddingTop: scaleForDpi("8.2rem"),
+            paddingBottom: scaleForDpi("3.7rem"),
           },
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
           <VStack
-            gap={{ base: scaleForDpi("3.6rem"), lg: scaleForDpi("4.6rem") }}
+            gap={{ base: scaleForDpi("2.9rem"), lg: scaleForDpi("3.7rem") }}
             align="center"
           >
             <VStack
-              gap={scaleForDpi("1.9rem")}
+              gap={scaleForDpi("1.3rem")}
               align="center"
               textAlign="center"
               maxW="4xl"
@@ -569,75 +569,73 @@ export default function MainMenu() {
                 <HStack
                   justify="center"
                   align="flex-end"
-                  gap={{ base: 3, md: 5 }}
-                  mb={scaleForDpi("1.4rem")}
+                  gap={{ base: scaleForDpi("0.7rem"), md: scaleForDpi("1.1rem") }}
+                  mb={scaleForDpi("0.9rem")}
                   flexWrap={{ base: "wrap", md: "nowrap" }}
                 >
-                  <Box transform="translateY(2px)">
+                  <Box transform="translateY(1.5px) translateX(-2px)">
                     <KnightCharacter />
                   </Box>
                   <Heading
                     ref={titleRef}
                     fontSize={{
-                      base: scaleForDpi("1.9rem"),
-                      md: scaleForDpi("3.1rem"),
-                      lg: scaleForDpi("3.9rem"),
+                      base: scaleForDpi("2.3rem"),
+                      md: scaleForDpi("3.7rem"),
+                      lg: scaleForDpi("4.6rem"),
                     }}
                     fontWeight={900}
-                    lineHeight="0.9"
-                    letterSpacing="0.045em"
+                    lineHeight="0.87"
+                    letterSpacing="0.051em"
                     color="fgEmphasized"
-                    textShadow="0 2px 6px rgba(0,0,0,0.55)"
+                    textShadow="0 3px 8px rgba(0,0,0,0.62), 0 1px 2px rgba(0,0,0,0.8)"
                     fontFamily="'Hiragino Kaku Gothic ProN', 'Noto Sans CJK JP', 'Yu Gothic', YuGothic, 'Meiryo UI', Meiryo, 'MS PGothic', sans-serif"
                     css={{
-                      WebkitTextStroke: "0.3px rgba(255,255,255,0.18)",
+                      WebkitTextStroke: "0.4px rgba(255,255,255,0.15)",
                       textTransform: "none",
-                      filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.45))",
-                      // DPI scaling font optimization
+                      filter: "drop-shadow(0 4px 9px rgba(0,0,0,0.52))",
                       "@container (max-width: 600px)": {
-                        fontSize: scaleForDpi("2rem"), // 32px base
+                        fontSize: scaleForDpi("2.1rem"),
                       },
                       "@container (min-width: 600px) and (max-width: 900px)": {
-                        fontSize: scaleForDpi("3.5rem"), // 56px base
+                        fontSize: scaleForDpi("3.3rem"),
                       },
                       "@container (min-width: 900px)": {
-                        fontSize: scaleForDpi("4.5rem"), // 72px base
+                        fontSize: scaleForDpi("4.3rem"),
                       },
                     }}
                   >
                     序の紋章III
                   </Heading>
                 </HStack>
-                <Box mt={scaleForDpi("0.35rem")} mb={scaleForDpi("0.6rem")}>
-                  <Box h="1px" bg="rgba(255,215,0,0.18)" />
-                  <Box h="1px" bg="rgba(0,0,0,0.6)" transform="translateY(-1px)" />
+                <Box mt={scaleForDpi("0.3rem")} mb={scaleForDpi("0.7rem")}>
+                  <Box h="1px" bg="rgba(255,215,0,0.22)" boxShadow="0 0 3px rgba(255,215,0,0.15)" />
+                  <Box h="1px" bg="rgba(0,0,0,0.65)" transform="translateY(-1px)" />
                 </Box>
                 <Text
                   fontSize={{
-                    base: scaleForDpi("1.3rem"),
-                    md: scaleForDpi("1.6rem"),
-                    lg: scaleForDpi("1.9rem"),
+                    base: scaleForDpi("1.17rem"),
+                    md: scaleForDpi("1.43rem"),
+                    lg: scaleForDpi("1.71rem"),
                   }}
-                  color="rgba(255,255,255,0.85)"
+                  color="rgba(255,255,255,0.87)"
                   fontWeight={500}
-                  lineHeight="1.37"
-                  letterSpacing="0.018em"
+                  lineHeight="1.42"
+                  letterSpacing="0.021em"
                   maxW="3xl"
                   mx="auto"
-                  textShadow="0 2px 4px rgba(0,0,0,0.5)"
+                  textShadow="0 2px 5px rgba(0,0,0,0.58)"
                   css={{
-                    // DPI scaling subtitle optimization
                     "@container (max-width: 600px)": {
-                      fontSize: scaleForDpi("1.125rem"), // 18px base for mobile readability
-                      lineHeight: "1.5",
+                      fontSize: scaleForDpi("1.09rem"),
+                      lineHeight: "1.52",
                     },
                     "@container (min-width: 600px) and (max-width: 900px)": {
-                      fontSize: scaleForDpi("1.375rem"), // 22px base for tablet
-                      lineHeight: "1.45",
+                      fontSize: scaleForDpi("1.31rem"),
+                      lineHeight: "1.47",
                     },
                     "@container (min-width: 900px)": {
-                      fontSize: scaleForDpi("1.75rem"), // 28px base for desktop
-                      lineHeight: "1.4",
+                      fontSize: scaleForDpi("1.63rem"),
+                      lineHeight: "1.43",
                     },
                   }}
                 >
@@ -645,71 +643,87 @@ export default function MainMenu() {
                   <Box
                     as="span"
                     display={{ base: "block", md: "inline" }}
-                    color="rgba(255,255,255,0.95)"
+                    color="rgba(255,255,255,0.93)"
                     fontWeight={600}
-                    ml={{ md: 2 }}
-                    letterSpacing="0.012em"
+                    ml={{ md: scaleForDpi("0.4rem") }}
+                    letterSpacing="0.015em"
                   >
                     協力して正しい順に並べよう
                   </Box>
                 </Text>
               </Box>
 
+              {/* シンプルなコマンドメニュー（モダン＆洗練） */}
               <VStack
-                gap={scaleForDpi("1.6rem")}
-                align="center"
+                gap={scaleForDpi("0.97rem")}
+                align="stretch"
                 w="100%"
-                css={{
-                  "@container (max-width: 600px)": {
-                    gap: scaleForDpi("1.1rem"),
-                  },
-                }}
-                >
-                  <AppButton
-                    size="lg"
-                    visual="solid"
-                    palette="brand"
-                    onClick={openCreateFlow}
-                    css={{
-                      px: scaleForDpi("25px"),
-                      py: scaleForDpi("13px"),
-                      fontSize: scaleForDpi("1.04rem"),
-                      boxShadow: "2px 3px 0 rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
-                      transform: "translateY(-0.5px)",
-                      "&:hover": {
-                        boxShadow: "2px 4px 0 rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.11)",
-                      },
-                      "&:active": {
-                        transform: "translateY(0.2px)",
-                        boxShadow: "1px 2px 0 rgba(0,0,0,0.4)",
-                      },
-                    }}
-                  >
-                    <Plus size={20} style={{ marginRight: "10px" }} />
-                    新しいルームを作成
-                  </AppButton>
-                <HStack
-                  gap={scaleForDpi("1rem")}
-                  flexWrap="wrap"
-                  justify="center"
+                maxW={{ base: "340px", md: "380px" }}
+                mt={scaleForDpi("2.1rem")}
+              >
+                {/* メインCTA: 新しい部屋 */}
+                <AppButton
+                  size="lg"
+                  visual="solid"
+                  palette="brand"
+                  onClick={openCreateFlow}
                   css={{
-                    "& button": {
-                      minHeight: scaleForDpi("2.75rem"),
-                      minWidth: scaleForDpi("2.75rem"),
-                      "@container (max-width: 600px)": {
-                        minHeight: scaleForDpi("3rem"),
-                        fontSize: scaleForDpi("0.9rem"),
-                      },
+                    position: "relative",
+                    px: scaleForDpi("23px"),
+                    py: scaleForDpi("13px"),
+                    fontSize: scaleForDpi("1.07rem"),
+                    fontWeight: "600",
+                    letterSpacing: "0.015em",
+                    borderRadius: "3px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4)",
+                    transition: "183ms cubic-bezier(.2,1,.3,1)",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                    "&:hover": {
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.45)",
+                    },
+                    "&:active": {
+                      transform: "translateY(0px)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
                     },
                   }}
+                >
+                  <Plus size={19} style={{ marginRight: "9px" }} />
+                  新しい部屋
+                </AppButton>
+
+                {/* サブメニュー: 横並び */}
+                <HStack
+                  gap={scaleForDpi("0.83rem")}
+                  justify="center"
+                  flexWrap="wrap"
                 >
                   <AppButton
                     size="md"
                     visual="outline"
                     palette="gray"
                     css={{
-                      px: scaleForDpi("18px"),
-                      py: scaleForDpi("11px"),
+                      px: scaleForDpi("17px"),
+                      py: scaleForDpi("9px"),
+                      fontSize: scaleForDpi("0.93rem"),
+                      fontWeight: "500",
+                      letterSpacing: "0.012em",
+                      borderRadius: "3px",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      background: "rgba(18,22,32,0.58)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                      transition: "177ms cubic-bezier(.2,1,.3,1)",
+                      backdropFilter: "blur(10px)",
+                      "&:hover": {
+                        background: "rgba(28,32,42,0.68)",
+                        borderColor: "rgba(255,255,255,0.32)",
+                        transform: "translateY(-1px)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                      },
+                      "&:active": {
+                        transform: "translateY(0px)",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                      },
                     }}
                     onClick={async () => {
                       try {
@@ -742,8 +756,8 @@ export default function MainMenu() {
                     }}
                     onMouseEnter={() => router.prefetch("/rules")}
                   >
-                    <BookOpen size={18} style={{ marginRight: "8px" }} />
-                    ルールを見る
+                    <BookOpen size={16} style={{ marginRight: "6px" }} />
+                    ルール
                   </AppButton>
                   <AppButton
                     size="md"
@@ -751,12 +765,32 @@ export default function MainMenu() {
                     palette={displayName ? "gray" : "brand"}
                     onClick={openNameChange}
                     css={{
-                      px: scaleForDpi("18px"),
-                      py: scaleForDpi("11px"),
+                      px: scaleForDpi("17px"),
+                      py: scaleForDpi("9px"),
+                      fontSize: scaleForDpi("0.93rem"),
+                      fontWeight: "500",
+                      letterSpacing: "0.012em",
+                      borderRadius: "3px",
+                      border: displayName ? "1px solid rgba(255,255,255,0.22)" : "none",
+                      background: displayName ? "rgba(18,22,32,0.58)" : undefined,
+                      boxShadow: displayName ? "0 1px 4px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4)",
+                      transition: "177ms cubic-bezier(.2,1,.3,1)",
+                      backdropFilter: displayName ? "blur(10px)" : "none",
+                      textShadow: displayName ? "none" : "0 1px 2px rgba(0,0,0,0.5)",
+                      "&:hover": {
+                        background: displayName ? "rgba(28,32,42,0.68)" : undefined,
+                        borderColor: displayName ? "rgba(255,255,255,0.32)" : undefined,
+                        transform: "translateY(-1px)",
+                        boxShadow: displayName ? "0 2px 6px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.45)",
+                      },
+                      "&:active": {
+                        transform: "translateY(0px)",
+                        boxShadow: displayName ? "0 1px 2px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.4)",
+                      },
                     }}
                   >
-                    <User size={18} style={{ marginRight: "8px" }} />
-                    {displayName ? "プレイヤー設定" : "名前を設定"}
+                    <User size={16} style={{ marginRight: "6px" }} />
+                    プレイヤー設定
                   </AppButton>
                 </HStack>
               </VStack>
@@ -765,43 +799,41 @@ export default function MainMenu() {
         </Container>
       </Box>
 
-      {/* ルーム一覧 */}
+      {/* ルーム一覧（ロビーエリア） */}
       <Container
         maxW="7xl"
-        py={{ base: scaleForDpi("3.1rem"), md: scaleForDpi("4.3rem") }}
+        py={{ base: scaleForDpi("2.7rem"), md: scaleForDpi("3.9rem") }}
         css={{
-          // DPI scaling container optimization
           "@container (max-width: 600px)": {
-            paddingTop: scaleForDpi("2.5rem"), // 40px base for mobile
-            paddingBottom: scaleForDpi("2.5rem"),
+            paddingTop: scaleForDpi("2.3rem"),
+            paddingBottom: scaleForDpi("3.1rem"),
           },
           "@container (min-width: 600px) and (max-width: 900px)": {
-            paddingTop: scaleForDpi("3rem"), // 48px base for tablet
-            paddingBottom: scaleForDpi("3rem"),
+            paddingTop: scaleForDpi("3.3rem"),
+            paddingBottom: scaleForDpi("4.1rem"),
           },
           "@container (min-width: 900px)": {
-            paddingTop: scaleForDpi("4rem"), // 64px base for desktop
-            paddingBottom: scaleForDpi("4rem"),
+            paddingTop: scaleForDpi("3.7rem"),
+            paddingBottom: scaleForDpi("4.8rem"),
           },
         }}
       >
         <Grid
           templateColumns={{ base: "1fr", xl: "1fr 340px" }}
-          gap={scaleForDpi("2.1rem")}
+          gap={scaleForDpi("1.9rem")}
           alignItems="start"
           css={{
-            // DPI scaling grid optimization
             "@container (max-width: 600px)": {
-              gap: scaleForDpi("1.5rem"), // 24px gap for mobile
+              gap: scaleForDpi("1.3rem"),
             },
             "@container (min-width: 600px)": {
-              gap: scaleForDpi("2rem"), // 32px gap for larger screens
+              gap: scaleForDpi("1.7rem"),
             },
           }}
         >
           <GridItem>
             <Box
-              mb={8}
+              mb={scaleForDpi("1.7rem")}
               bg="bgPanel"
               border="borders.retrogame"
               borderColor="whiteAlpha.90"
@@ -848,33 +880,20 @@ export default function MainMenu() {
                   </HStack>
                 </HStack>
 
-                <HStack gap={2}>
-                  {/* リフレッシュボタン */}
-                  <AppButton
-                    size="sm"
-                    visual="outline"
-                    palette="gray"
-                    onClick={() => {
-                      refreshRooms();
-                      refreshLobbyCounts();
-                    }}
-                    loading={roomsLoading}
-                    disabled={!firebaseEnabled}
-                  >
-                    <RefreshCw size={16} />
-                  </AppButton>
-
-                  {/* スタイリッシュな名前設定ボタン */}
-                  <AppButton
-                    size="sm"
-                    visual={displayName ? "outline" : "solid"}
-                    palette={displayName ? "gray" : "brand"}
-                    onClick={openNameChange}
-                  >
-                    <User size={16} style={{ marginRight: 8 }} />
-                    {displayName ? "プレイヤー設定" : "名前を設定"}
-                  </AppButton>
-                </HStack>
+                {/* リフレッシュボタン */}
+                <AppButton
+                  size="sm"
+                  visual="outline"
+                  palette="gray"
+                  onClick={() => {
+                    refreshRooms();
+                    refreshLobbyCounts();
+                  }}
+                  loading={roomsLoading}
+                  disabled={!firebaseEnabled}
+                >
+                  <RefreshCw size={16} />
+                </AppButton>
               </HStack>
             </Box>
 
