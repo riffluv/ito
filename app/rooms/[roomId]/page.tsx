@@ -50,6 +50,7 @@ import {
 } from "@/lib/services/roomService";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
 import {
   getCachedRoomPasswordHash,
@@ -118,6 +119,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useAssetPreloader(ROOM_CORE_ASSETS);
   useEffect(() => {
     initMetricsExport();
+  }, []);
+  useEffect(() => {
+    setMetric("app", "appVersion", APP_VERSION);
   }, []);
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -394,6 +398,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!requiredSwVersion) return false;
     return requiredSwVersion !== APP_VERSION;
   }, [requiredSwVersion]);
+  useEffect(() => {
+    if (requiredSwVersion) {
+      setMetric("app", "requiredSwVersion", requiredSwVersion);
+      setMetric("app", "versionMismatch", requiredSwVersion === APP_VERSION ? 0 : 1);
+    } else {
+      setMetric("app", "requiredSwVersion", "");
+      setMetric("app", "versionMismatch", 0);
+    }
+  }, [requiredSwVersion]);
   const versionMismatchHandledRef = useRef(false);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
   const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
@@ -591,6 +604,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!uid) return;
     if (versionMismatchHandledRef.current) return;
     versionMismatchHandledRef.current = true;
+    bumpMetric("forcedExit", "versionMismatch");
     setPendingRejoinFlag();
     setForcedExitReason("version-mismatch");
     leavingRef.current = true;

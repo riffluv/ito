@@ -9,6 +9,7 @@ import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
 const panelFloat = keyframes`
   0% { transform: translateY(0px); }
@@ -101,6 +102,8 @@ export function DragonQuestParty({
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [enableScroll, setEnableScroll] = useState(false);
   const playerCacheRef = useRef<Map<string, PartyMember>>(new Map());
+  const renderStart =
+    typeof performance !== "undefined" ? performance.now() : null;
 
   const lastStablePlayersRef = useRef<PartyMember[]>(players);
   useEffect(() => {
@@ -182,6 +185,9 @@ export function DragonQuestParty({
       new Map(displayedPlayers.map((player) => [player.id, player] as const)),
     [displayedPlayers]
   );
+  useEffect(() => {
+    setMetric("ui", "dragonQuestPartyPlayers", displayedPlayers.length);
+  }, [displayedPlayers.length]);
 
   const displayedHostId = hostOverride?.targetId ?? hostId ?? null;
   const transferInFlight = transferTargetId !== null;
@@ -262,6 +268,12 @@ export function DragonQuestParty({
       setTransferTargetId(null);
     }
   }, [hostId, transferTargetId]);
+  useEffect(() => {
+    if (renderStart == null || typeof performance === "undefined") return;
+    const duration = performance.now() - renderStart;
+    setMetric("ui", "dragonQuestPartyRenderMs", Math.round(duration));
+    bumpMetric("ui", "dragonQuestPartyRenderCount");
+  });
 
   const handleHostTransfer = useCallback(
     async (targetId: string, targetName: string) => {
