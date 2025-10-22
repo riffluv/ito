@@ -1,5 +1,14 @@
 import type * as PIXI from "pixi.js";
 
+const nextFrame = () =>
+  new Promise<void>((resolve) => {
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 16);
+    }
+  });
+
 export interface DragonQuestBackgroundOptions {
   width: number;
   height: number;
@@ -114,6 +123,8 @@ export async function createDragonQuestBackground(
     autoDensity: false,
   });
 
+  await nextFrame();
+
   if (!app.canvas) {
     throw new Error("Pixi canvas unavailable");
   }
@@ -198,6 +209,8 @@ export async function createDragonQuestBackground(
 
   rebuildBackground(options.width, options.height);
 
+  await nextFrame();
+
   for (let i = 0; i < 15; i += 1) {
     const accent = new pixi.Graphics();
     const x = Math.random() * options.width;
@@ -210,6 +223,8 @@ export async function createDragonQuestBackground(
     });
     foreground.addChild(accent);
   }
+
+  await nextFrame();
 
   const particles = createParticles(
     pixi,

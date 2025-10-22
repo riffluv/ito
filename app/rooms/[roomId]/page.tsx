@@ -125,23 +125,61 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     const rafIds: number[] = [];
     let gsapModule: typeof import("gsap") | null = null;
     let pixiModule: typeof import("pixi.js") | null = null;
+    let moduleLoadPromise: Promise<void> | null = null;
+    let warmupIdleHandle: number | null = null;
+    let warmupTimeoutHandle: number | null = null;
+    let modulePrefetchCancel: (() => void) | null = null;
 
-    const ensureModules = async () => {
-      if (!gsapModule) {
-        try {
-          gsapModule = await import("gsap");
-        } catch {
-          gsapModule = null;
-        }
+    const ensureModules = () => {
+      if (moduleLoadPromise) {
+        return moduleLoadPromise;
       }
-      if (!pixiModule) {
-        try {
-          pixiModule = await import("pixi.js");
-        } catch {
-          pixiModule = null;
+      moduleLoadPromise = (async () => {
+        if (!gsapModule) {
+          try {
+            gsapModule = await import("gsap");
+          } catch {
+            gsapModule = null;
+          }
         }
+        if (!pixiModule) {
+          try {
+            pixiModule = await import("pixi.js");
+          } catch {
+            pixiModule = null;
+          }
+        }
+      })().catch(() => {
+        moduleLoadPromise = null;
+      });
+      return moduleLoadPromise ?? Promise.resolve();
+    };
+
+    const scheduleModulePrefetch = () => {
+      if (typeof window === "undefined") return;
+      const win = window as Window &
+        typeof globalThis & {
+          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+          cancelIdleCallback?: (handle: number) => void;
+        };
+      if (typeof win.requestIdleCallback === "function") {
+        const id = win.requestIdleCallback(
+          () => {
+            modulePrefetchCancel = null;
+            void ensureModules();
+          },
+          { timeout: 1200 }
+        );
+        modulePrefetchCancel = () => win.cancelIdleCallback?.(id);
+      } else {
+        const timeoutId = window.setTimeout(() => {
+          modulePrefetchCancel = null;
+          void ensureModules();
+        }, 400);
+        modulePrefetchCancel = () => window.clearTimeout(timeoutId);
       }
     };
+    scheduleModulePrefetch();
 
     const pumpFrames = (remaining: number) => {
       if (disposed || remaining <= 0) return;
@@ -176,8 +214,46 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       pumpFrames(3);
     };
 
+    const cancelScheduledWarmup = () => {
+      const win = window as Window &
+        typeof globalThis & {
+          cancelIdleCallback?: (handle: number) => void;
+        };
+      if (warmupIdleHandle !== null) {
+        win.cancelIdleCallback?.(warmupIdleHandle);
+        warmupIdleHandle = null;
+      }
+      if (warmupTimeoutHandle !== null) {
+        window.clearTimeout(warmupTimeoutHandle);
+        warmupTimeoutHandle = null;
+      }
+    };
+
+    const scheduleWarmup = () => {
+      cancelScheduledWarmup();
+      const win = window as Window &
+        typeof globalThis & {
+          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        };
+      if (typeof win.requestIdleCallback === "function") {
+        warmupIdleHandle = win.requestIdleCallback(
+          () => {
+            warmupIdleHandle = null;
+            void runWarmup();
+          },
+          { timeout: 1200 }
+        );
+      } else {
+        warmupTimeoutHandle = window.setTimeout(() => {
+          warmupTimeoutHandle = null;
+          void runWarmup();
+        }, 300);
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
+      cancelScheduledWarmup();
       void runWarmup();
     };
 
@@ -186,13 +262,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     });
 
     if (document.visibilityState === "visible") {
-      void runWarmup();
+      scheduleWarmup();
     }
 
     return () => {
       disposed = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       rafIds.forEach((id) => cancelAnimationFrame(id));
+      cancelScheduledWarmup();
+      modulePrefetchCancel?.();
     };
   }, [soundManager]);
 
@@ -221,18 +299,49 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [soundManager, shouldPlayBgm]);
 
   useEffect(() => {
-    const prefetch = async () => {
-      await Promise.allSettled(
-        PREFETCH_COMPONENT_LOADERS.map((loader) => {
-          try {
-            return loader();
-          } catch (error) {
-            return Promise.reject(error);
-          }
-        })
-      );
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    const win = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+
+    const runPrefetch = async () => {
+      for (const loader of PREFETCH_COMPONENT_LOADERS) {
+        if (cancelled) break;
+        try {
+          await loader();
+        } catch {
+          // ignore individual loader failure
+        }
+      }
     };
-    prefetch();
+
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const triggerPrefetch = () => {
+      idleHandle = null;
+      timeoutHandle = null;
+      void runPrefetch();
+    };
+
+    if (typeof win.requestIdleCallback === "function") {
+      idleHandle = win.requestIdleCallback(triggerPrefetch, { timeout: 2000 });
+    } else {
+      timeoutHandle = window.setTimeout(triggerPrefetch, 600);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle !== null) {
+        win.cancelIdleCallback?.(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+    };
   }, []);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -1885,4 +1994,3 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-
