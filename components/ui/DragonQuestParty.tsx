@@ -62,6 +62,20 @@ const LIST_MAX_HEIGHT_DPI125 = "calc(100vh - 200px)";
 const LIST_MAX_HEIGHT_DPI150 = "calc(100vh - 180px)";
 const LIST_GAP = 2;
 
+const shallowEqualPartyMember = (a: PartyMember, b: PartyMember) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export function DragonQuestParty({
   players,
   roomStatus,
@@ -86,6 +100,7 @@ export function DragonQuestParty({
   const [ambientPhase, setAmbientPhase] = useState<0 | 1>(0);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [enableScroll, setEnableScroll] = useState(false);
+  const playerCacheRef = useRef<Map<string, PartyMember>>(new Map());
 
   const lastStablePlayersRef = useRef<PartyMember[]>(players);
   useEffect(() => {
@@ -98,41 +113,69 @@ export function DragonQuestParty({
     suspendTransientUpdates && players.length === 0
       ? lastStablePlayersRef.current
       : players;
+  const byId = useMemo(
+    () => new Map(effectivePlayers.map((p) => [p.id, p] as const)),
+    [effectivePlayers]
+  );
+
+  const roundIdsKey = Array.isArray(roundIds) ? roundIds.join(",") : "";
+  const eligibleIdsKey = Array.isArray(eligibleIds)
+    ? eligibleIds.join(",")
+    : "";
+  const onlineUidsKey = Array.isArray(onlineUids) ? onlineUids.join(",") : "";
+
   // 表示プレイヤーの決定ロジック（waitingカードと一致させるため eligibleIds を最優先）
   // - 1) roundIds（deal.players ベース、オンライン/オフライン含む）
   // - 2) eligibleIds（オンラインのラウンド対象）
   // - 3) onlineUids
   // - 4) players
   // - hostId は常に含める
-  const byId = new Map(effectivePlayers.map((p) => [p.id, p] as const));
-  let displayedIds: string[];
-  if (Array.isArray(roundIds) && roundIds.length > 0) {
-    displayedIds = Array.from(new Set(roundIds));
-  } else if (Array.isArray(eligibleIds) && eligibleIds.length > 0) {
-    displayedIds = Array.from(new Set(eligibleIds));
-  } else if (Array.isArray(onlineUids) && onlineUids.length > 0) {
-    displayedIds = Array.from(new Set(onlineUids));
-  } else {
-    displayedIds = effectivePlayers.map((p) => p.id);
-  }
-  if (hostId && !displayedIds.includes(hostId)) {
-    displayedIds = [hostId, ...displayedIds];
-  }
-  const displayedPlayers: PartyMember[] = displayedIds.map((id) => {
-    const existing = byId.get(id);
-    if (existing) return existing;
-    const fallbackName = fallbackNames?.[id];
-    return {
-      id,
-      uid: id,
-      name: fallbackName ? fallbackName : "プレイヤー",
-      avatar: "",
-      number: null,
-      clue1: "",
-      ready: false,
-      orderIndex: 0,
-    } as PartyMember;
-  });
+  const displayedIds = useMemo(() => {
+    let ids: string[];
+    if (roundIdsKey) {
+      ids = Array.from(new Set(roundIds ?? []));
+    } else if (eligibleIdsKey) {
+      ids = Array.from(new Set(eligibleIds ?? []));
+    } else if (onlineUidsKey) {
+      ids = Array.from(new Set(onlineUids ?? []));
+    } else {
+      ids = effectivePlayers.map((p) => p.id);
+    }
+    if (hostId && !ids.includes(hostId)) {
+      ids = [hostId, ...ids];
+    }
+    return ids;
+  }, [eligibleIdsKey, effectivePlayers, hostId, onlineUidsKey, roundIdsKey]);
+
+  const displayedPlayers: PartyMember[] = useMemo(() => {
+    const cache = playerCacheRef.current;
+    const nextCache = new Map<string, PartyMember>();
+    const result = displayedIds.map((id) => {
+      const existing = byId.get(id);
+      const fallbackName = fallbackNames?.[id];
+      const candidate: PartyMember =
+        existing ??
+        {
+          id,
+          uid: id,
+          name: fallbackName ? fallbackName : "プレイヤー",
+          avatar: "",
+          number: null,
+          clue1: "",
+          ready: false,
+          orderIndex: 0,
+        };
+      const cached = cache.get(id);
+      if (cached && shallowEqualPartyMember(cached, candidate)) {
+        nextCache.set(id, cached);
+        return cached;
+      }
+      nextCache.set(id, candidate);
+      return candidate;
+    });
+    playerCacheRef.current = nextCache;
+    return result;
+  }, [byId, displayedIds, fallbackNames]);
 
   const displayedPlayerMap = useMemo(
     () =>
@@ -150,6 +193,9 @@ export function DragonQuestParty({
     }
     const hostPlayer = displayedPlayers.find((player) => player.id === displayedHostId);
     if (!hostPlayer) {
+      return displayedPlayers;
+    }
+    if (displayedPlayers[0]?.id === displayedHostId) {
       return displayedPlayers;
     }
     return [hostPlayer, ...displayedPlayers.filter((player) => player.id !== displayedHostId)];
