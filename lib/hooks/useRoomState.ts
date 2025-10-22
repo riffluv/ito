@@ -267,27 +267,30 @@ export function useRoomState(
         })
         .catch((error) => {
           joinCompletedRef.current = false;
-          if (!pendingRejoin) {
-            const nextAttempt = attemptBeforeCall + 1;
-            joinAttemptRef.current = nextAttempt;
-            if (nextAttempt <= MAX_JOIN_RETRIES) {
-              const delay = Math.min(
-                BASE_JOIN_RETRY_DELAY_MS * Math.pow(JOIN_RETRY_BACKOFF_FACTOR, Math.max(nextAttempt - 1, 0)),
-                MAX_JOIN_RETRY_DELAY_MS
-              );
-              logDebug("room-state", "joinRoomFully-retry", { attempt: nextAttempt, delay });
-              clearRetryTimer();
-              joinRetryTimerRef.current = setTimeout(() => {
-                joinRetryTimerRef.current = null;
-                setJoinAttemptToken((value) => value + 1);
-              }, delay);
-              setJoinStatus("retrying");
-            } else {
-              logError("room-state", "joinRoomFully-max-retries", error);
-              setJoinStatus("retrying");
-            }
+          const nextAttempt = attemptBeforeCall + 1;
+          joinAttemptRef.current = nextAttempt;
+          const cappedAttempt = Math.min(Math.max(nextAttempt, 1), MAX_JOIN_RETRIES);
+          const delay = Math.min(
+            BASE_JOIN_RETRY_DELAY_MS *
+              Math.pow(JOIN_RETRY_BACKOFF_FACTOR, Math.max(cappedAttempt - 1, 0)),
+            MAX_JOIN_RETRY_DELAY_MS
+          );
+          const shouldRetry = pendingRejoin || nextAttempt <= MAX_JOIN_RETRIES;
+          if (shouldRetry) {
+            logDebug("room-state", "joinRoomFully-retry", {
+              attempt: nextAttempt,
+              delay,
+              pendingRejoin,
+            });
+            clearRetryTimer();
+            joinRetryTimerRef.current = setTimeout(() => {
+              joinRetryTimerRef.current = null;
+              setJoinAttemptToken((value) => value + 1);
+            }, delay);
+            setJoinStatus("retrying");
           } else {
-            joinAttemptRef.current = 0;
+            logError("room-state", "joinRoomFully-max-retries", error);
+            setJoinStatus("retrying");
           }
         })
         .finally(() => {
