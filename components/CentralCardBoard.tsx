@@ -38,7 +38,7 @@ import {
   submitSortedOrder,
 } from "@/lib/game/room";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { logError, logWarn } from "@/lib/utils/log";
 import { REVEAL_FIRST_DELAY, REVEAL_LINGER, REVEAL_STEP_DELAY } from "@/lib/ui/motion";
@@ -59,6 +59,7 @@ interface CentralCardBoardProps {
   proposal?: string[];
   resolveMode?: ResolveMode | null;
   orderNumbers?: Record<string, number | null | undefined>;
+  orderSnapshots?: Record<string, PlayerSnapshot> | null;
   isHost?: boolean;
   displayMode?: "full" | "minimal";
   slotCount?: number;
@@ -531,6 +532,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   resolveMode = "sort-submit",
   isHost,
   orderNumbers = {},
+  orderSnapshots = null,
   displayMode = "full",
   slotCount,
   revealedAt,
@@ -542,8 +544,28 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         map.set(player.id, player);
       }
     });
+    if (orderSnapshots && typeof orderSnapshots === 'object') {
+      Object.entries(orderSnapshots).forEach(([id, snapshot]) => {
+        if (!snapshot || map.has(id)) return;
+        map.set(id, {
+          id,
+          name:
+            typeof snapshot.name === 'string' && snapshot.name.trim()
+              ? snapshot.name
+              : '離脱プレイヤー',
+          avatar:
+            typeof snapshot.avatar === 'string' && snapshot.avatar.trim()
+              ? snapshot.avatar
+              : '/avatars/knight1.webp',
+          clue1: typeof snapshot.clue1 === 'string' ? snapshot.clue1 : '',
+          number: typeof snapshot.number === 'number' ? snapshot.number : null,
+          ready: true,
+          orderIndex: 0,
+        });
+      });
+    }
     return map;
-  }, [players]);
+  }, [players, orderSnapshots]);
 
   const placedIds = useMemo(
     () => new Set<string>([...(orderList || []), ...(proposal || [])]),

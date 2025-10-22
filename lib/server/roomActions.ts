@@ -16,6 +16,89 @@ import {
   systemMessagePlayerLeft,
 } from "@/lib/server/systemMessages";
 
+type LeaveRoomClueContext = {
+  room: any;
+  updates: Record<string, any>;
+  filteredPlayers: string[];
+  filteredList: string[];
+  filteredProposal: (string | null)[];
+  remainingCount: number;
+};
+
+function applyCluePhaseAdjustments({
+  room,
+  updates,
+  filteredPlayers,
+  filteredList,
+  filteredProposal,
+  remainingCount,
+}: LeaveRoomClueContext) {
+  if (room?.status !== "clue") return;
+
+  if (filteredPlayers.length !== (room?.deal?.players?.length ?? 0)) {
+    updates["deal.players"] = filteredPlayers;
+    updates["order.total"] = filteredPlayers.length;
+  }
+
+  if (filteredList.length !== (room?.order?.list?.length ?? 0)) {
+    updates["order.list"] = filteredList;
+  }
+
+  if (filteredProposal.length !== (room?.order?.proposal?.length ?? 0)) {
+    updates["order.proposal"] = filteredProposal;
+  }
+
+  const allowContinue =
+    typeof room?.options?.allowContinueAfterFail === "boolean"
+      ? !!room.options.allowContinueAfterFail
+      : true;
+
+  const currentOrderTotal =
+    typeof updates["order.total"] === "number"
+      ? updates["order.total"]
+      : typeof room?.order?.total === "number"
+      ? room.order.total
+      : null;
+
+  const nextTotal =
+    typeof currentOrderTotal === "number" && Number.isFinite(currentOrderTotal)
+      ? currentOrderTotal
+      : filteredPlayers.length;
+
+  const nextFailed =
+    typeof updates["order.failed"] === "boolean"
+      ? !!updates["order.failed"]
+      : !!room?.order?.failed;
+
+  const nextListLength = filteredList.length;
+
+  const shouldFinishByTotal =
+    remainingCount > 0 &&
+    typeof nextTotal === "number" &&
+    nextTotal >= 0 &&
+    nextListLength >= nextTotal;
+
+  const shouldFinishByFailure = remainingCount > 0 && nextFailed && !allowContinue;
+
+  if (shouldFinishByTotal || shouldFinishByFailure) {
+    const revealSuccess = !nextFailed;
+    const serverNow = FieldValue.serverTimestamp();
+    updates.status = "reveal";
+    updates.result = {
+      success: revealSuccess,
+      revealedAt: serverNow,
+    };
+    updates["order.decidedAt"] = serverNow;
+    if (!("order.total" in updates) && typeof nextTotal === "number") {
+      updates["order.total"] = nextTotal;
+    }
+    if (!("order.failed" in updates)) {
+      updates["order.failed"] = nextFailed;
+    }
+    updates.lastActiveAt = serverNow;
+  }
+}
+
 function sanitizeServerText(input: unknown, maxLength = 500): string {
   if (typeof input !== "string") return "";
   // eslint-disable-next-line no-control-regex -- 制御文字を明示的に除去するためのパターン
@@ -285,6 +368,7 @@ export async function leaveRoomServer(
   const playersRef = db.collection("rooms").doc(roomId).collection("players");
   let recordedPlayerName: string | null = null;
   let hadPlayerSnapshot = false;
+  let removedPlayerData: Record<string, any> | null = null;
 
   try {
     const primarySnap = await playersRef.doc(userId).get();
@@ -295,7 +379,11 @@ export async function leaveRoomServer(
     const pushDoc = (doc: any) => {
       if (seenIds.has(doc.id)) return;
       seenIds.add(doc.id);
-      const value = (doc.data() as any)?.name;
+      const data = doc.data() as any;
+      if (!removedPlayerData) {
+        removedPlayerData = { ...data };
+      }
+      const value = data?.name;
       if (!recordedPlayerName && typeof value === "string" && value.trim()) {
         recordedPlayerName = value.trim();
       }
@@ -368,74 +456,39 @@ export async function leaveRoomServer(
         : [];
       const filteredProposal = origProposal.filter((id) => id !== userId);
 
-      const isCluePhase = room?.status === "clue";
-
       const updates: Record<string, any> = {};
 
-      if (isCluePhase) {
-        if (origPlayers.length !== filteredPlayers.length) {
-          updates["deal.players"] = filteredPlayers;
-          updates["order.total"] = filteredPlayers.length;
-        }
-        if (origList.length !== filteredList.length) {
-          updates["order.list"] = filteredList;
-        }
-        if (origProposal.length !== filteredProposal.length) {
-          updates["order.proposal"] = filteredProposal;
-        }
-      }
+      applyCluePhaseAdjustments({
+        room,
+        updates,
+        filteredPlayers,
+        filteredList,
+        filteredProposal,
+        remainingCount,
+      });
 
-      if (isCluePhase) {
-        const allowContinue =
-          typeof room?.options?.allowContinueAfterFail === "boolean"
-            ? !!room.options.allowContinueAfterFail
-            : true;
-
-        const currentOrderTotal =
-          typeof updates["order.total"] === "number"
-            ? updates["order.total"]
-            : typeof room?.order?.total === "number"
-            ? room.order.total
-            : null;
-
-        const nextTotal =
-          typeof currentOrderTotal === "number" && Number.isFinite(currentOrderTotal)
-            ? currentOrderTotal
-            : filteredPlayers.length;
-
-        const nextFailed =
-          typeof updates["order.failed"] === "boolean"
-            ? !!updates["order.failed"]
-            : !!room?.order?.failed;
-
-        const nextListLength = filteredList.length;
-
-        const shouldFinishByTotal =
-          remainingCount > 0 &&
-          typeof nextTotal === "number" &&
-          nextTotal >= 0 &&
-          nextListLength >= nextTotal;
-
-        const shouldFinishByFailure =
-          remainingCount > 0 && nextFailed && !allowContinue;
-
-        if (shouldFinishByTotal || shouldFinishByFailure) {
-          const revealSuccess = !nextFailed;
-          const serverNow = FieldValue.serverTimestamp();
-          updates.status = "reveal";
-          updates.result = {
-            success: revealSuccess,
-            revealedAt: serverNow,
-          };
-          updates["order.decidedAt"] = serverNow;
-          if (!("order.total" in updates) && typeof nextTotal === "number") {
-            updates["order.total"] = nextTotal;
-          }
-          if (!("order.failed" in updates)) {
-            updates["order.failed"] = nextFailed;
-          }
-          updates.lastActiveAt = serverNow;
-        }
+      if (
+        room?.status === "reveal" &&
+        remainingCount > 0 &&
+        removedPlayerData
+      ) {
+        const snapshotPayload = {
+          name:
+            typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
+              ? removedPlayerData.name
+              : "離脱プレイヤー",
+          avatar:
+            typeof removedPlayerData?.avatar === "string" && removedPlayerData.avatar.trim()
+              ? removedPlayerData.avatar
+              : "/avatars/knight1.webp",
+          clue1:
+            typeof removedPlayerData?.clue1 === "string" ? removedPlayerData.clue1 : "",
+          number:
+            typeof removedPlayerData?.number === "number" && Number.isFinite(removedPlayerData.number)
+              ? removedPlayerData.number
+              : null,
+        };
+        updates[`order.snapshots.${userId}`] = snapshotPayload;
       }
 
       if (remainingCount === 0) {
