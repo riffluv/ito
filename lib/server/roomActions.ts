@@ -368,17 +368,90 @@ export async function leaveRoomServer(
         : [];
       const filteredProposal = origProposal.filter((id) => id !== userId);
 
+      const isCluePhase = room?.status === "clue";
+
       const updates: Record<string, any> = {};
 
-      if (origPlayers.length !== filteredPlayers.length) {
-        updates["deal.players"] = filteredPlayers;
-        updates["order.total"] = filteredPlayers.length;
+      if (isCluePhase) {
+        if (origPlayers.length !== filteredPlayers.length) {
+          updates["deal.players"] = filteredPlayers;
+          updates["order.total"] = filteredPlayers.length;
+        }
+        if (origList.length !== filteredList.length) {
+          updates["order.list"] = filteredList;
+        }
+        if (origProposal.length !== filteredProposal.length) {
+          updates["order.proposal"] = filteredProposal;
+        }
       }
-      if (origList.length !== filteredList.length) {
-        updates["order.list"] = filteredList;
+
+      if (isCluePhase) {
+        const allowContinue =
+          typeof room?.options?.allowContinueAfterFail === "boolean"
+            ? !!room.options.allowContinueAfterFail
+            : true;
+
+        const currentOrderTotal =
+          typeof updates["order.total"] === "number"
+            ? updates["order.total"]
+            : typeof room?.order?.total === "number"
+            ? room.order.total
+            : null;
+
+        const nextTotal =
+          typeof currentOrderTotal === "number" && Number.isFinite(currentOrderTotal)
+            ? currentOrderTotal
+            : filteredPlayers.length;
+
+        const nextFailed =
+          typeof updates["order.failed"] === "boolean"
+            ? !!updates["order.failed"]
+            : !!room?.order?.failed;
+
+        const nextListLength = filteredList.length;
+
+        const shouldFinishByTotal =
+          remainingCount > 0 &&
+          typeof nextTotal === "number" &&
+          nextTotal >= 0 &&
+          nextListLength >= nextTotal;
+
+        const shouldFinishByFailure =
+          remainingCount > 0 && nextFailed && !allowContinue;
+
+        if (shouldFinishByTotal || shouldFinishByFailure) {
+          const revealSuccess = !nextFailed;
+          const serverNow = FieldValue.serverTimestamp();
+          updates.status = "reveal";
+          updates.result = {
+            success: revealSuccess,
+            revealedAt: serverNow,
+          };
+          updates["order.decidedAt"] = serverNow;
+          if (!("order.total" in updates) && typeof nextTotal === "number") {
+            updates["order.total"] = nextTotal;
+          }
+          if (!("order.failed" in updates)) {
+            updates["order.failed"] = nextFailed;
+          }
+          updates.lastActiveAt = serverNow;
+        }
       }
-      if (origProposal.length !== filteredProposal.length) {
-        updates["order.proposal"] = filteredProposal;
+
+      if (remainingCount === 0) {
+        const serverNow = FieldValue.serverTimestamp();
+        delete updates["deal.players"];
+        delete updates["order.total"];
+        delete updates["order.list"];
+        delete updates["order.proposal"];
+        delete updates["order.failed"];
+        delete updates["order.failedAt"];
+        delete updates["order.decidedAt"];
+        updates.status = "waiting";
+        updates.deal = null;
+        updates.order = null;
+        updates.result = null;
+        updates.lastActiveAt = serverNow;
       }
 
       const playerInputs = buildHostPlayerInputsFromSnapshots({

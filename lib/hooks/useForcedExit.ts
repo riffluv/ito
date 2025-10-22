@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { notify } from "@/components/ui/notify";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
+import { forceDetachAll } from "@/lib/firebase/presence";
 import { logDebug, logError } from "@/lib/utils/log";
 
 interface UseForcedExitParams {
@@ -13,6 +14,7 @@ interface UseForcedExitParams {
   redirectGuard: boolean;
   lastKnownHostId: string | null;
   leavingRef: React.MutableRefObject<boolean>;
+  detachNow: () => Promise<void> | void;
   setPendingRejoinFlag: () => void;
   setForcedExitReason: (reason: "game-in-progress" | null) => void;
   roomId: string;
@@ -33,6 +35,7 @@ export function useForcedExit({
   redirectGuard,
   lastKnownHostId,
   leavingRef,
+  detachNow,
   setPendingRejoinFlag,
   setForcedExitReason,
   roomId,
@@ -79,7 +82,21 @@ export function useForcedExit({
 
       if (!forcedExitCleanupRef.current) {
         forcedExitCleanupRef.current = true;
-        leaveRoomAction(roomId, uid, displayName ?? null)
+        const runCleanup = async () => {
+          leavingRef.current = true;
+          try {
+            await detachNow();
+          } catch (error) {
+            logDebug("useForcedExit", "auto-detach-failed", error);
+          }
+          try {
+            await forceDetachAll(roomId, uid);
+          } catch (error) {
+            logDebug("useForcedExit", "auto-force-detach-failed", error);
+          }
+          await leaveRoomAction(roomId, uid, displayName ?? null);
+        };
+        runCleanup()
           .catch((error) => {
             logError("useForcedExit", "auto-leave-failed", error);
           })
@@ -108,5 +125,6 @@ export function useForcedExit({
     setForcedExitReason,
     roomId,
     displayName,
+    detachNow,
   ]);
 }

@@ -664,6 +664,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     redirectGuard,
     lastKnownHostId,
     leavingRef,
+    detachNow,
     setPendingRejoinFlag,
     setForcedExitReason,
     roomId,
