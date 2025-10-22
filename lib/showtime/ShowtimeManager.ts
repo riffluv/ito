@@ -1,4 +1,5 @@
 import { ACTION_EXECUTORS } from "./actions";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import type { Scenario, ScenarioStep, ShowtimeContext } from "./types";
 
 const sleep = (ms: number) =>
@@ -34,6 +35,7 @@ export class ShowtimeManager<C extends ShowtimeContext = ShowtimeContext> {
     if (!this.scenarios.has(name)) {
       return Promise.resolve();
     }
+    bumpMetric("showtime", "playQueued");
     return new Promise<void>((resolve) => {
       this.queue.push({ name, context, resolve });
       if (!this.playing) {
@@ -61,17 +63,29 @@ export class ShowtimeManager<C extends ShowtimeContext = ShowtimeContext> {
         next.resolve();
         continue;
       }
-      this.currentPromise = this.runScenario(scenario, next.context);
+      this.currentPromise = this.runScenario(next.name, scenario, next.context);
       await this.currentPromise;
+      bumpMetric("showtime", "playCompleted");
       next.resolve();
     }
     this.currentPromise = null;
     this.playing = false;
   }
 
-  private async runScenario(scenario: Scenario<C>, context: C) {
+  private async runScenario(name: string, scenario: Scenario<C>, context: C) {
+    const start = typeof performance !== "undefined" ? performance.now() : null;
+    let executedSteps = 0;
     for (const step of scenario) {
       await this.executeStep(step, context);
+      executedSteps += 1;
+    }
+    if (executedSteps > 0) {
+      bumpMetric("showtime", "stepsExecuted", executedSteps);
+    }
+    setMetric("showtime", "lastScenario", name);
+    if (start !== null && typeof performance !== "undefined") {
+      const duration = performance.now() - start;
+      setMetric("showtime", "lastDurationMs", Math.round(duration));
     }
   }
 
@@ -87,6 +101,8 @@ export class ShowtimeManager<C extends ShowtimeContext = ShowtimeContext> {
       return;
     }
     const rawParams = typeof step.params === "function" ? step.params(context) : step.params;
+    setMetric("showtime", "lastAction", step.action);
+    bumpMetric("showtime", "actionsExecuted");
     const promise = executor(rawParams ?? {}, context);
     if (!step.fireAndForget) {
       await promise;

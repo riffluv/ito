@@ -3,6 +3,7 @@ import { notify } from "@/components/ui/notify";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { forceDetachAll } from "@/lib/firebase/presence";
 import { logDebug, logError } from "@/lib/utils/log";
+import { bumpMetric } from "@/lib/utils/metrics";
 
 interface UseForcedExitParams {
   uid: string | null;
@@ -78,6 +79,7 @@ export function useForcedExit({
           logDebug("room-page", "notify-force-exit-init-failed", error);
         }
         setForcedExitReason("game-in-progress");
+        bumpMetric("forcedExit", "gameInProgress");
       }
 
       if (!forcedExitCleanupRef.current) {
