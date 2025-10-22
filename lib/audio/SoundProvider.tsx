@@ -27,6 +27,8 @@ const CRITICAL_PREWARM_IDS = new Set<SoundId>([
   "clue_decide",
   "order_confirm",
   "reset_game",
+  "result_victory",
+  "result_failure",
 ]);
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
