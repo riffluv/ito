@@ -1525,6 +1525,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           displayMode={getDisplayMode(room)}
           isHost={isHost}
           orderNumbers={room.order?.numbers ?? {}}
+          orderSnapshots={room.order?.snapshots ?? null}
           slotCount={slotCount}
           topic={room.topic ?? null}
           revealedAt={room.result?.revealedAt ?? null}

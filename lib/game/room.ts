@@ -101,13 +101,15 @@ export async function dealNumbers(roomId: string): Promise<number> {
   // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
   const fallbackPool = activeByRecency.length > 0 ? activeByRecency : all;
   let target = fallbackPool;
+  let presencePlayers: typeof all | null = null;
+  let missingPlayers: typeof all | null = null;
   try {
     if (presenceSupported()) {
       const uids = await fetchPresenceUids(roomId);
       if (Array.isArray(uids) && uids.length > 0) {
         const presenceSet = new Set(uids);
-        const presencePlayers: typeof all = [];
-        const missingPlayers: typeof all = [];
+        presencePlayers = [];
+        missingPlayers = [];
         for (const player of fallbackPool) {
           if (presenceSet.has(player.id)) {
             presencePlayers.push(player);
@@ -129,9 +131,21 @@ export async function dealNumbers(roomId: string): Promise<number> {
   if (target.length < Math.min(2, all.length)) {
     target = all;
   }
-  const ordered = [...target].sort((a, b) =>
-    String(a.uid || a.id).localeCompare(String(b.uid || b.id))
-  );
+
+  const sortByStableIdentity = (items: typeof all) =>
+    [...items].sort((a, b) =>
+      String(a.uid || a.id).localeCompare(String(b.uid || b.id))
+    );
+
+  let ordered: typeof all;
+  if (presencePlayers && presencePlayers.length > 0) {
+    const online = sortByStableIdentity(presencePlayers);
+    const offline = sortByStableIdentity(missingPlayers || []);
+    ordered = [...online, ...offline];
+  } else {
+    ordered = sortByStableIdentity(target);
+  }
+
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
   await updateDoc(doc(db!, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },

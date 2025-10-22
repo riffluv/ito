@@ -20,6 +20,13 @@ export type RoomOptions = {
   defaultTopicType?: "通常版" | "レインボー版" | "クラシック版" | "カスタム";
 };
 
+export type PlayerSnapshot = {
+  name: string;
+  avatar: string;
+  clue1: string;
+  number: number | null;
+};
+
 export type RoomDoc = {
   name: string;
   hostId: string;
@@ -53,6 +60,7 @@ export type RoomDoc = {
     total?: number | null;
     proposal?: string[] | null;
     numbers?: Record<string, number | null | undefined> | null;
+    snapshots?: Record<string, PlayerSnapshot> | null;
   } | null;
   result?: {
     success: boolean;

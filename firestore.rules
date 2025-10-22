@@ -44,7 +44,7 @@ service cloud.firestore {
 
     function isValidOrderMap(order) {
       return order is map
-        && order.keys().hasOnly(['list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'total', 'proposal', 'numbers'])
+        && order.keys().hasOnly(['list', 'decidedAt', 'lastNumber', 'failed', 'failedAt', 'total', 'proposal', 'numbers', 'snapshots'])
         && (!('list' in order) || (order.list is list && order.list.size() <= 16))
         && (!('proposal' in order) || (order.proposal == null || (order.proposal is list && order.proposal.size() <= 16)))
         && (!('decidedAt' in order) || isTimestampValue(order.decidedAt))
@@ -52,7 +52,8 @@ service cloud.firestore {
         && (!('failed' in order) || order.failed is bool)
         && (!('failedAt' in order) || order.failedAt == null || order.failedAt is number)
         && (!('total' in order) || order.total == null || (order.total is number && order.total >= 0 && order.total <= 16))
-        && (!('numbers' in order) || order.numbers == null || order.numbers is map);
+        && (!('numbers' in order) || order.numbers == null || order.numbers is map)
+        && (!('snapshots' in order) || order.snapshots == null || order.snapshots is map);
     }
 
     function isValidResultMap(result) {
