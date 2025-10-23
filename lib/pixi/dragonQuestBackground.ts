@@ -173,7 +173,9 @@ export async function createDragonQuestBackground(
 
     mountains.clear();
     mountains.moveTo(0, height * 0.7);
-    for (let x = 0; x <= width; x += 100) {
+    // 解像度に応じて間引き（モバイル・ローエンドでは粗く）
+    const step = width < 800 ? 120 : 100;
+    for (let x = 0; x <= width; x += step) {
       const pointY = height * (0.7 + Math.sin(x * 0.01) * 0.15);
       mountains.lineTo(x, pointY);
     }
@@ -226,12 +228,21 @@ export async function createDragonQuestBackground(
 
   await nextFrame();
 
+  // デバイス性能に応じてパーティクル数を調整
+  const getParticleCount = (): number => {
+    if (typeof navigator === "undefined") return 60;
+    const cores = navigator.hardwareConcurrency || 4;
+    if (cores <= 4) return 30; // ローエンド
+    if (cores <= 8) return 45; // ミドルレンジ
+    return 60; // ハイエンド
+  };
+
   const particles = createParticles(
     pixi,
     particlesContainer,
     options.width,
     options.height,
-    60
+    getParticleCount()
   );
 
   let pointerTargetX = 0;
@@ -252,8 +263,24 @@ export async function createDragonQuestBackground(
   const fireworks: Firework[] = [];
   const meteors: Meteor[] = [];
 
+  // Object Pooling: Graphics オブジェクトの再利用
+  const graphicsPool: PIXI.Graphics[] = [];
+  const getGraphicsFromPool = (): PIXI.Graphics => {
+    return graphicsPool.pop() || new pixi.Graphics();
+  };
+  const releaseGraphicsToPool = (graphics: PIXI.Graphics) => {
+    graphics.clear();
+    graphics.alpha = 1;
+    graphics.visible = true;
+    if (graphicsPool.length < 200) { // プールサイズ上限
+      graphicsPool.push(graphics);
+    } else {
+      graphics.destroy();
+    }
+  };
+
   const launchFirework = (startX: number, startY: number, color: number) => {
-    const fw = new pixi.Graphics();
+    const fw = getGraphicsFromPool();
     fw.circle(0, 0, 4);
     fw.fill({ color, alpha: 1 });
     fireworksContainer.addChild(fw);
@@ -278,7 +305,7 @@ export async function createDragonQuestBackground(
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
       const speed = 3 + Math.random() * 4;
-      const particle = new pixi.Graphics();
+      const particle = getGraphicsFromPool();
       particle.circle(0, 0, 2 + Math.random() * 2);
       particle.fill({ color: fw.color, alpha: 0.9 });
       fireworksContainer.addChild(particle);
@@ -300,12 +327,12 @@ export async function createDragonQuestBackground(
 
   const launchMeteor = (startX: number, startY: number, targetX: number, targetY: number, size: number) => {
     // 隕石本体
-    const meteor = new pixi.Graphics();
+    const meteor = getGraphicsFromPool();
     meteor.circle(0, 0, size);
     meteor.fill({ color: 0xff4400, alpha: 1 });
 
     // 尾（トレイル）
-    const trail = new pixi.Graphics();
+    const trail = getGraphicsFromPool();
     trail.rect(-size * 3, -size / 2, size * 3, size);
     trail.fill({ color: 0xff6600, alpha: 0.6 });
 
@@ -393,6 +420,28 @@ export async function createDragonQuestBackground(
   let lastRender = performance.now();
   const minInterval = 1000 / 60;
 
+  // Visibility API: 非アクティブ時は完全停止
+  const handleVisibilityChange = () => {
+    if (typeof document === "undefined") return;
+    if (document.hidden) {
+      running = false;
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+    } else {
+      if (!running) {
+        running = true;
+        lastRender = performance.now();
+        frameId = requestAnimationFrame(animate);
+      }
+    }
+  };
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+  }
+
   const animate = (time: number) => {
     if (!running) {
       return;
@@ -458,10 +507,12 @@ export async function createDragonQuestBackground(
       meteor.trail.rotation = meteor.rotation;
       meteor.trail.alpha = Math.max(0, meteor.life * 0.6);
 
-      // 画面外に出たら削除
+      // 画面外に出たらプールに返却
       if (meteor.y > height + 200 || meteor.life <= 0) {
-        meteor.sprite.destroy();
-        meteor.trail.destroy();
+        meteorsContainer.removeChild(meteor.sprite);
+        meteorsContainer.removeChild(meteor.trail);
+        releaseGraphicsToPool(meteor.sprite);
+        releaseGraphicsToPool(meteor.trail);
         meteors.splice(i, 1);
       }
     }
@@ -487,7 +538,8 @@ export async function createDragonQuestBackground(
         // 頂点に達したら爆発（vyが正になるか、ライフが0.3以下で強制爆発）
         if ((fw.vy >= -0.5 || fw.life <= 0.3) && !fw.exploded) {
           explodeFirework(fw);
-          fw.sprite.destroy();
+          fireworksContainer.removeChild(fw.sprite);
+          releaseGraphicsToPool(fw.sprite);
           fireworks.splice(i, 1);
           continue;
         }
@@ -502,9 +554,10 @@ export async function createDragonQuestBackground(
         fw.sprite.y = fw.y;
         fw.sprite.alpha = Math.max(0, fw.life);
 
-        // ライフが尽きたら削除
+        // ライフが尽きたらプールに返却
         if (fw.life <= 0) {
-          fw.sprite.destroy();
+          fireworksContainer.removeChild(fw.sprite);
+          releaseGraphicsToPool(fw.sprite);
           fireworks.splice(i, 1);
         }
       }
@@ -537,6 +590,9 @@ export async function createDragonQuestBackground(
       if (frameId !== null) {
         cancelAnimationFrame(frameId);
         frameId = null;
+      }
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
       particles.forEach((particle) => {
         particle.sprite?.destroy();

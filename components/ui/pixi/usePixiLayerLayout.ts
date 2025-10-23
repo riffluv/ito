@@ -40,6 +40,7 @@ export function usePixiLayerLayout(
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const lastLayoutRef = useRef<DOMRect | null>(null);
   const dprRef = useRef(typeof window !== "undefined" ? window.devicePixelRatio : 1);
+  const resizeTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const target = targetRef.current;
@@ -95,13 +96,18 @@ export function usePixiLayerLayout(
       rafRef.current = requestAnimationFrame(updateLayout);
     };
 
-    // ResizeObserver でサイズ変化を監視
+    // ResizeObserver でサイズ変化を監視（debounce 付き）
     resizeObserverRef.current = new ResizeObserver(() => {
-      // サイズ変化時は即座に更新をトリガー
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
+      // 頻繁なリサイズ時の負荷軽減（16ms = 1フレーム遅延）
+      if (resizeTimeoutRef.current !== null) {
+        clearTimeout(resizeTimeoutRef.current);
       }
-      updateLayout();
+      resizeTimeoutRef.current = window.setTimeout(() => {
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+        }
+        updateLayout();
+      }, 16);
     });
 
     resizeObserverRef.current.observe(target);
@@ -116,6 +122,11 @@ export function usePixiLayerLayout(
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
+      }
+
+      if (resizeTimeoutRef.current !== null) {
+        clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
       }
 
       if (resizeObserverRef.current) {

@@ -1,7 +1,7 @@
 import { Box, Text, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
@@ -93,7 +93,9 @@ export function GameResultOverlay({
   const flashRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<(SVGRectElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Timeline を再利用（GC 負荷削減）
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const timeline = useMemo(() => gsap.timeline({ paused: true }), []);
   const prefersReduced = useReducedMotionPreference();
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
@@ -204,6 +206,9 @@ export function GameResultOverlay({
     const container = containerRef.current;
     if (!overlay || !text || !container) return;
 
+    // GPU アクセラレーションを強制（force3D）
+    gsap.set([container, overlay, text], { force3D: true });
+
     if (prefersReduced) {
       gsap.set(container, {
         xPercent: -50,
@@ -217,7 +222,8 @@ export function GameResultOverlay({
       return;
     }
 
-    const tl = gsap.timeline();
+    // Timeline を再利用（クリアして再スタート）
+    const tl = timeline.clear().pause();
     tlRef.current = tl;
 
     if (failed) {
@@ -784,6 +790,9 @@ export function GameResultOverlay({
       .set({}, {}, 0) // パーティクル用のプレースホルダー
       ;
     }
+
+    // Timeline を再生
+    tl.restart();
 
     return () => {
       tlRef.current?.kill();
