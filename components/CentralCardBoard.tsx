@@ -1038,7 +1038,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       const cardId = proposalCardId ?? orderCardId ?? pendingCardId ?? null;
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
       const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
-      const showCard = !!cardId && ready && !isOptimistic && isGameActive;
+      const forceVisible = roomStatus === "reveal" || roomStatus === "finished";
+      const showCard = !!cardId && !isOptimistic && isGameActive && (ready || forceVisible);
       return {
         idx,
         totalSlots: slotCountStatic,
@@ -1058,6 +1059,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     playerReadyMap,
     optimisticReturningSet,
     isGameActive,
+    roomStatus,
     canDropAtPosition,
   ]);
 
