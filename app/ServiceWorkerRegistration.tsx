@@ -30,6 +30,32 @@ const LOOP_GUARD_THRESHOLD = 3;
 let controllerChangeBound = false;
 let controllerChangeAutoCount = 0;
 
+const bindVisibilityHiddenAutoApply = () => {
+  if (typeof document === "undefined") {
+    return () => {
+      /* noop */
+    };
+  }
+  const visHandler = () => {
+    try {
+      if (document.visibilityState === "hidden") {
+        const waiting = getWaitingServiceWorker();
+        if (waiting) {
+          applyServiceWorkerUpdate({
+            reason: "visibility:hidden",
+          });
+        }
+      }
+    } catch {
+      /* noop */
+    }
+  };
+  document.addEventListener("visibilitychange", visHandler);
+  return () => {
+    document.removeEventListener("visibilitychange", visHandler);
+  };
+};
+
 const bindControllerChangeListener = () => {
   if (controllerChangeBound) return;
   controllerChangeBound = true;
@@ -109,30 +135,6 @@ const registerServiceWorker = async () => {
         }
       });
     });
-
-    // タブが非表示の間に待機SWがあれば自動適用（Soft規定の最適化）
-    if (typeof document !== "undefined") {
-      const visHandler = () => {
-        try {
-          if (document.visibilityState === "hidden") {
-            const waiting = getWaitingServiceWorker();
-            if (waiting) {
-              const applied = applyServiceWorkerUpdate({
-                reason: "visibility:hidden",
-              });
-              if (!applied) {
-                try {
-                  waiting.waiting?.postMessage({ type: "SKIP_WAITING" });
-                } catch {
-                  /* no-op */
-                }
-              }
-            }
-          }
-        } catch {}
-      };
-      document.addEventListener("visibilitychange", visHandler);
-    }
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
@@ -144,11 +146,15 @@ const registerServiceWorker = async () => {
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     registerServiceWorker();
-    // ページ再マウント時に古い待機Registrationが残っていれば反映する
+    const cleanupVisibility = bindVisibilityHiddenAutoApply();
+    // ページをマウントした際に既存の待機登録があれば再通知
     const existing = getWaitingServiceWorker();
     if (existing) {
       announceServiceWorkerUpdate(existing);
     }
+    return () => {
+      cleanupVisibility();
+    };
   }, []);
 
   return null;
