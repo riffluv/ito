@@ -29,7 +29,7 @@ export function useServiceWorkerUpdate(): UpdateState {
       return;
     }
     setIsApplying(true);
-    const ok = applyServiceWorkerUpdate();
+    const ok = applyServiceWorkerUpdate({ reason: "manual" });
     if (!ok) {
       setIsApplying(false);
     }

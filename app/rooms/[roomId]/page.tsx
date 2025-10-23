@@ -10,6 +10,7 @@ import NameDialog from "@/components/NameDialog";
 import RoomNotifyBridge from "@/components/RoomNotifyBridge";
 import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
 import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
+import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
 // 笞｡ PERFORMANCE: React.lazy 縺ｧ驕・ｻｶ繝ｭ繝ｼ繝・
 import { lazy, Suspense } from "react";
@@ -52,6 +53,11 @@ import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
+import {
+  applyServiceWorkerUpdate,
+  getWaitingServiceWorker,
+  subscribeToServiceWorkerUpdates,
+} from "@/lib/serviceWorker/updateChannel";
 import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
@@ -104,6 +110,12 @@ const PREFETCH_COMPONENT_LOADERS: Array<() => Promise<unknown>> = [
   () => import("@/components/ui/Tooltip"),
 ];
 
+type SafeUpdateTrigger =
+  | "status:waiting"
+  | "status:reveal-finished"
+  | "status:finished-waiting"
+  | "idle";
+
 type RoomPageContentProps = {
   roomId: string;
 };
@@ -116,9 +128,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
   const bgmPlayingRef = useRef(false);
+  const safeUpdateFeatureEnabled =
+    process.env.NEXT_PUBLIC_FEATURE_SAFE_UPDATE === "1";
+  const idleApplyConfiguredMs = safeUpdateFeatureEnabled
+    ? Number.parseInt(process.env.NEXT_PUBLIC_FEATURE_IDLE_APPLY_MS ?? "", 10)
+    : Number.NaN;
+  const idleApplyMs =
+    Number.isFinite(idleApplyConfiguredMs) && idleApplyConfiguredMs > 0
+      ? idleApplyConfiguredMs
+      : 0;
   useAssetPreloader(ROOM_CORE_ASSETS);
   useEffect(() => {
     initMetricsExport();
+  }, []);
+  useEffect(() => {
+    setMetric("safeUpdate", "deferred", 0);
+    setMetric("safeUpdate", "applied", 0);
   }, []);
   useEffect(() => {
     setMetric("app", "appVersion", APP_VERSION);
@@ -347,6 +372,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     };
   }, []);
+  useEffect(() => {
+    return subscribeToServiceWorkerUpdates((registration) => {
+      setHasWaitingUpdate(!!registration);
+    });
+  }, []);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
@@ -387,6 +417,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const initialStatusHydratedRef = useRef(false);
   const lastRevealTsRef = useRef<number | null>(null);
   const [joinVersion, setJoinVersion] = useState(0);
+  const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
+    typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
+  );
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
   const requiredSwVersion = useMemo(() => {
@@ -398,6 +431,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!requiredSwVersion) return false;
     return requiredSwVersion !== APP_VERSION;
   }, [requiredSwVersion]);
+  const safeUpdateActive = safeUpdateFeatureEnabled && versionMismatch;
+  const versionMismatchBlocksAccess = versionMismatch && !safeUpdateFeatureEnabled;
   useEffect(() => {
     if (requiredSwVersion) {
       setMetric("app", "requiredSwVersion", requiredSwVersion);
@@ -408,6 +443,158 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [requiredSwVersion]);
   const versionMismatchHandledRef = useRef(false);
+  const safeUpdateEnteredRef = useRef(false);
+  const safeUpdateStatusRef = useRef<string | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
+  const lastInteractionTsRef = useRef<number>(
+    typeof window === "undefined" ? 0 : Date.now()
+  );
+  const currentRoomStatus = room?.status ?? null;
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) {
+      safeUpdateEnteredRef.current = false;
+      return;
+    }
+    if (safeUpdateActive) {
+      if (!safeUpdateEnteredRef.current) {
+        safeUpdateEnteredRef.current = true;
+        bumpMetric("safeUpdate", "deferred");
+      }
+    } else {
+      safeUpdateEnteredRef.current = false;
+    }
+  }, [safeUpdateActive, safeUpdateFeatureEnabled]);
+  const tryApplyServiceWorker = useCallback(
+    (reason: SafeUpdateTrigger) => {
+      if (!safeUpdateFeatureEnabled) return false;
+      const registration = getWaitingServiceWorker();
+      const waitingWorker = registration?.waiting;
+      if (!registration || !waitingWorker) {
+        return false;
+      }
+      const applied = applyServiceWorkerUpdate({
+        reason,
+        safeMode: safeUpdateActive,
+      });
+      if (!applied) {
+        try {
+          waitingWorker.postMessage({ type: "SKIP_WAITING" });
+        } catch {
+          /* no-op */
+        }
+      }
+      return applied;
+    },
+    [safeUpdateFeatureEnabled, safeUpdateActive]
+  );
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) {
+      safeUpdateStatusRef.current = currentRoomStatus;
+      return;
+    }
+    if (currentRoomStatus === null) {
+      safeUpdateStatusRef.current = null;
+      return;
+    }
+    const previousStatus = safeUpdateStatusRef.current;
+    if (hasWaitingUpdate) {
+      if (currentRoomStatus === "waiting" && previousStatus !== "waiting") {
+        tryApplyServiceWorker("status:waiting");
+      } else if (previousStatus === "reveal" && currentRoomStatus === "finished") {
+        tryApplyServiceWorker("status:reveal-finished");
+      } else if (previousStatus === "finished" && currentRoomStatus === "waiting") {
+        tryApplyServiceWorker("status:finished-waiting");
+      }
+    }
+    safeUpdateStatusRef.current = currentRoomStatus;
+  }, [
+    currentRoomStatus,
+    hasWaitingUpdate,
+    safeUpdateFeatureEnabled,
+    tryApplyServiceWorker,
+  ]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) return;
+    if (!hasWaitingUpdate) return;
+    if (currentRoomStatus === "waiting") {
+      tryApplyServiceWorker("status:waiting");
+    }
+  }, [
+    safeUpdateFeatureEnabled,
+    hasWaitingUpdate,
+    currentRoomStatus,
+    tryApplyServiceWorker,
+  ]);
+  const resetIdleTimer = useCallback(() => {
+    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) {
+      if (typeof window !== "undefined" && idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      return;
+    }
+    if (typeof window === "undefined") return;
+    if (!hasWaitingUpdate) {
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      return;
+    }
+    if (idleTimerRef.current !== null) {
+      window.clearTimeout(idleTimerRef.current);
+    }
+    lastInteractionTsRef.current = Date.now();
+    idleTimerRef.current = window.setTimeout(() => {
+      idleTimerRef.current = null;
+      if (!safeUpdateFeatureEnabled) return;
+      tryApplyServiceWorker("idle");
+    }, idleApplyMs);
+  }, [
+    safeUpdateFeatureEnabled,
+    idleApplyMs,
+    hasWaitingUpdate,
+    tryApplyServiceWorker,
+  ]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) {
+      if (typeof window !== "undefined" && idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      return;
+    }
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const handleInteraction = () => {
+      lastInteractionTsRef.current = Date.now();
+      resetIdleTimer();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        resetIdleTimer();
+      }
+    };
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart"];
+    for (const eventName of events) {
+      window.addEventListener(eventName, handleInteraction, true);
+    }
+    document.addEventListener("visibilitychange", handleVisibility, true);
+    resetIdleTimer();
+    return () => {
+      for (const eventName of events) {
+        window.removeEventListener(eventName, handleInteraction, true);
+      }
+      document.removeEventListener("visibilitychange", handleVisibility, true);
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+  }, [safeUpdateFeatureEnabled, idleApplyMs, resetIdleTimer]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) return;
+    resetIdleTimer();
+  }, [safeUpdateFeatureEnabled, idleApplyMs, hasWaitingUpdate, resetIdleTimer]);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
   const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
   const onlineUidSignature = useMemo(
@@ -591,7 +778,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [rejoinSessionKey, uid]);
 
   useEffect(() => {
-    if (!versionMismatch) {
+    if (!versionMismatchBlocksAccess) {
       versionMismatchHandledRef.current = false;
       if (forcedExitReason === "version-mismatch") {
         setForcedExitReason(null);
@@ -629,7 +816,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     })();
   }, [
-    versionMismatch,
+    versionMismatchBlocksAccess,
     uid,
     detachNow,
     roomId,
@@ -762,18 +949,26 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 蜈･螳､繧ｬ繝ｼ繝・ 閾ｪ蛻・′繝｡繝ｳ繝舌・縺ｧ縺ｪ縺・ｴ蜷医∝ｾ・ｩ滉ｸｭ莉･螟悶・驛ｨ螻九↓縺ｯ蜈･繧後↑縺・
   // 縺溘□縺励√・繧ｹ繝医・蟶ｸ縺ｫ繧｢繧ｯ繧ｻ繧ｹ蜿ｯ閭ｽ
-  const canAccess = (isMember || isHost) && !versionMismatch;
+  const canAccess = (isMember || isHost) && !versionMismatchBlocksAccess;
   const isSpectatorMode =
-    (!canAccess && room?.status !== "waiting") ||
-    versionMismatch ||
+    !canAccess ||
+    versionMismatchBlocksAccess ||
     !!forcedExitReason;
 
   // 観戦理由の判定（文言出し分け用）
-  const spectatorReason: "version-mismatch" | "mid-game" | null = (() => {
-    if (versionMismatch || forcedExitReason === "version-mismatch") {
+  const spectatorReason: "version-mismatch" | "mid-game" | "waiting" | null = (() => {
+    if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
       return "version-mismatch";
     }
-    if (!canAccess && room?.status !== "waiting") return "mid-game";
+    if (!canAccess) {
+      if (room?.status === "waiting") {
+        return "waiting";
+      }
+      return "mid-game";
+    }
+    if (forcedExitReason) {
+      return "mid-game";
+    }
     return null;
   })();
   // 笞｡ PERFORMANCE: 37陦後・蠑ｷ蛻ｶ騾蜃ｺ蜃ｦ逅・ｒ繧ｫ繧ｹ繧ｿ繝繝輔ャ繧ｯ蛹・
@@ -800,7 +995,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const handleRetryJoin = useCallback(async () => {
     if (!uid) return;
-    if (versionMismatch) {
+    if (versionMismatchBlocksAccess) {
       try {
         notify({
           title: "最新バージョンに更新してください",
@@ -864,7 +1059,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
       }
     }
-  }, [uid, roomId, displayName, setPendingRejoinFlag, versionMismatch]);
+  }, [uid, roomId, displayName, setPendingRejoinFlag, versionMismatchBlocksAccess]);
 
   useEffect(() => {
     if (!forcedExitReason) return;
@@ -1709,6 +1904,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 下の「今すぐ更新」ボタンを押してページを更新してください。
               </Text>
             </>
+          ) : spectatorReason === "waiting" ? (
+            <>
+              <Text
+                fontSize={{ base: "md", md: "lg" }}
+                fontWeight={700}
+                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              >
+                ホストが再開準備中だよ
+              </Text>
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+                lineHeight={1.7}
+                mt={1}
+              >
+                少し待つか「席に戻れるか試す」を押して席へ戻ろう！
+              </Text>
+            </>
           ) : (
             <>
               <Text
@@ -1756,7 +1969,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin || versionMismatch}
+              disabled={!waitingToRejoin || versionMismatchBlocksAccess}
             >
               席に戻れるか試す
             </AppButton>
@@ -1771,7 +1984,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin || versionMismatch}
+              disabled={!waitingToRejoin || versionMismatchBlocksAccess}
             >
               席に戻れるか試す
             </AppButton>
@@ -1839,10 +2052,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       {joinStatusMessage}
     </Box>
   ) : null;
+  const safeUpdateBannerNode =
+    safeUpdateActive && safeUpdateFeatureEnabled ? (
+      <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
+    ) : null;
 
   return (
     <>
       {joinStatusBanner}
+      {safeUpdateBannerNode}
       {/* 蜿ｳ荳翫ヨ繝ｼ繧ｹ繝磯夂衍縺ｮ雉ｼ隱ｭ・医メ繝｣繝・ヨ縺ｨ迢ｬ遶具ｼ・*/}
       <RoomNotifyBridge roomId={roomId} />
       <GameLayout
