@@ -1,16 +1,22 @@
 import { Box, Text, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
+import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
+
+// 環境変数で切り替え（デフォルトは Pixi 版）
+const USE_PIXI_RAYS = process.env.NEXT_PUBLIC_USE_PIXI_RAYS !== "0";
 
 const VICTORY_TITLE = "🏆 勝利！";
 const FAILURE_TITLE = "💀 失敗…";
 const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
 const FAILURE_SUBTEXT = "もう一度チャレンジしてみましょう。";
 
+// SVG 版（バックアップ・フォールバック用）
 const RAY_ANGLES = [0, 43, 88, 137, 178, 223, 271, 316] as const;
 const RAY_THICKNESS = 36;
 const RAY_LENGTH = 1900;
@@ -20,7 +26,7 @@ interface VictoryBurstRaysProps {
   registerRayRef: (index: number) => (node: SVGRectElement | null) => void;
 }
 
-function VictoryBurstRays({ registerRayRef }: VictoryBurstRaysProps) {
+function VictoryBurstRaysSVG({ registerRayRef }: VictoryBurstRaysProps) {
   const gradientBaseId = useId();
   const gradientId = `${gradientBaseId}-victory-ray`;
   const filterId = `${gradientBaseId}-victory-glow`;
@@ -91,16 +97,67 @@ export function GameResultOverlay({
   const textRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
-  const linesRef = useRef<(SVGRectElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   // Timeline を再利用（GC 負荷削減）
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const timeline = useMemo(() => gsap.timeline({ paused: true }), []);
   const prefersReduced = useReducedMotionPreference();
+
+  // Pixi 版放射ライン（デフォルト）
+  const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
+  const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
+
+  // SVG 版放射ライン（フォールバック）
+  const linesRef = useRef<(SVGRectElement | null)[]>([]);
+  const registerLineRef = useCallback(
+    (index: number) => (node: SVGRectElement | null) => {
+      linesRef.current[index] = node;
+    },
+    []
+  );
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
   const playFailure = useSoundEffect("clear_failure");
   const soundManager = useSoundManager();
+
+  // Pixi 放射ラインの初期化（USE_PIXI_RAYS が true の場合のみ）
+  useEffect(() => {
+    if (!USE_PIXI_RAYS || !pixiRaysLayer || mode !== "overlay" || prefersReduced) {
+      return;
+    }
+
+    let controller: VictoryRaysController | null = null;
+    let mounted = true;
+
+    const init = async () => {
+      const { createVictoryRays } = await import("@/lib/pixi/victoryRays");
+      if (!mounted || !pixiRaysLayer) return;
+
+      const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 960;
+      const centerY = typeof window !== "undefined" ? window.innerHeight / 2 : 540;
+
+      controller = await createVictoryRays({
+        container: pixiRaysLayer,
+        centerX,
+        centerY,
+      });
+
+      if (mounted) {
+        setPixiRaysController(controller);
+      }
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      if (controller) {
+        controller.destroy();
+      }
+      setPixiRaysController(null);
+    };
+  }, [pixiRaysLayer, mode, prefersReduced]);
+
   const triggerBackgroundFx = useCallback(
     (effect: "fireworks" | "meteors") => {
       if (prefersReduced || typeof window === "undefined") return;
@@ -140,12 +197,6 @@ export function GameResultOverlay({
   }, [revealedAt]);
 
   const playbackKeyRef = useRef<string | null>(null);
-  const registerLineRef = useCallback(
-    (index: number) => (node: SVGRectElement | null) => {
-      linesRef.current[index] = node;
-    },
-    []
-  );
 
   useEffect(() => {
     const currentSettings = soundManager?.getSettings();
@@ -480,14 +531,6 @@ export function GameResultOverlay({
         rotation: 0,
         opacity: 1, // 勝利時は即座に表示
       });
-      linesRef.current.forEach((line) => {
-        if (line) {
-          gsap.set(line, {
-            transformOrigin: "0% 50%",
-            transformBox: "fill-box",
-          });
-        }
-      });
 
       // ====================================================
       // BOOST Phase 0: ホワイトフラッシュ（衝撃的開幕）
@@ -511,57 +554,73 @@ export function GameResultOverlay({
       // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
       // LEFT → RIGHT → CENTER！！
       // ====================================================
+      if (USE_PIXI_RAYS && pixiRaysController) {
+        // Pixi 版（デフォルト）
+        tl.call(() => {
+          pixiRaysController.playExplosion();
+        }, undefined, 0.05);
+      } else {
+        // SVG 版（フォールバック）
+        linesRef.current.forEach((line) => {
+          if (line) {
+            gsap.set(line, {
+              transformOrigin: "0% 50%",
+              transformBox: "fill-box",
+            });
+          }
+        });
 
-      // 【第1波】LEFT から爆発（0.05s）
-      [0, 1, 7].forEach((index) => {
-        const line = linesRef.current[index];
-        if (!line) return;
-        tl.fromTo(
-          line,
-          { scaleX: 0, opacity: 1 },
-          {
-            scaleX: 4.6,
-            opacity: 0,
-            duration: 0.58,
-            ease: "power3.out",
-          },
-          0.05
-        );
-      });
+        // 【第1波】LEFT から爆発（0.05s）
+        [0, 1, 7].forEach((index) => {
+          const line = linesRef.current[index];
+          if (!line) return;
+          tl.fromTo(
+            line,
+            { scaleX: 0, opacity: 1 },
+            {
+              scaleX: 4.6,
+              opacity: 0,
+              duration: 0.58,
+              ease: "power3.out",
+            },
+            0.05
+          );
+        });
 
-      // 【第2波】RIGHT から爆発（0.15s）
-      [3, 4, 5].forEach((index) => {
-        const line = linesRef.current[index];
-        if (!line) return;
-        tl.fromTo(
-          line,
-          { scaleX: 0, opacity: 1 },
-          {
-            scaleX: 4.6,
-            opacity: 0,
-            duration: 0.58,
-            ease: "power3.out",
-          },
-          0.15
-        );
-      });
+        // 【第2波】RIGHT から爆発（0.15s）
+        [3, 4, 5].forEach((index) => {
+          const line = linesRef.current[index];
+          if (!line) return;
+          tl.fromTo(
+            line,
+            { scaleX: 0, opacity: 1 },
+            {
+              scaleX: 4.6,
+              opacity: 0,
+              duration: 0.58,
+              ease: "power3.out",
+            },
+            0.15
+          );
+        });
 
-      // 【第3波】CENTER（上下）から爆発（0.25s）
-      [2, 6].forEach((index) => {
-        const line = linesRef.current[index];
-        if (!line) return;
-        tl.fromTo(
-          line,
-          { scaleX: 0, opacity: 1 },
-          {
-            scaleX: 5.4,
-            opacity: 0,
-            duration: 0.83,
-            ease: "power4.out",
-          },
-          0.25
-        );
-      });
+        // 【第3波】CENTER（上下）から爆発（0.25s）
+        [2, 6].forEach((index) => {
+          const line = linesRef.current[index];
+          if (!line) return;
+          tl.fromTo(
+            line,
+            { scaleX: 0, opacity: 1 },
+            {
+              scaleX: 5.4,
+              opacity: 0,
+              duration: 0.83,
+              ease: "power4.out",
+            },
+            0.25
+          );
+        });
+      }
 
       // ====================================================
       // BOOST Phase 0.7: コンテナシェイク（衝撃波）
@@ -817,13 +876,16 @@ export function GameResultOverlay({
           rotation: 0,
         });
       }
-      linesRef.current.forEach((line) => {
-        if (line) {
-          gsap.set(line, { clearProps: "all" });
-        }
-      });
+      // SVG 版のクリーンアップ
+      if (!USE_PIXI_RAYS) {
+        linesRef.current.forEach((line) => {
+          if (line) {
+            gsap.set(line, { clearProps: "all" });
+          }
+        });
+      }
     };
-  }, [failed, mode, prefersReduced, triggerBackgroundFx]);
+  }, [failed, mode, prefersReduced, triggerBackgroundFx, pixiRaysController]);
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
   const subtext = failed ? FAILURE_SUBTEXT : VICTORY_SUBTEXT;
@@ -861,7 +923,7 @@ export function GameResultOverlay({
             pointerEvents="none"
             zIndex={9999}
           />
-          <VictoryBurstRays registerRayRef={registerLineRef} />
+          {!USE_PIXI_RAYS && <VictoryBurstRaysSVG registerRayRef={registerLineRef} />}
         </>
       )}
 

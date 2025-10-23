@@ -2,8 +2,10 @@ import type * as PIXI from "pixi.js";
 import { gsap } from "gsap";
 
 const RAY_ANGLES = [0, 43, 88, 137, 178, 223, 271, 316] as const;
-const RAY_THICKNESS = 36;
-const RAY_BASE_LENGTH = 1900;
+// AI感排除：線幅を微妙に可変（均一を避ける）
+const RAY_THICKNESS_BASE = 19;
+const RAY_THICKNESS_VARIATION = [0, 2, -1, 1, -2, 3, 1, -1]; // 各ラインの微差
+const RAY_BASE_LENGTH = 2400; // より長く、颯爽と
 
 export interface VictoryRaysController {
   destroy(): void;
@@ -33,31 +35,37 @@ export async function createVictoryRays(
   const rays: PIXI.Graphics[] = [];
 
   // 各角度でラインを生成
-  RAY_ANGLES.forEach((angle) => {
+  RAY_ANGLES.forEach((angle, index) => {
     const ray = new pixi.Graphics();
+    const thickness = RAY_THICKNESS_BASE + RAY_THICKNESS_VARIATION[index];
 
-    // グラデーション風の描画（複数の矩形を重ねる）
-    const segments = 5;
-    for (let i = 0; i < segments; i++) {
-      const progress = i / segments;
-      const nextProgress = (i + 1) / segments;
+    // AI感排除：グラデーションに微差を入れる（不等間隔セグメント）
+    const segments = 7; // より細かく
+    const segmentOffsets = [0, 0.12, 0.28, 0.47, 0.68, 0.85, 1.0]; // 不等間隔！
+
+    for (let i = 0; i < segments - 1; i++) {
+      const progress = segmentOffsets[i];
+      const nextProgress = segmentOffsets[i + 1];
 
       const startX = RAY_BASE_LENGTH * progress;
       const endX = RAY_BASE_LENGTH * nextProgress;
       const width = endX - startX;
 
-      // グラデーションカラー（左から右へフェード）
-      let alpha = 1 - progress * 0.7; // 1.0 → 0.3
-      if (progress > 0.7) {
-        alpha = 0.3 * (1 - (progress - 0.7) / 0.3); // 0.3 → 0
+      // AI感排除：アルファ値に微差（均一を避ける）
+      let alpha = 1.0 - progress * 0.82; // 1.0 → 0.18
+      if (progress > 0.68) {
+        alpha = 0.18 * (1 - (progress - 0.68) / 0.32); // 0.18 → 0
       }
+      // 微妙なゆらぎ
+      alpha *= (0.96 + (index % 3) * 0.02);
 
-      ray.rect(startX, -RAY_THICKNESS / 2, width, RAY_THICKNESS);
+      ray.rect(startX, -thickness / 2, width, thickness);
       ray.fill({
-        color: progress < 0.22 ? 0xfffbe6 :
-               progress < 0.55 ? 0xffd45c :
-               progress < 0.82 ? 0xffb347 : 0xffffff,
-        alpha: alpha * 0.8,
+        color: progress < 0.12 ? 0xfffbe6 :
+               progress < 0.28 ? 0xffeeb3 :
+               progress < 0.47 ? 0xffd45c :
+               progress < 0.68 ? 0xffb347 : 0xffffff,
+        alpha: alpha * 0.87, // 少し控えめ
       });
     }
 
@@ -82,51 +90,54 @@ export async function createVictoryRays(
     const tl = gsap.timeline();
     explosionTimeline = tl;
 
-    // 【第1波】LEFT から爆発（0.05s）
-    [0, 1, 7].forEach((index) => {
+    // AI感排除：不等間隔タイミング + 手癖easing
+    const handEasing = "cubic-bezier(.2,1,.3,1)";
+
+    // 【第1波】LEFT から爆発（颯爽と速く！）
+    [0, 1, 7].forEach((index, i) => {
       const ray = rays[index];
       if (!ray) return;
       tl.fromTo(
         ray,
         { pixi: { scaleX: 0, alpha: 1 } },
         {
-          pixi: { scaleX: 4.6, alpha: 0 },
-          duration: 0.58,
-          ease: "power3.out",
+          pixi: { scaleX: 5.2, alpha: 0 }, // より長く
+          duration: 0.43, // より速く（0.58 → 0.43）
+          ease: handEasing,
         },
-        0.05
+        0.03 + i * 0.017 // 不等間隔（0.017差）
       );
     });
 
-    // 【第2波】RIGHT から爆発（0.15s）
-    [3, 4, 5].forEach((index) => {
+    // 【第2波】RIGHT から爆発（微妙にズラす）
+    [3, 4, 5].forEach((index, i) => {
       const ray = rays[index];
       if (!ray) return;
       tl.fromTo(
         ray,
         { pixi: { scaleX: 0, alpha: 1 } },
         {
-          pixi: { scaleX: 4.6, alpha: 0 },
-          duration: 0.58,
-          ease: "power3.out",
+          pixi: { scaleX: 5.3, alpha: 0 },
+          duration: 0.46,
+          ease: handEasing,
         },
-        0.15
+        0.11 + i * 0.019 // 不等間隔（0.019差）
       );
     });
 
-    // 【第3波】CENTER（上下）から爆発（0.25s）
-    [2, 6].forEach((index) => {
+    // 【第3波】CENTER（上下）から爆発（少し遅らせて強調）
+    [2, 6].forEach((index, i) => {
       const ray = rays[index];
       if (!ray) return;
       tl.fromTo(
         ray,
         { pixi: { scaleX: 0, alpha: 1 } },
         {
-          pixi: { scaleX: 5.4, alpha: 0 },
-          duration: 0.83,
-          ease: "power4.out",
+          pixi: { scaleX: 6.1, alpha: 0 }, // 最も長く
+          duration: 0.67, // 少し長め
+          ease: "power4.out", // 中央は強調
         },
-        0.25
+        0.21 + i * 0.023 // 不等間隔（0.023差）
       );
     });
   };
