@@ -1,9 +1,9 @@
 "use client";
 
-// 驥崎ｦ√さ繝ｳ繝昴・繝阪Φ繝・ Eager loading・亥・譛溯｡ｨ遉ｺ諤ｧ閭ｽ蜆ｪ蜈茨ｼ・
-// import { Hud } from "@/components/Hud"; // 繝倥ャ繝繝ｼ蜑企勁: MiniHandDock縺ｫ邨ｱ蜷域ｸ医∩
+// HUD は初期表示の軽量化を優先し、必要になるまで読み込まない。
+// import { Hud } from "@/components/Hud";
 
-// 譌ｧCluePanel縺ｯ譛ｪ菴ｿ逕ｨ・亥姐譁ｰ縺励◆荳ｭ螟ｮUI縺ｫ邨ｱ蜷域ｸ医∩・・
+// 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
 import NameDialog from "@/components/NameDialog";
@@ -12,7 +12,7 @@ import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
 import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
 import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
-// 笞｡ PERFORMANCE: React.lazy 縺ｧ驕・ｻｶ繝ｭ繝ｼ繝・
+
 import { lazy, Suspense } from "react";
 const SettingsModal = lazy(() => import("@/components/SettingsModal"));
 import { AppButton } from "@/components/ui/AppButton";
@@ -401,9 +401,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     passwordVerified ? (displayName ?? null) : null
   );
 
-  // 險ｭ螳壹Δ繝ｼ繝繝ｫ縺ｮ迥ｶ諷狗ｮ｡逅・
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  // 險倬鹸邁ｿ繝｢繝ｼ繝繝ｫ縺ｮ迥ｶ諷狗ｮ｡逅・
+
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
   const [dealRecoveryDismissed, setDealRecoveryDismissed] = useState(false);
   const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
@@ -603,7 +603,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [presenceReady, onlineUidSignature]);
 
-  // 笞｡ PERFORMANCE: room蜈ｨ菴薙〒縺ｯ縺ｪ縺丞ｿ・ｦ√↑繝励Ο繝代ユ繧｣縺縺醍屮隕・
+
   useEffect(() => {
     const requiresPassword = room?.requiresPassword;
     const passwordHash = room?.passwordHash;
@@ -746,15 +746,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return selectHostCandidate(inputs) ?? null;
   }, [room?.id, players, onlineUidSignature, lastKnownHostId, joinVersion, presenceReady]);
 
-  // 驟榊ｸ・ｼ泌・: 謨ｰ蟄励′譚･縺溽椪髢薙↓霆ｽ縺上・繝・・・・iamondNumberCard逕ｨ・・
+
   const [pop, setPop] = useState(false);
   const [redirectGuard, setRedirectGuard] = useState(true);
   const [forcedExitReason, setForcedExitReason] = useState<
     "game-in-progress" | "version-mismatch" | null
   >(null);
-  // hostClaimAttemptRef, hostClaimTimerRef 縺ｯ useHostClaim 蜀・↓遘ｻ蜍・
-  // pruneRef, offlineSinceRef 縺ｯ useHostPruning 蜀・↓遘ｻ蜍・
-  const forcedExitScheduledRef = useRef(false); // 莉悶・蝣ｴ謇縺ｧ繧ゆｽｿ繧上ｌ縺ｦ縺・ｋ縺溘ａ谿九☆
+
+
+  const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
@@ -931,17 +931,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     };
   }, [me?.number]);
-  // 蜷榊燕譛ｪ險ｭ螳壽凾縺ｯ繝繧､繧｢繝ｭ繧ｰ繧定｡ｨ遉ｺ縲Ｂuto-join縺ｯuseRoomState蛛ｴ縺ｧ謚第ｭ｢貂医∩
+
   const needName = !displayName || !String(displayName).trim();
-  // 笞｡ PERFORMANCE: useCallback縺ｧ繝｡繝｢蛹悶＠縺ｦ荳崎ｦ√↑髢｢謨ｰ蜀咲函謌舌ｒ髦ｲ豁｢
+
   const handleSubmitName = useCallback(async (name: string) => {
     setDisplayName(name);
   }, [setDisplayName]);
 
-  // 繝ｩ繧ｦ繝ｳ繝牙ｯｾ雎｡縺ｯ荳企Κ縺ｧ險育ｮ玲ｸ医∩・・ligibleIds・・
 
-  // 蜈･螳､繧ｬ繝ｼ繝・ 閾ｪ蛻・′繝｡繝ｳ繝舌・縺ｧ縺ｪ縺・ｴ蜷医∝ｾ・ｩ滉ｸｭ莉･螟悶・驛ｨ螻九↓縺ｯ蜈･繧後↑縺・
-  // 縺溘□縺励√・繧ｹ繝医・蟶ｸ縺ｫ繧｢繧ｯ繧ｻ繧ｹ蜿ｯ閭ｽ
+
+
+
   const canAccess = (isMember || isHost) && !versionMismatchBlocksAccess;
   const isSpectatorMode =
     !canAccess ||
@@ -964,7 +964,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     return null;
   })();
-  // 笞｡ PERFORMANCE: 37陦後・蠑ｷ蛻ｶ騾蜃ｺ蜃ｦ逅・ｒ繧ｫ繧ｹ繧ｿ繝繝輔ャ繧ｯ蛹・
+
   useForcedExit({
     uid,
     roomStatus: room?.status,
@@ -1087,8 +1087,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     displayName,
   ]);
 
-  // 笞｡ PERFORMANCE: 88陦後・蟾ｨ螟ｧuseEffect繧偵き繧ｹ繧ｿ繝繝輔ャ繧ｯ蛹・
-  // 蜑阪・繝帙せ繝医′縺ｾ縺繝｡繝ｳ繝舌・縺九←縺・°繧定ｨ育ｮ・
+
+
   const previousHostStillMember = useMemo(() => {
     if (!lastKnownHostId) return false;
     if (uid && lastKnownHostId === uid) return false;
@@ -1115,7 +1115,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     leavingRef,
   });
 
-  // 謨ｰ蟄鈴・蟶・ｾ鯉ｼ医∪縺溘・playing縺ｧ譛ｪ蜑ｲ蠖薙・蝣ｴ蜷茨ｼ峨∬・蛻・・逡ｪ蜿ｷ繧貞牡蠖難ｼ域ｱｺ螳夂噪・・
+
   useEffect(() => {
     if (!room || !uid || !me) return;
     if (room.status !== "clue") return;
@@ -1132,7 +1132,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     me?.id,
   ]);
 
-  // 貅門ｙ螳御ｺ・ｼ・eady・峨・繝ｩ繧ｦ繝ｳ繝牙盾蜉閠・ｼ・eal.players・峨ｒ蟇ｾ雎｡縺ｫ蛻､螳・
+
   const allCluesReady = useMemo(() => {
     const dealPlayers = room?.deal?.players;
     const ids = Array.isArray(dealPlayers)
@@ -1213,13 +1213,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.status, room?.result?.success]);
 
-  // canStartSorting 縺ｯ eligibleIds 螳夂ｾｩ蠕後↓遘ｻ蜍・
 
-  // playing 繝輔ぉ繝ｼ繧ｺ蟒・ｭ｢縺ｫ縺､縺・canStartPlaying 繝ｭ繧ｸ繝・け縺ｯ蜑企勁
 
-  // 繝ｩ繧ｦ繝ｳ繝峨′騾ｲ繧薙□繧芽・蛻・・ready繧偵Μ繧ｻ繝・ヨ
+
+
+
   const [seenRound, setSeenRound] = useState<number>(0);
-  // 笞｡ PERFORMANCE: room蜈ｨ菴薙〒縺ｯ縺ｪ縺俊oom.round縺縺醍屮隕悶＠縺ｦ辟｡鬧・↑蜀榊ｮ溯｡後ｒ髦ｲ豁｢
+
   useEffect(() => {
     if (!uid) return;
     const r = room?.round || 0;
@@ -1230,7 +1230,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.round, uid, roomId, seenRound]);
 
-  // 繝帙せ繝亥髄縺代ヨ繝ｼ繧ｹ繝・ 騾｣諠ｳ繝ｯ繝ｼ繝牙ｮ御ｺ・夂衍・医Δ繝ｼ繝峨＃縺ｨ縺ｫ繝｡繝・そ繝ｼ繧ｸ蟾ｮ縺玲崛縺医・荳蠎ｦ縺縺托ｼ・
+
   useEffect(() => {
     if (!isHost || !allCluesReady) {
       return;
@@ -1266,8 +1266,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
   ]);
 
-  // 笞｡ PERFORMANCE: room蜈ｨ菴薙〒縺ｯ縺ｪ縺俊oom.status縺縺醍屮隕・
-  // waiting縺ｫ謌ｻ縺｣縺溘ｉ閾ｪ蛻・・繝輔ぅ繝ｼ繝ｫ繝峨ｒ蛻晄悄蛹・
+
+
   const myPlayer = useMemo(() => players.find((p) => p.id === uid), [players, uid]);
   const shouldResetPlayer = useMemo(() => {
     if (!myPlayer) return false;
@@ -1286,7 +1286,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.status, uid, roomId, shouldResetPlayer]);
 
-  // 笞｡ PERFORMANCE: 80陦後・繝帙せ繝医・繝ｫ繝ｼ繝九Φ繧ｰ蜃ｦ逅・ｒ繧ｫ繧ｹ繧ｿ繝繝輔ャ繧ｯ蛹・
+
   useHostPruning({
     isHost,
     uid,
@@ -1297,7 +1297,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     presenceReady,
   });
 
-  // 陦ｨ遉ｺ蜷阪′螟峨ｏ縺｣縺溘ｉ縲∝・螳､荳ｭ縺ｮ閾ｪ蛻・・繝励Ξ繧､繝､繝ｼDoc縺ｫ繧ょ渚譏
+
   useEffect(() => {
     if (!uid) return;
     if (displayName) {
@@ -1329,9 +1329,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
 
     const performLeave = async (token: string | null) => {
-      // 噫 OPTIMIZED: 荳ｦ蛻怜・逅・〒繧ｯ繝ｪ繝ｼ繝ｳ繧｢繝・・繧帝ｫ倬溷喧
+
       try {
-        // 1. 繝ｪ繧ｹ繝翫・隗｣髯､繧剃ｸｦ蛻怜ｮ溯｡鯉ｼ・romise.all縺ｧ鬮倬溷喧・・
+
         await Promise.all([
           Promise.resolve(detachNow()).catch((error: unknown) => {
             logError("room-page", "leave-detach-now", error);
@@ -1344,7 +1344,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         logError("room-page", "leave-parallel-cleanup", error);
       }
 
-      // 2. API蜻ｼ縺ｳ蜃ｺ縺暦ｼ医ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ莉倥″・・
+
       let viaApi = false;
       if (token) {
         try {
@@ -1367,7 +1367,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
       }
 
-      // 3. 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ・・PI螟ｱ謨玲凾・・
+
       if (!viaApi) {
         try {
           await leaveRoomAction(roomId, uid, displayName);
@@ -1376,7 +1376,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
       }
 
-      // 4. 繧ｻ繝・す繝ｧ繝ｳ繝輔Λ繧ｰ繧ｯ繝ｪ繧｢
+
       clearSessionFlags();
     };
 
@@ -1431,7 +1431,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     router,
   ]);
 
-  // 騾蜃ｺ譎ょ・逅・ｒ繝輔ャ繧ｯ縺ｧ荳蜈・喧
+
   useLeaveCleanup({
     enabled: true,
     roomId,
@@ -1442,11 +1442,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     user,
   });
 
-  // isMember 縺ｯ荳翫〒邂怜・貂医∩
 
-  // 繝ｩ繧ｦ繝ｳ繝牙ｯｾ雎｡・郁｡ｨ遉ｺ縺ｮ螳牙ｮ壽ｧ驥崎ｦ厄ｼ・
-  // presence縺ｮ荳譎ら噪縺ｪ謠ｺ繧後〒繧ｹ繝ｭ繝・ヨ/蠕・ｩ溘き繝ｼ繝画焚縺梧ｸ帙ｉ縺ｪ縺・ｈ縺・・
-  // 蝓ｺ譛ｬ縺ｯ繝ｩ繧ｦ繝ｳ繝峨Γ繝ｳ繝舌・・・eal.players 竏ｪ players・峨ｒ蜈･螳､鬆・〒繧ｽ繝ｼ繝医＠縺ｦ謗｡逕ｨ縺吶ｋ縲・
+
+
+
+
   const unsortedBaseIds = useMemo(() => {
     const dealPlayers = room?.deal?.players;
     if (Array.isArray(dealPlayers)) {
@@ -1459,13 +1459,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return players.map((p) => p.id);
   }, [room?.deal?.players, players]);
 
-  // 蜈･螳､鬆・〒繧ｽ繝ｼ繝茨ｼ井ｸ雋ｫ縺励◆荳ｦ縺ｳ鬆・ｒ菫晄戟・・
+
   const baseIds = useMemo(
     () => sortPlayersByJoinOrder(unsortedBaseIds, players),
     [unsortedBaseIds, players]
   );
 
-  // 繝帙せ繝医ｒ譛蜆ｪ蜈茨ｼ亥ｷｦ遶ｯ・峨↓驟咲ｽｮ縺吶ｋ縺溘ａ縺ｮ繧ｽ繝ｼ繝・
+
   const hostId = room?.hostId ?? null;
   const eligibleIds = useMemo(() => {
     if (!hostId) {
@@ -1581,7 +1581,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     eligibleIds.length,
   ]);
 
-  // 荳ｦ縺ｳ譖ｿ縺医ヵ繧ｧ繝ｼ繧ｺ縺ｮ蛻､螳夲ｼ・entralCardBoard縺ｨ蜷後§繝ｭ繧ｸ繝・け・・
+
   const canStartSorting = useMemo(() => {
     const resolveMode = room?.options?.resolveMode;
     const roomStatus = room?.status;
@@ -1666,7 +1666,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     );
   }
 
-  // 陦ｨ遉ｺ逕ｨ驛ｨ螻句錐・・閾ｪ蛻・・謇区惆]繧帝勁蜴ｻ・・
+
   const displayRoomName = stripMinimalTag(room?.name) || "";
   const waitingToRejoin = room?.status === "waiting";
 
@@ -1758,13 +1758,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       </Box>
     );
   }
-  // 騾比ｸｭ蜿ょ刈OK縺ｮ縺溘ａ縲√ヶ繝ｭ繝・け逕ｻ髱｢縺ｯ陦ｨ遉ｺ縺励↑縺・
 
-  // 譁ｰ縺励＞GameLayout繧剃ｽｿ逕ｨ縺励◆莠域ｸｬ蜿ｯ閭ｽ縺ｪ讒矩
+
+
   // Layout nodes split to avoid JSX nesting pitfalls
-  const headerNode = undefined; // 繝倥ャ繝繝ｼ蜑企勁: MiniHandDock縺ｫ讖溯・邨ｱ蜷域ｸ医∩
+  const headerNode = undefined;
 
-  // 蟾ｦ繝ｬ繝ｼ繝ｫ・壹↑縺九∪・医が繝ｳ繝ｩ繧､繝ｳ陦ｨ遉ｺ・・
+
   const sidebarNode = (
     <DragonQuestParty
       players={players}
@@ -1802,7 +1802,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         p={0}
         pt={{ base: "56px", md: "64px" }}
         css={{
-          // DPI150縺ｧ縺ｯ繧｢繝翫え繝ｳ繧ｹ蟶ｯ縺ｮ鬮倥＆繧偵＆繧峨↓謚代∴繧具ｼ磯㍾縺ｪ繧雁屓驕ｿ・狗乢髱｢遒ｺ菫晢ｼ・
+
           "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
             {
               paddingTop: "40px !important",
@@ -1811,7 +1811,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       >
         <UniversalMonitor room={room} players={players} />
       </Box>
-      {/* 繝峨ャ繝郁｡後′隕ｪ縺ｧ繧ｯ繝ｪ繝・・縺輔ｌ縺ｪ縺・ｈ縺・↓: visible + minH=0 */}
       <Box
         overflow="visible"
         minH={0}
@@ -2054,7 +2053,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     <>
       {joinStatusBanner}
       {safeUpdateBannerNode}
-      {/* 蜿ｳ荳翫ヨ繝ｼ繧ｹ繝磯夂衍縺ｮ雉ｼ隱ｭ・医メ繝｣繝・ヨ縺ｨ迢ｬ遶具ｼ・*/}
       <RoomNotifyBridge roomId={roomId} />
       <GameLayout
         variant="immersive"
@@ -2134,7 +2132,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         </Dialog.Positioner>
       </Dialog.Root>
 
-      {/* 蜷榊燕蜈･蜉帙Δ繝ｼ繝繝ｫ縲ゅく繝｣繝ｳ繧ｻ繝ｫ縺ｯ荳榊庄・磯哩縺倥※繧ょ・蠎ｦ髢九￥・・*/}
       <NameDialog
         isOpen={needName}
         defaultValue=""
@@ -2146,14 +2143,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         mode="create"
       />
 
-      {/* 繧ｷ繝ｳ繝励Ν騾ｲ陦檎憾豕∬｡ｨ遉ｺ・井ｸｭ螟ｮ荳奇ｼ・*/}
       <SimplePhaseDisplay
         roomStatus={room?.status || "waiting"}
         canStartSorting={canStartSorting}
         topicText={room?.topic || null}
       />
 
-      {/* 繝√Ε繝・ヨ縺ｯ繝医げ繝ｫ蠑擾ｼ・AB縺ｧ髢矩哩・・*/}
       <MinimalChat
         roomId={roomId}
         players={players}
@@ -2171,7 +2166,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         onCancel={handleRoomPasswordCancel}
       />
 
-      {/* 繝帙せ繝域桃菴懊・繝輔ャ繧ｿ繝ｼ縺ｮ蜷御ｸ陦後↓邨ｱ蜷域ｸ医∩・医Δ繝・け貅匁侠・・*/}
 
       <Suspense fallback={null}>
         <SettingsModal
