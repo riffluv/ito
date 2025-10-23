@@ -58,6 +58,8 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
           resolution: Math.min(window.devicePixelRatio || 1, 2),
           width: host.clientWidth || window.innerWidth,
           height: host.clientHeight || window.innerHeight,
+          preference: 'webgl',
+          hello: false, // コンソールログ削減
         });
       } catch (error) {
         console.error("[PixiHudStage] init failed", error);
@@ -71,8 +73,18 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       }
 
       appRef.current = pixiApp;
-      pixiApp.stage.sortableChildren = true;
+      // sortableChildren はレイヤー追加時に動的に有効化（デフォルト無効で軽量化）
+      pixiApp.stage.sortableChildren = false;
       pixiApp.renderer.events.cursorStyles.default = "default";
+
+      // バッチレンダリング最適化
+      if ('batch' in pixiApp.renderer && typeof (pixiApp.renderer as any).batch?.setMaxTextures === 'function') {
+        try {
+          (pixiApp.renderer as any).batch.setMaxTextures(16); // デフォルト8から倍増
+        } catch (e) {
+          console.warn("[PixiHudStage] batch.setMaxTextures not available", e);
+        }
+      }
 
       host.innerHTML = "";
       host.appendChild(pixiApp.canvas);
@@ -153,6 +165,11 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     }
 
     currentApp.stage.addChild(container);
+
+    // レイヤー数が増えた場合のみ sortableChildren を有効化
+    if (currentApp.stage.children.length > 2) {
+      currentApp.stage.sortableChildren = true;
+    }
     currentApp.stage.sortChildren();
     store.set(name, { container, refCount: 1 });
     return container;
