@@ -476,13 +476,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         reason,
         safeMode: safeUpdateActive,
       });
-      if (!applied) {
-        try {
-          waitingWorker.postMessage({ type: "SKIP_WAITING" });
-        } catch {
-          /* no-op */
-        }
-      }
       return applied;
     },
     [safeUpdateFeatureEnabled, safeUpdateActive]

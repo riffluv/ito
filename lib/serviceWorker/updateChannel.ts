@@ -42,9 +42,17 @@ export function applyServiceWorkerUpdate(
   const safeMode = options?.safeMode === true;
   const isAutomatic = reason !== "manual";
   if (autoApplySuppressed && isAutomatic) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("[sw] auto-apply suppressed", { reason });
+    }
     return false;
   }
   if (!waitingRegistration?.waiting) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("[sw] no waiting service worker to apply", { reason });
+    }
     return false;
   }
   try {
@@ -55,6 +63,10 @@ export function applyServiceWorkerUpdate(
   } catch {
     pendingReload = false;
     pendingApplyContext = null;
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("[sw] applying service worker failed", { reason });
+    }
     return false;
   }
 }
