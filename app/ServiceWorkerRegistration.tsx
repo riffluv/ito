@@ -10,6 +10,7 @@ import {
   getWaitingServiceWorker,
   suppressAutoApply,
 } from "@/lib/serviceWorker/updateChannel";
+import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
 const SW_PATH = "/sw.js";
@@ -64,6 +65,11 @@ const bindControllerChangeListener = () => {
     const context = consumePendingApplyContext();
     if (pendingReload) {
       const isAuto = context?.reason ? context.reason !== "manual" : false;
+      logSafeUpdateTelemetry("applied", {
+        reason: context?.reason,
+        safeMode: context?.safeMode,
+        detail: isAuto ? "auto" : "manual",
+      });
       if (isAuto) {
         controllerChangeAutoCount += 1;
       } else {

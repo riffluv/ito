@@ -1,3 +1,5 @@
+import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
+
 type UpdateListener = (registration: ServiceWorkerRegistration | null) => void;
 
 const listeners = new Set<UpdateListener>();
@@ -42,6 +44,7 @@ export function applyServiceWorkerUpdate(
   const safeMode = options?.safeMode === true;
   const isAutomatic = reason !== "manual";
   if (autoApplySuppressed && isAutomatic) {
+    logSafeUpdateTelemetry("suppressed", { reason, safeMode });
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.warn("[sw] auto-apply suppressed", { reason });
@@ -49,6 +52,7 @@ export function applyServiceWorkerUpdate(
     return false;
   }
   if (!waitingRegistration?.waiting) {
+    logSafeUpdateTelemetry("no_waiting", { reason, safeMode });
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.warn("[sw] no waiting service worker to apply", { reason });
@@ -59,10 +63,12 @@ export function applyServiceWorkerUpdate(
     pendingReload = true;
     pendingApplyContext = { reason, safeMode };
     waitingRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
+    logSafeUpdateTelemetry("triggered", { reason, safeMode });
     return true;
   } catch {
     pendingReload = false;
     pendingApplyContext = null;
+    logSafeUpdateTelemetry("failure", { reason, safeMode });
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.warn("[sw] applying service worker failed", { reason });

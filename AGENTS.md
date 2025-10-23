@@ -64,3 +64,10 @@
 - `scaleForDpi(value)` は `calc(value * var(--dpi-scale, 1))` に展開されるユーティリティ。100% DPI では 1 倍、125%/150% では `app/globals.css` のメディアクエリで定義した縮尺が適用される。
 - 高 DPI でも同じ視覚サイズを維持したい余白やフォントにだけ `scaleForDpi()` を噛ませる。幅ベースで変化させたい場合は従来通り `@container` / Chakra のレスポンシブプロップで制御する。
 - 新しいデザインを反映するときは 100% DPI 基準でレイアウトを決めた上で、必要箇所にだけ `scaleForDpi()` を追加する運用とする。トークン（`UNIFIED_LAYOUT` や `--card-*`）を先に更新すると関係箇所へ自動反映される。
+
+## Safe Update テレメトリ
+
+- `lib/telemetry/safeUpdate.ts` を追加。Safe Update のトリガ／成功／抑止／失敗を Sentry Metrics + captureMessage で計測。
+- `lib/serviceWorker/updateChannel.ts` で `applyServiceWorkerUpdate` 成功時・抑止時・失敗時にテレメトリを送出。理由（`reason`）と `safeMode` フラグをタグ化。
+- `app/ServiceWorkerRegistration.tsx` の `controllerchange` ハンドラで適用完了（`applied`）を記録し、自動／手動を `detail` に含める。
+- メトリクスは `safe_update.*` 名で送信。Sentry 側でダッシュボード化することで、安全更新の成功率・抑止率を定量把握可能。
