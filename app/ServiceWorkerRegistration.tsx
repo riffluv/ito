@@ -5,9 +5,12 @@ import {
   announceServiceWorkerUpdate,
   applyServiceWorkerUpdate,
   clearWaitingServiceWorker,
+  consumePendingApplyContext,
   consumePendingReloadFlag,
   getWaitingServiceWorker,
+  suppressAutoApply,
 } from "@/lib/serviceWorker/updateChannel";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
 const SW_PATH = "/sw.js";
 const APP_VERSION =
@@ -23,14 +26,34 @@ const shouldRegister = () => {
   return typeof window !== "undefined" && "serviceWorker" in navigator;
 };
 
+const LOOP_GUARD_THRESHOLD = 3;
 let controllerChangeBound = false;
+let controllerChangeAutoCount = 0;
 
 const bindControllerChangeListener = () => {
   if (controllerChangeBound) return;
   controllerChangeBound = true;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (consumePendingReloadFlag()) {
+    const pendingReload = consumePendingReloadFlag();
+    const context = consumePendingApplyContext();
+    if (pendingReload) {
+      const isAuto = context?.reason ? context.reason !== "manual" : false;
+      if (isAuto) {
+        controllerChangeAutoCount += 1;
+      } else {
+        controllerChangeAutoCount = 0;
+      }
+      bumpMetric("sw", "applied.count");
+      if (context?.safeMode) {
+        bumpMetric("safeUpdate", "applied");
+      }
+      if (isAuto && controllerChangeAutoCount > LOOP_GUARD_THRESHOLD) {
+        suppressAutoApply();
+        setMetric("sw", "loopGuard.tripped", 1);
+      }
       window.location.reload();
+    } else {
+      controllerChangeAutoCount = 0;
     }
   });
 };
@@ -55,6 +78,8 @@ const registerServiceWorker = async () => {
     return;
   }
 
+  setMetric("sw", "loopGuard.tripped", 0);
+  setMetric("sw", "applied.count", 0);
   const versionedPath = `${SW_PATH}?v=${APP_VERSION}`;
 
   try {
@@ -92,7 +117,9 @@ const registerServiceWorker = async () => {
           if (document.visibilityState === "hidden") {
             const waiting = getWaitingServiceWorker();
             if (waiting) {
-              const applied = applyServiceWorkerUpdate();
+              const applied = applyServiceWorkerUpdate({
+                reason: "visibility:hidden",
+              });
               if (!applied) {
                 try {
                   waiting.waiting?.postMessage({ type: "SKIP_WAITING" });

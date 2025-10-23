@@ -137,7 +137,10 @@
       "Bash(powershell:*)",
       "mcp__ide__getDiagnostics",
       "Bash(mkdir:*)",
-      "Bash(git log -10 --pretty=format:\"%h|%ad|%s\" --date=short)"
+      "Bash(git log -10 --pretty=format:\"%h|%ad|%s\" --date=short)",
+      "Bash(git log --all --format='%aN')",
+      "Bash(git log --since=\"2024-01-01\" --pretty=format:\"%ai\")",
+      "Bash(awk '{print $1}')"
     ],
     "deny": [],
     "ask": []
