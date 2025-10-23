@@ -3,6 +3,7 @@ import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
+import deepEqual from "fast-deep-equal/es6";
 import { logDebug, logError } from "@/lib/utils/log";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
@@ -82,7 +83,10 @@ export function useRoomState(
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
-    let prevDataHash = ""; // 差分検知：前回データのハッシュ値を保存
+    let prevRoomSnapshot: { id: string | null; data: ReturnType<typeof sanitizeRoom> | null } = {
+      id: null,
+      data: null,
+    };
 
     const stop = () => {
       try {
@@ -100,20 +104,22 @@ export function useRoomState(
         (snap) => {
           if (!snap.exists()) {
             setRoom(null);
-            prevDataHash = ""; // 部屋が存在しない場合はハッシュをリセット
+            prevRoomSnapshot = { id: null, data: null };
             return;
           }
 
-          // 差分検知：データが変わってない場合はstate更新をスキップ（70%削減）
           const rawData = snap.data();
-          const dataHash = JSON.stringify(rawData);
-          if (dataHash === prevDataHash) {
-            // 前回と同じデータ = 無視 = 再レンダリングなし = 課金削減！
+          const sanitized = sanitizeRoom(rawData);
+          if (
+            prevRoomSnapshot.data &&
+            prevRoomSnapshot.id === snap.id &&
+            deepEqual(prevRoomSnapshot.data, sanitized)
+          ) {
             return;
           }
-          prevDataHash = dataHash; // 今回のハッシュを保存
 
-          setRoom({ id: snap.id, ...sanitizeRoom(rawData) });
+          prevRoomSnapshot = { id: snap.id, data: sanitized };
+          setRoom({ id: snap.id, ...sanitized });
         },
         (err) => {
           if (isFirebaseQuotaExceeded(err)) {
