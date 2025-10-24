@@ -422,6 +422,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
+  const playersSignature = useMemo(
+    () => players.map((p) => p.id).join(","),
+    [players]
+  );
   const requiredSwVersion = useMemo(() => {
     const raw = room?.requiredSwVersion;
     if (typeof raw !== "string") return "";
@@ -754,6 +758,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   >(null);
 
 
+  const spectatorStateLogRef = useRef<{
+    roomStatus: string | null;
+    isMember: boolean;
+    canAccess: boolean;
+    forcedExitReason: typeof forcedExitReason;
+    spectatorReason: typeof spectatorReason;
+    joinStatus: typeof joinStatus;
+    playersSignature: string;
+    waitingToRejoin: boolean;
+  } | null>(null);
+  const spectatorAutoRetryStateRef = useRef<{
+    lastAttemptTs: number;
+    statusKey: string | null;
+  }>({ lastAttemptTs: 0, statusKey: null });
+
+
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
   const rejoinSessionKey = useMemo(
@@ -964,6 +984,50 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     return null;
   })();
+  const waitingToRejoin = room?.status === "waiting";
+
+  useEffect(() => {
+    const nextState = {
+      roomStatus: room?.status ?? null,
+      isMember,
+      canAccess,
+      forcedExitReason,
+      spectatorReason,
+      joinStatus,
+      playersSignature,
+      waitingToRejoin,
+    };
+    const prev = spectatorStateLogRef.current;
+    if (
+      !prev ||
+      prev.roomStatus !== nextState.roomStatus ||
+      prev.isMember !== nextState.isMember ||
+      prev.canAccess !== nextState.canAccess ||
+      prev.forcedExitReason !== nextState.forcedExitReason ||
+      prev.spectatorReason !== nextState.spectatorReason ||
+      prev.joinStatus !== nextState.joinStatus ||
+      prev.playersSignature !== nextState.playersSignature ||
+      prev.waitingToRejoin !== nextState.waitingToRejoin
+    ) {
+      spectatorStateLogRef.current = nextState;
+      logDebug("room-page", "spectator-state", {
+        roomId,
+        uid,
+        ...nextState,
+      });
+    }
+  }, [
+    room?.status,
+    isMember,
+    canAccess,
+    forcedExitReason,
+    spectatorReason,
+    joinStatus,
+    playersSignature,
+    waitingToRejoin,
+    roomId,
+    uid,
+  ]);
 
   useForcedExit({
     uid,
@@ -986,73 +1050,182 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     void executeForcedExit();
   }, [executeForcedExit]);
 
-  const handleRetryJoin = useCallback(async () => {
-    if (!uid) return;
-    if (versionMismatchBlocksAccess) {
-      try {
-        notify({
-          title: "最新バージョンに更新してください",
-          description: "ページを更新してから再参加してください",
-          type: "warning",
-        });
-      } catch (notifyError) {
-        logDebug("room-page", "notify-version-mismatch-retry", notifyError);
+  const performSeatRecovery = useCallback(
+    async ({ silent }: { silent: boolean }) => {
+      if (!uid) return false;
+      if (leavingRef.current) {
+        if (!silent) {
+          logDebug("room-page", "seat-recovery-blocked-leaving", {
+            roomId,
+            uid,
+          });
+        }
+        return false;
       }
+      if (versionMismatchBlocksAccess) {
+        if (!silent) {
+          try {
+            notify({
+              title: "最新バージョンに更新してください",
+              description: "ページを更新してから再参加してください",
+              type: "warning",
+            });
+          } catch (notifyError) {
+            logDebug("room-page", "notify-version-mismatch-retry", notifyError);
+          }
+        } else {
+          logDebug("room-page", "auto-seat-recovery-blocked-version-mismatch", {
+            roomId,
+            uid,
+          });
+        }
+        return false;
+      }
+
+      setPendingRejoinFlag();
+
+      try {
+        const normalizedDisplayName =
+          typeof displayName === "string" && displayName.trim().length > 0
+            ? displayName.trim()
+            : null;
+        await joinRoomFully({
+          roomId,
+          uid,
+          displayName: normalizedDisplayName,
+          notifyChat: false,
+        });
+
+        forcedExitScheduledRef.current = false;
+        forcedExitRecoveryPendingRef.current = false;
+        setForcedExitReason(null);
+
+        if (silent) {
+          logDebug("room-page", "auto-seat-recovery-success", { roomId, uid });
+        } else {
+          try {
+            notify({
+              title: "\u5e2d\u3092\u53d6\u308a\u76f4\u3057\u307e\u3057\u305f",
+              description: "\u307f\u3093\u306a\u306e\u30ab\u30fc\u30c9\u304c\u914d\u308a\u76f4\u3055\u308c\u308b\u307e\u3067\u5f85\u3061\u307e\u3057\u3087\u3046",
+              type: "success",
+            });
+          } catch (notifyError) {
+            logDebug("room-page", "notify-force-exit-retry-success", notifyError);
+          }
+        }
+        return true;
+      } catch (error) {
+        forcedExitRecoveryPendingRef.current = true;
+        const code = getRoomServiceErrorCode(error);
+        const isInProgress = code === "ROOM_IN_PROGRESS";
+
+        if (!isInProgress) {
+          logError(
+            "room-page",
+            silent ? "auto-seat-recovery-error" : "forced-exit-retry-join",
+            error
+          );
+        } else if (silent) {
+          logDebug("room-page", "auto-seat-recovery-in-progress", {
+            roomId,
+            uid,
+          });
+        }
+
+        if (!silent) {
+          const fallbackDescription =
+            code && error instanceof Error && error.message
+              ? error.message
+              : "\u5c11\u3057\u6642\u9593\u3092\u304a\u3044\u3066\u304b\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044";
+
+          try {
+            notify({
+              title: isInProgress
+                ? "\u307e\u3060\u30b2\u30fc\u30e0\u304c\u9032\u884c\u4e2d\u3067\u3059"
+                : "再参加に失敗しました",
+              description: isInProgress
+                ? "\u30db\u30b9\u30c8\u304c\u30ea\u30bb\u30c3\u30c8\u3057\u305f\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044"
+                : fallbackDescription,
+              type: isInProgress ? "info" : "error",
+            });
+          } catch (notifyError) {
+            logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
+          }
+        }
+        return false;
+      }
+    },
+    [uid, versionMismatchBlocksAccess, setPendingRejoinFlag, displayName, roomId, setForcedExitReason]
+  );
+
+  const handleRetryJoin = useCallback(async () => {
+    await performSeatRecovery({ silent: false });
+  }, [performSeatRecovery]);
+
+  const attemptAutoSeatRecovery = useCallback(async () => {
+    await performSeatRecovery({ silent: true });
+  }, [performSeatRecovery]);
+
+  useEffect(() => {
+    if (!waitingToRejoin || !isSpectatorMode) {
+      spectatorAutoRetryStateRef.current = { lastAttemptTs: 0, statusKey: null };
+      return;
+    }
+    if (leavingRef.current) {
+      return;
+    }
+    if (spectatorReason !== "waiting") {
+      return;
+    }
+    if (versionMismatchBlocksAccess) {
+      return;
+    }
+    if (!uid) {
+      return;
+    }
+    if (joinStatus === "joining" || joinStatus === "retrying") {
       return;
     }
 
-    setPendingRejoinFlag();
-
-    try {
-      await joinRoomFully({
-        roomId,
-        uid,
-        displayName: displayName ?? null,
-        notifyChat: false,
-      });
-
-      forcedExitScheduledRef.current = false;
-      forcedExitRecoveryPendingRef.current = false;
-      setForcedExitReason(null);
-
-      try {
-        notify({
-          title: "\u5e2d\u3092\u53d6\u308a\u76f4\u3057\u307e\u3057\u305f",
-          description: "\u307f\u3093\u306a\u306e\u30ab\u30fc\u30c9\u304c\u914d\u308a\u76f4\u3055\u308c\u308b\u307e\u3067\u5f85\u3061\u307e\u3057\u3087\u3046",
-          type: "success",
-        });
-      } catch (notifyError) {
-        logDebug("room-page", "notify-force-exit-retry-success", notifyError);
-      }
-    } catch (error) {
-      forcedExitRecoveryPendingRef.current = true;
-      const code = getRoomServiceErrorCode(error);
-      const isInProgress = code === "ROOM_IN_PROGRESS";
-
-      if (!isInProgress) {
-        logError("room-page", "forced-exit-retry-join", error);
-      }
-
-      const fallbackDescription =
-        code && error instanceof Error && error.message
-          ? error.message
-          : "\u5c11\u3057\u6642\u9593\u3092\u304a\u3044\u3066\u304b\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044";
-
-      try {
-        notify({
-          title: isInProgress
-            ? "\u307e\u3060\u30b2\u30fc\u30e0\u304c\u9032\u884c\u4e2d\u3067\u3059"
-            : "再参加に失敗しました",
-          description: isInProgress
-            ? "\u30db\u30b9\u30c8\u304c\u30ea\u30bb\u30c3\u30c8\u3057\u305f\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044"
-            : fallbackDescription,
-          type: isInProgress ? "info" : "error",
-        });
-      } catch (notifyError) {
-        logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
-      }
+    const statusKey = `${room?.id ?? ""}:${room?.status ?? ""}`;
+    const { lastAttemptTs, statusKey: previousKey } =
+      spectatorAutoRetryStateRef.current;
+    const now = Date.now();
+    const minInterval = previousKey === statusKey ? 1500 : 400;
+    if (now - lastAttemptTs < minInterval) {
+      return;
     }
-  }, [uid, roomId, displayName, setPendingRejoinFlag, versionMismatchBlocksAccess]);
+
+    spectatorAutoRetryStateRef.current = {
+      lastAttemptTs: now,
+      statusKey,
+    };
+
+    logDebug("room-page", "auto-seat-recovery-attempt", {
+      roomId,
+      uid,
+      joinStatus,
+      statusKey,
+      spectatorReason,
+      waitingToRejoin,
+      players: playersSignature
+        ? playersSignature.split(",").filter((id) => id)
+        : [],
+    });
+    void attemptAutoSeatRecovery();
+  }, [
+    waitingToRejoin,
+    isSpectatorMode,
+    spectatorReason,
+    versionMismatchBlocksAccess,
+    uid,
+    joinStatus,
+    room?.id,
+    room?.status,
+    playersSignature,
+    attemptAutoSeatRecovery,
+    roomId,
+  ]);
 
   useEffect(() => {
     if (!forcedExitReason) return;
@@ -1065,10 +1238,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       forcedExitRecoveryPendingRef.current = false;
       setPendingRejoinFlag();
       if (uid) {
+        const normalizedDisplayName =
+          typeof displayName === "string" && displayName.trim().length > 0
+            ? displayName.trim()
+            : null;
         void joinRoomFully({
           roomId,
           uid,
-          displayName: displayName ?? null,
+          displayName: normalizedDisplayName,
           notifyChat: false,
         }).catch((error) => {
           logDebug("room-page", "forced-exit-auto-rejoin", error);
@@ -1668,7 +1845,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
 
   const displayRoomName = stripMinimalTag(room?.name) || "";
-  const waitingToRejoin = room?.status === "waiting";
 
   if (!room) {
     const handleBackToLobby = async () => {
