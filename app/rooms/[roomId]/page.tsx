@@ -1308,18 +1308,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
     me?.id,
   ]);
-
-
-  const allCluesReady = useMemo(() => {
-    const dealPlayers = room?.deal?.players;
-    const ids = Array.isArray(dealPlayers)
-      ? dealPlayers
-      : players.map((p) => p.id);
-    const idSet = new Set(ids);
-    const targets = players.filter((p) => idSet.has(p.id));
-    return targets.length > 0 && targets.every((p) => p.ready === true);
-  }, [players, room?.deal?.players]);
-
   useEffect(() => {
     if (!room) {
       previousRoundRef.current = null;
@@ -1406,43 +1394,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       updateDoc(meRef, { ready: false }).catch(() => void 0);
     }
   }, [room?.round, uid, roomId, seenRound]);
-
-
-  useEffect(() => {
-    if (!isHost || !allCluesReady) {
-      return;
-    }
-
-    const status = room?.status;
-    if (status !== "clue") {
-      return;
-    }
-
-    const mode = room?.options?.resolveMode || "sequential";
-    const id = `clues-ready-${mode}-${roomId}-${room?.round || 0}`;
-    // sequential: すぐ出し始められる
-    // sort-submit: 並べてホストが『せーので判定』ボタンを押し通れを促す
-    try {
-      notify({
-        id,
-        type: "success",
-        title: "全員の連想ワードが揃いました",
-        description:
-          "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
-        duration: 6000,
-      });
-    } catch (error) {
-      logDebug("room-page", "notify-clues-ready-failed", error);
-    }
-  }, [
-    allCluesReady,
-    isHost,
-    room?.options?.resolveMode,
-    room?.round,
-    room?.status,
-    roomId,
-  ]);
-
 
 
   const myPlayer = useMemo(() => players.find((p) => p.id === uid), [players, uid]);
@@ -1643,13 +1594,85 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
 
 
-  const hostId = room?.hostId ?? null;
-  const eligibleIds = useMemo(() => {
-    if (!hostId) {
+  const presenceEligibleIds = useMemo(() => {
+    if (!presenceReady) {
       return baseIds;
     }
-    return [hostId, ...baseIds.filter((id) => id !== hostId)];
-  }, [hostId, baseIds]);
+    if (!Array.isArray(onlineUids) || onlineUids.length === 0) {
+      return baseIds;
+    }
+    const onlineSet = new Set(onlineUids);
+    const filtered = baseIds.filter((id) => onlineSet.has(id));
+    if (filtered.length === 0) {
+      return baseIds;
+    }
+    return filtered;
+  }, [presenceReady, onlineUidSignature, baseIds]);
+
+
+  const hostId = room?.hostId ?? null;
+  const eligibleIds = useMemo(() => {
+    const pool = presenceEligibleIds;
+    if (!hostId) {
+      return pool;
+    }
+    if (!pool.includes(hostId)) {
+      return pool;
+    }
+    return [hostId, ...pool.filter((id) => id !== hostId)];
+  }, [hostId, presenceEligibleIds]);
+
+  const clueTargetIds = useMemo(() => {
+    const dealPlayers = room?.deal?.players;
+    if (Array.isArray(dealPlayers)) {
+      const filtered = (dealPlayers as string[]).filter(
+        (pid): pid is string => typeof pid === "string" && pid.length > 0
+      );
+      if (filtered.length > 0) {
+        return filtered;
+      }
+    }
+    return eligibleIds;
+  }, [room?.deal?.players, eligibleIds]);
+
+  const allCluesReady = useMemo(() => {
+    const idSet = new Set(clueTargetIds);
+    const targets = players.filter((p) => idSet.has(p.id));
+    return targets.length > 0 && targets.every((p) => p.ready === true);
+  }, [players, clueTargetIds]);
+
+  useEffect(() => {
+    if (!isHost || !allCluesReady) {
+      return;
+    }
+
+    const status = room?.status;
+    if (status !== "clue") {
+      return;
+    }
+
+    const mode = room?.options?.resolveMode || "sequential";
+    const id = `clues-ready-${mode}-${roomId}-${room?.round || 0}`;
+    try {
+      notify({
+        id,
+        type: "success",
+        title: "全員の連想ワードが揃いました",
+        description:
+          "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
+        duration: 6000,
+      });
+    } catch (error) {
+      logDebug("room-page", "notify-clues-ready-failed", error);
+    }
+  }, [
+    allCluesReady,
+    isHost,
+    room?.options?.resolveMode,
+    room?.round,
+    room?.status,
+    roomId,
+  ]);
 
   const needsDealRecovery = useMemo(() => {
     if (!room || room.status !== "clue") return false;
@@ -2184,7 +2207,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           roomName={displayRoomName}
           currentTopic={room.topic || null}
           onlineUids={onlineUids}
-          roundIds={players.map((p) => p.id)}
+          roundIds={clueTargetIds}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onLeaveRoom={leaveRoom}
           pop={pop}

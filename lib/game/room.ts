@@ -44,6 +44,28 @@ async function broadcastNotify(
   }
 }
 
+type DealCandidate = { id: string; uid?: string; lastSeen?: any };
+
+export function selectDealTargetPlayers(
+  candidates: DealCandidate[],
+  presenceUids: string[] | null | undefined,
+  now: number
+): DealCandidate[] {
+  const activeByRecency = candidates.filter((p) =>
+    isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+  );
+  const fallbackPool =
+    activeByRecency.length > 0 ? activeByRecency : candidates;
+  if (Array.isArray(presenceUids) && presenceUids.length > 0) {
+    const presenceSet = new Set(presenceUids);
+    const online = fallbackPool.filter((p) => presenceSet.has(p.id));
+    if (online.length > 0) {
+      return online;
+    }
+  }
+  return fallbackPool;
+}
+
 export async function startGame(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
@@ -92,59 +114,27 @@ export async function startGame(roomId: string) {
 export async function dealNumbers(roomId: string): Promise<number> {
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
-  const all: { id: string; uid?: string; lastSeen?: any }[] = [];
+  const all: DealCandidate[] = [];
   snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
   const now = Date.now();
-  const activeByRecency = all.filter((p) =>
-    isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
-  );
-  // presence優先でオンラインのみ配布。presence未対応時はlastSeenで近接を採用
-  const fallbackPool = activeByRecency.length > 0 ? activeByRecency : all;
-  let target = fallbackPool;
-  let presencePlayers: typeof all | null = null;
-  let missingPlayers: typeof all | null = null;
-  try {
-    if (presenceSupported()) {
-      const uids = await fetchPresenceUids(roomId);
-      if (Array.isArray(uids) && uids.length > 0) {
-        const presenceSet = new Set(uids);
-        presencePlayers = [];
-        missingPlayers = [];
-        for (const player of fallbackPool) {
-          if (presenceSet.has(player.id)) {
-            presencePlayers.push(player);
-          } else {
-            missingPlayers.push(player);
-          }
-        }
-        if (presencePlayers.length > 0) {
-          target = [...presencePlayers, ...missingPlayers];
-        }
+
+  let presenceUids: string[] | null = null;
+  if (presenceSupported()) {
+    try {
+      const fetched = await fetchPresenceUids(roomId);
+      if (Array.isArray(fetched) && fetched.length > 0) {
+        presenceUids = fetched;
       }
+    } catch {
+      presenceUids = null;
     }
-  } catch {
-    target = fallbackPool;
-  }
-  if (!target.length) {
-    target = fallbackPool;
-  }
-  if (target.length < Math.min(2, all.length)) {
-    target = all;
   }
 
-  const sortByStableIdentity = (items: typeof all) =>
-    [...items].sort((a, b) =>
-      String(a.uid || a.id).localeCompare(String(b.uid || b.id))
-    );
+  const target = selectDealTargetPlayers(all, presenceUids, now);
 
-  let ordered: typeof all;
-  if (presencePlayers && presencePlayers.length > 0) {
-    const online = sortByStableIdentity(presencePlayers);
-    const offline = sortByStableIdentity(missingPlayers || []);
-    ordered = [...online, ...offline];
-  } else {
-    ordered = sortByStableIdentity(target);
-  }
+  const ordered = [...target].sort((a, b) =>
+    String(a.uid || a.id).localeCompare(String(b.uid || b.id))
+  );
 
   // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
   await updateDoc(doc(db!, "rooms", roomId), {

@@ -561,6 +561,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     const playLedgerOpen = useSoundEffect("ledger_open");
     const playOrderConfirm = useSoundEffect("order_confirm");
     const playCardPlace = useSoundEffect("card_place");
+    const playDropInvalid = useSoundEffect("drop_invalid");
     const playCardDeal = useSoundEffect("card_deal");
     const playTopicShuffle = useSoundEffect("topic_shuffle");
     const playResetGame = useSoundEffect("reset_game");
@@ -632,27 +633,29 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     try {
       if (isSortMode) {
         if (isRemoving) {
+          const removalPromise = removeCardFromProposal(roomId, me.id);
+          playCardPlace();
           window.dispatchEvent(
             new CustomEvent("ito:card-returning", {
               detail: { roomId, playerId: me.id },
             })
           );
-          await removeCardFromProposal(roomId, me.id);
-          playCardPlace();
+          await removalPromise;
           setInlineFeedback({
             message: "カードを待機エリアに戻しました",
             tone: "info",
           });
           didSucceed = true;
         } else {
-          const result = await addCardToProposal(roomId, me.id);
+          const submitPromise = addCardToProposal(roomId, me.id);
+          playCardPlace();
+          const result = await submitPromise;
           if (result === "noop") {
             setInlineFeedback({
               message: "カードは既に提出済みです",
               tone: "info",
             });
           } else {
-            playCardPlace();
             setInlineFeedback({
               message: "カードを提出しました",
               tone: "success",
@@ -661,12 +664,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           }
         }
       } else {
-        await commitPlayFromClue(roomId, me.id);
+        const commitPromise = commitPlayFromClue(roomId, me.id);
         playCardPlace();
+        await commitPromise;
         setInlineFeedback({ message: "カードを提出しました", tone: "success" });
         didSucceed = true;
       }
     } catch (e: any) {
+      playDropInvalid();
       const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(e)) {
         handleFirebaseQuotaError(actionLabel);
