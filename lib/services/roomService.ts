@@ -333,10 +333,13 @@ export async function assignNumberIfNeeded(
     );
     const myNum = nums[idx];
     if (me.number !== myNum) {
+      const existingClue =
+        typeof me.clue1 === "string" ? (me.clue1 as string) : "";
+      const nextReady = existingClue.trim().length > 0;
       await updateDoc(doc(db!, "rooms", roomId, "players", uid), {
         number: myNum,
-        clue1: me.clue1 || "",
-        ready: false,
+        clue1: existingClue,
+        ready: nextReady,
         orderIndex: 0,
       });
     }
