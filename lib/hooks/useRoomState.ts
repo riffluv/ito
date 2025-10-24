@@ -42,6 +42,7 @@ export function useRoomState(
   const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const joinAttemptRef = useRef(0);
   const membershipRetryAtRef = useRef(0);
+  const membershipLogSignatureRef = useRef<string | null>(null);
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,13 +260,33 @@ export function useRoomState(
 
       clearRetryTimer();
       const attemptBeforeCall = joinAttemptRef.current;
+      const normalizedDisplayName =
+        typeof displayName === "string" && displayName.trim().length > 0
+          ? displayName.trim()
+          : null;
+      logDebug("room-state", "joinRoomFully-attempt", {
+        roomId,
+        uid,
+        status: room.status,
+        pendingRejoin,
+        attempt: attemptBeforeCall + 1,
+        normalizedDisplayNameProvided: normalizedDisplayName !== null,
+        players: players.map((p) => p.id),
+      });
       const joinTask = joinRoomFully({
         roomId,
         uid,
-        displayName: displayName,
+        displayName: normalizedDisplayName,
         notifyChat: !pendingRejoin,
       })
         .then(() => {
+          logDebug("room-state", "joinRoomFully-success", {
+            roomId,
+            uid,
+            status: room.status,
+            pendingRejoin,
+            attempt: attemptBeforeCall + 1,
+          });
           joinCompletedRef.current = true;
           joinAttemptRef.current = 0;
           clearRetryTimer();
@@ -287,6 +308,7 @@ export function useRoomState(
               attempt: nextAttempt,
               delay,
               pendingRejoin,
+              status: room.status,
             });
             clearRetryTimer();
             joinRetryTimerRef.current = setTimeout(() => {
@@ -295,7 +317,14 @@ export function useRoomState(
             }, delay);
             setJoinStatus("retrying");
           } else {
-            logError("room-state", "joinRoomFully-max-retries", error);
+            logError("room-state", "joinRoomFully-max-retries", {
+              error,
+              roomId,
+              uid,
+              status: room.status,
+              pendingRejoin,
+              attempt: nextAttempt,
+            });
             setJoinStatus("retrying");
           }
         })
@@ -310,7 +339,11 @@ export function useRoomState(
     } else if (isMember) {
       joinAttemptRef.current = 0;
       clearRetryTimer();
-      ensureMember({ roomId, uid, displayName: displayName }).catch(
+      const normalizedDisplayName =
+        typeof displayName === "string" && displayName.trim().length > 0
+          ? displayName.trim()
+          : null;
+      ensureMember({ roomId, uid, displayName: normalizedDisplayName }).catch(
         () => void 0
       );
       setJoinStatus("joined");
@@ -347,7 +380,6 @@ export function useRoomState(
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
-    if (!displayName || !String(displayName).trim()) return;
     if (!isHost && room.status !== "waiting") return;
     if (loading) return;
     if (leavingRef.current) return;
@@ -380,9 +412,60 @@ export function useRoomState(
     room?.status,
     uid,
     room,
-    displayName,
     isHost,
     roomId,
+  ]);
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    if (!roomId || !uid) return;
+    if (!room) {
+      membershipLogSignatureRef.current = null;
+      return;
+    }
+    if (room.status !== "waiting") {
+      membershipLogSignatureRef.current = null;
+      return;
+    }
+    if (isMember) {
+      if (membershipLogSignatureRef.current !== null) {
+        logDebug("room-state", "waiting-membership-resolved", {
+          roomId,
+          uid,
+          players: players.map((p) => p.id),
+        });
+      }
+      membershipLogSignatureRef.current = null;
+      return;
+    }
+    const signature = [
+      uid,
+      players.map((p) => p.id).join(","),
+      joinStatus,
+      joinAttemptRef.current,
+      joinCompletedRef.current ? "1" : "0",
+      joinInFlightRef.current ? "1" : "0",
+    ].join("|");
+    if (membershipLogSignatureRef.current === signature) {
+      return;
+    }
+    membershipLogSignatureRef.current = signature;
+    logDebug("room-state", "waiting-membership-missing", {
+      roomId,
+      uid,
+      players: players.map((p) => p.id),
+      joinStatus,
+      joinAttempt: joinAttemptRef.current,
+      joinCompleted: joinCompletedRef.current,
+      joinInFlight: !!joinInFlightRef.current,
+    });
+  }, [
+    firebaseEnabled,
+    room,
+    roomId,
+    uid,
+    isMember,
+    players,
+    joinStatus,
   ]);
 
   // メモ化されたstateオブジェクトで不必要な再レンダリングを防ぐ
