@@ -8,6 +8,7 @@ import {
 } from "@/lib/firebase/presence";
 import {
   PRESENCE_HEARTBEAT_MS,
+  PRESENCE_HEARTBEAT_RETRY_DELAYS_MS,
 } from "@/lib/constants/presence";
 import type { PlayerDoc } from "@/lib/types";
 import {
@@ -44,6 +45,7 @@ export function useParticipants(
     roomId: null,
     uid: null,
   });
+  const attachRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
@@ -220,12 +222,32 @@ export function useParticipants(
   }, [roomId]);
 
   // 自分の presence アタッチ/デタッチ
+  const clearAttachRetryTimer = () => {
+    if (attachRetryTimerRef.current) {
+      try {
+        clearTimeout(attachRetryTimerRef.current);
+      } catch {}
+      attachRetryTimerRef.current = null;
+    }
+  };
+
+  useEffect(
+    () => () => {
+      clearAttachRetryTimer();
+    },
+    []
+  );
+
   useEffect(() => {
     if (!presenceSupported()) {
+      clearAttachRetryTimer();
       if (detachRef.current) {
         try {
           const maybePromise = detachRef.current();
-          if (maybePromise && typeof (maybePromise as Promise<void>).then === "function") {
+          if (
+            maybePromise &&
+            typeof (maybePromise as Promise<void>).then === "function"
+          ) {
             (maybePromise as Promise<void>).catch(() => void 0);
           }
         } catch {}
@@ -236,7 +258,8 @@ export function useParticipants(
     }
 
     let cancelled = false;
-    void (async () => {
+
+    const handleDetachIfNeeded = async () => {
       const prev = activePresenceRef.current;
       const roomChanged = prev.roomId !== (roomId ?? null);
       const uidChanged = prev.uid !== (uid ?? null);
@@ -254,23 +277,52 @@ export function useParticipants(
         if (!cancelled) {
           activePresenceRef.current = { roomId: roomId ?? null, uid: uid ?? null };
         }
+      }
+    };
+
+    const attachDelays = [0, ...PRESENCE_HEARTBEAT_RETRY_DELAYS_MS];
+
+    const tryAttach = async (attempt = 0) => {
+      if (cancelled) return;
+      if (!roomId || !uid) return;
+      if (detachRef.current) {
+        activePresenceRef.current = { roomId, uid };
         return;
       }
 
-      if (!detachRef.current) {
-        try {
-          const detach = await attachPresence(roomId, uid);
-          if (cancelled) {
-            try {
-              await detach();
-            } catch {}
-            return;
-          }
-          detachRef.current = detach;
-          activePresenceRef.current = { roomId, uid };
-        } catch {}
+      try {
+        const detach = await attachPresence(roomId, uid);
+        if (cancelled) {
+          try {
+            await detach();
+          } catch {}
+          return;
+        }
+        clearAttachRetryTimer();
+        detachRef.current = detach;
+        activePresenceRef.current = { roomId, uid };
+      } catch {
+        const nextAttempt = attempt + 1;
+        const delay =
+          attachDelays[
+            Math.min(nextAttempt, attachDelays.length - 1)
+          ];
+        clearAttachRetryTimer();
+        attachRetryTimerRef.current = setTimeout(
+          () => {
+            tryAttach(nextAttempt);
+          },
+          delay
+        );
       }
-    })();
+    };
+
+    handleDetachIfNeeded().finally(() => {
+      if (!cancelled && roomId && uid) {
+        clearAttachRetryTimer();
+        tryAttach(0);
+      }
+    });
 
     return () => {
       cancelled = true;
