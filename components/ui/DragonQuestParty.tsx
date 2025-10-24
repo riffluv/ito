@@ -7,7 +7,7 @@ import { toastIds } from "@/lib/ui/toastIds";
 import { Box, Text } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
@@ -77,7 +77,7 @@ const shallowEqualPartyMember = (a: PartyMember, b: PartyMember) => {
   return true;
 };
 
-export function DragonQuestParty({
+function DragonQuestParty({
   players,
   roomStatus,
   onlineCount,
@@ -630,4 +630,74 @@ export function DragonQuestParty({
   );
 }
 
-export default DragonQuestParty;
+const areStringArraysEqual = (
+  prev: string[] | undefined,
+  next: string[] | undefined
+) => {
+  if (prev === next) return true;
+  if (!prev || !next) return (!prev || prev.length === 0) && (!next || next.length === 0);
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    if (prev[i] !== next[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const arePartyMembersEqual = (prev: PartyMember[], next: PartyMember[]) => {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    if (!shallowEqualPartyMember(prev[i], next[i])) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const areFallbackNamesEqual = (
+  prev: Record<string, string> | undefined,
+  next: Record<string, string> | undefined
+) => {
+  if (prev === next) return true;
+  if (!prev && !next) return true;
+  if (!prev || !next) return false;
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(next);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const key of prevKeys) {
+    if (prev[key] !== next[key]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const arePropsEqual = (
+  prev: DragonQuestPartyProps,
+  next: DragonQuestPartyProps
+) => {
+  if (!arePartyMembersEqual(prev.players, next.players)) return false;
+  if (prev.roomStatus !== next.roomStatus) return false;
+  if ((prev.onlineCount ?? null) !== (next.onlineCount ?? null)) return false;
+  if (!areStringArraysEqual(prev.onlineUids, next.onlineUids)) return false;
+  if (prev.hostId !== next.hostId) return false;
+  if (prev.roomId !== next.roomId) return false;
+  if ((prev.isHostUser ?? false) !== (next.isHostUser ?? false)) return false;
+  if (!areStringArraysEqual(prev.eligibleIds, next.eligibleIds)) return false;
+  if (!areStringArraysEqual(prev.roundIds, next.roundIds)) return false;
+  if (!areStringArraysEqual(prev.submittedPlayerIds, next.submittedPlayerIds))
+    return false;
+  if (!areFallbackNamesEqual(prev.fallbackNames, next.fallbackNames)) return false;
+  if ((prev.displayRoomName ?? "") !== (next.displayRoomName ?? "")) return false;
+  if (
+    (prev.suspendTransientUpdates ?? false) !==
+    (next.suspendTransientUpdates ?? false)
+  )
+    return false;
+  return true;
+};
+
+export default memo(DragonQuestParty, arePropsEqual);
+export { DragonQuestParty };
