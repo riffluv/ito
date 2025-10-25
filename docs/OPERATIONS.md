@@ -1,57 +1,92 @@
-# 運用メモ（提出・通知・同期の要点）
+# 運用ガイド (OPERATIONS)
 
-この文書は、ゲーム挙動を変えずに安定運用するための短いメモです。
+ゲーム「序の紋章 III（オンライン版）」を継続運用する際のハンドブックです。UI 層から Firebase までの責務を明示し、日常運用・トラブル対応・トレースの見方を何度でも参照できる形でまとめています。
 
-## 1. Firestore ルール（提出の許可）
+---
 
-- 一般参加者の更新は、`clue` 中のみ以下を満たすと許可されます。
-  - トップレベルの差分: `order` と `lastActiveAt` だけが変更
-  - `order` 内の差分: `proposal` のみ（互換で `total` 同時更新も許可）
-  - 重要フィールド（`hostId/status/options/topic/deal/result/round` 等）は不変
-- ホスト/管理者の更新は従来どおり（`isValidHostAssignment` + `isValidRoomDoc`）。
+## 1. レイヤー構造と責務
 
-備考: 旧/新クライアントどちらの書式（`updateMask` の揺れ）でも通るよう、diff ベースで判定しています。
+```
+UI (components/ui, app/rooms/...)        ← 表示と入力のみ。ロジックは Hook/Service に委譲。
+      ↓
+Hooks (lib/hooks, components/hooks)       ← 状態集約・イベント制御。「traceAction」で主要操作を記録。
+      ↓
+Service (lib/game/service.ts ほか)        ← Firestore/RTDB 書き込み口を統一。UI から直接触らない。
+      ↓
+Firebase (lib/firebase/..., Cloud Functions) ← 永続層。認証・権限・バックグラウンド処理。
+```
 
-## 2. クライアントの提出方針
+- **UI**: レイアウトとアニメーションを担当。GameCard などは props だけで振る舞いを決定。
+- **Hooks**: 画面固有の状態を集約 (`useRoomState`, `useHostActions`, `useCardSubmission`, etc)。ここで trace を発火させ、失敗時は `traceError` で詳細を残す。
+- **Service**: `lib/game/service.ts` に必ず経由。Firestore / RTDB へ直接書き込みたい場合も、ここへ処理を追加する。
+- **Firebase**: ルール・Functions・RTDB Presence。Presence は RTDB が唯一のソース。
 
-- rooms の更新は「`order.proposal` と `lastActiveAt`」のみピンポイント更新。
-- DnD の空きスロット ID は `slot-<index>` に統一（`over.id` と一致）。
+---
 
-## 3. ラウンド境界の扱い（復活防止）
+## 2. トレースとメトリクスの見方
 
-- 古い連想を出さない条件: `clueUpdatedAt > resetAt`。
-- 判定は以下の全経路に適用済みです。
-  - 待機カード（WaitingAreaCard）
-  - サイドリスト（DragonQuestParty）
-  - 中央スロット（CentralCardBoard）
-  - 入力欄の初期値（MiniHandDock）
-- データの初期化（書き込み）は waiting 遷移時のみ（clue 直後は UI ガードで十分）。
+- 主要操作に `traceAction("名前", detail)` を仕込んでいます。例:
+  - `host.start`, `numbers.deal`, `order.submit`, `room.reset`, `reveal.finalize`
+  - UI 由来: `ui.card.submit`, `ui.host.quickStart`, `ui.host.nextGame`, `ui.host.transfer`
+- 失敗時は `traceError("名前", err, detail)` を必ず併走。Sentry Metrics が有効なら `trace.error.*` として集計され、開発中は console に `[trace:error]` が出力されます。
+- ローカル/検証環境で挙動を見る際は **ブラウザ DevTools の Console** を開き、`[trace:action] ...` / `[trace:error] ...` を確認。
+- メトリクスサマリは `window.__ITO_METRICS__` で取得可:
+  - `ui.dragonQuestPartyRenderMs`, `ui.dragonQuestPartyRenderCount`
+  - `participants.presenceReady`, `firestoreQueue.*`
+  - Safe Update 系 (`safeUpdate.*`) も同様に監視できる。
 
-## 4. 通知
+---
 
-- `events` サブコレクションに集約。チャットに依存しない。
-- `RoomNotifyBridge` が可視時のみ購読し、右上トースト表示。
-- 初期読み取りは最新1件→“入室後の新規のみ”表示。
+## 3. よくあるトラブルと対処
 
-## 5. ログの静音化
+| 症状 | 確認ポイント | 対処 |
+| ---- | ------------ | ---- |
+| カードが出せない / 「提出」ボタンが無効 | `traceAction("ui.card.submit")` が出ているか、`computeAllSubmitted` の条件が揃っているか | Presence Ready が false の場合はオンライン人数が計算に乗らない。`window.__ITO_METRICS__.participants` を確認し、クライアントが presence を張れているかチェック |
+| 並び確定が押せない | `tests/submit-offline-continue.spec.ts` のロジックどおり、場に出ている人数と `effectiveActive` が一致しているか | 離脱者が proposal に残っていないか確認。ホストは「中断」でリセットまたは `/trace` を参照 |
+| ホスト委譲が戻ってしまう | `[trace:error] ui.host.transfer` の detail を確認 | RTDB presence が古い可能性。対象プレイヤーに再ログインしてもらい、再度委譲 |
+| 初回カードで回転しない | `GameCard` の `lastRotationRef` が未更新の場合は 3D 無効化が働いていないか確認 | タブを再読み込み。GSAP の from-to が実行されているか console で確認 |
 
-- `.env.local`（開発）
-  - `NEXT_PUBLIC_LOG_LEVEL=warn`
-  - `NEXT_PUBLIC_FIRESTORE_LOG_LEVEL=warn`
-- `.env`（本番）
-  - `NEXT_PUBLIC_LOG_LEVEL=error`（または `silent`）
-  - `NEXT_PUBLIC_FIRESTORE_LOG_LEVEL=error`（または `silent`）
+---
 
-## 6. TTL（任意・無料）
+## 4. FSM フラグの切り替え手順
 
-- Firestore コンソール → TTL → 追加
-  - コレクショングループ: `rooms/*/events`
-  - TTL フィールド: `expireAt`
-  - 有効化（自動削除）
-- 送信側は `expireAt` を自動付与（保持日数は `NEXT_PUBLIC_EVENT_TTL_DAYS`）。
+新しい状態機械 (`lib/state/roomMachine.ts`) は feature flag で管理しています。
 
-## 7. ロールバック
+1. `.env.local` に `NEXT_PUBLIC_FSM_ENABLE=1` を設定（0 のままなら従来ロジック）。
+2. `npm run dev` または `npm run build && npm run start` を再起動。
+3. 主な動線（待機 → 連想 → 提出 → 公開 → 終了）の挙動が変わらないことを確認。
+4. トラブル時は flag を 0 に戻し、`lib/hooks/useRoomState.ts` の `fsmEnabled` 分岐を辿って差分を調査。
 
-- ルールはコンソールの「履歴」から即復元可能。
-- 既存クライアントは proposal ピンポイント更新に統一済みのため、後方互換性は保たれます。
+※ 状態遷移テストは `tests/roomMachine.spec.ts` で網羅済み。Flag ON/OFF 双方で手動確認してから本番へ。
+
+---
+
+## 5. コマンドとチェックリスト
+
+- 開発サーバー: `npm run dev`
+- 型チェック: `npm run typecheck`
+- ユニット／Playwright（一部）: `npm run test` / `npx playwright test`
+- 本番ビルド: `npm run build && npm run start`
+- 主要テスト:
+  - `tests/roomMachine.spec.ts`
+  - `tests/submit-offline-continue.spec.ts`
+  - `tests/clue-input-shortcuts.spec.ts`
+  - 既存 `__tests__/presence.spec.ts`
+
+**デプロイ前チェック**
+1. `npm run typecheck` → OK
+2. `npm run test` → OK
+3. `npx playwright test` → 新規テスト含めて OK
+4. `NEXT_PUBLIC_FSM_ENABLE=0` の状態で手動プレイ → OK
+5. Flag を 1 にして同じ流れを確認（リリース前の検証環境で実施推奨）
+
+---
+
+## 6. 参考リンク
+
+- `Safe Update` telemetries: `lib/telemetry/safeUpdate.ts`
+- Presence ロジック再設計メモ: `AGENTS.md`
+- Game ロジック概要: `docs/GAME_LOGIC_OVERVIEW.md`
+
+困ったら AGENTS.md や Safe Update メモへ追記し、次の担当者につなげてください。
 
