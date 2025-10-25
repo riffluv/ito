@@ -36,8 +36,11 @@ import { BaseCard } from "../cards/BaseCard";
 import {
   getDragonQuestStyleOverrides,
   getDragonQuestTextColors,
-  type GameCardState
+  type GameCardState,
 } from "../cards/card.styles";
+
+const FLIP_DURATION_DEFAULT = 0.35;
+const FLIP_DURATION_RESULT = 0.4;
 
 // テキスト統一スタイル
 const getUnifiedTextStyle = (): React.CSSProperties => ({
@@ -74,7 +77,6 @@ export function GameCard({
   const threeDContainerRef = useRef<HTMLDivElement | null>(null);
   const gsapInitialisedRef = useRef<boolean>(false);
   const flipTweenRef = useRef<gsap.core.Tween | null>(null);
-  const lastRotationRef = useRef<number>(flipped ? 180 : 0);
   const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
     isInteractive && onClick ? onClick : undefined;
   const isResultPreset = flipPreset === "result";
@@ -101,10 +103,8 @@ export function GameCard({
   }, [flipped, variant, playCardFlip]);
 
   // Shared semantic colors
-const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
-const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
-const FLIP_DURATION_DEFAULT = 0.62;
-const FLIP_DURATION_RESULT = 0.4;
+  const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
+  const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
   const successBorder =
     state === "success"
       ? UI_TOKENS.COLORS.dqGold // Gold for success
@@ -160,60 +160,36 @@ const FLIP_DURATION_RESULT = 0.4;
       }
     };
 
-    const targetRotation = flipped ? 180 : 0;
-
     if (!allow3d) {
       resetTween();
+      el.style.transform = "";
+      el.style.transition = "";
       gsapInitialisedRef.current = false;
-      lastRotationRef.current = targetRotation;
-      gsap.set(el, {
-        rotateY: targetRotation,
-        transformPerspective: 0,
-        transformOrigin: "center center",
-      });
       return () => {
         resetTween();
       };
     }
 
-    const previousRotation = lastRotationRef.current;
+    el.style.transition = "";
 
     if (!gsapInitialisedRef.current) {
       gsap.set(el, {
-        rotateY: previousRotation,
+        rotateY: flipped ? 180 : 0,
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
       gsapInitialisedRef.current = true;
     }
 
-    if (previousRotation === targetRotation) {
-      return () => {
-        resetTween();
-      };
-    }
-
     resetTween();
-
-    flipTweenRef.current = gsap.fromTo(
-      el,
-      {
-        rotateY: previousRotation,
-        transformPerspective: 1000,
-        transformOrigin: "center center",
-      },
-      {
-        duration: isResultPreset ? FLIP_DURATION_RESULT : FLIP_DURATION_DEFAULT,
-        rotateY: targetRotation,
-        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-        overwrite: "auto",
-        immediateRender: false,
-        transformPerspective: 1000,
-        transformOrigin: "center center",
-      }
-    );
-
-    lastRotationRef.current = targetRotation;
+    flipTweenRef.current = gsap.to(el, {
+      duration: isResultPreset ? FLIP_DURATION_RESULT : FLIP_DURATION_DEFAULT,
+      rotateY: flipped ? 180 : 0,
+      ease: isResultPreset ? "back.out(1.65)" : "power2.out",
+      overwrite: "auto",
+      transformPerspective: 1000,
+      transformOrigin: "center center",
+    });
 
     return () => {
       resetTween();
