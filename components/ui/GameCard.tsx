@@ -103,7 +103,7 @@ export function GameCard({
   // Shared semantic colors
 const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
 const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
-const FLIP_DURATION_DEFAULT = 0.48;
+const FLIP_DURATION_DEFAULT = 0.62;
 const FLIP_DURATION_RESULT = 0.4;
   const successBorder =
     state === "success"
