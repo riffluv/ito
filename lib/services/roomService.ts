@@ -373,7 +373,10 @@ export async function joinRoomFully({
     throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
 
-  await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
+  const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
+  if (!recallV2Enabled) {
+    await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
+  }
   await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
   await updateLastActive(roomId).catch(() => void 0);
 
