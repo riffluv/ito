@@ -8,6 +8,7 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { handleGameError } from "@/lib/utils/errorHandling";
 import { useCallback, useMemo, useState } from "react";
 import { executeQuickStart } from "@/lib/game/quickStart";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 const normalizeProposalIds = (source: unknown): string[] =>
   Array.isArray(source)
@@ -97,6 +98,10 @@ export function useHostActions({
     }
     const finalOrder = proposal.length > 0 ? proposal : orderList;
     try {
+      traceAction("ui.order.evaluate", {
+        roomId,
+        count: finalOrder.length,
+      });
       await submitSortedOrder(roomId, finalOrder);
       notify({
         id: toastIds.genericInfo(roomId, "evaluate-success"),
@@ -105,6 +110,10 @@ export function useHostActions({
         duration: 1800,
       });
     } catch (error) {
+      traceError("ui.order.evaluate", error as any, {
+        roomId,
+        count: finalOrder.length,
+      });
       handleGameError(error, "並び確定");
     } finally {
       setEvaluatePending(false);
@@ -136,6 +145,11 @@ export function useHostActions({
         return;
       }
       const defaultType = room.options?.defaultTopicType || "通常版";
+      traceAction("ui.host.quickStart", {
+        roomId,
+        activeCount: String(activeCount),
+        defaultType,
+      });
       autoStartControl?.begin?.(4500, { broadcast: true });
       muteNotifications(
         [
@@ -151,6 +165,7 @@ export function useHostActions({
         defaultTopicType: defaultType,
       });
     } catch (error) {
+      traceError("ui.host.quickStart", error, { roomId });
       autoStartControl?.clear?.();
       handleGameError(error, "クイック開始");
     }
@@ -159,6 +174,7 @@ export function useHostActions({
   // resetアクションのハンドラーを個別にメモ化
   const handleReset = useCallback(async () => {
     try {
+      traceAction("ui.room.reset", { roomId });
       await topicControls.resetTopic(roomId);
       notify({
         id: toastIds.gameReset(roomId),
@@ -167,6 +183,7 @@ export function useHostActions({
         duration: 2000,
       });
     } catch (error) {
+      traceError("ui.room.reset", error, { roomId });
       handleGameError(error, "ゲームリセット");
     }
   }, [roomId]);
