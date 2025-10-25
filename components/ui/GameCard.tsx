@@ -74,6 +74,7 @@ export function GameCard({
   const threeDContainerRef = useRef<HTMLDivElement | null>(null);
   const gsapInitialisedRef = useRef<boolean>(false);
   const flipTweenRef = useRef<gsap.core.Tween | null>(null);
+  const lastRotationRef = useRef<number>(flipped ? 180 : 0);
   const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
     isInteractive && onClick ? onClick : undefined;
   const isResultPreset = flipPreset === "result";
@@ -157,34 +158,60 @@ export function GameCard({
       }
     };
 
+    const targetRotation = flipped ? 180 : 0;
+
     if (!allow3d) {
       resetTween();
-      el.style.transform = "";
-      el.style.transition = "";
       gsapInitialisedRef.current = false;
-      return;
+      lastRotationRef.current = targetRotation;
+      gsap.set(el, {
+        rotateY: targetRotation,
+        transformPerspective: 0,
+        transformOrigin: "center center",
+      });
+      return () => {
+        resetTween();
+      };
     }
 
-    el.style.transition = "";
+    const previousRotation = lastRotationRef.current;
 
     if (!gsapInitialisedRef.current) {
       gsap.set(el, {
-        rotateY: flipped ? 180 : 0,
+        rotateY: previousRotation,
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
       gsapInitialisedRef.current = true;
     }
 
+    if (previousRotation === targetRotation) {
+      return () => {
+        resetTween();
+      };
+    }
+
     resetTween();
-    flipTweenRef.current = gsap.to(el, {
-      duration: isResultPreset ? 0.28 : 0.35,
-      rotateY: flipped ? 180 : 0,
-      ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-      overwrite: "auto",
-      transformPerspective: 1000,
-      transformOrigin: "center center",
-    });
+
+    flipTweenRef.current = gsap.fromTo(
+      el,
+      {
+        rotateY: previousRotation,
+        transformPerspective: 1000,
+        transformOrigin: "center center",
+      },
+      {
+        duration: isResultPreset ? 0.28 : 0.35,
+        rotateY: targetRotation,
+        ease: isResultPreset ? "back.out(1.65)" : "power2.out",
+        overwrite: "auto",
+        immediateRender: false,
+        transformPerspective: 1000,
+        transformOrigin: "center center",
+      }
+    );
+
+    lastRotationRef.current = targetRotation;
 
     return () => {
       resetTween();

@@ -5,6 +5,7 @@ import {
   removeCardFromProposal as removeCardFromProposalInternal,
   startGame as startGameInternal,
   submitSortedOrder as submitSortedOrderInternal,
+  finalizeReveal as finalizeRevealInternal,
 } from "@/lib/game/room";
 import {
   resetRoomWithPrune as resetRoomWithPruneInternal,
@@ -53,6 +54,10 @@ export async function resetRoomWithPrune(
   return resetRoomWithPruneInternal(roomId, keepIds, opts);
 }
 
+export async function finalizeReveal(roomId: string) {
+  return finalizeRevealInternal(roomId);
+}
+
 export { topicControls };
 
 export const GameService = {
@@ -63,6 +68,6 @@ export const GameService = {
   commitPlayFromClue,
   submitSortedOrder,
   resetRoomWithPrune,
+  finalizeReveal,
   topicControls,
 } as const;
-
