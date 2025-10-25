@@ -280,8 +280,18 @@ export function PixiGuideButtons({
       } else {
         observedElements.clear();
       }
-      spaceGuide.destroy();
-      eGuide.destroy();
+      if (spaceGuide.parent) {
+        spaceGuide.parent.removeChild(spaceGuide);
+      }
+      if (!spaceGuide.destroyed) {
+        spaceGuide.destroy({ children: true });
+      }
+      if (eGuide.parent) {
+        eGuide.parent.removeChild(eGuide);
+      }
+      if (!eGuide.destroyed) {
+        eGuide.destroy({ children: true });
+      }
       spaceGuideRef.current = null;
       eGuideRef.current = null;
       isInitializedRef.current = false;
