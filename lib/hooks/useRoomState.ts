@@ -11,8 +11,15 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
+import {
+  createRoomMachine,
+  type RoomMachineActorRef,
+  type RoomMachineClientEvent,
+  type RoomMachineSnapshot,
+} from "@/lib/state/roomMachine";
+import { createActor } from "xstate";
 
 export type RoomState = {
   room: (RoomDoc & { id: string }) | null;
@@ -24,6 +31,9 @@ export type RoomState = {
   isMember: boolean;
   isHost: boolean;
   joinStatus?: "idle" | "joining" | "retrying" | "joined";
+  phase: RoomDoc["status"];
+  fsmEnabled: boolean;
+  sendRoomEvent?: (event: RoomMachineClientEvent) => void;
 };
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
@@ -50,6 +60,11 @@ export function useRoomState(
   const [joinStatus, setJoinStatus] = useState<"idle" | "joining" | "retrying" | "joined">(
     "idle"
   );
+  const machineRef = useRef<RoomMachineActorRef | null>(null);
+  const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
+    null
+  );
+  const fsmEnabled = process.env.NEXT_PUBLIC_FSM_ENABLE === "1";
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -69,6 +84,45 @@ export function useRoomState(
       joinRetryTimerRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    if (!fsmEnabled) {
+      const existing = machineRef.current;
+      if (existing) {
+        existing.stop();
+        machineRef.current = null;
+      }
+      setMachineSnapshot(null);
+      return;
+    }
+
+    const actor = createActor(
+      createRoomMachine({
+        roomId,
+        room: null,
+        players: [],
+        onlineUids: undefined,
+        presenceReady: false,
+      })
+    );
+    actor.start();
+    setMachineSnapshot(actor.getSnapshot());
+    const subscription = actor.subscribe((snapshot) => {
+      setMachineSnapshot(snapshot);
+    });
+    if (machineRef.current) {
+      machineRef.current.stop();
+    }
+    machineRef.current = actor;
+
+    return () => {
+      subscription.unsubscribe();
+      actor.stop();
+      if (machineRef.current === actor) {
+        machineRef.current = null;
+      }
+    };
+  }, [fsmEnabled, roomId]);
 
   // subscribe room
   useEffect(() => {
@@ -205,6 +259,19 @@ export function useRoomState(
       setLoading(partLoading === true);
     });
   }, [fetchedPlayers, partLoading]);
+
+  useEffect(() => {
+    if (!fsmEnabled) return;
+    const actor = machineRef.current;
+    if (!actor) return;
+    actor.send({
+      type: "SYNC",
+      room,
+      players,
+      onlineUids,
+      presenceReady,
+    });
+  }, [fsmEnabled, room, players, onlineUids, presenceReady]);
 
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
@@ -454,10 +521,10 @@ export function useRoomState(
       uid,
       players: players.map((p) => p.id),
       joinStatus,
-      joinAttempt: joinAttemptRef.current,
-      joinCompleted: joinCompletedRef.current,
-      joinInFlight: !!joinInFlightRef.current,
-    });
+    joinAttempt: joinAttemptRef.current,
+    joinCompleted: joinCompletedRef.current,
+    joinInFlight: !!joinInFlightRef.current,
+  });
   }, [
     firebaseEnabled,
     room,
@@ -468,10 +535,41 @@ export function useRoomState(
     joinStatus,
   ]);
 
+  const effectivePhase = useMemo<RoomDoc["status"]>(() => {
+    if (!fsmEnabled) {
+      return room?.status ?? "waiting";
+    }
+    const snapshot = machineSnapshot;
+    if (!snapshot) {
+      return room?.status ?? "waiting";
+    }
+    return snapshot.value as RoomDoc["status"];
+  }, [fsmEnabled, machineSnapshot, room?.status]);
+
+  const effectiveRoom = useMemo<(RoomDoc & { id: string }) | null>(() => {
+    if (!room) return null;
+    if (!fsmEnabled) return room;
+    const snapshot = machineSnapshot;
+    if (!snapshot) return room;
+    const statusFromMachine = snapshot.value as RoomDoc["status"];
+    if (statusFromMachine === room.status) {
+      return room;
+    }
+    return { ...room, status: statusFromMachine };
+  }, [room, fsmEnabled, machineSnapshot]);
+
+  const sendRoomEvent = useCallback(
+    (event: RoomMachineClientEvent) => {
+      if (!fsmEnabled) return;
+      machineRef.current?.send(event);
+    },
+    [fsmEnabled]
+  );
+
   // メモ化されたstateオブジェクトで不必要な再レンダリングを防ぐ
   const state: RoomState = useMemo(
     () => ({
-      room,
+      room: effectiveRoom,
       players,
       loading,
       onlineUids,
@@ -479,9 +577,12 @@ export function useRoomState(
       onlinePlayers,
       isMember,
       isHost,
+      phase: effectivePhase,
+      fsmEnabled,
+      sendRoomEvent: fsmEnabled ? sendRoomEvent : undefined,
     }),
     [
-      room,
+      effectiveRoom,
       players,
       loading,
       onlineUids,
@@ -489,6 +590,9 @@ export function useRoomState(
       onlinePlayers,
       isMember,
       isHost,
+      effectivePhase,
+      fsmEnabled,
+      sendRoomEvent,
     ]
   );
 
