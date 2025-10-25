@@ -2,35 +2,17 @@
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
-import { notify, muteNotifications } from "@/components/ui/notify";
+import { notify } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
-import { updateClue1 } from "@/lib/firebase/players";
-import { resetRoomWithPrune } from "@/lib/firebase/rooms";
 import { keyframes } from "@emotion/react";
-import {
-  canSubmitCard,
-  computeAllSubmitted,
-  isSortSubmit,
-  normalizeResolveMode,
-  ResolveMode,
-} from "@/lib/game/resolveMode";
-import {
-  addCardToProposal,
-  commitPlayFromClue,
-  removeCardFromProposal,
-  startGame as startGameAction,
-  submitSortedOrder,
-} from "@/lib/game/room";
-import { topicControls } from "@/lib/game/topicControls";
+import { ResolveMode } from "@/lib/game/resolveMode";
+import { topicControls } from "@/lib/game/service";
+import { useClueInput } from "@/lib/hooks/useClueInput";
+import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
+import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
 import type { PlayerDoc } from "@/lib/types";
-import { postRoundReset } from "@/lib/utils/broadcast";
-import {
-  handleFirebaseQuotaError,
-  isFirebaseQuotaExceeded,
-} from "@/lib/utils/errorHandling";
-import { logInfo } from "@/lib/utils/log";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { toastIds } from "@/lib/ui/toastIds";
 import { SAFE_AREA_INSET } from "@/lib/ui/layout";
@@ -44,14 +26,11 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
-import SpaceKeyHint from "./SpaceKeyHint";
-import SubmitEHint from "./SubmitEHint";
 import { KEYBOARD_KEYS } from "./hints/constants";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
@@ -311,22 +290,22 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   } = props;
 
   // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
-  const [effectiveDefaultTopicType, setEffectiveDefaultTopicType] =
-    React.useState<string>(defaultTopicType);
-  React.useEffect(
-    () => setEffectiveDefaultTopicType(defaultTopicType),
-    [defaultTopicType]
-  );
+  const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
+    string | undefined
+  >(defaultTopicType);
+  React.useEffect(() => setDefaultTopicOverride(defaultTopicType), [
+    defaultTopicType,
+  ]);
   React.useEffect(() => {
     const handler = (e: any) => {
       const v = e?.detail?.defaultTopicType;
-      if (typeof v === "string") setEffectiveDefaultTopicType(v);
+      if (typeof v === "string") setDefaultTopicOverride(v);
     };
     if (typeof window !== "undefined") {
       window.addEventListener("defaultTopicTypeChanged", handler as any);
       try {
         const v = window.localStorage.getItem("defaultTopicType");
-        if (v) setEffectiveDefaultTopicType(v);
+        if (v) setDefaultTopicOverride(v);
       } catch {}
     }
     return () => {
@@ -336,11 +315,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     };
   }, []);
 
-  const [text, setText] = React.useState<string>(me?.clue1 || "");
-  const deferredText = React.useDeferredValue(text);
-  const [isRestarting, setIsRestarting] = React.useState(false);
-  const [quickStartPending, setQuickStartPending] = React.useState(false);
-  const [isResetting, setIsResetting] = React.useState(false);
+  const computedDefaultTopicType =
+    defaultTopicOverride ?? defaultTopicType ?? "通常版";
+
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
@@ -350,16 +327,55 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   } | null>(null);
   const [topicActionLoading, setTopicActionLoading] = React.useState(false);
   const [dealActionLoading, setDealActionLoading] = React.useState(false);
-  const [shouldShowSpaceHint, setShouldShowSpaceHint] = React.useState(false);
-  const [shouldShowSubmitHint, setShouldShowSubmitHint] = React.useState(false);
 
   // 入力フィールド参照
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const submitHintShownRef = React.useRef(false);
-  const resetSubmitHint = React.useCallback(() => {
-    submitHintShownRef.current = false;
-    setShouldShowSubmitHint(false);
-  }, []);
+
+  const {
+    text,
+    setText,
+    clueEditable,
+    canDecide,
+    hasText,
+    displayHasText,
+    ready,
+    handleDecide,
+    handleClear,
+    handleInputKeyDown,
+  } = useClueInput({
+    roomId,
+    roomStatus,
+    player: me ?? null,
+    inputRef,
+    onFeedback: setInlineFeedback,
+  });
+
+  const {
+    actualResolveMode,
+    isSortMode,
+    placed,
+    canSubmit,
+    canSubmitBase,
+    canClickProposalButton,
+    actionLabel,
+    allSubmitted,
+    shouldShowSubmitHint,
+    isSubmitHintEligible,
+    resetSubmitHint,
+    handleSubmit,
+  } = useCardSubmission({
+    roomId,
+    roomStatus,
+    resolveMode,
+    player: me ?? null,
+    proposal,
+    eligibleIds,
+    cluesReady,
+    clueEditable,
+    inputRef,
+    onFeedback: setInlineFeedback,
+    isRevealAnimating,
+  });
 
   const {
     autoStartLocked,
@@ -368,18 +384,47 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     showIndicator: showAutoStartIndicator,
   } = useHostAutoStartLock(roomId, roomStatus);
 
+  const {
+    quickStart,
+    quickStartPending,
+    isResetting,
+    isRestarting,
+    resetGame,
+    restartGame,
+    handleNextGame,
+    evalSorted,
+    customOpen,
+    setCustomOpen,
+    customText,
+    setCustomText,
+    customStartPending,
+    handleSubmitCustom,
+    effectiveDefaultTopicType: hostDefaultTopicType,
+  } = useHostActionsCore({
+    roomId,
+    roomStatus,
+    isHost: !!isHost,
+    isRevealAnimating,
+    autoStartLocked,
+    beginAutoStartLock,
+    clearAutoStartLock,
+    actualResolveMode,
+    defaultTopicType: computedDefaultTopicType,
+    roundIds,
+    onlineUids,
+    proposal,
+    currentTopic,
+    onFeedback: setInlineFeedback,
+  });
+
+  const effectiveDefaultTopicType = hostDefaultTopicType;
+
   React.useEffect(() => {
     if (!inlineFeedback) return;
     if (inlineFeedback.tone === "info") return;
     const timer = setTimeout(() => setInlineFeedback(null), 2000);
     return () => clearTimeout(timer);
   }, [inlineFeedback]);
-
-  // 連想ワードの同期を強化（空文字列の場合も確実にリセット）
-  React.useEffect(() => {
-    const newValue = me?.clue1 || "";
-    setText(newValue);
-  }, [me?.clue1]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -408,72 +453,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   }, [roomStatus]);
 
-  // スペースキーのグローバルハンドラー（フォーカスのみ）
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 入力欄やその他の入力要素にフォーカスがある場合は無視
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      const canEdit = roomStatus === "waiting" || roomStatus === "clue";
-
-      // スペースキーで入力欄にフォーカス
-      if (e.key === KEYBOARD_KEYS.SPACE && canEdit) {
-        e.preventDefault();
-        e.stopPropagation();
-        inputRef.current?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, [roomStatus]);
-
-  const actualResolveMode = normalizeResolveMode(resolveMode);
-  const isSortMode = isSortSubmit(actualResolveMode);
   const isCustomModeSelectable =
     topicBox === "カスタム" ||
     (!topicBox && effectiveDefaultTopicType === "カスタム");
-  const trimmedText = text.trim();
-  const deferredTrimmedText = deferredText.trim();
-  const hasText = trimmedText.length > 0;
-  const displayHasText = deferredTrimmedText.length > 0;
-  const clueEditable = roomStatus === "waiting" || roomStatus === "clue";
-  const placed = !!proposal?.includes(me?.id || "");
-  const ready = !!(me && (me as any).ready === true);
-  const canDecide =
-    clueEditable && !!me?.id && typeof me?.number === "number" && hasText;
-  const allSubmitted = computeAllSubmitted({
-    mode: actualResolveMode,
-    eligibleIds,
-    proposal,
-  });
-  const canSubmitBase = canSubmitCard({
-    mode: actualResolveMode,
-    canDecide:
-      !!me?.id && typeof me?.number === "number" && !!me?.clue1?.trim(), // Firebase保存済みチェック
-    ready,
-    placed,
-    cluesReady,
-  });
-  const canSubmit = clueEditable && canSubmitBase;
-
-  const canClickProposalButton = isSortMode
-    ? !!me?.id && clueEditable && (placed || canSubmitBase)
-    : !!me?.id && canSubmit;
-
-  // ホスト視点でソート中かつ全員提出済みの場合のみ「せーの！」を出す
   const shouldShowSeinoButton =
     !!isHost && isSortMode && roomStatus === "clue" && allSubmitted;
 
@@ -493,41 +475,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     }
   }, [clueEditable]);
 
-  // ゲーム開始直後（clueフェーズに入った時）にSpaceキーヒント表示
-  React.useEffect(() => {
-    if (roomStatus === "clue") {
-      setShouldShowSpaceHint(true);
-    } else {
-      setShouldShowSpaceHint(false);
-    }
-  }, [roomStatus]);
-
-
-  const actionLabel = isSortMode && placed ? "戻す" : "出す";
-  const isSubmitHintEligible =
-    roomStatus === "clue" &&
-    !isRevealAnimating &&
-    canClickProposalButton &&
-    actionLabel === "出す";
-
-  React.useEffect(() => {
-    if (isSubmitHintEligible && !submitHintShownRef.current) {
-      submitHintShownRef.current = true;
-      setShouldShowSubmitHint(true);
-      return;
-    }
-    if (!isSubmitHintEligible) {
-      resetSubmitHint();
-    }
-  }, [isSubmitHintEligible, resetSubmitHint]);
-
   React.useEffect(() => {
     if (!shouldShowSubmitHint) return;
     const timer = window.setTimeout(() => {
-      setShouldShowSubmitHint(false);
+      resetSubmitHint();
     }, 2500);
     return () => window.clearTimeout(timer);
-  }, [shouldShowSubmitHint]);
+  }, [resetSubmitHint, shouldShowSubmitHint]);
 
   const baseActionTooltip =
     isSortMode && placed ? "カードを待機エリアに戻す" : "カードを場に出す";
@@ -555,494 +509,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           : !ready
             ? "「決定」を押すとカードを出せます"
             : "カードを場に出せません";
-    const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
+  const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
 
-    const playClueDecide = useSoundEffect("clue_decide");
-    const playLedgerOpen = useSoundEffect("ledger_open");
-    const playOrderConfirm = useSoundEffect("order_confirm");
-    const playCardPlace = useSoundEffect("card_place");
-    const playDropInvalid = useSoundEffect("drop_invalid");
-    const playCardDeal = useSoundEffect("card_deal");
-    const playTopicShuffle = useSoundEffect("topic_shuffle");
-    const playResetGame = useSoundEffect("reset_game");
-
-    // ⚡ PERFORMANCE: useCallbackでメモ化して不要な関数再生成を防止
-    const handleDecide = React.useCallback(async () => {
-    if (!canDecide || !me?.id) return;
-
-    try {
-      playClueDecide();
-      await updateClue1(roomId, me.id, trimmedText);
-      setInlineFeedback({
-        message: "連想ワードを保存しました",
-        tone: "success",
-      });
-    } catch (e: any) {
-      if (isFirebaseQuotaExceeded(e)) {
-        handleFirebaseQuotaError("連想ワード記録");
-        notify({
-          id: toastIds.firebaseLimit(roomId, "clue-save"),
-          title: "接続制限のため記録不可",
-          description:
-            "現在連想ワードを記録できません。24時間後に再度お試しください。",
-          type: "error",
-        });
-      } else {
-        notify({
-          id: toastIds.clueSaveError(roomId),
-          title: "記録に失敗しました",
-          description: e?.message,
-          type: "error",
-        });
-      }
-    }
-  }, [canDecide, me?.id, playClueDecide, roomId, trimmedText]);
-
-  // ⚡ PERFORMANCE: useCallbackでメモ化
-  const handleClear = React.useCallback(async () => {
-    if (!clueEditable || !me?.id) return;
-    try {
-      await updateClue1(roomId, me.id, "");
-      setText("");
-      setInlineFeedback({
-        message: "連想ワードをクリアしました",
-        tone: "info",
-      });
-    } catch (e: any) {
-      notify({
-        id: toastIds.clueClearError(roomId),
-        title: "クリアに失敗しました",
-        description: e?.message,
-        type: "error",
-      });
-    }
-  }, [clueEditable, me?.id, roomId]);
-
-  // ⚡ PERFORMANCE: useCallbackでメモ化
-  const handleSubmit = React.useCallback(async () => {
-    if (!me?.id || !clueEditable) return;
-
-    const isRemoving = isSortMode && placed;
-    if (isSortMode) {
-      if (!placed && !canSubmit) return;
-    } else {
-      if (!canSubmit || !cluesReady) return;
-    }
-
-    let didSucceed = false;
-    try {
-      if (isSortMode) {
-        if (isRemoving) {
-          const removalPromise = removeCardFromProposal(roomId, me.id);
-          playCardPlace();
-          window.dispatchEvent(
-            new CustomEvent("ito:card-returning", {
-              detail: { roomId, playerId: me.id },
-            })
-          );
-          await removalPromise;
-          setInlineFeedback({
-            message: "カードを待機エリアに戻しました",
-            tone: "info",
-          });
-          didSucceed = true;
-        } else {
-          const submitPromise = addCardToProposal(roomId, me.id);
-          playCardPlace();
-          const result = await submitPromise;
-          if (result === "noop") {
-            setInlineFeedback({
-              message: "カードは既に提出済みです",
-              tone: "info",
-            });
-          } else {
-            setInlineFeedback({
-              message: "カードを提出しました",
-              tone: "success",
-            });
-            didSucceed = true;
-          }
-        }
-      } else {
-        const commitPromise = commitPlayFromClue(roomId, me.id);
-        playCardPlace();
-        await commitPromise;
-        setInlineFeedback({ message: "カードを提出しました", tone: "success" });
-        didSucceed = true;
-      }
-    } catch (e: any) {
-      playDropInvalid();
-      const actionLabel = isRemoving ? "カードを戻す" : "カードを出す";
-      if (isFirebaseQuotaExceeded(e)) {
-        handleFirebaseQuotaError(actionLabel);
-        notify({
-          id: toastIds.firebaseLimit(roomId, "card-action"),
-          title: "Firebase 制限により処理できません",
-          description:
-            "現在カード操作を完了できません。しばらく待って再度お試しください。",
-          type: "error",
-        });
-      } else {
-        notify({
-          id: toastIds.cardActionError(roomId),
-          title: actionLabel + "処理に失敗しました",
-          description: e?.message,
-          type: "error",
-        });
-      }
-    }
-    if (didSucceed) {
-      resetSubmitHint();
-    }
-  }, [
-    me?.id,
-    clueEditable,
-    isSortMode,
-    placed,
-    canSubmit,
-    cluesReady,
-    roomId,
-    playCardPlace,
-    resetSubmitHint,
-  ]);
-
-  React.useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (!isSubmitHintEligible) return;
-      if (event.repeat) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key?.toLowerCase() !== KEYBOARD_KEYS.E) return;
-      const target = event.target as HTMLElement | null;
-      if (target === inputRef.current) {
-        event.preventDefault();
-        inputRef.current?.blur();
-        handleSubmit();
-        return;
-      }
-      if (isTypingFocus(target)) return;
-      event.preventDefault();
-      handleSubmit();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleSubmit, inputRef, isSubmitHintEligible]);
-
-  // カスタムお題モーダル制御
-    const [customOpen, setCustomOpen] = React.useState(false);
-    const [customStartPending, setCustomStartPending] = React.useState(false);
-    const [customText, setCustomText] = React.useState<string>("");
-  // ⚡ PERFORMANCE: useCallbackでメモ化
-  const handleSubmitCustom = React.useCallback(async (val: string) => {
-    const v = (val || "").trim();
-    if (!v) return;
-    await topicControls.setCustomTopic(roomId, v);
-    setCustomOpen(false);
-
-    if (!isHost) {
-      setCustomStartPending(false);
-      notify({
-        id: toastIds.topicChangeSuccess(roomId),
-        title: "お題を更新しました",
-        description: "ホストが開始するとゲームがスタートします",
-        type: "success",
-        duration: 1800,
-      });
-      return;
-    }
-
-    try {
-      // カスタムお題確定後、まだゲームが始まっていなければ開始→配布まで自動進行
-      if (
-        (roomStatus === "waiting" || customStartPending) &&
-        isSortSubmit(actualResolveMode)
-      ) {
-        playOrderConfirm();
-        await startGameAction(roomId);
-        await topicControls.dealNumbers(roomId);
-        notify({
-          id: toastIds.gameStart(roomId),
-          title: "カスタムお題で開始",
-          type: "success",
-          duration: 2000,
-        });
-      }
-    } finally {
-      setCustomStartPending(false);
-    }
-    }, [
-      roomId,
-      isHost,
-      roomStatus,
-      customStartPending,
-      actualResolveMode,
-      playOrderConfirm,
-      playTopicShuffle,
-    ]);
-
-  const quickStart = async (opts?: { broadcast?: boolean; playSound?: boolean }) => {
-    if (quickStartPending) return false;
-
-    setQuickStartPending(true);
-
-    muteNotifications(
-      [
-        toastIds.topicChangeSuccess(roomId),
-        toastIds.topicShuffleSuccess(roomId),
-        toastIds.numberDealSuccess(roomId),
-        toastIds.gameReset(roomId),
-      ],
-      2800
-    );
-
-    let effectiveType = defaultTopicType as string;
-    let latestTopic: string | null = currentTopic ?? null;
-    try {
-      if (db) {
-        const snap = await getDoc(doc(db, "rooms", roomId));
-        const data = snap.data() as any;
-        const latestType = data?.options?.defaultTopicType as
-          | string
-          | undefined;
-        if (latestType && typeof latestType === "string")
-          effectiveType = latestType;
-        const topicFromSnapshot = data?.topic;
-        if (typeof topicFromSnapshot === "string") {
-          latestTopic = topicFromSnapshot;
-        } else if (topicFromSnapshot == null) {
-          latestTopic = null;
-        }
-      }
-    } catch {}
-
-    const topicToUse = typeof latestTopic === "string" ? latestTopic : "";
-    if (effectiveType === "カスタム" && !topicToUse.trim()) {
-      setCustomStartPending(true);
-      setCustomText("");
-      setCustomOpen(true);
-      setQuickStartPending(false);
-      return false;
-    }
-
-      const shouldBroadcast = opts?.broadcast ?? true;
-      const shouldPlaySound = opts?.playSound ?? true;
-    beginAutoStartLock(4500, { broadcast: shouldBroadcast });
-
-    let success = false;
-    try {
-      if (effectiveType === "カスタム") {
-        if (shouldPlaySound) {
-          playOrderConfirm();
-        }
-        await startGameAction(roomId);
-        await topicControls.dealNumbers(roomId);
-        try {
-          postRoundReset(roomId);
-        } catch {}
-      } else {
-        if (shouldPlaySound) {
-          playOrderConfirm();
-        }
-        await startGameAction(roomId);
-        try {
-          delete (window as any).__ITO_LAST_RESET;
-        } catch {}
-        const selectType =
-          effectiveType === "カスタム" ? "通常版" : effectiveType;
-        await topicControls.selectCategory(roomId, selectType as any);
-        await topicControls.dealNumbers(roomId);
-        try {
-          postRoundReset(roomId);
-        } catch {}
-      }
-      success = true;
-    } catch (error: any) {
-      clearAutoStartLock();
-      if (isFirebaseQuotaExceeded(error)) {
-        handleFirebaseQuotaError("ゲーム開始");
-      } else {
-        const message = error?.message || "処理に失敗しました";
-        notify({
-          id: toastIds.gameStartError(roomId),
-          title: "ゲーム開始に失敗しました",
-          description: message,
-          type: "error",
-        });
-      }
-    } finally {
-      setQuickStartPending(false);
-    }
-
-    return success;
-  };
-
-  const evalSorted = async () => {
-    if (!allSubmitted) return;
-    const list = (proposal || []).filter(
-      (v): v is string => typeof v === "string" && v.length > 0
-    );
-    playOrderConfirm();
-    try {
-      await submitSortedOrder(roomId, list);
-    } catch (error: any) {
-      notify({
-        id: toastIds.genericError(roomId, "submit-order"),
-        title: "並びの確定に失敗しました",
-        description:
-          error?.message ||
-          "提出枚数や並び順を確認して、もう一度お試しください。",
-        type: "error",
-      });
-    }
-  };
-
-  const resetGame = async (options?: { showFeedback?: boolean; playSound?: boolean }) => {
-    const showFeedback = options?.showFeedback ?? true;
-    const shouldPlaySound = options?.playSound ?? true;
-    setIsResetting(true);
-    if (shouldPlaySound) {
-      playResetGame();
-    }
-    if (showFeedback) {
-      setInlineFeedback({ message: "リセット中…", tone: "info" });
-    } else {
-      setInlineFeedback(null);
-    }
-    try {
-      // 在席者だけでやり直すための keep を決定（presence のオンラインUIDを利用）
-      // 観戦者も復帰対象に含める改善
-      const keepSet = new Set<string>();
-
-      // ラウンド参加者を追加
-      if (Array.isArray(roundIds)) {
-        roundIds.forEach((id) => {
-          if (typeof id === "string" && id.trim().length > 0) {
-            keepSet.add(id);
-          }
-        });
-      }
-
-      // オンラインユーザーを追加
-      if (Array.isArray(onlineUids)) {
-        onlineUids.forEach((id) => {
-          if (typeof id === "string" && id.trim().length > 0) {
-            keepSet.add(id);
-          }
-        });
-      }
-
-      const keep = Array.from(keepSet);
-
-      // オプション: リセット前に不在者を一括追い出し（prune）
-      // NEXT_PUBLIC_RESET_PRUNE=0 / false で無効化可能
-      const shouldPrune = (() => {
-        try {
-          const raw = (process.env.NEXT_PUBLIC_RESET_PRUNE || "")
-            .toString()
-            .toLowerCase();
-          if (!raw) return true; // 既定: 有効
-          return !(raw === "0" || raw === "false");
-        } catch {
-          return true;
-        }
-      })();
-
-      if (shouldPrune && Array.isArray(roundIds)) {
-        const keepSet = new Set(keep);
-        const targets = roundIds.filter((id) => !keepSet.has(id));
-        if (targets.length > 0) {
-          try {
-            const auth = getAuth();
-            const user = auth.currentUser;
-            const token = await user?.getIdToken();
-            if (token && user?.uid) {
-              logInfo("rooms", "reset prune request", {
-                roomId,
-                targetsCount: targets.length,
-              });
-              await fetch(`/api/rooms/${roomId}/prune`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token, callerUid: user.uid, targets }),
-              }).catch(() => {});
-            }
-          } catch {}
-        }
-      }
-
-      await resetRoomWithPrune(roomId, keep, { notifyChat: true });
-      if (showFeedback) {
-        setInlineFeedback({
-          message: "待機状態に戻しました！",
-          tone: "success",
-        });
-      } else {
-        setInlineFeedback(null);
-      }
-      notify({
-        id: toastIds.gameReset(roomId),
-        title: "ゲームを待機状態に戻しました",
-        type: "success",
-        duration: 2000,
-      });
-      try {
-        postRoundReset(roomId);
-      } catch {}
-    } catch (e: any) {
-      const msg = String(e?.message || e || "");
-      console.error("❌ resetGame: 失敗", e);
-      notify({
-        id: toastIds.genericError(roomId, "game-reset"),
-        title: "リセットに失敗しました",
-        description: msg,
-        type: "error",
-      });
-      setInlineFeedback(null);
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  const restartGame = async (opts?: { playSound?: boolean }) => {
-    await resetGame({ showFeedback: false, playSound: opts?.playSound ?? true });
-    return quickStart({ broadcast: false, playSound: opts?.playSound ?? true });
-  };
-
-  // ⚡ PERFORMANCE: useCallbackでメモ化
-  const handleNextGame = React.useCallback(async () => {
-    if (!isHost) return;
-    if (autoStartLocked || quickStartPending) return;
-    if (roomStatus === "reveal" && isRevealAnimating) return;
-
-    beginAutoStartLock(5000, { broadcast: true });
-    setIsRestarting(true);
-    try {
-      playOrderConfirm();
-      const ok = await restartGame({ playSound: false });
-      if (!ok) {
-        clearAutoStartLock();
-      }
-    } catch (e) {
-      clearAutoStartLock();
-      console.error("❌ nextGameButton: 失敗", e);
-    } finally {
-      setIsRestarting(false);
-    }
-  }, [
-    isHost,
-    autoStartLocked,
-    quickStartPending,
-    roomStatus,
-    isRevealAnimating,
-    beginAutoStartLock,
-    restartGame,
-    clearAutoStartLock,
-  ]);
-
+  const playLedgerOpen = useSoundEffect("ledger_open");
+  const playCardDeal = useSoundEffect("card_deal");
+  const playTopicShuffle = useSoundEffect("topic_shuffle");
   // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ
   const hasHostButtons =
     isHost &&
     (roomStatus === "waiting" ||
-      (isSortSubmit(actualResolveMode) && roomStatus === "clue") ||
+      (isSortMode && roomStatus === "clue") ||
       (roomStatus === "reveal" && !!allowContinueAfterFail) ||
       roomStatus === "finished");
 
@@ -1068,11 +544,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   return (
     <>
-      {/* 🎮 Spaceキーヒント（ゲーム開始直後に初回のみ表示） */}
-      {/* 注: Pure PixiJS版に移行したためコメントアウト */}
-      {/* <SpaceKeyHint shouldShow={shouldShowSpaceHint} /> */}
-      {/* <SubmitEHint shouldShow={shouldShowSubmitHint} /> */}
-
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
         isVisible={shouldShowSeinoButton}
@@ -1182,12 +653,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             placeholder="連想ワード..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === KEYBOARD_KEYS.ENTER && canDecide) {
-                e.preventDefault();
-                handleDecide();
-              }
-            }}
+            onKeyDown={handleInputKeyDown}
             data-guide-target="association-input"
             maxLength={50}
             size="md"

@@ -2,7 +2,7 @@
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { topicControls } from "@/lib/game/topicControls";
+import { topicControls } from "@/lib/game/service";
 import { topicTypeLabels } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
 import { Menu, Text, VStack } from "@chakra-ui/react";

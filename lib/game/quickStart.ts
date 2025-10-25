@@ -1,7 +1,6 @@
 "use client";
 
-import { startGame } from "@/lib/game/room";
-import { topicControls } from "@/lib/game/topicControls";
+import { startGame, topicControls } from "@/lib/game/service";
 import { topicTypeLabels, type TopicType } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
 
