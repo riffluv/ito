@@ -41,6 +41,7 @@ import {
   getClueTargetIds,
   getPresenceEligibleIds,
 } from "@/lib/game/selectors";
+import { requestSeat, SeatRequestSource } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
@@ -59,6 +60,7 @@ import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
@@ -70,7 +72,7 @@ import {
 } from "@/lib/utils/roomPassword";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
@@ -783,6 +785,20 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastAttemptTs: number;
     statusKey: string | null;
   }>({ lastAttemptTs: 0, statusKey: null });
+  const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
+  const [seatRequestState, setSeatRequestState] = useState<{
+    status: "idle" | "pending" | "accepted" | "rejected";
+    source: SeatRequestSource | null;
+    requestedAt: number | null;
+    error?: string | null;
+  }>({ status: "idle", source: null, requestedAt: null, error: null });
+  const [seatRequestTimedOut, setSeatRequestTimedOut] = useState(false);
+  const seatRequestSignalsRef = useRef({
+    accepted: false,
+    rejected: false,
+    timeout: false,
+  });
+  const recallJoinHandledRef = useRef(false);
 
 
   const forcedExitScheduledRef = useRef(false);
@@ -791,15 +807,53 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [uid, roomId]
   );
-  const setPendingRejoinFlag = useCallback(() => {
-    if (!uid || !rejoinSessionKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(rejoinSessionKey, uid);
-    } catch (error) {
-      logDebug("room-page", "session-storage-write-failed", error);
-    }
-  }, [rejoinSessionKey, uid]);
+  const setPendingRejoinFlag = useCallback(
+    (source: SeatRequestSource = "manual") => {
+      if (!uid) return;
+      if (recallV2Enabled) {
+        setSeatRequestState({
+          status: "pending",
+          source,
+          requestedAt: Date.now(),
+          error: null,
+        });
+        setSeatRequestTimedOut(false);
+        leavingRef.current = true;
+        void requestSeat(roomId, uid, displayName ?? null, source).catch(
+          (error) => {
+            traceError("spectator.requestSeat.client", error, {
+              roomId,
+              uid,
+              source,
+            });
+            setSeatRequestState({
+              status: "idle",
+              source: null,
+              requestedAt: null,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            leavingRef.current = false;
+          }
+        );
+        return;
+      }
+      if (!rejoinSessionKey) return;
+      if (typeof window === "undefined") return;
+      try {
+        window.sessionStorage.setItem(rejoinSessionKey, uid);
+      } catch (error) {
+        logDebug("room-page", "session-storage-write-failed", error);
+      }
+    },
+    [
+      uid,
+      recallV2Enabled,
+      roomId,
+      displayName,
+      rejoinSessionKey,
+      leavingRef,
+    ]
+  );
 
   useEffect(() => {
     if (!versionMismatchBlocksAccess) {
@@ -816,7 +870,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (versionMismatchHandledRef.current) return;
     versionMismatchHandledRef.current = true;
     bumpMetric("forcedExit", "versionMismatch");
-    setPendingRejoinFlag();
+    setPendingRejoinFlag("auto");
     setForcedExitReason("version-mismatch");
     leavingRef.current = true;
 
@@ -855,7 +909,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!uid) return;
 
     forcedExitRecoveryPendingRef.current = false;
-    setPendingRejoinFlag();
+    setPendingRejoinFlag("auto");
 
     if (!leavingRef.current) {
       leavingRef.current = true;
@@ -1000,6 +1054,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   })();
   const spectatorReason = isSpectatorMode ? rawSpectatorReason : null;
   const waitingToRejoin = room?.status === "waiting";
+  const seatRequestPending = recallV2Enabled && seatRequestState.status === "pending";
+  const seatRequestAccepted = recallV2Enabled && seatRequestState.status === "accepted";
+  const seatRequestRejected = recallV2Enabled && seatRequestState.status === "rejected";
+  const seatRequestError = recallV2Enabled ? seatRequestState.error : null;
+  const seatRequestButtonDisabled = recallV2Enabled
+    ? seatRequestPending || !waitingToRejoin || versionMismatchBlocksAccess
+    : !waitingToRejoin || versionMismatchBlocksAccess;
 
   useEffect(() => {
     const nextState = {
@@ -1055,7 +1116,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastKnownHostId,
     leavingRef,
     detachNow,
-    setPendingRejoinFlag,
+    setPendingRejoinFlag: () => setPendingRejoinFlag("auto"),
     setForcedExitReason,
     roomId,
     displayName,
@@ -1066,8 +1127,55 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [executeForcedExit]);
 
   const performSeatRecovery = useCallback(
-    async ({ silent }: { silent: boolean }) => {
+    async ({
+      silent,
+      source,
+    }: {
+      silent: boolean;
+      source: SeatRequestSource;
+    }) => {
       if (!uid) return false;
+
+      if (recallV2Enabled) {
+        if (versionMismatchBlocksAccess) {
+          if (!silent) {
+            try {
+              notify({
+                title: "最新バージョンへ更新してください",
+                description: "ページを更新してから再度お試しください",
+                type: "warning",
+              });
+            } catch (notifyError) {
+              logDebug("room-page", "notify-version-mismatch-retry", notifyError);
+            }
+          } else {
+            logDebug("room-page", "auto-seat-recovery-blocked-version-mismatch", {
+              roomId,
+              uid,
+            });
+          }
+          return false;
+        }
+        setPendingRejoinFlag(source);
+        if (!silent) {
+          try {
+            notify({
+              title: "席への復帰を申請しました",
+              description: "ホストの準備ができ次第、自動で席に戻ります",
+              type: "info",
+            });
+          } catch (notifyError) {
+            logDebug("room-page", "notify-seat-request", notifyError);
+          }
+        } else {
+          logDebug("room-page", "auto-seat-request-issued", {
+            roomId,
+            uid,
+            source,
+          });
+        }
+        return true;
+      }
       if (leavingRef.current) {
         if (room?.status === "waiting") {
           leavingRef.current = false;
@@ -1101,7 +1209,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         return false;
       }
 
-      setPendingRejoinFlag();
+      setPendingRejoinFlag(source);
 
       try {
         const normalizedDisplayName =
@@ -1174,17 +1282,193 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         return false;
       }
     },
-    [uid, versionMismatchBlocksAccess, setPendingRejoinFlag, displayName, roomId, setForcedExitReason, room?.status]
+    [
+      uid,
+      recallV2Enabled,
+      versionMismatchBlocksAccess,
+      setPendingRejoinFlag,
+      displayName,
+      roomId,
+      setForcedExitReason,
+      room?.status,
+      leavingRef,
+    ]
   );
 
   const handleRetryJoin = useCallback(async () => {
-    await performSeatRecovery({ silent: false });
+    await performSeatRecovery({ silent: false, source: "manual" });
   }, [performSeatRecovery]);
 
   const attemptAutoSeatRecovery = useCallback(async () => {
-    await performSeatRecovery({ silent: true });
+    await performSeatRecovery({ silent: true, source: "auto" });
   }, [performSeatRecovery]);
 
+  useEffect(() => {
+    if (!recallV2Enabled) return;
+    if (!firebaseEnabled) return;
+    if (!uid) return;
+    if (!db) return;
+    const requestRef = doc(db, "rooms", roomId, "rejoinRequests", uid);
+    const unsubscribe = onSnapshot(
+      requestRef,
+      (snap) => {
+        if (!snap.exists()) {
+          setSeatRequestState({
+            status: "idle",
+            source: null,
+            requestedAt: null,
+            error: null,
+          });
+          setSeatRequestTimedOut(false);
+          seatRequestSignalsRef.current.accepted = false;
+          seatRequestSignalsRef.current.rejected = false;
+          seatRequestSignalsRef.current.timeout = false;
+          return;
+        }
+        const data = snap.data() as Record<string, any>;
+        const statusRaw = typeof data?.status === "string" ? (data.status as string) : "pending";
+        const status: "pending" | "accepted" | "rejected" =
+          statusRaw === "accepted" || statusRaw === "rejected" ? statusRaw : "pending";
+        const sourceRaw = typeof data?.source === "string" ? (data.source as string) : "manual";
+        const source: SeatRequestSource = sourceRaw === "auto" ? "auto" : "manual";
+        const created =
+          typeof data?.createdAt?.toMillis === "function"
+            ? Number(data.createdAt.toMillis())
+            : Date.now();
+        const failure =
+          typeof data?.failureReason === "string" ? (data.failureReason as string) : null;
+        setSeatRequestState({
+          status,
+          source,
+          requestedAt: created,
+          error: failure,
+        });
+      },
+      (error) => {
+        traceError("spectator.rejoinRequest.subscribe", error, { roomId, uid });
+      }
+    );
+    return () => {
+      unsubscribe();
+    };
+  }, [recallV2Enabled, firebaseEnabled, uid, roomId, db]);
+
+  useEffect(() => {
+    if (!recallV2Enabled) return;
+    if (seatRequestState.status !== "pending" || !seatRequestState.requestedAt) {
+      setSeatRequestTimedOut(false);
+      seatRequestSignalsRef.current.timeout = false;
+      return;
+    }
+    const timeoutMs = 15000;
+    const now = Date.now();
+    const remaining = Math.max(timeoutMs - (now - seatRequestState.requestedAt), 0);
+    if (remaining === 0) {
+      if (!seatRequestSignalsRef.current.timeout) {
+        seatRequestSignalsRef.current.timeout = true;
+        traceAction("spectator.recallTimeout", { roomId, uid });
+        bumpMetric("recall", "timeout");
+        setSeatRequestTimedOut(true);
+      }
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (!seatRequestSignalsRef.current.timeout) {
+        seatRequestSignalsRef.current.timeout = true;
+        traceAction("spectator.recallTimeout", { roomId, uid });
+        bumpMetric("recall", "timeout");
+      }
+      setSeatRequestTimedOut(true);
+    }, remaining);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [recallV2Enabled, seatRequestState.status, seatRequestState.requestedAt, roomId, uid]);
+
+  useEffect(() => {
+    if (!recallV2Enabled) return;
+    if (seatRequestState.status === "accepted") {
+      if (!seatRequestSignalsRef.current.accepted) {
+        seatRequestSignalsRef.current.accepted = true;
+        seatRequestSignalsRef.current.rejected = false;
+        seatRequestSignalsRef.current.timeout = false;
+        leavingRef.current = false;
+        forcedExitScheduledRef.current = false;
+        forcedExitRecoveryPendingRef.current = false;
+        setForcedExitReason(null);
+        traceAction("spectator.recallAccepted", { roomId, uid });
+        bumpMetric("recall", "accepted");
+      }
+      setSeatRequestTimedOut(false);
+    } else if (seatRequestState.status === "rejected") {
+      if (!seatRequestSignalsRef.current.rejected) {
+        seatRequestSignalsRef.current.rejected = true;
+        seatRequestSignalsRef.current.accepted = false;
+        seatRequestSignalsRef.current.timeout = false;
+        leavingRef.current = false;
+        forcedExitRecoveryPendingRef.current = false;
+        traceAction("spectator.recallRejected", { roomId, uid });
+        bumpMetric("recall", "rejected");
+      }
+      setSeatRequestTimedOut(false);
+    } else {
+      seatRequestSignalsRef.current.accepted = false;
+      seatRequestSignalsRef.current.rejected = false;
+    }
+  }, [
+    recallV2Enabled,
+    seatRequestState.status,
+    roomId,
+    uid,
+    leavingRef,
+    forcedExitScheduledRef,
+    forcedExitRecoveryPendingRef,
+    setForcedExitReason,
+  ]);
+  useEffect(() => {
+    if (!recallV2Enabled) {
+      recallJoinHandledRef.current = false;
+      return;
+    }
+    const canHandle =
+      seatRequestAccepted ||
+      (recallV2Enabled && isMember && !isSpectatorMode && !!room);
+    if (!canHandle) {
+      recallJoinHandledRef.current = false;
+      return;
+    }
+    if (!uid || !room) return;
+    if (recallJoinHandledRef.current) return;
+    recallJoinHandledRef.current = true;
+
+    const normalizedDisplayName =
+      typeof displayName === "string" && displayName.trim().length > 0
+        ? displayName.trim()
+        : null;
+
+    (async () => {
+      try {
+        await joinRoomFully({
+          roomId,
+          uid,
+          displayName: normalizedDisplayName,
+          notifyChat: false,
+        });
+        await assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
+      } catch (error) {
+        traceError("spectator.recallJoinFailed", error, { roomId, uid });
+      }
+    })();
+  }, [
+    recallV2Enabled,
+    seatRequestAccepted,
+    isMember,
+    isSpectatorMode,
+    uid,
+    room,
+    roomId,
+    displayName,
+  ]);
   useEffect(() => {
     if (!waitingToRejoin || !isSpectatorMode) {
       spectatorAutoRetryStateRef.current = { lastAttemptTs: 0, statusKey: null };
@@ -1197,6 +1481,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       return;
     }
     if (versionMismatchBlocksAccess) {
+      return;
+    }
+    if (recallV2Enabled && (seatRequestPending || seatRequestAccepted)) {
       return;
     }
     if (!uid) {
@@ -1237,6 +1524,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     isSpectatorMode,
     spectatorReason,
     versionMismatchBlocksAccess,
+    recallV2Enabled,
+    seatRequestPending,
+    seatRequestAccepted,
     uid,
     joinStatus,
     room?.id,
@@ -1258,7 +1548,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
     if (room?.status === "waiting" && forcedExitRecoveryPendingRef.current) {
       forcedExitRecoveryPendingRef.current = false;
-      setPendingRejoinFlag();
+      setPendingRejoinFlag("auto");
       if (uid) {
         const normalizedDisplayName =
           typeof displayName === "string" && displayName.trim().length > 0
@@ -1969,6 +2259,44 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             </AppButton>
           </Box>
         </Box>
+        {recallV2Enabled ? (
+          <Box textAlign="center" mt={seatRequestError ? 4 : 3}>
+            {seatRequestPending ? (
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+              >
+                ホストが席の準備を進めています。そのままお待ちください。
+              </Text>
+            ) : seatRequestTimedOut ? (
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+              >
+                ホストの準備中かもしれません。少し待ってから再度お試しください。
+              </Text>
+            ) : seatRequestRejected ? (
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+              >
+                申請が受理されませんでした。時間を置くかホストに確認してみてください。
+              </Text>
+            ) : seatRequestAccepted ? (
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+              >
+                席が確保されました。まもなくプレイに戻ります。
+              </Text>
+            ) : null}
+            {seatRequestError ? (
+              <Text fontSize="sm" color="tomato" mt={2}>
+                {seatRequestError}
+              </Text>
+            ) : null}
+          </Box>
+        ) : null}
       </Box>
     );
   }
@@ -2187,9 +2515,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin || versionMismatchBlocksAccess}
+              disabled={seatRequestButtonDisabled}
             >
-              席に戻れるか試す
+              {seatRequestPending ? (
+                <HStack gap={2} align="center">
+                  <Spinner size="sm" />
+                  <Text as="span">申請中...</Text>
+                </HStack>
+              ) : (
+                "席に戻れるか試す"
+              )}
             </AppButton>
             <AppButton palette="gray" size="md" onClick={handleForcedExitLeaveNow}>
               ロビーへ戻る
@@ -2203,9 +2538,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
               visual="outline"
               size="md"
               onClick={handleRetryJoin}
-              disabled={!waitingToRejoin || versionMismatchBlocksAccess}
+              disabled={seatRequestButtonDisabled}
             >
-              席に戻れるか試す
+              {seatRequestPending ? (
+                <HStack gap={2} align="center">
+                  <Spinner size="sm" />
+                  <Text as="span">申請中...</Text>
+                </HStack>
+              ) : (
+                "席に戻れるか試す"
+              )}
             </AppButton>
             <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
               ロビーへ戻る

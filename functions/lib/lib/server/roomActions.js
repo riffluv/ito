@@ -4,16 +4,62 @@ exports.ensureHostAssignedServer = ensureHostAssignedServer;
 exports.leaveRoomServer = leaveRoomServer;
 exports.transferHostServer = transferHostServer;
 const firestore_1 = require("firebase-admin/firestore");
+const presence_1 = require("@/lib/constants/presence");
 const firebaseAdmin_1 = require("@/lib/server/firebaseAdmin");
 const log_1 = require("@/lib/utils/log");
 const HostManager_1 = require("@/lib/host/HostManager");
 const systemMessages_1 = require("@/lib/server/systemMessages");
-const PRESENCE_STALE_MS = Number(process.env.NEXT_PUBLIC_PRESENCE_STALE_MS ||
-    process.env.PRESENCE_STALE_MS ||
-    300000);
-const MAX_CLOCK_SKEW_MS = Number(process.env.NEXT_PUBLIC_PRESENCE_MAX_CLOCK_SKEW_MS ||
-    process.env.PRESENCE_MAX_CLOCK_SKEW_MS ||
-    120000);
+function applyCluePhaseAdjustments({ room, updates, filteredPlayers, filteredList, filteredProposal, remainingCount, }) {
+    if (room?.status !== "clue")
+        return;
+    if (filteredPlayers.length !== (room?.deal?.players?.length ?? 0)) {
+        updates["deal.players"] = filteredPlayers;
+        updates["order.total"] = filteredPlayers.length;
+    }
+    if (filteredList.length !== (room?.order?.list?.length ?? 0)) {
+        updates["order.list"] = filteredList;
+    }
+    if (filteredProposal.length !== (room?.order?.proposal?.length ?? 0)) {
+        updates["order.proposal"] = filteredProposal;
+    }
+    const allowContinue = typeof room?.options?.allowContinueAfterFail === "boolean"
+        ? !!room.options.allowContinueAfterFail
+        : true;
+    const currentOrderTotal = typeof updates["order.total"] === "number"
+        ? updates["order.total"]
+        : typeof room?.order?.total === "number"
+            ? room.order.total
+            : null;
+    const nextTotal = typeof currentOrderTotal === "number" && Number.isFinite(currentOrderTotal)
+        ? currentOrderTotal
+        : filteredPlayers.length;
+    const nextFailed = typeof updates["order.failed"] === "boolean"
+        ? !!updates["order.failed"]
+        : !!room?.order?.failed;
+    const nextListLength = filteredList.length;
+    const shouldFinishByTotal = remainingCount > 0 &&
+        typeof nextTotal === "number" &&
+        nextTotal >= 0 &&
+        nextListLength >= nextTotal;
+    const shouldFinishByFailure = remainingCount > 0 && nextFailed && !allowContinue;
+    if (shouldFinishByTotal || shouldFinishByFailure) {
+        const revealSuccess = !nextFailed;
+        const serverNow = firestore_1.FieldValue.serverTimestamp();
+        updates.status = "reveal";
+        updates.result = {
+            success: revealSuccess,
+            revealedAt: serverNow,
+        };
+        updates["order.decidedAt"] = serverNow;
+        if (!("order.total" in updates) && typeof nextTotal === "number") {
+            updates["order.total"] = nextTotal;
+        }
+        if (!("order.failed" in updates)) {
+            updates["order.failed"] = nextFailed;
+        }
+        updates.lastActiveAt = serverNow;
+    }
+}
 function sanitizeServerText(input, maxLength = 500) {
     if (typeof input !== "string")
         return "";
@@ -34,9 +80,9 @@ function isConnectionActive(conn, now) {
     const ts = typeof conn?.ts === "number" ? conn.ts : 0;
     if (!ts)
         return false;
-    if (ts - now > MAX_CLOCK_SKEW_MS)
+    if (ts - now > presence_1.MAX_CLOCK_SKEW_MS)
         return false;
-    return now - ts <= PRESENCE_STALE_MS;
+    return now - ts <= presence_1.PRESENCE_STALE_MS;
 }
 async function fetchPresenceUids(roomId, db) {
     try {
@@ -222,19 +268,6 @@ async function ensureHostAssignedServer(roomId, uid) {
                 const data = doc.data();
                 return typeof data?.orderIndex === "number" ? data.orderIndex : null;
             },
-            getLastSeenAt: (doc) => {
-                const data = doc.data();
-                const raw = data?.lastSeen;
-                if (raw && typeof raw.toMillis === "function") {
-                    try {
-                        return raw.toMillis();
-                    }
-                    catch {
-                        return null;
-                    }
-                }
-                return null;
-            },
             getName: (doc) => {
                 const data = doc.data();
                 return typeof data?.name === "string" ? data.name : null;
@@ -278,6 +311,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
     const playersRef = db.collection("rooms").doc(roomId).collection("players");
     let recordedPlayerName = null;
     let hadPlayerSnapshot = false;
+    let removedPlayerData = null;
     try {
         const primarySnap = await playersRef.doc(userId).get();
         const duplicatesSnap = await playersRef.where("uid", "==", userId).get();
@@ -287,7 +321,11 @@ async function leaveRoomServer(roomId, userId, displayName) {
             if (seenIds.has(doc.id))
                 return;
             seenIds.add(doc.id);
-            const value = doc.data()?.name;
+            const data = doc.data();
+            if (!removedPlayerData) {
+                removedPlayerData = { ...data };
+            }
+            const value = data?.name;
             if (!recordedPlayerName && typeof value === "string" && value.trim()) {
                 recordedPlayerName = value.trim();
             }
@@ -352,15 +390,45 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 : [];
             const filteredProposal = origProposal.filter((id) => id !== userId);
             const updates = {};
-            if (origPlayers.length !== filteredPlayers.length) {
-                updates["deal.players"] = filteredPlayers;
-                updates["order.total"] = filteredPlayers.length;
+            applyCluePhaseAdjustments({
+                room,
+                updates,
+                filteredPlayers,
+                filteredList,
+                filteredProposal,
+                remainingCount,
+            });
+            if (room?.status === "reveal" &&
+                remainingCount > 0 &&
+                removedPlayerData) {
+                const snapshotPayload = {
+                    name: typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
+                        ? removedPlayerData.name
+                        : "離脱プレイヤー",
+                    avatar: typeof removedPlayerData?.avatar === "string" && removedPlayerData.avatar.trim()
+                        ? removedPlayerData.avatar
+                        : "/avatars/knight1.webp",
+                    clue1: typeof removedPlayerData?.clue1 === "string" ? removedPlayerData.clue1 : "",
+                    number: typeof removedPlayerData?.number === "number" && Number.isFinite(removedPlayerData.number)
+                        ? removedPlayerData.number
+                        : null,
+                };
+                updates[`order.snapshots.${userId}`] = snapshotPayload;
             }
-            if (origList.length !== filteredList.length) {
-                updates["order.list"] = filteredList;
-            }
-            if (origProposal.length !== filteredProposal.length) {
-                updates["order.proposal"] = filteredProposal;
+            if (remainingCount === 0) {
+                const serverNow = firestore_1.FieldValue.serverTimestamp();
+                delete updates["deal.players"];
+                delete updates["order.total"];
+                delete updates["order.list"];
+                delete updates["order.proposal"];
+                delete updates["order.failed"];
+                delete updates["order.failedAt"];
+                delete updates["order.decidedAt"];
+                updates.status = "waiting";
+                updates.deal = null;
+                updates.order = null;
+                updates.result = null;
+                updates.lastActiveAt = serverNow;
             }
             const playerInputs = (0, HostManager_1.buildHostPlayerInputsFromSnapshots)({
                 docs: playerDocs,
@@ -368,19 +436,6 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 getOrderIndex: (doc) => {
                     const data = doc.data();
                     return typeof data?.orderIndex === "number" ? data.orderIndex : null;
-                },
-                getLastSeenAt: (doc) => {
-                    const data = doc.data();
-                    const raw = data?.lastSeen;
-                    if (raw && typeof raw.toMillis === "function") {
-                        try {
-                            return raw.toMillis();
-                        }
-                        catch {
-                            return null;
-                        }
-                    }
-                    return null;
                 },
                 getName: (doc) => {
                     const data = doc.data();
@@ -489,18 +544,19 @@ async function leaveRoomServer(roomId, userId, displayName) {
         });
         return;
     }
-    if (hostCleared && remainingCount === 0) {
-        try {
-            await resetRoomToWaiting(roomId);
-            (0, log_1.logDebug)("rooms", "host-leave fallback-reset", {
-                roomId,
-                leavingUid: userId,
-            });
-        }
-        catch (error) {
-            (0, log_1.logWarn)("rooms", "leave-room-server-reset-failed", error);
-        }
-    }
+    // 自動リセット機能を削除: 全員がpruneされた時に勝手にリセットすると混乱を招く
+    // ホストが復帰すれば手動でリセットできる
+    // if (hostCleared && remainingCount === 0) {
+    //   try {
+    //     await resetRoomToWaiting(roomId);
+    //     logDebug("rooms", "host-leave fallback-reset", {
+    //       roomId,
+    //       leavingUid: userId,
+    //     });
+    //   } catch (error) {
+    //     logWarn("rooms", "leave-room-server-reset-failed", error);
+    //   }
+    // }
 }
 async function transferHostServer(roomId, currentUid, targetUid, opts = {}) {
     const db = (0, firebaseAdmin_1.getAdminDb)();
