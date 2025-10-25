@@ -1,8 +1,6 @@
 import { notify } from "@/components/ui/notify";
-import {
-  addCardToProposal,
-  addCardToProposalAtPosition,
-} from "@/lib/game/room";
+import { addCardToProposalAtPosition } from "@/lib/game/room";
+import { addCardToProposal } from "@/lib/game/service";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";

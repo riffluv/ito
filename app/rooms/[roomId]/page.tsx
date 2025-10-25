@@ -36,6 +36,11 @@ import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { forceDetachAll } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
+import {
+  areAllCluesReady,
+  getClueTargetIds,
+  getPresenceEligibleIds,
+} from "@/lib/game/selectors";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
@@ -1594,21 +1599,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
 
 
-  const presenceEligibleIds = useMemo(() => {
-    if (!presenceReady) {
-      return baseIds;
-    }
-    if (!Array.isArray(onlineUids) || onlineUids.length === 0) {
-      return baseIds;
-    }
-    const onlineSet = new Set(onlineUids);
-    const filtered = baseIds.filter((id) => onlineSet.has(id));
-    if (filtered.length === 0) {
-      return baseIds;
-    }
-    return filtered;
-  }, [presenceReady, onlineUidSignature, baseIds]);
-
+  const presenceEligibleIds = useMemo(
+    () =>
+      getPresenceEligibleIds({
+        baseIds,
+        onlineUids,
+        presenceReady,
+      }),
+    [baseIds, presenceReady, onlineUidSignature]
+  );
 
   const hostId = room?.hostId ?? null;
   const eligibleIds = useMemo(() => {
@@ -1622,24 +1621,23 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return [hostId, ...pool.filter((id) => id !== hostId)];
   }, [hostId, presenceEligibleIds]);
 
-  const clueTargetIds = useMemo(() => {
-    const dealPlayers = room?.deal?.players;
-    if (Array.isArray(dealPlayers)) {
-      const filtered = (dealPlayers as string[]).filter(
-        (pid): pid is string => typeof pid === "string" && pid.length > 0
-      );
-      if (filtered.length > 0) {
-        return filtered;
-      }
-    }
-    return eligibleIds;
-  }, [room?.deal?.players, eligibleIds]);
+  const clueTargetIds = useMemo(
+    () =>
+      getClueTargetIds({
+        dealPlayers: room?.deal?.players ?? null,
+        eligibleIds,
+      }),
+    [room?.deal?.players, eligibleIds]
+  );
 
-  const allCluesReady = useMemo(() => {
-    const idSet = new Set(clueTargetIds);
-    const targets = players.filter((p) => idSet.has(p.id));
-    return targets.length > 0 && targets.every((p) => p.ready === true);
-  }, [players, clueTargetIds]);
+  const allCluesReady = useMemo(
+    () =>
+      areAllCluesReady({
+        players,
+        targetIds: clueTargetIds,
+      }),
+    [players, clueTargetIds]
+  );
 
   useEffect(() => {
     if (!isHost || !allCluesReady) {

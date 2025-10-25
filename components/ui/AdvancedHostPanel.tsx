@@ -2,7 +2,7 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { topicControls } from "@/lib/game/topicControls";
+import { topicControls } from "@/lib/game/service";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { logError } from "@/lib/utils/log";
 import { Dialog, HStack, Text, VStack } from "@chakra-ui/react";

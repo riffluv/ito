@@ -1,8 +1,7 @@
 "use client";
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { submitSortedOrder } from "@/lib/game/room";
-import { topicControls } from "@/lib/game/topicControls";
+import { submitSortedOrder, topicControls } from "@/lib/game/service";
 import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
 import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";

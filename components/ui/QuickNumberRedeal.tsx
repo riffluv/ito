@@ -2,7 +2,7 @@
 import { notify } from "@/components/ui/notify";
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { toastIds } from "@/lib/ui/toastIds";
-import { topicControls } from "@/lib/game/topicControls";
+import { topicControls } from "@/lib/game/service";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { Shuffle } from "lucide-react";
