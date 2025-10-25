@@ -10,6 +10,7 @@ import { gsap } from "gsap";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 const panelFloat = keyframes`
   0% { transform: translateY(0px); }
@@ -278,53 +279,75 @@ function DragonQuestParty({
   const handleHostTransfer = useCallback(
     async (targetId: string, targetName: string) => {
       if (!roomId || transferTargetId !== null) return;
+      traceAction("ui.host.transfer", { roomId, targetId });
       const previousId = displayedHostId;
       setTransferTargetId(targetId);
       setHostOverride({ targetId, previousId });
 
-    const toastId = toastIds.hostTransfer(roomId, targetId);
-    const result = await notifyAsync(
-      () => transferHost(roomId, targetId),
-      {
-        pending: {
-          id: toastId,
-          title: `${targetName} をホストに設定中…`,
-          type: "info",
-          duration: 1500,
-        },
-        success: {
-          id: toastId,
-          title: `${targetName} がホストになりました`,
-          type: "success",
-          duration: 2000,
-        },
-        error: {
-          id: toastId,
-          title: "委譲に失敗しました",
-          type: "error",
-          duration: 3000,
-        },
-      }
-    );
+      const toastId = toastIds.hostTransfer(roomId, targetId);
+      try {
+        const result = await notifyAsync(
+          () => transferHost(roomId, targetId),
+          {
+            pending: {
+              id: toastId,
+              title: `${targetName} をホストに設定中…`,
+              type: "info",
+              duration: 1500,
+            },
+            success: {
+              id: toastId,
+              title: `${targetName} がホストになりました`,
+              type: "success",
+              duration: 2000,
+            },
+            error: {
+              id: toastId,
+              title: "委譲に失敗しました",
+              type: "error",
+              duration: 3000,
+            },
+          }
+        );
 
-    if (result === null) {
-      setHostOverride((current) =>
-        current && current.targetId === targetId ? null : current
-      );
-      setTransferTargetId((current) =>
-        current === targetId ? null : current
-      );
-      notify({
-        id: toastId,
-        title: "ホスト委譲を元に戻しました",
-        description: "ネットワーク状況を確認してもう一度お試しください",
-        type: "warning",
-        duration: 3200,
-      });
-    }
-  },
-  [roomId, transferTargetId, displayedHostId]
-);
+        if (result === null) {
+          traceError("ui.host.transfer", "result_null", { roomId, targetId });
+          setHostOverride((current) =>
+            current && current.targetId === targetId ? null : current
+          );
+          setTransferTargetId((current) =>
+            current === targetId ? null : current
+          );
+          notify({
+            id: toastId,
+            title: "ホスト委譲を元に戻しました",
+            description: "ネットワーク状況を確認してもう一度お試しください",
+            type: "warning",
+            duration: 3200,
+          });
+        }
+      } catch (error) {
+        traceError("ui.host.transfer", error, { roomId, targetId });
+        setHostOverride((current) =>
+          current && current.targetId === targetId ? null : current
+        );
+        setTransferTargetId((current) =>
+          current === targetId ? null : current
+        );
+        notify({
+          id: toastIds.hostTransfer(roomId, targetId),
+          title: "ホスト委譲に失敗しました",
+          description:
+            error instanceof Error
+              ? error.message
+              : "ネットワーク状況を確認してもう一度お試しください",
+          type: "error",
+          duration: 3200,
+        });
+      }
+    },
+    [roomId, transferTargetId, displayedHostId]
+  );
 
   useEffect(() => {
     if (!prefersReducedMotion) return;

@@ -13,6 +13,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -92,6 +93,7 @@ export function useHostActions({
 
       let effectiveType = effectiveDefaultTopicType;
       let latestTopic: string | null | undefined = currentTopic ?? null;
+      let traceDetail: Record<string, unknown> | undefined;
 
       muteNotifications(
         [
@@ -135,6 +137,13 @@ export function useHostActions({
 
       const shouldBroadcast = options?.broadcast ?? true;
       const shouldPlaySound = options?.playSound ?? true;
+      traceDetail = {
+        roomId,
+        type: effectiveType,
+        broadcast: shouldBroadcast ? "1" : "0",
+        playSound: shouldPlaySound ? "1" : "0",
+      };
+      traceAction("ui.host.quickStart", traceDetail);
       beginAutoStartLock(4500, { broadcast: shouldBroadcast });
 
       let success = false;
@@ -179,6 +188,7 @@ export function useHostActions({
         success = true;
       } catch (error: any) {
         clearAutoStartLock();
+        traceError("ui.host.quickStart", error, traceDetail ?? { roomId });
         if (isFirebaseQuotaExceeded(error)) {
           handleFirebaseQuotaError("ゲーム開始");
         } else {
@@ -245,6 +255,12 @@ export function useHostActions({
           }
         })();
 
+        traceAction("ui.room.reset", {
+          roomId,
+          keep: String(keep.length),
+          prune: shouldPrune ? "1" : "0",
+        });
+
         if (shouldPrune && Array.isArray(roundIds) && roundIds.length > 0) {
           const keepLookup = new Set(keep);
           const targets = roundIds.filter((id) => !keepLookup.has(id));
@@ -293,6 +309,7 @@ export function useHostActions({
           postRoundReset(roomId);
         } catch {}
       } catch (error: any) {
+        traceError("ui.room.reset", error, { roomId });
         const msg = String(error?.message || error || "");
         console.error("❌ resetGame: 失敗", error);
         notify({
@@ -317,16 +334,26 @@ export function useHostActions({
 
   const restartGame = useCallback(
     async (opts?: { playSound?: boolean }) => {
-      await resetGame({
-        showFeedback: false,
-        playSound: opts?.playSound ?? true,
+      const playSound = opts?.playSound ?? true;
+      traceAction("ui.host.restart", {
+        roomId,
+        playSound: playSound ? "1" : "0",
       });
-      return quickStart({
-        broadcast: false,
-        playSound: opts?.playSound ?? true,
-      });
+      try {
+        await resetGame({
+          showFeedback: false,
+          playSound,
+        });
+        return await quickStart({
+          broadcast: false,
+          playSound,
+        });
+      } catch (error) {
+        traceError("ui.host.restart", error, { roomId });
+        throw error;
+      }
     },
-    [resetGame, quickStart]
+    [resetGame, quickStart, roomId]
   );
 
   const handleNextGame = useCallback(async () => {
@@ -334,6 +361,7 @@ export function useHostActions({
     if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
 
+    traceAction("ui.host.nextGame", { roomId });
     beginAutoStartLock(5000, { broadcast: true });
     setIsRestarting(true);
     try {
@@ -344,6 +372,7 @@ export function useHostActions({
       }
     } catch (error) {
       clearAutoStartLock();
+      traceError("ui.host.nextGame", error, { roomId });
       console.error("❌ nextGameButton: 失敗", error);
     } finally {
       setIsRestarting(false);
@@ -368,8 +397,10 @@ export function useHostActions({
     if (list.length === 0) return;
     playOrderConfirm();
     try {
+      traceAction("ui.order.submit", { roomId, count: list.length });
       await submitSortedOrder(roomId, list);
     } catch (error: any) {
+      traceError("ui.order.submit", error, { roomId, count: list.length });
       notify({
         id: toastIds.genericError(roomId, "submit-order"),
         title: "並びの確定に失敗しました",
@@ -385,7 +416,20 @@ export function useHostActions({
     async (value: string) => {
       const trimmed = (value || "").trim();
       if (!trimmed) return;
-      await topicControls.setCustomTopic(roomId, trimmed);
+      traceAction("ui.topic.customSubmit", {
+        roomId,
+        isHost: isHost ? "1" : "0",
+      });
+      try {
+        await topicControls.setCustomTopic(roomId, trimmed);
+      } catch (error) {
+        setCustomStartPending(false);
+        traceError("ui.topic.customSubmit", error, {
+          roomId,
+          stage: "setTopic",
+        });
+        throw error;
+      }
       setCustomOpen(false);
 
       if (!isHost) {
@@ -406,8 +450,24 @@ export function useHostActions({
           actualResolveMode === "sort-submit"
         ) {
           playOrderConfirm();
-          await startGame(roomId);
-          await topicControls.dealNumbers(roomId);
+          try {
+            await startGame(roomId);
+          } catch (error) {
+            traceError("ui.topic.customSubmit", error, {
+              roomId,
+              stage: "startGame",
+            });
+            throw error;
+          }
+          try {
+            await topicControls.dealNumbers(roomId);
+          } catch (error) {
+            traceError("ui.topic.customSubmit", error, {
+              roomId,
+              stage: "dealNumbers",
+            });
+            throw error;
+          }
           notify({
             id: toastIds.gameStart(roomId),
             title: "カスタムお題で開始",

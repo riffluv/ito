@@ -19,6 +19,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { toastIds } from "@/lib/ui/toastIds";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   useCallback,
   useEffect,
@@ -130,9 +131,15 @@ export function useCardSubmission({
     }
 
     let didSucceed = false;
+    const actionName = isSortMode
+      ? removing
+        ? "ui.card.remove"
+        : "ui.card.submit"
+      : "ui.card.submit";
     try {
       if (isSortMode) {
         if (removing) {
+          traceAction(actionName, { roomId, playerId });
           const removalPromise = removeCardFromProposal(roomId, playerId);
           playCardPlace();
           window.dispatchEvent(
@@ -147,6 +154,7 @@ export function useCardSubmission({
           });
           didSucceed = true;
         } else {
+          traceAction(actionName, { roomId, playerId });
           const submitPromise = addCardToProposal(roomId, playerId);
           playCardPlace();
           const result = await submitPromise;
@@ -164,6 +172,7 @@ export function useCardSubmission({
           didSucceed = true;
         }
       } else {
+        traceAction(actionName, { roomId, playerId });
         const commitPromise = commitPlayFromClue(roomId, playerId);
         playCardPlace();
         await commitPromise;
@@ -171,6 +180,7 @@ export function useCardSubmission({
         didSucceed = true;
       }
     } catch (error: any) {
+      traceError(actionName, error, { roomId, playerId });
       playDropInvalid();
       const label = removing ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(error)) {
