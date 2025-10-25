@@ -52,11 +52,13 @@ type InternalApplyContext = ApplyServiceWorkerOptions & {
 
 let pendingApplyContext: InternalApplyContext | null = null;
 let applyTimeoutId: number | null = null;
+let forceApplyTimerId: number | null = null;
 let preCheckPhase: SafeUpdatePhase | null = null;
 let applyAttemptSequence = 0;
 let autoApplySuppressed = false;
 
 const APPLY_TIMEOUT_MS = 12_000;
+const FORCE_APPLY_DELAY_MS = 60_000;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 
 const broadcast =
@@ -118,6 +120,7 @@ function setWaitingRegistration(
       state.phase = "ready";
     }
     state.lastError = null;
+    scheduleForceApplyTimer();
     if (shouldBroadcast) {
       broadcast?.postMessage({
         type: "update-ready",
@@ -126,6 +129,7 @@ function setWaitingRegistration(
       });
     }
   } else {
+    clearForceApplyTimer();
     state.waitingSince = null;
     state.waitingVersion = null;
     if (state.phase === "checking" && preCheckPhase) {
@@ -150,6 +154,17 @@ function clearApplyTimeout() {
   }
 }
 
+function clearForceApplyTimer() {
+  if (typeof window === "undefined") {
+    forceApplyTimerId = null;
+    return;
+  }
+  if (forceApplyTimerId !== null) {
+    window.clearTimeout(forceApplyTimerId);
+    forceApplyTimerId = null;
+  }
+}
+
 function scheduleApplyTimeout(reason: string, safeMode: boolean) {
   if (typeof window === "undefined") {
     return;
@@ -164,9 +179,31 @@ function scheduleApplyTimeout(reason: string, safeMode: boolean) {
   }, APPLY_TIMEOUT_MS);
 }
 
+function scheduleForceApplyTimer() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (!waitingRegistration?.waiting) {
+    clearForceApplyTimer();
+    return;
+  }
+  clearForceApplyTimer();
+  forceApplyTimerId = window.setTimeout(() => {
+    forceApplyTimerId = null;
+    if (!waitingRegistration?.waiting) {
+      return;
+    }
+    if (state.phase === "applying" || pendingReload) {
+      return;
+    }
+    applyServiceWorkerUpdate({ reason: "timeout" });
+  }, FORCE_APPLY_DELAY_MS);
+}
+
 function handleApplySuccess(options?: { broadcastEvent?: boolean }) {
   const broadcastEvent = options?.broadcastEvent !== false;
   clearApplyTimeout();
+  clearForceApplyTimer();
   state.lastError = null;
   state.phase = "applied";
   state.pendingReload = pendingReload;
@@ -179,6 +216,7 @@ function handleApplySuccess(options?: { broadcastEvent?: boolean }) {
 
 function markApplyFailure(detail: string, reason: string, safeMode: boolean) {
   clearApplyTimeout();
+  clearForceApplyTimer();
   pendingReload = false;
   state.pendingReload = false;
   state.phase = "failed";
@@ -308,6 +346,7 @@ export function applyServiceWorkerUpdate(
     state.phase = "applying";
     state.lastError = null;
     state.applyReason = reason;
+    clearForceApplyTimer();
     applyAttemptSequence += 1;
     pendingApplyContext = {
       reason,

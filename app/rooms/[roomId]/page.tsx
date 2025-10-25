@@ -64,6 +64,7 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
+  resyncWaitingServiceWorker,
   subscribeToServiceWorkerUpdates,
 } from "@/lib/serviceWorker/updateChannel";
 import {
@@ -385,6 +386,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       setHasWaitingUpdate(!!registration);
     });
   }, []);
+  useEffect(() => {
+    void resyncWaitingServiceWorker("room:mount");
+    if (typeof document === "undefined") {
+      return;
+    }
+    const handleVisibilityResync = () => {
+      if (document.visibilityState === "visible") {
+        void resyncWaitingServiceWorker("room:visible");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityResync, true);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityResync, true);
+    };
+  }, []);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
@@ -428,6 +444,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
     typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
   );
+  const [versionMismatchGuarded, setVersionMismatchGuarded] = useState(false);
   const {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
@@ -472,6 +489,31 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       setMetric("app", "versionMismatch", 0);
     }
   }, [requiredSwVersion]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!safeUpdateFeatureEnabled || !versionMismatch) {
+      setVersionMismatchGuarded(false);
+      if (versionGuardTimerRef.current !== null) {
+        window.clearTimeout(versionGuardTimerRef.current);
+        versionGuardTimerRef.current = null;
+      }
+      return;
+    }
+    if (versionGuardTimerRef.current !== null) {
+      window.clearTimeout(versionGuardTimerRef.current);
+    }
+    versionGuardTimerRef.current = window.setTimeout(() => {
+      setVersionMismatchGuarded(true);
+    }, 6000);
+    return () => {
+      if (versionGuardTimerRef.current !== null) {
+        window.clearTimeout(versionGuardTimerRef.current);
+        versionGuardTimerRef.current = null;
+      }
+    };
+  }, [safeUpdateFeatureEnabled, versionMismatch]);
   const versionMismatchHandledRef = useRef(false);
   const safeUpdateEnteredRef = useRef(false);
   const safeUpdateStatusRef = useRef<string | null>(null);
@@ -479,6 +521,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const lastInteractionTsRef = useRef<number>(
     typeof window === "undefined" ? 0 : Date.now()
   );
+  const versionGuardTimerRef = useRef<number | null>(null);
   const currentRoomStatus = room?.status ?? null;
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) {
@@ -2678,11 +2721,57 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     safeUpdateActive && safeUpdateFeatureEnabled ? (
       <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
     ) : null;
+  const versionMismatchOverlay =
+    safeUpdateActive && versionMismatchGuarded ? (
+      <Box
+        position="fixed"
+        inset={0}
+        zIndex={1600}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bg="rgba(6, 10, 18, 0.88)"
+        pointerEvents="all"
+      >
+        <VStack
+          gap={4}
+          maxW="360px"
+          px={6}
+          py={8}
+          bg="rgba(14, 20, 32, 0.9)"
+          border="1px solid rgba(255,255,255,0.18)"
+          borderRadius="12px"
+          boxShadow="0 18px 38px rgba(0,0,0,0.5)"
+        >
+          <Text fontSize="lg" fontWeight="bold" color="rgba(255,255,255,0.92)">
+            新しいバージョンを適用しています
+          </Text>
+          <Text fontSize="sm" color="rgba(255,255,255,0.76)" textAlign="center" lineHeight={1.8}>
+            ゲームを安全に続行するため、このままお待ちください。
+            自動で切り替わらない場合は下のボタンで今すぐ更新できます。
+          </Text>
+          <AppButton
+            palette="brand"
+            size="md"
+            w="100%"
+            onClick={spectatorUpdateFailed ? retrySpectatorUpdate : applySpectatorUpdate}
+            disabled={spectatorUpdateApplying}
+          >
+            {spectatorUpdateApplying
+              ? "更新を適用中..."
+              : spectatorUpdateFailed
+                ? "再試行する"
+                : "今すぐ更新"}
+          </AppButton>
+        </VStack>
+      </Box>
+    ) : null;
 
   return (
     <>
       {joinStatusBanner}
       {safeUpdateBannerNode}
+      {versionMismatchOverlay}
       <RoomNotifyBridge roomId={roomId} />
       <GameLayout
         variant="immersive"
