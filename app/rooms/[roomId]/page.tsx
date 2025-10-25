@@ -439,6 +439,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     () => players.map((p) => p.id).join(","),
     [players]
   );
+  const dealPlayers = useMemo(() => {
+    const list = room?.deal?.players;
+    if (!Array.isArray(list)) {
+      return [] as string[];
+    }
+    return list.filter((id): id is string => typeof id === "string");
+  }, [room?.deal]);
+  const dealPlayersSignature = useMemo(
+    () => (dealPlayers.length > 0 ? dealPlayers.join(",") : ""),
+    [dealPlayers]
+  );
   const requiredSwVersion = useMemo(() => {
     const raw = room?.requiredSwVersion;
     if (typeof raw !== "string") return "";
@@ -799,6 +810,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     timeout: false,
   });
   const recallJoinHandledRef = useRef(false);
+  const assignNumberRetrySignatureRef = useRef<string | null>(null);
 
 
   const forcedExitScheduledRef = useRef(false);
@@ -1456,6 +1468,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         });
         await assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
       } catch (error) {
+        recallJoinHandledRef.current = false;
+        assignNumberRetrySignatureRef.current = null;
         traceError("spectator.recallJoinFailed", error, { roomId, uid });
       }
     })();
@@ -1468,6 +1482,47 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     room,
     roomId,
     displayName,
+  ]);
+  useEffect(() => {
+    if (!uid || !roomId || !room) {
+      return;
+    }
+    if (isSpectatorMode || !me) {
+      assignNumberRetrySignatureRef.current = null;
+      return;
+    }
+    if (typeof me.number === "number") {
+      assignNumberRetrySignatureRef.current = null;
+      return;
+    }
+    if (room.status !== "clue") {
+      assignNumberRetrySignatureRef.current = null;
+      return;
+    }
+    if (dealPlayers.length === 0 || !dealPlayers.includes(uid)) {
+      return;
+    }
+    const attemptSignature = `${room.round ?? 0}:${dealPlayersSignature}`;
+    if (assignNumberRetrySignatureRef.current === attemptSignature) {
+      return;
+    }
+    assignNumberRetrySignatureRef.current = attemptSignature;
+    traceAction("spectator.recallAssignNumberRetry", { roomId, uid });
+    void assignNumberIfNeeded(roomId, uid, room).catch((error) => {
+      assignNumberRetrySignatureRef.current = null;
+      traceError("spectator.recallAssignNumberRetry", error, { roomId, uid });
+    });
+  }, [
+    uid,
+    roomId,
+    room,
+    room?.status,
+    room?.round,
+    me,
+    me?.number,
+    isSpectatorMode,
+    dealPlayersSignature,
+    dealPlayers,
   ]);
   useEffect(() => {
     if (!waitingToRejoin || !isSpectatorMode) {

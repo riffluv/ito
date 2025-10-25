@@ -74,6 +74,21 @@ const nextConfig = {
           },
         },
       };
+    } else {
+      // サーバー側ビルドで chunk が .next/server/chunks 配下に出力されると
+      // webpack-runtime が `require("./859.js")` で読み込みに失敗するため、
+      // chunkFilename から `chunks/` プレフィックスを取り除き、
+      // ルート直下 (.next/server) に配置する。
+      if (
+        isServer &&
+        config.output?.chunkFilename &&
+        config.output.chunkFilename.includes("chunks/")
+      ) {
+        config.output.chunkFilename = config.output.chunkFilename.replace(
+          "chunks/",
+          ""
+        );
+      }
     }
     return config;
   },
