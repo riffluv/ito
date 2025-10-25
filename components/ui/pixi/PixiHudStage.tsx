@@ -39,6 +39,19 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
   const [app, setApp] = useState<Application | null>(null);
+  const safeDestroyContainer = useCallback((container: Container) => {
+    if ((container as unknown as { destroyed?: boolean }).destroyed) {
+      return;
+    }
+    try {
+      container.destroy({ children: true });
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.warn("[PixiHudStage] container destroy failed", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!hostRef.current) {
@@ -118,7 +131,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         resizeObserver = null;
       }
       layersRef.current.forEach(({ container }) => {
-        container.destroy({ children: true });
+        safeDestroyContainer(container);
       });
       layersRef.current.clear();
       setApp(null);
@@ -187,11 +200,11 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     if (record.refCount > 0) return;
 
     currentApp.stage.removeChild(record.container);
-    record.container.destroy({ children: true });
+    safeDestroyContainer(record.container);
     store.delete(name);
 
     // Canvas全体のpointerEventsは常に"none"のまま
-  }, []);
+  }, [safeDestroyContainer]);
 
   const contextValue = useMemo<PixiHudContextValue>(
     () => ({
@@ -249,4 +262,3 @@ export function usePixiHudLayer(name: string, options?: LayerOptions) {
 
   return container;
 }
-

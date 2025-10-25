@@ -426,6 +426,9 @@ export class GuideButton extends PIXI.Container {
    * クリーンアップ（メモリリーク防止）
    */
   destroy(options?: boolean | PIXI.DestroyOptions): void {
+    if ((this as unknown as { destroyed?: boolean }).destroyed) {
+      return;
+    }
     this.stopTimeline();
     super.destroy(options);
   }
