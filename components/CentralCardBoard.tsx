@@ -981,11 +981,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   const activeProposal = useMemo<(string | null)[]>(() => {
-    if (roomStatus === "finished") {
-      return (orderList || []).map((id) => (typeof id === "string" && id.length > 0 ? id : null));
+    const normalizedOrder = (orderList || []).map((id) => (typeof id === "string" && id.length > 0 ? id : null));
+
+    if (roomStatus === "finished" || roomStatus === "reveal") {
+      return normalizedOrder;
     }
-    if (!Array.isArray(proposal)) return [];
-    return proposal.map((id) => (typeof id === "string" && id.length > 0 ? id : null));
+
+    if (Array.isArray(proposal)) {
+      const normalizedProposal = proposal.map((id) => (typeof id === "string" && id.length > 0 ? id : null));
+      if (normalizedProposal.some(Boolean)) {
+        return normalizedProposal;
+      }
+    }
+
+    // リビール直前に proposal がクリアされ、orderList だけが更新された瞬間をフォロー
+    if (normalizedOrder.some(Boolean)) {
+      return normalizedOrder;
+    }
+
+    return [];
   }, [roomStatus, orderList?.join(","), proposal?.join(",")]);
 
   const proposalLength = activeProposal.length;
