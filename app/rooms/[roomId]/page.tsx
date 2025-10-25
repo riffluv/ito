@@ -431,6 +431,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
+    hasError: spectatorUpdateFailed,
+    retryUpdate: retrySpectatorUpdate,
     applyUpdate: applySpectatorUpdate,
   } = useServiceWorkerUpdate();
   const meId = uid || "";
@@ -2445,10 +2447,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     <AppButton
       palette="brand"
       size="md"
-      onClick={applySpectatorUpdate}
+      onClick={spectatorUpdateFailed ? retrySpectatorUpdate : applySpectatorUpdate}
       disabled={spectatorUpdateApplying}
     >
-      {spectatorUpdateApplying ? "適用中..." : "最新アップデートを適用"}
+      {spectatorUpdateApplying
+        ? "適用中..."
+        : spectatorUpdateFailed
+          ? "再試行"
+          : "最新アップデートを適用"}
     </AppButton>
   ) : null;
 

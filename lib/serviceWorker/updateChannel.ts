@@ -1,40 +1,281 @@
 import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
 
 type UpdateListener = (registration: ServiceWorkerRegistration | null) => void;
+type SnapshotListener = (snapshot: SafeUpdateSnapshot) => void;
 
-const listeners = new Set<UpdateListener>();
+export type SafeUpdatePhase =
+  | "idle"
+  | "checking"
+  | "ready"
+  | "applying"
+  | "applied"
+  | "failed";
+
+export type SafeUpdateSnapshot = {
+  phase: SafeUpdatePhase;
+  waitingSince: number | null;
+  waitingVersion: string | null;
+  lastCheckAt: number | null;
+  lastError: string | null;
+  autoApplySuppressed: boolean;
+  pendingReload: boolean;
+  applyReason: string | null;
+};
 
 export type ApplyServiceWorkerOptions = {
   reason?: string;
   safeMode?: boolean;
 };
 
+const updateListeners = new Set<UpdateListener>();
+const snapshotListeners = new Set<SnapshotListener>();
+
 let waitingRegistration: ServiceWorkerRegistration | null = null;
+
+const state: SafeUpdateSnapshot = {
+  phase: "idle",
+  waitingSince: null,
+  waitingVersion: null,
+  lastCheckAt: null,
+  lastError: null,
+  autoApplySuppressed: false,
+  pendingReload: false,
+  applyReason: null,
+};
+
 let pendingReload = false;
-let pendingApplyContext: ApplyServiceWorkerOptions | null = null;
+
+type InternalApplyContext = ApplyServiceWorkerOptions & {
+  startedAt: number;
+  attemptId: number;
+};
+
+let pendingApplyContext: InternalApplyContext | null = null;
+let applyTimeoutId: number | null = null;
+let preCheckPhase: SafeUpdatePhase | null = null;
+let applyAttemptSequence = 0;
 let autoApplySuppressed = false;
 
-export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
-  listeners.add(listener);
-  listener(waitingRegistration);
-  return () => {
-    listeners.delete(listener);
-  };
+const APPLY_TIMEOUT_MS = 12_000;
+const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
+
+const broadcast =
+  typeof window !== "undefined" && "BroadcastChannel" in window
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+if (broadcast) {
+  broadcast.addEventListener("message", (event) => {
+    handleBroadcastMessage(event.data);
+  });
 }
 
-export function announceServiceWorkerUpdate(registration: ServiceWorkerRegistration | null) {
-  waitingRegistration = registration;
-  listeners.forEach((listener) => {
+function cloneSnapshot(): SafeUpdateSnapshot {
+  return { ...state };
+}
+
+function notifyListeners() {
+  snapshotListeners.forEach((listener) => {
+    try {
+      listener(cloneSnapshot());
+    } catch {
+      /* ignore listener failure */
+    }
+  });
+  updateListeners.forEach((listener) => {
     try {
       listener(waitingRegistration);
     } catch {
-      /* ignore listener errors to avoid breaking others */
+      /* ignore listener failure */
     }
   });
 }
 
+function extractVersionTag(registration: ServiceWorkerRegistration): string | null {
+  const candidate =
+    registration.waiting ?? registration.installing ?? registration.active ?? null;
+  if (!candidate) {
+    return null;
+  }
+  try {
+    const url = new URL(candidate.scriptURL);
+    return url.searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
+function setWaitingRegistration(
+  registration: ServiceWorkerRegistration | null,
+  shouldBroadcast: boolean,
+  source?: string
+) {
+  waitingRegistration = registration;
+  if (registration) {
+    state.waitingSince = state.waitingSince ?? Date.now();
+    state.waitingVersion = extractVersionTag(registration);
+    if (state.phase !== "applying") {
+      state.phase = "ready";
+    }
+    state.lastError = null;
+    if (shouldBroadcast) {
+      broadcast?.postMessage({
+        type: "update-ready",
+        version: state.waitingVersion,
+        source,
+      });
+    }
+  } else {
+    state.waitingSince = null;
+    state.waitingVersion = null;
+    if (state.phase === "checking" && preCheckPhase) {
+      state.phase = preCheckPhase;
+    } else if (state.phase !== "applying" && state.phase !== "failed") {
+      state.phase = "idle";
+    }
+    if (shouldBroadcast) {
+      broadcast?.postMessage({ type: "update-cleared", source });
+    }
+  }
+  notifyListeners();
+}
+
+function clearApplyTimeout() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (applyTimeoutId !== null) {
+    window.clearTimeout(applyTimeoutId);
+    applyTimeoutId = null;
+  }
+}
+
+function scheduleApplyTimeout(reason: string, safeMode: boolean) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  clearApplyTimeout();
+  applyTimeoutId = window.setTimeout(() => {
+    if (state.phase === "applying") {
+      const contextReason = pendingApplyContext?.reason ?? reason;
+      const contextSafeMode = pendingApplyContext?.safeMode ?? safeMode;
+      markApplyFailure("timeout", contextReason, contextSafeMode);
+    }
+  }, APPLY_TIMEOUT_MS);
+}
+
+function handleApplySuccess(options?: { broadcastEvent?: boolean }) {
+  const broadcastEvent = options?.broadcastEvent !== false;
+  clearApplyTimeout();
+  state.lastError = null;
+  state.phase = "applied";
+  state.pendingReload = pendingReload;
+  state.applyReason = pendingApplyContext?.reason ?? state.applyReason;
+  notifyListeners();
+  if (broadcastEvent) {
+    broadcast?.postMessage({ type: "update-applied" });
+  }
+}
+
+function markApplyFailure(detail: string, reason: string, safeMode: boolean) {
+  clearApplyTimeout();
+  pendingReload = false;
+  state.pendingReload = false;
+  state.phase = "failed";
+  state.lastError = detail;
+  state.applyReason = reason;
+  logSafeUpdateTelemetry("failure", { reason, safeMode, detail });
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.warn("[sw] applying service worker failed", { reason, detail });
+  }
+  broadcast?.postMessage({ type: "update-failed", detail });
+  pendingApplyContext = null;
+  notifyListeners();
+}
+
+function handleBroadcastMessage(message: unknown) {
+  if (!message || typeof message !== "object") {
+    return;
+  }
+  const payload = message as { type?: string; detail?: string };
+  switch (payload.type) {
+    case "update-ready":
+      void resyncWaitingServiceWorker("broadcast-ready");
+      break;
+    case "update-cleared":
+      if (!pendingReload) {
+        setWaitingRegistration(null, false, "broadcast-cleared");
+      }
+      break;
+    case "update-applied":
+      if (waitingRegistration || state.phase === "applying" || state.waitingSince) {
+        handleApplySuccess({ broadcastEvent: false });
+      }
+      break;
+    case "update-failed": {
+      clearApplyTimeout();
+      pendingReload = false;
+      state.pendingReload = false;
+      state.phase = "failed";
+      state.lastError =
+        typeof payload.detail === "string" ? payload.detail : "unknown";
+      state.applyReason = pendingApplyContext?.reason ?? state.applyReason;
+      pendingApplyContext = null;
+      notifyListeners();
+      break;
+    }
+    case "suppress":
+      autoApplySuppressed = true;
+      state.autoApplySuppressed = true;
+      notifyListeners();
+      break;
+    case "resume-auto":
+      autoApplySuppressed = false;
+      state.autoApplySuppressed = false;
+      notifyListeners();
+      break;
+    default:
+      break;
+  }
+}
+
+export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
+  updateListeners.add(listener);
+  try {
+    listener(waitingRegistration);
+  } catch {
+    /* ignore immediate listener failure */
+  }
+  return () => {
+    updateListeners.delete(listener);
+  };
+}
+
+export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () => void {
+  snapshotListeners.add(listener);
+  try {
+    listener(cloneSnapshot());
+  } catch {
+    /* ignore immediate listener failure */
+  }
+  return () => {
+    snapshotListeners.delete(listener);
+  };
+}
+
+export function getSafeUpdateSnapshot(): SafeUpdateSnapshot {
+  return cloneSnapshot();
+}
+
 export function getWaitingServiceWorker(): ServiceWorkerRegistration | null {
   return waitingRegistration;
+}
+
+export function announceServiceWorkerUpdate(
+  registration: ServiceWorkerRegistration | null
+) {
+  setWaitingRegistration(registration, true, "announce");
 }
 
 export function applyServiceWorkerUpdate(
@@ -43,36 +284,45 @@ export function applyServiceWorkerUpdate(
   const reason = options?.reason ?? "manual";
   const safeMode = options?.safeMode === true;
   const isAutomatic = reason !== "manual";
+
   if (autoApplySuppressed && isAutomatic) {
     logSafeUpdateTelemetry("suppressed", { reason, safeMode });
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.warn("[sw] auto-apply suppressed", { reason });
-    }
+    state.lastError = "suppressed";
+    notifyListeners();
     return false;
   }
-  if (!waitingRegistration?.waiting) {
+
+  const registration = waitingRegistration;
+  const waitingWorker = registration?.waiting;
+  if (!registration || !waitingWorker) {
     logSafeUpdateTelemetry("no_waiting", { reason, safeMode });
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.warn("[sw] no waiting service worker to apply", { reason });
-    }
+    state.lastError = "no_waiting";
+    state.phase = "failed";
+    notifyListeners();
     return false;
   }
+
   try {
     pendingReload = true;
-    pendingApplyContext = { reason, safeMode };
-    waitingRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
+    state.pendingReload = true;
+    state.phase = "applying";
+    state.lastError = null;
+    state.applyReason = reason;
+    applyAttemptSequence += 1;
+    pendingApplyContext = {
+      reason,
+      safeMode,
+      startedAt: Date.now(),
+      attemptId: applyAttemptSequence,
+    };
+    waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    scheduleApplyTimeout(reason, safeMode);
     logSafeUpdateTelemetry("triggered", { reason, safeMode });
+    broadcast?.postMessage({ type: "update-applying", reason });
+    notifyListeners();
     return true;
   } catch {
-    pendingReload = false;
-    pendingApplyContext = null;
-    logSafeUpdateTelemetry("failure", { reason, safeMode });
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.warn("[sw] applying service worker failed", { reason });
-    }
+    markApplyFailure("exception", reason, safeMode);
     return false;
   }
 }
@@ -82,28 +332,102 @@ export function consumePendingReloadFlag(): boolean {
     return false;
   }
   pendingReload = false;
+  state.pendingReload = false;
+  notifyListeners();
   return true;
 }
 
 export function consumePendingApplyContext(): ApplyServiceWorkerOptions | null {
-  const context = pendingApplyContext;
+  if (!pendingApplyContext) {
+    return null;
+  }
+  const { reason, safeMode } = pendingApplyContext;
   pendingApplyContext = null;
-  return context;
+  state.applyReason = null;
+  notifyListeners();
+  return { reason, safeMode };
 }
 
 export function suppressAutoApply() {
   autoApplySuppressed = true;
+  state.autoApplySuppressed = true;
+  broadcast?.postMessage({ type: "suppress" });
+  notifyListeners();
 }
 
 export function clearAutoApplySuppression() {
   autoApplySuppressed = false;
+  state.autoApplySuppressed = false;
+  broadcast?.postMessage({ type: "resume-auto" });
+  notifyListeners();
 }
 
 export function isAutoApplySuppressed(): boolean {
   return autoApplySuppressed;
 }
 
-export function clearWaitingServiceWorker() {
-  waitingRegistration = null;
-  announceServiceWorkerUpdate(null);
+type ClearResult = "activated" | "redundant" | "manual";
+
+export function clearWaitingServiceWorker(options?: { result?: ClearResult }) {
+  const result: ClearResult = options?.result ?? "manual";
+  if (result === "redundant" && pendingApplyContext) {
+    const { reason = "manual", safeMode = false } = pendingApplyContext;
+    markApplyFailure("redundant", reason, safeMode);
+    setWaitingRegistration(null, true, "clear");
+    return;
+  }
+
+  setWaitingRegistration(null, true, "clear");
+
+  if (state.phase === "applying") {
+    handleApplySuccess();
+  } else if (result === "manual") {
+    state.lastError = null;
+    notifyListeners();
+  }
+}
+
+export function markUpdateCheckStart() {
+  if (state.phase === "applying") {
+    return;
+  }
+  preCheckPhase = state.phase;
+  state.phase = "checking";
+  state.lastCheckAt = Date.now();
+  notifyListeners();
+}
+
+export function markUpdateCheckEnd() {
+  if (state.phase !== "checking") {
+    return;
+  }
+  state.phase = waitingRegistration ? "ready" : preCheckPhase ?? "idle";
+  preCheckPhase = null;
+  notifyListeners();
+}
+
+export function markUpdateCheckError(detail: string) {
+  if (state.phase !== "checking") {
+    return;
+  }
+  state.phase = preCheckPhase ?? "idle";
+  preCheckPhase = null;
+  state.lastError = detail;
+  notifyListeners();
+}
+
+export async function resyncWaitingServiceWorker(source?: string): Promise<void> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (registration?.waiting) {
+      setWaitingRegistration(registration, false, source ?? "resync");
+    } else if (!pendingReload) {
+      setWaitingRegistration(null, false, source ?? "resync");
+    }
+  } catch {
+    // ignore resync failures
+  }
 }
