@@ -82,7 +82,7 @@ export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgePr
     if (waitingSince) {
       const elapsed = Date.now() - waitingSince;
       if (elapsed < 60_000) {
-        return "数秒以内に検知しました。";
+        return "アプデ来てるよ！更新してね。";
       }
       if (elapsed < 3_600_000) {
         const minutes = Math.round(elapsed / 60_000);
