@@ -78,6 +78,15 @@ service cloud.firestore {
       return votes is map && votes.size() <= 16;
     }
 
+    function isValidRejoinRequestDoc(data) {
+      return data is map
+        && data.keys().hasOnly(['status', 'displayName', 'createdAt', 'source'])
+        && data.status == 'pending'
+        && (!('displayName' in data) || optionalSafeText(data.displayName, 1, 32))
+        && (!('source' in data) || data.source in ['manual', 'auto'])
+        && (!('createdAt' in data) || isTimestampValue(data.createdAt));
+    }
+
     function isValidRoomDoc(data) {
       return data is map
         && data.keys().hasOnly([
@@ -231,6 +240,24 @@ service cloud.firestore {
 
         allow update: if false;
         allow delete: if false;
+      }
+
+      match /rejoinRequests/{uid} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAuthenticated()
+          && request.auth.uid == uid
+          && isValidRejoinRequestDoc(request.resource.data)
+          && (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time);
+
+        allow update: if isAuthenticated()
+          && request.auth.uid == uid
+          && isValidRejoinRequestDoc(request.resource.data)
+          && (!('createdAt' in request.resource.data)
+            || request.resource.data.createdAt == resource.data.createdAt
+            || request.resource.data.createdAt == request.time);
+
+        allow delete: if isAuthenticated() && request.auth.uid == uid;
       }
     }
 

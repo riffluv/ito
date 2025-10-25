@@ -65,6 +65,7 @@ export function useRoomState(
     null
   );
   const fsmEnabled = process.env.NEXT_PUBLIC_FSM_ENABLE === "1";
+  const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -286,7 +287,7 @@ export function useRoomState(
     if (!displayName || !String(displayName).trim()) return;
 
     let pendingRejoin = false;
-    if (rejoinSessionKey && typeof window !== "undefined") {
+    if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
       try {
         pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
       } catch {}
@@ -294,7 +295,7 @@ export function useRoomState(
 
     const clearPending = () => {
       if (!pendingRejoin) return;
-      if (rejoinSessionKey && typeof window !== "undefined") {
+      if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
         try {
           window.sessionStorage.removeItem(rejoinSessionKey);
         } catch {}
@@ -427,6 +428,7 @@ export function useRoomState(
     rejoinSessionKey,
     isMember,
     joinAttemptToken,
+    recallV2Enabled,
   ]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;

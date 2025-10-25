@@ -757,3 +757,5 @@ export const pruneOldEvents = functions.pubsub
     }
     return null;
   });
+
+export { onRejoinRequestCreate, onRoomWaitingProcessRejoins } from "./rejoin";

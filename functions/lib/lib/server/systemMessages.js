@@ -7,9 +7,21 @@ exports.systemMessageHostTransferred = systemMessageHostTransferred;
 exports.systemMessageRoomBecameEmpty = systemMessageRoomBecameEmpty;
 const DEFAULT_PLAYER_NAME = "名もなき冒険者";
 const MAX_NAME_LENGTH = 16;
+function removeControlCharacters(text) {
+    let result = "";
+    for (let i = 0; i < text.length; i += 1) {
+        const code = text.charCodeAt(i);
+        if ((code >= 0 && code <= 31) || code === 127) {
+            result += " ";
+        }
+        else {
+            result += text[i];
+        }
+    }
+    return result;
+}
 function sanitizeText(raw) {
-    return raw
-        .replace(/[\u0000-\u001F\u007F]/g, " ")
+    return removeControlCharacters(raw)
         .replace(/[\u2028\u2029]/g, " ")
         .replace(/<[^>]*>/g, "")
         .replace(/\s+/g, " ")

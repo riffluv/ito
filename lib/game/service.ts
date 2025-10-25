@@ -11,7 +11,15 @@ import {
   resetRoomWithPrune as resetRoomWithPruneInternal,
 } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
+import { db } from "@/lib/firebase/client";
+import { bumpMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import {
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 
 export type ResetRoomKeepIds = Parameters<
   typeof resetRoomWithPruneInternal
@@ -115,6 +123,49 @@ export async function finalizeReveal(roomId: string) {
 
 export { topicControls };
 
+export type SeatRequestSource = "manual" | "auto";
+
+export async function requestSeat(
+  roomId: string,
+  uid: string,
+  displayName?: string | null,
+  source: SeatRequestSource = "manual"
+) {
+  const normalizedName =
+    typeof displayName === "string" ? displayName.trim() : "";
+  const cappedName =
+    normalizedName.length > 32 ? normalizedName.slice(0, 32) : normalizedName;
+
+  traceAction("spectator.requestSeat", { roomId, uid, source });
+  try {
+    await setDoc(
+      doc(db!, "rooms", roomId, "rejoinRequests", uid),
+      {
+        status: "pending",
+        displayName: cappedName.length > 0 ? cappedName : null,
+        source,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    bumpMetric("recall", "requested");
+  } catch (error) {
+    traceError("spectator.requestSeat", error, { roomId, uid, source });
+    throw error;
+  }
+}
+
+export async function cancelSeatRequest(roomId: string, uid: string) {
+  traceAction("spectator.cancelSeatRequest", { roomId, uid });
+  try {
+    await deleteDoc(doc(db!, "rooms", roomId, "rejoinRequests", uid));
+    bumpMetric("recall", "cancelled");
+  } catch (error) {
+    traceError("spectator.cancelSeatRequest", error, { roomId, uid });
+    throw error;
+  }
+}
+
 export const GameService = {
   startGame,
   dealNumbers,
@@ -125,4 +176,6 @@ export const GameService = {
   resetRoomWithPrune,
   finalizeReveal,
   topicControls,
+  requestSeat,
+  cancelSeatRequest,
 } as const;
