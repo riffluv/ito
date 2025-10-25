@@ -101,8 +101,10 @@ export function GameCard({
   }, [flipped, variant, playCardFlip]);
 
   // Shared semantic colors
-  const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
-  const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
+const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
+const strongGlow = UI_TOKENS.SHADOWS.ringPurpleStrong;
+const FLIP_DURATION_DEFAULT = 0.48;
+const FLIP_DURATION_RESULT = 0.4;
   const successBorder =
     state === "success"
       ? UI_TOKENS.COLORS.dqGold // Gold for success
@@ -201,7 +203,7 @@ export function GameCard({
         transformOrigin: "center center",
       },
       {
-        duration: isResultPreset ? 0.28 : 0.35,
+        duration: isResultPreset ? FLIP_DURATION_RESULT : FLIP_DURATION_DEFAULT,
         rotateY: targetRotation,
         ease: isResultPreset ? "back.out(1.65)" : "power2.out",
         overwrite: "auto",
