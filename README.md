@@ -114,6 +114,20 @@ npm run dev
 
 http://localhost:3000 でアクセス可能
 
+### 5. よく使うコマンド
+
+| 目的 | コマンド |
+| ---- | -------- |
+| 型チェック | `npm run typecheck` |
+| 単体テスト（Jest） | `npm run test` |
+| Playwright テスト | `npx playwright test` <br> ※特定ファイルだけ走らせる場合は `npx playwright test tests/roomMachine.spec.ts` のように指定 |
+| 本番ビルド＋起動 | `npm run build && npm run start` |
+
+### Feature Flag: FSM
+
+- `.env.local` の `NEXT_PUBLIC_FSM_ENABLE` を `1` にすると、新しい状態機械 (`lib/state/roomMachine.ts`) を利用します。
+- 既定値 `0` のままでもゲームは従来ロジックで動作します。切り替え後は `npm run dev` を再起動して変化を確認してください。
+
 ## 🏗️ アーキテクチャ
 
 ### ディレクトリ構造
@@ -166,6 +180,7 @@ stripe_checkout_entitlements/{sessionId}
 
 ## 📚 関連ドキュメント
 
+- `docs/OPERATIONS.md` - 運用ガイド／トレースの見方／トラブルシューティング
 - `docs/GAME_LOGIC_OVERVIEW.md` - ゲームロジック詳細仕様
 - `claudedocs/vercel-firebase-setup.md` - デプロイ設定手順
 
