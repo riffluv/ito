@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
@@ -21,17 +21,100 @@ const containerStyles = {
 };
 
 export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgeProps) {
-  const { isUpdateReady, isApplying, applyUpdate } = useServiceWorkerUpdate();
+  const {
+    isUpdateReady,
+    isApplying,
+    hasError,
+    phase,
+    lastError,
+    autoApplySuppressed,
+    waitingSince,
+    applyUpdate,
+    retryUpdate,
+  } = useServiceWorkerUpdate();
 
-  const effectiveReady = preview || isUpdateReady || isApplying;
+  const effectiveReady =
+    preview || isUpdateReady || isApplying || hasError || autoApplySuppressed;
   const effectiveApplying = preview ? false : isApplying;
 
   const statusText = useMemo(() => {
+    if (preview) {
+      return "新しいバージョン";
+    }
     if (effectiveApplying) {
       return "更新を適用中...";
     }
+    if (phase === "failed") {
+      return "更新に失敗しました";
+    }
+    if (autoApplySuppressed) {
+      return "自動更新を保留中";
+    }
     return "新しいバージョン";
-  }, [effectiveApplying]);
+  }, [autoApplySuppressed, effectiveApplying, phase, preview]);
+
+  const helperText = useMemo(() => {
+    if (preview) {
+      return "プレビュー表示です";
+    }
+    if (effectiveApplying) {
+      return "まもなくページが更新されます";
+    }
+    if (phase === "failed") {
+      switch (lastError) {
+        case "timeout":
+          return "タイムアウトしました。再試行してください。";
+        case "no_waiting":
+          return "更新対象が見つかりませんでした。";
+        case "redundant":
+          return "他の更新と競合しました。";
+        case "suppressed":
+          return "自動適用は停止中です。";
+        case "exception":
+          return "更新中にエラーが発生しました。";
+        default:
+          return "更新に失敗しました。";
+      }
+    }
+    if (autoApplySuppressed) {
+      return "ループガードのため手動適用が必要です。";
+    }
+    if (waitingSince) {
+      const elapsed = Date.now() - waitingSince;
+      if (elapsed < 60_000) {
+        return "数秒以内に検知しました。";
+      }
+      if (elapsed < 3_600_000) {
+        const minutes = Math.round(elapsed / 60_000);
+        return `約${minutes}分前に検知しました。`;
+      }
+      const hours = Math.round(elapsed / 3_600_000);
+      return `約${hours}時間前に検知しました。`;
+    }
+    return "安全なタイミングで自動適用されます。";
+  }, [autoApplySuppressed, effectiveApplying, lastError, phase, preview, waitingSince]);
+
+  const handleClick = useCallback(() => {
+    if (preview) return;
+    if (phase === "failed") {
+      retryUpdate();
+      return;
+    }
+    applyUpdate();
+  }, [applyUpdate, phase, preview, retryUpdate]);
+
+  const buttonLabel = useMemo(() => {
+    if (preview) {
+      return "今すぐ更新";
+    }
+    if (phase === "failed") {
+      return "再試行";
+    }
+    if (effectiveApplying) {
+      return "適用中";
+    }
+    return "今すぐ更新";
+  }, [effectiveApplying, phase, preview]);
 
   if (!effectiveReady) {
     return null;
@@ -49,17 +132,22 @@ export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgePr
       <Text fontSize="13px" letterSpacing="0.08em" textTransform="uppercase">
         {statusText}
       </Text>
+      {!preview && helperText ? (
+        <Text fontSize="11px" color="rgba(255,255,255,0.7)" lineHeight="1.6">
+          {helperText}
+        </Text>
+      ) : null}
       <HStack gap="8px" w="100%">
         <AppButton
           size="xs"
           palette="brand"
           visual="solid"
-          onClick={preview ? undefined : applyUpdate}
+          onClick={preview ? undefined : handleClick}
           disabled={preview ? false : effectiveApplying}
           w="100%"
           fontSize="12px"
         >
-          今すぐ更新
+          {buttonLabel}
         </AppButton>
       </HStack>
     </Box>
