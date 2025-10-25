@@ -18,6 +18,28 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
+type FocusShortcutEvent = Pick<KeyboardEvent, "key" | "target">;
+
+export function shouldFocusClueInput(
+  event: FocusShortcutEvent,
+  clueEditable: boolean
+): boolean {
+  if (!clueEditable) return false;
+  if (!event || event.key !== KEYBOARD_KEYS.SPACE) return false;
+  const target = (event.target as HTMLElement | null) ?? null;
+  if (!target) return true;
+  const tagName = typeof target.tagName === "string" ? target.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA") return false;
+  if ((target as HTMLElement).isContentEditable) return false;
+  return true;
+}
+
+export function shouldSubmitClue(key: string | undefined, canDecide: boolean): boolean {
+  if (!canDecide) return false;
+  if (typeof key !== "string") return false;
+  return key === KEYBOARD_KEYS.ENTER;
+}
+
 export type ClueFeedback = { message: string; tone: "info" | "success" };
 
 type UseClueInputOptions = {
@@ -80,17 +102,7 @@ export function useClueInput({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-      if (!clueEditable) return;
-      if (event.key === KEYBOARD_KEYS.SPACE) {
+      if (shouldFocusClueInput(event, clueEditable)) {
         event.preventDefault();
         inputRef.current?.focus();
       }
@@ -152,7 +164,7 @@ export function useClueInput({
 
   const handleInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      if (event.key === KEYBOARD_KEYS.ENTER && canDecide) {
+      if (shouldSubmitClue(event.key, canDecide)) {
         event.preventDefault();
         void handleDecide();
       }
