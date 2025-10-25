@@ -105,6 +105,5 @@ export function isAutoApplySuppressed(): boolean {
 
 export function clearWaitingServiceWorker() {
   waitingRegistration = null;
-  pendingApplyContext = null;
   announceServiceWorkerUpdate(null);
 }

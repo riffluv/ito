@@ -21,7 +21,9 @@ export const roundStartScenario: Scenario<RoundContext> = [
   },
   {
     action: "audio.play",
-    params: { id: "round_start" },
+    params: (ctx) => ({
+      id: ctx.status === "waiting" ? "order_confirm" : "round_start",
+    }),
     fireAndForget: true,
   },
   {
@@ -46,4 +48,3 @@ export const roundStartScenario: Scenario<RoundContext> = [
     fireAndForget: true,
   },
 ];
-

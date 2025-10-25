@@ -46,6 +46,7 @@ import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
+import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import { selectHostCandidate } from "@/lib/host/HostManager";
 import { showtime } from "@/lib/showtime";
 import { verifyPassword } from "@/lib/security/password";
@@ -425,6 +426,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
     typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
   );
+  const {
+    isUpdateReady: spectatorUpdateReady,
+    isApplying: spectatorUpdateApplying,
+    applyUpdate: applySpectatorUpdate,
+  } = useServiceWorkerUpdate();
   const meId = uid || "";
   const me = players.find((p) => p.id === meId);
   const playersSignature = useMemo(
@@ -967,14 +973,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
 
 
+  const joinInProgress = joinStatus === "joining" || joinStatus === "retrying";
+  const spectatorEligibilityReady = forcedExitReason
+    ? true
+    : !joinInProgress && presenceReady && !loading;
   const canAccess = (isMember || isHost) && !versionMismatchBlocksAccess;
-  const isSpectatorMode =
-    !canAccess ||
-    versionMismatchBlocksAccess ||
-    !!forcedExitReason;
+  const shouldShowSpectator =
+    !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
+  const isSpectatorMode = spectatorEligibilityReady && shouldShowSpectator;
 
   // 観戦理由の判定（文言出し分け用）
-  const spectatorReason: "version-mismatch" | "mid-game" | "waiting" | null = (() => {
+  const rawSpectatorReason: "version-mismatch" | "mid-game" | "waiting" | null = (() => {
     if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
       return "version-mismatch";
     }
@@ -989,6 +998,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     return null;
   })();
+  const spectatorReason = isSpectatorMode ? rawSpectatorReason : null;
   const waitingToRejoin = room?.status === "waiting";
 
   useEffect(() => {
@@ -2041,6 +2051,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </Box>
   );
 
+  const spectatorUpdateButton = spectatorUpdateReady ? (
+    <AppButton
+      palette="brand"
+      size="md"
+      onClick={applySpectatorUpdate}
+      disabled={spectatorUpdateApplying}
+    >
+      {spectatorUpdateApplying ? "適用中..." : "最新アップデートを適用"}
+    </AppButton>
+  ) : null;
+
   const spectatorNotice = isSpectatorMode ? (
     <Box
       position="relative"
@@ -2140,8 +2161,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       >
         {spectatorReason === "version-mismatch" ? (
           <>
+            {spectatorUpdateButton}
             <AppButton
-              palette="brand"
+              palette={spectatorUpdateButton ? "gray" : "brand"}
               size="md"
               onClick={() => {
                 try {
@@ -2168,6 +2190,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           </>
         ) : (
           <>
+            {spectatorUpdateButton}
             <AppButton
               palette="gray"
               visual="outline"

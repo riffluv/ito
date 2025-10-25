@@ -210,6 +210,10 @@ export function GameResultOverlay({
 
     playbackKeyRef.current = key;
 
+    if (revealedAt == null) {
+      return;
+    }
+
     const now = Date.now();
     const isFreshReveal = timestamp == null || now - timestamp <= 6000;
     if (!isFreshReveal) {
