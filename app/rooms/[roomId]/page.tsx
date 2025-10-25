@@ -1069,13 +1069,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     async ({ silent }: { silent: boolean }) => {
       if (!uid) return false;
       if (leavingRef.current) {
-        if (!silent) {
-          logDebug("room-page", "seat-recovery-blocked-leaving", {
-            roomId,
-            uid,
-          });
+        if (room?.status === "waiting") {
+          leavingRef.current = false;
+        } else {
+          if (!silent) {
+            logDebug("room-page", "seat-recovery-blocked-leaving", {
+              roomId,
+              uid,
+            });
+          }
+          return false;
         }
-        return false;
       }
       if (versionMismatchBlocksAccess) {
         if (!silent) {
@@ -1170,7 +1174,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         return false;
       }
     },
-    [uid, versionMismatchBlocksAccess, setPendingRejoinFlag, displayName, roomId, setForcedExitReason]
+    [uid, versionMismatchBlocksAccess, setPendingRejoinFlag, displayName, roomId, setForcedExitReason, room?.status]
   );
 
   const handleRetryJoin = useCallback(async () => {
@@ -1247,6 +1251,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!canAccess && room?.status !== "waiting") return;
 
     forcedExitScheduledRef.current = false;
+    if (room?.status === "waiting") {
+      leavingRef.current = false;
+    }
     setForcedExitReason(null);
 
     if (room?.status === "waiting" && forcedExitRecoveryPendingRef.current) {
