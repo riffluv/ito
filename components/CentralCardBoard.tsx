@@ -96,6 +96,7 @@ interface MagnetSnapshot {
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
+const EMPTY_PLAYER_ID_SET: ReadonlySet<string> = new Set<string>();
 
 const BOARD_FRAME_STYLES = {
   containerType: "inline-size",
@@ -851,6 +852,35 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const optimisticReturningSet = useMemo(() => new Set(optimisticReturningIds), [optimisticReturningIds]);
 
+  const pendingLookup = useMemo<ReadonlySet<string>>(() => {
+    if (!pending || pending.length === 0) {
+      return EMPTY_PLAYER_ID_SET;
+    }
+    const filtered = pending.filter(
+      (id): id is string => typeof id === "string" && id.length > 0
+    );
+    if (filtered.length === 0) {
+      return EMPTY_PLAYER_ID_SET;
+    }
+    return new Set(filtered);
+  }, [pending]);
+
+  const placedLookup = useMemo<ReadonlySet<string>>(() => {
+    if (!Array.isArray(proposal) || proposal.length === 0) {
+      return EMPTY_PLAYER_ID_SET;
+    }
+    const result = new Set<string>();
+    proposal.forEach((id) => {
+      if (typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)) {
+        result.add(id);
+      }
+    });
+    if (result.size === 0) {
+      return EMPTY_PLAYER_ID_SET;
+    }
+    return result;
+  }, [proposal?.join(","), eligibleIdSet]);
+
   const availableEligibleCount = useMemo(() => {
     if (!Array.isArray(eligibleIds)) return 0;
     let count = 0;
@@ -872,25 +902,37 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [playerMap]);
 
   const waitingPlayers = useMemo(() => {
-    const pendingLookup = new Set((pending || []).filter(Boolean));
-    const placedLookup = new Set(
-      (Array.isArray(proposal)
-        ? proposal.filter(
-            (id): id is string =>
-              typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
-          )
-        : [])
-    );
-    return (eligibleIds || [])
-      .map((id) => playerMap.get(id)!)
-      .filter((player) => {
-        if (!player) return false;
-        if (pendingLookup.has(player.id)) return false;
-        if (optimisticReturningSet.has(player.id)) return true;
-        if (placedLookup.has(player.id)) return false;
-        return player.id !== activeId;
-      });
-  }, [eligibleIds, playerMap, proposal?.join(","), eligibleIdSet, activeId, pending, optimisticReturningSet]);
+    if (!Array.isArray(eligibleIds) || eligibleIds.length === 0) {
+      return [];
+    }
+    const result: (PlayerDoc & { id: string })[] = [];
+    eligibleIds.forEach((id) => {
+      const player = playerMap.get(id);
+      if (!player) return;
+      if (pendingLookup !== EMPTY_PLAYER_ID_SET && pendingLookup.has(player.id)) {
+        return;
+      }
+      if (optimisticReturningSet.has(player.id)) {
+        result.push(player);
+        return;
+      }
+      if (placedLookup !== EMPTY_PLAYER_ID_SET && placedLookup.has(player.id)) {
+        return;
+      }
+      if (player.id === activeId) {
+        return;
+      }
+      result.push(player);
+    });
+    return result;
+  }, [
+    Array.isArray(eligibleIds) ? eligibleIds.join(",") : "_",
+    playerMap,
+    pendingLookup,
+    placedLookup,
+    optimisticReturningSet,
+    activeId,
+  ]);
 
   const playDropInvalid = useSoundEffect("drop_invalid");
   const playCardPlace = useSoundEffect("card_place");

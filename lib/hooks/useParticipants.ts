@@ -33,6 +33,19 @@ export type ParticipantsState = {
   error: Error | null;
 };
 
+const createPlayersSignature = (list: readonly (PlayerDoc & { id: string })[]) => {
+  if (!list.length) return "";
+  return list
+    .map((player) => {
+      const ready = player.ready ? "1" : "0";
+      const number = typeof player.number === "number" ? player.number : "_";
+      const order = typeof player.orderIndex === "number" ? player.orderIndex : "_";
+      const clue = typeof player.clue1 === "string" ? player.clue1 : "";
+      return `${player.id}|${ready}|${number}|${order}|${clue}`;
+    })
+    .join(";");
+};
+
 export function useParticipants(
   roomId: string,
   uid: string | null
@@ -52,6 +65,8 @@ export function useParticipants(
   });
   const attachRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reattachTriggerRef = useRef<(() => void) | null>(null);
+  const playersRef = useRef<(PlayerDoc & { id: string })[]>([]);
+  const playersSignatureRef = useRef<string>("");
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
@@ -95,14 +110,64 @@ export function useParticipants(
           orderBy("uid", "asc")
         ),
         (snap) => {
-          const list: (PlayerDoc & { id: string })[] = [];
-          snap.forEach((d) => list.push(d.data() as any));
+          const changes = snap.docChanges();
+          let working =
+            playersRef.current.length > 0 ? playersRef.current.slice() : [];
+
+          if (changes.length === 0 && !snap.metadata.hasPendingWrites) {
+            working = snap.docs.map((doc) => ({
+              ...(doc.data() as PlayerDoc),
+              id: doc.id,
+            }));
+          } else {
+            for (const change of changes) {
+              const payload = {
+                ...(change.doc.data() as PlayerDoc),
+                id: change.doc.id,
+              };
+              if (change.type === "added") {
+                const index =
+                  change.newIndex >= 0 ? change.newIndex : working.length;
+                working.splice(index, 0, payload);
+              } else if (change.type === "modified") {
+                const oldIndex =
+                  change.oldIndex >= 0
+                    ? change.oldIndex
+                    : working.findIndex((p) => p.id === payload.id);
+                if (oldIndex >= 0) {
+                  working.splice(oldIndex, 1);
+                }
+                const newIndex =
+                  change.newIndex >= 0 ? change.newIndex : working.length;
+                working.splice(newIndex, 0, payload);
+              } else if (change.type === "removed") {
+                const removeIndex =
+                  change.oldIndex >= 0
+                    ? change.oldIndex
+                    : working.findIndex((p) => p.id === payload.id);
+                if (removeIndex >= 0) {
+                  working.splice(removeIndex, 1);
+                }
+              }
+            }
+          }
+
+          const signature = createPlayersSignature(working);
+          const previousSignature = playersSignatureRef.current;
+          const shouldUpdatePlayers = signature !== previousSignature;
+          if (shouldUpdatePlayers) {
+            playersRef.current = working;
+            playersSignatureRef.current = signature;
+          }
+
           unstable_batchedUpdates(() => {
-            setPlayers(list);
+            if (shouldUpdatePlayers) {
+              setPlayers(working);
+            }
             setLoading(false);
           });
           setMetric("participants", "lastSnapshotTs", Date.now());
-          setMetric("participants", "playersCount", list.length);
+          setMetric("participants", "playersCount", working.length);
         },
         (err) => {
           unstable_batchedUpdates(() => {
