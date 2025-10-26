@@ -291,7 +291,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   } = props;
 
   // Reveal直前の一瞬だけローカルで手札UIを隠すゲート
-  const { hideHandUI, begin: beginReveal } = useRevealGate(roomStatus as any, roomId);
+  const {
+    hideHandUI,
+    begin: beginReveal,
+    end: endReveal,
+  } = useRevealGate(roomStatus as any, roomId);
 
   // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
   const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
@@ -555,7 +559,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           disabled={!allSubmitted}
           onClick={async () => {
             beginReveal();
-            await evalSorted();
+            try {
+              await evalSorted();
+            } catch {
+              endReveal();
+            }
           }}
         />
       )}

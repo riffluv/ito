@@ -145,7 +145,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     Number.isFinite(idleApplyConfiguredMs) && idleApplyConfiguredMs > 0
       ? idleApplyConfiguredMs
       : 0;
-  useAssetPreloader(ROOM_CORE_ASSETS);
+  const [allowCoreAssetPreload, setAllowCoreAssetPreload] = useState(false);
+  useAssetPreloader(ROOM_CORE_ASSETS, { enabled: allowCoreAssetPreload });
   useEffect(() => {
     initMetricsExport();
   }, []);
@@ -156,6 +157,49 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     setMetric("app", "appVersion", APP_VERSION);
   }, []);
+  useEffect(() => {
+    if (typeof navigator === "undefined") {
+      setAllowCoreAssetPreload(true);
+      return;
+    }
+    const connection: any = (navigator as any).connection ?? null;
+    const slowTypes = new Set(["slow-2g", "2g", "3g"]);
+
+    const evaluate = () => {
+      if (!connection) {
+        setAllowCoreAssetPreload(true);
+        return;
+      }
+      if (connection.saveData === true) {
+        setAllowCoreAssetPreload(false);
+        return;
+      }
+      const effectiveType = typeof connection.effectiveType === "string"
+        ? connection.effectiveType.toLowerCase()
+        : "";
+      if (slowTypes.has(effectiveType)) {
+        setAllowCoreAssetPreload(false);
+        return;
+      }
+      if (typeof connection.downlink === "number" && connection.downlink < 1.5) {
+        setAllowCoreAssetPreload(false);
+        return;
+      }
+      setAllowCoreAssetPreload(true);
+    };
+
+    evaluate();
+    if (connection && typeof connection.addEventListener === "function") {
+      connection.addEventListener("change", evaluate);
+      return () => {
+        connection.removeEventListener("change", evaluate);
+      };
+    }
+    return;
+  }, []);
+  useEffect(() => {
+    setMetric("assets", "corePreloadEligible", allowCoreAssetPreload ? 1 : 0);
+  }, [allowCoreAssetPreload]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     let disposed = false;
@@ -234,8 +278,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
     const runWarmup = async () => {
       if (document.visibilityState !== "visible") return;
+      const warmupStartedAt =
+        typeof performance !== "undefined" ? performance.now() : null;
       await ensureModules();
       if (disposed) return;
+      let tickerRestore: (() => void) | null = null;
       if (soundManager) {
         void soundManager.warmup().catch(() => undefined);
       }
@@ -243,12 +290,34 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         gsapModule.gsap.ticker.wake();
         gsapModule.gsap.ticker.tick();
       }
-      if (pixiModule) {
-        pixiModule.Ticker.shared.autoStart = true;
-        pixiModule.Ticker.shared.start();
-        pixiModule.Ticker.shared.update();
+      try {
+        if (pixiModule) {
+          const ticker = pixiModule.Ticker.shared;
+          const prevAutoStart = ticker.autoStart;
+          const wasStarted = ticker.started ?? false;
+          if (!wasStarted) {
+            ticker.autoStart = true;
+            ticker.start();
+          }
+          ticker.update();
+          tickerRestore = () => {
+            ticker.autoStart = prevAutoStart;
+            if (!wasStarted && ticker.started) {
+              ticker.stop();
+            }
+          };
+        }
+        pumpFrames(3);
+      } finally {
+        tickerRestore?.();
+        if (warmupStartedAt !== null) {
+          setMetric(
+            "warmup",
+            "roomWarmupMs",
+            Math.round(performance.now() - warmupStartedAt)
+          );
+        }
       }
-      pumpFrames(3);
     };
 
     const cancelScheduledWarmup = () => {
@@ -357,18 +426,60 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
     let idleHandle: number | null = null;
     let timeoutHandle: number | null = null;
+    let interactionBlocked = false;
+    let interactionReleaseTimeout: number | null = null;
+
+    const schedulePrefetch = (delay = 0) => {
+      if (cancelled) return;
+      if (idleHandle !== null) {
+        win.cancelIdleCallback?.(idleHandle);
+        idleHandle = null;
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
+      if (delay > 0) {
+        timeoutHandle = window.setTimeout(() => {
+          timeoutHandle = null;
+          if (cancelled) return;
+          triggerPrefetch();
+        }, delay);
+        return;
+      }
+      if (typeof win.requestIdleCallback === "function") {
+        idleHandle = win.requestIdleCallback(triggerPrefetch, { timeout: 2000 });
+      } else {
+        timeoutHandle = window.setTimeout(triggerPrefetch, 800);
+      }
+    };
 
     const triggerPrefetch = () => {
       idleHandle = null;
       timeoutHandle = null;
+      if (interactionBlocked) {
+        schedulePrefetch(1200);
+        return;
+      }
       void runPrefetch();
     };
 
-    if (typeof win.requestIdleCallback === "function") {
-      idleHandle = win.requestIdleCallback(triggerPrefetch, { timeout: 2000 });
-    } else {
-      timeoutHandle = window.setTimeout(triggerPrefetch, 600);
-    }
+    const handleInteraction = () => {
+      interactionBlocked = true;
+      if (interactionReleaseTimeout !== null) {
+        window.clearTimeout(interactionReleaseTimeout);
+      }
+      interactionReleaseTimeout = window.setTimeout(() => {
+        interactionBlocked = false;
+        schedulePrefetch(0);
+      }, 1600);
+    };
+
+    window.addEventListener("pointerdown", handleInteraction, { passive: true });
+    window.addEventListener("touchstart", handleInteraction, { passive: true });
+    window.addEventListener("keydown", handleInteraction, { passive: true });
+
+    schedulePrefetch(0);
 
     return () => {
       cancelled = true;
@@ -378,6 +489,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       if (timeoutHandle !== null) {
         window.clearTimeout(timeoutHandle);
       }
+      if (interactionReleaseTimeout !== null) {
+        window.clearTimeout(interactionReleaseTimeout);
+      }
+      window.removeEventListener("pointerdown", handleInteraction);
+      window.removeEventListener("touchstart", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
     };
   }, []);
   useEffect(() => {
