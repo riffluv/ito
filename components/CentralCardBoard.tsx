@@ -572,6 +572,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [orderList?.join(","), proposal?.join(",")]
   );
 
+  // 在室プレイヤーのみを許可（presence + players）
+  const eligibleIdSet = useMemo(() => {
+    const set = new Set<string>();
+    (eligibleIds || []).forEach((id) => {
+      if (playerMap.has(id)) set.add(id);
+    });
+    return set;
+  }, [Array.isArray(eligibleIds) ? eligibleIds.join(",") : "_", playerMap]);
+
   const me = useMemo(() => playerMap.get(meId), [playerMap, meId]);
   const hasNumber = useMemo(() => !!me?.number, [me?.number]);
   const mePlaced = useMemo(() => placedIds.has(meId), [placedIds, meId]);
@@ -769,16 +778,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const waitingPlayers = useMemo(() => {
     const pendingLookup = new Set((pending || []).filter(Boolean));
+    const placedLookup = new Set(
+      (Array.isArray(proposal)
+        ? proposal.filter(
+            (id): id is string =>
+              typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+          )
+        : [])
+    );
     return (eligibleIds || [])
       .map((id) => playerMap.get(id)!)
       .filter((player) => {
         if (!player) return false;
         if (pendingLookup.has(player.id)) return false;
         if (optimisticReturningSet.has(player.id)) return true;
-        if (placedIds.has(player.id)) return false;
+        if (placedLookup.has(player.id)) return false;
         return player.id !== activeId;
       });
-  }, [eligibleIds, playerMap, placedIds, activeId, pending, optimisticReturningSet]);
+  }, [eligibleIds, playerMap, proposal?.join(","), eligibleIdSet, activeId, pending, optimisticReturningSet]);
 
   const playDropInvalid = useSoundEffect("drop_invalid");
   const playCardPlace = useSoundEffect("card_place");
@@ -980,27 +997,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     ]
   );
 
-  const activeProposal = useMemo<(string | null)[]>(() => {
+  /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
     const normalizedOrder = (orderList || []).map((id) => (typeof id === "string" && id.length > 0 ? id : null));
 
+    // reveal/finished は履歴どおり表示
     if (roomStatus === "finished" || roomStatus === "reveal") {
       return normalizedOrder;
     }
 
+    // 進行中は在室メンバーのみ反映
     if (Array.isArray(proposal)) {
-      const normalizedProposal = proposal.map((id) => (typeof id === "string" && id.length > 0 ? id : null));
-      if (normalizedProposal.some(Boolean)) {
-        return normalizedProposal;
-      }
+      const filtered = proposal.filter(
+        (id): id is string => typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+      );
+      if (filtered.length > 0) return filtered;
     }
 
-    // リビール直前に proposal がクリアされ、orderList だけが更新された瞬間をフォロー
+    // リビール直前のフォロー（在室メンバーに限定）
     if (normalizedOrder.some(Boolean)) {
-      return normalizedOrder;
+      const filteredOrder = normalizedOrder.filter(
+        (id): id is string => typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+      );
+      if (filteredOrder.length > 0) return filteredOrder;
     }
 
     return [];
-  }, [roomStatus, orderList?.join(","), proposal?.join(",")]);
+  }, [roomStatus, orderList?.join(","), proposal?.join(","), eligibleIdSet]);
 
   const proposalLength = activeProposal.length;
 
@@ -1535,3 +1557,4 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 };
 
 export default CentralCardBoard;
+

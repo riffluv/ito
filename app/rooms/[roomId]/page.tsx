@@ -36,12 +36,8 @@ import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { forceDetachAll } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
-import {
-  areAllCluesReady,
-  getClueTargetIds,
-  getPresenceEligibleIds,
-} from "@/lib/game/selectors";
-import { requestSeat, SeatRequestSource } from "@/lib/game/service";
+import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
+import { requestSeat, SeatRequestSource, pruneProposalByEligible } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
@@ -78,6 +74,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { APP_VERSION } from "@/lib/constants/appVersion";
+import { PRUNE_PROPOSAL_DEBOUNCE_MS } from '@/lib/constants/uiTimings';
 
 const ROOM_CORE_ASSETS = [
   "/images/flag.webp",
@@ -2049,6 +2046,40 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     [players, clueTargetIds]
   );
 
+  // 在室外IDが proposal に混入している場合の自動クリーンアップ（clue中のみ、軽いデバウンス）
+  const pruneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pruneSigRef = useRef<string>("");
+  useEffect(() => {
+    if (!room || room.status !== "clue") {
+      if (pruneTimerRef.current) {
+        clearTimeout(pruneTimerRef.current);
+        pruneTimerRef.current = null;
+      }
+      pruneSigRef.current = "";
+      return;
+    }
+    const proposal: (string | null)[] = Array.isArray(room?.order?.proposal)
+      ? (room.order!.proposal as (string | null)[])
+      : [];
+    const extra = proposal.filter(
+      (pid): pid is string => typeof pid === "string" && !eligibleIds.includes(pid)
+    );
+    const sig = `${roomId}|${room?.round || 0}|${proposal.join(',')}|${eligibleIds.join(',')}`;
+    if (extra.length === 0 || pruneSigRef.current === sig) return;
+    pruneSigRef.current = sig;
+    if (pruneTimerRef.current) {
+      clearTimeout(pruneTimerRef.current);
+      pruneTimerRef.current = null;
+    }
+    pruneTimerRef.current = setTimeout(() => { pruneProposalByEligible(roomId, eligibleIds).catch(() => {}); }, PRUNE_PROPOSAL_DEBOUNCE_MS);
+    return () => {
+      if (pruneTimerRef.current) {
+        clearTimeout(pruneTimerRef.current);
+        pruneTimerRef.current = null;
+      }
+    };
+  }, [room?.status, room?.order?.proposal, room?.round, eligibleIds.join(","), roomId]);
+
   useEffect(() => {
     if (!isHost || !allCluesReady) {
       return;
@@ -2166,80 +2197,46 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     setDealRecoveryDismissed(true);
   }, []);
 
-  // 笞｡ PERFORMANCE: slotCount險育ｮ励ｒuseMemo蛹・
-  const slotCount = useMemo(() => {
-    if (!room || !room.status) return 0;
-    if (room.status === "reveal" || room.status === "finished") {
-      return (room.order?.list || []).length;
-    }
-    const dealPlayers = Array.isArray(room?.deal?.players)
-      ? (room.deal?.players ?? [])
-      : [];
-    const proposalList = Array.isArray(room?.order?.proposal)
-      ? (room.order?.proposal ?? [])
-      : [];
-    const dealLen = dealPlayers.length;
-    const propLen = proposalList.length;
-    return Math.max(dealLen, propLen, eligibleIds.length);
-  }, [
-    room?.status,
-    room?.order?.list,
-    room?.deal?.players,
-    room?.order?.proposal,
-    eligibleIds.length,
-  ]);
+  // slotCount: 進行中は「オンライン在室数」を優先。presence未確定時は提出数/配札数にフォールバック。
+  const slotCount = useMemo(() => computeSlotCount({
+    status: room?.status || "waiting",
+    orderList: room?.order?.list || [],
+    dealPlayers: Array.isArray(room?.deal?.players) ? room.deal!.players : [],
+    proposal: Array.isArray(room?.order?.proposal) ? room.order!.proposal : [],
+    presenceReady,
+    onlineUids,
+    playersCount: players.length,
+  }), [room?.status, room?.order?.list, room?.deal?.players, room?.order?.proposal, presenceReady, onlineUidSignature, players.length]);
+  const orderList = room?.order?.list;
 
+  const submittedPlayerIds = useMemo(() => {
+    const ids = new Set<string>();
+    const proposal = room?.order?.proposal;
+    if (Array.isArray(proposal)) {
+      proposal.forEach((pid) => {
+        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
+      });
+    }
+    if (Array.isArray(orderList)) {
+      orderList.forEach((pid) => {
+        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
+      });
+    }
+    return Array.from(ids);
+  }, [room?.order?.proposal, orderList]);
 
   const canStartSorting = useMemo(() => {
     const resolveMode = room?.options?.resolveMode;
     const roomStatus = room?.status;
-
-    if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
-      return false;
-    }
-
+    if (resolveMode !== "sort-submit" || roomStatus !== "clue") return false;
     const playerMap = new Map(players.map((p) => [p.id, p]));
     const placedIds = new Set(room?.order?.proposal ?? []);
     let waitingCount = 0;
-
     for (const id of eligibleIds) {
       const candidate = playerMap.get(id);
-      if (candidate && !placedIds.has(candidate.id)) {
-        waitingCount += 1;
-      }
+      if (candidate && !placedIds.has(candidate.id)) waitingCount += 1;
     }
-
     return waitingCount === 0;
-  }, [
-    room?.options?.resolveMode,
-    room?.status,
-    players,
-    eligibleIds,
-    room?.order?.proposal,
-  ]);
-
-  const orderList = room?.order?.list;
-  const submittedPlayerIds = useMemo(() => {
-    const ids = new Set<string>();
-    const proposal = room?.order?.proposal;
-
-    if (Array.isArray(proposal)) {
-      proposal.forEach((pid) => {
-        if (typeof pid === "string" && pid.trim().length > 0) {
-          ids.add(pid);
-        }
-      });
-    }
-
-    if (Array.isArray(orderList)) {
-      orderList.forEach((pid) => {
-        if (typeof pid === "string" && pid.trim().length > 0) {
-          ids.add(pid);
-        }
-      });
-    }
-
-    return Array.from(ids);
   }, [room?.order?.proposal, orderList]);
 
   const meHasPlacedCard = submittedPlayerIds.includes(meId);
@@ -2939,4 +2936,9 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
+
+
+
+
 
