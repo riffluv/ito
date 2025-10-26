@@ -11,6 +11,7 @@ import {
   evaluateSorted,
   shouldFinishAfterPlay,
 } from "@/lib/game/rules";
+import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
 import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
 import {
@@ -556,10 +557,62 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     }
 
     // プレイヤーの数字を取得して保存（リアルタイム判定で使用）
-    const numbers: Record<string, number | null | undefined> = {};
-    for (const pid of list) {
-      const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
-      numbers[pid] = (pSnap.data() as any)?.number;
+    let numbers: Record<string, number | null | undefined> = {};
+    let numbersResolved = false;
+
+    if (
+      roundPlayers &&
+      typeof room?.deal?.seed === "string" &&
+      room.deal.seed
+    ) {
+      const min =
+        typeof room?.deal?.min === "number" ? room.deal.min : 1;
+      const max =
+        typeof room?.deal?.max === "number" ? room.deal.max : 100;
+      const generated = generateDeterministicNumbers(
+        roundPlayers.length,
+        min,
+        max,
+        String(room.deal.seed)
+      );
+      const deterministicMap: Record<string, number | null> = {};
+      roundPlayers.forEach((pid, index) => {
+        deterministicMap[pid] = generated[index] ?? null;
+      });
+      numbersResolved = list.every((pid) => pid in deterministicMap);
+      if (numbersResolved) {
+        numbers = list.reduce<Record<string, number | null | undefined>>(
+          (acc, pid) => {
+            acc[pid] = deterministicMap[pid] ?? null;
+            return acc;
+          },
+          {}
+        );
+      }
+    }
+
+    if (!numbersResolved && room?.order?.numbers) {
+      const existing =
+        room.order.numbers as Record<string, number | null | undefined>;
+      numbersResolved = list.every((pid) => pid in existing);
+      if (numbersResolved) {
+        numbers = list.reduce<Record<string, number | null | undefined>>(
+          (acc, pid) => {
+            acc[pid] = existing[pid] ?? null;
+            return acc;
+          },
+          {}
+        );
+      }
+    }
+
+    if (!numbersResolved) {
+      const fetched: Record<string, number | null | undefined> = {};
+      for (const pid of list) {
+        const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
+        fetched[pid] = (pSnap.data() as any)?.number;
+      }
+      numbers = fetched;
     }
 
     // サーバー側でも判定を行い、結果を保存

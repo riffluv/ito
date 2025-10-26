@@ -24,6 +24,7 @@ interface UseRevealAnimationProps {
     list: string[];
     numbers: Record<string, number | null | undefined>;
   } | null;
+  startPending?: boolean;
 }
 
 export function useRevealAnimation({
@@ -32,6 +33,7 @@ export function useRevealAnimation({
   resolveMode,
   orderListLength,
   orderData,
+  startPending = false,
 }: UseRevealAnimationProps) {
   const [revealAnimating, setRevealAnimating] = useState(false);
   const [revealIndex, setRevealIndex] = useState(0);
@@ -39,6 +41,8 @@ export function useRevealAnimation({
     null
   );
   const prevStatusRef = useRef(roomStatus);
+  const startSignalRef = useRef<boolean>(false);
+  const finalizePendingRef = useRef(false);
 
   // Start reveal animation: useLayoutEffect so we set the flag before the
   // browser paints. This avoids a render where `roomStatus === 'reveal'` but
@@ -47,34 +51,42 @@ export function useRevealAnimation({
   useLayoutEffect(() => {
     const prev = prevStatusRef.current;
     const becameReveal = prev !== "reveal" && roomStatus === "reveal";
-    const isRevealNow = roomStatus === "reveal";
+    const startSignal = (!!startPending || roomStatus === "reveal") && orderListLength > 0;
+    const startRaised = startSignal && !startSignalRef.current;
     const shouldStart =
       resolveMode === "sort-submit" &&
       orderListLength > 0 &&
-      (becameReveal || (isRevealNow && !revealAnimating && revealIndex === 0));
+      (becameReveal || (startRaised && !revealAnimating));
 
     if (shouldStart) {
       setRevealAnimating(true);
       setRevealIndex(0);
       setRealtimeResult(null); // リセット
-      logDebug("reveal", "start", { orderListLength });
+      logDebug("reveal", "start", {
+        orderListLength,
+        reason: becameReveal ? "status" : "pending-signal",
+      });
     }
+    startSignalRef.current = startSignal;
     prevStatusRef.current = roomStatus;
-  }, [roomStatus, resolveMode, orderListLength, revealAnimating, revealIndex]);
+  }, [roomStatus, resolveMode, orderListLength, revealAnimating, startPending]);
 
   // Handle reveal animation progression
   useEffect(() => {
     if (!revealAnimating) return;
 
-    if (revealIndex >= orderListLength) {
+    if (revealIndex >= orderListLength && orderListLength > 0) {
       logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
-      // Keep the animation flag true during the linger period so the UI
-      // doesn't revert to the "face-down" state while waiting to finalize.
+      finalizePendingRef.current = true;
+      const attemptFinalize = () => {
+        if (!finalizePendingRef.current) return;
+        if (roomStatus === "reveal") {
+          finalizePendingRef.current = false;
+          finalizeReveal(roomId).catch(() => void 0);
+        }
+      };
       const linger = setTimeout(() => {
-        // Trigger finalize on the server; do NOT change revealAnimating
-        // here. We'll observe `roomStatus` and clear the flag when the
-        // server-side state moves to 'finished'.
-        finalizeReveal(roomId).catch(() => void 0);
+        attemptFinalize();
       }, REVEAL_LINGER);
       return () => clearTimeout(linger);
     }
@@ -164,10 +176,14 @@ export function useRevealAnimation({
   useEffect(() => {
     if (roomStatus === "finished") {
       setRevealAnimating(false);
+      finalizePendingRef.current = false;
       // リアルタイム結果は保持する（最終表示で使用するため）
       // setRealtimeResult(null);
+    } else if (roomStatus === "reveal" && finalizePendingRef.current) {
+      finalizePendingRef.current = false;
+      finalizeReveal(roomId).catch(() => void 0);
     }
-  }, [roomStatus]);
+  }, [roomStatus, roomId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

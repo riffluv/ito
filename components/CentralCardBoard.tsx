@@ -841,6 +841,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             numbers: orderNumbers,
           }
         : null,
+    startPending: uiRevealPending || localRevealPending,
   });
 
   useEffect(() => {
