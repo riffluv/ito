@@ -2717,10 +2717,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       {joinStatusMessage}
     </Box>
   ) : null;
-  const safeUpdateBannerNode =
-    safeUpdateActive && safeUpdateFeatureEnabled ? (
-      <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
-    ) : null;
+  // 更新告知の見える化: バージョン不一致だけでなく、SWが待機中でも表示
+  const shouldShowUpdateBanner =
+    safeUpdateFeatureEnabled && (hasWaitingUpdate || safeUpdateActive);
+  const safeUpdateBannerNode = shouldShowUpdateBanner ? (
+    <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
+  ) : null;
   const versionMismatchOverlay =
     safeUpdateActive && versionMismatchGuarded ? (
       <Box
