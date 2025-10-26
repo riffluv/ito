@@ -1,0 +1,561 @@
+"use client";
+
+// HUD は初期表示の軽量化を優先し、必要になるまで読み込まない。
+// import { Hud } from "@/components/Hud";
+
+// 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
+// PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
+import CentralCardBoard from "@/components/CentralCardBoard";
+import NameDialog from "@/components/NameDialog";
+import RoomNotifyBridge from "@/components/RoomNotifyBridge";
+import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
+import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
+import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
+import dynamic from "next/dynamic";
+
+import { lazy, Suspense } from "react";
+const SettingsModal = lazy(() => import("@/components/SettingsModal"));
+import { AppButton } from "@/components/ui/AppButton";
+import DragonQuestParty from "@/components/ui/DragonQuestParty";
+import GameLayout from "@/components/ui/GameLayout";
+import MiniHandDock from "@/components/ui/MiniHandDock";
+import { notify } from "@/components/ui/notify";
+import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
+import { useTransition } from "@/components/ui/TransitionProvider";
+import UniversalMonitor from "@/components/UniversalMonitor";
+import { useAuth } from "@/context/AuthContext";
+import { db, firebaseEnabled } from "@/lib/firebase/client";
+import {
+  resetPlayerState,
+  setPlayerName,
+} from "@/lib/firebase/players";
+import {
+  PRESENCE_STALE_MS,
+} from "@/lib/constants/presence";
+import { useAssetPreloader } from "@/hooks/useAssetPreloader";
+import { forceDetachAll } from "@/lib/firebase/presence";
+import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
+import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
+import {
+  areAllCluesReady,
+  getClueTargetIds,
+  getPresenceEligibleIds,
+} from "@/lib/game/selectors";
+import { requestSeat, SeatRequestSource } from "@/lib/game/service";
+import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
+import { useRoomState } from "@/lib/hooks/useRoomState";
+import { useHostClaim } from "@/lib/hooks/useHostClaim";
+import { useHostPruning } from "@/lib/hooks/useHostPruning";
+import { useForcedExit } from "@/lib/hooks/useForcedExit";
+import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
+import { selectHostCandidate } from "@/lib/host/HostManager";
+import { showtime } from "@/lib/showtime";
+import { verifyPassword } from "@/lib/security/password";
+import {
+  assignNumberIfNeeded,
+  getRoomServiceErrorCode,
+  joinRoomFully,
+} from "@/lib/services/roomService";
+import { sortPlayersByJoinOrder } from "@/lib/utils";
+import { logDebug, logError, logInfo } from "@/lib/utils/log";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { initMetricsExport } from "@/lib/utils/metricsExport";
+import { traceAction, traceError } from "@/lib/utils/trace";
+  import {
+    applyServiceWorkerUpdate,
+    getWaitingServiceWorker,
+    resyncWaitingServiceWorker,
+    subscribeToServiceWorkerUpdates,
+    suppressAutoApply,
+    clearAutoApplySuppression,
+  } from "@/lib/serviceWorker/updateChannel";
+import {
+  getCachedRoomPasswordHash,
+  storeRoomPasswordHash,
+} from "@/lib/utils/roomPassword";
+import { UI_TOKENS } from "@/theme/layout";
+import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
+import { APP_VERSION } from "@/lib/constants/appVersion";
+
+const ROOM_CORE_ASSETS = [
+  "/images/flag.webp",
+  "/images/flag2.webp",
+  "/images/flag3.webp",
+  "/images/card1.webp",
+  "/images/card2.webp",
+  "/images/card3.webp",
+  "/images/hanepen1.webp",
+  "/images/hanepen2.webp",
+  "/images/backgrounds/hd2d/bg1.png",
+] as const;
+
+const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
+  ssr: false,
+  loading: () => null,
+});
+
+const MvpLedger = dynamic(
+  () => import("@/components/ui/MvpLedger").then((mod) => ({ default: mod.MvpLedger })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+const RoomPasswordPrompt = dynamic(
+  () =>
+    import("@/components/RoomPasswordPrompt").then((mod) => ({
+      default: mod.RoomPasswordPrompt,
+    })),
+  { ssr: false, loading: () => null }
+);
+
+const PREFETCH_COMPONENT_LOADERS: Array<() => Promise<unknown>> = [
+  () => import("@/components/SettingsModal"),
+  () => import("@/components/ui/MinimalChat"),
+  () => import("@/components/RoomPasswordPrompt").then((mod) => mod.RoomPasswordPrompt),
+  () => import("@/components/ui/Tooltip"),
+];
+
+type SafeUpdateTrigger =
+  | "status:waiting"
+  | "status:reveal-finished"
+  | "status:finished-waiting"
+  | "idle";
+
+type RoomPageContentProps = {
+  roomId: string;
+};
+
+function RoomPageContent({ roomId }: RoomPageContentProps) {
+  const { user, displayName, setDisplayName, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const transition = useTransition();
+  const uid = user?.uid || null;
+  const soundManager = useSoundManager();
+  const soundSettings = useSoundSettings();
+  const bgmPlayingRef = useRef(false);
+  const safeUpdateFeatureEnabled =
+    process.env.NEXT_PUBLIC_FEATURE_SAFE_UPDATE === "1";
+  const idleApplyConfiguredMs = safeUpdateFeatureEnabled
+    ? Number.parseInt(process.env.NEXT_PUBLIC_FEATURE_IDLE_APPLY_MS ?? "", 10)
+    : Number.NaN;
+  const idleApplyMs =
+    Number.isFinite(idleApplyConfiguredMs) && idleApplyConfiguredMs > 0
+      ? idleApplyConfiguredMs
+      : 0;
+  useAssetPreloader(ROOM_CORE_ASSETS);
+  useEffect(() => {
+    initMetricsExport();
+  }, []);
+  useEffect(() => {
+    setMetric("safeUpdate", "deferred", 0);
+    setMetric("safeUpdate", "applied", 0);
+  }, []);
+  useEffect(() => {
+    setMetric("app", "appVersion", APP_VERSION);
+  }, []);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let disposed = false;
+    const rafIds: number[] = [];
+    let gsapModule: typeof import("gsap") | null = null;
+    let pixiModule: typeof import("pixi.js") | null = null;
+    let moduleLoadPromise: Promise<void> | null = null;
+    let warmupIdleHandle: number | null = null;
+    let warmupTimeoutHandle: number | null = null;
+    let modulePrefetchCancel: (() => void) | null = null;
+
+    const ensureModules = () => {
+      if (moduleLoadPromise) {
+        return moduleLoadPromise;
+      }
+      moduleLoadPromise = (async () => {
+        if (!gsapModule) {
+          try {
+            gsapModule = await import("gsap");
+          } catch {
+            gsapModule = null;
+          }
+        }
+        if (!pixiModule) {
+          try {
+            pixiModule = await import("pixi.js");
+          } catch {
+            pixiModule = null;
+          }
+        }
+      })().catch(() => {
+        moduleLoadPromise = null;
+      });
+      return moduleLoadPromise ?? Promise.resolve();
+    };
+
+    const scheduleModulePrefetch = () => {
+      if (typeof window === "undefined") return;
+      const win = window as Window &
+        typeof globalThis & {
+          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+          cancelIdleCallback?: (handle: number) => void;
+        };
+      if (typeof win.requestIdleCallback === "function") {
+        const id = win.requestIdleCallback(
+          () => {
+            modulePrefetchCancel = null;
+            void ensureModules();
+          },
+          { timeout: 1200 }
+        );
+        modulePrefetchCancel = () => win.cancelIdleCallback?.(id);
+      } else {
+        const timeoutId = window.setTimeout(() => {
+          modulePrefetchCancel = null;
+          void ensureModules();
+        }, 400);
+        modulePrefetchCancel = () => window.clearTimeout(timeoutId);
+      }
+    };
+    scheduleModulePrefetch();
+
+    const pumpFrames = (remaining: number) => {
+      if (disposed || remaining <= 0) return;
+      const id = requestAnimationFrame(() => {
+        if (gsapModule) {
+          gsapModule.gsap.ticker.tick();
+        }
+        if (pixiModule) {
+          pixiModule.Ticker.shared.update();
+        }
+        pumpFrames(remaining - 1);
+      });
+      rafIds.push(id);
+    };
+
+    const runWarmup = async () => {
+      if (document.visibilityState !== "visible") return;
+      await ensureModules();
+      if (disposed) return;
+      if (soundManager) {
+        void soundManager.warmup().catch(() => undefined);
+      }
+      if (gsapModule) {
+        gsapModule.gsap.ticker.wake();
+        gsapModule.gsap.ticker.tick();
+      }
+      if (pixiModule) {
+        pixiModule.Ticker.shared.autoStart = true;
+        pixiModule.Ticker.shared.start();
+        pixiModule.Ticker.shared.update();
+      }
+      pumpFrames(3);
+    };
+
+    const cancelScheduledWarmup = () => {
+      const win = window as Window &
+        typeof globalThis & {
+          cancelIdleCallback?: (handle: number) => void;
+        };
+      if (warmupIdleHandle !== null) {
+        win.cancelIdleCallback?.(warmupIdleHandle);
+        warmupIdleHandle = null;
+      }
+      if (warmupTimeoutHandle !== null) {
+        window.clearTimeout(warmupTimeoutHandle);
+        warmupTimeoutHandle = null;
+      }
+    };
+
+    const scheduleWarmup = () => {
+      cancelScheduledWarmup();
+      const win = window as Window &
+        typeof globalThis & {
+          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        };
+      if (typeof win.requestIdleCallback === "function") {
+        warmupIdleHandle = win.requestIdleCallback(
+          () => {
+            warmupIdleHandle = null;
+            void runWarmup();
+          },
+          { timeout: 1200 }
+        );
+      } else {
+        warmupTimeoutHandle = window.setTimeout(() => {
+          warmupTimeoutHandle = null;
+          void runWarmup();
+        }, 300);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      cancelScheduledWarmup();
+      void runWarmup();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange, {
+      passive: true,
+    });
+
+    if (document.visibilityState === "visible") {
+      scheduleWarmup();
+    }
+
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      rafIds.forEach((id) => cancelAnimationFrame(id));
+      cancelScheduledWarmup();
+      modulePrefetchCancel?.();
+    };
+  }, [soundManager]);
+
+  const shouldPlayBgm =
+    !!soundManager &&
+    !soundSettings.muted &&
+    (soundSettings.categoryVolume?.ambient ?? 0) > 0.001;
+
+  useEffect(() => {
+    if (!soundManager) return;
+    if (shouldPlayBgm) {
+      bgmPlayingRef.current = true;
+      void soundManager.play("bgm1").catch(() => {
+        bgmPlayingRef.current = false;
+      });
+    } else if (bgmPlayingRef.current) {
+      soundManager.stop("bgm1");
+      bgmPlayingRef.current = false;
+    }
+    return () => {
+      if (bgmPlayingRef.current) {
+        soundManager.stop("bgm1");
+        bgmPlayingRef.current = false;
+      }
+    };
+  }, [soundManager, shouldPlayBgm]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    const win = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+
+    const runPrefetch = async () => {
+      for (const loader of PREFETCH_COMPONENT_LOADERS) {
+        if (cancelled) break;
+        try {
+          await loader();
+        } catch {
+          // ignore individual loader failure
+        }
+      }
+    };
+
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const triggerPrefetch = () => {
+      idleHandle = null;
+      timeoutHandle = null;
+      void runPrefetch();
+    };
+
+    if (typeof win.requestIdleCallback === "function") {
+      idleHandle = win.requestIdleCallback(triggerPrefetch, { timeout: 2000 });
+    } else {
+      timeoutHandle = window.setTimeout(triggerPrefetch, 600);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle !== null) {
+        win.cancelIdleCallback?.(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        window.clearTimeout(timeoutHandle);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    return subscribeToServiceWorkerUpdates((registration) => {
+      setHasWaitingUpdate(!!registration);
+    });
+  }, []);
+  useEffect(() => {
+    void resyncWaitingServiceWorker("room:mount");
+    if (typeof document === "undefined") {
+      return;
+    }
+    const handleVisibilityResync = () => {
+      if (document.visibilityState === "visible") {
+        void resyncWaitingServiceWorker("room:visible");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityResync, true);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityResync, true);
+    };
+  }, []);
+  const [passwordVerified, setPasswordVerified] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordDialogLoading, setPasswordDialogLoading] = useState(false);
+  const [passwordDialogError, setPasswordDialogError] = useState<string | null>(
+    null
+  );
+  const {
+    room,
+    players,
+    onlineUids,
+    presenceReady,
+    onlinePlayers,
+    loading,
+    isHost,
+    isMember,
+    detachNow,
+    leavingRef,
+    joinStatus,
+  } = useRoomState(
+    roomId,
+    uid,
+    passwordVerified ? (displayName ?? null) : null
+  );
+
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [dealRecoveryDismissed, setDealRecoveryDismissed] = useState(false);
+  const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
+  const dealRecoveryTimerRef = useRef<number | null>(null);
+  const isGameFinished = room?.status === "finished";
+  const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
+  const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
+  const joinCounterRef = useRef(0);
+  const previousRoundRef = useRef<number | null>(null);
+  const previousStatusRef = useRef<string | null>(null);
+  const initialStatusHydratedRef = useRef(false);
+  const lastRevealTsRef = useRef<number | null>(null);
+  const [joinVersion, setJoinVersion] = useState(0);
+  const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
+    typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
+  );
+  const [versionMismatchGuarded, setVersionMismatchGuarded] = useState(false);
+  const {
+    isUpdateReady: spectatorUpdateReady,
+    isApplying: spectatorUpdateApplying,
+    hasError: spectatorUpdateFailed,
+    retryUpdate: retrySpectatorUpdate,
+    applyUpdate: applySpectatorUpdate,
+  } = useServiceWorkerUpdate();
+  const meId = uid || "";
+  const me = players.find((p) => p.id === meId);
+  const playersSignature = useMemo(
+    () => players.map((p) => p.id).join(","),
+    [players]
+  );
+  const dealPlayers = useMemo(() => {
+    const list = room?.deal?.players;
+    if (!Array.isArray(list)) {
+      return [] as string[];
+    }
+    return list.filter((id): id is string => typeof id === "string");
+  }, [room?.deal]);
+  const dealPlayersSignature = useMemo(
+    () => (dealPlayers.length > 0 ? dealPlayers.join(",") : ""),
+    [dealPlayers]
+  );
+  const requiredSwVersion = useMemo(() => {
+    const raw = room?.requiredSwVersion;
+    if (typeof raw !== "string") return "";
+    return raw.trim();
+  }, [room?.requiredSwVersion]);
+  const versionMismatch = useMemo(() => {
+    if (!requiredSwVersion) return false;
+    return requiredSwVersion !== APP_VERSION;
+  }, [requiredSwVersion]);
+  const safeUpdateActive = safeUpdateFeatureEnabled && versionMismatch;
+  const versionMismatchBlocksAccess = versionMismatch && !safeUpdateFeatureEnabled;
+  useEffect(() => {
+    if (requiredSwVersion) {
+      setMetric("app", "requiredSwVersion", requiredSwVersion);
+      setMetric("app", "versionMismatch", requiredSwVersion === APP_VERSION ? 0 : 1);
+    } else {
+      setMetric("app", "requiredSwVersion", "");
+      setMetric("app", "versionMismatch", 0);
+    }
+  }, [requiredSwVersion]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!safeUpdateFeatureEnabled || !versionMismatch) {
+      setVersionMismatchGuarded(false);
+      if (versionGuardTimerRef.current !== null) {
+        window.clearTimeout(versionGuardTimerRef.current);
+        versionGuardTimerRef.current = null;
+      }
+      return;
+    }
+    if (versionGuardTimerRef.current !== null) {
+      window.clearTimeout(versionGuardTimerRef.current);
+    }
+    versionGuardTimerRef.current = window.setTimeout(() => {
+      setVersionMismatchGuarded(true);
+    }, 6000);
+    return () => {
+      if (versionGuardTimerRef.current !== null) {
+        window.clearTimeout(versionGuardTimerRef.current);
+        versionGuardTimerRef.current = null;
+      }
+    };
+  }, [safeUpdateFeatureEnabled, versionMismatch]);
+  const versionMismatchHandledRef = useRef(false);
+  const safeUpdateEnteredRef = useRef(false);
+  const safeUpdateStatusRef = useRef<string | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
+  const lastInteractionTsRef = useRef<number>(
+    typeof window === "undefined" ? 0 : Date.now()
+  );
+  const versionGuardTimerRef = useRef<number | null>(null);
+  const currentRoomStatus = room?.status ?? null;
+  // プレイ中は自動適用（グローバル）も抑止し、待機に戻ったら解除
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) return;
+    if (currentRoomStatus === "waiting") {
+      clearAutoApplySuppression();
+      return;
+    }
+    if (
+      currentRoomStatus === "clue" ||
+      currentRoomStatus === "reveal" ||
+      currentRoomStatus === "finished"
+    ) {
+      suppressAutoApply();
+    }
+  }, [safeUpdateFeatureEnabled, currentRoomStatus]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) {
+      safeUpdateEnteredRef.current = false;
+      return;
+    }
+    if (safeUpdateActive) {
+      if (!safeUpdateEnteredRef.current) {
+        safeUpdateEnteredRef.current = true;
+        bumpMetric("safeUpdate", "deferred");
+      }
+    } else {
+      safeUpdateEnteredRef.current = false;
+    }
+  }, [safeUpdateActive, safeUpdateFeatureEnabled]);
+  const tryApplyServiceWorker = useCallback(
+    (reason: SafeUpdateTrigger) => {
+      if (!safeUpdateFeatureEnabled) return false;
+      if (currentRoomStatus !== "waiting") {
+
