@@ -66,6 +66,7 @@ interface CentralCardBoardProps {
   slotCount?: number;
   topic?: string | null;
   revealedAt?: unknown;
+  uiRevealPending?: boolean;
 }
 
 interface SlotDescriptorBase {
@@ -541,6 +542,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   displayMode = "full",
   slotCount,
   revealedAt,
+  uiRevealPending = false,
 }) => {
   const [localRevealPending, setLocalRevealPending] = useState(false);
   useEffect(() => {
@@ -563,7 +565,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       if (localRevealPending) setLocalRevealPending(false);
     }
   }, [roomStatus, localRevealPending]);
-  const isRevealing = selectIsRevealing({ status: roomStatus, localHide: localRevealPending });
+  const isRevealing = selectIsRevealing({ status: roomStatus, localHide: localRevealPending, uiRevealPending });
   const playerMap = useMemo(() => {
     const map = new Map<string, PlayerDoc & { id: string }>();
     players.forEach((player) => {

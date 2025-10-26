@@ -17,6 +17,7 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   deleteDoc,
   doc,
+  updateDoc,
   runTransaction,
   serverTimestamp,
   setDoc,
@@ -122,6 +123,46 @@ export async function finalizeReveal(roomId: string) {
   }
 }
 
+// =============================
+// UI Shared Gate: revealPending
+// =============================
+export async function beginRevealPending(roomId: string) {
+  if (!db) return;
+  const roomRef = doc(db, "rooms", roomId);
+  try {
+    traceAction("ui.revealPending.begin", { roomId });
+    await setDoc(
+      roomRef,
+      {
+        ui: {
+          revealPending: true,
+          revealBeginAt: serverTimestamp(),
+        },
+        lastActiveAt: serverTimestamp(),
+      } as any,
+      { merge: true }
+    );
+  } catch (error) {
+    traceError("ui.revealPending.begin", error, { roomId });
+    throw error;
+  }
+}
+
+export async function clearRevealPending(roomId: string) {
+  if (!db) return;
+  const roomRef = doc(db, "rooms", roomId);
+  try {
+    traceAction("ui.revealPending.clear", { roomId });
+    await updateDoc(roomRef, {
+      "ui.revealPending": false,
+      lastActiveAt: serverTimestamp(),
+    } as any);
+  } catch (error) {
+    traceError("ui.revealPending.clear", error, { roomId });
+    // 非致命: 失敗してもUIは自動解除されるため握りつぶす
+  }
+}
+
 // clue中のみ、proposalから在室外IDを除去（冪等）。UI側の表示フィルタと合わせて二重で安全策。
 export async function pruneProposalByEligible(
   roomId: string,
@@ -217,4 +258,6 @@ export const GameService = {
   requestSeat,
   cancelSeatRequest,
   pruneProposalByEligible,
+  beginRevealPending,
+  clearRevealPending,
 } as const;
