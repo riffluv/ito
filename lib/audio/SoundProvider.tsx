@@ -28,10 +28,8 @@ const CRITICAL_PREWARM_IDS = new Set<SoundId>([
   "drop_invalid",
   "clue_decide",
   "order_confirm",
-  "reset_game",
-  "result_victory",
-  "result_failure",
 ]);
+const CONSTRAINED_PREWARM_IDS = new Set<SoundId>(["ui_click", "card_flip", "card_place"]);
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const managerRef = useRef<SoundManager | null>(null);
@@ -121,20 +119,63 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     if (!manager) return;
     if (PREWARM_SOUND_IDS.length === 0) return;
 
-    const critical = PREWARM_SOUND_IDS.filter((id) => CRITICAL_PREWARM_IDS.has(id));
-    const deferred = PREWARM_SOUND_IDS.filter((id) => !CRITICAL_PREWARM_IDS.has(id));
+    const connection =
+      typeof navigator !== "undefined" ? ((navigator as any).connection ?? null) : null;
+    const effectiveType =
+      typeof connection?.effectiveType === "string"
+        ? String(connection.effectiveType).toLowerCase()
+        : "";
+    const constrainedNetwork =
+      !!connection &&
+      (connection.saveData === true ||
+        ["slow-2g", "2g", "3g"].includes(effectiveType));
+    setMetric("audio", "prewarm.constrained", constrainedNetwork ? 1 : 0);
+
+    const criticalSet = constrainedNetwork ? CONSTRAINED_PREWARM_IDS : CRITICAL_PREWARM_IDS;
+    const critical = PREWARM_SOUND_IDS.filter((id) => criticalSet.has(id));
+    const deferred = constrainedNetwork
+      ? []
+      : PREWARM_SOUND_IDS.filter((id) => !criticalSet.has(id));
     let cancelled = false;
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
 
     if (critical.length) {
-      manager.prewarm(critical).catch(() => undefined);
+      void (async () => {
+        const startedAt =
+          typeof performance !== "undefined" ? performance.now() : null;
+        try {
+          await manager.prewarm(critical);
+          if (startedAt !== null) {
+            setMetric(
+              "audio",
+              "prewarm.criticalMs",
+              Math.round(performance.now() - startedAt)
+            );
+          }
+        } catch {
+          // ignore
+        }
+      })();
     }
 
     if (deferred.length) {
       const runDeferred = () => {
         if (cancelled) return;
-        manager.prewarm(deferred).catch(() => undefined);
+        const startedAt =
+          typeof performance !== "undefined" ? performance.now() : null;
+        manager
+          .prewarm(deferred)
+          .then(() => {
+            if (startedAt !== null) {
+              setMetric(
+                "audio",
+                "prewarm.deferredMs",
+                Math.round(performance.now() - startedAt)
+              );
+            }
+          })
+          .catch(() => undefined);
       };
       const win = window as Window &
         typeof globalThis & {

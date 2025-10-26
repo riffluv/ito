@@ -6,6 +6,8 @@ import {
   startGame,
   submitSortedOrder,
   topicControls,
+  beginRevealPending,
+  clearRevealPending,
 } from "@/lib/game/service";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import {
@@ -13,12 +15,12 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useCallback, useMemo, useState } from "react";
-import { beginRevealPending } from "@/lib/game/service";
 
 type QuickStartOptions = {
   broadcast?: boolean;
@@ -396,16 +398,42 @@ export function useHostActions({
       (value): value is string => typeof value === "string" && value.length > 0
     );
     if (list.length === 0) return;
+
     playOrderConfirm();
+
+    const startedAt =
+      typeof performance !== "undefined" ? performance.now() : null;
+    let revealPendingStarted = false;
+
     try {
       traceAction("ui.order.submit", { roomId, count: list.length });
-      // 共有UIゲートを即時ON（冪等）してから確定を投げる
       try {
-        // レイテンシ悪化を避けるため非同期に発火（クリティカルパスをブロックしない）
         void beginRevealPending(roomId);
-      } catch {}
+        revealPendingStarted = true;
+      } catch (revealError) {
+        traceError("ui.order.submit.revealPending", revealError, {
+          roomId,
+        });
+      }
       await submitSortedOrder(roomId, list);
+      if (startedAt !== null) {
+        setMetric(
+          "order",
+          "submitSortedOrderSuccessMs",
+          Math.round(performance.now() - startedAt)
+        );
+      }
     } catch (error: any) {
+      if (startedAt !== null) {
+        setMetric(
+          "order",
+          "submitSortedOrderFailureMs",
+          Math.round(performance.now() - startedAt)
+        );
+      }
+      if (revealPendingStarted) {
+        void clearRevealPending(roomId);
+      }
       traceError("ui.order.submit", error, { roomId, count: list.length });
       notify({
         id: toastIds.genericError(roomId, "submit-order"),
@@ -415,6 +443,7 @@ export function useHostActions({
           "提出枚数や並び順を確認して、もう一度お試しください。",
         type: "error",
       });
+      throw error;
     }
   }, [proposal, playOrderConfirm, roomId]);
 
