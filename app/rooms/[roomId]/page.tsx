@@ -1128,7 +1128,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const seatRequestRejected = recallV2Enabled && seatRequestState.status === "rejected";
   const seatRequestError = recallV2Enabled ? seatRequestState.error : null;
   const seatRequestButtonDisabled = recallV2Enabled
-    ? seatRequestPending || !waitingToRejoin || versionMismatchBlocksAccess
+    ? versionMismatchBlocksAccess || seatRequestPending || seatRequestAccepted
     : !waitingToRejoin || versionMismatchBlocksAccess;
 
   useEffect(() => {
@@ -2591,7 +2591,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 fontWeight={700}
                 textShadow="2px 2px 0 rgba(0,0,0,0.8)"
               >
-                いまゲームの最中だよ
+                ホストが承認すると席に戻れるよ
               </Text>
               <Text
                 fontSize={{ base: "sm", md: "md" }}
@@ -2599,7 +2599,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 lineHeight={1.7}
                 mt={1}
               >
-                このラウンドが終わったら参加できるよ。まずは観戦しよう！
+                「席に戻れるか試す」を押して復帰を申請し、ホストの呼び込みを待とう。
               </Text>
             </>
           )}
