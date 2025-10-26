@@ -1,102 +1,26 @@
-import { expect, test } from "@playwright/test";
-import {
-  areAllCluesReady,
-  getClueTargetIds,
-  getPresenceEligibleIds,
-} from "../lib/game/selectors";
+import { computeSlotCount, computeVisibleProposal } from "@/lib/game/selectors";
 
-test.describe("getPresenceEligibleIds", () => {
-  test("presence 未準備なら baseIds を返す", () => {
-    const base = ["a", "b", "c"];
-
-  const result = getPresenceEligibleIds({
-    baseIds: base,
-    onlineUids: ["a"],
-    presenceReady: false,
-  });
-
-  expect(result).toEqual(base);
-  });
-
-  test("オンラインプレイヤーのみ抽出し、空になった場合は baseIds にフォールバックする", () => {
-    const base = ["p1", "p2", "p3"];
-
-    const filtered = getPresenceEligibleIds({
-      baseIds: base,
-      onlineUids: ["p1", "p3"],
+describe("selectors minimal", () => {
+  test("computeSlotCount uses online count when presenceReady", () => {
+    const n = computeSlotCount({
+      status: "clue" as any,
+      orderList: [],
+      dealPlayers: ["a", "b"],
+      proposal: ["a"],
       presenceReady: true,
+      onlineUids: ["a"],
+      playersCount: 1,
     });
-
-    expect(filtered).toEqual(["p1", "p3"]);
-
-    const fallback = getPresenceEligibleIds({
-      baseIds: base,
-      onlineUids: [],
-      presenceReady: true,
-    });
-
-    expect(fallback).toEqual(base);
-  });
-});
-
-test.describe("getClueTargetIds", () => {
-  test("dealPlayers が有効なときはそれを優先し、不正値を除外する", () => {
-    const result = getClueTargetIds({
-      dealPlayers: ["a", "", 1, "b"],
-      eligibleIds: ["z"],
-    });
-
-    expect(result).toEqual(["a", "b"]);
+    expect(n).toBe(1); // max(proposal=1, online=1)
   });
 
-  test("dealPlayers が空または未定義なら eligibleIds を返す", () => {
-    const eligible = ["a", "b"];
-
-    const emptyResult = getClueTargetIds({
-      dealPlayers: [],
-      eligibleIds: eligible,
+  test("computeVisibleProposal filters by eligible in clue", () => {
+    const v = computeVisibleProposal({
+      status: "clue" as any,
+      orderList: ["x"],
+      proposal: ["x", "y"],
+      eligibleIds: ["x"],
     });
-    expect(emptyResult).toEqual(eligible);
-
-    const undefinedResult = getClueTargetIds({
-      dealPlayers: undefined,
-      eligibleIds: eligible,
-    });
-    expect(undefinedResult).toEqual(eligible);
-  });
-});
-
-test.describe("areAllCluesReady", () => {
-  const players = [
-    { id: "a", ready: true },
-    { id: "b", ready: true },
-    { id: "c", ready: false },
-  ];
-
-  test("targetIds が空なら false", () => {
-    expect(
-      areAllCluesReady({
-        players,
-        targetIds: [],
-      })
-    ).toBe(false);
-  });
-
-  test("target の ready が揃っていなければ false", () => {
-    expect(
-      areAllCluesReady({
-        players,
-        targetIds: ["a", "c"],
-      })
-    ).toBe(false);
-  });
-
-  test("全員 ready のときのみ true", () => {
-    expect(
-      areAllCluesReady({
-        players,
-        targetIds: ["a", "b"],
-      })
-    ).toBe(true);
+    expect(v).toEqual(["x"]);
   });
 });

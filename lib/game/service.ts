@@ -17,6 +17,7 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   deleteDoc,
   doc,
+  runTransaction,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -121,6 +122,43 @@ export async function finalizeReveal(roomId: string) {
   }
 }
 
+// clue中のみ、proposalから在室外IDを除去（冪等）。UI側の表示フィルタと合わせて二重で安全策。
+export async function pruneProposalByEligible(
+  roomId: string,
+  eligibleIds: readonly string[]
+) {
+  if (!db) return;
+  const roomRef = doc(db, "rooms", roomId);
+  const eligible = new Set(eligibleIds);
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists()) return;
+      const room: any = snap.data();
+      if (room?.status !== "clue") return;
+      const proposal: (string | null)[] = Array.isArray(room?.order?.proposal)
+        ? (room.order.proposal as (string | null)[])
+        : [];
+      if (proposal.length === 0) return;
+      const filtered = proposal.filter(
+        (id): id is string => typeof id === "string" && eligible.has(id)
+      );
+      if (filtered.length === proposal.length) return;
+      traceAction("order.proposal.prune", {
+        roomId,
+        before: proposal.length,
+        after: filtered.length,
+      });
+      tx.update(roomRef, {
+        "order.proposal": filtered,
+        lastActiveAt: serverTimestamp(),
+      });
+    });
+  } catch (error) {
+    traceError("order.proposal.prune", error, { roomId });
+  }
+}
+
 export { topicControls };
 
 export type SeatRequestSource = "manual" | "auto";
@@ -178,4 +216,5 @@ export const GameService = {
   topicControls,
   requestSeat,
   cancelSeatRequest,
+  pruneProposalByEligible,
 } as const;
