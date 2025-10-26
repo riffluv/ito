@@ -223,7 +223,7 @@ export async function setOrderProposal(roomId: string, proposal: string[]) {
   await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
 }
 
-type ProposalWriteResult = "ok" | "noop" | "missing-deal";
+export type ProposalWriteResult = "ok" | "noop" | "missing-deal";
 
 // sort-submit モード: プレイヤーが自分のカードを場(提案配列)に置く
 // 既存の末尾追加機能（「出す」ボタン用）
