@@ -364,7 +364,15 @@ export class SoundManager {
       return null;
     }
 
-    const context = new Ctor();
+    let context: AudioContext;
+    try {
+      // 低遅延ヒント（未対応環境では無視/失敗時にフォールバック）
+      // @ts-ignore legacy webkit constructor may not accept options
+      context = new Ctor({ latencyHint: "interactive" } as any) as AudioContext;
+    } catch {
+      // @ts-ignore legacy webkit fallback
+      context = new (Ctor as any)() as AudioContext;
+    }
     this.context = context as AudioContext;
 
     const master = context.createGain();

@@ -152,8 +152,25 @@ export function useParticipants(
       );
     };
 
-    // 常時購読（非アクティブでも即時同期）
-    maybeStart();
+    // 初回のみ軽い遅延（フラグON時）
+    if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
+      try {
+        const start = () => {
+          try {
+            maybeStart();
+          } catch {}
+        };
+        // 1フレーム + 50ms の段階化
+        requestAnimationFrame(() => {
+          setTimeout(start, 50);
+        });
+      } catch {
+        setTimeout(() => maybeStart(), 50);
+      }
+    } else {
+      // 既定の即時購読
+      maybeStart();
+    }
 
     return () => {
       if (backoffTimer) {

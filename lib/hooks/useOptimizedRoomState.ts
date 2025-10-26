@@ -8,6 +8,8 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { doc, onSnapshot } from "firebase/firestore";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 export type OptimizedRoomState = {
   room: (RoomDoc & { id: string }) | null;
@@ -201,7 +203,23 @@ export function useOptimizedRoomState(
     };
 
     if (typeof document === "undefined" || document.visibilityState === "visible") {
-      maybeStart();
+      if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
+        try {
+          requestAnimationFrame(() => {
+            try {
+              maybeStart();
+              setMetric("perf", "warmup.watch", 1);
+              traceAction("warmup.watch");
+            } catch (e) {
+              traceError("warmup.watch", e as any);
+            }
+          });
+        } catch {
+          maybeStart();
+        }
+      } else {
+        maybeStart();
+      }
     }
     const onVis = () => {
       if (document.visibilityState === "visible") maybeStart();
