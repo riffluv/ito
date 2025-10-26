@@ -1234,10 +1234,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
 
   const joinInProgress = joinStatus === "joining" || joinStatus === "retrying";
+  const hasOptimisticSeat =
+    !!optimisticMe &&
+    !(forcedExitReason || versionMismatchBlocksAccess);
   const spectatorEligibilityReady = forcedExitReason
     ? true
     : !joinInProgress && presenceReady && !loading;
-  const canAccess = (isMember || isHost) && !versionMismatchBlocksAccess;
+  const canAccess =
+    (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   const shouldShowSpectator =
     !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
   const isSpectatorMode = spectatorEligibilityReady && shouldShowSpectator;
