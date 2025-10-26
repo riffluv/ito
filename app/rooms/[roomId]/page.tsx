@@ -1342,6 +1342,28 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     : !waitingToRejoin || versionMismatchBlocksAccess;
 
   useEffect(() => {
+    if (!seatRequestAccepted) return;
+    if (!uid) return;
+    if (me) return;
+    const baseName = normalizedDisplayName;
+    setOptimisticMe((prev) => {
+      if (prev && prev.id === uid) {
+        return prev;
+      }
+      return {
+        id: uid,
+        name: baseName,
+        avatar: prev?.avatar || "",
+        number: null,
+        clue1: "",
+        ready: false,
+        orderIndex: 0,
+        uid,
+      } as PlayerDoc & { id: string };
+    });
+  }, [seatRequestAccepted, uid, me, normalizedDisplayName]);
+
+  useEffect(() => {
     const nextState = {
       roomStatus: room?.status ?? null,
       isMember,
