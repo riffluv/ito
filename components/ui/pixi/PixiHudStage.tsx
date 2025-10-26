@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 import { Application, Container } from "pixi.js";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 type LayerOptions = {
   zIndex?: number;
@@ -120,6 +122,26 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       resizeObserver.observe(host);
 
       setApp(pixiApp);
+
+      // GPUウォームアップ（フラグON時のみ、初期化直後に空描画）
+      if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
+        try {
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              try {
+                pixiApp.renderer.render(pixiApp.stage);
+                setMetric("perf", "warmup.pixi", 1);
+                traceAction("warmup.pixi");
+              } catch (e) {
+                console.warn("[PixiHudStage] warmup render failed", e);
+                traceError("warmup.pixi", e as any);
+              }
+            })
+          );
+        } catch (e) {
+          console.warn("[PixiHudStage] warmup scheduling failed", e);
+        }
+      }
     };
 
     init();

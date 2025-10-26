@@ -5,6 +5,8 @@ import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import deepEqual from "fast-deep-equal/es6";
 import { logDebug, logError } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -211,8 +213,25 @@ export function useRoomState(
       );
     };
 
-    // 常に購読を開始（非アクティブでも即時同期させる）
-    maybeStart();
+    // 初回は1フレーム遅延して購読（フラグON時）
+    if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
+      try {
+        requestAnimationFrame(() => {
+          try {
+            maybeStart();
+            setMetric("perf", "warmup.watch", 1);
+            traceAction("warmup.watch");
+          } catch (e) {
+            traceError("warmup.watch", e as any);
+          }
+        });
+      } catch {
+        maybeStart();
+      }
+    } else {
+      // 既定の即時購読
+      maybeStart();
+    }
 
     return () => {
       if (backoffTimer) {

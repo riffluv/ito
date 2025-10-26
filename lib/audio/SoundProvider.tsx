@@ -4,6 +4,8 @@ import { SoundManager } from "./SoundManager";
 import { SOUND_LIBRARY } from "./registry";
 import { DEFAULT_SOUND_SETTINGS, SoundId, SoundSettings } from "./types";
 import { setGlobalSoundManager } from "./global";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 interface SoundContextValue {
   manager: SoundManager | null;
@@ -59,6 +61,59 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       manager.destroy();
       managerRef.current = null;
     };
+  }, []);
+
+  // 軽量ウォームアップ（フラグON時のみ、初回入力/可視化で一度だけ）
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_PERF_WARMUP !== "1") return;
+    const mgr = managerRef.current;
+    if (!mgr) return;
+    const didWarmRef = { current: false };
+
+    const candidates = [
+      "card_flip",
+      "ui_click",
+      "drag_pickup",
+    ] as SoundId[];
+    const prewarmIds: SoundId[] = candidates.filter((id) =>
+      (PREWARM_SOUND_IDS as ReadonlyArray<SoundId>).includes(id)
+    );
+
+    const runWarmup = async () => {
+      if (didWarmRef.current) return;
+      didWarmRef.current = true;
+      try {
+        await mgr.warmup();
+        if (prewarmIds.length) {
+          await mgr.prewarm(prewarmIds);
+        }
+        setMetric("perf", "warmup.audio", 1);
+        traceAction("warmup.audio");
+      } catch (error) {
+        console.warn("[SoundProvider] warmup failed", error);
+        traceError("warmup.audio", error as any);
+      } finally {
+        detach();
+      }
+    };
+
+    const onPointerDown = () => void runWarmup();
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void runWarmup();
+      }
+    };
+    const detach = () => {
+      if (typeof window === "undefined") return;
+      window.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("pointerdown", onPointerDown, { passive: true });
+      document.addEventListener("visibilitychange", onVisibility, { passive: true } as any);
+    }
+    return detach;
   }, []);
 
   useEffect(() => {
