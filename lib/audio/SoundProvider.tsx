@@ -22,14 +22,27 @@ const CRITICAL_PREWARM_IDS = new Set<SoundId>([
   "ui_click",
   "card_flip",
   "card_place",
-  "card_deal",
   "drag_pickup",
   "drop_success",
   "drop_invalid",
   "clue_decide",
   "order_confirm",
 ]);
-const CONSTRAINED_PREWARM_IDS = new Set<SoundId>(["ui_click", "card_flip", "card_place"]);
+const PRIORITY_STAGE_ONE: SoundId[] = [
+  "card_deal",
+  "clue_decide",
+  "drag_pickup",
+  "drop_success",
+  "drop_invalid",
+];
+const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
+  "ui_click",
+  "card_flip",
+  "card_place",
+  "drag_pickup",
+  "drop_success",
+  "drop_invalid",
+]);
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const managerRef = useRef<SoundManager | null>(null);
@@ -133,9 +146,18 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     const criticalSet = constrainedNetwork ? CONSTRAINED_PREWARM_IDS : CRITICAL_PREWARM_IDS;
     const critical = PREWARM_SOUND_IDS.filter((id) => criticalSet.has(id));
-    const deferred = constrainedNetwork
-      ? []
-      : PREWARM_SOUND_IDS.filter((id) => !criticalSet.has(id));
+    const deferredBase = PREWARM_SOUND_IDS.filter((id) => !criticalSet.has(id));
+    const stageOne: SoundId[] = [];
+    const deferred: SoundId[] = [];
+    if (!constrainedNetwork) {
+      deferredBase.forEach((id) => {
+        if (PRIORITY_STAGE_ONE.includes(id)) {
+          stageOne.push(id);
+        } else {
+          deferred.push(id);
+        }
+      });
+    }
     let cancelled = false;
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
@@ -162,13 +184,17 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       setMetric("audio", "prewarm.criticalMs", 0);
     }
 
-    if (deferred.length) {
+    const runStageQueue = (
+      queue: SoundId[],
+      metricsKey: string,
+      options: { baseDelay: number; minDelay: number }
+    ) => {
+      if (queue.length === 0) return;
       const win = window as Window &
         typeof globalThis & {
           requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
           cancelIdleCallback?: (handle: number) => void;
         };
-      const queue = [...deferred];
       const totalStartedAt =
         typeof performance !== "undefined" ? performance.now() : null;
 
@@ -197,14 +223,14 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
               if (totalStartedAt !== null) {
                 setMetric(
                   "audio",
-                  "prewarm.deferredMs",
+                  metricsKey,
                   Math.round(performance.now() - totalStartedAt)
                 );
               }
               return;
             }
             if (!cancelled) {
-              scheduleNext(queue.length > 2 ? 480 : 260);
+              scheduleNext(queue.length > 2 ? options.baseDelay : options.minDelay);
             }
           });
       };
@@ -220,16 +246,23 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
               timeoutHandle = undefined;
               if (cancelled) return;
               idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
-            }, Math.max(delayMs, 120));
+            }, Math.max(delayMs, options.minDelay));
           } else {
             idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
           }
         } else {
-          timeoutHandle = window.setTimeout(invoke, Math.max(delayMs, 150));
+          timeoutHandle = window.setTimeout(invoke, Math.max(delayMs, options.minDelay));
         }
       };
 
       scheduleNext(0);
+    };
+
+    if (stageOne.length) {
+      runStageQueue(stageOne, "prewarm.stageOneMs", { baseDelay: 140, minDelay: 80 });
+    }
+    if (deferred.length) {
+      runStageQueue(deferred, "prewarm.deferredMs", { baseDelay: 420, minDelay: 160 });
     }
 
     return () => {
