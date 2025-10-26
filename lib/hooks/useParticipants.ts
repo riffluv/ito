@@ -28,6 +28,7 @@ export type ParticipantsState = {
   presenceReady: boolean;
   participants: (PlayerDoc & { id: string })[]; // players ∩ online
   detach: () => Promise<void> | void; // 明示的退出時に使用
+  reattachNow: () => Promise<void>; // 観戦→復帰などで presence を再接続
   loading: boolean;
   error: Error | null;
 };
@@ -50,6 +51,7 @@ export function useParticipants(
     uid: null,
   });
   const attachRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reattachTriggerRef = useRef<(() => void) | null>(null);
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
@@ -262,6 +264,7 @@ export function useParticipants(
   useEffect(() => {
     if (!presenceSupported()) {
       clearAttachRetryTimer();
+      reattachTriggerRef.current = null;
       if (detachRef.current) {
         try {
           const maybePromise = detachRef.current();
@@ -279,6 +282,7 @@ export function useParticipants(
     }
 
     let cancelled = false;
+    reattachTriggerRef.current = null;
 
     const handleDetachIfNeeded = async () => {
       const prev = activePresenceRef.current;
@@ -338,6 +342,12 @@ export function useParticipants(
       }
     };
 
+    reattachTriggerRef.current = () => {
+      if (cancelled) return;
+      clearAttachRetryTimer();
+      void tryAttach(0);
+    };
+
     handleDetachIfNeeded().finally(() => {
       if (!cancelled && roomId && uid) {
         clearAttachRetryTimer();
@@ -347,6 +357,7 @@ export function useParticipants(
 
     return () => {
       cancelled = true;
+      reattachTriggerRef.current = null;
     };
   }, [roomId, uid]);
 
@@ -392,11 +403,26 @@ export function useParticipants(
   }, [presenceReady]);
 
   const detach = async () => {
+    const current = detachRef.current;
+    detachRef.current = null;
+    activePresenceRef.current = { roomId: null, uid: null };
+    if (!current) return;
     try {
-      const r = detachRef.current?.();
-      if (r && typeof (r as any).then === "function")
-        await (r as Promise<void>);
+      const maybeResult = current();
+      if (maybeResult && typeof (maybeResult as Promise<void>).then === "function") {
+        await (maybeResult as Promise<void>).catch(() => void 0);
+      }
     } catch {}
+  };
+
+  const reattachNow = async () => {
+    await detach();
+    const trigger = reattachTriggerRef.current;
+    if (trigger) {
+      try {
+        trigger();
+      } catch {}
+    }
   };
 
   return {
@@ -405,6 +431,7 @@ export function useParticipants(
     presenceReady,
     participants,
     detach,
+    reattachNow,
     loading,
     error,
   };

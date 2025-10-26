@@ -271,6 +271,7 @@ export function useRoomState(
     presenceReady,
     participants,
     detach,
+    reattachNow,
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
   useEffect(() => {
@@ -618,5 +619,6 @@ export function useRoomState(
   );
 
   const detachNow = detach;
-  return { ...state, detachNow, leavingRef, joinStatus } as const;
+  const reattachPresence = reattachNow;
+  return { ...state, detachNow, reattachPresence, leavingRef, joinStatus } as const;
 }

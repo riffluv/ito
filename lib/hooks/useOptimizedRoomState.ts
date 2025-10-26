@@ -252,6 +252,7 @@ export function useOptimizedRoomState(
     onlineUids,
     participants,
     detach,
+    reattachNow,
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
   
@@ -324,10 +325,12 @@ export function useOptimizedRoomState(
   }, [state, options.roomSelector]);
 
   const detachNow = detach;
+  const reattachPresence = reattachNow;
   
   return { 
     ...selectedState, 
     detachNow, 
+    reattachPresence,
     leavingRef,
     // Debug info (development only)
     ...(process.env.NODE_ENV === 'development' && {
