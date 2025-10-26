@@ -2018,12 +2018,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       return;
     }
     if (status && prev !== status) {
-      const isFreshReveal =
-        revealedMs === null || revealedMs !== lastRevealTsRef.current;
-      const shouldPlay =
-        (status === "reveal" && isFreshReveal) ||
-        (status === "finished" && prev === "reveal");
-      if (shouldPlay) {
+      const enteringReveal = status === "reveal" && prev !== "reveal";
+      const finishingReveal =
+        status === "finished" &&
+        prev === "reveal" &&
+        (revealedMs === null || revealedMs !== lastRevealTsRef.current);
+      if (enteringReveal || finishingReveal) {
         void showtime.play("round:reveal", {
           success: room.result?.success ?? null,
         });
