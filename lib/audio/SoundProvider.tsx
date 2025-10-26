@@ -153,40 +153,83 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
               Math.round(performance.now() - startedAt)
             );
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          setMetric("audio", "prewarm.criticalMs", -1);
+          traceError("audio.prewarm.critical", error as any);
         }
       })();
+    } else {
+      setMetric("audio", "prewarm.criticalMs", 0);
     }
 
     if (deferred.length) {
-      const runDeferred = () => {
-        if (cancelled) return;
-        const startedAt =
-          typeof performance !== "undefined" ? performance.now() : null;
-        manager
-          .prewarm(deferred)
-          .then(() => {
-            if (startedAt !== null) {
-              setMetric(
-                "audio",
-                "prewarm.deferredMs",
-                Math.round(performance.now() - startedAt)
-              );
-            }
-          })
-          .catch(() => undefined);
-      };
       const win = window as Window &
         typeof globalThis & {
           requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
           cancelIdleCallback?: (handle: number) => void;
         };
-      if (typeof win.requestIdleCallback === "function") {
-        idleHandle = win.requestIdleCallback(runDeferred, { timeout: 3000 });
-      } else {
-        timeoutHandle = window.setTimeout(runDeferred, 1200);
-      }
+      const queue = [...deferred];
+      const totalStartedAt =
+        typeof performance !== "undefined" ? performance.now() : null;
+
+      const runNext = () => {
+        idleHandle = undefined;
+        timeoutHandle = undefined;
+        if (cancelled) return;
+        const soundId = queue.shift();
+        if (!soundId) return;
+        const soundStartedAt =
+          typeof performance !== "undefined" ? performance.now() : null;
+        manager
+          .prewarm([soundId])
+          .catch((error) => {
+            traceError("audio.prewarm.deferred", error as any, { soundId });
+          })
+          .finally(() => {
+            if (soundStartedAt !== null) {
+              setMetric(
+                "audio",
+                `prewarm.sound.${soundId}`,
+                Math.round(performance.now() - soundStartedAt)
+              );
+            }
+            if (queue.length === 0) {
+              if (totalStartedAt !== null) {
+                setMetric(
+                  "audio",
+                  "prewarm.deferredMs",
+                  Math.round(performance.now() - totalStartedAt)
+                );
+              }
+              return;
+            }
+            if (!cancelled) {
+              scheduleNext(queue.length > 2 ? 480 : 260);
+            }
+          });
+      };
+
+      const scheduleNext = (delayMs: number) => {
+        if (cancelled || queue.length === 0) return;
+        const invoke = () => {
+          runNext();
+        };
+        if (typeof win.requestIdleCallback === "function") {
+          if (delayMs > 0) {
+            timeoutHandle = window.setTimeout(() => {
+              timeoutHandle = undefined;
+              if (cancelled) return;
+              idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
+            }, Math.max(delayMs, 120));
+          } else {
+            idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
+          }
+        } else {
+          timeoutHandle = window.setTimeout(invoke, Math.max(delayMs, 150));
+        }
+      };
+
+      scheduleNext(0);
     }
 
     return () => {
