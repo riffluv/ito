@@ -549,14 +549,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <>
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
-      <SeinoButton
-        isVisible={shouldShowSeinoButton}
-        disabled={!allSubmitted}
-        onClick={async () => {
-          beginReveal();
-          await evalSorted();
-        }}
-      />
+      {shouldShowSeinoButton && !hideHandUI && (
+        <SeinoButton
+          isVisible
+          disabled={!allSubmitted}
+          onClick={async () => {
+            beginReveal();
+            await evalSorted();
+          }}
+        />
+      )}
 
       {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
       {isHost && roomStatus === "waiting" && !preparing && (
