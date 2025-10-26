@@ -61,12 +61,14 @@ import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
 import { traceAction, traceError } from "@/lib/utils/trace";
-import {
-  applyServiceWorkerUpdate,
-  getWaitingServiceWorker,
-  resyncWaitingServiceWorker,
-  subscribeToServiceWorkerUpdates,
-} from "@/lib/serviceWorker/updateChannel";
+  import {
+    applyServiceWorkerUpdate,
+    getWaitingServiceWorker,
+    resyncWaitingServiceWorker,
+    subscribeToServiceWorkerUpdates,
+    suppressAutoApply,
+    clearAutoApplySuppression,
+  } from "@/lib/serviceWorker/updateChannel";
 import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
@@ -523,6 +525,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
   const versionGuardTimerRef = useRef<number | null>(null);
   const currentRoomStatus = room?.status ?? null;
+  // プレイ中は自動適用（グローバル）も抑止し、待機に戻ったら解除
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) return;
+    if (currentRoomStatus === "waiting") {
+      clearAutoApplySuppression();
+      return;
+    }
+    if (
+      currentRoomStatus === "clue" ||
+      currentRoomStatus === "reveal" ||
+      currentRoomStatus === "finished"
+    ) {
+      suppressAutoApply();
+    }
+  }, [safeUpdateFeatureEnabled, currentRoomStatus]);
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) {
       safeUpdateEnteredRef.current = false;
@@ -540,6 +557,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const tryApplyServiceWorker = useCallback(
     (reason: SafeUpdateTrigger) => {
       if (!safeUpdateFeatureEnabled) return false;
+      if (currentRoomStatus !== "waiting") {
+        return false;
+      }
       const registration = getWaitingServiceWorker();
       const waitingWorker = registration?.waiting;
       if (!registration || !waitingWorker) {
@@ -551,7 +571,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       });
       return applied;
     },
-    [safeUpdateFeatureEnabled, safeUpdateActive]
+    [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]
   );
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) {
@@ -2723,8 +2743,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const safeUpdateBannerNode = shouldShowUpdateBanner ? (
     <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
   ) : null;
+  // プレイ中は強制的な更新オーバーレイとボタンを出さない（waiting時のみ表示）
   const versionMismatchOverlay =
-    safeUpdateActive && versionMismatchGuarded ? (
+    safeUpdateActive && versionMismatchGuarded && currentRoomStatus === "waiting" ? (
       <Box
         position="fixed"
         inset={0}
@@ -2769,6 +2790,19 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       </Box>
     ) : null;
 
+  // プレイ中はSW自動適用を抑制し、待機に戻ったら解除
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) return;
+    if (currentRoomStatus === "waiting") {
+      clearAutoApplySuppression();
+    } else if (
+      currentRoomStatus === "clue" ||
+      currentRoomStatus === "reveal" ||
+      currentRoomStatus === "finished"
+    ) {
+      suppressAutoApply();
+    }
+  }, [safeUpdateFeatureEnabled, currentRoomStatus]);
   return (
     <>
       {joinStatusBanner}
@@ -2934,3 +2968,4 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
