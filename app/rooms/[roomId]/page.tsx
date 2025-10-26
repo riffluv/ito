@@ -2492,8 +2492,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     proposal: Array.isArray(room?.order?.proposal) ? room.order!.proposal : [],
     presenceReady,
     onlineUids,
-    playersCount: players.length,
-  }), [room?.status, room?.order?.list, room?.deal?.players, room?.order?.proposal, presenceReady, onlineUidSignature, players.length]);
+    playersCount: playersWithOptimistic.length,
+  }), [room?.status, room?.order?.list, room?.deal?.players, room?.order?.proposal, presenceReady, onlineUidSignature, playersWithOptimistic.length]);
   const orderList = room?.order?.list;
 
   const submittedPlayerIds = useMemo(() => {
