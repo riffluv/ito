@@ -53,6 +53,7 @@ import {
   getRoomServiceErrorCode,
   joinRoomFully,
 } from "@/lib/services/roomService";
+import type { PlayerDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
@@ -463,11 +464,29 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     applyUpdate: applySpectatorUpdate,
   } = useServiceWorkerUpdate();
   const meId = uid || "";
-  const me = players.find((p) => p.id === meId);
+  const meFromPlayers = players.find((p) => p.id === meId);
+  const [optimisticMe, setOptimisticMe] = useState<(PlayerDoc & { id: string }) | null>(null);
+  const me = meFromPlayers ?? optimisticMe ?? null;
+  const playersWithOptimistic = useMemo(() => {
+    if (!optimisticMe) return players;
+    if (players.some((p) => p.id === optimisticMe.id)) {
+      return players;
+    }
+    return [...players, optimisticMe];
+  }, [players, optimisticMe]);
   const playersSignature = useMemo(
-    () => players.map((p) => p.id).join(","),
-    [players]
+    () => playersWithOptimistic.map((p) => p.id).join(","),
+    [playersWithOptimistic]
   );
+  const normalizedDisplayName = useMemo(() => {
+    if (typeof displayName === "string") {
+      const trimmed = displayName.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    return "匿名";
+  }, [displayName]);
   const dealPlayers = useMemo(() => {
     const list = room?.deal?.players;
     if (!Array.isArray(list)) {
@@ -1105,6 +1124,70 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const shouldShowSpectator =
     !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
   const isSpectatorMode = spectatorEligibilityReady && shouldShowSpectator;
+  useEffect(() => {
+    if (!uid) {
+      if (optimisticMe) {
+        setOptimisticMe(null);
+      }
+      return;
+    }
+    if (isSpectatorMode) {
+      if (optimisticMe) {
+        setOptimisticMe(null);
+      }
+      return;
+    }
+    if (meFromPlayers) {
+      if (optimisticMe) {
+        setOptimisticMe(null);
+      }
+      return;
+    }
+    const joinInFlight =
+      joinStatus === "joining" ||
+      joinStatus === "retrying" ||
+      joinStatus === "joined";
+    const presenceAttached =
+      presenceReady &&
+      Array.isArray(onlineUids) &&
+      onlineUids.includes(uid);
+    if (!joinInFlight && !presenceAttached) {
+      if (optimisticMe) {
+        setOptimisticMe(null);
+      }
+      return;
+    }
+    const baseName = normalizedDisplayName;
+    setOptimisticMe((prev) => {
+      if (
+        prev &&
+        prev.id === uid &&
+        prev.name === baseName &&
+        prev.uid === uid
+      ) {
+        return prev;
+      }
+      return {
+        id: uid,
+        name: baseName,
+        avatar: prev?.avatar || "",
+        number: null,
+        clue1: "",
+        ready: false,
+        orderIndex: 0,
+        uid,
+      };
+    });
+  }, [
+    uid,
+    optimisticMe,
+    isSpectatorMode,
+    meFromPlayers,
+    joinStatus,
+    presenceReady,
+    onlineUids,
+    normalizedDisplayName,
+  ]);
 
   // 観戦理由の判定（文言出し分け用）
   const rawSpectatorReason: "version-mismatch" | "mid-game" | "waiting" | null = (() => {
@@ -1511,7 +1594,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (recallJoinHandledRef.current) return;
     recallJoinHandledRef.current = true;
 
-    const normalizedDisplayName =
+    const normalizedDisplayNameForJoin =
       typeof displayName === "string" && displayName.trim().length > 0
         ? displayName.trim()
         : null;
@@ -1521,10 +1604,34 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         await joinRoomFully({
           roomId,
           uid,
-          displayName: normalizedDisplayName,
+          displayName: normalizedDisplayNameForJoin,
           notifyChat: false,
         });
         await assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
+        setOptimisticMe((prev) => {
+          const baseName =
+            normalizedDisplayNameForJoin && normalizedDisplayNameForJoin.length > 0
+              ? normalizedDisplayNameForJoin
+              : normalizedDisplayName;
+          if (
+            prev &&
+            prev.id === uid &&
+            prev.name === baseName &&
+            prev.uid === uid
+          ) {
+            return prev;
+          }
+          return {
+            id: uid,
+            name: baseName,
+            avatar: prev?.avatar || "",
+            number: null,
+            clue1: "",
+            ready: false,
+            orderIndex: 0,
+            uid,
+          };
+        });
         traceAction("presence.reattach.requested", { roomId, uid });
         try {
           await reattachPresence();
@@ -1547,6 +1654,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     room,
     roomId,
     displayName,
+    normalizedDisplayName,
   ]);
   useEffect(() => {
     if (!uid || !roomId || !room) {
@@ -2012,17 +2120,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (Array.isArray(dealPlayers)) {
       const combined = new Set<string>([
         ...dealPlayers,
-        ...players.map((p) => p.id),
+        ...playersWithOptimistic.map((p) => p.id),
       ]);
       return Array.from(combined);
     }
-    return players.map((p) => p.id);
-  }, [room?.deal?.players, players]);
+    return playersWithOptimistic.map((p) => p.id);
+  }, [room?.deal?.players, playersWithOptimistic]);
 
 
   const baseIds = useMemo(
-    () => sortPlayersByJoinOrder(unsortedBaseIds, players),
-    [unsortedBaseIds, players]
+    () => sortPlayersByJoinOrder(unsortedBaseIds, playersWithOptimistic),
+    [unsortedBaseIds, playersWithOptimistic]
   );
 
 
@@ -2429,7 +2537,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const sidebarNode = (
     <DragonQuestParty
-      players={players}
+      players={playersWithOptimistic}
       roomStatus={room?.status || "waiting"}
       onlineCount={onlinePlayers.length}
       onlineUids={onlineUids}
@@ -2471,7 +2579,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             },
         }}
       >
-        <UniversalMonitor room={room} players={players} />
+        <UniversalMonitor room={room} players={playersWithOptimistic} />
       </Box>
       <Box
         overflow="visible"
@@ -2485,7 +2593,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       >
         <CentralCardBoard
           roomId={roomId}
-          players={players}
+          players={playersWithOptimistic}
           orderList={room.order?.list || []}
           meId={meId}
           eligibleIds={eligibleIds}
@@ -2686,7 +2794,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const handAreaNode = (
     <Box display="flex" flexDirection="column" gap={spectatorNotice ? 4 : 0}>
       {spectatorNotice}
-      {me ? (
+      {!isSpectatorMode && me ? (
         <MiniHandDock
           roomId={roomId}
           me={me}
@@ -2895,7 +3003,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
       <MinimalChat
         roomId={roomId}
-        players={players}
+        players={playersWithOptimistic}
         hostId={room?.hostId ?? null}
         onOpenLedger={() => setIsLedgerOpen(true)}
         isGameFinished={room?.status === "finished"}
@@ -2926,7 +3034,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         <MvpLedger
           isOpen={isLedgerOpen}
           onClose={() => setIsLedgerOpen(false)}
-          players={players}
+          players={playersWithOptimistic}
           orderList={room.order?.list || []}
           topic={room.topic || null}
           failed={!!room.order?.failed}
