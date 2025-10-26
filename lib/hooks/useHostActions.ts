@@ -18,6 +18,7 @@ import { toastIds } from "@/lib/ui/toastIds";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useCallback, useMemo, useState } from "react";
+import { beginRevealPending } from "@/lib/game/service";
 
 type QuickStartOptions = {
   broadcast?: boolean;
@@ -398,6 +399,11 @@ export function useHostActions({
     playOrderConfirm();
     try {
       traceAction("ui.order.submit", { roomId, count: list.length });
+      // 共有UIゲートを即時ON（冪等）してから確定を投げる
+      try {
+        // レイテンシ悪化を避けるため非同期に発火（クリティカルパスをブロックしない）
+        void beginRevealPending(roomId);
+      } catch {}
       await submitSortedOrder(roomId, list);
     } catch (error: any) {
       traceError("ui.order.submit", error, { roomId, count: list.length });

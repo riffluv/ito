@@ -38,6 +38,7 @@ import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
 import { requestSeat, SeatRequestSource, pruneProposalByEligible } from "@/lib/game/service";
+import { clearRevealPending } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
@@ -430,6 +431,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
   const dealRecoveryTimerRef = useRef<number | null>(null);
   const isGameFinished = room?.status === "finished";
+
+  // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
+  useEffect(() => {
+    if (!isHost) return;
+    const pending = (room as any)?.ui?.revealPending === true;
+    const status = room?.status;
+    if (!pending) return;
+    if (status === 'reveal' || status === 'finished') {
+      void clearRevealPending(roomId);
+    }
+  }, [isHost, (room as any)?.ui?.revealPending, room?.status, roomId]);
   const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
@@ -2481,6 +2493,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           slotCount={slotCount}
           topic={room.topic ?? null}
           revealedAt={room.result?.revealedAt ?? null}
+          uiRevealPending={(room as any)?.ui?.revealPending === true}
         />
       </Box>
     </Box>
@@ -2936,9 +2949,3 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-
-
-
-
-
-
