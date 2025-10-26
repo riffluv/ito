@@ -415,6 +415,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     isHost,
     isMember,
     detachNow,
+    reattachPresence,
     leavingRef,
     joinStatus,
   } = useRoomState(
@@ -1524,6 +1525,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           notifyChat: false,
         });
         await assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
+        traceAction("presence.reattach.requested", { roomId, uid });
+        try {
+          await reattachPresence();
+          traceAction("presence.reattach.success", { roomId, uid });
+        } catch (reattachError) {
+          traceError("presence.reattach.failed", reattachError, { roomId, uid });
+        }
       } catch (error) {
         recallJoinHandledRef.current = false;
         assignNumberRetrySignatureRef.current = null;
