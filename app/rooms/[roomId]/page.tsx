@@ -1242,6 +1242,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
   const isSpectatorMode = spectatorEligibilityReady && shouldShowSpectator;
   useEffect(() => {
+    traceAction("spectator.mode", {
+      roomId,
+      uid,
+      isSpectatorMode,
+      isMember,
+      roomStatus: room?.status ?? null,
+    });
+  }, [roomId, uid, isSpectatorMode, isMember, room?.status]);
+  useEffect(() => {
     if (!uid) {
       if (optimisticMe) {
         setOptimisticMe(null);
@@ -1612,6 +1621,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           source,
           requestedAt: created,
           error: failure,
+        });
+        traceAction("spectator.rejoinRequest.state", {
+          roomId,
+          uid,
+          status,
+          source,
+          createdAt: created,
         });
       },
       (error) => {
@@ -2908,10 +2924,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </Box>
   ) : null;
 
+  const showHand =
+    !!me &&
+    (isMember ||
+      seatRequestAccepted ||
+      (uid ? players.some((player) => player.id === uid) : false));
+
   const handAreaNode = (
     <Box display="flex" flexDirection="column" gap={spectatorNotice ? 4 : 0}>
       {spectatorNotice}
-      {!isSpectatorMode && me ? (
+      {showHand ? (
         <MiniHandDock
           roomId={roomId}
           me={me}
