@@ -74,10 +74,6 @@ async function acceptPendingRequest(roomId, uid) {
             return;
         }
         const roomData = roomSnap.data();
-        if (roomData?.status !== "waiting") {
-            outcome = "pending";
-            return;
-        }
         const playerRef = roomRef.collection("players").doc(uid);
         const playerSnap = await tx.get(playerRef);
         const serverTs = admin.firestore.FieldValue.serverTimestamp();

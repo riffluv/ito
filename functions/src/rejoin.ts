@@ -69,10 +69,6 @@ async function acceptPendingRequest(
       return;
     }
     const roomData = roomSnap.data() as FirebaseFirestore.DocumentData;
-    if ((roomData?.status as string) !== "waiting") {
-      outcome = "pending";
-      return;
-    }
 
     const playerRef = roomRef.collection("players").doc(uid);
     const playerSnap = await tx.get(playerRef);

@@ -70,9 +70,9 @@ export function useForcedExit({
         setPendingRejoinFlag();
         try {
           notify({
-            title: "ゲーム進行中です",
+            title: "ゲームの席から外れました",
             description:
-              "今回はプレイヤーとして残ることができません。ホストがリセットすると再参加できます。",
+              "ホストに呼び込みをお願いするか、「席に戻れるか試す」で復帰を申請してください。",
             type: "info",
           });
         } catch (error) {

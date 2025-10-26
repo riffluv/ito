@@ -1027,19 +1027,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
-    const normalizedOrder = (orderList || []).map((id) => (typeof id === "string" && id.length > 0 ? id : null));
+    const normalizedOrder = (orderList || []).map((id) =>
+      typeof id === "string" && id.length > 0 ? id : null
+    );
 
     // reveal/finished は履歴どおり表示（localHide では切り替えない）
     if (roomStatus === "finished" || roomStatus === "reveal") {
       return normalizedOrder;
     }
 
-    // 進行中は在室メンバーのみ反映
+    // 進行中は在室メンバーのみ反映（スロット位置を保持）
     if (Array.isArray(proposal)) {
-      const filtered = proposal.filter(
-        (id): id is string => typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+      const sanitized = proposal.map((id) =>
+        typeof id === "string" && id.length > 0 && eligibleIdSet.has(id) ? id : null
       );
-      if (filtered.length > 0) return filtered;
+      if (sanitized.some(Boolean)) return sanitized;
     }
 
     // リビール直前のフォロー（在室メンバーに限定）
