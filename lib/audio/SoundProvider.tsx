@@ -35,6 +35,15 @@ const PRIORITY_STAGE_ONE: SoundId[] = [
   "drop_success",
   "drop_invalid",
 ];
+const HEAVY_PREWARM_IDS = new Set<SoundId>([
+  "clear_success1",
+  "clear_success2",
+  "clear_failure",
+  "result_victory",
+  "result_failure",
+  "ledger_close",
+  "bgm1",
+]);
 const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
   "ui_click",
   "card_flip",
@@ -148,132 +157,150 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     const critical = PREWARM_SOUND_IDS.filter((id) => criticalSet.has(id));
     const deferredBase = PREWARM_SOUND_IDS.filter((id) => !criticalSet.has(id));
     const stageOne: SoundId[] = [];
-    const deferred: SoundId[] = [];
+    const stageTwo: SoundId[] = [];
+    const heavyStage: SoundId[] = [];
     if (!constrainedNetwork) {
       deferredBase.forEach((id) => {
         if (PRIORITY_STAGE_ONE.includes(id)) {
           stageOne.push(id);
-        } else {
-          deferred.push(id);
+          return;
         }
+        if (HEAVY_PREWARM_IDS.has(id)) {
+          heavyStage.push(id);
+          return;
+        }
+        stageTwo.push(id);
       });
     }
     let cancelled = false;
-    let idleHandle: number | undefined;
-    let timeoutHandle: number | undefined;
+    const pendingTimeouts = new Set<number>();
 
-    if (critical.length) {
-      void (async () => {
+    const recordSoundMetric = (soundId: SoundId, startedAt: number | null) => {
+      if (startedAt !== null) {
+        setMetric(
+          "audio",
+          `prewarm.sound.${soundId}`,
+          Math.max(0, Math.round(performance.now() - startedAt))
+        );
+      }
+    };
+
+    const delay = async (ms: number) => {
+      if (cancelled || typeof window === "undefined") return;
+      if (ms <= 0) return;
+      await new Promise<void>((resolve) => {
+        const handle = window.setTimeout(() => {
+          pendingTimeouts.delete(handle);
+          resolve();
+        }, ms);
+        pendingTimeouts.add(handle);
+      });
+    };
+
+    const processQueue = async (
+      queue: SoundId[],
+      metricsKey: string,
+      options: { initialDelay?: number; gapLong: number; gapShort: number; traceKey: string }
+    ) => {
+      if (queue.length === 0 || cancelled) return;
+      const totalStartedAt =
+        typeof performance !== "undefined" ? performance.now() : null;
+      if (options.initialDelay && options.initialDelay > 0) {
+        await delay(options.initialDelay);
+        if (cancelled) return;
+      }
+      for (let index = 0; index < queue.length; index += 1) {
+        const soundId = queue[index];
+        const soundStartedAt =
+          typeof performance !== "undefined" ? performance.now() : null;
+        try {
+          await manager.prewarm([soundId]);
+        } catch (error) {
+          traceError(options.traceKey, error as any, { soundId });
+        } finally {
+          recordSoundMetric(soundId, soundStartedAt);
+        }
+        if (cancelled) break;
+        if (index < queue.length - 1) {
+          const remaining = queue.length - index - 1;
+          const gap =
+            remaining > 2 ? options.gapLong : options.gapShort;
+          await delay(gap);
+          if (cancelled) break;
+        }
+      }
+      if (totalStartedAt !== null) {
+        setMetric(
+          "audio",
+          metricsKey,
+          Math.round(
+            Math.max(0, (performance?.now?.() ?? totalStartedAt) - totalStartedAt)
+          )
+        );
+      }
+    };
+
+    void (async () => {
+      if (critical.length) {
         const startedAt =
           typeof performance !== "undefined" ? performance.now() : null;
         try {
-          await manager.prewarm(critical);
+          for (const soundId of critical) {
+            if (cancelled) break;
+            const soundStartedAt =
+              typeof performance !== "undefined" ? performance.now() : null;
+            try {
+              await manager.prewarm([soundId]);
+            } catch (soundError) {
+              traceError("audio.prewarm.critical", soundError as any, { soundId });
+            } finally {
+              recordSoundMetric(soundId, soundStartedAt);
+            }
+            if (cancelled) break;
+          }
           if (startedAt !== null) {
             setMetric(
               "audio",
               "prewarm.criticalMs",
-              Math.round(performance.now() - startedAt)
+              Math.round(Math.max(0, (performance?.now?.() ?? startedAt) - startedAt))
             );
           }
         } catch (error) {
           setMetric("audio", "prewarm.criticalMs", -1);
-          traceError("audio.prewarm.critical", error as any);
+          traceError("audio.prewarm.critical.batch", error as any);
         }
-      })();
-    } else {
+      } else {
+        setMetric("audio", "prewarm.criticalMs", 0);
+      }
+
+      await processQueue(stageOne, "prewarm.stageOneMs", {
+        gapLong: 120,
+        gapShort: 70,
+        traceKey: "audio.prewarm.stageOne",
+      });
+      await processQueue(stageTwo, "prewarm.deferredMs", {
+        initialDelay: 240,
+        gapLong: 260,
+        gapShort: 140,
+        traceKey: "audio.prewarm.deferred",
+      });
+      await processQueue(heavyStage, "prewarm.heavyMs", {
+        initialDelay: 1400,
+        gapLong: 520,
+        gapShort: 260,
+        traceKey: "audio.prewarm.heavy",
+      });
+    })();
+
+    if (critical.length === 0) {
       setMetric("audio", "prewarm.criticalMs", 0);
-    }
-
-    const runStageQueue = (
-      queue: SoundId[],
-      metricsKey: string,
-      options: { baseDelay: number; minDelay: number }
-    ) => {
-      if (queue.length === 0) return;
-      const win = window as Window &
-        typeof globalThis & {
-          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
-          cancelIdleCallback?: (handle: number) => void;
-        };
-      const totalStartedAt =
-        typeof performance !== "undefined" ? performance.now() : null;
-
-      const runNext = () => {
-        idleHandle = undefined;
-        timeoutHandle = undefined;
-        if (cancelled) return;
-        const soundId = queue.shift();
-        if (!soundId) return;
-        const soundStartedAt =
-          typeof performance !== "undefined" ? performance.now() : null;
-        manager
-          .prewarm([soundId])
-          .catch((error) => {
-            traceError("audio.prewarm.deferred", error as any, { soundId });
-          })
-          .finally(() => {
-            if (soundStartedAt !== null) {
-              setMetric(
-                "audio",
-                `prewarm.sound.${soundId}`,
-                Math.round(performance.now() - soundStartedAt)
-              );
-            }
-            if (queue.length === 0) {
-              if (totalStartedAt !== null) {
-                setMetric(
-                  "audio",
-                  metricsKey,
-                  Math.round(performance.now() - totalStartedAt)
-                );
-              }
-              return;
-            }
-            if (!cancelled) {
-              scheduleNext(queue.length > 2 ? options.baseDelay : options.minDelay);
-            }
-          });
-      };
-
-      const scheduleNext = (delayMs: number) => {
-        if (cancelled || queue.length === 0) return;
-        const invoke = () => {
-          runNext();
-        };
-        if (typeof win.requestIdleCallback === "function") {
-          if (delayMs > 0) {
-            timeoutHandle = window.setTimeout(() => {
-              timeoutHandle = undefined;
-              if (cancelled) return;
-              idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
-            }, Math.max(delayMs, options.minDelay));
-          } else {
-            idleHandle = win.requestIdleCallback(invoke, { timeout: 2500 });
-          }
-        } else {
-          timeoutHandle = window.setTimeout(invoke, Math.max(delayMs, options.minDelay));
-        }
-      };
-
-      scheduleNext(0);
-    };
-
-    if (stageOne.length) {
-      runStageQueue(stageOne, "prewarm.stageOneMs", { baseDelay: 140, minDelay: 80 });
-    }
-    if (deferred.length) {
-      runStageQueue(deferred, "prewarm.deferredMs", { baseDelay: 420, minDelay: 160 });
     }
 
     return () => {
       cancelled = true;
       if (typeof window !== "undefined") {
-        if (idleHandle !== undefined) {
-          (window as any).cancelIdleCallback?.(idleHandle);
-        }
-        if (timeoutHandle !== undefined) {
-          window.clearTimeout(timeoutHandle);
-        }
+        pendingTimeouts.forEach((handle) => window.clearTimeout(handle));
+        pendingTimeouts.clear();
       }
     };
   }, []);
