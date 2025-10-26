@@ -136,3 +136,11 @@ export function computeSlotCount(opts: {
 
   return Math.max(propLen, dealLen, opts.playersCount);
 }
+
+/**
+ * 表示系の共通判定: リビール中かどうか。
+ * 将来的にローカル/共有ゲートを併合するための小さなセレクタ。
+ */
+export function isRevealing(opts: { status: any; localHide?: boolean }): boolean {
+  return opts.status === "reveal" || !!opts.localHide;
+}

@@ -44,6 +44,7 @@ import { logError, logWarn } from "@/lib/utils/log";
 import { REVEAL_FIRST_DELAY, REVEAL_LINGER, REVEAL_STEP_DELAY } from "@/lib/ui/motion";
 import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { isRevealing as selectIsRevealing } from "@/lib/game/selectors";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 
@@ -259,6 +260,7 @@ function InteractiveBoardBase({
   displayMode,
   roomStatus,
   boardRef,
+  isRevealing,
 }: {
   slots: DragSlotDescriptor[];
   magnetSnapshot: MagnetSnapshot;
@@ -280,6 +282,7 @@ function InteractiveBoardBase({
   displayMode?: "full" | "minimal";
   roomStatus: RoomDoc["status"];
   boardRef: React.RefObject<HTMLDivElement>;
+  isRevealing: boolean;
 }) {
   const sortableItems = useMemo(
     () => activeProposal.filter((id): id is string => typeof id === "string" && id.length > 0),
@@ -368,7 +371,7 @@ function InteractiveBoardBase({
           : null}
       </DragOverlay>
 
-      {(roomStatus === "clue" || roomStatus === "waiting") && waitingPlayers.length > 0 && (
+      {(roomStatus === "clue" || roomStatus === "waiting") && !isRevealing && waitingPlayers.length > 0 && (
         <Box
           width="100%"
           maxWidth="var(--board-max-width)"
@@ -413,6 +416,7 @@ function StaticBoardBase({
   onDropAtPosition,
   onSlotEnter,
   onSlotLeave,
+  isRevealing,
 }: {
   slots: StaticSlotDescriptor[];
   renderCard: (id: string, idx: number) => React.ReactNode;
@@ -425,6 +429,7 @@ function StaticBoardBase({
   onDropAtPosition: (event: React.DragEvent, index: number) => void;
   onSlotEnter: (index: number) => void;
   onSlotLeave: () => void;
+  isRevealing: boolean;
 }) {
   return (
     <>
@@ -488,7 +493,7 @@ function StaticBoardBase({
         })}
       </BoardFrame>
 
-      {(roomStatus === "clue" || roomStatus === "waiting") && waitingPlayers.length > 0 && (
+      {(roomStatus === "clue" || roomStatus === "waiting") && !isRevealing && waitingPlayers.length > 0 && (
         <Box
           width="100%"
           maxWidth="var(--board-max-width)"
@@ -537,6 +542,28 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   slotCount,
   revealedAt,
 }) => {
+  const [localRevealPending, setLocalRevealPending] = useState(false);
+  useEffect(() => {
+    const onLocalBegin = (e: Event) => {
+      const detailRoom = (e as CustomEvent<{ roomId?: string }>).detail?.roomId;
+      if (detailRoom && detailRoom !== roomId) return;
+      setLocalRevealPending(true);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("ito:local-reveal-begin", onLocalBegin as EventListener);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("ito:local-reveal-begin", onLocalBegin as EventListener);
+      }
+    };
+  }, [roomId]);
+  useEffect(() => {
+    if (roomStatus === "reveal" || roomStatus === "finished") {
+      if (localRevealPending) setLocalRevealPending(false);
+    }
+  }, [roomStatus, localRevealPending]);
+  const isRevealing = selectIsRevealing({ status: roomStatus, localHide: localRevealPending });
   const playerMap = useMemo(() => {
     const map = new Map<string, PlayerDoc & { id: string }>();
     players.forEach((player) => {
@@ -1000,7 +1027,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
     const normalizedOrder = (orderList || []).map((id) => (typeof id === "string" && id.length > 0 ? id : null));
 
-    // reveal/finished は履歴どおり表示
+    // reveal/finished は履歴どおり表示（localHide では切り替えない）
     if (roomStatus === "finished" || roomStatus === "reveal") {
       return normalizedOrder;
     }
@@ -1464,7 +1491,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }}
     >
       <VisuallyHidden aria-live="polite">
-        {roomStatus === "reveal"
+        {isRevealing
           ? `進行状況: ${revealIndex} / ${(orderList || []).length}`
           : roomStatus === "finished"
           ? realtimeResult?.failedAt != null
@@ -1531,6 +1558,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             displayMode={displayMode}
             roomStatus={roomStatus}
             boardRef={boardContainerRef}
+            isRevealing={isRevealing}
           />
         ) : (
           <StaticBoard
@@ -1545,6 +1573,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             onDropAtPosition={onDropAtPosition}
             onSlotEnter={handleSlotEnter}
             onSlotLeave={handleSlotLeave}
+            isRevealing={isRevealing}
           />
         )}
       </Box>

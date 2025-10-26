@@ -12,6 +12,7 @@ import { topicControls } from "@/lib/game/service";
 import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
+import { useRevealGate } from "@/lib/hooks/useRevealGate";
 import type { PlayerDoc } from "@/lib/types";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { toastIds } from "@/lib/ui/toastIds";
@@ -289,6 +290,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     currentTopic,
   } = props;
 
+  // Reveal直前の一瞬だけローカルで手札UIを隠すゲート
+  const { hideHandUI, begin: beginReveal } = useRevealGate(roomStatus as any, roomId);
+
   // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
   const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
     string | undefined
@@ -548,7 +552,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       <SeinoButton
         isVisible={shouldShowSeinoButton}
         disabled={!allSubmitted}
-        onClick={evalSorted}
+        onClick={async () => {
+          beginReveal();
+          await evalSorted();
+        }}
       />
 
       {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
@@ -607,7 +614,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Box>
       )}
 
-      {/* 中央下部: シームレス浮遊ボタン群（常時表示） */}
+      {/* 中央下部: シームレス浮遊ボタン群（revealゲート中はDOMごと非表示） */}
+      {!hideHandUI && (
       <Flex
         position="fixed"
         bottom={{ base: "20px", md: "24px" }}
@@ -642,6 +650,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             },
           }}
         >
+          {/* revealゲート中は上位の条件でDOM未描画 */}
           <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
         </Box>
 
@@ -823,6 +832,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           </>
         )}
       </Flex>
+      )}
 
       {/* フィードバックメッセージ (中央入力エリアの上) */}
       {inlineFeedback && (
