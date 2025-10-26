@@ -9,6 +9,56 @@ import {
 } from "@/lib/ui/motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+type RevealPersistenceDeps = {
+  requireDb: typeof import("@/lib/firebase/require").requireDb;
+  doc: typeof import("firebase/firestore").doc;
+  runTransaction: typeof import("firebase/firestore").runTransaction;
+  serverTimestamp: typeof import("firebase/firestore").serverTimestamp;
+};
+
+let revealPersistenceDepsPromise: Promise<RevealPersistenceDeps> | null = null;
+
+async function preloadRevealPersistenceDeps(): Promise<RevealPersistenceDeps> {
+  if (!revealPersistenceDepsPromise) {
+    revealPersistenceDepsPromise = (async () => {
+      const [firebaseRequire, firestore] = await Promise.all([
+        import("@/lib/firebase/require"),
+        import("firebase/firestore"),
+      ]);
+      return {
+        requireDb: firebaseRequire.requireDb,
+        doc: firestore.doc,
+        runTransaction: firestore.runTransaction,
+        serverTimestamp: firestore.serverTimestamp,
+      };
+    })().catch((error) => {
+      revealPersistenceDepsPromise = null;
+      throw error;
+    });
+  }
+  return revealPersistenceDepsPromise;
+}
+
+const scheduleRevealPersistenceTask = (task: () => void) => {
+  if (typeof window === "undefined") {
+    task();
+    return;
+  }
+  const idle = (window as any).requestIdleCallback as
+    | ((callback: () => void, options?: { timeout?: number }) => number)
+    | undefined;
+  if (typeof idle === "function") {
+    idle(
+      () => {
+        task();
+      },
+      { timeout: 1500 }
+    );
+    return;
+  }
+  window.setTimeout(task, 0);
+};
+
 interface RealtimeResult {
   success: boolean;
   failedAt: number | null;
@@ -43,6 +93,14 @@ export function useRevealAnimation({
   const prevStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
+
+  useEffect(() => {
+    if (resolveMode === "sort-submit" && orderListLength > 0) {
+      void preloadRevealPersistenceDeps().catch((error) => {
+        logWarn("reveal", "preload-result-modules-failed", error);
+      });
+    }
+  }, [resolveMode, orderListLength]);
 
   // Start reveal animation: useLayoutEffect so we set the flag before the
   // browser paints. This avoids a render where `roomStatus === 'reveal'` but
@@ -135,32 +193,32 @@ export function useRevealAnimation({
           // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
           else if (result.success && nextIndex === orderListLength) {
             // 完全非同期で実行（めくりリズムに影響させない）
-            setTimeout(async () => {
-              try {
-                const { requireDb } = await import("@/lib/firebase/require");
-                const { doc, runTransaction, serverTimestamp } = await import(
-                  "firebase/firestore"
-                );
-                const _db = requireDb();
-                const roomRef = doc(_db, "rooms", roomId);
-                await runTransaction(_db, async (tx) => {
-                  const currentSnap = await tx.get(roomRef);
-                  if (!currentSnap.exists()) return;
-                  const currentRoom = currentSnap.data() as any;
-                  if (currentRoom.result) return; // 既存結果がある場合はスキップ
-                  tx.update(roomRef, {
-                    result: {
-                      success: true,
-                      failedAt: null,
-                      lastNumber: result.last,
-                      revealedAt: serverTimestamp(),
-                    },
+            scheduleRevealPersistenceTask(() => {
+              void (async () => {
+                try {
+                  const { requireDb, doc, runTransaction, serverTimestamp } =
+                    await preloadRevealPersistenceDeps();
+                  const _db = requireDb();
+                  const roomRef = doc(_db, "rooms", roomId);
+                  await runTransaction(_db, async (tx) => {
+                    const currentSnap = await tx.get(roomRef);
+                    if (!currentSnap.exists()) return;
+                    const currentRoom = currentSnap.data() as any;
+                    if (currentRoom.result) return; // 既存結果がある場合はスキップ
+                    tx.update(roomRef, {
+                      result: {
+                        success: true,
+                        failedAt: null,
+                        lastNumber: result.last,
+                        revealedAt: serverTimestamp(),
+                      },
+                    });
                   });
-                });
-              } catch (e) {
-                logWarn("reveal", "result-save-error", e);
-              }
-            }, 0);
+                } catch (e) {
+                  logWarn("reveal", "result-save-error", e);
+                }
+              })();
+            });
           }
         }
       } catch (e) {

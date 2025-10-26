@@ -1,5 +1,5 @@
 import { notify } from "@/components/ui/notify";
-import { addCardToProposalAtPosition } from "@/lib/game/room";
+import { scheduleAddCardToProposalAtPosition } from "@/lib/game/proposalScheduler";
 import { addCardToProposal } from "@/lib/game/service";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
@@ -180,7 +180,7 @@ export function useDropHandler({
       return next;
     });
 
-    const request = addCardToProposalAtPosition(roomId, meId, targetIndex);
+    const request = scheduleAddCardToProposalAtPosition(roomId, meId, targetIndex);
     if (inserted) {
       playOnce();
     }

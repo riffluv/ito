@@ -31,9 +31,11 @@ import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import {
-  addCardToProposalAtPosition,
+  scheduleAddCardToProposalAtPosition,
+  scheduleMoveCardInProposalToPosition,
+} from "@/lib/game/proposalScheduler";
+import {
   finalizeReveal,
-  moveCardInProposalToPosition,
   removeCardFromProposal,
   submitSortedOrder,
 } from "@/lib/game/room";
@@ -626,6 +628,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
   const magnetTargetRef = useRef<string | null>(null);
   const magnetHighlightTimeoutRef = useRef<number | null>(null);
+  const pendingMagnetStateRef = useRef<MagnetResult | null>(null);
+  const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
+  const magnetFlushFrameRef = useRef<number | null>(null);
 
   const magnetConfig = useMemo(
     () => ({
@@ -639,67 +644,124 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   useEffect(() => {
     magnetConfigRef.current = magnetConfig;
   }, [magnetConfig]);
+
+  const flushMagnetUpdates = useCallback(() => {
+    const nextState = pendingMagnetStateRef.current;
+    const nextTarget = pendingMagnetTargetIdRef.current;
+    pendingMagnetStateRef.current = null;
+    pendingMagnetTargetIdRef.current = undefined;
+    if (nextState) {
+      magnetStateRef.current = nextState;
+      setMagnetState(nextState);
+    }
+    if (nextTarget !== undefined) {
+      magnetTargetRef.current = nextTarget;
+      setMagnetTargetId(nextTarget);
+    }
+  }, [setMagnetState, setMagnetTargetId]);
+
+  const scheduleMagnetFlush = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const immediate = options?.immediate ?? false;
+      if (immediate || typeof window === "undefined") {
+        if (typeof window !== "undefined" && magnetFlushFrameRef.current != null) {
+          window.cancelAnimationFrame(magnetFlushFrameRef.current);
+        }
+        magnetFlushFrameRef.current = null;
+        flushMagnetUpdates();
+        return;
+      }
+      if (magnetFlushFrameRef.current != null) return;
+      magnetFlushFrameRef.current = window.requestAnimationFrame(() => {
+        magnetFlushFrameRef.current = null;
+        flushMagnetUpdates();
+      });
+    },
+    [flushMagnetUpdates]
+  );
+
+  const enqueueMagnetUpdate = useCallback(
+    (update: { state?: MagnetResult; target?: string | null; immediate?: boolean }) => {
+      let didQueue = false;
+      if (update.state) {
+        pendingMagnetStateRef.current = update.state;
+        didQueue = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(update, "target")) {
+        pendingMagnetTargetIdRef.current = update.target;
+        didQueue = true;
+      }
+      if (!didQueue) return;
+      scheduleMagnetFlush({ immediate: update.immediate });
+    },
+    [scheduleMagnetFlush]
+  );
+
+  const getProjectedMagnetTarget = useCallback(() => {
+    return pendingMagnetTargetIdRef.current !== undefined
+      ? pendingMagnetTargetIdRef.current
+      : magnetTargetRef.current;
+  }, []);
+
   const boardContainerRef = useRef<HTMLDivElement | null>(null);
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
 
-  const resetMagnet = useCallback((options?: { immediate?: boolean }) => {
-    const immediate = options?.immediate ?? false;
-    if (
-      magnetStateRef.current.strength === 0 &&
-      !magnetStateRef.current.shouldSnap &&
-      magnetTargetRef.current === null
-    ) {
-      if (immediate) {
-        setMagnetTargetId(null);
+  const resetMagnet = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const immediate = options?.immediate ?? false;
+      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const projectedTarget = getProjectedMagnetTarget();
+      const needsStateReset =
+        projectedState.dx !== 0 ||
+        projectedState.dy !== 0 ||
+        projectedState.strength !== 0 ||
+        projectedState.shouldSnap;
+      const needsTargetReset = projectedTarget !== null;
+
+      if (!needsStateReset && !needsTargetReset) {
+        return;
       }
-      return;
-    }
 
-    if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
-      window.clearTimeout(magnetHighlightTimeoutRef.current);
-      magnetHighlightTimeoutRef.current = null;
-    }
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
 
-    magnetTargetRef.current = null;
-    const next = createInitialMagnetState();
-    magnetStateRef.current = next;
-    setMagnetState(next);
-
-    if (immediate) {
-      setMagnetTargetId(null);
-    } else {
-      setMagnetTargetId((prev) => (prev === null ? prev : null));
-    }
-  }, []);
+      enqueueMagnetUpdate({
+        state: needsStateReset ? createInitialMagnetState() : undefined,
+        target: needsTargetReset ? null : undefined,
+        immediate,
+      });
+    },
+    [enqueueMagnetUpdate, getProjectedMagnetTarget]
+  );
 
   const scheduleMagnetTarget = useCallback(
     (nextId: string | null) => {
-      if (magnetTargetRef.current === nextId) return;
+      const projected = getProjectedMagnetTarget();
+      if (projected === nextId) return;
       if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
       }
 
       if (typeof window === "undefined") {
-        magnetTargetRef.current = nextId;
-        setMagnetTargetId(nextId);
+        enqueueMagnetUpdate({ target: nextId, immediate: true });
         return;
       }
 
       const delay = prefersReducedMotion ? 36 : 90;
       if (delay <= 0) {
-        magnetTargetRef.current = nextId;
-        setMagnetTargetId(nextId);
+        enqueueMagnetUpdate({ target: nextId });
         return;
       }
 
       magnetHighlightTimeoutRef.current = window.setTimeout(() => {
-        magnetTargetRef.current = nextId;
-        setMagnetTargetId(nextId);
         magnetHighlightTimeoutRef.current = null;
+        enqueueMagnetUpdate({ target: nextId });
       }, delay);
     },
-    [prefersReducedMotion]
+    [enqueueMagnetUpdate, getProjectedMagnetTarget, prefersReducedMotion]
   );
 
   useEffect(() => {
@@ -707,6 +769,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
+      }
+      if (typeof window !== "undefined" && magnetFlushFrameRef.current != null) {
+        window.cancelAnimationFrame(magnetFlushFrameRef.current);
+        magnetFlushFrameRef.current = null;
       }
     };
   }, []);
@@ -1213,10 +1279,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
         scheduleMagnetTarget(null);
-        if (magnetStateRef.current.strength > 0 || magnetStateRef.current.shouldSnap) {
-          const next = createInitialMagnetState();
-          magnetStateRef.current = next;
-          setMagnetState(next);
+        const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+        if (
+          projectedState.dx !== 0 ||
+          projectedState.dy !== 0 ||
+          projectedState.strength > 0 ||
+          projectedState.shouldSnap
+        ) {
+          enqueueMagnetUpdate({ state: createInitialMagnetState() });
         }
         return;
       }
@@ -1225,7 +1295,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       const magnetResult = computeMagnetTransform(over.rect, activeRect, magnetConfigRef.current);
 
-      const previous = magnetStateRef.current;
+      const previous = pendingMagnetStateRef.current ?? magnetStateRef.current;
       const deltaX = Math.abs(previous.dx - magnetResult.dx);
       const deltaY = Math.abs(previous.dy - magnetResult.dy);
       const deltaStrength = Math.abs(previous.strength - magnetResult.strength);
@@ -1233,10 +1303,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         return;
       }
 
-      magnetStateRef.current = magnetResult;
-      setMagnetState(magnetResult);
+      enqueueMagnetUpdate({ state: magnetResult });
     },
-    [resolveMode, roomStatus, scheduleMagnetTarget]
+    [enqueueMagnetUpdate, resolveMode, roomStatus, scheduleMagnetTarget]
   );
 
   const onDragStart = useCallback(
@@ -1396,14 +1465,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             if (alreadyInProposal) {
               playOnce();
-              moveCardInProposalToPosition(roomId, activePlayerId, slotIndex).catch((error) => {
+              scheduleMoveCardInProposalToPosition(roomId, activePlayerId, slotIndex).catch((error) => {
                 logError("central-card-board", "move-card-in-proposal", error);
                 playDropInvalid();
               });
               return;
             }
 
-            const request = addCardToProposalAtPosition(roomId, activePlayerId, slotIndex);
+            const request = scheduleAddCardToProposalAtPosition(roomId, activePlayerId, slotIndex);
             if (insertedPending) {
               playOnce();
             }
@@ -1444,18 +1513,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             return;
           }
           playCardPlace();
-          moveCardInProposalToPosition(roomId, activePlayerId, targetIndex).catch((error) => {
+          scheduleMoveCardInProposalToPosition(roomId, activePlayerId, targetIndex).catch((error) => {
             logError("central-card-board", "move-card-in-proposal", error);
             playDropInvalid();
           });
         }
       } finally {
-        magnetStateRef.current = magnetResult;
-        setMagnetState(magnetResult);
+        enqueueMagnetUpdate({ state: magnetResult, immediate: true });
         clearActive();
       }
     },
     [
+      enqueueMagnetUpdate,
       resolveMode,
       roomStatus,
       playDropInvalid,
