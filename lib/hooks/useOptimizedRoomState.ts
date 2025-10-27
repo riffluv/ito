@@ -249,12 +249,13 @@ export function useOptimizedRoomState(
   // Participants with optimized updates
   const {
     players: fetchedPlayers,
-    onlineUids,
+    onlineUids: effectiveOnlineUids,
     participants,
     detach,
     reattachNow,
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
+  const onlineUids = effectiveOnlineUids;
   
   useEffect(() => {
     const nextSignature = createPlayersSignature(fetchedPlayers);
