@@ -17,7 +17,7 @@ import * as PIXI from "pixi.js";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
-type BackgroundOption = "css" | "pixi-simple" | "pixi-dq";
+type BackgroundOption = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 const normalizeBackgroundOption = (
   value: string | null
 ): BackgroundOption => {
@@ -26,6 +26,9 @@ const normalizeBackgroundOption = (
   }
   if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
     return "pixi-dq";
+  }
+  if (value === "pixi-inferno" || value === "inferno") {
+    return "pixi-inferno";
   }
   return "css";
 };
@@ -112,6 +115,7 @@ export function SettingsModal({
     css: "CSS はいけい",
     "pixi-simple": "Pixi ライト",
     "pixi-dq": "ドラクエ風 Pixi",
+    "pixi-inferno": "煉獄 Pixi",
   };
 
   const backgroundOptions: {
@@ -131,8 +135,13 @@ export function SettingsModal({
     },
     {
       value: "pixi-dq",
-      title: "山はいいよね。 pixiJS",
+      title: "山はいいよね。 pixiJS（夜）",
       description: "和みそうな、景色 PixiJS 背景。",
+    },
+    {
+      value: "pixi-inferno",
+      title: "煉獄。 pixiJS",
+      description: "地獄の炎と溶岩の PixiJS 背景。",
     },
   ];
 
