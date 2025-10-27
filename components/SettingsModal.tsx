@@ -18,6 +18,8 @@ import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground"
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
 type BackgroundOption = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
+type SceneryVariant = "night" | "inferno" | "sunny";
+
 const normalizeBackgroundOption = (
   value: string | null
 ): BackgroundOption => {
@@ -31,6 +33,21 @@ const normalizeBackgroundOption = (
     return "pixi-inferno";
   }
   return "css";
+};
+
+// 背景タイプからバリエーションへのマッピング
+const getVariantFromBackground = (bg: BackgroundOption): SceneryVariant | null => {
+  if (bg === "pixi-dq") return "night";
+  if (bg === "pixi-inferno") return "inferno";
+  return null;
+};
+
+// バリエーションから背景タイプへのマッピング
+const getBackgroundFromVariant = (variant: SceneryVariant): BackgroundOption => {
+  if (variant === "night") return "pixi-dq";
+  if (variant === "inferno") return "pixi-inferno";
+  if (variant === "sunny") return "pixi-dq"; // 晴天は未実装なので夜にフォールバック（将来実装）
+  return "pixi-dq";
 };
 
 
@@ -114,14 +131,15 @@ export function SettingsModal({
   const backgroundLabelMap: Record<BackgroundOption, string> = {
     css: "CSS はいけい",
     "pixi-simple": "Pixi ライト",
-    "pixi-dq": "ドラクエ風 Pixi",
-    "pixi-inferno": "煉獄 Pixi",
+    "pixi-dq": "山はいいよね（夜）",
+    "pixi-inferno": "山はいいよね（煉獄）",
   };
 
   const backgroundOptions: {
-    value: BackgroundOption;
+    value: BackgroundOption | "scenery"; // "scenery" は山はいいよねグループ
     title: string;
     description: string;
+    hasVariants?: boolean;
   }[] = [
     {
       value: "css",
@@ -134,14 +152,32 @@ export function SettingsModal({
       description: "黒ベースの PixiJS 背景。",
     },
     {
-      value: "pixi-dq",
-      title: "山はいいよね。 pixiJS（夜）",
+      value: "scenery",
+      title: "山はいいよね。 pixiJS",
       description: "和みそうな、景色 PixiJS 背景。",
+      hasVariants: true,
+    },
+  ];
+
+  const sceneryVariants: {
+    value: SceneryVariant;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      value: "night",
+      label: "夜",
+      description: "星空と山々の夜景",
     },
     {
-      value: "pixi-inferno",
-      title: "煉獄。 pixiJS",
-      description: "地獄の炎と溶岩の PixiJS 背景。",
+      value: "inferno",
+      label: "煉獄",
+      description: "地獄の炎と溶岩",
+    },
+    {
+      value: "sunny",
+      label: "晴天",
+      description: "（準備中）",
     },
   ];
 
@@ -227,6 +263,12 @@ export function SettingsModal({
     } catch {
       // noop
     }
+  };
+
+  // バリエーション変更ハンドラ
+  const handleVariantChange = (variant: SceneryVariant) => {
+    const newBg = getBackgroundFromVariant(variant);
+    handleBackgroundChange(newBg);
   };
 
   // アニメーション優先トグル（reduced-motion無視）
@@ -773,12 +815,176 @@ export function SettingsModal({
                   </Text>
                   <Stack gap={2}>
                     {backgroundOptions.map((opt) => {
+                      // sceneryグループの場合は特別処理
+                      if (opt.value === "scenery") {
+                        const currentVariant = getVariantFromBackground(backgroundType);
+                        const isScenerySelected = currentVariant !== null;
+
+                        return (
+                          <Box
+                            key={opt.value}
+                            p={4}
+                            borderRadius="0"
+                            border="2px solid"
+                            borderColor={
+                              isScenerySelected
+                                ? UI_TOKENS.COLORS.whiteAlpha90
+                                : UI_TOKENS.COLORS.whiteAlpha30
+                            }
+                            bg={
+                              isScenerySelected
+                                ? UI_TOKENS.COLORS.whiteAlpha10
+                                : UI_TOKENS.COLORS.panelBg
+                            }
+                            transition={`background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1), box-shadow 177ms cubic-bezier(.2,1,.3,1)`}
+                            boxShadow={
+                              isScenerySelected
+                                ? UI_TOKENS.SHADOWS.panelDistinct
+                                : UI_TOKENS.SHADOWS.panelSubtle
+                            }
+                          >
+                            <HStack
+                              justify="space-between"
+                              align="start"
+                              cursor="pointer"
+                              onClick={() => {
+                                if (!isScenerySelected) {
+                                  handleVariantChange("night");
+                                }
+                              }}
+                            >
+                              <VStack align="start" gap={1} flex="1">
+                                <Text
+                                  fontSize="md"
+                                  fontWeight="bold"
+                                  color="white"
+                                  fontFamily="monospace"
+                                  textShadow="1px 1px 0px #000"
+                                >
+                                  {opt.title}
+                                </Text>
+                                <Text
+                                  fontSize="sm"
+                                  color={UI_TOKENS.COLORS.textMuted}
+                                  lineHeight="short"
+                                  fontFamily="monospace"
+                                >
+                                  {opt.description}
+                                </Text>
+                              </VStack>
+                              <Box
+                                w={5}
+                                h={5}
+                                borderRadius="0"
+                                border="2px solid"
+                                borderColor={
+                                  isScenerySelected
+                                    ? "white"
+                                    : UI_TOKENS.COLORS.whiteAlpha50
+                                }
+                                bg={isScenerySelected ? "white" : "transparent"}
+                                mt={0.5}
+                                position="relative"
+                                transition="background-color 177ms cubic-bezier(.2,1,.3,1), border-color 177ms cubic-bezier(.2,1,.3,1)"
+                              >
+                                {isScenerySelected && (
+                                  <Box
+                                    position="absolute"
+                                    top="50%"
+                                    left="50%"
+                                    transform="translate(-50%, -50%)"
+                                    w="10px"
+                                    h="6px"
+                                    color="black"
+                                    fontWeight={880}
+                                    fontSize="12px"
+                                    fontFamily="monospace"
+                                    lineHeight={1}
+                                  >
+                                    ✓
+                                  </Box>
+                                )}
+                              </Box>
+                            </HStack>
+
+                            {/* バリエーション選択（選択時のみ表示） */}
+                            {isScenerySelected && (
+                              <Box mt={3} pt={3} borderTop="1px solid" borderColor={UI_TOKENS.COLORS.whiteAlpha20}>
+                                <Text
+                                  fontSize="xs"
+                                  fontWeight="600"
+                                  color={UI_TOKENS.COLORS.textMuted}
+                                  mb={2}
+                                  fontFamily="monospace"
+                                >
+                                  バリエーション:
+                                </Text>
+                                <HStack gap={2}>
+                                  {sceneryVariants.map((variant) => {
+                                    const isVariantSelected = currentVariant === variant.value;
+                                    const isDisabled = variant.value === "sunny"; // 晴天は未実装
+
+                                    return (
+                                      <Box
+                                        key={variant.value}
+                                        as="button"
+                                        flex="1"
+                                        px={3}
+                                        py={2}
+                                        borderRadius="0"
+                                        border="2px solid"
+                                        borderColor={
+                                          isVariantSelected
+                                            ? UI_TOKENS.COLORS.whiteAlpha90
+                                            : UI_TOKENS.COLORS.whiteAlpha30
+                                        }
+                                        bg={
+                                          isVariantSelected
+                                            ? UI_TOKENS.COLORS.whiteAlpha15
+                                            : UI_TOKENS.COLORS.panelBg
+                                        }
+                                        color="white"
+                                        fontFamily="monospace"
+                                        fontSize="sm"
+                                        fontWeight="bold"
+                                        cursor={isDisabled ? "not-allowed" : "pointer"}
+                                        opacity={isDisabled ? 0.4 : 1}
+                                        transition={`background-color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
+                                        onClick={() => {
+                                          if (!isDisabled) {
+                                            handleVariantChange(variant.value);
+                                          }
+                                        }}
+                                        _hover={
+                                          !isDisabled
+                                            ? {
+                                                borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                                                bg: isVariantSelected
+                                                  ? UI_TOKENS.COLORS.whiteAlpha20
+                                                  : UI_TOKENS.COLORS.whiteAlpha05,
+                                              }
+                                            : {}
+                                        }
+                                        title={variant.description}
+                                      >
+                                        {variant.label}
+                                      </Box>
+                                    );
+                                  })}
+                                </HStack>
+                              </Box>
+                            )}
+                          </Box>
+                        );
+                      }
+
+                      // 通常の背景オプション
                       const isSelected = backgroundType === opt.value;
                       return (
                         <Box
                           key={opt.value}
                           cursor="pointer"
-                          onClick={() => handleBackgroundChange(opt.value)}
+                          onClick={() => handleBackgroundChange(opt.value as BackgroundOption)}
                           p={4}
                           borderRadius="0"
                           border="2px solid"
