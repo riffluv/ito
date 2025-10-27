@@ -2,8 +2,10 @@
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
+import { prefetchRoomExperience } from "@/lib/prefetch/prefetchRoomExperience";
 import { Lock, Play, UserCheck, Users } from "lucide-react";
-import { memo } from "react";
+import { memo, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 type RoomCardProps = {
   id: string;
@@ -32,6 +34,20 @@ export const RoomCard = memo(function RoomCard({
   const statusLabel = status === "waiting" ? "待機中" : "進行中";
   const isWaiting = status === "waiting";
   const locked = !!requiresPassword;
+  const router = useRouter();
+  const prefetchedRef = useRef(false);
+
+  const handlePrefetch = useCallback(() => {
+    if (!isWaiting) return;
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    try {
+      router.prefetch(`/rooms/${id}`);
+    } catch {
+      // prefetch is best-effort; ignore failures
+    }
+    void prefetchRoomExperience(id);
+  }, [id, isWaiting, router]);
 
   return (
     <Box
@@ -40,6 +56,8 @@ export const RoomCard = memo(function RoomCard({
       cursor={isWaiting ? "default" : "not-allowed"}
       data-locked={locked ? "true" : "false"}
       _hover={{}}
+      onPointerEnter={handlePrefetch}
+      onFocusCapture={handlePrefetch}
       css={{
         "&:hover .hover-decoration": {
           opacity: 1,
