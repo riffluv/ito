@@ -159,15 +159,17 @@ export function GameResultOverlay({
   }, [pixiRaysLayer, mode, prefersReduced]);
 
   const triggerBackgroundFx = useCallback(
-    (effect: "fireworks" | "meteors") => {
+    (effect: "fireworks" | "meteors" | "lightSweep") => {
       if (prefersReduced || typeof window === "undefined") return;
       const bg = (window as any)?.bg;
       if (!bg) return;
       try {
         if (effect === "fireworks") {
           bg.launchFireworks?.();
-        } else {
+        } else if (effect === "meteors") {
           bg.launchMeteors?.();
+        } else {
+          bg.lightSweep?.();
         }
       } catch (error) {
         console.warn(`[GameResultOverlay] bg.${effect} failed`, error);
@@ -326,7 +328,8 @@ export function GameResultOverlay({
         opacity: 0.3, // 完全に消さず、暗いまま
         duration: 0.28,
         ease: "power2.out"
-      });
+      })
+      .call(() => triggerBackgroundFx("lightSweep"), undefined, "<");
 
       // ====================================================
       // Phase 0.5: 失敗BOXが上から落ちてくる！
@@ -552,7 +555,8 @@ export function GameResultOverlay({
         opacity: 0,
         duration: 0.23,
         ease: "power2.out"
-      });
+      })
+      .call(() => triggerBackgroundFx("lightSweep"), undefined, "<");
 
       // ====================================================
       // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
