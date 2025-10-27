@@ -548,6 +548,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   uiRevealPending = false,
 }) => {
   const [localRevealPending, setLocalRevealPending] = useState(false);
+  const lastKnownCardRef = useRef(new Map<string, PlayerDoc & { id: string }>());
   useEffect(() => {
     const onLocalBegin = (e: Event) => {
       const detailRoom = (e as CustomEvent<{ roomId?: string }>).detail?.roomId;
@@ -596,8 +597,44 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         });
       });
     }
+    const relevantIds = new Set<string>();
+    if (Array.isArray(orderList)) {
+      orderList.forEach((value) => {
+        if (typeof value === "string" && value.trim()) relevantIds.add(value);
+      });
+    }
+    if (Array.isArray(proposal)) {
+      proposal.forEach((value) => {
+        if (typeof value === "string" && value.trim()) relevantIds.add(value);
+      });
+    }
+    if (orderSnapshots && typeof orderSnapshots === "object") {
+      Object.keys(orderSnapshots).forEach((id) => {
+        if (typeof id === "string" && id.trim()) relevantIds.add(id);
+      });
+    }
+    const lastKnown = lastKnownCardRef.current;
+    map.forEach((player, id) => {
+      lastKnown.set(id, {
+        id,
+        name: player?.name ?? "",
+        avatar: player?.avatar ?? "",
+        clue1: typeof player?.clue1 === "string" ? player.clue1 : "",
+        number: typeof player?.number === "number" ? player.number : null,
+        ready: true,
+        orderIndex: typeof player?.orderIndex === "number" ? player.orderIndex : 0,
+      });
+    });
+    relevantIds.forEach((id) => {
+      if (!map.has(id)) {
+        const fallback = lastKnown.get(id);
+        if (fallback) {
+          map.set(id, fallback);
+        }
+      }
+    });
     return map;
-  }, [players, orderSnapshots]);
+  }, [players, orderList, proposal, orderSnapshots]);
 
   const placedIds = useMemo(
     () => new Set<string>([...(orderList || []), ...(proposal || [])]),
