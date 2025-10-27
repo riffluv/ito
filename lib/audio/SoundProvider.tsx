@@ -52,6 +52,7 @@ const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
   "drop_success",
   "drop_invalid",
 ]);
+const RESUME_ON_POINTER = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const managerRef = useRef<SoundManager | null>(null);
@@ -302,6 +303,23 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         pendingTimeouts.forEach((handle) => window.clearTimeout(handle));
         pendingTimeouts.clear();
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (!manager || typeof window === "undefined") return;
+    const markInteraction = () => {
+      manager.markUserInteraction();
+      if (RESUME_ON_POINTER) {
+        void manager.prepareForInteraction();
+      }
+    };
+    window.addEventListener("pointerdown", markInteraction, { passive: true });
+    window.addEventListener("keydown", markInteraction, { passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", markInteraction);
+      window.removeEventListener("keydown", markInteraction);
     };
   }, []);
 
