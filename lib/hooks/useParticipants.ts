@@ -24,8 +24,10 @@ import { unstable_batchedUpdates } from "react-dom";
 
 export type ParticipantsState = {
   players: (PlayerDoc & { id: string })[];
-  onlineUids?: string[]; // presenceReady=false の間は undefined
+  onlineUids?: string[]; // presence 未整備時は undefined（安定化済み）
+  stableOnlineUids?: string[];
   presenceReady: boolean;
+  presenceDegraded: boolean;
   participants: (PlayerDoc & { id: string })[]; // players ∩ online
   detach: () => Promise<void> | void; // 明示的退出時に使用
   reattachNow: () => Promise<void>; // 観戦→復帰などで presence を再接続
@@ -56,6 +58,7 @@ export function useParticipants(
     undefined
   );
   const [presenceReady, setPresenceReady] = useState(false);
+  const [presenceDegraded, setPresenceDegraded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
@@ -67,6 +70,7 @@ export function useParticipants(
   const reattachTriggerRef = useRef<(() => void) | null>(null);
   const playersRef = useRef<(PlayerDoc & { id: string })[]>([]);
   const playersSignatureRef = useRef<string>("");
+  const presenceStallTimerRef = useRef<number | null>(null);
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
@@ -426,6 +430,47 @@ export function useParticipants(
     };
   }, [roomId, uid]);
 
+  useEffect(() => {
+    if (!presenceSupported()) {
+      if (presenceStallTimerRef.current !== null) {
+        window.clearTimeout(presenceStallTimerRef.current);
+        presenceStallTimerRef.current = null;
+      }
+      setPresenceDegraded(false);
+      return;
+    }
+    if (!roomId) {
+      setPresenceDegraded(false);
+      if (presenceStallTimerRef.current !== null) {
+        window.clearTimeout(presenceStallTimerRef.current);
+        presenceStallTimerRef.current = null;
+      }
+      return;
+    }
+    if (presenceReady) {
+      setPresenceDegraded(false);
+      if (presenceStallTimerRef.current !== null) {
+        window.clearTimeout(presenceStallTimerRef.current);
+        presenceStallTimerRef.current = null;
+      }
+      return;
+    }
+    if (presenceStallTimerRef.current !== null) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      presenceStallTimerRef.current = null;
+      setPresenceDegraded(true);
+    }, PRESENCE_HEARTBEAT_MS * 2);
+    presenceStallTimerRef.current = handle;
+    return () => {
+      if (presenceStallTimerRef.current === handle) {
+        window.clearTimeout(handle);
+        presenceStallTimerRef.current = null;
+      }
+    };
+  }, [presenceReady, roomId]);
+
   // アンマウント時のデタッチ
   useEffect(() => {
     return () => {
@@ -437,26 +482,75 @@ export function useParticipants(
     };
   }, []);
 
+  useEffect(() => {
+    if (!presenceReady || !Array.isArray(onlineUids)) {
+      setStableOnlineUids(undefined);
+      return;
+    }
+    const GRACE_MS = PRESENCE_DISAPPEAR_GRACE_MS;
+    const now = Date.now();
+    const next = new Set<string>(onlineUids || []);
+    const prev = new Set(stableOnlineUids || onlineUids);
+    const missingSinceRef = new Map<string, number>();
+
+    try {
+      const store = (window as any).__missingSince as
+        | Record<string, number>
+        | undefined;
+      if (store) {
+        for (const [k, v] of Object.entries(store)) missingSinceRef.set(k, v);
+      }
+    } catch {}
+
+    const result = new Set<string>();
+    next.forEach((id) => result.add(id));
+    prev.forEach((id) => {
+      if (next.has(id)) {
+        missingSinceRef.delete(id);
+        return;
+      }
+      const first = missingSinceRef.get(id) ?? now;
+      missingSinceRef.set(id, first);
+      if (now - first < GRACE_MS) {
+        result.add(id);
+      }
+    });
+
+    setStableOnlineUids(Array.from(result));
+    try {
+      const store: Record<string, number> = {};
+      missingSinceRef.forEach((v, k) => (store[k] = v));
+      (window as any).__missingSince = store;
+    } catch {}
+  }, [presenceReady, (onlineUids ?? []).join(",")]);
+
+  const effectiveOnlineUids = useMemo(() => {
+    if (presenceReady) return onlineUids;
+    if (presenceDegraded && Array.isArray(stableOnlineUids)) {
+      return stableOnlineUids;
+    }
+    return onlineUids;
+  }, [
+    presenceReady,
+    presenceDegraded,
+    Array.isArray(stableOnlineUids) ? stableOnlineUids.join(",") : "stable-null",
+    Array.isArray(onlineUids) ? onlineUids.join(",") : "online-null",
+  ]);
+
   const participants = useMemo(() => {
-    const baseOnline = Array.isArray(stableOnlineUids)
-      ? stableOnlineUids
-      : onlineUids;
-    if (!presenceReady || !Array.isArray(baseOnline)) {
+    if (!Array.isArray(effectiveOnlineUids) || (!presenceReady && !presenceDegraded)) {
       return players;
     }
-    if (baseOnline.length === 0) {
+    if (effectiveOnlineUids.length === 0) {
       return [];
     }
-    const set = new Set(baseOnline);
+    const set = new Set(effectiveOnlineUids);
     return players.filter((p) => set.has(p.id));
   }, [
     players,
     presenceReady,
-    Array.isArray(stableOnlineUids)
-      ? stableOnlineUids.join(",")
-      : Array.isArray(onlineUids)
-      ? onlineUids.join(",")
-      : "_",
+    presenceDegraded,
+    Array.isArray(effectiveOnlineUids) ? effectiveOnlineUids.join(",") : "effective-null",
   ]);
 
   useEffect(() => {
@@ -492,59 +586,15 @@ export function useParticipants(
 
   return {
     players,
-    onlineUids,
+    onlineUids: effectiveOnlineUids,
+    stableOnlineUids,
     presenceReady,
+    presenceDegraded,
     participants,
     detach,
     reattachNow,
     loading,
     error,
   };
-
-  // 退出→即復帰の端境を吸収するため、オンライン配列の離脱判定を短くデバウンス
-  useEffect(() => {
-    if (!presenceReady || !Array.isArray(onlineUids)) {
-      setStableOnlineUids(undefined);
-      return;
-    }
-    const GRACE_MS = PRESENCE_DISAPPEAR_GRACE_MS;
-    const now = Date.now();
-    const next = new Set<string>(onlineUids || []);
-    const prev = new Set(stableOnlineUids || onlineUids);
-    const missingSinceRef = new Map<string, number>();
-
-    // 以前の消失時刻を保持（windowに格納してレンダー間で維持）
-    try {
-      const store = (window as any).__missingSince as
-        | Record<string, number>
-        | undefined;
-      if (store) {
-        for (const [k, v] of Object.entries(store)) missingSinceRef.set(k, v);
-      }
-    } catch {}
-
-    const result = new Set<string>();
-    // 現在オンラインは即採用
-    next.forEach((id) => result.add(id));
-    // 直前までオンラインで今いないIDは一定猶予で保持
-    prev.forEach((id) => {
-      if (next.has(id)) {
-        missingSinceRef.delete(id);
-        return;
-      }
-      const first = missingSinceRef.get(id) ?? now;
-      missingSinceRef.set(id, first);
-      if (now - first < GRACE_MS) {
-        result.add(id);
-      }
-    });
-
-    setStableOnlineUids(Array.from(result));
-    try {
-      const store: Record<string, number> = {};
-      missingSinceRef.forEach((v, k) => (store[k] = v));
-      (window as any).__missingSince = store;
-    } catch {}
-  }, [presenceReady, (onlineUids ?? []).join(",")]);
 }
 

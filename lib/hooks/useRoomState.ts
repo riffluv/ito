@@ -22,13 +22,19 @@ import {
   type RoomMachineSnapshot,
 } from "@/lib/state/roomMachine";
 import { createActor } from "xstate";
+import {
+  loadPrefetchedRoom,
+  storePrefetchedRoom,
+} from "@/lib/prefetch/prefetchRoomExperience";
 
 export type RoomState = {
   room: (RoomDoc & { id: string }) | null;
   players: (PlayerDoc & { id: string })[];
   loading: boolean;
   onlineUids?: string[];
+  stableOnlineUids?: string[];
   presenceReady: boolean;
+  presenceDegraded: boolean;
   onlinePlayers: (PlayerDoc & { id: string })[];
   isMember: boolean;
   isHost: boolean;
@@ -68,6 +74,25 @@ export function useRoomState(
   );
   const fsmEnabled = process.env.NEXT_PUBLIC_FSM_ENABLE === "1";
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
+  const prefetchedAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (!roomId || typeof window === "undefined") {
+      prefetchedAppliedRef.current = false;
+      return;
+    }
+    const cached = loadPrefetchedRoom(roomId);
+    if (!cached) {
+      prefetchedAppliedRef.current = false;
+      return;
+    }
+    if (room?.id === roomId) {
+      return;
+    }
+    prefetchedAppliedRef.current = true;
+    setRoom({ id: roomId, ...(cached as RoomDoc) });
+    setLoading(false);
+  }, [roomId, room?.id]);
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -163,6 +188,7 @@ export function useRoomState(
           if (!snap.exists()) {
             setRoom(null);
             prevRoomSnapshot = { id: null, data: null };
+            storePrefetchedRoom(roomId, null);
             return;
           }
 
@@ -178,6 +204,8 @@ export function useRoomState(
 
           prevRoomSnapshot = { id: snap.id, data: sanitized };
           setRoom({ id: snap.id, ...sanitized });
+          storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
+          prefetchedAppliedRef.current = false;
         },
         (err) => {
           if (isFirebaseQuotaExceeded(err)) {
@@ -208,6 +236,7 @@ export function useRoomState(
           } else {
             // その他のエラー時は一旦nullに
             setRoom(null);
+            storePrefetchedRoom(roomId, null);
           }
         }
       );
@@ -267,13 +296,17 @@ export function useRoomState(
   // participants: Firestore players + RTDB presence
   const {
     players: fetchedPlayers,
-    onlineUids,
+    onlineUids: effectiveOnlineUids,
+    stableOnlineUids,
     presenceReady,
+    presenceDegraded,
     participants,
     detach,
     reattachNow,
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
+  const onlineUids = effectiveOnlineUids;
+  const presenceOperational = presenceReady || presenceDegraded;
   useEffect(() => {
     unstable_batchedUpdates(() => {
       setPlayers(fetchedPlayers);
@@ -290,9 +323,9 @@ export function useRoomState(
       room,
       players,
       onlineUids,
-      presenceReady,
+      presenceReady: presenceOperational,
     });
-  }, [fsmEnabled, room, players, onlineUids, presenceReady]);
+  }, [fsmEnabled, room, players, onlineUids, presenceOperational]);
 
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
@@ -595,7 +628,9 @@ export function useRoomState(
       players,
       loading,
       onlineUids,
-      presenceReady,
+      stableOnlineUids,
+      presenceReady: presenceOperational,
+      presenceDegraded,
       onlinePlayers,
       isMember,
       isHost,
@@ -608,7 +643,9 @@ export function useRoomState(
       players,
       loading,
       onlineUids,
-      presenceReady,
+      stableOnlineUids,
+      presenceOperational,
+      presenceDegraded,
       onlinePlayers,
       isMember,
       isHost,
@@ -620,5 +657,11 @@ export function useRoomState(
 
   const detachNow = detach;
   const reattachPresence = reattachNow;
-  return { ...state, detachNow, reattachPresence, leavingRef, joinStatus } as const;
+  return {
+    ...state,
+    detachNow,
+    reattachPresence,
+    leavingRef,
+    joinStatus,
+  } as const;
 }

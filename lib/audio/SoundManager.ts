@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import { SOUND_INDEX } from "./registry";
 import { buildCandidateUrls } from "./paths";
 import {
@@ -100,6 +101,8 @@ export class SoundManager {
   private firstPlayRecorded = false;
   private lastVisibilityResumeAt: number | null = null;
   private firstSoundAfterVisibilityRecorded = false;
+  private workletNode: AudioWorkletNode | null = null;
+  private workletSetupPromise: Promise<void> | null = null;
 
   constructor() {
     if (!isBrowser()) return;
@@ -342,6 +345,15 @@ export class SoundManager {
       this.ambientDuckTimeout = null;
     }
     this.ambientDuckAmount = 1;
+    if (this.workletNode) {
+      try {
+        this.workletNode.disconnect();
+      } catch {
+        // ignore
+      }
+      this.workletNode = null;
+    }
+    this.workletSetupPromise = null;
     if (this.context) {
       try {
         this.context.close();
@@ -378,7 +390,7 @@ export class SoundManager {
     const master = context.createGain();
     this.masterGain = master;
     master.gain.value = this.settings.muted ? 0 : this.settings.masterVolume;
-    master.connect(context.destination);
+    this.connectMasterGain();
 
     SOUND_CATEGORIES.forEach((category) => {
       const gain = context.createGain();
@@ -387,7 +399,98 @@ export class SoundManager {
       this.categoryGains.set(category, gain);
     });
 
+    this.setupAudioWorklet(context);
+
     return this.context;
+  }
+
+  private connectMasterGain() {
+    if (!this.context || !this.masterGain) return;
+    try {
+      this.masterGain.disconnect();
+    } catch {
+      // ignore disconnect errors
+    }
+    if (this.workletNode) {
+      try {
+        this.workletNode.disconnect();
+      } catch {
+        // ignore
+      }
+      try {
+        this.masterGain.connect(this.workletNode);
+        this.workletNode.connect(this.context.destination);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        traceError("audio.worklet.connectFailed", err);
+        try {
+          this.masterGain.connect(this.context.destination);
+        } catch {}
+      }
+    } else {
+      try {
+        this.masterGain.connect(this.context.destination);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        traceError("audio.master.connectFailed", err);
+      }
+    }
+  }
+
+  private setupAudioWorklet(context: AudioContext) {
+    if (!isBrowser()) return;
+    if (!context.audioWorklet) return;
+    if (this.workletNode || this.workletSetupPromise) return;
+
+    const moduleUrl = new URL("/audio-worklets/ito-mixer.js", window.location.origin).toString();
+
+    this.workletSetupPromise = (async () => {
+      try {
+        await context.audioWorklet.addModule(moduleUrl);
+        if (!this.context || this.context !== context) {
+          return;
+        }
+        const node = new AudioWorkletNode(context, "ito-mixer", {
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
+          outputChannelCount: [Math.max(1, context.destination.channelCount ?? 2)],
+        });
+        if (typeof node.port?.start === "function") {
+          try {
+            node.port.start();
+          } catch {
+            // ignore
+          }
+        }
+        node.onprocessorerror = (event: unknown) => {
+          const raw =
+            event instanceof ErrorEvent ? event.error : event instanceof Error ? event : null;
+          if (raw) {
+            const err = raw instanceof Error ? raw : new Error(String(raw));
+            traceError("audio.worklet.processorError", err);
+          }
+        };
+        this.workletNode = node;
+        if (typeof context.baseLatency === "number") {
+          setMetric("audio", "worklet.baseLatencyMs", Math.round(context.baseLatency * 1000));
+        }
+        const outputLatency = (context as any)?.outputLatency;
+        if (typeof outputLatency === "number") {
+          setMetric("audio", "worklet.outputLatencyMs", Math.round(outputLatency * 1000));
+        }
+        this.connectMasterGain();
+        traceAction("audio.worklet.ready", {
+          baseLatency: context.baseLatency ?? null,
+          outputLatency: outputLatency ?? null,
+        });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        traceError("audio.worklet.initFailed", err);
+        this.workletNode = null;
+      } finally {
+        this.workletSetupPromise = null;
+      }
+    })();
   }
 
   private getCategoryGain(category: SoundCategory): GainNode {
