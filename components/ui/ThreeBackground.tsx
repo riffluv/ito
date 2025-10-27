@@ -7,10 +7,11 @@ import type {
   SimpleBackgroundController,
 } from "@/lib/pixi/simpleBackground";
 import type { DragonQuestBackgroundController } from "@/lib/pixi/dragonQuestBackground";
+import type { InfernoBackgroundController } from "@/lib/pixi/infernoBackground";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 
-type BackgroundType = "css" | "pixi-simple" | "pixi-dq";
+type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
 
 const normalizeBackgroundType = (value: string | null): BackgroundType => {
@@ -19,6 +20,9 @@ const normalizeBackgroundType = (value: string | null): BackgroundType => {
   }
   if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
     return "pixi-dq";
+  }
+  if (value === "pixi-inferno" || value === "inferno") {
+    return "pixi-inferno";
   }
   return "css";
 };
@@ -95,6 +99,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const simpleControllerRef = useRef<SimpleBackgroundController | null>(null);
   const dragonQuestControllerRef =
     useRef<DragonQuestBackgroundController | null>(null);
+  const infernoControllerRef =
+    useRef<InfernoBackgroundController | null>(null);
   const legacyFrameIdRef = useRef<number>();
   const legacyAppRef = useRef<PIXITypes.Application | null>(null);
   const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
@@ -143,7 +149,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   }, []);
 
   const effectiveQuality = useMemo<BackgroundQuality>(() => {
-    if (backgroundType === "pixi-dq") {
+    if (backgroundType === "pixi-dq" || backgroundType === "pixi-inferno") {
       return "high";
     }
     if (backgroundType === "pixi-simple") {
@@ -180,6 +186,20 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     }
   };
 
+  const cleanupInfernoBackground = () => {
+    if (infernoControllerRef.current) {
+      try {
+        infernoControllerRef.current.destroy();
+      } catch (error) {
+        logPixiBackground("warn", "inferno-destroy-error", error);
+      }
+      infernoControllerRef.current = null;
+    }
+    if (mountRef.current) {
+      mountRef.current.innerHTML = "";
+    }
+  };
+
   const cleanupLegacyBackground = () => {
     const frameId = legacyFrameIdRef.current;
     if (frameId) {
@@ -205,7 +225,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     if (backgroundType !== "pixi-simple") {
       cleanupSimpleBackground();
       cleanupDragonQuestBackground();
-      if (backgroundType !== "pixi-dq") {
+      cleanupInfernoBackground();
+      if (backgroundType !== "pixi-dq" && backgroundType !== "pixi-inferno") {
         updateGlobalBackground({
           renderer: "dom",
           quality: effectiveQuality,
@@ -326,7 +347,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     if (backgroundType !== "pixi-dq") {
       cleanupDragonQuestBackground();
       cleanupLegacyBackground();
-      if (backgroundType !== "pixi-simple") {
+      if (backgroundType !== "pixi-simple" && backgroundType !== "pixi-inferno") {
         updateGlobalBackground({
           renderer: "dom",
           quality: effectiveQuality,
@@ -353,6 +374,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     }
 
     cleanupSimpleBackground();
+    cleanupInfernoBackground();
     cleanupLegacyBackground();
 
     let disposed = false;
@@ -411,6 +433,109 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         detachResize();
       }
       cleanupDragonQuestBackground();
+      updateGlobalBackground({
+        renderer: "dom",
+        quality: effectiveQuality,
+      });
+    };
+  }, [
+    backgroundType,
+    effectiveMode,
+    effectiveQuality,
+    gpuCapability,
+    isLowPowerDevice,
+    reducedMotion,
+    supports3D,
+  ]);
+
+  useEffect(() => {
+    if (backgroundType !== "pixi-inferno") {
+      cleanupInfernoBackground();
+      if (backgroundType !== "pixi-simple" && backgroundType !== "pixi-dq") {
+        updateGlobalBackground({
+          renderer: "dom",
+          quality: effectiveQuality,
+        });
+      }
+      return;
+    }
+
+    if (isLowPowerDevice || !supports3D) {
+      logPixiBackground("warn", "inferno-fallback-low-power", {
+        reducedMotion,
+        supports3D,
+        gpuCapability,
+        effectiveMode,
+      });
+      cleanupInfernoBackground();
+      setBackgroundType("css");
+      return;
+    }
+
+    if (!mountRef.current) {
+      return;
+    }
+
+    cleanupSimpleBackground();
+    cleanupDragonQuestBackground();
+    cleanupLegacyBackground();
+
+    let disposed = false;
+    let detachResize: (() => void) | null = null;
+
+    const init = async () => {
+      try {
+        const module = await import("@/lib/pixi/infernoBackground");
+        if (disposed) return;
+        const controller =
+          await module.createInfernoBackground({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            antialias: !isLowPowerDevice,
+            resolution: Math.min(1.3, window.devicePixelRatio || 1),
+          });
+
+        if (!mountRef.current) {
+          controller.destroy();
+          return;
+        }
+
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(controller.canvas);
+        infernoControllerRef.current = controller;
+        logPixiBackground("info", "inferno-init-success");
+
+        const handleResize = () => {
+          controller.resize(window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener("resize", handleResize);
+        detachResize = () =>
+          window.removeEventListener("resize", handleResize);
+
+        updateGlobalBackground({
+          renderer: "pixi",
+          quality: effectiveQuality,
+          onLightSweep: () => controller.lightSweep(),
+          onLaunchFireworks: () => controller.launchFireworks(),
+          onLaunchMeteors: () => controller.launchMeteors(),
+        });
+      } catch (error) {
+        logPixiBackground("error", "inferno-init-failed", error);
+        if (!disposed) {
+          cleanupInfernoBackground();
+          setBackgroundType("css");
+        }
+      }
+    };
+
+    init();
+
+    return () => {
+      disposed = true;
+      if (detachResize) {
+        detachResize();
+      }
+      cleanupInfernoBackground();
       updateGlobalBackground({
         renderer: "dom",
         quality: effectiveQuality,
