@@ -2,6 +2,7 @@
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { recordMetricDistribution } from "@/lib/perf/metricsClient";
 import { SOUND_INDEX } from "./registry";
 import { buildCandidateUrls } from "./paths";
 import {
@@ -101,6 +102,7 @@ export class SoundManager {
   private firstPlayRecorded = false;
   private lastVisibilityResumeAt: number | null = null;
   private firstSoundAfterVisibilityRecorded = false;
+  private pendingInputMetric: { timestamp: number; recorded: boolean } | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private workletSetupPromise: Promise<void> | null = null;
 
@@ -148,6 +150,20 @@ export class SoundManager {
     await Promise.allSettled(tasks);
   }
 
+  markUserInteraction(): void {
+    if (!isBrowser()) return;
+    const timestamp =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.pendingInputMetric = { timestamp, recorded: false };
+  }
+
+  async prepareForInteraction(): Promise<void> {
+    if (!isBrowser()) return;
+    const context = this.ensureContext();
+    if (!context) return;
+    await this.resumeContext();
+  }
+
   async play(
     soundId: SoundId,
     overrides?: PlaybackOverrides,
@@ -183,6 +199,20 @@ export class SoundManager {
         bumpMetric("audio", "visibilityToSoundSamples", 1);
         this.firstSoundAfterVisibilityRecorded = true;
       }
+    }
+
+    if (this.pendingInputMetric && !this.pendingInputMetric.recorded) {
+      const delta = nowTimestamp - this.pendingInputMetric.timestamp;
+      if (delta >= 0 && Number.isFinite(delta)) {
+        const rounded = Math.round(delta);
+        setMetric("audio", "pointerToSoundMs", rounded);
+        recordMetricDistribution("client.audio.pointerToSound", rounded, {
+          sound: soundId,
+          mode: internal ? "internal" : "user",
+        });
+      }
+      this.pendingInputMetric.recorded = true;
+      this.pendingInputMetric = null;
     }
 
     await this.resumeContext();

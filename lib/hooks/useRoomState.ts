@@ -13,7 +13,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { doc, onSnapshot } from "firebase/firestore";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import {
   createRoomMachine,
@@ -26,6 +26,8 @@ import {
   loadPrefetchedRoom,
   storePrefetchedRoom,
 } from "@/lib/prefetch/prefetchRoomExperience";
+
+const ROOM_SNAPSHOT_DEFER_ENABLED = process.env.NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER === "1";
 
 export type RoomState = {
   room: (RoomDoc & { id: string }) | null;
@@ -75,6 +77,35 @@ export function useRoomState(
   const fsmEnabled = process.env.NEXT_PUBLIC_FSM_ENABLE === "1";
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const prefetchedAppliedRef = useRef(false);
+  const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED && typeof startTransition === "function";
+
+  const enqueueCommit = useCallback(
+    (task: () => void, startedAt: number | null, metricKey?: string) => {
+      const runTask = () => {
+        task();
+        if (
+          deferEnabled &&
+          metricKey &&
+          startedAt !== null &&
+          typeof window !== "undefined" &&
+          typeof performance !== "undefined"
+        ) {
+          window.requestAnimationFrame(() => {
+            const duration = performance.now() - startedAt;
+            if (duration >= 0) {
+              setMetric("perf", metricKey, Math.round(duration));
+            }
+          });
+        }
+      };
+      if (deferEnabled) {
+        startTransition(runTask);
+      } else {
+        runTask();
+      }
+    },
+    [deferEnabled]
+  );
 
   useEffect(() => {
     if (!roomId || typeof window === "undefined") {
@@ -90,9 +121,13 @@ export function useRoomState(
       return;
     }
     prefetchedAppliedRef.current = true;
-    setRoom({ id: roomId, ...(cached as RoomDoc) });
-    setLoading(false);
-  }, [roomId, room?.id]);
+    const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+    enqueueCommit(() => {
+      prefetchedAppliedRef.current = true;
+      setRoom({ id: roomId, ...(cached as RoomDoc) });
+      setLoading(false);
+    }, startedAt);
+  }, [roomId, room?.id, enqueueCommit]);
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -158,8 +193,12 @@ export function useRoomState(
       return;
     }
     if (!roomId) {
-      setRoom(null);
-      setLoading(false);
+      const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+      enqueueCommit(() => {
+        setRoom(null);
+        setLoading(false);
+        prefetchedAppliedRef.current = false;
+      }, startedAt);
       return;
     }
 
@@ -185,10 +224,14 @@ export function useRoomState(
       unsubRef.current = onSnapshot(
         doc(db!, "rooms", roomId),
         (snap) => {
+          const receivedAt = typeof performance !== "undefined" ? performance.now() : null;
           if (!snap.exists()) {
-            setRoom(null);
-            prevRoomSnapshot = { id: null, data: null };
-            storePrefetchedRoom(roomId, null);
+            enqueueCommit(() => {
+              prevRoomSnapshot = { id: null, data: null };
+              setRoom(null);
+              storePrefetchedRoom(roomId, null);
+              prefetchedAppliedRef.current = false;
+            }, receivedAt, "roomSnapshotCommitMs");
             return;
           }
 
@@ -202,10 +245,12 @@ export function useRoomState(
             return;
           }
 
-          prevRoomSnapshot = { id: snap.id, data: sanitized };
-          setRoom({ id: snap.id, ...sanitized });
-          storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
-          prefetchedAppliedRef.current = false;
+          enqueueCommit(() => {
+            prevRoomSnapshot = { id: snap.id, data: sanitized };
+            setRoom({ id: snap.id, ...sanitized });
+            storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
+            prefetchedAppliedRef.current = false;
+          }, receivedAt, "roomSnapshotCommitMs");
         },
         (err) => {
           if (isFirebaseQuotaExceeded(err)) {
@@ -235,8 +280,12 @@ export function useRoomState(
             resume();
           } else {
             // その他のエラー時は一旦nullに
-            setRoom(null);
-            storePrefetchedRoom(roomId, null);
+            const errorAt = typeof performance !== "undefined" ? performance.now() : null;
+            enqueueCommit(() => {
+              setRoom(null);
+              storePrefetchedRoom(roomId, null);
+              prefetchedAppliedRef.current = false;
+            }, errorAt, "roomSnapshotCommitMs");
           }
         }
       );
@@ -270,7 +319,7 @@ export function useRoomState(
       }
       stop();
     };
-  }, [roomId]);
+  }, [roomId, enqueueCommit]);
 
   // メモ化の最適化: playersの変更を正確に検知
   const isMember = useMemo(
@@ -308,11 +357,14 @@ export function useRoomState(
   const onlineUids = effectiveOnlineUids;
   const presenceOperational = presenceReady || presenceDegraded;
   useEffect(() => {
-    unstable_batchedUpdates(() => {
-      setPlayers(fetchedPlayers);
-      setLoading(partLoading === true);
-    });
-  }, [fetchedPlayers, partLoading]);
+    const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+    enqueueCommit(() => {
+      unstable_batchedUpdates(() => {
+        setPlayers(fetchedPlayers);
+        setLoading(partLoading === true);
+      });
+    }, startedAt, "participantsCommitMs");
+  }, [fetchedPlayers, partLoading, enqueueCommit]);
 
   useEffect(() => {
     if (!fsmEnabled) return;

@@ -53,6 +53,31 @@ function describeError(err: unknown): { message: string; stack?: string } {
   }
 }
 
+type TraceRecord = {
+  name: string;
+  detail: TraceDetail;
+  timestamp: number;
+};
+
+const TRACE_BUFFER_KEY = "__ITO_TRACE_BUFFER__";
+const TRACE_BUFFER_LIMIT = 10;
+
+function pushTraceRecord(name: string, detail: TraceDetail) {
+  if (typeof performance === "undefined") return;
+  const scope = globalThis as typeof globalThis & {
+    [TRACE_BUFFER_KEY]?: TraceRecord[];
+  };
+  const buffer = scope[TRACE_BUFFER_KEY] ?? (scope[TRACE_BUFFER_KEY] = []);
+  buffer.push({
+    name,
+    detail,
+    timestamp: performance.now(),
+  });
+  if (buffer.length > TRACE_BUFFER_LIMIT) {
+    buffer.splice(0, buffer.length - TRACE_BUFFER_LIMIT);
+  }
+}
+
 export function traceAction(name: string, detail?: Record<string, unknown>): void {
   try {
     recordMetricDistribution(`trace.action.${name}`, 1, toTags(detail));
@@ -61,6 +86,7 @@ export function traceAction(name: string, detail?: Record<string, unknown>): voi
       level: "info",
       extra: detail,
     });
+    pushTraceRecord(name, detail);
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.debug(`[trace:action] ${name}`, detail ?? {});
@@ -86,6 +112,7 @@ export function traceError(
       level: "error",
       extra: { ...detail, error: errorInfo },
     });
+    pushTraceRecord(name, detail);
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.error(`[trace:error] ${name}`, { detail, error: errorInfo });
@@ -97,4 +124,3 @@ export function traceError(
     }
   }
 }
-

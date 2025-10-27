@@ -4,6 +4,12 @@ import { addCardToProposal } from "@/lib/game/service";
 import type { PlayerDoc } from "@/lib/types";
 import { useMemo, useState } from "react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { traceAction, traceError } from "@/lib/utils/trace";
+import { recordMetricDistribution } from "@/lib/perf/metricsClient";
+
+const DROP_OPTIMISTIC_ENABLED = process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
+
+type DropOutcome = "success" | "noop" | "error";
 
 interface UseDropHandlerProps {
   roomId: string;
@@ -30,20 +36,19 @@ export function useDropHandler({
   const playDropInvalid = useSoundEffect("drop_invalid");
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
+  const optimisticMode = DROP_OPTIMISTIC_ENABLED;
 
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
     const ready = !!(me && typeof me.clue1 === "string" && me.clue1.trim());
-    // 連想ワード未確定時は中央ボードへの提出を無効化（視覚的チラつき防止）
     if (!ready) return false;
     return true;
   }, [roomStatus, hasNumber, me?.clue1]);
 
-  // Sort-submit mode only: position dropping always allowed
   const canDropAtPosition = useMemo(() => {
     return (targetIndex: number) => {
-      return canDrop; // Always allow dropping at any position in sort-submit mode
+      return canDrop;
     };
   }, [canDrop]);
 
@@ -60,25 +65,51 @@ export function useDropHandler({
 
     setIsOver(false);
 
+    const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+    const optimistic = optimisticMode;
+    const logOutcome = (outcome: DropOutcome) => {
+      if (startedAt === null || typeof performance === "undefined") return;
+      const sample = Number(Math.max(0, performance.now() - startedAt).toFixed(2));
+      if (!Number.isFinite(sample)) return;
+      recordMetricDistribution("client.drop.resolveMs", sample, {
+        outcome,
+        mode: optimistic ? "optimistic" : "default",
+      });
+    };
+
     if (!canDrop) {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "phase",
+      });
       playDropInvalid();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
 
     if (pid !== meId) {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "foreign-card",
+      });
       playDropInvalid();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
 
     if (!me || typeof me.number !== "number") {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "no-number",
+      });
       playDropInvalid();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
 
-    // Only sort-submit mode is supported
     let previousPending: string[] | null = null;
     let inserted = false;
     let didPlaySound = false;
@@ -87,6 +118,7 @@ export function useDropHandler({
       didPlaySound = true;
       playCardPlace();
     };
+    let notifiedSuccess = false;
 
     setPending((prev) => {
       previousPending = prev.slice();
@@ -97,6 +129,19 @@ export function useDropHandler({
       return [...prev, pid];
     });
 
+    traceAction("interaction.drop.commit", {
+      roomId,
+      playerId: meId,
+      target: "board",
+      optimistic,
+      placed: inserted,
+    });
+
+    if (optimistic && inserted) {
+      notify({ title: "カードを場に置きました", type: "success" });
+      notifiedSuccess = true;
+    }
+
     const request = addCardToProposal(roomId, meId);
     if (inserted) {
       playOnce();
@@ -105,10 +150,15 @@ export function useDropHandler({
     request
       .then((result) => {
         if (result === "noop") {
+          logOutcome("noop");
           if (inserted && previousPending) {
             const snapshot = previousPending.slice();
             setPending(() => snapshot);
           }
+          traceAction("interaction.drop.noop", {
+            roomId,
+            playerId: meId,
+          });
           playDropInvalid();
           notify({
             title: "カードは既に提出済みです",
@@ -116,10 +166,22 @@ export function useDropHandler({
           });
           return;
         }
-        playOnce();
-        notify({ title: "カードを場に置きました", type: "success" });
+        logOutcome("success");
+        traceAction("interaction.drop.success", {
+          roomId,
+          playerId: meId,
+          optimistic,
+        });
+        if (!notifiedSuccess) {
+          notify({ title: "カードを場に置きました", type: "success" });
+        }
       })
       .catch((err: any) => {
+        logOutcome("error");
+        traceError("interaction.drop.error", err, {
+          roomId,
+          playerId: meId,
+        });
         if (previousPending && inserted) {
           const snapshot = previousPending.slice();
           setPending(() => snapshot);
@@ -133,7 +195,6 @@ export function useDropHandler({
       });
   };
 
-  // Sort-submit mode: position drop handler (simplified)
   const onDropAtPosition = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
     const pid = e.dataTransfer.getData("text/plain");
@@ -141,25 +202,51 @@ export function useDropHandler({
 
     setIsOver(false);
 
+    const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+    const optimistic = optimisticMode;
+    const logOutcome = (outcome: DropOutcome) => {
+      if (startedAt === null || typeof performance === "undefined") return;
+      const sample = Number(Math.max(0, performance.now() - startedAt).toFixed(2));
+      if (!Number.isFinite(sample)) return;
+      recordMetricDistribution("client.drop.resolveMs", sample, {
+        outcome,
+        mode: optimistic ? "optimistic" : "default",
+      });
+    };
+
     if (!canDrop) {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "phase",
+      });
       playDropInvalid();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
 
     if (pid !== meId) {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "foreign-card",
+      });
       playDropInvalid();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
 
     if (!me || typeof me.number !== "number") {
+      traceAction("interaction.drop.blocked", {
+        roomId,
+        playerId: meId,
+        reason: "no-number",
+      });
       playDropInvalid();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
 
-    // 位置指定追加に切り替え
     let previous: string[] | null = null;
     let inserted = false;
     let didPlaySound = false;
@@ -168,6 +255,7 @@ export function useDropHandler({
       didPlaySound = true;
       playCardPlace();
     };
+    let notifiedSuccess = false;
 
     setPending((prev) => {
       previous = prev.slice();
@@ -180,6 +268,20 @@ export function useDropHandler({
       return next;
     });
 
+    traceAction("interaction.drop.commit", {
+      roomId,
+      playerId: meId,
+      target: "position",
+      index: targetIndex,
+      optimistic,
+      placed: inserted,
+    });
+
+    if (optimistic && inserted) {
+      notify({ title: "カードを場に置きました", type: "success" });
+      notifiedSuccess = true;
+    }
+
     const request = scheduleAddCardToProposalAtPosition(roomId, meId, targetIndex);
     if (inserted) {
       playOnce();
@@ -188,10 +290,16 @@ export function useDropHandler({
     request
       .then((result) => {
         if (result === "noop") {
+          logOutcome("noop");
           if (inserted) {
             const snapshot = previous ? previous.slice() : [];
             setPending(() => snapshot);
           }
+          traceAction("interaction.drop.noop", {
+            roomId,
+            playerId: meId,
+            index: targetIndex,
+          });
           notify({
             title: "その位置には置けません",
             description: "別の位置を選ぶか、既存のカードを動かしてください。",
@@ -200,20 +308,35 @@ export function useDropHandler({
           playDropInvalid();
           return;
         }
-        playOnce();
-        notify({ title: "カードをその位置に置きました", type: "success" });
+
+        logOutcome("success");
+        traceAction("interaction.drop.success", {
+          roomId,
+          playerId: meId,
+          optimistic,
+          index: targetIndex,
+        });
+        if (!notifiedSuccess) {
+          notify({ title: "カードをその位置に置きました", type: "success" });
+        }
       })
       .catch((err: any) => {
-        if (previous !== null && inserted) {
+        logOutcome("error");
+        traceError("interaction.drop.error", err, {
+          roomId,
+          playerId: meId,
+          index: targetIndex,
+        });
+        if (previous && inserted) {
           const snapshot = previous.slice();
           setPending(() => snapshot);
         }
-        playDropInvalid();
         notify({
           title: "配置に失敗しました",
           description: err?.message,
           type: "error",
         });
+        playDropInvalid();
       });
   };
 

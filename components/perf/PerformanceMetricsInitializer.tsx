@@ -7,13 +7,96 @@ import {
 
 const DEFAULT_FPS_WINDOW = 5000;
 const DEFAULT_INP_WINDOW = 15000;
+const TRACE_BUFFER_KEY = "__ITO_TRACE_BUFFER__";
+const TRACE_RECENT_THRESHOLD_MS = 2000;
+const ENABLE_INTERACTION_TAGS =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_PERF_INTERACTION_TAGS === "1";
+
+type TraceBufferRecord = {
+  name: string;
+  detail?: Record<string, unknown>;
+  timestamp: number;
+};
+
+declare global {
+  interface Window {
+    dumpItoMetrics?: () => void;
+  }
+}
 
 function resolveNumber(envValue: string | undefined, fallback: number): number {
   const parsed = Number(envValue);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function pickRecentTraceTag(interaction: PerformanceEventTiming) {
+  if (!ENABLE_INTERACTION_TAGS || typeof performance === "undefined") return undefined;
+  const scope = globalThis as typeof globalThis & {
+    [TRACE_BUFFER_KEY]?: TraceBufferRecord[];
+  };
+  const buffer = scope[TRACE_BUFFER_KEY];
+  if (!buffer || buffer.length === 0) return undefined;
+  const start = interaction.startTime;
+  let candidate: TraceBufferRecord | undefined;
+  for (let index = buffer.length - 1; index >= 0; index -= 1) {
+    const record = buffer[index];
+    if (!record) continue;
+    if (start >= record.timestamp && start - record.timestamp <= TRACE_RECENT_THRESHOLD_MS) {
+      candidate = record;
+      break;
+    }
+  }
+  if (!candidate) return undefined;
+  const tags: Record<string, string> = {
+    trace: candidate.name.slice(0, 60),
+  };
+  if (candidate.detail && typeof candidate.detail === "object") {
+    const detail = candidate.detail as Record<string, unknown>;
+    const maybeString = (value: unknown) =>
+      typeof value === "string" && value.length > 0 ? value.slice(0, 80) : undefined;
+    const phase = maybeString(detail.phase);
+    if (phase) tags.tracePhase = phase;
+    const source = maybeString(detail.source);
+    if (source) tags.traceSource = source;
+    const scopeTag = maybeString(detail.scope);
+    if (scopeTag) tags.traceScope = scopeTag;
+  }
+  return tags;
+}
+
 export default function PerformanceMetricsInitializer() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dumpItoMetrics = () => {
+      const metrics = (window as typeof window & { __ITO_METRICS__?: Record<string, any> })
+        .__ITO_METRICS__ ?? {};
+      const traces =
+        (window as typeof window & { __ITO_TRACE_BUFFER__?: TraceBufferRecord[] })
+          .__ITO_TRACE_BUFFER__ ?? [];
+
+      const perf = metrics.perf ?? {};
+      const audio = metrics.audio ?? {};
+      const dropRecords = Object.fromEntries(
+        Object.entries(metrics).filter(([key]) => key.startsWith("client.drop"))
+      );
+
+      console.group("ITO metrics snapshot");
+      console.log("perf:", perf);
+      console.log("audio:", audio);
+      if (Object.keys(dropRecords).length > 0) {
+        console.log("drop-related:", dropRecords);
+      }
+      console.log("trace buffer (latest 10):", traces);
+      console.groupEnd();
+    };
+    return () => {
+      if (typeof window !== "undefined") {
+        delete window.dumpItoMetrics;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!shouldSendClientMetrics()) return;
     const sampleWindow = resolveNumber(
@@ -67,10 +150,17 @@ export default function PerformanceMetricsInitializer() {
     const flush = () => {
       if (!worstInteraction) return;
       const interactionId = (worstInteraction as any)?.interactionId;
-      recordMetricDistribution("client.inp.rolling", worstInteraction.duration, {
+      const tags: Record<string, string> = {
         event: worstInteraction.name,
-        interactionId: interactionId != null ? String(interactionId) : undefined,
-      });
+      };
+      if (interactionId != null) {
+        tags.interactionId = String(interactionId);
+      }
+      const traceTags = pickRecentTraceTag(worstInteraction);
+      if (traceTags) {
+        Object.assign(tags, traceTags);
+      }
+      recordMetricDistribution("client.inp.rolling", worstInteraction.duration, tags);
       worstInteraction = null;
     };
 
