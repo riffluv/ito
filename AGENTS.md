@@ -113,4 +113,10 @@ npx playwright test  # Playwright（個別指定推奨）
 - 変更点・気づき・トラブルシュート結果は `docs/OPERATIONS.md` か専用ナレッジ（Notion/GitHub Discussions 等）へ追記。
 - 他エージェント（Claude など）と協業する場合は、トレース名やフラグの状態を明記して連携する。
 
+---
+
+## 9. 据え置き体感フラグ運用メモ
+
+- `.env` 系で管理している据え置き関連フラグ（`NEXT_PUBLIC_PERF_INTERACTION_TAGS` / `NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER` / `NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER` / `NEXT_PUBLIC_UI_DROP_OPTIMISTIC`）は、検証が完了したら本番環境でも `1` にして常時有効化する想定。
+- 本番で有効化後は、`dumpItoMetrics()` などでメトリクスをモニタリングし、数値に問題がなければ旧挙動用の分岐・フォールバックコードを順次削除・リファクタリングしておくことが推奨。
 以上。作業前にこのドキュメントをざっと確認し、タスクに取りかかってください。必要があれば自由に追記・修正して構いません。*** End Patch
