@@ -468,7 +468,7 @@ export async function leaveRoomServer(
       });
 
       if (
-        room?.status === "reveal" &&
+        (room?.status === "reveal" || room?.status === "finished") &&
         remainingCount > 0 &&
         removedPlayerData
       ) {
@@ -476,7 +476,7 @@ export async function leaveRoomServer(
           name:
             typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
               ? removedPlayerData.name
-              : "離脱プレイヤー",
+              : "退室したプレイヤー",
           avatar:
             typeof removedPlayerData?.avatar === "string" && removedPlayerData.avatar.trim()
               ? removedPlayerData.avatar
