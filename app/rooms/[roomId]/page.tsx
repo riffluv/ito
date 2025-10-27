@@ -64,6 +64,8 @@ import { traceAction, traceError } from "@/lib/utils/trace";
     getWaitingServiceWorker,
     resyncWaitingServiceWorker,
     subscribeToServiceWorkerUpdates,
+    holdForceApplyTimer,
+    releaseForceApplyTimer,
   } from "@/lib/serviceWorker/updateChannel";
 import {
   getCachedRoomPasswordHash,
@@ -728,6 +730,25 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     safeUpdateFeatureEnabled,
     tryApplyServiceWorker,
   ]);
+  useEffect(() => {
+    const holdReason = "room:safe-update";
+    if (!safeUpdateFeatureEnabled) {
+      releaseForceApplyTimer(holdReason);
+      return () => {
+        releaseForceApplyTimer(holdReason);
+      };
+    }
+    if (safeUpdateActive && currentRoomStatus !== "waiting") {
+      holdForceApplyTimer(holdReason);
+      return () => {
+        releaseForceApplyTimer(holdReason);
+      };
+    }
+    releaseForceApplyTimer(holdReason);
+    return () => {
+      releaseForceApplyTimer(holdReason);
+    };
+  }, [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]);
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) return;
     if (!hasWaitingUpdate) return;
