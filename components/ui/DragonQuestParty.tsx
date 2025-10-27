@@ -148,8 +148,8 @@ function DragonQuestParty({
     if (hostId && !ids.includes(hostId)) {
       ids = [hostId, ...ids];
     }
-    return ids;
-  }, [eligibleIdsKey, effectivePlayers, hostId, onlineUidsKey, roundIdsKey]);
+    return ids.filter((id) => byId.has(id));
+  }, [eligibleIdsKey, effectivePlayers, hostId, onlineUidsKey, roundIdsKey, byId]);
 
   const displayedPlayers: PartyMember[] = useMemo(() => {
     const cache = playerCacheRef.current;
