@@ -22,7 +22,9 @@ export interface InfernoBackgroundController {
   destroy(): void;
   lightSweep(): void;
   launchFireworks(): void;
+  launchVolcanoEruption(): void;
   launchMeteors(): void;
+  flashRed?(count?: number, duration?: number): void;
 }
 
 type Particle = {
@@ -206,7 +208,7 @@ export async function createInfernoBackground(
     });
 
     sweepOverlay.clear();
-    sweepOverlay.beginFill(0xff4500, 0.3); // 🔥 赤いフラッシュ
+    sweepOverlay.beginFill(0xff0000, 0.5); // 🔥 強い赤いフラッシュ
     sweepOverlay.drawRect(0, 0, width, height);
     sweepOverlay.endFill();
     sweepOverlay.alpha = 0;
@@ -258,13 +260,28 @@ export async function createInfernoBackground(
   let pointerCurrentY = 0;
   let sweepActive = false;
   let sweepStart = 0;
+  let sweepFlashes = 0;
+  let sweepFlashIndex = 0;
   const SWEEP_DURATION = 900;
 
+  // 🔥 赤いフラッシュ（複数回点滅）
   const triggerLightSweep = () => {
     sweepActive = true;
     sweepStart = performance.now();
     sweepOverlay.alpha = 0;
     pointerTargetY = -0.35;
+    sweepFlashes = 3; // 🔥 3回点滅
+    sweepFlashIndex = 0;
+  };
+
+  // 🔥 カスタム赤フラッシュ（回数・時間指定可能）
+  const triggerFlashRed = (count: number = 3, duration: number = 800) => {
+    sweepActive = true;
+    sweepStart = performance.now();
+    sweepOverlay.alpha = 0;
+    pointerTargetY = -0.35;
+    sweepFlashes = count;
+    sweepFlashIndex = 0;
   };
 
   const fireworks: Firework[] = [];
@@ -286,18 +303,19 @@ export async function createInfernoBackground(
     }
   };
 
-  const launchFirework = (startX: number, startY: number, color: number) => {
-    const fw = getGraphicsFromPool();
-    fw.circle(0, 0, 5); // 少し大きめ
-    fw.fill({ color, alpha: 1 });
-    fireworksContainer.addChild(fw);
+  // 🔥 溶岩球を下から上へ噴き上げる（火山噴火）
+  const launchLavaBall = (startX: number, startY: number, color: number) => {
+    const lava = getGraphicsFromPool();
+    lava.circle(0, 0, 7 + Math.random() * 4); // 大きめの溶岩塊
+    lava.fill({ color, alpha: 1 });
+    fireworksContainer.addChild(lava);
 
     fireworks.push({
-      sprite: fw,
+      sprite: lava,
       x: startX,
       y: startY,
-      vx: (Math.random() - 0.5) * 2.5,
-      vy: -9 - Math.random() * 5,
+      vx: (Math.random() - 0.5) * 3,
+      vy: -12 - Math.random() * 8, // 🔥 下から上へ強力に噴出
       life: 1,
       maxLife: 1,
       phase: "launch",
@@ -306,28 +324,29 @@ export async function createInfernoBackground(
     });
   };
 
-  const explodeFirework = (fw: Firework) => {
-    fw.exploded = true;
-    const particleCount = 80 + Math.floor(Math.random() * 50); // 🔥 爆炎は派手に
+  // 🔥 溶岩球の爆発（全方向へ激しく飛び散る）
+  const explodeLavaBall = (lava: Firework) => {
+    lava.exploded = true;
+    const particleCount = 100 + Math.floor(Math.random() * 50); // 🔥 より多くのパーティクル
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 3.5 + Math.random() * 5;
+      const speed = 4 + Math.random() * 4; // 🔥 より速く
       const particle = getGraphicsFromPool();
-      particle.circle(0, 0, 2.5 + Math.random() * 2);
-      particle.fill({ color: fw.color, alpha: 0.95 });
+      particle.circle(0, 0, 2 + Math.random() * 2.5);
+      particle.fill({ color: lava.color, alpha: 0.95 });
       fireworksContainer.addChild(particle);
 
       fireworks.push({
         sprite: particle,
-        x: fw.x,
-        y: fw.y,
+        x: lava.x,
+        y: lava.y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
         maxLife: 1,
         phase: "explode",
         exploded: true,
-        color: fw.color,
+        color: lava.color,
       });
     }
   };
@@ -349,7 +368,7 @@ export async function createInfernoBackground(
     const dx = targetX - startX;
     const dy = targetY - startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const speed = 18 + Math.random() * 7; // 🔥 速め
+    const speed = 20 + Math.random() * 10; // 🔥 より速く（20〜30）
     const vx = (dx / distance) * speed;
     const vy = (dy / distance) * speed;
     const rotation = Math.atan2(dy, dx);
@@ -367,46 +386,74 @@ export async function createInfernoBackground(
     });
   };
 
+  // 🔥 着弾爆発エフェクト
+  const explodeMeteor = (meteor: Meteor) => {
+    const particleCount = 30 + Math.floor(Math.random() * 20);
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 2 + Math.random() * 3;
+      const particle = getGraphicsFromPool();
+      particle.circle(0, 0, 1.5 + Math.random() * 2);
+      particle.fill({ color: 0xff4500, alpha: 0.9 });
+      fireworksContainer.addChild(particle);
+
+      fireworks.push({
+        sprite: particle,
+        x: meteor.x,
+        y: meteor.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.6,
+        maxLife: 0.6,
+        phase: "explode",
+        exploded: true,
+        color: 0xff4500,
+      });
+    }
+  };
+
   const triggerMeteors = () => {
     const width = app.screen.width;
     const height = app.screen.height;
 
-    // 🔥 上から火山弾が降ってくる（4〜6個）
-    const meteorCount = 4 + Math.floor(Math.random() * 3);
+    // 🔥 上から火山弾が降ってくる（6〜8個に増加）
+    const meteorCount = 6 + Math.floor(Math.random() * 3);
     for (let i = 0; i < meteorCount; i++) {
       setTimeout(() => {
-        const startX = width * (0.2 + Math.random() * 0.6); // 上部全体から
+        const startX = width * (0.2 + Math.random() * 0.6);
         const startY = -80 - Math.random() * 120;
         const targetX = width * (0.2 + Math.random() * 0.6);
         const targetY = height + 100 + Math.random() * 100;
-        const size = 10 + Math.random() * 10; // でかい！
+        const size = 12 + Math.random() * 8; // 🔥 より大きく（12〜20）
         launchMeteor(startX, startY, targetX, targetY, size);
-      }, i * 120 + Math.random() * 80);
+      }, i * 100 + Math.random() * 60); // より密集して降る
     }
   };
 
-  const triggerFireworks = () => {
+  // 🔥 火山噴火エフェクト（画面下部から溶岩噴出）
+  const triggerVolcanoEruption = () => {
     const width = app.screen.width;
     const height = app.screen.height;
 
-    // 🔥 爆炎噴火（複数箇所から）
-    for (let i = 0; i < 4; i++) {
+    // 🔥 複数箇所から溶岩噴出（下から上へ）- 画面全体に広がる
+    const eruptions = 5; // 5箇所から噴出
+    for (let i = 0; i < eruptions; i++) {
       setTimeout(() => {
-        const x = width * (0.1 + Math.random() * 0.8);
-        const y = height * 0.75;
+        const x = width * (0.05 + Math.random() * 0.9); // 🔥 0.05〜0.95 でより広範囲
+        const y = height; // 🔥 画面最下部から
         const color = INFERNO_EXPLOSION_COLORS[Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)];
-        launchFirework(x, y, color);
-      }, i * 100);
+        launchLavaBall(x, y, color);
+      }, i * 80 + Math.random() * 50);
     }
 
-    // 中央から大爆発
+    // 🔥 中央から大規模噴火
     for (let i = 0; i < 3; i++) {
       setTimeout(() => {
-        const x = width * 0.5 + (Math.random() - 0.5) * width * 0.2;
-        const y = height * 0.8;
+        const x = width * 0.5 + (Math.random() - 0.5) * width * 0.3; // 🔥 中央±15%→±15%でより広く
+        const y = height;
         const color = INFERNO_EXPLOSION_COLORS[Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)];
-        launchFirework(x, y, color);
-      }, i * 150 + 250);
+        launchLavaBall(x, y, color);
+      }, i * 120 + 300);
     }
   };
 
@@ -478,12 +525,23 @@ export async function createInfernoBackground(
     foreground.x = pointerCurrentX * width * 0.07;
     foreground.y = pointerCurrentY * height * 0.06;
 
+    // 🔥 複数回点滅する赤フラッシュ
     if (sweepActive) {
       const elapsed = time - sweepStart;
-      const t = Math.min(1, elapsed / SWEEP_DURATION);
-      const envelope = Math.sin(Math.PI * t);
-      sweepOverlay.alpha = envelope * 0.4; // 🔥 強めのフラッシュ
-      if (elapsed >= SWEEP_DURATION) {
+      const flashInterval = 300; // 300ms間隔で点滅
+      const flashDuration = 200; // 各フラッシュ200ms
+
+      const currentFlash = Math.floor(elapsed / flashInterval);
+
+      if (currentFlash < sweepFlashes) {
+        const flashProgress = (elapsed % flashInterval) / flashDuration;
+        if (flashProgress < 1) {
+          // サイン波で急激に明るく→暗く
+          sweepOverlay.alpha = Math.sin(Math.PI * flashProgress) * 0.6;
+        } else {
+          sweepOverlay.alpha = 0;
+        }
+      } else {
         sweepActive = false;
         sweepOverlay.alpha = 0;
         pointerTargetY = 0;
@@ -508,6 +566,12 @@ export async function createInfernoBackground(
       meteor.trail.y = meteor.y;
       meteor.trail.rotation = meteor.rotation;
       meteor.trail.alpha = Math.max(0, meteor.life * 0.7);
+
+      // 🔥 画面下部90%で着弾爆発
+      if (meteor.y > height * 0.9 && meteor.life > 0.5) {
+        explodeMeteor(meteor);
+        meteor.life = 0; // 即座に消去
+      }
 
       if (meteor.y > height + 200 || meteor.life <= 0) {
         meteorsContainer.removeChild(meteor.sprite);
@@ -536,7 +600,7 @@ export async function createInfernoBackground(
         fw.sprite.y = fw.y;
 
         if ((fw.vy >= -0.5 || fw.life <= 0.3) && !fw.exploded) {
-          explodeFirework(fw);
+          explodeLavaBall(fw);
           fireworksContainer.removeChild(fw.sprite);
           releaseGraphicsToPool(fw.sprite);
           fireworks.splice(i, 1);
@@ -578,10 +642,16 @@ export async function createInfernoBackground(
       triggerLightSweep();
     },
     launchFireworks() {
-      triggerFireworks();
+      triggerVolcanoEruption();
+    },
+    launchVolcanoEruption() {
+      triggerVolcanoEruption();
     },
     launchMeteors() {
       triggerMeteors();
+    },
+    flashRed(count?: number, duration?: number) {
+      triggerFlashRed(count, duration);
     },
     destroy() {
       running = false;
