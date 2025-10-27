@@ -2646,44 +2646,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             </AppButton>
           </Box>
         </Box>
-        {recallV2Enabled ? (
-          <Box textAlign="center" mt={seatRequestError ? 4 : 3}>
-            {seatRequestPending ? (
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-              >
-                ホストが席の準備を進めています。そのままお待ちください。
-              </Text>
-            ) : seatRequestTimedOut ? (
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-              >
-                ホストの準備中かもしれません。少し待ってから再度お試しください。
-              </Text>
-            ) : seatRequestRejected ? (
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-              >
-                申請が受理されませんでした。時間を置くかホストに確認してみてください。
-              </Text>
-            ) : seatRequestAccepted ? (
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-              >
-                席が確保されました。まもなくプレイに戻ります。
-              </Text>
-            ) : null}
-            {seatRequestError ? (
-              <Text fontSize="sm" color="tomato" mt={2}>
-                {seatRequestError}
-              </Text>
-            ) : null}
-          </Box>
-        ) : null}
       </Box>
     );
   }
