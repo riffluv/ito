@@ -61,6 +61,36 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   const phaseRef = useRef<HTMLDivElement>(null);
   const playersRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let paused = false;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (!paused) {
+          gsap.ticker.sleep();
+          gsap.globalTimeline.pause();
+          paused = true;
+        }
+      } else if (paused) {
+        gsap.ticker.wake();
+        gsap.globalTimeline.resume();
+        paused = false;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility, { passive: true } as any);
+    handleVisibility();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (paused) {
+        gsap.ticker.wake();
+        gsap.globalTimeline.resume();
+      }
+    };
+  }, []);
+
   // --- temporary stubs to satisfy typechecker in CI/build environment ---
   const previousPlayerCount = useRef<number>(0);
   const playerCount = 0;
