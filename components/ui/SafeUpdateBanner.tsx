@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Box, Text } from "@chakra-ui/react";
+import { AppButton } from "@/components/ui/AppButton";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 
 type SafeUpdateBannerProps = {
@@ -9,8 +10,16 @@ type SafeUpdateBannerProps = {
 };
 
 export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerProps) {
-  const { phase, autoApplySuppressed, hasError, lastError, isApplying } =
-    useServiceWorkerUpdate();
+  const {
+    phase,
+    autoApplySuppressed,
+    hasError,
+    lastError,
+    isApplying,
+    isUpdateReady,
+    applyUpdate,
+    retryUpdate,
+  } = useServiceWorkerUpdate();
 
   const headline = useMemo(() => {
     if (isApplying || phase === "applying") {
@@ -24,6 +33,22 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     }
     return "新バージョン待機中";
   }, [autoApplySuppressed, hasError, isApplying, phase]);
+
+  const actionType = useMemo(() => {
+    if (isApplying || phase === "applying") {
+      return null;
+    }
+    if (hasError || phase === "failed") {
+      return "retry" as const;
+    }
+    if (autoApplySuppressed) {
+      return "apply" as const;
+    }
+    if (phase === "ready" || isUpdateReady) {
+      return "apply" as const;
+    }
+    return null;
+  }, [autoApplySuppressed, hasError, isApplying, isUpdateReady, phase]);
 
   const description = useMemo(() => {
     if (isApplying || phase === "applying") {
@@ -61,7 +86,7 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
       padding="12px 16px"
       color="rgba(255,255,255,0.92)"
       fontFamily="'Courier New', monospace"
-      pointerEvents="none"
+      pointerEvents={actionType ? "auto" : "none"}
       boxShadow="0 8px 18px rgba(0,0,0,0.35)"
       maxW="240px"
     >
@@ -71,6 +96,17 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
       <Text fontSize="12px" mt="6px" lineHeight="1.6">
         {description}
       </Text>
+      {actionType ? (
+        <AppButton
+          mt="10px"
+          size="sm"
+          palette="brand"
+          onClick={actionType === "retry" ? retryUpdate : applyUpdate}
+          disabled={isApplying || phase === "applying"}
+        >
+          {actionType === "retry" ? "再試行する" : "今すぐ適用"}
+        </AppButton>
+      ) : null}
     </Box>
   );
 }

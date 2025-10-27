@@ -57,6 +57,9 @@ let preCheckPhase: SafeUpdatePhase | null = null;
 let applyAttemptSequence = 0;
 let autoApplySuppressed = false;
 
+const FORCE_APPLY_HOLD_DEFAULT = "__default__";
+const forceApplyHolds = new Map<string, number>();
+
 const APPLY_TIMEOUT_MS = 12_000;
 const FORCE_APPLY_DELAY_MS = 60_000;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
@@ -179,11 +182,53 @@ function scheduleApplyTimeout(reason: string, safeMode: boolean) {
   }, APPLY_TIMEOUT_MS);
 }
 
+function normalizeForceHoldReason(reason?: string): string {
+  const trimmed = typeof reason === "string" ? reason.trim() : "";
+  return trimmed.length > 0 ? trimmed : FORCE_APPLY_HOLD_DEFAULT;
+}
+
+function hasForceApplyHold(): boolean {
+  return forceApplyHolds.size > 0;
+}
+
+function registerForceApplyHold(reason: string | undefined, shouldBroadcast: boolean) {
+  const key = normalizeForceHoldReason(reason);
+  const nextCount = (forceApplyHolds.get(key) ?? 0) + 1;
+  forceApplyHolds.set(key, nextCount);
+  clearForceApplyTimer();
+  if (shouldBroadcast) {
+    broadcast?.postMessage({ type: "force-hold", detail: key });
+  }
+}
+
+function registerForceApplyRelease(reason: string | undefined, shouldBroadcast: boolean) {
+  const key = normalizeForceHoldReason(reason);
+  const current = forceApplyHolds.get(key);
+  if (!current) {
+    return;
+  }
+  if (current <= 1) {
+    forceApplyHolds.delete(key);
+  } else {
+    forceApplyHolds.set(key, current - 1);
+  }
+  if (shouldBroadcast) {
+    broadcast?.postMessage({ type: "force-release", detail: key });
+  }
+  if (!hasForceApplyHold()) {
+    scheduleForceApplyTimer();
+  }
+}
+
 function scheduleForceApplyTimer() {
   if (typeof window === "undefined") {
     return;
   }
   if (!waitingRegistration?.waiting) {
+    clearForceApplyTimer();
+    return;
+  }
+  if (hasForceApplyHold()) {
     clearForceApplyTimer();
     return;
   }
@@ -240,6 +285,12 @@ function handleBroadcastMessage(message: unknown) {
   switch (payload.type) {
     case "update-ready":
       void resyncWaitingServiceWorker("broadcast-ready");
+      break;
+    case "force-hold":
+      registerForceApplyHold(payload.detail, false);
+      break;
+    case "force-release":
+      registerForceApplyRelease(payload.detail, false);
       break;
     case "update-cleared":
       if (!pendingReload) {
@@ -385,6 +436,14 @@ export function consumePendingApplyContext(): ApplyServiceWorkerOptions | null {
   state.applyReason = null;
   notifyListeners();
   return { reason, safeMode };
+}
+
+export function holdForceApplyTimer(reason?: string) {
+  registerForceApplyHold(reason, true);
+}
+
+export function releaseForceApplyTimer(reason?: string) {
+  registerForceApplyRelease(reason, true);
 }
 
 export function suppressAutoApply() {
