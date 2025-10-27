@@ -42,7 +42,9 @@ declare global {
     bg?: {
       lightSweep: () => void;
       launchFireworks: () => void;
+      launchVolcanoEruption?: () => void;
       launchMeteors: () => void;
+      flashRed?: (count?: number, duration?: number) => void;
       setQuality: (quality: BackgroundQuality) => void;
       getQuality: () => BackgroundQuality;
       getRenderer: () => "dom" | "pixi";
@@ -519,6 +521,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onLaunchFireworks: () => controller.launchFireworks(),
           onLaunchMeteors: () => controller.launchMeteors(),
         });
+
+        // 🔥 煉獄専用のメソッドをグローバルに登録
+        if (window.bg) {
+          window.bg.launchVolcanoEruption = () => controller.launchVolcanoEruption?.();
+          window.bg.flashRed = (count?: number, duration?: number) => controller.flashRed?.(count, duration);
+        }
       } catch (error) {
         logPixiBackground("error", "inferno-init-failed", error);
         if (!disposed) {

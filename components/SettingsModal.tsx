@@ -18,7 +18,7 @@ import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground"
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
 type BackgroundOption = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
-type SceneryVariant = "night" | "inferno" | "sunny";
+type SceneryVariant = "night" | "inferno";
 
 const normalizeBackgroundOption = (
   value: string | null
@@ -46,7 +46,6 @@ const getVariantFromBackground = (bg: BackgroundOption): SceneryVariant | null =
 const getBackgroundFromVariant = (variant: SceneryVariant): BackgroundOption => {
   if (variant === "night") return "pixi-dq";
   if (variant === "inferno") return "pixi-inferno";
-  if (variant === "sunny") return "pixi-dq"; // 晴天は未実装なので夜にフォールバック（将来実装）
   return "pixi-dq";
 };
 
@@ -173,11 +172,6 @@ export function SettingsModal({
       value: "inferno",
       label: "煉獄",
       description: "地獄の炎と溶岩",
-    },
-    {
-      value: "sunny",
-      label: "晴天",
-      description: "（準備中）",
     },
   ];
 
@@ -922,7 +916,6 @@ export function SettingsModal({
                                 <HStack gap={2}>
                                   {sceneryVariants.map((variant) => {
                                     const isVariantSelected = currentVariant === variant.value;
-                                    const isDisabled = variant.value === "sunny"; // 晴天は未実装
 
                                     return (
                                       <Box
@@ -947,24 +940,15 @@ export function SettingsModal({
                                         fontFamily="monospace"
                                         fontSize="sm"
                                         fontWeight="bold"
-                                        cursor={isDisabled ? "not-allowed" : "pointer"}
-                                        opacity={isDisabled ? 0.4 : 1}
+                                        cursor="pointer"
                                         transition={`background-color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
-                                        onClick={() => {
-                                          if (!isDisabled) {
-                                            handleVariantChange(variant.value);
-                                          }
+                                        onClick={() => handleVariantChange(variant.value)}
+                                        _hover={{
+                                          borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                                          bg: isVariantSelected
+                                            ? UI_TOKENS.COLORS.whiteAlpha20
+                                            : UI_TOKENS.COLORS.whiteAlpha05,
                                         }}
-                                        _hover={
-                                          !isDisabled
-                                            ? {
-                                                borderColor: UI_TOKENS.COLORS.whiteAlpha80,
-                                                bg: isVariantSelected
-                                                  ? UI_TOKENS.COLORS.whiteAlpha20
-                                                  : UI_TOKENS.COLORS.whiteAlpha05,
-                                              }
-                                            : {}
-                                        }
                                         title={variant.description}
                                       >
                                         {variant.label}
