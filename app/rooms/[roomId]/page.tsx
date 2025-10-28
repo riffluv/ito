@@ -1171,7 +1171,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "exit", message: "ロビーへ戻ります...", duration: 1200 },
+              { id: "disconnect", message: "せつだん中です...", duration: 730 },
+              { id: "exit", message: "ロビーへ もどります...", duration: 880 },
+              { id: "done", message: "かんりょう！", duration: 390 },
             ],
           },
           performExit
@@ -2239,7 +2241,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "leave", message: "ロビーへ戻ります...", duration: 600 }, // 1200ms → 600ms に短縮
+              { id: "disconnect", message: "せつだん中です...", duration: 730 },
+              { id: "leave", message: "ロビーへ もどります...", duration: 880 },
+              { id: "done", message: "かんりょう！", duration: 390 },
             ],
           },
           async () => {
@@ -2592,7 +2596,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "return", message: "ロビーへ戻ります...", duration: 1000 },
+              { id: "disconnect", message: "せつだん中です...", duration: 730 },
+              { id: "return", message: "ロビーへ もどります...", duration: 880 },
+              { id: "done", message: "かんりょう！", duration: 390 },
             ],
           }
         );

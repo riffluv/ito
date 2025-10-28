@@ -373,24 +373,19 @@ export default function MainMenu() {
           `/rooms/${room.id}`,
           {
             direction: "fade",
-            duration: 1.2,
+            duration: 1.0,
             showLoading: true,
             loadingSteps: [
-              { id: "firebase", message: "せつぞく中です...", duration: 1500 },
+              { id: "connect", message: "せつぞく中です...", duration: 550 },
               {
-                id: "room",
-                message: "ルームの じょうほうを とくていしています...",
-                duration: 2000,
-              },
-              {
-                id: "player",
-                message: "プレイヤーを とうろくしています...",
-                duration: 1800,
+                id: "prepare",
+                message: "じゅんびしています...",
+                duration: 750,
               },
               {
                 id: "ready",
-                message: "じゅんびが かんりょうしました！",
-                duration: 1000,
+                message: "かんりょう...",
+                duration: 700,
               },
             ],
           },
@@ -555,11 +550,11 @@ export default function MainMenu() {
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
           <VStack
-            gap={{ base: scaleForDpi("2.9rem"), lg: scaleForDpi("3.7rem") }}
+            gap={{ base: "47px", lg: "61px" }}
             align="center"
           >
             <VStack
-              gap={scaleForDpi("1.3rem")}
+              gap="19px"
               align="center"
               textAlign="center"
               maxW="4xl"
@@ -569,8 +564,8 @@ export default function MainMenu() {
                 <HStack
                   justify="center"
                   align="flex-end"
-                  gap={{ base: scaleForDpi("0.7rem"), md: scaleForDpi("1.1rem") }}
-                  mb={scaleForDpi("0.9rem")}
+                  gap={{ base: "11px", md: "17px" }}
+                  mb="13px"
                   flexWrap={{ base: "wrap", md: "nowrap" }}
                 >
                   <Box transform="translateY(1.5px) translateX(-2px)">
@@ -607,7 +602,7 @@ export default function MainMenu() {
                     序の紋章III
                   </Heading>
                 </HStack>
-                <Box mt={scaleForDpi("0.3rem")} mb={scaleForDpi("0.7rem")}>
+                <Box mt="4px" mb="11px">
                   <Box h="1px" bg="rgba(255,215,0,0.22)" boxShadow="0 0 3px rgba(255,215,0,0.15)" />
                   <Box h="1px" bg="rgba(0,0,0,0.65)" transform="translateY(-1px)" />
                 </Box>
@@ -653,15 +648,14 @@ export default function MainMenu() {
                 </Text>
               </Box>
 
-              {/* シンプルなコマンドメニュー（モダン＆洗練） */}
+              {/* ドラクエ風コマンドメニュー */}
               <VStack
-                gap={scaleForDpi("0.97rem")}
-                align="stretch"
+                gap="17px"
+                align="center"
                 w="100%"
-                maxW={{ base: "340px", md: "380px" }}
-                mt={scaleForDpi("2.1rem")}
+                mt="38px"
               >
-                {/* メインCTA: 新しい部屋 */}
+                {/* メインCTA: 新しい部屋を作成 */}
                 <AppButton
                   size="lg"
                   visual="solid"
@@ -669,32 +663,43 @@ export default function MainMenu() {
                   onClick={openCreateFlow}
                   css={{
                     position: "relative",
-                    px: scaleForDpi("23px"),
-                    py: scaleForDpi("13px"),
-                    fontSize: scaleForDpi("1.07rem"),
-                    fontWeight: "600",
-                    letterSpacing: "0.015em",
-                    borderRadius: "3px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4)",
-                    transition: "183ms cubic-bezier(.2,1,.3,1)",
-                    textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                    minWidth: "260px",
+                    maxWidth: "280px",
+                    width: "auto",
+                    px: scaleForDpi("32px"),
+                    py: scaleForDpi("16px"),
+                    fontSize: scaleForDpi("1.15rem"),
+                    fontWeight: "700",
+                    fontFamily: "monospace",
+                    letterSpacing: "0.5px",
+                    borderRadius: "0",
+                    border: "3px solid rgba(255,255,255,0.9)",
+                    background: "linear-gradient(to bottom, rgba(255,128,45,0.95), rgba(235,110,30,0.92))",
+                    boxShadow: "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,0.62), 4px 5px 0 rgba(0,0,0,0.48), 2px 3px 0 rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.25)",
+                    textShadow: "2px 2px 0px rgba(0,0,0,0.85)",
+                    transitionProperty: "transform, box-shadow, background, border-color",
+                    transitionDuration: "183ms",
+                    transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
+                    willChange: "transform",
                     "&:hover": {
-                      transform: "translateY(-1px)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.45)",
+                      transform: "translateY(-2px)",
+                      background: "linear-gradient(to bottom, rgba(255,145,65,0.98), rgba(255,128,45,0.95))",
+                      borderColor: "rgba(255,255,255,0.95)",
+                      boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,0.68), 5px 7px 0 rgba(0,0,0,0.54), 3px 5px 0 rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3)",
                     },
                     "&:active": {
-                      transform: "translateY(0px)",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                      transform: "translateY(1px)",
+                      boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,0.62), 1px 2px 0 rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.15)",
                     },
                   }}
                 >
-                  <Plus size={19} style={{ marginRight: "9px" }} />
-                  新しい部屋
+                  <Plus size={20} style={{ marginRight: "10px" }} />
+                  新しい部屋を作成
                 </AppButton>
 
-                {/* サブメニュー: 横並び */}
+                {/* サブメニュー: 横並び（ドラクエ風） */}
                 <HStack
-                  gap={scaleForDpi("0.83rem")}
+                  gap="15px"
                   justify="center"
                   flexWrap="wrap"
                 >
@@ -703,49 +708,49 @@ export default function MainMenu() {
                     visual="outline"
                     palette="gray"
                     css={{
-                      px: scaleForDpi("17px"),
-                      py: scaleForDpi("9px"),
-                      fontSize: scaleForDpi("0.93rem"),
-                      fontWeight: "500",
-                      letterSpacing: "0.012em",
-                      borderRadius: "3px",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                      background: "rgba(18,22,32,0.58)",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
-                      transition: "177ms cubic-bezier(.2,1,.3,1)",
-                      backdropFilter: "blur(10px)",
+                      minWidth: "130px",
+                      px: scaleForDpi("20px"),
+                      py: scaleForDpi("11px"),
+                      fontSize: scaleForDpi("0.95rem"),
+                      fontWeight: "600",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.5px",
+                      borderRadius: "0",
+                      border: "2px solid rgba(255,255,255,0.7)",
+                      background: "rgba(28,32,42,0.85)",
+                      boxShadow: "2px 3px 0 rgba(0,0,0,0.68), 1px 2px 0 rgba(0,0,0,0.52), inset 1px 1px 0 rgba(255,255,255,0.1)",
+                      textShadow: "1px 1px 0px rgba(0,0,0,0.8)",
+                      transitionProperty: "transform, box-shadow, background, border-color",
+                      transitionDuration: "173ms",
+                      transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
+                      willChange: "transform",
                       "&:hover": {
-                        background: "rgba(28,32,42,0.68)",
-                        borderColor: "rgba(255,255,255,0.32)",
+                        background: "rgba(38,42,52,0.95)",
+                        borderColor: "rgba(255,255,255,0.85)",
                         transform: "translateY(-1px)",
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                        boxShadow: "3px 4px 0 rgba(0,0,0,0.72), 2px 3px 0 rgba(0,0,0,0.58), inset 1px 1px 0 rgba(255,255,255,0.15)",
                       },
                       "&:active": {
-                        transform: "translateY(0px)",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                        transform: "translateY(1px)",
+                        boxShadow: "1px 2px 0 rgba(0,0,0,0.72), inset 1px 1px 0 rgba(255,255,255,0.08)",
                       },
                     }}
                     onClick={async () => {
                       try {
                         await transition.navigateWithTransition("/rules", {
                           direction: "fade",
-                          duration: 1.0,
+                          duration: 0.8,
                           showLoading: true,
                           loadingSteps: [
                             {
                               id: "loading",
-                              message: "ルールせつめいを よみこんでいます...",
-                              duration: 1000,
-                            },
-                            {
-                              id: "prepare",
-                              message: "せつめいを じゅんびしています...",
-                              duration: 800,
+                              message: "よみこみ中...",
+                              duration: 620,
                             },
                             {
                               id: "ready",
-                              message: "よみこみ かんりょう！",
-                              duration: 600,
+                              message: "かんりょう！",
+                              duration: 280,
                             },
                           ],
                         });
@@ -761,31 +766,36 @@ export default function MainMenu() {
                   </AppButton>
                   <AppButton
                     size="md"
-                    visual={displayName ? "outline" : "solid"}
-                    palette={displayName ? "gray" : "brand"}
+                    visual="outline"
+                    palette="gray"
                     onClick={openNameChange}
                     css={{
-                      px: scaleForDpi("17px"),
-                      py: scaleForDpi("9px"),
-                      fontSize: scaleForDpi("0.93rem"),
-                      fontWeight: "500",
-                      letterSpacing: "0.012em",
-                      borderRadius: "3px",
-                      border: displayName ? "1px solid rgba(255,255,255,0.22)" : "none",
-                      background: displayName ? "rgba(18,22,32,0.58)" : undefined,
-                      boxShadow: displayName ? "0 1px 4px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4)",
-                      transition: "177ms cubic-bezier(.2,1,.3,1)",
-                      backdropFilter: displayName ? "blur(10px)" : "none",
-                      textShadow: displayName ? "none" : "0 1px 2px rgba(0,0,0,0.5)",
+                      minWidth: "130px",
+                      px: scaleForDpi("20px"),
+                      py: scaleForDpi("11px"),
+                      fontSize: scaleForDpi("0.95rem"),
+                      fontWeight: "600",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.5px",
+                      borderRadius: "0",
+                      border: displayName ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,215,0,0.8)",
+                      background: displayName ? "rgba(28,32,42,0.85)" : "rgba(255,215,0,0.15)",
+                      boxShadow: displayName ? "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.1)" : "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.15), 0 0 8px rgba(255,215,0,0.3)",
+                      textShadow: "1px 1px 0px rgba(0,0,0,0.8)",
+                      color: displayName ? "rgba(255,255,255,0.92)" : "rgba(255,235,205,0.98)",
+                      transitionProperty: "transform, box-shadow, background, border-color",
+                      transitionDuration: "170ms",
+                      transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
+                      willChange: "transform",
                       "&:hover": {
-                        background: displayName ? "rgba(28,32,42,0.68)" : undefined,
-                        borderColor: displayName ? "rgba(255,255,255,0.32)" : undefined,
+                        background: displayName ? "rgba(38,42,52,0.95)" : "rgba(255,215,0,0.22)",
+                        borderColor: displayName ? "rgba(255,255,255,0.85)" : "rgba(255,215,0,0.95)",
                         transform: "translateY(-1px)",
-                        boxShadow: displayName ? "0 2px 6px rgba(0,0,0,0.3)" : "0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.45)",
+                        boxShadow: displayName ? "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.15)" : "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.2), 0 0 12px rgba(255,215,0,0.4)",
                       },
                       "&:active": {
-                        transform: "translateY(0px)",
-                        boxShadow: displayName ? "0 1px 2px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.4)",
+                        transform: "translateY(1px)",
+                        boxShadow: "1px 1px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.08)",
                       },
                     }}
                   >
@@ -819,7 +829,7 @@ export default function MainMenu() {
         }}
       >
         <Grid
-          templateColumns={{ base: "1fr", xl: "1fr 340px" }}
+          templateColumns={{ base: "1fr", md: "1fr 340px" }}
           gap={scaleForDpi("1.9rem")}
           alignItems="start"
           css={{
@@ -1122,113 +1132,127 @@ export default function MainMenu() {
               </Box>
             )}
           </GridItem>
-          <GridItem display={{ base: "none", xl: "block" }}>
+          <GridItem display={{ base: "none", md: "block" }}>
             <VStack gap={6} align="stretch">
               <Box
-                bg="bgPanel"
-                border="borders.retrogame"
-                borderColor="whiteAlpha.90"
+                bg="rgba(20,16,12,0.85)"
+                border="4px solid"
+                borderColor="rgba(139,92,46,0.9)"
                 borderRadius={0}
                 p={5}
-                boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
+                boxShadow="3px 3px 0 rgba(0,0,0,0.9), 5px 5px 0 rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,235,205,0.15)"
                 position="relative"
+                css={{
+                  background: "linear-gradient(135deg, rgba(28,22,16,0.92) 0%, rgba(18,14,10,0.88) 100%)",
+                  borderImage: "linear-gradient(to bottom, rgba(180,130,70,0.95), rgba(120,80,40,0.85)) 1",
+                }}
               >
                 <VStack gap={4} align="stretch">
-                  <HStack gap={3} align="center">
+                  <HStack gap={4} align="center" pb={2} borderBottom="2px solid rgba(139,92,46,0.5)">
                     <Box
-                      w={10}
-                      h={10}
+                      w={12}
+                      h={12}
                       borderRadius={0}
-                      bg="bgSubtle"
-                      border="borders.retrogameThin"
-                      borderColor="whiteAlpha.60"
+                      bg="rgba(139,92,46,0.3)"
+                      border="3px solid rgba(214,177,117,0.7)"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      boxShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                      boxShadow="2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,235,205,0.3)"
                     >
                       <Image
                         src="/images/hanepen1.webp"
                         alt="羽ペン"
-                        w="20px"
-                        h="20px"
-                        filter="brightness(0) invert(1)"
+                        w="24px"
+                        h="24px"
+                        filter="brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.6))"
                       />
                     </Box>
                     <Text
-                      fontWeight={600}
-                      fontSize="lg"
-                      color="white"
+                      fontWeight={700}
+                      fontSize="xl"
+                      color="rgba(255,235,205,0.98)"
                       fontFamily="monospace"
-                      textShadow="1px 1px 0px #000"
-                      letterSpacing="0.5px"
+                      textShadow="2px 2px 0px rgba(0,0,0,0.9), 0 0 8px rgba(255,235,205,0.3)"
+                      letterSpacing="1px"
                     >
                       開発者より
                     </Text>
                   </HStack>
 
                   <VStack gap={4} align="stretch">
-                    <Box {...DEVELOPER_NOTE_STYLES.box} border="2px solid rgba(255,255,255,0.2)">
+                    <Box
+                      p={4}
+                      bg="rgba(245,235,215,0.12)"
+                      border="2px solid rgba(214,177,117,0.4)"
+                      borderRadius={0}
+                      boxShadow="inset 0 1px 0 rgba(255,245,220,0.2), 1px 1px 0 rgba(0,0,0,0.5)"
+                      css={{
+                        background: "linear-gradient(to bottom, rgba(245,235,215,0.15), rgba(235,225,205,0.08))",
+                      }}
+                    >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
+                          <Text fontSize="md" fontWeight={700} color="rgba(255,215,0,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
                             🎮
                           </Text>
-                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(255,255,255,0.95)">
+                          <Text fontSize="md" fontWeight={700} color="rgba(255,235,205,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
                             このゲームについて
                           </Text>
                         </HStack>
-                        <Text {...DEVELOPER_NOTE_STYLES.text} textShadow="1px 1px 0px #000">
-                          “連想ワードだけで数字の大小をそろえる”という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
+                        <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                          "連想ワードだけで数字の大小をそろえる"という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
                         </Text>
                       </VStack>
                     </Box>
 
                     <Box
-                      {...DEVELOPER_NOTE_STYLES.box}
-                      border="2px solid rgba(34,197,94,0.3)"
-                      css={{
-                        borderLeft: "3px solid transparent",
-                        borderImage: "linear-gradient(to bottom, rgba(34,197,94,0.95), rgba(34,197,94,0.5)) 1",
-                      }}
+                      p={4}
+                      bg="rgba(34,197,94,0.1)"
+                      border="2px solid rgba(34,197,94,0.5)"
+                      borderLeft="4px solid rgba(34,197,94,0.8)"
+                      borderRadius={0}
+                      boxShadow="inset 0 1px 0 rgba(34,197,94,0.2), 1px 1px 0 rgba(0,0,0,0.5)"
                     >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
+                          <Text fontSize="md" fontWeight={700} color="rgba(34,197,94,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
                             ⚠️
                           </Text>
-                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(34,197,94,0.95)">
+                          <Text fontSize="md" fontWeight={700} color="rgba(100,255,150,0.98)" fontFamily="monospace" textShadow="1px 1px 0px #000">
                             注意事項
                           </Text>
                         </HStack>
-                        <Text {...DEVELOPER_NOTE_STYLES.text}>
+                        <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
                           ブラウザだけで遊べる完全オリジナル作品です。同期実験中のため、不具合を見つけたら気軽に知らせてください。
                         </Text>
                       </VStack>
                     </Box>
 
                     <Box
-                      {...DEVELOPER_NOTE_STYLES.box}
-                      border="2px solid rgba(147,51,234,0.3)"
-                      css={{
-                        borderLeft: "3px solid transparent",
-                        borderImage: "linear-gradient(to bottom, rgba(147,51,234,0.95), rgba(147,51,234,0.5)) 1",
-                      }}
+                      p={4}
+                      bg="rgba(147,51,234,0.1)"
+                      border="2px solid rgba(147,51,234,0.5)"
+                      borderLeft="4px solid rgba(147,51,234,0.8)"
+                      borderRadius={0}
+                      boxShadow="inset 0 1px 0 rgba(147,51,234,0.2), 1px 1px 0 rgba(0,0,0,0.5)"
                     >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Box w="1em" display="flex" justifyContent="center">
-                            <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
-                              ◆
-                            </Text>
-                          </Box>
-                          <Text {...DEVELOPER_NOTE_STYLES.heading} color="rgba(147,51,234,0.95)">
+                          <Text fontSize="md" fontWeight={700} color="rgba(147,51,234,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                            💎
+                          </Text>
+                          <Text fontSize="md" fontWeight={700} color="rgba(180,120,255,0.98)" fontFamily="monospace" textShadow="1px 1px 0px #000">
                             今後の予定
                           </Text>
                         </HStack>
                         <VStack gap={1.5} align="start" pl={2}>
-                          <Text {...DEVELOPER_NOTE_STYLES.text}>・ちゃんと寝る</Text>
-                          <Text {...DEVELOPER_NOTE_STYLES.text}>・コーヒーを控える（最重要）</Text>
+                          <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                            ・ちゃんと寝る
+                          </Text>
+                          <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                            ・コーヒーを控える（最重要）
+                          </Text>
                         </VStack>
                       </VStack>
                     </Box>

@@ -220,11 +220,16 @@ export const RoomCard = memo(function RoomCard({
               size="sm"
               visual="solid"
               palette={locked ? "purple" : "brand"}
-              css={{ width: "100%" }}
-              onPointerDown={(event) => {
-                if (event.button !== 0) return;
-                event.stopPropagation();
-                onJoin(id);
+              css={{
+                width: "100%",
+                transitionProperty: "transform, box-shadow",
+                transitionDuration: "177ms",
+                transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
+                willChange: "transform",
+                _active: {
+                  transform: "translateY(1px)",
+                  boxShadow: "1px 2px 0 rgba(0,0,0,0.6)",
+                }
               }}
               onClick={(event) => {
                 event.stopPropagation();
