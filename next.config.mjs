@@ -3,7 +3,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // 開発環境でのカード描画・アニメーション問題を回避するため無効化
+  // Strict Modeの2重レンダリングがPixi.js/GSAPアニメーションと競合
+  reactStrictMode: false,
   // Allow builds to succeed on CI while we iteratively fix lint warnings/errors
   eslint: {
     ignoreDuringBuilds: true,

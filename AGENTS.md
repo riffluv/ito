@@ -40,6 +40,33 @@ npx playwright test  # Playwright（個別指定推奨）
 
 主な Playwright テスト: `tests/roomMachine.spec.ts`, `tests/submit-offline-continue.spec.ts`, `tests/clue-input-shortcuts.spec.ts`, 既存 `tests/presence-host.spec.ts` など。
 
+### 🚨 開発環境の重要な設定（必読）
+
+**React Strict Mode を無効化済み**（`next.config.mjs` で `reactStrictMode: false`）
+
+#### 無効化した理由
+Pixi.js / GSAP を使用した重量級アニメーションプロジェクトでは、Strict Mode の2重レンダリングが以下の問題を引き起こす：
+- **Pixi.js スプライト**: 2重初期化によるメモリリーク・描画バグ
+- **GSAP アニメーション**: タイムライン衝突・途中停止
+- **カード描画**: チカチカ・表示されない・提出できない
+- **Firestore 永続キャッシュ**: IndexedDB 同期エラー
+
+#### 本番環境への影響
+**完全にゼロ。デプロイしても安全。**
+- `reactStrictMode` は開発時のデバッグツールで、本番ビルドには影響しない
+- `npm run start` でも Vercel でも、Strict Mode の2重レンダリングは元々発生しない
+- この設定変更は `npm run dev` の挙動のみに影響
+
+#### 推奨開発フロー
+- 通常開発: `npm run dev` で快適に作業
+- 品質確認: `npm run start` で本番ビルドをテスト（Strict Mode 有効時と同じ挙動）
+
+#### トラブルシュート
+`npm run dev` でカード関連の不具合（チカチカ、表示されない、提出できない）が発生した場合：
+1. `next.config.mjs` の `reactStrictMode` が `false` になっているか確認
+2. 開発サーバーを再起動（Ctrl+C → `npm run dev`）
+3. ブラウザのキャッシュをクリア（F12 → Application → Clear storage）
+
 ---
 
 ## 4. 状態管理まわりのポイント
