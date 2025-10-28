@@ -1,5 +1,7 @@
 "use client";
 
+const SPECTATOR_ACTIVATION_DELAY_MS = 450;
+
 // HUD は初期表示の軽量化を優先し、必要になるまで読み込まない。
 // import { Hud } from "@/components/Hud";
 
@@ -1267,7 +1269,39 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   const shouldShowSpectator =
     !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
-  const isSpectatorMode = spectatorEligibilityReady && shouldShowSpectator;
+  const spectatorDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [spectatorDelayReady, setSpectatorDelayReady] = useState(false);
+  const spectatorImmediate =
+    versionMismatchBlocksAccess || forcedExitReason !== null;
+  useEffect(() => {
+    if (spectatorDelayRef.current !== null) {
+      clearTimeout(spectatorDelayRef.current);
+      spectatorDelayRef.current = null;
+    }
+    if (!shouldShowSpectator) {
+      setSpectatorDelayReady(false);
+      return;
+    }
+    if (spectatorImmediate) {
+      setSpectatorDelayReady(true);
+      return;
+    }
+    setSpectatorDelayReady(false);
+    spectatorDelayRef.current = setTimeout(() => {
+      spectatorDelayRef.current = null;
+      setSpectatorDelayReady(true);
+    }, SPECTATOR_ACTIVATION_DELAY_MS);
+    return () => {
+      if (spectatorDelayRef.current !== null) {
+        clearTimeout(spectatorDelayRef.current);
+        spectatorDelayRef.current = null;
+      }
+    };
+  }, [shouldShowSpectator, spectatorImmediate]);
+  const isSpectatorMode =
+    spectatorEligibilityReady &&
+    shouldShowSpectator &&
+    (spectatorImmediate || spectatorDelayReady);
   useEffect(() => {
     traceAction("spectator.mode", {
       roomId,
