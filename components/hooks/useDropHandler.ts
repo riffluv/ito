@@ -2,8 +2,10 @@ import { notify } from "@/components/ui/notify";
 import { scheduleAddCardToProposalAtPosition } from "@/lib/game/proposalScheduler";
 import { addCardToProposal } from "@/lib/game/service";
 import type { PlayerDoc } from "@/lib/types";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { useSoundManager } from "@/lib/audio/SoundProvider";
+import type { SoundId } from "@/lib/audio/types";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { recordMetricDistribution } from "@/lib/perf/metricsClient";
 
@@ -34,9 +36,51 @@ export function useDropHandler({
 }: UseDropHandlerProps) {
   const playCardPlace = useSoundEffect("card_place");
   const playDropInvalid = useSoundEffect("drop_invalid");
+  const soundManager = useSoundManager();
+  const prewarmRoomRef = useRef<string | null>(null);
+  const dropSoundReady = useRef(false);
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
   const optimisticMode = DROP_OPTIMISTIC_ENABLED;
+
+  useEffect(() => {
+    if (!soundManager) return;
+    if (!roomId) return;
+    if (prewarmRoomRef.current === roomId && dropSoundReady.current) return;
+    const targetRoom = roomId;
+    prewarmRoomRef.current = targetRoom;
+    const dropSoundIds: SoundId[] = ["card_place", "drop_success", "drop_invalid", "drag_pickup"];
+    void soundManager
+      .prewarm(dropSoundIds)
+      .then(() => {
+        if (prewarmRoomRef.current === targetRoom) {
+          dropSoundReady.current = true;
+        }
+        traceAction("audio.prewarm.drop", { roomId: targetRoom });
+      })
+      .catch((error) => {
+        if (prewarmRoomRef.current === targetRoom) {
+          dropSoundReady.current = false;
+        }
+        traceError("audio.prewarm.drop.failed", error as any, { roomId: targetRoom });
+      });
+  }, [soundManager, roomId]);
+
+  const playCardPlaceNow = useCallback(() => {
+    if (soundManager) {
+      soundManager.markUserInteraction();
+      void soundManager.prepareForInteraction();
+    }
+    playCardPlace();
+  }, [soundManager, playCardPlace]);
+
+  const playDropInvalidNow = useCallback(() => {
+    if (soundManager) {
+      soundManager.markUserInteraction();
+      void soundManager.prepareForInteraction();
+    }
+    playDropInvalid();
+  }, [soundManager, playDropInvalid]);
 
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
@@ -83,7 +127,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "phase",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
@@ -94,7 +138,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "foreign-card",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
@@ -105,7 +149,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "no-number",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
@@ -116,7 +160,7 @@ export function useDropHandler({
     const playOnce = () => {
       if (didPlaySound) return;
       didPlaySound = true;
-      playCardPlace();
+      playCardPlaceNow();
     };
     let notifiedSuccess = false;
 
@@ -159,7 +203,7 @@ export function useDropHandler({
             roomId,
             playerId: meId,
           });
-          playDropInvalid();
+          playDropInvalidNow();
           notify({
             title: "カードは既に提出済みです",
             type: "info",
@@ -186,7 +230,7 @@ export function useDropHandler({
           const snapshot = previousPending.slice();
           setPending(() => snapshot);
         }
-        playDropInvalid();
+        playDropInvalidNow();
         notify({
           title: "配置に失敗しました",
           description: err?.message,
@@ -220,7 +264,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "phase",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "今はここに置けません", type: "info" });
       return;
     }
@@ -231,7 +275,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "foreign-card",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "自分のカードをドラッグしてください", type: "info" });
       return;
     }
@@ -242,7 +286,7 @@ export function useDropHandler({
         playerId: meId,
         reason: "no-number",
       });
-      playDropInvalid();
+      playDropInvalidNow();
       notify({ title: "数字が割り当てられていません", type: "warning" });
       return;
     }
@@ -253,7 +297,7 @@ export function useDropHandler({
     const playOnce = () => {
       if (didPlaySound) return;
       didPlaySound = true;
-      playCardPlace();
+      playCardPlaceNow();
     };
     let notifiedSuccess = false;
 
@@ -305,7 +349,7 @@ export function useDropHandler({
             description: "別の位置を選ぶか、既存のカードを動かしてください。",
             type: "info",
           });
-          playDropInvalid();
+          playDropInvalidNow();
           return;
         }
 
@@ -336,7 +380,7 @@ export function useDropHandler({
           description: err?.message,
           type: "error",
         });
-        playDropInvalid();
+        playDropInvalidNow();
       });
   };
 
