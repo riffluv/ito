@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface TransitionLoadingStep {
   id: string;
@@ -12,19 +12,35 @@ export interface TransitionLoadingStep {
 }
 
 export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
-  { id: "firebase", message: "せつぞく中です...", duration: 700, icon: "🔥" },
+  { id: "firebase", message: "せつぞく中です...", duration: 890, icon: "🔥" },
   {
     id: "room",
     message: "ルームの じょうほうを とくていしています...",
-    duration: 900,
+    duration: 1130,
     icon: "⚔️",
   },
-  { id: "player", message: "プレイヤーを とうろくしています...", duration: 800, icon: "👥" },
-  { id: "ready", message: "じゅんびが かんりょうしました！", duration: 500, icon: "🎮" },
+  {
+    id: "player",
+    message: "プレイヤーを とうろくしています...",
+    duration: 680,
+    icon: "👥",
+  },
+  {
+    id: "ready",
+    message: "じゅんびが かんりょうしました！",
+    duration: 310,
+    icon: "🎮",
+  },
 ];
 
 interface TransitionOptions {
-  direction?: "slideLeft" | "slideRight" | "slideUp" | "slideDown" | "fade" | "scale";
+  direction?:
+    | "slideLeft"
+    | "slideRight"
+    | "slideUp"
+    | "slideDown"
+    | "fade"
+    | "scale";
   duration?: number;
   showLoading?: boolean;
   loadingSteps?: TransitionLoadingStep[];
@@ -40,7 +56,9 @@ export function usePageTransition() {
   const [progress, setProgress] = useState(0);
   const [fromPage, setFromPage] = useState("");
   const [toPage, setToPage] = useState("");
-  const [loadingStepsState, setLoadingStepsState] = useState<TransitionLoadingStep[]>([]);
+  const [loadingStepsState, setLoadingStepsState] = useState<
+    TransitionLoadingStep[]
+  >([]);
   const [pendingCompletion, setPendingCompletion] = useState(false);
 
   const transitionRef = useRef<{
@@ -109,7 +127,9 @@ export function usePageTransition() {
         // ローディング表示が有効な場合（Firebase操作の有無を問わず）
         if (showLoading) {
           const stepsToRun =
-            loadingSteps && loadingSteps.length > 0 ? loadingSteps : DEFAULT_LOADING_STEPS;
+            loadingSteps && loadingSteps.length > 0
+              ? loadingSteps
+              : DEFAULT_LOADING_STEPS;
 
           setIsLoading(true);
           setProgress(0);
@@ -118,12 +138,16 @@ export function usePageTransition() {
 
           // Firebase操作を並列実行（ローディングと同時進行）
           let firebaseCompleted = false;
-          const firebasePromise = firebaseOperation ? firebaseOperation().then(() => {
-            firebaseCompleted = true;
-          }).catch((error) => {
-            console.error("Firebase operation error:", error);
-            firebaseCompleted = true; // エラーでも進行を続ける
-          }) : Promise.resolve();
+          const firebasePromise = firebaseOperation
+            ? firebaseOperation()
+                .then(() => {
+                  firebaseCompleted = true;
+                })
+                .catch((error) => {
+                  console.error("Firebase operation error:", error);
+                  firebaseCompleted = true; // エラーでも進行を続ける
+                })
+            : Promise.resolve();
 
           // 総時間を計算
           const totalDuration = stepsToRun.reduce(
@@ -132,7 +156,10 @@ export function usePageTransition() {
           );
           const routerPushDelay =
             totalDuration > 0
-              ? Math.max(Math.min(totalDuration - 300, totalDuration * 0.8), 120)
+              ? Math.max(
+                  Math.min(totalDuration - 300, totalDuration * 0.8),
+                  120
+                )
               : 0;
           clearScheduledNavigation();
           pushTimeoutRef.current = window.setTimeout(() => {
@@ -148,7 +175,7 @@ export function usePageTransition() {
 
             // ステップ間の待機時間
             const waitTime = Math.max(step.duration, 0);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
 
             // ステップ完了時にプログレスを更新
             elapsedTime += waitTime;
@@ -192,7 +219,6 @@ export function usePageTransition() {
           router.push(href);
           pushTimeoutRef.current = null;
         }, delay);
-
       } catch (error) {
         console.error("遷移エラー:", error);
         setIsLoading(false);
@@ -213,10 +239,30 @@ export function usePageTransition() {
   const navigateToRoom = useCallback(
     async (roomId: string, joinRoomOperation: () => Promise<void>) => {
       const loadingSteps = [
-        { id: "firebase", message: "🔥 Firebase接続中...", duration: 400, icon: "🔥" },
-        { id: "room", message: "⚔️ ルーム情報取得中...", duration: 600, icon: "⚔️" },
-        { id: "player", message: "👥 プレイヤー登録中...", duration: 300, icon: "👥" },
-        { id: "ready", message: "🎮 ゲーム準備完了！", duration: 200, icon: "🎮" },
+        {
+          id: "firebase",
+          message: "🔥 Firebase接続中...",
+          duration: 890,
+          icon: "🔥",
+        },
+        {
+          id: "room",
+          message: "⚔️ ルーム情報取得中...",
+          duration: 1130,
+          icon: "⚔️",
+        },
+        {
+          id: "player",
+          message: "👥 プレイヤー登録中...",
+          duration: 680,
+          icon: "👥",
+        },
+        {
+          id: "ready",
+          message: "🎮 ゲーム準備完了！",
+          duration: 310,
+          icon: "🎮",
+        },
       ];
 
       await navigateWithTransition(
@@ -301,7 +347,11 @@ export const TRANSITION_PRESETS = {
   modal: { direction: "scale" as const, duration: 0.4 },
 
   // ゲーム特有
-  enterRoom: { direction: "slideLeft" as const, duration: 0.8, showLoading: true },
+  enterRoom: {
+    direction: "slideLeft" as const,
+    duration: 0.8,
+    showLoading: true,
+  },
   exitRoom: { direction: "slideRight" as const, duration: 0.6 },
   settings: { direction: "slideUp" as const, duration: 0.5 },
 

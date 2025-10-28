@@ -1,12 +1,12 @@
 "use client";
 
-import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { gsap } from "gsap";
 import {
   DEFAULT_LOADING_STEPS,
   TransitionLoadingStep,
 } from "@/hooks/usePageTransition";
+import { Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { gsap } from "gsap";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface DragonQuestLoadingProps {
   isVisible: boolean;
@@ -39,6 +39,7 @@ export function DragonQuestLoading({
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const checkmarkRef = useRef<HTMLDivElement>(null);
   const dot1Ref = useRef<HTMLDivElement>(null);
   const dot2Ref = useRef<HTMLDivElement>(null);
   const dot3Ref = useRef<HTMLDivElement>(null);
@@ -50,7 +51,7 @@ export function DragonQuestLoading({
   }, [steps]);
 
   const currentIndex = useMemo(() => {
-    const index = resolvedSteps.findIndex(step => step.id === currentStep);
+    const index = resolvedSteps.findIndex((step) => step.id === currentStep);
     if (index >= 0) return index;
     if (progress >= 100) return resolvedSteps.length - 1;
     return resolvedSteps.length > 0 ? 0 : -1;
@@ -89,6 +90,7 @@ export function DragonQuestLoading({
   // プログレスバーアニメーション - 純粋なGSAP制御
   useEffect(() => {
     const bar = progressBarRef.current;
+    const checkmark = checkmarkRef.current;
     if (!bar) return;
 
     const clamped = Math.min(Math.max(progress, 0), 100);
@@ -100,8 +102,25 @@ export function DragonQuestLoading({
       overwrite: "auto",
     });
 
+    // 100%到達時にチェックマークを表示
+    if (checkmark) {
+      if (clamped >= 100) {
+        gsap.set(checkmark, { scale: 0, opacity: 0 });
+        gsap.to(checkmark, {
+          scale: 1,
+          opacity: 1,
+          duration: 0.3,
+          ease: "back.out(2)",
+          delay: 0.1,
+        });
+      } else {
+        gsap.set(checkmark, { scale: 0, opacity: 0 });
+      }
+    }
+
     return () => {
       gsap.killTweensOf(bar);
+      if (checkmark) gsap.killTweensOf(checkmark);
     };
   }, [progress]);
 
@@ -111,7 +130,7 @@ export function DragonQuestLoading({
       setFurthestStepIndex(-1);
       return;
     }
-    setFurthestStepIndex(prev => Math.max(prev, currentIndex));
+    setFurthestStepIndex((prev) => Math.max(prev, currentIndex));
   }, [currentIndex, isVisible]);
 
   useEffect(() => {
@@ -130,11 +149,12 @@ export function DragonQuestLoading({
     const dot2 = dot2Ref.current;
     const dot3 = dot3Ref.current;
 
-    // ボックスのパルス効果
+    // ボックスのパルス効果 - 僅差の非均一で呼吸感
     if (box) {
       gsap.to(box, {
-        boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 30px rgba(255,255,255,0.25)",
-        duration: 1,
+        boxShadow:
+          "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 30px rgba(255,255,255,0.25)",
+        duration: 1.07,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
@@ -145,7 +165,7 @@ export function DragonQuestLoading({
     if (bar) {
       gsap.to(bar, {
         filter: "brightness(1.2)",
-        duration: 0.75,
+        duration: 0.78,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
@@ -157,39 +177,39 @@ export function DragonQuestLoading({
       gsap.to(dot1, {
         opacity: 1,
         scale: 1.2,
-        duration: 0.47,
+        duration: 0.43,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: false,
-        repeatDelay: 0.93,
+        repeatDelay: 0.97,
       });
     }
 
-    // ドット2（0.47秒遅延）
+    // ドット2（0.51秒遅延 - 僅差の非均一）
     if (dot2) {
       gsap.to(dot2, {
         opacity: 1,
-        scale: 1.2,
-        duration: 0.47,
+        scale: 1.15,
+        duration: 0.48,
         ease: "sine.inOut",
-        delay: 0.47,
+        delay: 0.51,
         repeat: -1,
         yoyo: false,
-        repeatDelay: 0.93,
+        repeatDelay: 0.89,
       });
     }
 
-    // ドット3（0.93秒遅延）
+    // ドット3（0.97秒遅延）
     if (dot3) {
       gsap.to(dot3, {
         opacity: 1,
-        scale: 1.2,
-        duration: 0.47,
+        scale: 1.18,
+        duration: 0.45,
         ease: "sine.inOut",
-        delay: 0.93,
+        delay: 0.97,
         repeat: -1,
         yoyo: false,
-        repeatDelay: 0.93,
+        repeatDelay: 0.91,
       });
     }
 
@@ -202,27 +222,43 @@ export function DragonQuestLoading({
     };
   }, [isVisible]);
 
-  // 完了時のフェードアウト - 純粋なGSAP制御
+  // 完了時のマイクロアニメーション + フェードアウト - 純粋なGSAP制御
   useEffect(() => {
     if (!isVisible || !onComplete) return;
     if (progress < 100) return;
 
     const timer = window.setTimeout(() => {
       const container = containerRef.current;
+      const box = boxRef.current;
+
       if (!container) {
         onComplete();
         return;
       }
 
-      // ドラクエ風：すっきり消える
+      // 完了時のマイクロアニメーション：ボックスフラッシュ + スケールアップ
+      if (box) {
+        gsap.to(box, {
+          boxShadow:
+            "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 60px rgba(255,255,255,0.8)",
+          scale: 1.018,
+          duration: 0.17,
+          ease: "power2.out",
+          yoyo: true,
+          repeat: 1,
+        });
+      }
+
+      // ドラクエ風：すっきり消える（マイクロアニメーション後）
       gsap.to(container, {
         opacity: 0,
         duration: 0.27, // AI感除去: 0.3 → 0.27
         ease: "none",
+        delay: 0.31, // マイクロアニメーション完了を待つ（僅差の非均一）
         onComplete,
         overwrite: "auto",
       });
-    }, 150); // ドラクエ風：キビキビした反応（300ms→150msに短縮）
+    }, 147); // ドラクエ風：キビキビした反応（300ms→147msに短縮・僅差の非均一）
 
     return () => {
       window.clearTimeout(timer);
@@ -258,32 +294,36 @@ export function DragonQuestLoading({
         ref={boxRef}
         bg="#000000"
         border="4px solid #ffffff"
-        borderRadius={0}
+        borderRadius="1px"
         width="640px"
         maxWidth="92vw"
-        p={6}
+        pt="23px"
+        pb="27px"
+        px="26px"
         position="relative"
         css={{
           borderTopColor: "#ffffff",
           borderLeftColor: "#ffffff",
           borderBottomColor: "#888888",
           borderRightColor: "#888888",
-          boxShadow: "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15)",
+          boxShadow:
+            "inset 2px 2px 0 #ffffff, inset -2px -2px 0 #333333, 0 0 20px rgba(255,255,255,0.15)",
         }}
       >
         {/* HD-2D風：洗練されたローディング */}
-        <VStack align="center" gap={6}>
+        <VStack align="center" gap="23px">
           {/* メインメッセージ - 1文字ずつ表示風 */}
           <Text
             fontSize="xl"
             color="#ffffff"
             fontFamily="monospace"
             textAlign="center"
-            lineHeight={1.8}
-            letterSpacing="0.12em"
+            lineHeight={1.83}
+            letterSpacing="0.117em"
             fontWeight="normal"
             css={{
-              textShadow: "0 0 8px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.8)",
+              textShadow:
+                "0 0 8px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.8)",
             }}
           >
             {customMessage || activeStep?.message || "よみこみ中です"}
@@ -298,7 +338,8 @@ export function DragonQuestLoading({
               bg="rgba(0,0,0,0.8)"
               position="relative"
               css={{
-                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.6), 0 0 10px rgba(255,255,255,0.2)",
+                boxShadow:
+                  "inset 0 2px 4px rgba(0,0,0,0.6), 0 0 10px rgba(255,255,255,0.2)",
               }}
             >
               <Box
@@ -310,26 +351,45 @@ export function DragonQuestLoading({
                 width="0%"
                 bg="linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)"
                 css={{
-                  boxShadow: "0 0 12px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
+                  boxShadow:
+                    "0 0 12px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
                   filter: "brightness(1)",
                 }}
               />
             </Box>
-            {/* プログレス％表示 */}
-            <Text
-              fontSize="xs"
-              color="rgba(255,255,255,0.7)"
-              fontFamily="monospace"
-              textAlign="center"
-              mt={2}
-              letterSpacing="0.1em"
-            >
-              {Math.round(progress)}%
-            </Text>
+            {/* プログレス％表示 - 中央揃え */}
+            <Box position="relative" width="100%">
+              <Text
+                fontSize="xs"
+                color="rgba(255,255,255,0.7)"
+                fontFamily="monospace"
+                textAlign="center"
+                letterSpacing="0.11em"
+                mt="9px"
+              >
+                {Math.round(progress)}%
+              </Text>
+              {/* 完了時のチェックマーク - 右上に配置 */}
+              <Box
+                ref={checkmarkRef}
+                position="absolute"
+                right="0"
+                top="0"
+                fontSize="lg"
+                color="#4ade80"
+                css={{
+                  textShadow: "0 0 8px rgba(74,222,128,0.8)",
+                  opacity: 0,
+                  transform: "scale(0)",
+                }}
+              >
+                ✓
+              </Box>
+            </Box>
           </Box>
 
-          {/* オクトパス風装飾ドット */}
-          <HStack gap={2} justify="center">
+          {/* オクトパス風装飾ドット - 僅差の非均一で人の手感 */}
+          <HStack gap="7px" justify="center">
             <Box
               ref={dot1Ref}
               w="6px"
@@ -343,13 +403,13 @@ export function DragonQuestLoading({
             />
             <Box
               ref={dot2Ref}
-              w="6px"
-              h="6px"
+              w="5px"
+              h="5px"
               bg="#ffffff"
               css={{
                 boxShadow: "0 0 8px rgba(255,255,255,0.8)",
                 opacity: 0.3,
-                transform: "scale(0.8)",
+                transform: "scale(0.85)",
               }}
             />
             <Box
@@ -366,7 +426,6 @@ export function DragonQuestLoading({
           </HStack>
         </VStack>
       </Box>
-
     </Box>
   );
 }
