@@ -1,10 +1,12 @@
 export interface MagnetConfig {
   /**
    * 半径内に入ったときに吸着補正を開始する距離（px）
+   * デフォルト: 120px (PC), 150px推奨 (タッチ)
    */
   snapRadius?: number;
   /**
    * ドロップ確定とみなす距離（px）。snapRadius より小さい値を推奨。
+   * デフォルト: 24px (PC), 30px推奨 (タッチ)
    */
   snapThreshold?: number;
   /**
@@ -13,8 +15,13 @@ export interface MagnetConfig {
   maxOffset?: number;
   /**
    * 補正の緩和カーブ。0.0〜1.0 を入力し 0.0〜1.0 を返す関数。
+   * デフォルト: easeOutBack風のオーバーシュート付き
    */
   ease?: (t: number) => number;
+  /**
+   * デバイス種別（タッチ時は閾値を拡大）
+   */
+  isTouch?: boolean;
 }
 
 export interface MagnetResult {
@@ -32,20 +39,37 @@ export interface RectLike {
   height: number;
 }
 
-const defaultEase = (t: number) => 1 - Math.pow(1 - t, 3);
+/**
+ * easeOutBack: 終点を約10%オーバーシュートしてから戻る、
+ * 「バネで吸い付く」感覚を演出するイージング関数
+ * 参考: Penner's easing functions (overshoot parameter ≈ 1.70158)
+ */
+const easeOutBack = (t: number, overshoot: number = 1.70158): number => {
+  const t1 = t - 1;
+  return t1 * t1 * ((overshoot + 1) * t1 + overshoot) + 1;
+};
+
+const defaultEase = (t: number) => easeOutBack(t, 1.7);
 
 /**
  * ドラッグ中の要素と候補スロットの距離から吸着補正量を計算する。
+ *
+ * 資料に基づく推奨パラメータ:
+ * - スナップ距離: PC 24px / タッチ 30px
+ * - イージング: easeOutBack (10%程度のオーバーシュート)
+ * - アニメーション時間: 0.2秒 (CentralCardBoard側で設定)
  */
 export function computeMagnetTransform(
   overRect: RectLike | null | undefined,
   activeRect: RectLike | null | undefined,
   config: MagnetConfig = {}
 ): MagnetResult {
+  const isTouch = config.isTouch ?? false;
   const radius = Math.max(config.snapRadius ?? 120, 1);
   const maxOffset = config.maxOffset ?? 36;
   const ease = config.ease ?? defaultEase;
-  const threshold = config.snapThreshold ?? radius * 0.55;
+  // 資料推奨値: PC 24px, タッチ 30px
+  const threshold = config.snapThreshold ?? (isTouch ? 30 : 24);
 
   if (!overRect || !activeRect) {
     return {

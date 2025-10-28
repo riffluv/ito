@@ -4,12 +4,13 @@
  */
 
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useDroppable } from "@dnd-kit/core";
 import { BaseCard } from "./BaseCard";
 import type { EmptyCardProps } from "./card.types";
 import { gsap } from "gsap";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 // EmptyCardPropsを拡張してidプロパティを追加
 interface ExtendedEmptyCardProps extends EmptyCardProps {
@@ -35,11 +36,61 @@ export function EmptyCard({
   prefersReducedMotion = false,
   ...props
 }: ExtendedEmptyCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const wasOverRef = useRef(false);
+
+  // 資料推奨: 吸着時の音・触覚フィードバック
+  const playDropSuccess = useSoundEffect("drop_success");
+
   // @dnd-kitのuseDroppable（IDがある場合のみ）
   const dndDroppable = useDroppable({
     id: id || `empty-slot-${slotNumber}`,
     disabled: !isDroppable || !id,
   });
+
+  // 資料推奨: 吸着時のスケールバウンス効果 (1→1.05→1.0) + 音・触覚フィードバック
+  useEffect(() => {
+    const isOver = dndDroppable.isOver;
+    const wasOver = wasOverRef.current;
+
+    // ドロップ完了検知: isOver が true→false に変化した瞬間
+    if (wasOver && !isOver) {
+      if (!isDragActive && magnetStrength >= 0.85) {
+        playDropSuccess({ volumeMultiplier: 0.7, playbackRate: 1.1 });
+        try {
+          if (
+            typeof navigator !== "undefined" &&
+            typeof navigator.vibrate === "function"
+          ) {
+            navigator.vibrate(8);
+          }
+        } catch {
+          // ignore vibration errors
+        }
+      }
+      if (cardRef.current && !prefersReducedMotion) {
+        gsap.timeline()
+          .to(cardRef.current, {
+            scale: 1.05,
+            duration: 0.1,
+            ease: "power2.out",
+          })
+          .to(cardRef.current, {
+            scale: 1.0,
+            duration: 0.1,
+            ease: "back.out(1.7)", // easeOutBack でバウンス感
+          });
+      }
+    }
+
+    wasOverRef.current = isOver;
+  }, [
+    dndDroppable.isOver,
+    prefersReducedMotion,
+    playDropSuccess,
+    isDragActive,
+    magnetStrength,
+  ]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -61,12 +112,14 @@ export function EmptyCard({
     onDrop?.(e);
   };
 
-  // @dnd-kitとHTML5ドラッグ&ドロップの両方に対応
-  const combinedRef = (element: HTMLElement | null) => {
+  // @dnd-kitとHTML5ドラッグ&ドロップの両方に対応 + スケールアニメーション用ref統合
+  const combinedRef = useCallback((element: HTMLElement | null) => {
+    // cardRefをHTMLDivElementに型変更が必要だが、ここではany経由で対応
+    (cardRef as React.MutableRefObject<HTMLElement | null>).current = element;
     if (id && dndDroppable.setNodeRef) {
       dndDroppable.setNodeRef(element);
     }
-  };
+  }, [id, dndDroppable.setNodeRef]);
 
   const transformDuration = prefersReducedMotion ? 0.05 : 0.18;
   const boxShadowDuration = prefersReducedMotion ? 0.05 : 0.2;
