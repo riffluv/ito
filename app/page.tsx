@@ -3,10 +3,13 @@ import { CreateRoomModal } from "@/components/CreateRoomModal";
 import NameDialog from "@/components/NameDialog";
 import { RoomCard } from "@/components/RoomCard";
 import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
+import { SupporterCTA } from "@/components/site/SupporterCTA";
 import { AppButton } from "@/components/ui/AppButton";
 import { Pagination } from "@/components/ui/Pagination";
+import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { useTransition } from "@/components/ui/TransitionProvider";
+import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
@@ -41,9 +44,6 @@ import { gsap } from "gsap";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
-import { SupporterCTA } from "@/components/site/SupporterCTA";
-import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 
 // ナイトキャラ
 function KnightCharacter() {
@@ -119,7 +119,9 @@ export default function MainMenu() {
   const createDialog = useDisclosure();
   const [tempName, setTempName] = useState(displayName || "");
   const [showSkeletons, setShowSkeletons] = useState(false);
-  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">("create");
+  const [nameDialogMode, setNameDialogMode] = useState<"create" | "edit">(
+    "create"
+  );
   const pendingJoinRef = useRef<LobbyRoom | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -209,7 +211,6 @@ export default function MainMenu() {
       );
     }
   }, []);
-
 
   useEffect(() => {
     if (!roomsError) return;
@@ -532,7 +533,8 @@ export default function MainMenu() {
         }}
         css={{
           // グラスモーフィズム: 魔法の結晶風vignette（Pixi背景を透かす）
-          background: "radial-gradient(ellipse 76% 58% at center 32%, transparent 0%, rgba(8,12,18,0.12) 42%, rgba(6,9,15,0.35) 78%, rgba(4,6,11,0.48) 100%)",
+          background:
+            "radial-gradient(ellipse 76% 58% at center 32%, transparent 0%, rgba(8,12,18,0.12) 42%, rgba(6,9,15,0.35) 78%, rgba(4,6,11,0.48) 100%)",
           containerType: "inline-size",
           "@container (max-width: 600px)": {
             paddingTop: scaleForDpi("5.1rem"),
@@ -549,16 +551,8 @@ export default function MainMenu() {
         }}
       >
         <Container maxW="7xl" position="relative" zIndex={1}>
-          <VStack
-            gap={{ base: "47px", lg: "61px" }}
-            align="center"
-          >
-            <VStack
-              gap="19px"
-              align="center"
-              textAlign="center"
-              maxW="4xl"
-            >
+          <VStack gap={{ base: "47px", lg: "61px" }} align="center">
+            <VStack gap="19px" align="center" textAlign="center" maxW="4xl">
               <Box>
                 {/* 騎士とタイトルのメインビジュアル */}
                 <HStack
@@ -603,8 +597,16 @@ export default function MainMenu() {
                   </Heading>
                 </HStack>
                 <Box mt="4px" mb="11px">
-                  <Box h="1px" bg="rgba(255,215,0,0.22)" boxShadow="0 0 3px rgba(255,215,0,0.15)" />
-                  <Box h="1px" bg="rgba(0,0,0,0.65)" transform="translateY(-1px)" />
+                  <Box
+                    h="1px"
+                    bg="rgba(255,215,0,0.22)"
+                    boxShadow="0 0 3px rgba(255,215,0,0.15)"
+                  />
+                  <Box
+                    h="1px"
+                    bg="rgba(0,0,0,0.65)"
+                    transform="translateY(-1px)"
+                  />
                 </Box>
                 <Text
                   fontSize={{
@@ -649,12 +651,7 @@ export default function MainMenu() {
               </Box>
 
               {/* ドラクエ風コマンドメニュー */}
-              <VStack
-                gap="17px"
-                align="center"
-                w="100%"
-                mt="38px"
-              >
+              <VStack gap="17px" align="center" w="100%" mt="38px">
                 {/* メインCTA: 新しい部屋を作成 */}
                 <AppButton
                   size="lg"
@@ -674,22 +671,28 @@ export default function MainMenu() {
                     letterSpacing: "0.5px",
                     borderRadius: "0",
                     border: "3px solid rgba(255,255,255,0.9)",
-                    background: "linear-gradient(to bottom, rgba(255,128,45,0.95), rgba(235,110,30,0.92))",
-                    boxShadow: "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,0.62), 4px 5px 0 rgba(0,0,0,0.48), 2px 3px 0 rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.25)",
+                    background:
+                      "linear-gradient(to bottom, rgba(255,128,45,0.95), rgba(235,110,30,0.92))",
+                    boxShadow:
+                      "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,0.62), 4px 5px 0 rgba(0,0,0,0.48), 2px 3px 0 rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.25)",
                     textShadow: "2px 2px 0px rgba(0,0,0,0.85)",
-                    transitionProperty: "transform, box-shadow, background, border-color",
+                    transitionProperty:
+                      "transform, box-shadow, background, border-color",
                     transitionDuration: "183ms",
                     transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
                     willChange: "transform",
                     "&:hover": {
                       transform: "translateY(-2px)",
-                      background: "linear-gradient(to bottom, rgba(255,145,65,0.98), rgba(255,128,45,0.95))",
+                      background:
+                        "linear-gradient(to bottom, rgba(255,145,65,0.98), rgba(255,128,45,0.95))",
                       borderColor: "rgba(255,255,255,0.95)",
-                      boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,0.68), 5px 7px 0 rgba(0,0,0,0.54), 3px 5px 0 rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3)",
+                      boxShadow:
+                        "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,0.68), 5px 7px 0 rgba(0,0,0,0.54), 3px 5px 0 rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3)",
                     },
                     "&:active": {
                       transform: "translateY(1px)",
-                      boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,0.62), 1px 2px 0 rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.15)",
+                      boxShadow:
+                        "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,0.62), 1px 2px 0 rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.15)",
                     },
                   }}
                 >
@@ -698,11 +701,7 @@ export default function MainMenu() {
                 </AppButton>
 
                 {/* サブメニュー: 横並び（ドラクエ風） */}
-                <HStack
-                  gap="15px"
-                  justify="center"
-                  flexWrap="wrap"
-                >
+                <HStack gap="15px" justify="center" flexWrap="wrap">
                   <AppButton
                     size="md"
                     visual="outline"
@@ -718,9 +717,11 @@ export default function MainMenu() {
                       borderRadius: "0",
                       border: "2px solid rgba(255,255,255,0.7)",
                       background: "rgba(28,32,42,0.85)",
-                      boxShadow: "2px 3px 0 rgba(0,0,0,0.68), 1px 2px 0 rgba(0,0,0,0.52), inset 1px 1px 0 rgba(255,255,255,0.1)",
+                      boxShadow:
+                        "2px 3px 0 rgba(0,0,0,0.68), 1px 2px 0 rgba(0,0,0,0.52), inset 1px 1px 0 rgba(255,255,255,0.1)",
                       textShadow: "1px 1px 0px rgba(0,0,0,0.8)",
-                      transitionProperty: "transform, box-shadow, background, border-color",
+                      transitionProperty:
+                        "transform, box-shadow, background, border-color",
                       transitionDuration: "173ms",
                       transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
                       willChange: "transform",
@@ -728,11 +729,13 @@ export default function MainMenu() {
                         background: "rgba(38,42,52,0.95)",
                         borderColor: "rgba(255,255,255,0.85)",
                         transform: "translateY(-1px)",
-                        boxShadow: "3px 4px 0 rgba(0,0,0,0.72), 2px 3px 0 rgba(0,0,0,0.58), inset 1px 1px 0 rgba(255,255,255,0.15)",
+                        boxShadow:
+                          "3px 4px 0 rgba(0,0,0,0.72), 2px 3px 0 rgba(0,0,0,0.58), inset 1px 1px 0 rgba(255,255,255,0.15)",
                       },
                       "&:active": {
                         transform: "translateY(1px)",
-                        boxShadow: "1px 2px 0 rgba(0,0,0,0.72), inset 1px 1px 0 rgba(255,255,255,0.08)",
+                        boxShadow:
+                          "1px 2px 0 rgba(0,0,0,0.72), inset 1px 1px 0 rgba(255,255,255,0.08)",
                       },
                     }}
                     onClick={async () => {
@@ -778,24 +781,40 @@ export default function MainMenu() {
                       fontFamily: "monospace",
                       letterSpacing: "0.5px",
                       borderRadius: "0",
-                      border: displayName ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,215,0,0.8)",
-                      background: displayName ? "rgba(28,32,42,0.85)" : "rgba(255,215,0,0.15)",
-                      boxShadow: displayName ? "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.1)" : "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.15), 0 0 8px rgba(255,215,0,0.3)",
+                      border: displayName
+                        ? "2px solid rgba(255,255,255,0.7)"
+                        : "2px solid rgba(255,215,0,0.8)",
+                      background: displayName
+                        ? "rgba(28,32,42,0.85)"
+                        : "rgba(255,215,0,0.15)",
+                      boxShadow: displayName
+                        ? "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.1)"
+                        : "2px 2px 0 rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.15), 0 0 8px rgba(255,215,0,0.3)",
                       textShadow: "1px 1px 0px rgba(0,0,0,0.8)",
-                      color: displayName ? "rgba(255,255,255,0.92)" : "rgba(255,235,205,0.98)",
-                      transitionProperty: "transform, box-shadow, background, border-color",
+                      color: displayName
+                        ? "rgba(255,255,255,0.92)"
+                        : "rgba(255,235,205,0.98)",
+                      transitionProperty:
+                        "transform, box-shadow, background, border-color",
                       transitionDuration: "170ms",
                       transitionTimingFunction: "cubic-bezier(.2,1,.3,1)",
                       willChange: "transform",
                       "&:hover": {
-                        background: displayName ? "rgba(38,42,52,0.95)" : "rgba(255,215,0,0.22)",
-                        borderColor: displayName ? "rgba(255,255,255,0.85)" : "rgba(255,215,0,0.95)",
+                        background: displayName
+                          ? "rgba(38,42,52,0.95)"
+                          : "rgba(255,215,0,0.22)",
+                        borderColor: displayName
+                          ? "rgba(255,255,255,0.85)"
+                          : "rgba(255,215,0,0.95)",
                         transform: "translateY(-1px)",
-                        boxShadow: displayName ? "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.15)" : "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.2), 0 0 12px rgba(255,215,0,0.4)",
+                        boxShadow: displayName
+                          ? "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.15)"
+                          : "3px 3px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.2), 0 0 12px rgba(255,215,0,0.4)",
                       },
                       "&:active": {
                         transform: "translateY(1px)",
-                        boxShadow: "1px 1px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.08)",
+                        boxShadow:
+                          "1px 1px 0 rgba(0,0,0,0.75), inset 1px 1px 0 rgba(255,255,255,0.08)",
                       },
                     }}
                   >
@@ -1143,12 +1162,19 @@ export default function MainMenu() {
                 boxShadow="3px 3px 0 rgba(0,0,0,0.9), 5px 5px 0 rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,235,205,0.15)"
                 position="relative"
                 css={{
-                  background: "linear-gradient(135deg, rgba(28,22,16,0.92) 0%, rgba(18,14,10,0.88) 100%)",
-                  borderImage: "linear-gradient(to bottom, rgba(180,130,70,0.95), rgba(120,80,40,0.85)) 1",
+                  background:
+                    "linear-gradient(135deg, rgba(28,22,16,0.92) 0%, rgba(18,14,10,0.88) 100%)",
+                  borderImage:
+                    "linear-gradient(to bottom, rgba(180,130,70,0.95), rgba(120,80,40,0.85)) 1",
                 }}
               >
                 <VStack gap={4} align="stretch">
-                  <HStack gap={4} align="center" pb={2} borderBottom="2px solid rgba(139,92,46,0.5)">
+                  <HStack
+                    gap={4}
+                    align="center"
+                    pb={2}
+                    borderBottom="2px solid rgba(139,92,46,0.5)"
+                  >
                     <Box
                       w={12}
                       h={12}
@@ -1188,19 +1214,38 @@ export default function MainMenu() {
                       borderRadius={0}
                       boxShadow="inset 0 1px 0 rgba(255,245,220,0.2), 1px 1px 0 rgba(0,0,0,0.5)"
                       css={{
-                        background: "linear-gradient(to bottom, rgba(245,235,215,0.15), rgba(235,225,205,0.08))",
+                        background:
+                          "linear-gradient(to bottom, rgba(245,235,215,0.15), rgba(235,225,205,0.08))",
                       }}
                     >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Text fontSize="md" fontWeight={700} color="rgba(255,215,0,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(255,215,0,0.95)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             🎮
                           </Text>
-                          <Text fontSize="md" fontWeight={700} color="rgba(255,235,205,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(255,235,205,0.95)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             このゲームについて
                           </Text>
                         </HStack>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.92)"
+                          fontFamily="monospace"
+                          lineHeight="1.7"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.8)"
+                        >
                           "連想ワードだけで数字の大小をそろえる"という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
                         </Text>
                       </VStack>
@@ -1216,14 +1261,32 @@ export default function MainMenu() {
                     >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Text fontSize="md" fontWeight={700} color="rgba(34,197,94,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(34,197,94,0.95)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             ⚠️
                           </Text>
-                          <Text fontSize="md" fontWeight={700} color="rgba(100,255,150,0.98)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(100,255,150,0.98)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             注意事項
                           </Text>
                         </HStack>
-                        <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                        <Text
+                          fontSize="xs"
+                          color="rgba(255,255,255,0.92)"
+                          fontFamily="monospace"
+                          lineHeight="1.7"
+                          textShadow="1px 1px 0px rgba(0,0,0,0.8)"
+                        >
                           ブラウザだけで遊べる完全オリジナル作品です。同期実験中のため、不具合を見つけたら気軽に知らせてください。
                         </Text>
                       </VStack>
@@ -1239,18 +1302,42 @@ export default function MainMenu() {
                     >
                       <VStack gap={2} align="start">
                         <HStack gap={2} align="center">
-                          <Text fontSize="md" fontWeight={700} color="rgba(147,51,234,0.95)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(147,51,234,0.95)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             💎
                           </Text>
-                          <Text fontSize="md" fontWeight={700} color="rgba(180,120,255,0.98)" fontFamily="monospace" textShadow="1px 1px 0px #000">
+                          <Text
+                            fontSize="md"
+                            fontWeight={700}
+                            color="rgba(180,120,255,0.98)"
+                            fontFamily="monospace"
+                            textShadow="1px 1px 0px #000"
+                          >
                             今後の予定
                           </Text>
                         </HStack>
                         <VStack gap={1.5} align="start" pl={2}>
-                          <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                          <Text
+                            fontSize="xs"
+                            color="rgba(255,255,255,0.92)"
+                            fontFamily="monospace"
+                            lineHeight="1.7"
+                            textShadow="1px 1px 0px rgba(0,0,0,0.8)"
+                          >
                             ・ちゃんと寝る
                           </Text>
-                          <Text fontSize="xs" color="rgba(255,255,255,0.92)" fontFamily="monospace" lineHeight="1.7" textShadow="1px 1px 0px rgba(0,0,0,0.8)">
+                          <Text
+                            fontSize="xs"
+                            color="rgba(255,255,255,0.92)"
+                            fontFamily="monospace"
+                            lineHeight="1.7"
+                            textShadow="1px 1px 0px rgba(0,0,0,0.8)"
+                          >
                             ・コーヒーを控える（最重要）
                           </Text>
                         </VStack>
@@ -1261,11 +1348,7 @@ export default function MainMenu() {
               </Box>
               <SupporterCTA />
 
-              <Box
-                mt={4}
-                pt={4}
-                borderTop="1px solid rgba(255,255,255,0.2)"
-              >
+              <Box mt={4} pt={4} borderTop="1px solid rgba(255,255,255,0.2)">
                 <Text
                   fontSize="sm"
                   color="white"
@@ -1289,24 +1372,23 @@ export default function MainMenu() {
                         loadingSteps: [
                           {
                             id: "firebase",
-                            message: "せつぞく中です...",
-                            duration: 1500,
+                            message: "🔥 Firebase接続中...",
+                            duration: 890,
                           },
                           {
                             id: "room",
-                            message:
-                              "ルームの じょうほうを とくていしています...",
-                            duration: 2000,
+                            message: "⚔️ ルーム情報取得中...",
+                            duration: 1130,
                           },
                           {
                             id: "player",
-                            message: "プレイヤーを とうろくしています...",
-                            duration: 1800,
+                            message: "👥 プレイヤー登録中...",
+                            duration: 680,
                           },
                           {
                             id: "ready",
-                            message: "じゅんび かんりょう！",
-                            duration: 1000,
+                            message: "🎮 ゲーム準備完了！",
+                            duration: 310,
                           },
                         ],
                       }
