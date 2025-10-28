@@ -30,6 +30,11 @@ import { EmptyCard } from "@/components/cards";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
+import {
+  useBoardSlots,
+  type DragSlotDescriptor,
+  type StaticSlotDescriptor,
+} from "@/components/hooks/useBoardSlots";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import {
   scheduleAddCardToProposalAtPosition,
@@ -72,32 +77,12 @@ interface CentralCardBoardProps {
   uiRevealPending?: boolean;
 }
 
-interface SlotDescriptorBase {
-  idx: number;
-  totalSlots: number;
-  droppableId: string;
-  cardId: string | null;
-  showCard: boolean;
-  ready: boolean;
-  isOptimisticReturning: boolean;
-}
-
-interface DragSlotDescriptor extends SlotDescriptorBase {
-  proposalCardId: string | null;
-  pendingCardId: string | null;
-}
-
-interface StaticSlotDescriptor extends SlotDescriptorBase {
-  allowDrop: boolean;
-}
-
 interface MagnetSnapshot {
   targetId: string | null;
   strength: number;
 }
 
 const RETURN_DROP_ZONE_ID = "waiting-return-zone";
-const EMPTY_PLAYER_ID_SET: ReadonlySet<string> = new Set<string>();
 
 const BOARD_FRAME_STYLES = {
   containerType: "inline-size",
@@ -992,37 +977,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [setPending]
   );
 
-  const optimisticReturningSet = useMemo(() => new Set(optimisticReturningIds), [optimisticReturningIds]);
-
-  const pendingLookup = useMemo<ReadonlySet<string>>(() => {
-    if (!pending || pending.length === 0) {
-      return EMPTY_PLAYER_ID_SET;
-    }
-    const filtered = pending.filter(
-      (id): id is string => typeof id === "string" && id.length > 0
-    );
-    if (filtered.length === 0) {
-      return EMPTY_PLAYER_ID_SET;
-    }
-    return new Set(filtered);
-  }, [pending]);
-
-  const placedLookup = useMemo<ReadonlySet<string>>(() => {
-    if (!Array.isArray(proposal) || proposal.length === 0) {
-      return EMPTY_PLAYER_ID_SET;
-    }
-    const result = new Set<string>();
-    proposal.forEach((id) => {
-      if (typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)) {
-        result.add(id);
-      }
-    });
-    if (result.size === 0) {
-      return EMPTY_PLAYER_ID_SET;
-    }
-    return result;
-  }, [proposal?.join(","), eligibleIdSet]);
-
   const availableEligibleCount = useMemo(() => {
     if (!Array.isArray(eligibleIds)) return 0;
     let count = 0;
@@ -1042,39 +996,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     });
     return map;
   }, [playerMap]);
-
-  const waitingPlayers = useMemo(() => {
-    if (!Array.isArray(eligibleIds) || eligibleIds.length === 0) {
-      return [];
-    }
-    const result: (PlayerDoc & { id: string })[] = [];
-    eligibleIds.forEach((id) => {
-      const player = playerMap.get(id);
-      if (!player) return;
-      if (pendingLookup !== EMPTY_PLAYER_ID_SET && pendingLookup.has(player.id)) {
-        return;
-      }
-      if (optimisticReturningSet.has(player.id)) {
-        result.push(player);
-        return;
-      }
-      if (placedLookup !== EMPTY_PLAYER_ID_SET && placedLookup.has(player.id)) {
-        return;
-      }
-      if (player.id === activeId) {
-        return;
-      }
-      result.push(player);
-    });
-    return result;
-  }, [
-    Array.isArray(eligibleIds) ? eligibleIds.join(",") : "_",
-    playerMap,
-    pendingLookup,
-    placedLookup,
-    optimisticReturningSet,
-    activeId,
-  ]);
 
   const playDropInvalid = useSoundEffect("drop_invalid");
   const playCardPlace = useSoundEffect("card_place");
@@ -1327,60 +1248,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [roomStatus]
   );
 
-  const dragSlots = useMemo<DragSlotDescriptor[]>(() => {
-    return Array.from({ length: Math.max(0, slotCountDragging) }).map((_, idx) => {
-      const proposalCardId = activeProposal[idx] ?? null;
-      const pendingCardId = pending?.[idx] ?? null;
-      const cardId = proposalCardId ?? pendingCardId ?? null;
-      const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
-      const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
-      const showCard = !!cardId && ready && !isOptimistic;
-      return {
-        idx,
-        totalSlots: slotCountDragging,
-        droppableId: `slot-${idx}`,
-        cardId,
-        showCard,
-        ready,
-        isOptimisticReturning: isOptimistic,
-        proposalCardId,
-        pendingCardId,
-      };
-    });
-  }, [slotCountDragging, activeProposal, pending, playerReadyMap, optimisticReturningSet]);
-
-  const staticSlots = useMemo<StaticSlotDescriptor[]>(() => {
-    return Array.from({ length: Math.max(0, slotCountStatic) }).map((_, idx) => {
-      const proposalCardId = activeProposal[idx] ?? null;
-      const orderCardId = orderList?.[idx] ?? null;
-      const pendingCardId = pending?.[idx] ?? null;
-      const cardId = proposalCardId ?? orderCardId ?? pendingCardId ?? null;
-      const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
-      const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
-      const forceVisible = roomStatus === "reveal" || roomStatus === "finished";
-      const showCard = !!cardId && !isOptimistic && isGameActive && (ready || forceVisible);
-      return {
-        idx,
-        totalSlots: slotCountStatic,
-        droppableId: `slot-${idx}`,
-        cardId,
-        showCard,
-        ready,
-        isOptimisticReturning: isOptimistic,
-        allowDrop: canDropAtPosition(idx),
-      };
-    });
-  }, [
+  const { dragSlots, staticSlots, waitingPlayers } = useBoardSlots({
+    slotCountDragging,
     slotCountStatic,
     activeProposal,
-    orderList,
     pending,
     playerReadyMap,
-    optimisticReturningSet,
+    optimisticReturningIds,
     isGameActive,
     roomStatus,
+    orderList,
     canDropAtPosition,
-  ]);
+    eligibleIds,
+    eligibleIdSet,
+    playerMap,
+    activeId,
+  });
 
   const magnetSnapshot = useMemo<MagnetSnapshot>(
     () => ({ targetId: magnetTargetId, strength: magnetState.strength }),
