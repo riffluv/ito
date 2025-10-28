@@ -1,15 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-
-export interface TransitionLoadingStep {
-  id: string;
-  message: string;
-  duration: number;
-  icon?: string;
-  color?: string;
-}
+import { useCallback, useEffect, useRef } from "react";
+import { useTransitionState } from "./transition/useTransitionState";
+import type { TransitionLoadingStep, TransitionOptions } from "./transition/types";
 
 export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
   { id: "firebase", message: "せつぞく中です...", duration: 890, icon: "🔥" },
@@ -33,41 +27,9 @@ export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
   },
 ];
 
-interface TransitionOptions {
-  direction?:
-    | "slideLeft"
-    | "slideRight"
-    | "slideUp"
-    | "slideDown"
-    | "fade"
-    | "scale";
-  duration?: number;
-  showLoading?: boolean;
-  loadingSteps?: TransitionLoadingStep[];
-}
-
 export function usePageTransition() {
   const router = useRouter();
   const pathname = usePathname();
-
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<string>("");
-  const [progress, setProgress] = useState(0);
-  const [fromPage, setFromPage] = useState("");
-  const [toPage, setToPage] = useState("");
-  const [loadingStepsState, setLoadingStepsState] = useState<
-    TransitionLoadingStep[]
-  >([]);
-  const [pendingCompletion, setPendingCompletion] = useState(false);
-
-  const transitionRef = useRef<{
-    direction: string;
-    duration: number;
-  }>({
-    direction: "slideLeft",
-    duration: 0.6,
-  });
   const pushTimeoutRef = useRef<number | null>(null);
 
   const clearScheduledNavigation = useCallback(() => {
@@ -83,23 +45,31 @@ export function usePageTransition() {
     };
   }, [clearScheduledNavigation]);
 
-  const finalizeLoading = useCallback(() => {
-    setIsLoading(false);
-    setProgress(0);
-    setCurrentStep("");
-    setLoadingStepsState([]);
-    setFromPage("");
-    setToPage("");
-    setPendingCompletion(false);
-    clearScheduledNavigation();
-  }, [clearScheduledNavigation]);
-
-  useEffect(() => {
-    if (!pendingCompletion) return;
-    if (!toPage || pathname === toPage) {
-      finalizeLoading();
-    }
-  }, [pendingCompletion, pathname, toPage, finalizeLoading]);
+  const { state, transitionRef, actions } = useTransitionState(
+    pathname ?? "",
+    clearScheduledNavigation
+  );
+  const {
+    isTransitioning,
+    isLoading,
+    currentStep,
+    progress,
+    fromPage,
+    toPage,
+    loadingSteps,
+  } = state;
+  const {
+    configureTransition,
+    resetPendingCompletion,
+    startLoading,
+    setCurrentStep: updateCurrentStep,
+    setProgress: updateProgress,
+    beginTransition,
+    completeTransition: finalizeTransition,
+    completeLoading: finalizeLoading,
+    cancelTransition,
+    clearLoadingArtifacts,
+  } = actions;
 
   // ページ遷移実行（Firebase処理含む）
   const navigateWithTransition = useCallback(
@@ -118,10 +88,13 @@ export function usePageTransition() {
       // 現在実行中なら無視
       if (isTransitioning || isLoading) return;
 
-      setPendingCompletion(false);
-      setFromPage(pathname || "");
-      setToPage(href);
-      transitionRef.current = { direction, duration };
+      resetPendingCompletion();
+      configureTransition({
+        from: pathname || "",
+        to: href,
+        direction,
+        duration,
+      });
 
       try {
         // ローディング表示が有効な場合（Firebase操作の有無を問わず）
@@ -131,10 +104,7 @@ export function usePageTransition() {
               ? loadingSteps
               : DEFAULT_LOADING_STEPS;
 
-          setIsLoading(true);
-          setProgress(0);
-          setLoadingStepsState(stepsToRun);
-          setCurrentStep(stepsToRun[0]?.id ?? "");
+          startLoading(stepsToRun);
 
           // Firebase操作を並列実行（ローディングと同時進行）
           let firebaseCompleted = false;
@@ -171,7 +141,7 @@ export function usePageTransition() {
           // 段階的ローディング実行（Firebase操作と並列）
           for (let i = 0; i < stepsToRun.length; i++) {
             const step = stepsToRun[i];
-            setCurrentStep(step.id);
+            updateCurrentStep(step.id);
 
             // ステップ間の待機時間
             const waitTime = Math.max(step.duration, 0);
@@ -185,14 +155,14 @@ export function usePageTransition() {
                 : ((i + 1) / stepsToRun.length) * 100,
               100
             );
-            setProgress(progress);
+            updateProgress(progress);
           }
 
           // Firebase操作の完了を待つ
           await firebasePromise;
 
           // 最終的に100%を確実に設定
-          setProgress(100);
+          updateProgress(100);
 
           // ローディング完了 - DragonQuestLoadingのonCompleteでcompleteLoading()が呼ばれる
           // この時点では既に目的のページに遷移済み
@@ -201,16 +171,12 @@ export function usePageTransition() {
         } else if (firebaseOperation) {
           // ローディング表示なしでFirebase操作実行
           await firebaseOperation();
-          setLoadingStepsState([]);
-          setCurrentStep("");
-          setProgress(0);
+          clearLoadingArtifacts();
         }
 
         // Firebase操作なし、またはローディング表示なしの場合のみ遷移アニメーション
-        setLoadingStepsState([]);
-        setCurrentStep("");
-        setProgress(0);
-        setIsTransitioning(true);
+        clearLoadingArtifacts();
+        beginTransition();
 
         // 暗転の中間でナビゲーション実行
         const delay = Math.max(duration * 400, 120);
@@ -221,18 +187,28 @@ export function usePageTransition() {
         }, delay);
       } catch (error) {
         console.error("遷移エラー:", error);
-        setIsLoading(false);
-        setIsTransitioning(false);
-        setLoadingStepsState([]);
-        setCurrentStep("");
-        setProgress(0);
-        clearScheduledNavigation();
+        cancelTransition();
 
         // エラー時の回復アニメーション
         // TODO: エラー表示機能を追加
       }
     },
-    [router, pathname, isTransitioning, isLoading, clearScheduledNavigation]
+    [
+      router,
+      pathname,
+      isTransitioning,
+      isLoading,
+      clearScheduledNavigation,
+      resetPendingCompletion,
+      configureTransition,
+      startLoading,
+      updateCurrentStep,
+      updateProgress,
+      clearLoadingArtifacts,
+      beginTransition,
+      cancelTransition,
+      transitionRef,
+    ]
   );
 
   // ルーム参加専用の遷移
@@ -297,25 +273,13 @@ export function usePageTransition() {
 
   // 遷移完了時のクリーンアップ
   const completeTransition = useCallback(() => {
-    setIsTransitioning(false);
-    setIsLoading(false); // ローディングも確実に終了
-    setProgress(0);
-    setCurrentStep("");
-    setFromPage("");
-    setToPage("");
-    setLoadingStepsState([]);
-    setPendingCompletion(false);
-    clearScheduledNavigation();
-  }, [clearScheduledNavigation]);
+    finalizeTransition();
+  }, [finalizeTransition]);
 
   // ローディング完了時のクリーンアップ
   const completeLoading = useCallback(() => {
-    if (toPage && pathname !== toPage) {
-      setPendingCompletion(true);
-      return;
-    }
     finalizeLoading();
-  }, [finalizeLoading, pathname, toPage]);
+  }, [finalizeLoading]);
 
   return {
     // 状態
@@ -325,7 +289,7 @@ export function usePageTransition() {
     progress,
     fromPage,
     toPage,
-    loadingSteps: loadingStepsState,
+    loadingSteps,
     direction: transitionRef.current.direction,
     duration: transitionRef.current.duration,
 
@@ -369,3 +333,4 @@ export const TRANSITION_PRESETS = {
 };
 
 export default usePageTransition;
+export type { TransitionLoadingStep, TransitionOptions } from "./transition/types";

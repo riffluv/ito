@@ -4,15 +4,15 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { memo, useEffect, useLayoutEffect, useRef } from "react";
+import { memo } from "react";
 import type { MouseEventHandler } from "react";
-import { gsap } from "gsap";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 import { CardFaceFront, CardFaceBack } from "./CardFaces";
 import { cardSizeCss } from "./cardSize";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { WAITING_LABEL } from "@/lib/ui/constants";
+import { useCardFlipAnimation } from "./hooks/useCardFlipAnimation";
 
 export type GameCardProps = {
   index?: number | null;
@@ -41,6 +41,10 @@ import {
 
 const FLIP_DURATION_DEFAULT = 0.35;
 const FLIP_DURATION_RESULT = 0.4;
+const FLIP_DURATIONS = {
+  default: FLIP_DURATION_DEFAULT,
+  result: FLIP_DURATION_RESULT,
+} as const;
 
 // テキスト統一スタイル
 const getUnifiedTextStyle = (): React.CSSProperties => ({
@@ -73,34 +77,9 @@ export function GameCard({
   const textColors = getDragonQuestTextColors(waitingInCentral);
 
   const playCardFlip = useSoundEffect("card_flip");
-  const previousFlipRef = useRef<boolean>(flipped);
-  const threeDContainerRef = useRef<HTMLDivElement | null>(null);
-  const gsapInitialisedRef = useRef<boolean>(false);
-  const flipTweenRef = useRef<gsap.core.Tween | null>(null);
   const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
     isInteractive && onClick ? onClick : undefined;
   const isResultPreset = flipPreset === "result";
-
-  useEffect(() => {
-    return () => {
-      const el = threeDContainerRef.current;
-      if (el) {
-        gsap.killTweensOf(el);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!allow3d) {
-      previousFlipRef.current = flipped;
-      return;
-    }
-    // 両方向の回転で音を鳴らす（連想→数字、数字→連想）
-    if (flipped !== previousFlipRef.current) {
-      playCardFlip();
-    }
-    previousFlipRef.current = flipped;
-  }, [flipped, variant, playCardFlip]);
 
   // Shared semantic colors
   const mildGlow = UI_TOKENS.SHADOWS.ringPurpleMild;
@@ -128,73 +107,13 @@ export function GameCard({
   const { effectiveMode, reducedMotion } = useAnimationSettings();
   const prefersSimple = reducedMotion || effectiveMode === "simple";
   const allow3d = variant === "flip" && !prefersSimple;
-  // 3D flip animation handlers
-  useEffect(() => {
-    return () => {
-      if (flipTweenRef.current) {
-        flipTweenRef.current.kill();
-        flipTweenRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!allow3d) {
-      previousFlipRef.current = flipped;
-      return;
-    }
-    if (flipped !== previousFlipRef.current) {
-      playCardFlip();
-    }
-    previousFlipRef.current = flipped;
-  }, [allow3d, flipped, playCardFlip]);
-
-  useLayoutEffect(() => {
-    const el = threeDContainerRef.current;
-    if (!el) return;
-
-    const resetTween = () => {
-      if (flipTweenRef.current) {
-        flipTweenRef.current.kill();
-        flipTweenRef.current = null;
-      }
-    };
-
-    if (!allow3d) {
-      resetTween();
-      el.style.transform = "";
-      el.style.transition = "";
-      gsapInitialisedRef.current = false;
-      return () => {
-        resetTween();
-      };
-    }
-
-    el.style.transition = "";
-
-    if (!gsapInitialisedRef.current) {
-      gsap.set(el, {
-        rotateY: flipped ? 180 : 0,
-        transformPerspective: 1000,
-        transformOrigin: "center center",
-      });
-      gsapInitialisedRef.current = true;
-    }
-
-    resetTween();
-    flipTweenRef.current = gsap.to(el, {
-      duration: isResultPreset ? FLIP_DURATION_RESULT : FLIP_DURATION_DEFAULT,
-      rotateY: flipped ? 180 : 0,
-      ease: isResultPreset ? "back.out(1.65)" : "power2.out",
-      overwrite: "auto",
-      transformPerspective: 1000,
-      transformOrigin: "center center",
-    });
-
-    return () => {
-      resetTween();
-    };
-  }, [allow3d, flipped, isResultPreset]);
+  const threeDContainerRef = useCardFlipAnimation({
+    flipped,
+    allow3d,
+    preset: flipPreset,
+    durations: FLIP_DURATIONS,
+    onFlip: playCardFlip,
+  });
 
   if (allow3d) {
     const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
