@@ -73,6 +73,22 @@ npx playwright test  # Playwright（必要なファイルのみ指定して実�
 
 デザイン検証時は `npm run build && npm run start` で本番ビルドの挙動を観察すると体感が安定します。
 
+### 開発環境の注意点（重要）
+
+- **React Strict Mode は無効化済み** (`next.config.mjs` で `reactStrictMode: false`)
+- **理由**: Pixi.js / GSAP の2重初期化により、開発環境（`npm run dev`）でカード描画不具合が発生
+  - カードがチカチカする
+  - カードが表示されない
+  - 連想ワード入力後にカードが空きスロットに出せない
+  - アニメーションが途中で止まる
+- **本番環境への影響**: なし
+  - `npm run start` (本番ビルド) では元々 Strict Mode の2重レンダリングは発生しない
+  - Vercel デプロイも同様に影響なし
+  - この設定変更はデプロイしても完全に安全
+- **推奨開発フロー**:
+  - 通常開発: `npm run dev` で快適に作業
+  - 品質確認: `npm run start` で本番ビルドをテスト
+
 ---
 
 ## 6. FSM フラグについて
