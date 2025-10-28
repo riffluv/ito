@@ -233,6 +233,7 @@ export const RoomCard = memo(function RoomCard({
               }}
               onClick={(event) => {
                 event.stopPropagation();
+                void prefetchRoomExperience(id, { priority: true });
                 onJoin(id);
               }}
             >
