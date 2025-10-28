@@ -6,6 +6,28 @@ const nextConfig = {
   // 開発環境でのカード描画・アニメーション問題を回避するため無効化
   // Strict Modeの2重レンダリングがPixi.js/GSAPアニメーションと競合
   reactStrictMode: false,
+  async headers() {
+    return [
+      {
+        source: "/sfx/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=86400",
+          },
+        ],
+      },
+    ];
+  },
   // Allow builds to succeed on CI while we iteratively fix lint warnings/errors
   eslint: {
     ignoreDuringBuilds: true,

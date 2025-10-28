@@ -24,8 +24,115 @@ export const ROOM_PREFETCH_TTL_MS = 15_000;
 const TIMESTAMP_KEY = "__ito_ts";
 
 const pending = new Map<string, Promise<void>>();
+const PREFETCH_RETRY_LIMIT = 3;
+const PREFETCH_RETRY_DELAY_MS = 600;
+
+type RecoveryEntry = {
+  opts: PrefetchOptions;
+  retries: number;
+  timer: number | null;
+};
+
+const recoveryEntries = new Map<string, RecoveryEntry>();
+let recoveryDetach: (() => void) | null = null;
 
 const isBrowser = () => typeof window !== "undefined";
+
+const pendingKeyVariants = (roomId: string) => [`${roomId}:p`, `${roomId}:n`];
+
+const cleanupRecoveryListeners = () => {
+  if (!recoveryDetach) return;
+  recoveryDetach();
+  recoveryDetach = null;
+};
+
+const ensureRecoveryListeners = () => {
+  if (!isBrowser() || recoveryDetach) return;
+  const triggerPointer = () => triggerRecovery("pointer");
+  const triggerVisibility = () => {
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      triggerRecovery("visibility");
+    }
+  };
+  window.addEventListener("pointerdown", triggerPointer, { passive: true });
+  document.addEventListener(
+    "visibilitychange",
+    triggerVisibility,
+    { passive: true } as AddEventListenerOptions
+  );
+  recoveryDetach = () => {
+    window.removeEventListener("pointerdown", triggerPointer);
+    document.removeEventListener("visibilitychange", triggerVisibility);
+  };
+};
+
+const triggerRecovery = (_reason: "timeout" | "pointer" | "visibility") => {
+  if (!isBrowser() || recoveryEntries.size === 0) {
+    cleanupRecoveryListeners();
+    return;
+  }
+  const entries = Array.from(recoveryEntries.entries());
+  entries.forEach(([roomId, entry]) => {
+    const [priorityKey, normalKey] = pendingKeyVariants(roomId);
+    if (pending.has(priorityKey) || pending.has(normalKey)) {
+      return;
+    }
+    if (entry.retries >= PREFETCH_RETRY_LIMIT) {
+      recoveryEntries.delete(roomId);
+      if (entry.timer !== null) {
+        window.clearTimeout(entry.timer);
+      }
+      return;
+    }
+    entry.retries += 1;
+    entry.timer = null;
+    void prefetchRoomExperience(roomId, { ...entry.opts, priority: true });
+  });
+  if (recoveryEntries.size === 0) {
+    cleanupRecoveryListeners();
+  }
+};
+
+const scheduleRecovery = (roomId: string, opts: PrefetchOptions) => {
+  if (!isBrowser()) return;
+  const existing = recoveryEntries.get(roomId);
+  const merged: PrefetchOptions = {
+    priority: opts.priority || existing?.opts.priority || false,
+  };
+  if (existing) {
+    existing.opts = merged;
+    if (existing.timer === null) {
+      existing.timer = window.setTimeout(() => {
+        existing.timer = null;
+        triggerRecovery("timeout");
+      }, PREFETCH_RETRY_DELAY_MS);
+    }
+    return;
+  }
+  const entry: RecoveryEntry = {
+    opts: merged,
+    retries: 0,
+    timer: null,
+  };
+  recoveryEntries.set(roomId, entry);
+  ensureRecoveryListeners();
+  entry.timer = window.setTimeout(() => {
+    entry.timer = null;
+    triggerRecovery("timeout");
+  }, PREFETCH_RETRY_DELAY_MS);
+};
+
+const clearRecovery = (roomId: string) => {
+  const entry = recoveryEntries.get(roomId);
+  if (!entry) return;
+  if (entry.timer !== null) {
+    window.clearTimeout(entry.timer);
+  }
+  recoveryEntries.delete(roomId);
+  if (recoveryEntries.size === 0) {
+    cleanupRecoveryListeners();
+  }
+};
 
 const createTimestampStub = (ms: number) =>
   Object.freeze({
@@ -113,18 +220,24 @@ export function loadPrefetchedRoom(roomId: string): Record<string, unknown> | nu
   }
 }
 
-function prewarmAudio(soundIds: SoundId[]): Promise<void> {
-  if (!isBrowser()) return Promise.resolve();
+function prewarmAudio(soundIds: SoundId[]): Promise<boolean> {
+  if (!isBrowser()) return Promise.resolve(true);
   const manager = getGlobalSoundManager();
   if (manager) {
-    return manager.prewarm(soundIds);
+    return manager
+      .prewarm(soundIds)
+      .then(() => true)
+      .catch((error) => {
+        traceError("prefetch.room.audio", error as Error);
+        return false;
+      });
   }
 
-  return new Promise<void>((resolve) => {
+  return new Promise<boolean>((resolve) => {
     const timeoutHandle = isBrowser()
       ? window.setTimeout(() => {
           unsubscribe();
-          resolve();
+          resolve(false);
         }, 300)
       : null;
 
@@ -136,25 +249,36 @@ function prewarmAudio(soundIds: SoundId[]): Promise<void> {
       }
       instance
         .prewarm(soundIds)
-        .catch((error) => {
-          traceError("prefetch.room.audio", error as Error);
+        .then(() => {
+          if (timeoutHandle !== null) {
+            window.clearTimeout(timeoutHandle);
+          }
+          resolve(true);
         })
-        .finally(() => resolve());
+        .catch((error) => {
+          if (timeoutHandle !== null) {
+            window.clearTimeout(timeoutHandle);
+          }
+          traceError("prefetch.room.audio", error as Error);
+          resolve(false);
+        })
+        .finally(() => undefined);
     });
   });
 }
 
-async function prefetchRoomSnapshot(roomId: string, priority = false): Promise<void> {
-  if (!firebaseEnabled || !db || !isBrowser()) return;
+async function prefetchRoomSnapshot(roomId: string, priority = false): Promise<boolean> {
+  if (!isBrowser()) return false;
+  if (!firebaseEnabled || !db) return true;
   const existing = loadPrefetchedRoom(roomId);
   if (existing && !priority) {
-    return;
+    return true;
   }
   try {
     const snapshotStart = typeof performance !== "undefined" ? performance.now() : null;
     const snap = await getDoc(doc(db, "rooms", roomId));
     if (!snap.exists()) {
-      return;
+      return false;
     }
     const sanitized = sanitizeRoom(snap.data());
     storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
@@ -165,8 +289,10 @@ async function prefetchRoomSnapshot(roomId: string, priority = false): Promise<v
         Math.max(0, Math.round(performance.now() - snapshotStart))
       );
     }
+    return true;
   } catch (error) {
     traceError("prefetch.room.snapshot", error as Error, { roomId });
+    return false;
   }
 }
 
@@ -183,31 +309,45 @@ export function prefetchRoomExperience(roomId: string, opts: PrefetchOptions = {
 
   const task = (async () => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+    let audioReady = false;
+    let snapshotReady = false;
 
     try {
       const soundIds = opts.priority
         ? PREFETCH_SOUND_IDS
         : PREFETCH_SOUND_IDS.slice(0, 3);
-      await Promise.all([
+      const results = await Promise.all([
         prewarmAudio(soundIds),
         prefetchRoomSnapshot(roomId, !!opts.priority),
       ]);
-      if (startedAt !== null) {
+      audioReady = results[0];
+      snapshotReady = results[1];
+      if (startedAt !== null && audioReady && snapshotReady) {
         setMetric(
           "prefetch",
           opts.priority ? "room.highPriorityAudioMs" : "room.audioMs",
           Math.max(0, Math.round(performance.now() - startedAt))
         );
       }
-      traceAction("prefetch.roomExperience", {
-        roomId,
-        mode: opts.priority ? "priority" : "standard",
-      });
     } catch (error) {
       traceError("prefetch.roomExperience", error as Error, { roomId });
     } finally {
       pending.delete(key);
     }
+
+    const success = audioReady && snapshotReady;
+    if (success) {
+      clearRecovery(roomId);
+    } else {
+      scheduleRecovery(roomId, opts);
+    }
+    traceAction("prefetch.roomExperience", {
+      roomId,
+      mode: opts.priority ? "priority" : "standard",
+      success,
+      audioReady,
+      snapshotReady,
+    });
   })();
 
   pending.set(key, task);
