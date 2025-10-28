@@ -18,6 +18,7 @@ import {
   type CollisionDetection,
   type DropAnimation,
 } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
@@ -246,6 +247,7 @@ BoardFrame.displayName = "CentralBoardFrame";
 function InteractiveBoardBase({
   slots,
   magnetSnapshot,
+  magnetState,
   prefersReducedMotion,
   activeId,
   isOver,
@@ -268,6 +270,7 @@ function InteractiveBoardBase({
 }: {
   slots: DragSlotDescriptor[];
   magnetSnapshot: MagnetSnapshot;
+  magnetState: MagnetResult;
   prefersReducedMotion: boolean;
   activeId: string | null;
   isOver: boolean;
@@ -292,6 +295,59 @@ function InteractiveBoardBase({
     () => activeProposal.filter((id): id is string => typeof id === "string" && id.length > 0),
     [activeProposal]
   );
+  const [dragTilt, setDragTilt] = useState(0);
+  const [dragLift, setDragLift] = useState(0);
+
+  useEffect(() => {
+    if (!activeId) {
+      setDragTilt(0);
+      setDragLift(0);
+      return;
+    }
+    const tiltRange = prefersReducedMotion ? 1.4 : 2.8;
+    const randomTilt = (Math.random() * tiltRange * 2 - tiltRange);
+    setDragTilt(Number(randomTilt.toFixed(2)));
+    setDragLift(prefersReducedMotion ? 2 : 8);
+  }, [activeId, prefersReducedMotion]);
+
+  const overlayShellStyle = useMemo<React.CSSProperties>(() => {
+    const baseShadowStrength = prefersReducedMotion ? 0.18 : 0.26;
+    const strength = magnetState.strength;
+    const blur = 14 + strength * 18;
+    const yOffset = 8 + strength * 10;
+    const opacity = baseShadowStrength + strength * 0.22;
+    return {
+      ...GHOST_CARD_STYLE,
+      cursor: "grabbing",
+      filter: `drop-shadow(0 ${yOffset.toFixed(2)}px ${blur.toFixed(2)}px rgba(0, 0, 0, ${opacity.toFixed(3)}))`,
+    };
+  }, [magnetState.strength, prefersReducedMotion]);
+
+  const overlayInnerStyle = useMemo<React.CSSProperties>(() => {
+    if (!activeId) {
+      return {
+        transform: "translate3d(0px, 0px, 0) scale(1)",
+      };
+    }
+    const strength = magnetState.strength;
+    const baseScale = prefersReducedMotion ? 1.02 : 1.05;
+    const magnetScaleBoost = strength * (prefersReducedMotion ? 0.015 : 0.045);
+    const translateX = magnetState.dx;
+    const translateY = magnetState.dy - dragLift * (strength > 0 ? 1 : 0.6);
+    const tiltInfluence = strength * (prefersReducedMotion ? 0.6 : 1.4);
+    const rotate = dragTilt + tiltInfluence;
+    const liftFilterStrength = Math.max(0, strength - 0.08);
+    const transitionDuration = prefersReducedMotion ? 80 : 150;
+    return {
+      transform: `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px, 0) scale(${(baseScale + magnetScaleBoost).toFixed(4)}) rotate(${rotate.toFixed(2)}deg)`,
+      transition: `transform ${transitionDuration}ms cubic-bezier(0.2, 0.75, 0.4, 1), filter ${transitionDuration + 40}ms cubic-bezier(0.2, 0.7, 0.4, 1)`,
+      filter:
+        liftFilterStrength > 0
+          ? `drop-shadow(0 ${4 + liftFilterStrength * 10}px ${12 + liftFilterStrength * 18}px rgba(0, 0, 0, ${0.18 + liftFilterStrength * 0.28}))`
+          : undefined,
+      willChange: "transform",
+    };
+  }, [activeId, dragLift, dragTilt, magnetState.dx, magnetState.dy, magnetState.strength, prefersReducedMotion]);
 
   return (
     <DndContext
@@ -368,9 +424,25 @@ function InteractiveBoardBase({
           ? (() => {
               const idx = activeProposal.indexOf(activeId);
               if (idx >= 0) {
-                return <div style={GHOST_CARD_STYLE}>{renderCard(activeId, idx)}</div>;
+                return (
+                  <div
+                    style={overlayShellStyle}
+                    data-floating-card="true"
+                    data-magnet-strength={magnetState.strength.toFixed(2)}
+                  >
+                    <div style={overlayInnerStyle}>{renderCard(activeId, idx)}</div>
+                  </div>
+                );
               }
-              return <div style={GHOST_CARD_STYLE}>{renderCard(activeId)}</div>;
+              return (
+                <div
+                  style={overlayShellStyle}
+                  data-floating-card="true"
+                  data-magnet-strength={magnetState.strength.toFixed(2)}
+                >
+                  <div style={overlayInnerStyle}>{renderCard(activeId)}</div>
+                </div>
+              );
             })()
           : null}
       </DragOverlay>
@@ -670,13 +742,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
   const magnetFlushFrameRef = useRef<number | null>(null);
 
+  const pointerProfile = usePointerProfile();
+
   const magnetConfig = useMemo(
-    () => ({
-      snapRadius: prefersReducedMotion ? 90 : 140,
-      snapThreshold: prefersReducedMotion ? 52 : 92,
-      maxOffset: prefersReducedMotion ? 16 : 34,
-    }),
-    [prefersReducedMotion]
+    () => {
+      const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
+      const snapRadius = prefersReducedMotion
+        ? 96
+        : isTouchLike
+          ? 168
+          : 132;
+      const snapThreshold = isTouchLike
+        ? prefersReducedMotion
+          ? 34
+          : 30
+        : prefersReducedMotion
+          ? 24
+          : 24;
+      const maxOffset = prefersReducedMotion ? 18 : 34;
+      return {
+        snapRadius,
+        snapThreshold,
+        maxOffset,
+        isTouch: isTouchLike,
+      };
+    },
+    [
+      prefersReducedMotion,
+      pointerProfile.isCoarsePointer,
+      pointerProfile.isTouchOnly,
+    ]
   );
   const magnetConfigRef = useRef(magnetConfig);
   useEffect(() => {
@@ -819,12 +914,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (prefersReducedMotion) {
       return { duration: 110, easing: "linear" };
     }
-    return magnetState.shouldSnap
-      ? { duration: 160, easing: "cubic-bezier(0.2, 0.8, 0.4, 1)" }
-      : { duration: 220, easing: UI_TOKENS.EASING.standard };
+    if (magnetState.shouldSnap) {
+      return {
+        duration: 180,
+        easing: "linear",
+        keyframes: ({ transform }) => {
+          const target = CSS.Transform.toString(transform.final);
+          return [
+            { transform: `${target} scale(0.98)` },
+            { transform: `${target} scale(1.06)` },
+            { transform: `${target} scale(1.0)` },
+          ];
+        },
+      };
+    }
+    return { duration: 220, easing: UI_TOKENS.EASING.standard };
   }, [magnetState.shouldSnap, prefersReducedMotion]);
-
-  const pointerProfile = usePointerProfile();
 
   const mouseSensorOptions = useMemo(() => (
     pointerProfile.isCoarsePointer
@@ -973,6 +1078,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const playDropInvalid = useSoundEffect("drop_invalid");
   const playCardPlace = useSoundEffect("card_place");
+  const playDragPickup = useSoundEffect("drag_pickup");
 
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
@@ -1391,8 +1497,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     (event: DragStartEvent) => {
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
+      playDragPickup();
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        try {
+          navigator.vibrate(6);
+        } catch {
+          // ignore haptic failures
+        }
+      }
     },
-    [resetMagnet]
+    [resetMagnet, playDragPickup]
   );
 
   const clearActive = useCallback(() => {
@@ -1693,6 +1807,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           <InteractiveBoard
             slots={dragSlots}
             magnetSnapshot={magnetSnapshot}
+            magnetState={magnetState}
             prefersReducedMotion={prefersReducedMotion}
             activeId={activeId}
             isOver={isOver}
