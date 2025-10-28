@@ -17,6 +17,7 @@ import type { PlayerDoc } from "@/lib/types";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { toastIds } from "@/lib/ui/toastIds";
 import { SAFE_AREA_INSET } from "@/lib/ui/layout";
+import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import {
   Box,
   Dialog,
@@ -24,6 +25,7 @@ import {
   HStack,
   IconButton,
   Input,
+  Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -266,6 +268,7 @@ interface MiniHandDockProps {
   roundIds?: string[];
   // カスタムお題（現在値）
   currentTopic?: string | null;
+  hostClaimStatus?: HostClaimStatus;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -288,7 +291,23 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     onlineUids,
     roundIds,
     currentTopic,
+    hostClaimStatus,
   } = props;
+
+  const hostClaimActive =
+    !isHost && !!hostClaimStatus && hostClaimStatus !== "idle";
+  const hostClaimMessage = React.useMemo(() => {
+    switch (hostClaimStatus) {
+      case "requesting":
+        return "ホスト権限を申請中...";
+      case "confirming":
+        return "ホスト権限の確定を待機しています...";
+      case "pending":
+        return "ホスト権限を準備中...";
+      default:
+        return "ホスト権限を準備中...";
+    }
+  }, [hostClaimStatus]);
 
   // Reveal直前の一瞬だけローカルで手札UIを隠すゲート
   const {
@@ -569,7 +588,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       )}
 
       {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
-      {isHost && roomStatus === "waiting" && !preparing && (
+      {(roomStatus === "waiting" && !preparing && (isHost || hostClaimActive)) && (
         <Box
           position="fixed"
           bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
@@ -582,17 +601,42 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             },
           }}
         >
-          <AppButton
-            {...SEINO_BUTTON_STYLES}
-            size="lg"
-            visual="solid"
-            onClick={() => quickStart()}
-            css={{
-              animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
-            }}
-          >
-            ゲーム開始
-          </AppButton>
+          {isHost ? (
+            <AppButton
+              {...SEINO_BUTTON_STYLES}
+              size="lg"
+              visual="solid"
+              onClick={() => quickStart()}
+              css={{
+                animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
+              }}
+            >
+              ゲーム開始
+            </AppButton>
+          ) : (
+            <Box
+              px="18px"
+              py="14px"
+              minW="196px"
+              display="flex"
+              alignItems="center"
+              gap="10px"
+              border="1px solid rgba(200,200,255,0.28)"
+              borderRadius="14px"
+              background="linear-gradient(145deg, rgba(28,36,60,0.92), rgba(20,24,36,0.88))"
+              boxShadow="0 10px 24px rgba(0,0,0,0.45)"
+            >
+              <Spinner size="sm" color="rgba(255,255,255,0.9)" />
+              <Text
+                fontSize="sm"
+                fontWeight="bold"
+                color="rgba(255,255,255,0.88)"
+                textAlign="left"
+              >
+                {hostClaimMessage}
+              </Text>
+            </Box>
+          )}
         </Box>
       )}
 
@@ -754,7 +798,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </HStack>
 
         {/* ホスト専用ボタン */}
-        {isHost && (
+        {isHost ? (
           <>
             <Tooltip
               content={
@@ -776,7 +820,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   )
                 }
                 isLoading={topicActionLoading}
-                disabled={topicActionLoading || (isGameFinished && effectiveDefaultTopicType !== "カスタム")}
+                disabled={
+                  topicActionLoading ||
+                  (isGameFinished && effectiveDefaultTopicType !== "カスタム")
+                }
                 onClick={async () => {
                   if (topicActionLoading) return;
                   let mode = effectiveDefaultTopicType;
@@ -840,7 +887,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               />
             </Tooltip>
           </>
-        )}
+        ) : null}
       </Flex>
       )}
 

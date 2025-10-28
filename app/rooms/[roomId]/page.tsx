@@ -2000,7 +2000,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return false;
   }, [lastKnownHostId, players, onlineUids, uid, presenceReady]);
 
-  useHostClaim({
+  const hostClaimStatus = useHostClaim({
     roomId,
     uid,
     user,
@@ -2968,6 +2968,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onLeaveRoom={leaveRoom}
           pop={pop}
+          hostClaimStatus={hostClaimStatus}
         />
       ) : spectatorNotice ? null : (
         <Box h="1px" />

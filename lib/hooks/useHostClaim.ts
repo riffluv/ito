@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { logError, logDebug } from "@/lib/utils/log";
 
@@ -15,6 +15,8 @@ interface UseHostClaimParams {
   isMember: boolean;
   leavingRef: React.MutableRefObject<boolean>;
 }
+
+export type HostClaimStatus = "idle" | "pending" | "requesting" | "confirming";
 
 /**
  * ⚡ PERFORMANCE: 88行の巨大useEffectをカスタムフック化
@@ -36,6 +38,20 @@ export function useHostClaim({
   const hostClaimTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hostClaimAttemptRef = useRef<number>(0);
   const hostClaimPostSuccessRef = useRef<number>(0);
+  const [claimStatus, setClaimStatus] =
+    useState<HostClaimStatus>("idle");
+  const statusRef = useRef<HostClaimStatus>("idle");
+
+  const updateStatus = useCallback(
+    (next: HostClaimStatus) => {
+      if (statusRef.current === next) {
+        return;
+      }
+      statusRef.current = next;
+      setClaimStatus(next);
+    },
+    []
+  );
 
   useEffect(() => {
     const clearTimer = () => {
@@ -61,16 +77,19 @@ export function useHostClaim({
 
     // 条件を満たさない場合は処理を停止
     if (!uid || !user || leavingRef.current) {
+      updateStatus("idle");
       clearTimer();
       return clearTimer;
     }
 
     if (!isMember) {
+      updateStatus("idle");
       clearTimer();
       return clearTimer;
     }
 
     if (!hostUnavailable) {
+      updateStatus("idle");
       clearTimer();
       return clearTimer;
     }
@@ -131,9 +150,16 @@ export function useHostClaim({
     }
 
     let cancelled = false;
+    updateStatus(
+      hostClaimPostSuccessRef.current > 0 ? "confirming" : "pending"
+    );
 
     const attemptClaim = async () => {
       try {
+        if (cancelled) {
+          return;
+        }
+        updateStatus("requesting");
         const token = await user.getIdToken();
         if (!token || cancelled) {
           return;
@@ -180,15 +206,22 @@ export function useHostClaim({
           const retryCount = hostClaimPostSuccessRef.current + 1;
           if (retryCount <= 3) {
             hostClaimPostSuccessRef.current = retryCount;
+            if (!cancelled) {
+              updateStatus("confirming");
+            }
             const delay = 600 * Math.pow(2, retryCount - 1);
             scheduleRetry(delay);
           }
         } else {
           hostClaimPostSuccessRef.current = 0;
+          if (!cancelled) {
+            updateStatus("idle");
+          }
         }
       } catch (error) {
         logError("room-page", "claim-host", error);
         if (!cancelled) {
+          updateStatus("pending");
           const attempt = hostClaimAttemptRef.current + 1;
           if (attempt <= 3) {
             hostClaimAttemptRef.current = attempt;
@@ -200,6 +233,8 @@ export function useHostClaim({
                 void attemptClaim();
               }
             }, delay);
+          } else {
+            updateStatus("idle");
           }
         }
       }
@@ -209,6 +244,7 @@ export function useHostClaim({
 
     return () => {
       cancelled = true;
+      updateStatus("idle");
       clearTimer();
     };
   }, [
@@ -223,5 +259,8 @@ export function useHostClaim({
     isMember,
     roomId,
     leavingRef,
+    updateStatus,
   ]);
+
+  return claimStatus;
 }
