@@ -398,13 +398,13 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 filteredProposal,
                 remainingCount,
             });
-            if (room?.status === "reveal" &&
+            if ((room?.status === "reveal" || room?.status === "finished") &&
                 remainingCount > 0 &&
                 removedPlayerData) {
                 const snapshotPayload = {
                     name: typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
                         ? removedPlayerData.name
-                        : "離脱プレイヤー",
+                        : "退室したプレイヤー",
                     avatar: typeof removedPlayerData?.avatar === "string" && removedPlayerData.avatar.trim()
                         ? removedPlayerData.avatar
                         : "/avatars/knight1.webp",
