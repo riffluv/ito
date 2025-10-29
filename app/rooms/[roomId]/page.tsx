@@ -1026,6 +1026,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     rejected: false,
     timeout: false,
   });
+  const seatRequestPending =
+    recallV2Enabled && seatRequestState.status === "pending";
+  const seatRequestAccepted =
+    recallV2Enabled && seatRequestState.status === "accepted";
+  const seatRequestRejected =
+    recallV2Enabled && seatRequestState.status === "rejected";
   const recallJoinHandledRef = useRef(false);
   const assignNumberRetrySignatureRef = useRef<string | null>(null);
 
@@ -1258,9 +1264,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
 
 
-  const joinInProgress = joinStatus === "joining" || joinStatus === "retrying";
+  const joinInProgress = joinStatus === "joining";
+  const joinEstablished = joinStatus === "joined";
   const hasOptimisticSeat =
     !!optimisticMe &&
+    (joinEstablished || seatRequestAccepted) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
   const spectatorEligibilityReady = forcedExitReason
     ? true
@@ -1330,15 +1338,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
       return;
     }
-    const joinInFlight =
-      joinStatus === "joining" ||
-      joinStatus === "retrying" ||
-      joinStatus === "joined";
-    const presenceAttached =
-      presenceReady &&
-      Array.isArray(onlineUids) &&
-      onlineUids.includes(uid);
-    if (!joinInFlight && !presenceAttached) {
+    const shouldHoldOptimisticSeat =
+      joinEstablished || seatRequestPending || seatRequestAccepted;
+    if (!shouldHoldOptimisticSeat) {
       if (optimisticMe) {
         setOptimisticMe(null);
       }
@@ -1370,9 +1372,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     optimisticMe,
     isSpectatorMode,
     meFromPlayers,
-    joinStatus,
-    presenceReady,
-    onlineUids,
+    joinEstablished,
+    seatRequestPending,
+    seatRequestAccepted,
     normalizedDisplayName,
   ]);
 
@@ -1394,13 +1396,50 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   })();
   const spectatorReason = isSpectatorMode ? rawSpectatorReason : null;
   const waitingToRejoin = room?.status === "waiting";
-  const seatRequestPending = recallV2Enabled && seatRequestState.status === "pending";
-  const seatRequestAccepted = recallV2Enabled && seatRequestState.status === "accepted";
-  const seatRequestRejected = recallV2Enabled && seatRequestState.status === "rejected";
-  const seatRequestError = recallV2Enabled ? seatRequestState.error : null;
+  const spectatorRecallEnabled =
+    ((room as any)?.ui?.spectatorRecall ?? true) === true;
   const seatRequestButtonDisabled = recallV2Enabled
     ? versionMismatchBlocksAccess || seatRequestPending || seatRequestAccepted
     : !waitingToRejoin || versionMismatchBlocksAccess;
+  const spectatorEnteredRef = useRef(false);
+  useEffect(() => {
+    if (!isSpectatorMode) {
+      spectatorEnteredRef.current = false;
+      return;
+    }
+    if (spectatorEnteredRef.current) {
+      return;
+    }
+    spectatorEnteredRef.current = true;
+    setSeatRequestState((prev) =>
+      prev.status === "idle"
+        ? prev
+        : { status: "idle", source: null, requestedAt: null, error: null }
+    );
+    setSeatRequestTimedOut(false);
+    seatRequestSignalsRef.current.accepted = false;
+    seatRequestSignalsRef.current.rejected = false;
+    seatRequestSignalsRef.current.timeout = false;
+    leavingRef.current = false;
+    if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
+      try {
+        const current = window.sessionStorage.getItem(rejoinSessionKey);
+        if (!current || current === uid) {
+          window.sessionStorage.removeItem(rejoinSessionKey);
+        }
+      } catch (error) {
+        logDebug("room-page", "spectator-session-clear-failed", error);
+      }
+    }
+  }, [
+    isSpectatorMode,
+    recallV2Enabled,
+    rejoinSessionKey,
+    uid,
+    setSeatRequestState,
+    setSeatRequestTimedOut,
+    leavingRef,
+  ]);
 
   useEffect(() => {
     if (!seatRequestAccepted) return;
@@ -1756,7 +1795,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   useEffect(() => {
     if (!recallV2Enabled) return;
-    if (seatRequestState.status === "accepted") {
+    if (seatRequestAccepted) {
       if (!seatRequestSignalsRef.current.accepted) {
         seatRequestSignalsRef.current.accepted = true;
         seatRequestSignalsRef.current.rejected = false;
@@ -1769,7 +1808,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         bumpMetric("recall", "accepted");
       }
       setSeatRequestTimedOut(false);
-    } else if (seatRequestState.status === "rejected") {
+    } else if (seatRequestRejected) {
       if (!seatRequestSignalsRef.current.rejected) {
         seatRequestSignalsRef.current.rejected = true;
         seatRequestSignalsRef.current.accepted = false;
@@ -1786,7 +1825,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [
     recallV2Enabled,
-    seatRequestState.status,
+    seatRequestAccepted,
+    seatRequestRejected,
     roomId,
     uid,
     leavingRef,
@@ -1924,6 +1964,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (spectatorReason !== "waiting") {
       return;
     }
+    if (!spectatorRecallEnabled) {
+      spectatorAutoRetryStateRef.current = { lastAttemptTs: 0, statusKey: null };
+      return;
+    }
     if (versionMismatchBlocksAccess) {
       return;
     }
@@ -1971,6 +2015,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     recallV2Enabled,
     seatRequestPending,
     seatRequestAccepted,
+    spectatorRecallEnabled,
     uid,
     joinStatus,
     room?.id,
@@ -2552,7 +2597,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     presenceReady,
     onlineUids,
     playersCount: playersWithOptimistic.length,
-  }), [room?.status, room?.order?.list, room?.deal?.players, room?.order?.proposal, presenceReady, onlineUidSignature, playersWithOptimistic.length]);
+    playerIds: playersWithOptimistic.map((p) => p.id),
+  }), [
+    room?.status,
+    room?.order?.list,
+    room?.deal?.players,
+    room?.order?.proposal,
+    presenceReady,
+    onlineUidSignature,
+    playersWithOptimistic.length,
+    playersSignature,
+  ]);
   const orderList = room?.order?.list;
 
   const submittedPlayerIds = useMemo(() => {

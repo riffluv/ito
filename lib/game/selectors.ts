@@ -117,6 +117,7 @@ export function computeSlotCount(opts: {
   presenceReady: boolean;
   onlineUids?: readonly string[] | null;
   playersCount: number;
+  playerIds?: readonly string[] | null;
 }): number {
   const status = opts.status;
   if (status === "reveal" || status === "finished") {
@@ -130,8 +131,16 @@ export function computeSlotCount(opts: {
   const dealLen = Array.isArray(opts.dealPlayers) ? opts.dealPlayers.length : 0;
 
   if (opts.presenceReady && Array.isArray(opts.onlineUids)) {
-    const onlineCount = opts.onlineUids.length;
-    return Math.max(propLen, onlineCount);
+    const onlineCount = (() => {
+      if (Array.isArray(opts.playerIds) && opts.playerIds.length > 0) {
+        const allowed = new Set(opts.playerIds);
+        return opts.onlineUids.filter((uid) => allowed.has(uid)).length;
+      }
+      return opts.onlineUids.length;
+    })();
+    if (onlineCount > 0) {
+      return Math.max(propLen, onlineCount);
+    }
   }
 
   return Math.max(propLen, dealLen, opts.playersCount);

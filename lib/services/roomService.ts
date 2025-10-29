@@ -130,8 +130,20 @@ export async function ensureMember({
     const status = room?.status;
     const isHost =
       typeof room?.hostId === "string" && room.hostId.trim() === uid;
+    const recallAllowed =
+      status === "waiting"
+        ? ((room as any)?.ui?.spectatorRecall ?? true) !== false
+        : true;
     if (!isHost && status && status !== "waiting") {
       logWarn("roomService", "ensureMember-blocked-in-progress", {
+        roomId,
+        uid,
+        status,
+      });
+      return { joined: false, reason: "inProgress" } as const;
+    }
+    if (!isHost && status === "waiting" && !recallAllowed) {
+      logWarn("roomService", "ensureMember-blocked-recall-disabled", {
         roomId,
         uid,
         status,
