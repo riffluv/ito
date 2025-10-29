@@ -383,13 +383,27 @@ export function useRoomState(
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [roomId, uid]
   );
-  // auto-join (待機中のみ自動参加。ゲーム中の途中参加は禁止)
-  // さらに、displayName未設定時は入室を保留して名前入力ダイアログを促す
+  // auto-join
+  // V2: 待機中のみ自動参加。ゲーム中の途中参加は禁止。
+  // V3(Recall V2 有効時): 観戦→復帰は rejoinRequests 経由に統一するため、
+  // 非メンバーの自動参加は行わない（観戦UIの「席に戻る」からのみ参加）。
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
     if (leavingRef.current) return;
     if (!displayName || !String(displayName).trim()) return;
+
+    // Spectator V3:
+    // - 原則: 観戦→復帰は rejoinRequests 経由（page.tsx 側で実装）
+    // - 例外: 初回/一般参加（waiting かつ recallOpen≠false）は従来どおり自動参加を許可
+    if (recallV2Enabled && !isMember) {
+      const status = (room as any)?.status as string | undefined;
+      const recallOpen = (room as any)?.ui?.recallOpen as boolean | undefined;
+      const allowDirectJoin = status === "waiting" && (recallOpen !== false);
+      if (!allowDirectJoin) {
+        return;
+      }
+    }
 
     let pendingRejoin = false;
     if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
