@@ -39,7 +39,7 @@ import { forceDetachAll } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
-import { requestSeat, SeatRequestSource, pruneProposalByEligible } from "@/lib/game/service";
+import { requestSeat, SeatRequestSource, pruneProposalByEligible, cancelSeatRequest } from "@/lib/game/service";
 import { clearRevealPending } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
@@ -555,6 +555,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const dealRecoveryTimerRef = useRef<number | null>(null);
   const isGameFinished = room?.status === "finished";
 
+  const roomStatus = room?.status ?? null;
+  const recallOpen = room?.ui?.recallOpen === true;
+  const spectatorRecallEnabled = recallOpen && roomStatus === "waiting";
+
+
   // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
   useEffect(() => {
     if (!isHost) return;
@@ -1038,6 +1043,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const setPendingRejoinFlag = useCallback(
     (source: SeatRequestSource = "manual") => {
       if (!uid) return;
+      if (!spectatorRecallEnabled) {
+        logDebug("room-page", "seat-request-blocked", {
+          roomId,
+          uid,
+          source,
+          roomStatus,
+          recallOpen,
+        });
+        return;
+      }
       setSeatRequestState({
         status: "pending",
         source,
@@ -1060,10 +1075,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             error: error instanceof Error ? error.message : String(error),
           });
           leavingRef.current = false;
-        }
-      );
+          }
+        );
     },
-    [uid, roomId, displayName, leavingRef]
+    [uid, roomId, displayName, leavingRef, spectatorRecallEnabled, roomStatus, recallOpen]
   );
 
   useEffect(() => {
@@ -1247,6 +1262,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     (joinEstablished || seatRequestAccepted) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
 
+
   // Spectator V3: シンプルな観戦判定
   const shouldShowSpectator =
     uid !== null && !isMember && !isHost && presenceReady && !loading;
@@ -1276,7 +1292,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       // 観戦遷移時の状態初期化を厳密化
       if (optimisticMe) {
         setOptimisticMe(null);
-  const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
       }
       // 他の残留状態もクリア
       if (seatRequestState.status !== "idle") {
@@ -1349,26 +1364,28 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   ]);
 
   // 観戦理由の判定（文言出し分け用）
-  const rawSpectatorReason: "version-mismatch" | "mid-game" | "waiting" | null = (() => {
-    if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
-      return "version-mismatch";
-    }
-    if (!canAccess) {
-      if (room?.status === "waiting") {
-        return "waiting";
-      }
-      return "mid-game";
-    }
-    if (forcedExitReason) {
-      return "mid-game";
-    }
-    return null;
-  })();
-  const spectatorReason = isSpectatorMode ? rawSpectatorReason : null;
-  const waitingToRejoin = room?.status === "waiting";
-  const spectatorRecallEnabled = room?.ui?.recallOpen ?? false;
+  type SpectatorReason =
+    | "version-mismatch"
+    | "waiting-open"
+    | "waiting-closed"
+    | "mid-game";
+  const spectatorReason: SpectatorReason | null = isSpectatorMode
+    ? (() => {
+        if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
+          return "version-mismatch";
+        }
+        if (roomStatus === "waiting") {
+          return recallOpen ? "waiting-open" : "waiting-closed";
+        }
+        return "mid-game";
+      })()
+    : null;
+  const waitingToRejoin = roomStatus === "waiting";
   const seatRequestButtonDisabled =
-    versionMismatchBlocksAccess || seatRequestPending || seatRequestAccepted;
+    versionMismatchBlocksAccess ||
+    seatRequestPending ||
+    seatRequestAccepted ||
+    !spectatorRecallEnabled;
   const spectatorEnteredRef = useRef(false);
   useEffect(() => {
     if (!isSpectatorMode) {
@@ -1389,12 +1406,23 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     seatRequestSignalsRef.current.rejected = false;
     seatRequestSignalsRef.current.timeout = false;
     leavingRef.current = false;
+    if (seatRequestState.status !== "idle" && uid) {
+      void cancelSeatRequest(roomId, uid).catch((error) => {
+        logDebug("room-page", "spectator-cancel-seat-request-failed", {
+          roomId,
+          uid,
+          error,
+        });
+      });
+    }
   }, [
     isSpectatorMode,
     uid,
     setSeatRequestState,
     setSeatRequestTimedOut,
     leavingRef,
+    roomId,
+    seatRequestState.status,
   ]);
 
   useEffect(() => {
@@ -1494,13 +1522,39 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }) => {
       if (!uid) return false;
 
-      // V3: 常にrecallV2方式を使用
+      if (!spectatorRecallEnabled) {
+        const description =
+          roomStatus === "waiting"
+            ? "ホストが席を開放すると席に戻れます。"
+            : "ゲーム進行中は席に戻れません。ラウンド終了後にもう一度お試しください。";
+        if (!silent) {
+          try {
+            notify({
+              title: roomStatus === "waiting" ? "まだ席に戻れません" : "ゲーム進行中です",
+              description,
+              type: "info",
+            });
+          } catch (notifyError) {
+            logDebug("room-page", "notify-seat-request-blocked", notifyError);
+          }
+        } else {
+          logDebug("room-page", "auto-seat-recovery-blocked-recall", {
+            roomId,
+            uid,
+            source,
+            roomStatus,
+            recallOpen,
+          });
+        }
+        return false;
+      }
+
       if (versionMismatchBlocksAccess) {
         if (!silent) {
           try {
             notify({
               title: "最新バージョンへ更新してください",
-              description: "ページを更新してから再度お試しください",
+              description: "ページを更新して最新バージョンをご利用ください",
               type: "warning",
             });
           } catch (notifyError) {
@@ -1514,12 +1568,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
         return false;
       }
+
       setPendingRejoinFlag(source);
       if (!silent) {
         try {
           notify({
-            title: "席への復帰を申請しました",
-            description: "ホストの準備ができ次第、自動で席に戻ります",
+            title: "席へ戻るリクエストを送りました",
+            description: "ホストの承認をお待ちください",
             type: "info",
           });
         } catch (notifyError) {
@@ -1536,13 +1591,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     },
     [
       uid,
-      
       versionMismatchBlocksAccess,
+      spectatorRecallEnabled,
+      roomStatus,
+      recallOpen,
       setPendingRejoinFlag,
       displayName,
       roomId,
-      setForcedExitReason,
-      room?.status,
       leavingRef,
     ]
   );
@@ -1589,6 +1644,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             : Date.now();
         const failure =
           typeof data?.failureReason === "string" ? (data.failureReason as string) : null;
+        if (status === "pending" && !spectatorRecallEnabled) {
+          void cancelSeatRequest(roomId, uid).catch((error) => {
+            logDebug("room-page", "spectator-cancel-pending", { roomId, uid, error });
+          });
+          setSeatRequestState({
+            status: "idle",
+            source: null,
+            requestedAt: null,
+            error: null,
+          });
+          setSeatRequestTimedOut(false);
+          seatRequestSignalsRef.current.accepted = false;
+          seatRequestSignalsRef.current.rejected = false;
+          seatRequestSignalsRef.current.timeout = false;
+          return;
+        }
         setSeatRequestState({
           status,
           source,
@@ -1610,7 +1681,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return () => {
       unsubscribe();
     };
-  }, [ firebaseEnabled, uid, roomId, db]);
+  }, [ firebaseEnabled, uid, roomId, db, spectatorRecallEnabled, roomStatus]);
 
   useEffect(() => {
     // V3: 常に有効
@@ -1812,7 +1883,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (leavingRef.current) {
       return;
     }
-    if (spectatorReason !== "waiting") {
+    if (spectatorReason !== "waiting-open") {
       return;
     }
     if (!spectatorRecallEnabled) {
@@ -2764,7 +2835,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 下の「今すぐ更新」ボタンを押してページを更新してください。
               </Text>
             </>
-          ) : spectatorReason === "waiting" ? (
+          ) : spectatorReason === "waiting-open" ? (
             <>
               <Text
                 fontSize={{ base: "md", md: "lg" }}
@@ -2780,6 +2851,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                 mt={1}
               >
                 少し待つか「席に戻れるか試す」を押して席へ戻ろう！
+              </Text>
+            </>
+          ) : spectatorReason === "waiting-closed" ? (
+            <>
+              <Text
+                fontSize={{ base: "md", md: "lg" }}
+                fontWeight={700}
+                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              >
+                次のゲーム準備中です
+              </Text>
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                color={UI_TOKENS.COLORS.whiteAlpha80}
+                lineHeight={1.7}
+                mt={1}
+              >
+                ホストが席を開放すると戻れるようになります。しばらくお待ちください。
               </Text>
             </>
           ) : (
