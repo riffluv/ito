@@ -77,22 +77,16 @@ export async function startGame(roomId: string) {
     throw new Error("開始できるのは待機中のみです");
   }
   // 新ラウンド開始時は前ラウンドの order/result/deal をクリア
-  const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
-  const updateData: any = {
+  // Spectator V3: ゲーム開始時は観戦者の入席を拒否
+  await updateDoc(ref, {
     status: "clue",
     result: null,
     deal: null,
     order: null,
     mvpVotes: {},
     lastActiveAt: serverTimestamp(),
-  };
-
-  // Spectator V3: ゲーム開始時は観戦者の入席を拒否
-  if (isV3Enabled) {
-    updateData["ui.recallOpen"] = false;
-  }
-
-  await updateDoc(ref, updateData);
+    "ui.recallOpen": false,
+  });
   // プレイヤーの一時状態も同時に初期化（古い連想が残るのを防止）
   try {
     const { collection, getDocs, writeBatch } = await import("firebase/firestore");
