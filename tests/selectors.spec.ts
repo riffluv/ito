@@ -10,8 +10,23 @@ describe("selectors minimal", () => {
       presenceReady: true,
       onlineUids: ["a"],
       playersCount: 1,
+      playerIds: ["a", "b"],
     });
     expect(n).toBe(1); // max(proposal=1, online=1)
+  });
+
+  test("computeSlotCount ignores spectators when presenceReady", () => {
+    const n = computeSlotCount({
+      status: "clue" as any,
+      orderList: [],
+      dealPlayers: ["a", "b"],
+      proposal: [],
+      presenceReady: true,
+      onlineUids: ["a", "spectator-1"],
+      playersCount: 2,
+      playerIds: ["a", "b"],
+    });
+    expect(n).toBe(2); // max(proposal=0, filtered online=1, players=2)
   });
 
   test("computeVisibleProposal filters by eligible in clue", () => {

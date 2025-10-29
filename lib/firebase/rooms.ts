@@ -290,7 +290,7 @@ export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolea
 export async function resetRoomWithPrune(
   roomId: string,
   keepIds: string[] | null | undefined,
-  opts?: { notifyChat?: boolean }
+  opts?: { notifyChat?: boolean; recallSpectators?: boolean }
 ) {
   const roomRef = doc(db!, "rooms", roomId);
   let removedCount: number | null = null;
@@ -327,6 +327,9 @@ export async function resetRoomWithPrune(
       topicBox: null,
       closedAt: null,
       expiresAt: null,
+      "ui.spectatorRecall": opts?.recallSpectators === true,
+      "ui.spectatorRecallAt":
+        opts?.recallSpectators === true ? serverTimestamp() : deleteField(),
     });
   });
 

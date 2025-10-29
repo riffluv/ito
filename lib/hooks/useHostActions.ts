@@ -30,6 +30,8 @@ type QuickStartOptions = {
 type ResetOptions = {
   showFeedback?: boolean;
   playSound?: boolean;
+  includeOnline?: boolean;
+  recallSpectators?: boolean;
 };
 
 type HostActionFeedback =
@@ -223,6 +225,9 @@ export function useHostActions({
     async (options?: ResetOptions) => {
       const showFeedback = options?.showFeedback ?? true;
       const shouldPlaySound = options?.playSound ?? true;
+      const includeOnline = options?.includeOnline ?? true;
+      const recallSpectators =
+        options?.recallSpectators ?? includeOnline;
       setIsResetting(true);
       if (shouldPlaySound) {
         playResetGame();
@@ -239,7 +244,7 @@ export function useHostActions({
             if (typeof id === "string" && id.trim()) keepSet.add(id);
           });
         }
-        if (Array.isArray(onlineUids)) {
+        if (includeOnline && Array.isArray(onlineUids)) {
           onlineUids.forEach((id) => {
             if (typeof id === "string" && id.trim()) keepSet.add(id);
           });
@@ -262,6 +267,7 @@ export function useHostActions({
           roomId,
           keep: String(keep.length),
           prune: shouldPrune ? "1" : "0",
+          recall: recallSpectators ? "1" : "0",
         });
 
         if (shouldPrune && Array.isArray(roundIds) && roundIds.length > 0) {
@@ -293,7 +299,10 @@ export function useHostActions({
           }
         }
 
-        await resetRoomWithPrune(roomId, keep, { notifyChat: true });
+        await resetRoomWithPrune(roomId, keep, {
+          notifyChat: true,
+          recallSpectators,
+        });
         if (showFeedback) {
           onFeedback?.({
             message: "待機状態に戻しました！",
@@ -346,6 +355,8 @@ export function useHostActions({
         await resetGame({
           showFeedback: false,
           playSound,
+          includeOnline: false,
+          recallSpectators: false,
         });
         return await quickStart({
           broadcast: false,

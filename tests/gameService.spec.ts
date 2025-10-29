@@ -112,7 +112,7 @@ test.describe("GameService wrappers", () => {
     (roomsModule as any).resetRoomWithPrune = async (
       roomId: string,
       keepIds: string[] | null | undefined,
-      opts?: { notifyChat?: boolean }
+      opts?: { notifyChat?: boolean; recallSpectators?: boolean }
     ) => {
       calls.push([roomId, keepIds, opts]);
       return undefined;
@@ -147,4 +147,3 @@ test.describe("GameService wrappers", () => {
     }
   });
 });
-
