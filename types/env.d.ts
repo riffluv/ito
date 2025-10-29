@@ -15,5 +15,6 @@ declare namespace NodeJS {
     STRIPE_PRICE_DONATION_LEGEND?: string;
     NEXT_PUBLIC_APP_URL?: string;
     NEXT_PUBLIC_APP_VERSION?: string;
+    NEXT_PUBLIC_SPECTATOR_V3?: string;
   }
 }
