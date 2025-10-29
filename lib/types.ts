@@ -78,6 +78,15 @@ export type RoomDoc = {
   // --- Version Align (PWA update) ---
   updatePhase?: 'required' | 'done' | undefined;
   requiredSwVersion?: string | undefined;
+  // --- UI State (Spectator V3) ---
+  ui?: {
+    /**
+     * 観戦者の入席許可フラグ (Spectator V3)
+     * true: リセット後の waiting 状態のみ（観戦者が「席に戻る」を許可）
+     * false: ゲーム中・次ゲーム準備中など（観戦者の入席を拒否）
+     */
+    recallOpen?: boolean;
+  };
 };
 
 export type PlayerDoc = {

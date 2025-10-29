@@ -316,7 +316,8 @@ export async function resetRoomWithPrune(
       removedCount = null;
     }
     // リセット本体
-    tx.update(roomRef, {
+    const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
+    const updateData: any = {
       status: "waiting",
       result: null,
       deal: null,
@@ -327,10 +328,19 @@ export async function resetRoomWithPrune(
       topicBox: null,
       closedAt: null,
       expiresAt: null,
-      "ui.spectatorRecall": opts?.recallSpectators === true,
-      "ui.spectatorRecallAt":
-        opts?.recallSpectators === true ? serverTimestamp() : deleteField(),
-    });
+    };
+
+    if (isV3Enabled) {
+      // Spectator V3: recallOpen で制御
+      updateData["ui.recallOpen"] = opts?.recallSpectators === true;
+    } else {
+      // 旧実装との互換性維持
+      updateData["ui.spectatorRecall"] = opts?.recallSpectators === true;
+      updateData["ui.spectatorRecallAt"] =
+        opts?.recallSpectators === true ? serverTimestamp() : deleteField();
+    }
+
+    tx.update(roomRef, updateData);
   });
 
   // プレイヤーの連想ワードと状態もクリア（「リセット」ボタン用）

@@ -1275,8 +1275,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     : !joinInProgress && presenceReady && !loading;
   const canAccess =
     (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
-  const shouldShowSpectator =
-    !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
+
+  // Spectator V3: 単純化されたロジック
+  const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
+  const shouldShowSpectatorV3 = isV3Enabled
+    ? uid !== null && !isMember && !isHost && presenceReady && !loading
+    : false;
+
+  const shouldShowSpectator = isV3Enabled
+    ? shouldShowSpectatorV3
+    : !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
   const spectatorDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [spectatorDelayReady, setSpectatorDelayReady] = useState(false);
   const spectatorImmediate =
@@ -1318,7 +1326,34 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       isMember,
       roomStatus: room?.status ?? null,
     });
-  }, [roomId, uid, isSpectatorMode, isMember, room?.status]);
+
+    // Spectator V3: 観戦遷移時のトレースと状態初期化
+    if (isV3Enabled && isSpectatorMode && uid) {
+      traceAction("spectator.enter", {
+        roomId,
+        uid,
+        reason: versionMismatchBlocksAccess
+          ? "version-mismatch"
+          : room?.status === "waiting"
+          ? "waiting"
+          : "mid-game",
+      });
+
+      // 観戦遷移時の状態初期化を厳密化
+      if (optimisticMe) {
+        setOptimisticMe(null);
+      }
+      // 他の残留状態もクリア
+      if (seatRequestState.status !== "idle") {
+        setSeatRequestState({
+          status: "idle",
+          source: null,
+          requestedAt: null,
+          error: null,
+        });
+      }
+    }
+  }, [roomId, uid, isSpectatorMode, isMember, room?.status, isV3Enabled, versionMismatchBlocksAccess]);
   useEffect(() => {
     if (!uid) {
       if (optimisticMe) {

@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import { logWarn } from "@/lib/utils/log";
+import { traceAction } from "@/lib/utils/trace";
 import {
   collection,
   deleteDoc,
@@ -130,24 +131,33 @@ export async function ensureMember({
     const status = room?.status;
     const isHost =
       typeof room?.hostId === "string" && room.hostId.trim() === uid;
-    const recallAllowed =
-      status === "waiting"
-        ? ((room as any)?.ui?.spectatorRecall ?? true) !== false
-        : true;
+
+    // Spectator V3: recallOpen で入席可否を制御
+    const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
+    const recallOpen = isV3Enabled
+      ? room?.ui?.recallOpen ?? false
+      : ((room as any)?.ui?.spectatorRecall ?? true) !== false;
+
+    // ゲーム進行中は入席拒否（ホスト以外）
     if (!isHost && status && status !== "waiting") {
       logWarn("roomService", "ensureMember-blocked-in-progress", {
         roomId,
         uid,
         status,
       });
+      traceAction("join.blocked", { roomId, uid, status, reason: "inProgress" });
       return { joined: false, reason: "inProgress" } as const;
     }
-    if (!isHost && status === "waiting" && !recallAllowed) {
+
+    // waiting でも recallOpen=false なら入席拒否（ホスト以外）
+    if (!isHost && status === "waiting" && !recallOpen) {
       logWarn("roomService", "ensureMember-blocked-recall-disabled", {
         roomId,
         uid,
         status,
+        recallOpen,
       });
+      traceAction("join.blocked", { roomId, uid, status, recallOpen });
       return { joined: false, reason: "inProgress" } as const;
     }
 

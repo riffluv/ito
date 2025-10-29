@@ -17,6 +17,7 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   deleteDoc,
   doc,
+  getDoc,
   updateDoc,
   runTransaction,
   serverTimestamp,
@@ -216,6 +217,25 @@ export async function requestSeat(
     normalizedName.length > 32 ? normalizedName.slice(0, 32) : normalizedName;
 
   traceAction("spectator.requestSeat", { roomId, uid, source });
+
+  // Spectator V3: recallOpen チェック
+  const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
+  if (isV3Enabled) {
+    const roomRef = doc(db!, "rooms", roomId);
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) {
+      throw new Error("部屋が見つかりません");
+    }
+    const room: any = roomSnap.data();
+    const recallOpen = room?.ui?.recallOpen ?? false;
+    const status = room?.status;
+
+    if (status !== "waiting" || !recallOpen) {
+      traceAction("spectator.requestSeat.blocked", { roomId, uid, status, recallOpen });
+      throw new Error("現在は席に戻ることができません");
+    }
+  }
+
   try {
     await setDoc(
       doc(db!, "rooms", roomId, "rejoinRequests", uid),
