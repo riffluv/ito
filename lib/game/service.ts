@@ -219,21 +219,18 @@ export async function requestSeat(
   traceAction("spectator.requestSeat", { roomId, uid, source });
 
   // Spectator V3: recallOpen チェック
-  const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
-  if (isV3Enabled) {
-    const roomRef = doc(db!, "rooms", roomId);
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) {
-      throw new Error("部屋が見つかりません");
-    }
-    const room: any = roomSnap.data();
-    const recallOpen = room?.ui?.recallOpen ?? false;
-    const status = room?.status;
+  const roomRef = doc(db!, "rooms", roomId);
+  const roomSnap = await getDoc(roomRef);
+  if (!roomSnap.exists()) {
+    throw new Error("部屋が見つかりません");
+  }
+  const room: any = roomSnap.data();
+  const recallOpen = room?.ui?.recallOpen ?? false;
+  const status = room?.status;
 
-    if (status !== "waiting" || !recallOpen) {
-      traceAction("spectator.requestSeat.blocked", { roomId, uid, status, recallOpen });
-      throw new Error("現在は席に戻ることができません");
-    }
+  if (status !== "waiting" || !recallOpen) {
+    traceAction("spectator.requestSeat.blocked", { roomId, uid, status, recallOpen });
+    throw new Error("現在は席に戻ることができません");
   }
 
   try {

@@ -1,6 +1,6 @@
 "use client";
 
-const SPECTATOR_ACTIVATION_DELAY_MS = 450;
+// V3: 遅延表示は不要になったため削除
 
 // HUD は初期表示の軽量化を優先し、必要になるまで読み込まない。
 // import { Hud } from "@/components/Hud";
@@ -1013,7 +1013,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastAttemptTs: number;
     statusKey: string | null;
   }>({ lastAttemptTs: 0, statusKey: null });
-  const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const [seatRequestState, setSeatRequestState] = useState<{
     status: "idle" | "pending" | "accepted" | "rejected";
     source: SeatRequestSource | null;
@@ -1026,68 +1025,45 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     rejected: false,
     timeout: false,
   });
-  const seatRequestPending =
-    recallV2Enabled && seatRequestState.status === "pending";
-  const seatRequestAccepted =
-    recallV2Enabled && seatRequestState.status === "accepted";
-  const seatRequestRejected =
-    recallV2Enabled && seatRequestState.status === "rejected";
+  // V3: recallV2はデフォルトで有効
+  const seatRequestPending = seatRequestState.status === "pending";
+  const seatRequestAccepted = seatRequestState.status === "accepted";
+  const seatRequestRejected = seatRequestState.status === "rejected";
   const recallJoinHandledRef = useRef(false);
   const assignNumberRetrySignatureRef = useRef<string | null>(null);
 
 
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
-  const rejoinSessionKey = useMemo(
-    () => (uid ? `pendingRejoin:${roomId}` : null),
-    [uid, roomId]
-  );
   const setPendingRejoinFlag = useCallback(
     (source: SeatRequestSource = "manual") => {
       if (!uid) return;
-      if (recallV2Enabled) {
-        setSeatRequestState({
-          status: "pending",
-          source,
-          requestedAt: Date.now(),
-          error: null,
-        });
-        setSeatRequestTimedOut(false);
-        leavingRef.current = true;
-        void requestSeat(roomId, uid, displayName ?? null, source).catch(
-          (error) => {
-            traceError("spectator.requestSeat.client", error, {
-              roomId,
-              uid,
-              source,
-            });
-            setSeatRequestState({
-              status: "idle",
-              source: null,
-              requestedAt: null,
-              error: error instanceof Error ? error.message : String(error),
-            });
-            leavingRef.current = false;
-          }
-        );
-        return;
-      }
-      if (!rejoinSessionKey) return;
-      if (typeof window === "undefined") return;
-      try {
-        window.sessionStorage.setItem(rejoinSessionKey, uid);
-      } catch (error) {
-        logDebug("room-page", "session-storage-write-failed", error);
-      }
+      setSeatRequestState({
+        status: "pending",
+        source,
+        requestedAt: Date.now(),
+        error: null,
+      });
+      setSeatRequestTimedOut(false);
+      leavingRef.current = true;
+      void requestSeat(roomId, uid, displayName ?? null, source).catch(
+        (error) => {
+          traceError("spectator.requestSeat.client", error, {
+            roomId,
+            uid,
+            source,
+          });
+          setSeatRequestState({
+            status: "idle",
+            source: null,
+            requestedAt: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          leavingRef.current = false;
+        }
+      );
     },
-    [
-      uid,
-      recallV2Enabled,
-      roomId,
-      displayName,
-      rejoinSessionKey,
-      leavingRef,
-    ]
+    [uid, roomId, displayName, leavingRef]
   );
 
   useEffect(() => {
@@ -1270,54 +1246,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     !!optimisticMe &&
     (joinEstablished || seatRequestAccepted) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
-  const spectatorEligibilityReady = forcedExitReason
-    ? true
-    : !joinInProgress && presenceReady && !loading;
-  const canAccess =
-    (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
 
-  // Spectator V3: 単純化されたロジック
-  const isV3Enabled = process.env.NEXT_PUBLIC_SPECTATOR_V3 === "1";
-  const shouldShowSpectatorV3 = isV3Enabled
-    ? uid !== null && !isMember && !isHost && presenceReady && !loading
-    : false;
-
-  const shouldShowSpectator = isV3Enabled
-    ? shouldShowSpectatorV3
-    : !canAccess || versionMismatchBlocksAccess || !!forcedExitReason;
-  const spectatorDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [spectatorDelayReady, setSpectatorDelayReady] = useState(false);
-  const spectatorImmediate =
-    versionMismatchBlocksAccess || forcedExitReason !== null;
-  useEffect(() => {
-    if (spectatorDelayRef.current !== null) {
-      clearTimeout(spectatorDelayRef.current);
-      spectatorDelayRef.current = null;
-    }
-    if (!shouldShowSpectator) {
-      setSpectatorDelayReady(false);
-      return;
-    }
-    if (spectatorImmediate) {
-      setSpectatorDelayReady(true);
-      return;
-    }
-    setSpectatorDelayReady(false);
-    spectatorDelayRef.current = setTimeout(() => {
-      spectatorDelayRef.current = null;
-      setSpectatorDelayReady(true);
-    }, SPECTATOR_ACTIVATION_DELAY_MS);
-    return () => {
-      if (spectatorDelayRef.current !== null) {
-        clearTimeout(spectatorDelayRef.current);
-        spectatorDelayRef.current = null;
-      }
-    };
-  }, [shouldShowSpectator, spectatorImmediate]);
-  const isSpectatorMode =
-    spectatorEligibilityReady &&
-    shouldShowSpectator &&
-    (spectatorImmediate || spectatorDelayReady);
+  // Spectator V3: シンプルな観戦判定
+  const shouldShowSpectator =
+    uid !== null && !isMember && !isHost && presenceReady && !loading;
+  const isSpectatorMode = shouldShowSpectator;
+  const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
     traceAction("spectator.mode", {
       roomId,
@@ -1328,7 +1262,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     });
 
     // Spectator V3: 観戦遷移時のトレースと状態初期化
-    if (isV3Enabled && isSpectatorMode && uid) {
+    if (isSpectatorMode && uid) {
       traceAction("spectator.enter", {
         roomId,
         uid,
@@ -1342,6 +1276,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       // 観戦遷移時の状態初期化を厳密化
       if (optimisticMe) {
         setOptimisticMe(null);
+  const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
       }
       // 他の残留状態もクリア
       if (seatRequestState.status !== "idle") {
@@ -1353,7 +1288,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         });
       }
     }
-  }, [roomId, uid, isSpectatorMode, isMember, room?.status, isV3Enabled, versionMismatchBlocksAccess]);
+  }, [roomId, uid, isSpectatorMode, isMember, room?.status, versionMismatchBlocksAccess]);
   useEffect(() => {
     if (!uid) {
       if (optimisticMe) {
@@ -1431,11 +1366,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   })();
   const spectatorReason = isSpectatorMode ? rawSpectatorReason : null;
   const waitingToRejoin = room?.status === "waiting";
-  const spectatorRecallEnabled =
-    ((room as any)?.ui?.spectatorRecall ?? true) === true;
-  const seatRequestButtonDisabled = recallV2Enabled
-    ? versionMismatchBlocksAccess || seatRequestPending || seatRequestAccepted
-    : !waitingToRejoin || versionMismatchBlocksAccess;
+  const spectatorRecallEnabled = room?.ui?.recallOpen ?? false;
+  const seatRequestButtonDisabled =
+    versionMismatchBlocksAccess || seatRequestPending || seatRequestAccepted;
   const spectatorEnteredRef = useRef(false);
   useEffect(() => {
     if (!isSpectatorMode) {
@@ -1456,20 +1389,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     seatRequestSignalsRef.current.rejected = false;
     seatRequestSignalsRef.current.timeout = false;
     leavingRef.current = false;
-    if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
-      try {
-        const current = window.sessionStorage.getItem(rejoinSessionKey);
-        if (!current || current === uid) {
-          window.sessionStorage.removeItem(rejoinSessionKey);
-        }
-      } catch (error) {
-        logDebug("room-page", "spectator-session-clear-failed", error);
-      }
-    }
   }, [
     isSpectatorMode,
-    recallV2Enabled,
-    rejoinSessionKey,
     uid,
     setSeatRequestState,
     setSeatRequestTimedOut,
@@ -1547,7 +1468,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     canAccess,
     loading,
     authLoading,
-    rejoinSessionKey,
+    
+    rejoinSessionKey: null, // V3
     redirectGuard,
     lastKnownHostId,
     leavingRef,
@@ -1572,65 +1494,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }) => {
       if (!uid) return false;
 
-      if (recallV2Enabled) {
-        if (versionMismatchBlocksAccess) {
-          if (!silent) {
-            try {
-              notify({
-                title: "最新バージョンへ更新してください",
-                description: "ページを更新してから再度お試しください",
-                type: "warning",
-              });
-            } catch (notifyError) {
-              logDebug("room-page", "notify-version-mismatch-retry", notifyError);
-            }
-          } else {
-            logDebug("room-page", "auto-seat-recovery-blocked-version-mismatch", {
-              roomId,
-              uid,
-            });
-          }
-          return false;
-        }
-        setPendingRejoinFlag(source);
-        if (!silent) {
-          try {
-            notify({
-              title: "席への復帰を申請しました",
-              description: "ホストの準備ができ次第、自動で席に戻ります",
-              type: "info",
-            });
-          } catch (notifyError) {
-            logDebug("room-page", "notify-seat-request", notifyError);
-          }
-        } else {
-          logDebug("room-page", "auto-seat-request-issued", {
-            roomId,
-            uid,
-            source,
-          });
-        }
-        return true;
-      }
-      if (leavingRef.current) {
-        if (room?.status === "waiting") {
-          leavingRef.current = false;
-        } else {
-          if (!silent) {
-            logDebug("room-page", "seat-recovery-blocked-leaving", {
-              roomId,
-              uid,
-            });
-          }
-          return false;
-        }
-      }
+      // V3: 常にrecallV2方式を使用
       if (versionMismatchBlocksAccess) {
         if (!silent) {
           try {
             notify({
-              title: "最新バージョンに更新してください",
-              description: "ページを更新してから再参加してください",
+              title: "最新バージョンへ更新してください",
+              description: "ページを更新してから再度お試しください",
               type: "warning",
             });
           } catch (notifyError) {
@@ -1644,83 +1514,29 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
         return false;
       }
-
       setPendingRejoinFlag(source);
-
-      try {
-        const normalizedDisplayName =
-          typeof displayName === "string" && displayName.trim().length > 0
-            ? displayName.trim()
-            : null;
-        await joinRoomFully({
+      if (!silent) {
+        try {
+          notify({
+            title: "席への復帰を申請しました",
+            description: "ホストの準備ができ次第、自動で席に戻ります",
+            type: "info",
+          });
+        } catch (notifyError) {
+          logDebug("room-page", "notify-seat-request", notifyError);
+        }
+      } else {
+        logDebug("room-page", "auto-seat-request-issued", {
           roomId,
           uid,
-          displayName: normalizedDisplayName,
-          notifyChat: false,
+          source,
         });
-
-        forcedExitScheduledRef.current = false;
-        forcedExitRecoveryPendingRef.current = false;
-        setForcedExitReason(null);
-
-        if (silent) {
-          logDebug("room-page", "auto-seat-recovery-success", { roomId, uid });
-        } else {
-          try {
-            notify({
-              title: "\u5e2d\u3092\u53d6\u308a\u76f4\u3057\u307e\u3057\u305f",
-              description: "\u307f\u3093\u306a\u306e\u30ab\u30fc\u30c9\u304c\u914d\u308a\u76f4\u3055\u308c\u308b\u307e\u3067\u5f85\u3061\u307e\u3057\u3087\u3046",
-              type: "success",
-            });
-          } catch (notifyError) {
-            logDebug("room-page", "notify-force-exit-retry-success", notifyError);
-          }
-        }
-        return true;
-      } catch (error) {
-        forcedExitRecoveryPendingRef.current = true;
-        const code = getRoomServiceErrorCode(error);
-        const isInProgress = code === "ROOM_IN_PROGRESS";
-
-        if (!isInProgress) {
-          logError(
-            "room-page",
-            silent ? "auto-seat-recovery-error" : "forced-exit-retry-join",
-            error
-          );
-        } else if (silent) {
-          logDebug("room-page", "auto-seat-recovery-in-progress", {
-            roomId,
-            uid,
-          });
-        }
-
-        if (!silent) {
-          const fallbackDescription =
-            code && error instanceof Error && error.message
-              ? error.message
-              : "\u5c11\u3057\u6642\u9593\u3092\u304a\u3044\u3066\u304b\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044";
-
-          try {
-            notify({
-              title: isInProgress
-                ? "\u307e\u3060\u30b2\u30fc\u30e0\u304c\u9032\u884c\u4e2d\u3067\u3059"
-                : "再参加に失敗しました",
-              description: isInProgress
-                ? "\u30db\u30b9\u30c8\u304c\u30ea\u30bb\u30c3\u30c8\u3057\u305f\u3089\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044"
-                : fallbackDescription,
-              type: isInProgress ? "info" : "error",
-            });
-          } catch (notifyError) {
-            logDebug("room-page", "notify-force-exit-retry-failed", notifyError);
-          }
-        }
         return false;
       }
     },
     [
       uid,
-      recallV2Enabled,
+      
       versionMismatchBlocksAccess,
       setPendingRejoinFlag,
       displayName,
@@ -1740,7 +1556,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [performSeatRecovery]);
 
   useEffect(() => {
-    if (!recallV2Enabled) return;
+    // V3: 常に有効
     if (!firebaseEnabled) return;
     if (!uid) return;
     if (!db) return;
@@ -1794,10 +1610,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return () => {
       unsubscribe();
     };
-  }, [recallV2Enabled, firebaseEnabled, uid, roomId, db]);
+  }, [ firebaseEnabled, uid, roomId, db]);
 
   useEffect(() => {
-    if (!recallV2Enabled) return;
+    // V3: 常に有効
     if (seatRequestState.status !== "pending" || !seatRequestState.requestedAt) {
       setSeatRequestTimedOut(false);
       seatRequestSignalsRef.current.timeout = false;
@@ -1826,10 +1642,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [recallV2Enabled, seatRequestState.status, seatRequestState.requestedAt, roomId, uid]);
+  }, [ seatRequestState.status, seatRequestState.requestedAt, roomId, uid]);
 
   useEffect(() => {
-    if (!recallV2Enabled) return;
+    // V3: 常に有効
     if (seatRequestAccepted) {
       if (!seatRequestSignalsRef.current.accepted) {
         seatRequestSignalsRef.current.accepted = true;
@@ -1859,7 +1675,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       seatRequestSignalsRef.current.rejected = false;
     }
   }, [
-    recallV2Enabled,
+    
     seatRequestAccepted,
     seatRequestRejected,
     roomId,
@@ -1870,13 +1686,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     setForcedExitReason,
   ]);
   useEffect(() => {
-    if (!recallV2Enabled) {
+    if (false) {
       recallJoinHandledRef.current = false;
       return;
     }
     const canHandle =
       seatRequestAccepted ||
-      (recallV2Enabled && isMember && !isSpectatorMode && !!room);
+      (isMember && !isSpectatorMode && !!room);
     if (!canHandle) {
       recallJoinHandledRef.current = false;
       return;
@@ -1937,7 +1753,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     })();
   }, [
-    recallV2Enabled,
+    
     seatRequestAccepted,
     isMember,
     isSpectatorMode,
@@ -2006,7 +1822,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (versionMismatchBlocksAccess) {
       return;
     }
-    if (recallV2Enabled && (seatRequestPending || seatRequestAccepted)) {
+    if ((seatRequestPending || seatRequestAccepted)) {
       return;
     }
     if (!uid) {
@@ -2047,7 +1863,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     isSpectatorMode,
     spectatorReason,
     versionMismatchBlocksAccess,
-    recallV2Enabled,
+    
     seatRequestPending,
     seatRequestAccepted,
     spectatorRecallEnabled,
@@ -2283,13 +2099,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
 
     const clearSessionFlags = () => {
-      try {
-        if (rejoinSessionKey && typeof window !== "undefined") {
-          window.sessionStorage.removeItem(rejoinSessionKey);
-        }
-      } catch (error) {
-        logDebug("room-page", "clear-session-storage-failed", error);
-      }
+      // V3: sessionStorage は不要になったため空実装
     };
 
     const performLeave = async (token: string | null) => {
@@ -2389,7 +2199,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
     leavingRef,
     user,
-    rejoinSessionKey,
+    
     roomId,
     detachNow,
     displayName,
