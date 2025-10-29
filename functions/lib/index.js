@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestCreate = exports.pruneOldEvents = exports.onPlayerCreated = exports.purgeOrphanRooms = exports.onPlayerDeleted = exports.purgeChatOnRoundStart = exports.pruneIdleRooms = exports.presenceCleanup = exports.cleanupGhostRooms = exports.pruneOldChat = exports.cleanupExpiredRooms = exports.onPresenceWrite = exports.onPlayerUpdate = void 0;
+exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestUpdate = exports.onRejoinRequestCreate = exports.pruneOldEvents = exports.onPlayerCreated = exports.purgeOrphanRooms = exports.onPlayerDeleted = exports.purgeChatOnRoundStart = exports.pruneIdleRooms = exports.presenceCleanup = exports.cleanupGhostRooms = exports.pruneOldChat = exports.cleanupExpiredRooms = exports.onPresenceWrite = exports.onPlayerUpdate = void 0;
 const presence_1 = require("@/lib/constants/presence");
 const roomActions_1 = require("@/lib/server/roomActions");
 const systemMessages_1 = require("@/lib/server/systemMessages");
@@ -767,4 +767,5 @@ exports.pruneOldEvents = functions.pubsub
 });
 var rejoin_1 = require("./rejoin");
 Object.defineProperty(exports, "onRejoinRequestCreate", { enumerable: true, get: function () { return rejoin_1.onRejoinRequestCreate; } });
+Object.defineProperty(exports, "onRejoinRequestUpdate", { enumerable: true, get: function () { return rejoin_1.onRejoinRequestUpdate; } });
 Object.defineProperty(exports, "onRoomWaitingProcessRejoins", { enumerable: true, get: function () { return rejoin_1.onRoomWaitingProcessRejoins; } });

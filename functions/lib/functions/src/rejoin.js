@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestCreate = void 0;
+exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestUpdate = exports.onRejoinRequestCreate = void 0;
 const utils_1 = require("@/lib/utils");
 const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
@@ -204,6 +204,27 @@ exports.onRejoinRequestCreate = functions.firestore
     const uid = context.params.uid;
     const result = await handleRejoinRequest(roomId, uid, "create");
     logger.debug("rejoin.onCreate.result", { roomId, uid, result });
+});
+exports.onRejoinRequestUpdate = functions.firestore
+    .document("rooms/{roomId}/rejoinRequests/{uid}")
+    .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!after) {
+        return;
+    }
+    const prevStatus = before?.status ?? "pending";
+    const nextStatus = after.status ?? "pending";
+    if (nextStatus !== "pending") {
+        return;
+    }
+    if (prevStatus === "pending") {
+        return;
+    }
+    const roomId = context.params.roomId;
+    const uid = context.params.uid;
+    const result = await handleRejoinRequest(roomId, uid, "update");
+    logger.debug("rejoin.onUpdate.result", { roomId, uid, result, prevStatus });
 });
 exports.onRoomWaitingProcessRejoins = functions.firestore
     .document("rooms/{roomId}")

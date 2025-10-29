@@ -1,4 +1,4 @@
-import { getAvatarByOrder, AVATAR_LIST } from "@/lib/utils";
+import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
@@ -22,13 +22,14 @@ type AcceptOutcome =
   | "pending"
   | "missing";
 
+type RejoinTrigger = "create" | "update" | "roomWaiting";
+
 const ACCEPT_MAX_ATTEMPTS = 3;
 const ACCEPT_BACKOFF_MS = [0, 200, 800];
 
 const logger = functions.logger ?? console;
 
-const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function normalizeName(name: unknown): string {
   if (typeof name !== "string") return "名無し";
@@ -99,9 +100,10 @@ async function acceptPendingRequest(
         joinedAt: serverTs,
       });
     } else {
-      const updates: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> = {
-        lastSeen: serverTs,
-      };
+      const updates: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> =
+        {
+          lastSeen: serverTs,
+        };
       if (!playerSnap.get("uid")) {
         updates.uid = uid;
       }
@@ -116,9 +118,10 @@ async function acceptPendingRequest(
       }
     }
 
-    const roomUpdates: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> = {
-      lastActiveAt: serverTs,
-    };
+    const roomUpdates: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> =
+      {
+        lastActiveAt: serverTs,
+      };
     const currentDeal = roomData?.deal;
     let totalPlayers: number | null = null;
     if (currentDeal && Array.isArray(currentDeal.players)) {
@@ -150,9 +153,13 @@ async function acceptPendingRequest(
 async function handleRejoinRequest(
   roomId: string,
   uid: string,
-  trigger: "create" | "roomWaiting"
+  trigger: RejoinTrigger
 ): Promise<AcceptOutcome> {
-  const requestRef = db.collection("rooms").doc(roomId).collection("rejoinRequests").doc(uid);
+  const requestRef = db
+    .collection("rooms")
+    .doc(roomId)
+    .collection("rejoinRequests")
+    .doc(uid);
   const requestSnap = await requestRef.get();
   if (!requestSnap.exists) {
     return "missing";
@@ -189,16 +196,19 @@ async function handleRejoinRequest(
         error,
       });
     }
-    const delay = ACCEPT_BACKOFF_MS[Math.min(attempt + 1, ACCEPT_BACKOFF_MS.length - 1)];
+    const delay =
+      ACCEPT_BACKOFF_MS[Math.min(attempt + 1, ACCEPT_BACKOFF_MS.length - 1)];
     if (delay > 0) {
       await sleep(delay);
     }
   }
 
   const failureReason =
-    lastError instanceof Error ? lastError.message : lastError
-      ? String(lastError)
-      : "unknown";
+    lastError instanceof Error
+      ? lastError.message
+      : lastError
+        ? String(lastError)
+        : "unknown";
 
   await requestRef.update({
     status: "rejected",
@@ -219,11 +229,40 @@ export const onRejoinRequestCreate = functions.firestore
     logger.debug("rejoin.onCreate.result", { roomId, uid, result });
   });
 
+export const onRejoinRequestUpdate = functions.firestore
+  .document("rooms/{roomId}/rejoinRequests/{uid}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data() as RejoinRequestDoc | undefined;
+    const after = change.after.data() as RejoinRequestDoc | undefined;
+    if (!after) {
+      return;
+    }
+
+    const prevStatus = before?.status ?? "pending";
+    const nextStatus = after.status ?? "pending";
+    if (nextStatus !== "pending") {
+      return;
+    }
+    if (prevStatus === "pending") {
+      return;
+    }
+
+    const roomId = context.params.roomId as string;
+    const uid = context.params.uid as string;
+
+    const result = await handleRejoinRequest(roomId, uid, "update");
+    logger.debug("rejoin.onUpdate.result", { roomId, uid, result, prevStatus });
+  });
+
 export const onRoomWaitingProcessRejoins = functions.firestore
   .document("rooms/{roomId}")
   .onUpdate(async (change, context) => {
-    const before = change.before.data() as FirebaseFirestore.DocumentData | undefined;
-    const after = change.after.data() as FirebaseFirestore.DocumentData | undefined;
+    const before = change.before.data() as
+      | FirebaseFirestore.DocumentData
+      | undefined;
+    const after = change.after.data() as
+      | FirebaseFirestore.DocumentData
+      | undefined;
     if (!before || !after) {
       return;
     }
@@ -254,4 +293,3 @@ export const onRoomWaitingProcessRejoins = functions.firestore
       }
     }
   });
-

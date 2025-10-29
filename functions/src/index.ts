@@ -99,7 +99,10 @@ export const onPlayerUpdate = functions.firestore
     try {
       await recalcRoomCounts(roomId);
     } catch (err) {
-      console.error("Failed to refresh room statistics after player update", err);
+      console.error(
+        "Failed to refresh room statistics after player update",
+        err
+      );
     }
   });
 
@@ -159,7 +162,11 @@ export const onPresenceWrite = functions.database
 
       // 完全に切断されたのでノードを掃除し、部屋から退室させる
       await userRef.remove().catch((err) => {
-        console.warn("Failed to remove user from room presence", { roomId, uid, err });
+        console.warn("Failed to remove user from room presence", {
+          roomId,
+          uid,
+          err,
+        });
       });
 
       try {
@@ -496,7 +503,10 @@ export const pruneIdleRooms = functions.pubsub
             });
           }
         } catch (err) {
-          console.warn("Failed to check presence activity for room", { roomId, err });
+          console.warn("Failed to check presence activity for room", {
+            roomId,
+            err,
+          });
         }
       }
 
@@ -515,7 +525,10 @@ export const pruneIdleRooms = functions.pubsub
           continue;
         }
       } catch (err) {
-        console.warn("Failed to query recent players for room", { roomId, err });
+        console.warn("Failed to query recent players for room", {
+          roomId,
+          err,
+        });
         continue;
       }
 
@@ -523,7 +536,10 @@ export const pruneIdleRooms = functions.pubsub
       try {
         playersSnap = await roomDoc.ref.collection("players").get();
       } catch (err) {
-        console.warn("Failed to read players while pruning idle room", { roomId, err });
+        console.warn("Failed to read players while pruning idle room", {
+          roomId,
+          err,
+        });
         continue;
       }
 
@@ -655,7 +671,10 @@ export const onPlayerDeleted = functions.firestore
     try {
       await recalcRoomCounts(ctx.params.roomId as string);
     } catch (err) {
-      console.error("Failed to recalculate room counts after player deletion", err);
+      console.error(
+        "Failed to recalculate room counts after player deletion",
+        err
+      );
     }
     return null;
   });
@@ -758,4 +777,8 @@ export const pruneOldEvents = functions.pubsub
     return null;
   });
 
-export { onRejoinRequestCreate, onRoomWaitingProcessRejoins } from "./rejoin";
+export {
+  onRejoinRequestCreate,
+  onRejoinRequestUpdate,
+  onRoomWaitingProcessRejoins,
+} from "./rejoin";
