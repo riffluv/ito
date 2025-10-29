@@ -133,7 +133,8 @@ export async function ensureMember({
       typeof room?.hostId === "string" && room.hostId.trim() === uid;
 
     // Spectator V3: recallOpen で入席可否を制御
-    const recallOpen = room?.ui?.recallOpen ?? false;
+    // 互換性のため、undefined は "開放中" とみなす（初期waitingでの入席可）
+    const recallOpen = room?.ui?.recallOpen ?? true;
 
     // ゲーム進行中は入席拒否（ホスト以外）
     if (!isHost && status && status !== "waiting") {
