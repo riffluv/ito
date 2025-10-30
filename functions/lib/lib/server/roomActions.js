@@ -429,6 +429,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 updates.order = null;
                 updates.result = null;
                 updates.lastActiveAt = serverNow;
+                updates["ui.recallOpen"] = true;
             }
             const playerInputs = (0, HostManager_1.buildHostPlayerInputsFromSnapshots)({
                 docs: playerDocs,

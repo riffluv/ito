@@ -638,6 +638,7 @@ exports.onPlayerDeleted = functions.firestore
                 closedAt: admin.firestore.FieldValue.serverTimestamp(),
                 expiresAt: admin.firestore.Timestamp.fromDate(expires),
                 lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+                "ui.recallOpen": true,
             });
         }
         else {

@@ -505,6 +505,7 @@ export async function leaveRoomServer(
         updates.order = null;
         updates.result = null;
         updates.lastActiveAt = serverNow;
+        updates["ui.recallOpen"] = true;
       }
 
       const playerInputs = buildHostPlayerInputsFromSnapshots({

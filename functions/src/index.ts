@@ -649,6 +649,7 @@ export const onPlayerDeleted = functions.firestore
           closedAt: admin.firestore.FieldValue.serverTimestamp(),
           expiresAt: admin.firestore.Timestamp.fromDate(expires),
           lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+          "ui.recallOpen": true,
         });
       } else {
         // ホストが消えた場合のフォールバック: 先頭の参加者をホストに
