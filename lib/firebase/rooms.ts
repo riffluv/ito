@@ -2,6 +2,7 @@ import { sendSystemMessage } from "@/lib/firebase/chat";
 import { auth, db } from "@/lib/firebase/client";
 import { presenceSupported } from "@/lib/firebase/presence";
 import { logWarn } from "@/lib/utils/log";
+import { traceAction } from "@/lib/utils/trace";
 import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
@@ -168,7 +169,31 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
       if (data?.hostId === userId) {
         updates.hostId = "";
         updates.hostName = deleteField();
-        updates["ui.recallOpen"] = true;
+        const dealPlayers = Array.isArray(data?.deal?.players)
+          ? (data.deal.players as string[])
+          : null;
+        const orderList = Array.isArray(data?.order?.list)
+          ? (data.order.list as string[])
+          : null;
+        const updatesDealPlayers =
+          updates.deal && Array.isArray((updates.deal as any).players)
+            ? ((updates.deal as any).players as string[]).length
+            : null;
+        const remainingDeal =
+          updatesDealPlayers !== null
+            ? updatesDealPlayers
+            : dealPlayers
+            ? dealPlayers.filter((pid) => pid !== userId).length
+            : null;
+        const remainingOrder = orderList
+          ? orderList.filter((pid) => pid !== userId).length
+          : null;
+        const shouldUnlockRecall =
+          remainingDeal === 0 ||
+          (remainingDeal === null && remainingOrder === 0);
+        if (shouldUnlockRecall) {
+          updates["ui.recallOpen"] = true;
+        }
       }
 
       if (Object.keys(updates).length > 0) {
@@ -294,6 +319,7 @@ export async function resetRoomWithPrune(
   opts?: { notifyChat?: boolean; recallSpectators?: boolean }
 ) {
   const roomRef = doc(db!, "rooms", roomId);
+  const recallSpectators = opts?.recallSpectators === true;
   let removedCount: number | null = null;
   let keptCount: number | null = null;
   let prevTotal: number | null = null;
@@ -328,8 +354,13 @@ export async function resetRoomWithPrune(
       topicBox: null,
       closedAt: null,
       expiresAt: null,
-      "ui.recallOpen": opts?.recallSpectators === true,
+      "ui.recallOpen": recallSpectators,
     });
+  });
+  traceAction("ui.recallOpen.set", {
+    roomId,
+    value: recallSpectators ? "1" : "0",
+    reason: recallSpectators ? "reset-open" : "reset-closed",
   });
 
   // プレイヤーの連想ワードと状態もクリア（「リセット」ボタン用）

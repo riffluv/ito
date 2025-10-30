@@ -25,6 +25,51 @@ type LeaveRoomClueContext = {
   remainingCount: number;
 };
 
+type WaitingResetOptions = {
+  recallOpen?: boolean;
+  resetRound?: boolean;
+  clearTopic?: boolean;
+  closedAt?: any;
+  expiresAt?: any;
+};
+
+export function composeWaitingResetPayload(
+  options?: WaitingResetOptions
+): Record<string, any> {
+  const payload: Record<string, any> = {
+    status: "waiting",
+    result: null,
+    deal: null,
+    order: null,
+  };
+
+  if (options?.resetRound) {
+    payload.round = 0;
+  }
+
+  if (options?.clearTopic) {
+    payload.topic = null;
+    payload.topicOptions = null;
+    payload.topicBox = null;
+  }
+
+  if (options && "closedAt" in options) {
+    payload.closedAt = options.closedAt;
+  }
+
+  if (options && "expiresAt" in options) {
+    payload.expiresAt = options.expiresAt;
+  }
+
+  if (options?.recallOpen !== undefined) {
+    payload["ui.recallOpen"] = options.recallOpen;
+  } else {
+    payload["ui.recallOpen"] = true;
+  }
+
+  return payload;
+}
+
 function applyCluePhaseAdjustments({
   room,
   updates,
@@ -179,20 +224,14 @@ async function resetRoomToWaiting(roomId: string) {
   const roomRef = db.collection("rooms").doc(roomId);
   const snap = await roomRef.get();
   if (!snap.exists) return;
-  await roomRef
-    .update({
-      status: "waiting",
-      result: null,
-      deal: null,
-      order: null,
-      round: 0,
-      topic: null,
-      topicOptions: null,
-      topicBox: null,
-      closedAt: null,
-      expiresAt: null,
-    })
-    .catch(() => void 0);
+  const payload = composeWaitingResetPayload({
+    recallOpen: true,
+    resetRound: true,
+    clearTopic: true,
+    closedAt: null,
+    expiresAt: null,
+  });
+  await roomRef.update(payload).catch(() => void 0);
 
   try {
     const playersSnap = await roomRef.collection("players").get();
@@ -500,12 +539,15 @@ export async function leaveRoomServer(
         delete updates["order.failed"];
         delete updates["order.failedAt"];
         delete updates["order.decidedAt"];
-        updates.status = "waiting";
-        updates.deal = null;
-        updates.order = null;
-        updates.result = null;
+        Object.assign(
+          updates,
+          composeWaitingResetPayload({ recallOpen: true })
+        );
         updates.lastActiveAt = serverNow;
-        updates["ui.recallOpen"] = true;
+        logDebug("rooms", "recall-open-reset", {
+          roomId,
+          reason: "empty-room-after-leave",
+        });
       }
 
       const playerInputs = buildHostPlayerInputsFromSnapshots({
