@@ -1264,8 +1264,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
 
   // Spectator V3: シンプルな観戦判定
-  const shouldShowSpectator =
-    uid !== null && !isMember && !isHost && presenceReady && !loading;
+  const isJoiningOrRetrying =
+    joinStatus !== "idle" && joinStatus !== "joined";
+
+const shouldShowSpectator =
+  uid !== null &&
+  !isHost &&
+  !isMember &&
+  !hasOptimisticSeat &&
+  !isJoiningOrRetrying &&
+  !seatRequestPending &&
+  !loading;
   const isSpectatorMode = shouldShowSpectator;
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
@@ -1899,7 +1908,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!uid) {
       return;
     }
-    if (joinStatus === "joining" || joinStatus === "retrying") {
+    const isJoiningOrRetrying = joinStatus !== "idle" && joinStatus !== "joined";
+    if (isJoiningOrRetrying) {
       return;
     }
 
