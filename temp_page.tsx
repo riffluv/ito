@@ -16,7 +16,6 @@ import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
 
 import { lazy, Suspense } from "react";
-import { keyframes } from "@emotion/react";
 const SettingsModal = lazy(() => import("@/components/SettingsModal"));
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
@@ -74,7 +73,7 @@ import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
 } from "@/lib/utils/roomPassword";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
+import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
@@ -94,21 +93,6 @@ const ROOM_CORE_ASSETS = [
   "/images/hanepen2.webp",
   "/images/backgrounds/hd2d/bg1.png",
 ] as const;
-
-const rejoinTextPulse = keyframes`
-  0% {
-    opacity: 0.6;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-1.5px);
-  }
-  100% {
-    opacity: 0.6;
-    transform: translateY(0);
-  }
-`;
 
 const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
   ssr: false,
@@ -3107,34 +3091,6 @@ const shouldShowSpectator =
     </Box>
   );
 
-  const showRejoinOverlay =
-    (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
-  const rejoinOverlayNode = showRejoinOverlay ? (
-    <Box
-      position="fixed"
-      bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
-      left="50%"
-      transform="translateX(-50%)"
-      zIndex={54}
-      css={{
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          bottom: "clamp(100px, 15vh, 180px)",
-        },
-      }}
-    >
-      <Text
-        fontSize="sm"
-        fontWeight="bold"
-        color="rgba(255,255,255,0.95)"
-        textAlign="center"
-        pointerEvents="none"
-        animation={`${rejoinTextPulse} 1.7s ease-in-out infinite`}
-      >
-        ゲームに参加中...
-      </Text>
-    </Box>
-  ) : null;
-
   const joinStatusMessage =
     joinStatus === "retrying"
       ? "再接続を試行しています..."
@@ -3217,7 +3173,6 @@ const shouldShowSpectator =
   return (
     <>
       {joinStatusBanner}
-      {rejoinOverlayNode}
       {safeUpdateBannerNode}
       {versionMismatchOverlay}
       <RoomNotifyBridge roomId={roomId} />
@@ -3380,3 +3335,4 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
