@@ -125,6 +125,21 @@ const orangeGlowNext = keyframes`
   }
 `;
 
+const subtleTextPulse = keyframes`
+  0% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+`;
+
 const TYPING_TAGS = new Set(["input", "textarea", "select"]);
 
 const isTypingFocus = (target: EventTarget | null): boolean => {
@@ -614,28 +629,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               ゲーム開始
             </AppButton>
           ) : (
-            <Box
-              px="18px"
-              py="14px"
-              minW="196px"
-              display="flex"
-              alignItems="center"
-              gap="10px"
-              border="1px solid rgba(200,200,255,0.28)"
-              borderRadius="14px"
-              background="linear-gradient(145deg, rgba(28,36,60,0.92), rgba(20,24,36,0.88))"
-              boxShadow="0 10px 24px rgba(0,0,0,0.45)"
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="rgba(255,255,255,0.95)"
+              textAlign="left"
+              animation={`${subtleTextPulse} 1.6s ease-in-out infinite`}
             >
-              <Spinner size="sm" color="rgba(255,255,255,0.9)" />
-              <Text
-                fontSize="sm"
-                fontWeight="bold"
-                color="rgba(255,255,255,0.88)"
-                textAlign="left"
-              >
-                {hostClaimMessage}
-              </Text>
-            </Box>
+              {hostClaimMessage}
+            </Text>
           )}
         </Box>
       )}
