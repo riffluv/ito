@@ -29,3 +29,11 @@ test("composeWaitingResetPayload honors options", () => {
   expect(payload.closedAt).toBe("CLOSED");
   expect(payload.expiresAt).toBe("EXPIRES");
 });
+
+test("composeWaitingResetPayload keeps recallOpen true when explicitly requested", () => {
+  const payload = composeWaitingResetPayload({ recallOpen: true });
+  expect(payload.status).toBe("waiting");
+  expect(payload["ui.recallOpen"]).toBe(true);
+  expect(payload).not.toHaveProperty("round");
+  expect(payload).not.toHaveProperty("topic");
+});
