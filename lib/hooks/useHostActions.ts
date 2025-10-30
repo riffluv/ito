@@ -296,13 +296,20 @@ export function useHostActions({
             } catch {
               // prune failures are non-fatal
             }
-          }
         }
+      }
 
-        await resetRoomWithPrune(roomId, keep, {
-          notifyChat: true,
-          recallSpectators,
-        });
+      notify({
+        id: toastIds.gameReset(roomId),
+        title: "待機状態に戻しています…",
+        type: "info",
+        duration: 2000,
+      });
+
+      await resetRoomWithPrune(roomId, keep, {
+        notifyChat: true,
+        recallSpectators,
+      });
         if (showFeedback) {
           onFeedback?.({
             message: "待機状態に戻しました！",
