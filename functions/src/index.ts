@@ -641,6 +641,7 @@ export const onPlayerDeleted = functions.firestore
         // 最後の1人が抜けた → ルームを初期化し、クローズ＋有効期限を設定
         const expires = new Date(Date.now() + 3 * 60 * 1000); // 3分
         const serverNow = admin.firestore.FieldValue.serverTimestamp();
+        // NOTE: /api/rooms/[roomId]/reset が正規ルート。Functions では自動解放の補助として同等の初期化を行う。
         const payload = composeWaitingResetPayload({
           recallOpen: true,
           resetRound: true,

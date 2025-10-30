@@ -170,6 +170,7 @@ async function resetRoomToWaiting(roomId) {
     const snap = await roomRef.get();
     if (!snap.exists)
         return;
+    // NOTE: /api/rooms/[roomId]/reset が正規ルート。サーバーアクションのフォールバックでも同一ペイロードを適用する。
     const payload = composeWaitingResetPayload({
         recallOpen: true,
         resetRound: true,

@@ -318,50 +318,164 @@ export async function resetRoomWithPrune(
   keepIds: string[] | null | undefined,
   opts?: { notifyChat?: boolean; recallSpectators?: boolean }
 ) {
+  const recallSpectators =
+    typeof opts?.recallSpectators === "boolean" ? opts.recallSpectators : false;
+  const keepArr = Array.isArray(keepIds) ? keepIds : [];
+  const keepSet = new Set(keepArr);
   const roomRef = doc(db!, "rooms", roomId);
-  const recallSpectators = opts?.recallSpectators === true;
+
   let removedCount: number | null = null;
-  let keptCount: number | null = null;
+  let keptCount: number | null = keepArr.length;
   let prevTotal: number | null = null;
-  await runTransaction(db!, async (tx) => {
-    const snap = await tx.get(roomRef);
-    if (!snap.exists()) return;
-    const room: any = snap.data();
+
+  const deriveStats = (room: any) => {
+    removedCount = null;
+    keptCount = keepArr.length;
+    prevTotal = null;
     const prevRound: string[] | null = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[])
       : null;
-    const keepArr = Array.isArray(keepIds) ? keepIds : [];
     if (prevRound && prevRound.length > 0) {
       prevTotal = prevRound.length;
-      const keep = new Set(keepArr);
-      keptCount = prevRound.filter((id) => keep.has(id)).length;
-      removedCount = prevTotal - keptCount;
-    } else {
-      // 前ラウンドが存在しない（waiting中など）の場合は、在席数のみを表示用に保持
-      prevTotal = null;
-      keptCount = keepArr.length;
-      removedCount = null;
+      keptCount = prevRound.filter((id) => keepSet.has(id)).length;
+      const diff = prevTotal - keptCount;
+      removedCount = diff >= 0 ? diff : 0;
     }
-    // リセット本体
-    tx.update(roomRef, {
-      status: "waiting",
-      result: null,
-      deal: null,
-      order: null,
-      round: 0,
-      topic: null,
-      topicOptions: null,
-      topicBox: null,
-      closedAt: null,
-      expiresAt: null,
-      "ui.recallOpen": recallSpectators,
+  };
+
+  try {
+    const initialSnap = await getDoc(roomRef);
+    if (initialSnap.exists()) {
+      deriveStats(initialSnap.data());
+    }
+  } catch {
+    // 読み取り失敗時は fallback 後に再計算される
+  }
+
+  let apiSuccess = false;
+  let fallbackReason: string | null = null;
+
+  const markFallback = (reason: string) => {
+    if (!fallbackReason) {
+      fallbackReason = reason;
+      traceAction("resetRoomWithPrune.fallback", { roomId, reason });
+    }
+  };
+
+  const currentUser = auth?.currentUser ?? null;
+
+  const obtainToken = async (forceRefresh: boolean): Promise<string | null> => {
+    if (!currentUser) return null;
+    try {
+      const raw = await currentUser.getIdToken(forceRefresh);
+      return raw ?? null;
+    } catch (error) {
+      logWarn(
+        "rooms",
+        forceRefresh
+          ? "reset-room-token-refresh-failed"
+          : "reset-room-token-fetch-failed",
+        error
+      );
+      return null;
+    }
+  };
+
+  const postReset = async (token: string): Promise<Response | null> => {
+    try {
+      return await fetch(`/api/rooms/${roomId}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, recallSpectators }),
+        keepalive: true,
+      });
+    } catch (error) {
+      logWarn("rooms", "reset-room-api-network-failed", error);
+      markFallback("network");
+      return null;
+    }
+  };
+
+  if (!currentUser) {
+    markFallback("auth-missing");
+  } else {
+    let token = await obtainToken(false);
+    if (!token) {
+      token = await obtainToken(true);
+    }
+    if (!token) {
+      markFallback("auth-token");
+    } else {
+      let response = await postReset(token);
+
+      if (response && response.status === 401) {
+        const refreshed = await obtainToken(true);
+        if (refreshed) {
+          token = refreshed;
+          response = await postReset(refreshed);
+        } else {
+          markFallback("auth-token");
+        }
+      }
+
+      if (response && response.ok) {
+        apiSuccess = true;
+      } else if (!response && fallbackReason) {
+        // ネットワーク系は fallback へ移行
+      } else if (response) {
+        let detail: any = null;
+        try {
+          detail = await response.json();
+        } catch {}
+        const code =
+          typeof detail?.error === "string" ? detail.error : "reset_failed";
+        throw new Error(code);
+      } else {
+        markFallback("network");
+      }
+    }
+  }
+
+  if (!apiSuccess && fallbackReason) {
+    try {
+      await runTransaction(db!, async (tx) => {
+        const snap = await tx.get(roomRef);
+        if (!snap.exists()) return;
+        const room: any = snap.data();
+        deriveStats(room);
+        tx.update(roomRef, {
+          status: "waiting",
+          result: null,
+          deal: null,
+          order: null,
+          round: 0,
+          topic: null,
+          topicOptions: null,
+          topicBox: null,
+          closedAt: null,
+          expiresAt: null,
+          "ui.recallOpen": recallSpectators,
+        });
+      });
+    } catch (error) {
+      logWarn("rooms", "reset-room-fallback-failed", { roomId, error });
+      throw error;
+    }
+  }
+
+  if (apiSuccess) {
+    traceAction("ui.recallOpen.set", {
+      roomId,
+      value: recallSpectators ? "1" : "0",
+      reason: "api.reset",
     });
-  });
-  traceAction("ui.recallOpen.set", {
-    roomId,
-    value: recallSpectators ? "1" : "0",
-    reason: recallSpectators ? "reset-open" : "reset-closed",
-  });
+  } else if (fallbackReason) {
+    traceAction("ui.recallOpen.set", {
+      roomId,
+      value: recallSpectators ? "1" : "0",
+      reason: "fallback.reset",
+    });
+  }
 
   // プレイヤーの連想ワードと状態もクリア（「リセット」ボタン用）
   try {
