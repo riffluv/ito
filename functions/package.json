@@ -6,8 +6,8 @@
     "node": "20"
   },
   "dependencies": {
-    "firebase-admin": "^12.7.0",
-    "firebase-functions": "5.1",
+    "firebase-admin": "^11.11.0",
+    "firebase-functions": "^4.5.0",
     "isomorphic-dompurify": "^2.27.0",
     "online-ito": "file:..",
     "tsconfig-paths": "^4.2.0"
