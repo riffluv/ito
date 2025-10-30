@@ -1030,10 +1030,44 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     rejected: false,
     timeout: false,
   });
+  const seatAcceptanceHoldTimerRef = useRef<number | null>(null);
+  const [seatAcceptanceHold, setSeatAcceptanceHold] = useState(false);
+  const startSeatAcceptanceHold = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (seatAcceptanceHoldTimerRef.current !== null) {
+      window.clearTimeout(seatAcceptanceHoldTimerRef.current);
+    }
+    setSeatAcceptanceHold(true);
+    seatAcceptanceHoldTimerRef.current = window.setTimeout(() => {
+      setSeatAcceptanceHold(false);
+      seatAcceptanceHoldTimerRef.current = null;
+    }, 30000);
+  }, []);
+  const clearSeatAcceptanceHold = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      seatAcceptanceHoldTimerRef.current !== null
+    ) {
+      window.clearTimeout(seatAcceptanceHoldTimerRef.current);
+    }
+    seatAcceptanceHoldTimerRef.current = null;
+    setSeatAcceptanceHold(false);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (
+        typeof window !== "undefined" &&
+        seatAcceptanceHoldTimerRef.current !== null
+      ) {
+        window.clearTimeout(seatAcceptanceHoldTimerRef.current);
+      }
+    };
+  }, []);
   // V3: recallV2はデフォルトで有効
   const seatRequestPending = seatRequestState.status === "pending";
   const seatRequestAccepted = seatRequestState.status === "accepted";
   const seatRequestRejected = seatRequestState.status === "rejected";
+  const seatAcceptanceActive = seatRequestAccepted || seatAcceptanceHold;
   const recallJoinHandledRef = useRef(false);
   const assignNumberRetrySignatureRef = useRef<string | null>(null);
 
@@ -1053,6 +1087,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         });
         return;
       }
+      clearSeatAcceptanceHold();
       setSeatRequestState({
         status: "pending",
         source,
@@ -1078,7 +1113,16 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           }
         );
     },
-    [uid, roomId, displayName, leavingRef, spectatorRecallEnabled, roomStatus, recallOpen]
+    [
+      uid,
+      roomId,
+      displayName,
+      leavingRef,
+      spectatorRecallEnabled,
+      roomStatus,
+      recallOpen,
+      clearSeatAcceptanceHold,
+    ]
   );
 
   useEffect(() => {
@@ -1259,13 +1303,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const joinEstablished = joinStatus === "joined";
   const hasOptimisticSeat =
     !!optimisticMe &&
-    (joinEstablished || seatRequestAccepted) &&
+    (joinEstablished || seatAcceptanceActive) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
 
 
   // Spectator V3: シンプルな観戦判定
   const isJoiningOrRetrying =
-    joinStatus !== "idle" && joinStatus !== "joined";
+    !seatAcceptanceActive && joinStatus !== "idle" && joinStatus !== "joined";
 
 const shouldShowSpectator =
   uid !== null &&
@@ -1333,7 +1377,7 @@ const shouldShowSpectator =
       return;
     }
     const shouldHoldOptimisticSeat =
-      joinEstablished || seatRequestPending || seatRequestAccepted;
+      joinEstablished || seatRequestPending || seatAcceptanceActive;
     if (!shouldHoldOptimisticSeat) {
       if (optimisticMe) {
         setOptimisticMe(null);
@@ -1368,7 +1412,7 @@ const shouldShowSpectator =
     meFromPlayers,
     joinEstablished,
     seatRequestPending,
-    seatRequestAccepted,
+    seatAcceptanceActive,
     normalizedDisplayName,
   ]);
 
@@ -1393,7 +1437,7 @@ const shouldShowSpectator =
   const seatRequestButtonDisabled =
     versionMismatchBlocksAccess ||
     seatRequestPending ||
-    seatRequestAccepted ||
+    seatAcceptanceActive ||
     !spectatorRecallEnabled;
   const spectatorEnteredRef = useRef(false);
   useEffect(() => {
@@ -1405,6 +1449,7 @@ const shouldShowSpectator =
       return;
     }
     spectatorEnteredRef.current = true;
+    clearSeatAcceptanceHold();
     setSeatRequestState((prev) =>
       prev.status === "idle"
         ? prev
@@ -1432,6 +1477,7 @@ const shouldShowSpectator =
     leavingRef,
     roomId,
     seatRequestState.status,
+    clearSeatAcceptanceHold,
   ]);
 
   useEffect(() => {
@@ -1455,6 +1501,15 @@ const shouldShowSpectator =
       } as PlayerDoc & { id: string };
     });
   }, [seatRequestAccepted, uid, me, normalizedDisplayName]);
+
+  useEffect(() => {
+    if (!seatAcceptanceHold) {
+      return;
+    }
+    if (!uid || isMember) {
+      clearSeatAcceptanceHold();
+    }
+  }, [seatAcceptanceHold, isMember, uid, clearSeatAcceptanceHold]);
 
   useEffect(() => {
     const nextState = {
@@ -1657,6 +1712,7 @@ const shouldShowSpectator =
           void cancelSeatRequest(roomId, uid).catch((error) => {
             logDebug("room-page", "spectator-cancel-pending", { roomId, uid, error });
           });
+          clearSeatAcceptanceHold();
           setSeatRequestState({
             status: "idle",
             source: null,
@@ -1675,6 +1731,27 @@ const shouldShowSpectator =
           requestedAt: created,
           error: failure,
         });
+        if (status === "accepted") {
+          startSeatAcceptanceHold();
+          const baseName = normalizedDisplayName;
+          setOptimisticMe((prev) => {
+            if (prev && prev.id === uid) {
+              return prev;
+            }
+            return {
+              id: uid,
+              name: baseName,
+              avatar: prev?.avatar || "",
+              number: null,
+              clue1: "",
+              ready: false,
+              orderIndex: 0,
+              uid,
+            } as PlayerDoc & { id: string };
+          });
+        } else {
+          clearSeatAcceptanceHold();
+        }
         traceAction("spectator.rejoinRequest.state", {
           roomId,
           uid,
@@ -1690,7 +1767,18 @@ const shouldShowSpectator =
     return () => {
       unsubscribe();
     };
-  }, [ firebaseEnabled, uid, roomId, db, spectatorRecallEnabled, roomStatus]);
+  }, [
+    firebaseEnabled,
+    uid,
+    roomId,
+    db,
+    spectatorRecallEnabled,
+    roomStatus,
+    startSeatAcceptanceHold,
+    clearSeatAcceptanceHold,
+    normalizedDisplayName,
+    setOptimisticMe,
+  ]);
 
   useEffect(() => {
     // V3: 常に有効
@@ -1771,7 +1859,7 @@ const shouldShowSpectator =
       return;
     }
     const canHandle =
-      seatRequestAccepted ||
+      seatAcceptanceActive ||
       (isMember && !isSpectatorMode && !!room);
     if (!canHandle) {
       recallJoinHandledRef.current = false;
@@ -1788,13 +1876,6 @@ const shouldShowSpectator =
 
     (async () => {
       try {
-        await joinRoomFully({
-          roomId,
-          uid,
-          displayName: normalizedDisplayNameForJoin,
-          notifyChat: false,
-        });
-        await assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
         setOptimisticMe((prev) => {
           const baseName =
             normalizedDisplayNameForJoin && normalizedDisplayNameForJoin.length > 0
@@ -1812,13 +1893,14 @@ const shouldShowSpectator =
             id: uid,
             name: baseName,
             avatar: prev?.avatar || "",
-            number: null,
-            clue1: "",
-            ready: false,
-            orderIndex: 0,
+            number: prev?.number ?? null,
+            clue1: prev?.clue1 ?? "",
+            ready: prev?.ready ?? false,
+            orderIndex: prev?.orderIndex ?? 0,
             uid,
           };
         });
+        void assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
         traceAction("presence.reattach.requested", { roomId, uid });
         try {
           await reattachPresence();
@@ -1834,7 +1916,7 @@ const shouldShowSpectator =
     })();
   }, [
     
-    seatRequestAccepted,
+    seatAcceptanceActive,
     isMember,
     isSpectatorMode,
     uid,
@@ -1902,7 +1984,7 @@ const shouldShowSpectator =
     if (versionMismatchBlocksAccess) {
       return;
     }
-    if ((seatRequestPending || seatRequestAccepted)) {
+    if (seatRequestPending || seatAcceptanceActive) {
       return;
     }
     if (!uid) {
@@ -1946,7 +2028,7 @@ const shouldShowSpectator =
     versionMismatchBlocksAccess,
     
     seatRequestPending,
-    seatRequestAccepted,
+    seatAcceptanceActive,
     spectatorRecallEnabled,
     uid,
     joinStatus,
@@ -2975,7 +3057,7 @@ const shouldShowSpectator =
   const showHand =
     !!me &&
     (isMember ||
-      seatRequestAccepted ||
+      seatAcceptanceActive ||
       (uid ? players.some((player) => player.id === uid) : false));
 
   const handAreaNode = (
