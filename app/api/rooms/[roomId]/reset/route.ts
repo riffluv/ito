@@ -12,13 +12,6 @@ type ResetRouteTestOverrides = {
 
 let testOverrides: ResetRouteTestOverrides | null = null;
 
-export function __setTestOverridesForResetRoute(
-  overrides: ResetRouteTestOverrides | null
-) {
-  if (process.env.NODE_ENV !== "test") return;
-  testOverrides = overrides;
-}
-
 function resolveAdminAuth() {
   return testOverrides?.auth ?? getAdminAuth();
 }
@@ -26,6 +19,18 @@ function resolveAdminAuth() {
 function resolveAdminDb() {
   return testOverrides?.db ?? getAdminDb();
 }
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __setResetRouteOverrides:
+    | ((overrides: ResetRouteTestOverrides | null) => void)
+    | undefined;
+}
+
+globalThis.__setResetRouteOverrides = (overrides) => {
+  if (process.env.NODE_ENV !== "test") return;
+  testOverrides = overrides;
+};
 
 export async function POST(
   req: NextRequest,
