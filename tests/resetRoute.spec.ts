@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-  POST,
-  __setTestOverridesForResetRoute,
-} from "../app/api/rooms/[roomId]/reset/route";
+import { POST } from "../app/api/rooms/[roomId]/reset/route";
 
 const ROOM_ID = "room-reset-spec";
 const originalNodeEnv = process.env.NODE_ENV;
@@ -12,12 +9,26 @@ const buildRequest = (body: Record<string, unknown>) =>
     json: async () => body,
   }) as any;
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __setResetRouteOverrides:
+    | ((overrides: Record<string, unknown> | null) => void)
+    | undefined;
+}
+
+const setOverrides = (overrides: Record<string, unknown> | null) => {
+  const setter = globalThis.__setResetRouteOverrides;
+  if (typeof setter === "function") {
+    setter(overrides as any);
+  }
+};
+
 test.beforeEach(() => {
   process.env.NODE_ENV = "test";
 });
 
 test.afterEach(() => {
-  __setTestOverridesForResetRoute(null);
+  setOverrides(null);
 });
 
 test.afterAll(() => {
@@ -26,7 +37,7 @@ test.afterAll(() => {
 
 test.describe("rooms reset API route", () => {
   test("returns 401 when token verification fails", async () => {
-    __setTestOverridesForResetRoute({
+    setOverrides({
       auth: {
         verifyIdToken: async () => {
           throw new Error("bad-token");
@@ -46,7 +57,7 @@ test.describe("rooms reset API route", () => {
 
   test("updates recallOpen=true via compose payload", async () => {
     let updatedPayload: any = null;
-    __setTestOverridesForResetRoute({
+    setOverrides({
       auth: {
         verifyIdToken: async () => ({ uid: "host-1", admin: false }),
       } as any,
@@ -85,7 +96,7 @@ test.describe("rooms reset API route", () => {
 
   test("updates recallOpen=false when option is false", async () => {
     let updatedPayload: any = null;
-    __setTestOverridesForResetRoute({
+    setOverrides({
       auth: {
         verifyIdToken: async () => ({ uid: "host-1", admin: false }),
       } as any,
