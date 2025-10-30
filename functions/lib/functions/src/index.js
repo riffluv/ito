@@ -178,7 +178,11 @@ exports.onPresenceWrite = functions.database
         }
         // 完全に切断されたのでノードを掃除し、部屋から退室させる
         await userRef.remove().catch((err) => {
-            console.warn("Failed to remove user from room presence", { roomId, uid, err });
+            console.warn("Failed to remove user from room presence", {
+                roomId,
+                uid,
+                err,
+            });
         });
         try {
             const playerDoc = await db
@@ -503,7 +507,10 @@ exports.pruneIdleRooms = functions.pubsub
                 }
             }
             catch (err) {
-                console.warn("Failed to check presence activity for room", { roomId, err });
+                console.warn("Failed to check presence activity for room", {
+                    roomId,
+                    err,
+                });
             }
         }
         if (presenceActive) {
@@ -521,7 +528,10 @@ exports.pruneIdleRooms = functions.pubsub
             }
         }
         catch (err) {
-            console.warn("Failed to query recent players for room", { roomId, err });
+            console.warn("Failed to query recent players for room", {
+                roomId,
+                err,
+            });
             continue;
         }
         let playersSnap;
@@ -529,7 +539,10 @@ exports.pruneIdleRooms = functions.pubsub
             playersSnap = await roomDoc.ref.collection("players").get();
         }
         catch (err) {
-            console.warn("Failed to read players while pruning idle room", { roomId, err });
+            console.warn("Failed to read players while pruning idle room", {
+                roomId,
+                err,
+            });
             continue;
         }
         if (playersSnap.empty) {
@@ -626,18 +639,21 @@ exports.onPlayerDeleted = functions.firestore
         if (players.empty) {
             // 最後の1人が抜けた → ルームを初期化し、クローズ＋有効期限を設定
             const expires = new Date(Date.now() + 3 * 60 * 1000); // 3分
-            await roomRef.update({
-                status: "waiting",
-                result: null,
-                deal: null,
-                order: null,
-                round: 0,
-                topic: null,
-                topicOptions: null,
-                topicBox: null,
-                closedAt: admin.firestore.FieldValue.serverTimestamp(),
+            const serverNow = admin.firestore.FieldValue.serverTimestamp();
+            const payload = (0, roomActions_1.composeWaitingResetPayload)({
+                recallOpen: true,
+                resetRound: true,
+                clearTopic: true,
+                closedAt: serverNow,
                 expiresAt: admin.firestore.Timestamp.fromDate(expires),
-                lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            await roomRef.update({
+                ...payload,
+                lastActiveAt: serverNow,
+            });
+            functions.logger.debug("room recall reopened after purge", {
+                roomId: ctx.params.roomId,
+                reason: "empty-room",
             });
         }
         else {

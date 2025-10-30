@@ -14,6 +14,7 @@ import {
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
 import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import { traceAction } from "@/lib/utils/trace";
 import {
   collection,
   doc,
@@ -78,6 +79,11 @@ export async function startGame(roomId: string) {
   }
   // 新ラウンド開始時は前ラウンドの order/result/deal をクリア
   // Spectator V3: ゲーム開始時は観戦者の入席を拒否
+  traceAction("ui.recallOpen.set", {
+    roomId,
+    value: "0",
+    reason: "startGame",
+  });
   await updateDoc(ref, {
     status: "clue",
     result: null,

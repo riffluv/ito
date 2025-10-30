@@ -3,7 +3,10 @@ import {
   PRESENCE_CLEANUP_INTERVAL_MS,
   PRESENCE_STALE_MS,
 } from "@/lib/constants/presence";
-import { leaveRoomServer } from "@/lib/server/roomActions";
+import {
+  leaveRoomServer,
+  composeWaitingResetPayload,
+} from "@/lib/server/roomActions";
 import { systemMessagePlayerJoined } from "@/lib/server/systemMessages";
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
@@ -637,19 +640,21 @@ export const onPlayerDeleted = functions.firestore
       if (players.empty) {
         // 最後の1人が抜けた → ルームを初期化し、クローズ＋有効期限を設定
         const expires = new Date(Date.now() + 3 * 60 * 1000); // 3分
-        await roomRef.update({
-          status: "waiting",
-          result: null,
-          deal: null,
-          order: null,
-          round: 0,
-          topic: null,
-          topicOptions: null,
-          topicBox: null,
-          closedAt: admin.firestore.FieldValue.serverTimestamp(),
+        const serverNow = admin.firestore.FieldValue.serverTimestamp();
+        const payload = composeWaitingResetPayload({
+          recallOpen: true,
+          resetRound: true,
+          clearTopic: true,
+          closedAt: serverNow,
           expiresAt: admin.firestore.Timestamp.fromDate(expires),
-          lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
-          "ui.recallOpen": true,
+        });
+        await roomRef.update({
+          ...payload,
+          lastActiveAt: serverNow,
+        });
+        functions.logger.debug("room recall reopened after purge", {
+          roomId: ctx.params.roomId,
+          reason: "empty-room",
         });
       } else {
         // ホストが消えた場合のフォールバック: 先頭の参加者をホストに

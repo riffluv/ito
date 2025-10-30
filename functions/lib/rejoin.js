@@ -49,9 +49,13 @@ function normalizeName(name) {
     return trimmed.length > 0 ? trimmed : "名無し";
 }
 async function acceptPendingRequest(roomId, uid) {
-    const roomRef = db.collection("rooms").doc(roomId);
-    const requestRef = roomRef.collection("rejoinRequests").doc(uid);
+    const requestRef = db
+        .collection("rooms")
+        .doc(roomId)
+        .collection("rejoinRequests")
+        .doc(uid);
     let outcome = "missing";
+    let desiredName = null;
     await db.runTransaction(async (tx) => {
         const requestSnap = await tx.get(requestRef);
         if (!requestSnap.exists) {
@@ -60,6 +64,7 @@ async function acceptPendingRequest(roomId, uid) {
         }
         const request = requestSnap.data();
         const status = request.status ?? "pending";
+        desiredName = normalizeName(request.displayName);
         if (status === "accepted") {
             outcome = "already";
             return;
@@ -68,83 +73,21 @@ async function acceptPendingRequest(roomId, uid) {
             outcome = "rejected";
             return;
         }
-        const roomSnap = await tx.get(roomRef);
-        if (!roomSnap.exists) {
-            outcome = "missing";
-            return;
-        }
-        const roomData = roomSnap.data();
-        const playerRef = roomRef.collection("players").doc(uid);
-        const playerSnap = await tx.get(playerRef);
         const serverTs = admin.firestore.FieldValue.serverTimestamp();
-        const desiredName = normalizeName(request.displayName);
-        if (!playerSnap.exists) {
-            const playersSnap = await tx.get(roomRef.collection("players"));
-            const usedAvatars = new Set();
-            playersSnap.forEach((doc) => {
-                const avatar = doc.get("avatar");
-                if (typeof avatar === "string") {
-                    usedAvatars.add(avatar);
-                }
-            });
-            const fallbackAvatar = (0, utils_1.getAvatarByOrder)(playersSnap.size);
-            const avatar = utils_1.AVATAR_LIST.find((item) => !usedAvatars.has(item)) ?? fallbackAvatar;
-            tx.set(playerRef, {
-                name: desiredName,
-                avatar,
-                number: null,
-                clue1: "",
-                ready: false,
-                orderIndex: 0,
-                uid,
-                lastSeen: serverTs,
-                joinedAt: serverTs,
-            });
-        }
-        else {
-            const updates = {
-                lastSeen: serverTs,
-            };
-            if (!playerSnap.get("uid")) {
-                updates.uid = uid;
-            }
-            if (!playerSnap.get("joinedAt")) {
-                updates.joinedAt = serverTs;
-            }
-            if (playerSnap.get("name") !== desiredName) {
-                updates.name = desiredName;
-            }
-            if (Object.keys(updates).length > 0) {
-                tx.update(playerRef, updates);
-            }
-        }
-        const roomUpdates = {
-            lastActiveAt: serverTs,
-        };
-        const currentDeal = roomData?.deal;
-        let totalPlayers = null;
-        if (currentDeal && Array.isArray(currentDeal.players)) {
-            const uniquePlayers = currentDeal.players.filter((playerId) => typeof playerId === "string");
-            if (!uniquePlayers.includes(uid)) {
-                uniquePlayers.push(uid);
-                roomUpdates["deal.players"] = uniquePlayers;
-            }
-            totalPlayers = uniquePlayers.length;
-        }
-        if (totalPlayers !== null && roomData?.order) {
-            roomUpdates["order.total"] = totalPlayers;
-        }
-        tx.update(roomRef, roomUpdates);
         tx.update(requestRef, {
             status: "accepted",
             acceptedAt: serverTs,
         });
         outcome = "accepted";
     });
-    return outcome;
+    return { outcome, desiredName };
 }
 async function handleRejoinRequest(roomId, uid, trigger) {
-    const requestRef = db.collection("rooms").doc(roomId).collection("rejoinRequests").doc(uid);
+    const requestRef = db
+        .collection("rooms")
+        .doc(roomId)
+        .collection("rejoinRequests")
+        .doc(uid);
     const requestSnap = await requestRef.get();
     if (!requestSnap.exists) {
         return "missing";
@@ -160,8 +103,21 @@ async function handleRejoinRequest(roomId, uid, trigger) {
     let lastError = null;
     for (let attempt = 0; attempt < ACCEPT_MAX_ATTEMPTS; attempt += 1) {
         try {
-            const outcome = await acceptPendingRequest(roomId, uid);
+            const { outcome, desiredName } = await acceptPendingRequest(roomId, uid);
             if (outcome === "accepted" || outcome === "already") {
+                if (outcome === "accepted") {
+                    try {
+                        await finalizeAcceptedRequest(roomId, uid, desiredName);
+                    }
+                    catch (finalizeError) {
+                        logger.error("rejoin.finalize.error", {
+                            roomId,
+                            uid,
+                            trigger,
+                            error: finalizeError,
+                        });
+                    }
+                }
                 return outcome;
             }
             if (outcome === "missing" || outcome === "rejected") {
@@ -186,9 +142,11 @@ async function handleRejoinRequest(roomId, uid, trigger) {
             await sleep(delay);
         }
     }
-    const failureReason = lastError instanceof Error ? lastError.message : lastError
-        ? String(lastError)
-        : "unknown";
+    const failureReason = lastError instanceof Error
+        ? lastError.message
+        : lastError
+            ? String(lastError)
+            : "unknown";
     await requestRef.update({
         status: "rejected",
         rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -196,6 +154,77 @@ async function handleRejoinRequest(roomId, uid, trigger) {
     });
     logger.error("rejoin.accept.gaveup", { roomId, uid, trigger, failureReason });
     return "rejected";
+}
+async function finalizeAcceptedRequest(roomId, uid, desiredName) {
+    const roomRef = db.collection("rooms").doc(roomId);
+    const playerRef = roomRef.collection("players").doc(uid);
+    const normalizedName = normalizeName(desiredName);
+    const serverTs = admin.firestore.FieldValue.serverTimestamp();
+    await db.runTransaction(async (tx) => {
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists) {
+            return;
+        }
+        const roomData = roomSnap.data();
+        const playerSnap = await tx.get(playerRef);
+        if (!playerSnap.exists) {
+            const playersSnap = await tx.get(roomRef.collection("players"));
+            const usedAvatars = new Set();
+            playersSnap.forEach((doc) => {
+                const avatar = doc.get("avatar");
+                if (typeof avatar === "string") {
+                    usedAvatars.add(avatar);
+                }
+            });
+            const fallbackAvatar = (0, utils_1.getAvatarByOrder)(playersSnap.size);
+            const avatar = utils_1.AVATAR_LIST.find((item) => !usedAvatars.has(item)) ?? fallbackAvatar;
+            tx.set(playerRef, {
+                name: normalizedName,
+                avatar,
+                number: null,
+                clue1: "",
+                ready: false,
+                orderIndex: 0,
+                uid,
+                lastSeen: serverTs,
+                joinedAt: serverTs,
+            });
+        }
+        else {
+            const updates = {
+                lastSeen: serverTs,
+            };
+            if (!playerSnap.get("uid")) {
+                updates.uid = uid;
+            }
+            if (!playerSnap.get("joinedAt")) {
+                updates.joinedAt = serverTs;
+            }
+            if (playerSnap.get("name") !== normalizedName) {
+                updates.name = normalizedName;
+            }
+            if (Object.keys(updates).length > 0) {
+                tx.update(playerRef, updates);
+            }
+        }
+        const roomUpdates = {
+            lastActiveAt: serverTs,
+        };
+        const currentDeal = roomData?.deal;
+        let totalPlayers = null;
+        if (currentDeal && Array.isArray(currentDeal.players)) {
+            const uniquePlayers = currentDeal.players.filter((playerId) => typeof playerId === "string");
+            if (!uniquePlayers.includes(uid)) {
+                uniquePlayers.push(uid);
+                roomUpdates["deal.players"] = uniquePlayers;
+            }
+            totalPlayers = uniquePlayers.length;
+        }
+        if (totalPlayers !== null && roomData?.order) {
+            roomUpdates["order.total"] = totalPlayers;
+        }
+        tx.update(roomRef, roomUpdates);
+    });
 }
 exports.onRejoinRequestCreate = functions.firestore
     .document("rooms/{roomId}/rejoinRequests/{uid}")
