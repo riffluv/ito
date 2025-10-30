@@ -168,6 +168,7 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
       if (data?.hostId === userId) {
         updates.hostId = "";
         updates.hostName = deleteField();
+        updates["ui.recallOpen"] = true;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -365,4 +366,3 @@ export async function resetRoomWithPrune(
     } catch {}
   }
 }
-
