@@ -82,6 +82,19 @@ export function sanitizeRoom(input: any): RoomDoc {
       const v = input?.requiredSwVersion;
       return typeof v === 'string' && v ? v : undefined;
     })(),
+    ...((): Partial<Pick<RoomDoc, "ui">> => {
+      const raw = input?.ui;
+      if (!raw || typeof raw !== "object") {
+        return {};
+      }
+      const next: NonNullable<RoomDoc["ui"]> = {};
+      if (raw.recallOpen === true) {
+        next.recallOpen = true;
+      } else if (raw.recallOpen === false) {
+        next.recallOpen = false;
+      }
+      return Object.keys(next).length > 0 ? { ui: next } : {};
+    })(),
   };
 }
 
