@@ -13,6 +13,8 @@ import { setMetric } from "@/lib/utils/metrics";
 export const DROP_OPTIMISTIC_ENABLED =
   process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
 
+const OPTIMISTIC_ROLLBACK_MS = 1200;
+
 type DropOutcome = "success" | "noop" | "error";
 
 interface UseDropHandlerProps {
@@ -47,12 +49,77 @@ export function useDropHandler({
     playInvalidSound,
   });
 
-  const [pending, setPending] = useState<string[]>([]);
+  const [pending, setPending] = useState<(string | null)[]>([]);
   const [isOver, setIsOver] = useState(false);
   const optimisticMode = DROP_OPTIMISTIC_ENABLED;
+  const proposalSignature = useMemo(
+    () =>
+      Array.isArray(_proposal)
+        ? _proposal.map((id) => (typeof id === "string" ? id : "_")).join(",")
+        : "none",
+    [_proposal]
+  );
 
   const pointerUnlockArmedRef = useRef(false);
   const pointerUnlockDoneRef = useRef(false);
+  const latestProposalRef = useRef<string[]>([]);
+  const optimisticEntriesRef = useRef<
+    Map<
+      string,
+      {
+        snapshot: (string | null)[];
+        timer: number | null;
+        targetIndex?: number;
+      }
+    >
+  >(new Map());
+
+  const scheduleOptimisticRollback = useCallback(
+    (pid: string, snapshot: (string | null)[], targetIndex?: number) => {
+      if (!optimisticMode) return;
+      if (typeof window === "undefined") return;
+      const existing = optimisticEntriesRef.current.get(pid);
+      if (existing?.timer) {
+        clearTimeout(existing.timer);
+      }
+      const snapshotCopy = Array.isArray(snapshot) ? snapshot.slice() : [];
+      const timer = window.setTimeout(() => {
+        const latest = latestProposalRef.current;
+        if (latest.includes(pid)) {
+          optimisticEntriesRef.current.delete(pid);
+          return;
+        }
+        setPending(() => snapshotCopy);
+        optimisticEntriesRef.current.delete(pid);
+        traceAction("interaction.drop.rollback", {
+          roomId,
+          playerId: meId,
+          index: typeof targetIndex === "number" ? targetIndex : undefined,
+        });
+        notify({
+          title: "配置を巻き戻しました",
+          description: "サーバーの結果と一致しませんでした。",
+          type: "warning",
+        });
+      }, OPTIMISTIC_ROLLBACK_MS);
+      optimisticEntriesRef.current.set(pid, {
+        snapshot: snapshotCopy,
+        timer,
+        targetIndex,
+      });
+    },
+    [meId, optimisticMode, roomId, setPending]
+  );
+
+  const clearOptimisticEntry = useCallback((pid: string) => {
+    const entry = optimisticEntriesRef.current.get(pid);
+    if (entry?.timer) {
+      clearTimeout(entry.timer);
+    }
+    if (entry) {
+      optimisticEntriesRef.current.delete(pid);
+    }
+  }, []);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER !== "1") return;
@@ -84,15 +151,67 @@ export function useDropHandler({
     };
   }, [roomStatus, soundManager]);
 
+  useEffect(() => {
+    if (Array.isArray(_proposal)) {
+      const sanitized = _proposal.filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      );
+      latestProposalRef.current = sanitized;
+    } else {
+      latestProposalRef.current = [];
+    }
+  }, [proposalSignature]);
+
+  useEffect(() => {
+    if (!optimisticMode) return;
+    if (latestProposalRef.current.length === 0) return;
+    setPending((prev) => {
+      if (prev.length === 0) return prev;
+      const proposalSet = new Set(latestProposalRef.current);
+      let changed = false;
+      const next = prev.slice();
+      for (let idx = 0; idx < next.length; idx += 1) {
+        const value = next[idx];
+        if (typeof value === "string" && proposalSet.has(value)) {
+          next[idx] = null;
+          changed = true;
+          clearOptimisticEntry(value);
+        }
+      }
+      if (!changed) return prev;
+      while (next.length > 0 && next[next.length - 1] == null) {
+        next.pop();
+      }
+      return next;
+    });
+  }, [clearOptimisticEntry, optimisticMode, proposalSignature, setPending]);
+
+  useEffect(() => {
+    return () => {
+      optimisticEntriesRef.current.forEach((entry) => {
+        if (entry.timer) {
+          clearTimeout(entry.timer);
+        }
+      });
+      optimisticEntriesRef.current.clear();
+    };
+  }, []);
+
   const canDropAtPosition = useMemo(() => {
     return (_targetIndex: number) => canDrop;
   }, [canDrop]);
 
   const currentPlaced = useMemo(() => {
     const base = orderList || [];
-    const extra = pending.filter((id) => !base.includes(id));
+    const pendingIds = pending.filter(
+      (id): id is string => typeof id === "string" && id.length > 0
+    );
+    const extra = pendingIds.filter((id) => !base.includes(id));
     return [...base, ...extra];
-  }, [orderList?.join(","), pending.join(",")]);
+  }, [
+    orderList?.join(","),
+    pending.map((id) => id ?? "_").join(","),
+  ]);
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -109,7 +228,7 @@ export function useDropHandler({
         return;
       }
 
-      let previousPending: string[] | null = null;
+      let previousPending: (string | null)[] = [];
       let inserted = false;
       let didPlaySound = false;
       let stageNotifyMarked = false;
@@ -134,6 +253,10 @@ export function useDropHandler({
         inserted = true;
         return [...prev, pid];
       });
+
+      if (inserted) {
+        scheduleOptimisticRollback(pid, previousPending.slice());
+      }
 
       traceAction("interaction.drop.commit", {
         roomId,
@@ -165,10 +288,11 @@ export function useDropHandler({
           }
           if (result === "noop") {
             session.complete("noop");
-            if (inserted && previousPending) {
+            if (inserted) {
               const snapshot = previousPending.slice();
               setPending(() => snapshot);
             }
+            clearOptimisticEntry(pid);
             traceAction("interaction.drop.noop", {
               roomId,
               playerId: meId,
@@ -204,10 +328,11 @@ export function useDropHandler({
             roomId,
             playerId: meId,
           });
-          if (previousPending && inserted) {
+          if (inserted) {
             const snapshot = previousPending.slice();
             setPending(() => snapshot);
           }
+          clearOptimisticEntry(pid);
           playInvalidSound();
           notify({
             title: "配置に失敗しました",
@@ -216,7 +341,16 @@ export function useDropHandler({
           });
         });
     },
-    [ensureCanDrop, meId, optimisticMode, playInvalidSound, playSuccessSound, roomId]
+    [
+      clearOptimisticEntry,
+      ensureCanDrop,
+      meId,
+      optimisticMode,
+      playInvalidSound,
+      playSuccessSound,
+      roomId,
+      scheduleOptimisticRollback,
+    ]
   );
 
 const onDropAtPosition = useCallback(
@@ -234,7 +368,7 @@ const onDropAtPosition = useCallback(
         return;
       }
 
-      let previous: string[] | null = null;
+      let previous: (string | null)[] = [];
       let inserted = false;
       let didPlaySound = false;
       let stageNotifyMarked = false;
@@ -264,6 +398,14 @@ const onDropAtPosition = useCallback(
         inserted = true;
         return next;
       });
+
+      if (inserted) {
+        scheduleOptimisticRollback(
+          pid,
+          previous.slice(),
+          targetIndex
+        );
+      }
 
       traceAction("interaction.drop.commit", {
         roomId,
@@ -303,9 +445,10 @@ const onDropAtPosition = useCallback(
           if (result === "noop") {
             session.complete("noop");
             if (inserted) {
-              const snapshot = previous ? previous.slice() : [];
+              const snapshot = previous.slice();
               setPending(() => snapshot);
             }
+            clearOptimisticEntry(pid);
             traceAction("interaction.drop.noop", {
               roomId,
               playerId: meId,
@@ -352,10 +495,11 @@ const onDropAtPosition = useCallback(
             playerId: meId,
             index: targetIndex,
           });
-          if (previous && inserted) {
+          if (inserted) {
             const snapshot = previous.slice();
             setPending(() => snapshot);
           }
+          clearOptimisticEntry(pid);
           notify({
             title: "配置に失敗しました",
             description: err?.message,
@@ -364,7 +508,16 @@ const onDropAtPosition = useCallback(
           playInvalidSound();
         });
     },
-    [ensureCanDrop, meId, optimisticMode, playInvalidSound, playSuccessSound, roomId]
+    [
+      clearOptimisticEntry,
+      ensureCanDrop,
+      meId,
+      optimisticMode,
+      playInvalidSound,
+      playSuccessSound,
+      roomId,
+      scheduleOptimisticRollback,
+    ]
   );
 
   return {
