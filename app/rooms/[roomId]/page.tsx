@@ -3096,6 +3096,7 @@ const shouldShowSpectator =
           currentTopic={room.topic || null}
           onlineUids={onlineUids}
           roundIds={clueTargetIds}
+          presenceReady={presenceReady}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onLeaveRoom={leaveRoom}
           pop={pop}

@@ -56,6 +56,7 @@ type UseHostActionsOptions = {
   proposal?: string[] | null;
   currentTopic?: string | null;
   onFeedback?: (payload: HostActionFeedback) => void;
+  presenceReady?: boolean;
 };
 
 export function useHostActions({
@@ -73,6 +74,7 @@ export function useHostActions({
   proposal,
   currentTopic,
   onFeedback,
+  presenceReady = false,
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -91,9 +93,27 @@ export function useHostActions({
     return "通常版";
   }, [defaultTopicType]);
 
+  const ensurePresenceReady = useCallback(() => {
+    if (presenceReady) {
+      return true;
+    }
+    traceAction("ui.host.presence.wait", { roomId });
+    notify({
+      id: toastIds.genericInfo(roomId, "presence-wait"),
+      title: "参加者の接続を待っています",
+      description: "全員のオンライン状態が揃うまで数秒お待ちください。",
+      type: "info",
+      duration: 2000,
+    });
+    return false;
+  }, [presenceReady, roomId]);
+
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
+      if (!ensurePresenceReady()) {
+        return false;
+      }
       setQuickStartPending(true);
 
       let effectiveType = effectiveDefaultTopicType;
@@ -218,6 +238,7 @@ export function useHostActions({
       clearAutoStartLock,
       playOrderConfirm,
       roomId,
+      ensurePresenceReady,
     ]
   );
 
@@ -502,6 +523,9 @@ export function useHostActions({
           (roomStatus === "waiting" || customStartPending) &&
           actualResolveMode === "sort-submit"
         ) {
+          if (!ensurePresenceReady()) {
+            return;
+          }
           playOrderConfirm();
           try {
             await startGame(roomId);
@@ -539,6 +563,7 @@ export function useHostActions({
       customStartPending,
       actualResolveMode,
       playOrderConfirm,
+      ensurePresenceReady,
     ]
   );
 
