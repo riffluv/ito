@@ -48,7 +48,7 @@ async function broadcastNotify(
 
 type DealCandidate = { id: string; uid?: string; lastSeen?: any };
 
-const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 60;
+const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 0;
 
 function readProposal(source: unknown): (string | null)[] {
   if (!Array.isArray(source)) return [];
@@ -85,7 +85,8 @@ export function selectDealTargetPlayers(
     const presenceSet = new Set(presenceUids);
     const online = fallbackPool.filter((p) => presenceSet.has(p.id));
     if (online.length > 0) {
-      return online;
+      const others = fallbackPool.filter((p) => !presenceSet.has(p.id));
+      return [...online, ...others];
     }
   }
   return fallbackPool;

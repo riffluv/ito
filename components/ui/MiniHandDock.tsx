@@ -284,6 +284,7 @@ interface MiniHandDockProps {
   // カスタムお題（現在値）
   currentTopic?: string | null;
   hostClaimStatus?: HostClaimStatus;
+  presenceReady?: boolean;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -307,6 +308,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     roundIds,
     currentTopic,
     hostClaimStatus,
+    presenceReady = true,
   } = props;
 
   const hostClaimActive =
@@ -456,6 +458,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     onlineUids,
     proposal,
     currentTopic,
+    presenceReady,
     onFeedback: setInlineFeedback,
   });
 
@@ -622,6 +625,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               size="lg"
               visual="solid"
               onClick={() => quickStart()}
+              disabled={!presenceReady || quickStartPending}
               css={{
                 animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
               }}
@@ -639,6 +643,17 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               {hostClaimMessage}
             </Text>
           )}
+          {isHost && !presenceReady ? (
+            <Text
+              mt={2}
+              fontSize="xs"
+              fontWeight="bold"
+              color="rgba(255,255,255,0.75)"
+              textAlign="center"
+            >
+              参加者の接続を待っています…
+            </Text>
+          ) : null}
         </Box>
       )}
 
