@@ -48,6 +48,29 @@ async function broadcastNotify(
 
 type DealCandidate = { id: string; uid?: string; lastSeen?: any };
 
+const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 60;
+
+function readProposal(source: unknown): (string | null)[] {
+  if (!Array.isArray(source)) return [];
+  return (source as (string | null | undefined)[]).map((value) =>
+    typeof value === "string" && value.length > 0 ? value : null
+  );
+}
+
+function normalizeProposal(
+  values: (string | null | undefined)[],
+  maxCount: number
+): (string | null)[] {
+  if (maxCount <= 0) return [];
+  const limited: (string | null)[] = values.slice(0, maxCount).map((value) =>
+    typeof value === "string" && value.length > 0 ? value : null
+  );
+  while (limited.length > 0 && limited[limited.length - 1] == null) {
+    limited.pop();
+  }
+  return limited;
+}
+
 export function selectDealTargetPlayers(
   candidates: DealCandidate[],
   presenceUids: string[] | null | undefined,
@@ -121,6 +144,8 @@ export async function startGame(roomId: string) {
 
 // ホストがトピック選択後に配札（重複なし）
 export async function dealNumbers(roomId: string): Promise<number> {
+  const startedAt = Date.now();
+  traceAction("deal.start", { roomId });
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: DealCandidate[] = [];
@@ -150,6 +175,11 @@ export async function dealNumbers(roomId: string): Promise<number> {
     deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
     "order.total": ordered.length,
     lastActiveAt: serverTimestamp(),
+  });
+  traceAction("deal.end", {
+    roomId,
+    count: ordered.length,
+    elapsedMs: Math.max(0, Date.now() - startedAt),
   });
   return ordered.length;
 }
@@ -249,88 +279,199 @@ export async function addCardToProposalAtPosition(
   targetIndex: number = -1
 ): Promise<ProposalWriteResult> {
   const roomRef = doc(db!, "rooms", roomId);
-  const playerRef = doc(db!, "rooms", roomId, "players", playerId);
 
-  const runOnce = (attemptIndex: number) =>
-    enqueueFirestoreWrite<ProposalWriteResult>(`proposal:${roomId}`, async () => {
-      return runTransaction(db!, async (tx) => {
-        const roomSnap = await tx.get(roomRef);
-        if (!roomSnap.exists()) throw new Error("room not found");
-        const room: any = roomSnap.data();
-        if (room.status !== "clue") return "noop";
-        if (room?.options?.resolveMode !== "sort-submit") return "noop";
-
-        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-          ? (room.deal.players as string[])
-          : null;
-        if (!roundPlayers || roundPlayers.length === 0) return "missing-deal";
-        if (!roundPlayers.includes(playerId)) return "missing-deal";
-
-        const pSnap = await tx.get(playerRef);
-        if (!pSnap.exists()) throw new Error("player not found");
-        const player: any = pSnap.data();
-        if (typeof player.number !== "number") {
-          return "missing-deal";
-        }
-
-        const maxCount: number = roundPlayers.length;
-        if (maxCount <= 0) return "missing-deal";
-
-        let current: (string | null)[] = Array.isArray(room?.order?.proposal)
-          ? (room.order.proposal as (string | null)[]).map((v) =>
-              typeof v === "string" ? v : null
-            )
-          : [];
-
-        if (current.includes(playerId)) return "noop";
-
-        let next = [...current];
-
-        if (targetIndex === -1) {
-          let placed = false;
-          for (let i = 0; i < Math.max(next.length, maxCount); i += 1) {
-            if (i >= next.length) next.length = i + 1;
-            if (next[i] == null) {
-              next[i] = playerId;
-              placed = true;
-              break;
+  const runOnce = (attemptIndex: number) => {
+    const readTimestamp =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? () => performance.now()
+        : () => Date.now();
+    const enqueuedAt = readTimestamp();
+    return enqueueFirestoreWrite<ProposalWriteResult>(
+      `proposal:${roomId}`,
+      async () => {
+        const dequeuedAt = readTimestamp();
+        const queueWaitMs = Math.max(0, Math.round(dequeuedAt - enqueuedAt));
+        const startedAt = dequeuedAt;
+        const attemptContext = {
+          roomId,
+          playerId,
+          attempt: String(attemptIndex),
+          queueWaitMs,
+        };
+        traceAction("lag.drop.tx.start", attemptContext);
+        let txResult: ProposalWriteResult | "error" | null = null;
+        let detailMetrics:
+          | {
+              roundPlayerCount: number;
+              previousLength: number;
+              normalizedLength: number;
+              nullCount: number;
+              changedSlots: number;
+              finalIndex: number;
+              targetIndex: number;
+              roomGetMs: number;
+              playerGetMs: number;
+              prepareMs: number;
             }
-          }
-          if (!placed) next.push(playerId);
-        } else {
-          const clamped = Math.max(
-            0,
-            Math.min(targetIndex, Math.max(0, maxCount - 1))
-          );
-          if (clamped < next.length) {
-            if (typeof next[clamped] === "string" && next[clamped]) {
-              return "noop";
+          | null = null;
+        try {
+          const result = await runTransaction(db!, async (tx) => {
+            const readStart = readTimestamp();
+            const roomSnap = await tx.get(roomRef);
+            const afterRoomGet = readTimestamp();
+            if (!roomSnap.exists()) throw new Error("room not found");
+            const room: any = roomSnap.data();
+            if (room.status !== "clue") return "noop";
+            if (room?.options?.resolveMode !== "sort-submit") return "noop";
+
+            const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+              ? (room.deal.players as string[])
+              : null;
+            if (!roundPlayers || roundPlayers.length === 0) {
+              traceAction("lag.drop.missingDeal", {
+                roomId,
+                playerId,
+                attempt: String(attemptIndex),
+                reason: "no-round-players",
+              });
+              return "missing-deal";
             }
-          } else {
-            next.length = clamped + 1;
+            if (!roundPlayers.includes(playerId)) {
+              traceAction("lag.drop.missingDeal", {
+                roomId,
+                playerId,
+                attempt: String(attemptIndex),
+                reason: "player-not-in-round",
+              });
+              return "missing-deal";
+            }
+
+            const afterPlayerGet = afterRoomGet;
+
+            const maxCount: number = roundPlayers.length;
+            if (maxCount <= 0) {
+              traceAction("lag.drop.missingDeal", {
+                roomId,
+                playerId,
+                attempt: String(attemptIndex),
+                reason: "invalid-max-count",
+              });
+              return "missing-deal";
+            }
+
+            const current = readProposal(room?.order?.proposal);
+            if (current.includes(playerId)) return "noop";
+
+            let next = [...current];
+
+            if (targetIndex === -1) {
+              let placed = false;
+              const limit = Math.max(next.length, maxCount);
+              for (let i = 0; i < limit; i += 1) {
+                if (i >= next.length) next.length = i + 1;
+                if (next[i] == null) {
+                  next[i] = playerId;
+                  placed = true;
+                  break;
+                }
+              }
+              if (!placed) next.push(playerId);
+            } else {
+              const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
+              if (clamped < next.length) {
+                if (typeof next[clamped] === "string" && next[clamped]) {
+                  return "noop";
+                }
+              } else {
+                next.length = clamped + 1;
+              }
+              next[clamped] = playerId;
+            }
+
+            if (maxCount > 0 && next.length > maxCount) {
+              next.length = maxCount;
+            }
+
+            const normalized = normalizeProposal(next, maxCount);
+            const afterPrepare = readTimestamp();
+
+            let changedSlots = 0;
+            const comparisonLength = Math.max(current.length, normalized.length);
+            for (let idx = 0; idx < comparisonLength; idx += 1) {
+              const before = idx < current.length ? current[idx] : null;
+              const after = idx < normalized.length ? normalized[idx] : null;
+              if (before !== after) {
+                changedSlots += 1;
+              }
+            }
+
+            detailMetrics = {
+              roundPlayerCount: maxCount,
+              previousLength: current.length,
+              normalizedLength: normalized.length,
+              nullCount: normalized.reduce(
+                (acc, value) => (value === null ? acc + 1 : acc),
+                0
+              ),
+              changedSlots,
+              finalIndex: normalized.indexOf(playerId),
+              targetIndex,
+              roomGetMs: Math.max(0, Math.round(afterRoomGet - readStart)),
+              playerGetMs: 0,
+              prepareMs: Math.max(0, Math.round(afterPrepare - afterPlayerGet)),
+            };
+
+            tx.update(roomRef, {
+              "order.proposal": normalized,
+              lastActiveAt: serverTimestamp(),
+            });
+
+            return "ok";
+          });
+          if (detailMetrics) {
+            const {
+              roundPlayerCount,
+              previousLength,
+              normalizedLength,
+              nullCount,
+              changedSlots,
+              finalIndex,
+              targetIndex: detailTargetIndex,
+              roomGetMs,
+              playerGetMs,
+              prepareMs,
+            } = detailMetrics;
+            traceAction("lag.drop.tx.detail", {
+              ...attemptContext,
+              roundPlayerCount,
+              previousLength,
+              normalizedLength,
+              nullCount,
+              changedSlots,
+              finalIndex,
+              targetIndex: detailTargetIndex,
+              roomGetMs,
+              playerGetMs,
+              prepareMs,
+            });
           }
-          next[clamped] = playerId;
+          txResult = result;
+          return result;
+        } catch (error) {
+          txResult = "error";
+          throw error;
+        } finally {
+          const elapsedMs = Math.max(0, Math.round(readTimestamp() - startedAt));
+          traceAction("lag.drop.tx.finish", {
+            ...attemptContext,
+            result: txResult ?? "unknown",
+            elapsedMs,
+          });
         }
-
-        if (maxCount > 0) {
-          if (next.length > maxCount) next.length = maxCount;
-          if (next.length < maxCount) {
-            const pad = new Array(maxCount - next.length).fill(null);
-            next = [...next, ...pad];
-          }
-        }
-
-        const normalized = next.map((v) => (v === undefined ? null : v));
-
-        tx.update(roomRef, {
-          "order.proposal": normalized,
-          order: { ...(room.order || {}), proposal: normalized },
-          lastActiveAt: serverTimestamp(),
-        });
-
-        return "ok";
-      });
-    });
+      },
+      { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
+    );
+  };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const result = await runOnce(attempt);
@@ -340,12 +481,27 @@ export async function addCardToProposalAtPosition(
 
     if (result === "missing-deal") {
       if (attempt === 0) {
+        traceAction("lag.drop.dealNumbers.triggered", {
+          roomId,
+          playerId,
+          attempt: String(attempt),
+        });
         await dealNumbers(roomId).catch(() => {});
       } else if (attempt === 1) {
+        traceAction("lag.drop.retry.wait", {
+          roomId,
+          playerId,
+          attempt: String(attempt),
+          delayMs: "200",
+        });
         await new Promise<void>((resolve) => {
           setTimeout(resolve, 200);
         });
       } else {
+        traceAction("lag.drop.missingDeal.exhausted", {
+          roomId,
+          playerId,
+        });
         throw new Error("カードの提出準備が整っていません");
       }
       continue;
@@ -361,50 +517,35 @@ export async function addCardToProposalAtPosition(
 // proposal からカードを取り除き、待機エリアへ戻す
 export async function removeCardFromProposal(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
-  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
-    await runTransaction(db!, async (tx) => {
-      const roomSnap = await tx.get(roomRef);
-      if (!roomSnap.exists()) throw new Error("room not found");
-      const room: any = roomSnap.data();
-      if (room.status !== "clue") return;
-      if (room?.options?.resolveMode !== "sort-submit") return;
-      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-        ? (room.deal.players as string[])
-        : null;
-      if (!roundPlayers || roundPlayers.length === 0) return;
-      if (!roundPlayers.includes(playerId)) return;
-
-      const maxCount: number = roundPlayers.length;
-      let current: (string | null)[] = [];
-      if (Array.isArray(room?.order?.proposal)) {
-        current = (room.order?.proposal as (string | null)[]).map((v) =>
-          typeof v === "string" ? v : null
-        );
-      }
-
-      if (maxCount > 0) {
-        if (current.length < maxCount) {
-          current = [
-            ...current,
-            ...new Array(maxCount - current.length).fill(null),
-          ];
-        } else if (current.length > maxCount) {
-          current.length = maxCount;
-        }
-      }
-
-      const targetIndex = current.findIndex((v) => v === playerId);
-      if (targetIndex < 0) return;
-
-      current[targetIndex] = null;
-
-      tx.update(roomRef, {
-        "order.proposal": current,
-        order: { ...(room.order || {}), proposal: current },
-        lastActiveAt: serverTimestamp(),
+  await enqueueFirestoreWrite(
+    `proposal:${roomId}`,
+    async () => {
+      await runTransaction(db!, async (tx) => {
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists()) throw new Error("room not found");
+        const room: any = roomSnap.data();
+        if (room.status !== "clue") return;
+        if (room?.options?.resolveMode !== "sort-submit") return;
+        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+          ? (room.deal.players as string[])
+          : null;
+        if (!roundPlayers || roundPlayers.length === 0) return;
+        if (!roundPlayers.includes(playerId)) return;
+        const maxCount: number = roundPlayers.length;
+        if (maxCount <= 0) return;
+        const current = readProposal(room?.order?.proposal);
+        const targetIndex = current.findIndex((v) => v === playerId);
+        if (targetIndex < 0) return;
+        current[targetIndex] = null;
+        const normalized = normalizeProposal(current, maxCount);
+        tx.update(roomRef, {
+          "order.proposal": normalized,
+          lastActiveAt: serverTimestamp(),
+        });
       });
-    });
-  });
+    },
+    { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
+  );
 }
 export async function moveCardInProposalToPosition(
   roomId: string,
@@ -412,58 +553,47 @@ export async function moveCardInProposalToPosition(
   targetIndex: number
 ) {
   const roomRef = doc(db!, "rooms", roomId);
-  await enqueueFirestoreWrite(`proposal:${roomId}`, async () => {
-    await runTransaction(db!, async (tx) => {
-      const roomSnap = await tx.get(roomRef);
-      if (!roomSnap.exists()) throw new Error("room not found");
-      const room: any = roomSnap.data();
-      if (room.status !== "clue") return;
-      if (room?.options?.resolveMode !== "sort-submit") return;
-      const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-        ? (room.deal.players as string[])
-        : null;
-      if (!roundPlayers || roundPlayers.length === 0) return;
-      if (!roundPlayers.includes(playerId)) return;
-      const current: any[] = (room?.order?.proposal || []).slice();
-      const maxCount: number = Array.isArray(room?.deal?.players)
-        ? (room.deal.players as string[]).length
-        : 0;
-      if (maxCount <= 0) return;
-
-      const fromIdx = current.findIndex((v) => v === playerId);
-      if (fromIdx < 0) return; // まだ出ていない
-
-      const clamped = Math.max(
-        0,
-        Math.min(targetIndex, Math.max(0, maxCount - 1))
-      );
-
-      if (current[clamped] && current[clamped] !== playerId) {
-        const targetCard = current[clamped];
-        current[clamped] = playerId;
-        current[fromIdx] = targetCard;
-      } else {
-        current[fromIdx] = null;
-        if (clamped >= current.length) (current as any).length = clamped + 1;
-        current[clamped] = playerId;
-      }
-
-      if (maxCount > 0) {
-        if (current.length > maxCount) current.length = maxCount;
-        if (current.length < maxCount) {
-          const pad = new Array(maxCount - current.length).fill(null);
-          current.push(...pad);
+  await enqueueFirestoreWrite(
+    `proposal:${roomId}`,
+    async () => {
+      await runTransaction(db!, async (tx) => {
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists()) throw new Error("room not found");
+        const room: any = roomSnap.data();
+        if (room.status !== "clue") return;
+        if (room?.options?.resolveMode !== "sort-submit") return;
+        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+          ? (room.deal.players as string[])
+          : null;
+        if (!roundPlayers || roundPlayers.length === 0) return;
+        if (!roundPlayers.includes(playerId)) return;
+        const maxCount: number = roundPlayers.length;
+        if (maxCount <= 0) return;
+        const current = readProposal(room?.order?.proposal);
+        const fromIdx = current.findIndex((v) => v === playerId);
+        if (fromIdx < 0) return;
+        const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
+        const targetValue = current[clamped];
+        if (typeof targetValue === "string" && targetValue !== playerId) {
+          current[clamped] = playerId;
+          current[fromIdx] = targetValue;
+        } else {
+          current[fromIdx] = null;
+          if (clamped >= current.length) current.length = clamped + 1;
+          current[clamped] = playerId;
         }
-      }
-
-      const normalized = current.map((v) => (v === undefined ? null : v));
-      tx.update(roomRef, {
-        "order.proposal": normalized,
-        order: { ...(room.order || {}), proposal: normalized },
-        lastActiveAt: serverTimestamp(),
+        if (maxCount > 0 && current.length > maxCount) {
+          current.length = maxCount;
+        }
+        const normalized = normalizeProposal(current, maxCount);
+        tx.update(roomRef, {
+          "order.proposal": normalized,
+          lastActiveAt: serverTimestamp(),
+        });
       });
-    });
-  });
+    },
+    { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
+  );
 }
 
 // ドロップ時にクライアントが即時にカードを場に出して判定する（clue フェーズ用）

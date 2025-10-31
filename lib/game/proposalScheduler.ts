@@ -1,3 +1,6 @@
+import { recordMetricDistribution } from "@/lib/perf/metricsClient";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 import {
   addCardToProposalAtPosition,
   moveCardInProposalToPosition,
@@ -14,10 +17,15 @@ interface PendingMutation {
   resolvers: Array<(value: unknown) => void>;
   rejecters: Array<(reason: unknown) => void>;
   timer: ReturnType<typeof setTimeout> | null;
+  enqueuedAt: number;
 }
 
-const FLUSH_DELAY_MS = 48;
+const FLUSH_DELAY_MS = 12;
 const pending = new Map<string, PendingMutation>();
+const getNow =
+  typeof performance !== "undefined" && typeof performance.now === "function"
+    ? () => performance.now()
+    : () => Date.now();
 
 const mutationKey = (roomId: string, playerId: string) => `${roomId}:${playerId}`;
 
@@ -30,6 +38,22 @@ const flushMutation = async (key: string) => {
     clearTimeout(queued.timer);
     queued.timer = null;
   }
+
+  const queueWaitMs = Math.max(0, Math.round(getNow() - queued.enqueuedAt));
+  recordMetricDistribution("client.drop.queueWaitMs", queueWaitMs, {
+    kind: queued.kind,
+  });
+  setMetric(
+    "client.drop",
+    `${queued.kind}.queueWaitMs`,
+    Number(queueWaitMs.toFixed(2))
+  );
+  traceAction("interaction.drop.queueWait", {
+    roomId: queued.roomId,
+    playerId: queued.playerId,
+    kind: queued.kind,
+    queueWaitMs,
+  });
 
   try {
     let result: unknown;
@@ -71,6 +95,7 @@ const queueMutation = <T>(
       existing.targetIndex = targetIndex;
       existing.resolvers.push(resolve as (value: unknown) => void);
       existing.rejecters.push(reject);
+      existing.enqueuedAt = getNow();
       existing.timer = setTimeout(() => {
         void flushMutation(key);
       }, FLUSH_DELAY_MS);
@@ -84,6 +109,7 @@ const queueMutation = <T>(
       targetIndex,
       resolvers: [resolve as (value: unknown) => void],
       rejecters: [reject],
+      enqueuedAt: getNow(),
       timer: setTimeout(() => {
         void flushMutation(key);
       }, FLUSH_DELAY_MS),

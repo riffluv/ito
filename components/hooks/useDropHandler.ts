@@ -8,8 +8,10 @@ import { useSoundManager } from "@/lib/audio/SoundProvider";
 import type { SoundId } from "@/lib/audio/types";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { recordMetricDistribution } from "@/lib/perf/metricsClient";
+import { setMetric } from "@/lib/utils/metrics";
 
-const DROP_OPTIMISTIC_ENABLED = process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
+export const DROP_OPTIMISTIC_ENABLED =
+  process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
 
 type DropOutcome = "success" | "noop" | "error";
 
@@ -34,6 +36,7 @@ export function useDropHandler({
   hasNumber,
   mePlaced: _mePlaced,
 }: UseDropHandlerProps) {
+  const soundManager = useSoundManager();
   const { playSuccessSound, playInvalidSound } = useDropSounds(roomId);
   const { canDrop, ensureCanDrop } = useDropEligibility({
     roomStatus,
@@ -47,6 +50,39 @@ export function useDropHandler({
   const [pending, setPending] = useState<string[]>([]);
   const [isOver, setIsOver] = useState(false);
   const optimisticMode = DROP_OPTIMISTIC_ENABLED;
+
+  const pointerUnlockArmedRef = useRef(false);
+  const pointerUnlockDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER !== "1") return;
+    if (typeof window === "undefined") return;
+    if (!soundManager) return;
+
+    if (roomStatus !== "clue") {
+      pointerUnlockArmedRef.current = false;
+      pointerUnlockDoneRef.current = false;
+      return;
+    }
+    if (pointerUnlockDoneRef.current || pointerUnlockArmedRef.current) return;
+
+    const handlePointer = () => {
+      pointerUnlockDoneRef.current = true;
+      pointerUnlockArmedRef.current = false;
+      soundManager.markUserInteraction();
+      void soundManager.prepareForInteraction();
+    };
+
+    pointerUnlockArmedRef.current = true;
+    window.addEventListener("pointerdown", handlePointer, { passive: true, once: true });
+
+    return () => {
+      if (pointerUnlockArmedRef.current && !pointerUnlockDoneRef.current) {
+        window.removeEventListener("pointerdown", handlePointer);
+        pointerUnlockArmedRef.current = false;
+      }
+    };
+  }, [roomStatus, soundManager]);
 
   const canDropAtPosition = useMemo(() => {
     return (_targetIndex: number) => canDrop;
@@ -66,7 +102,7 @@ export function useDropHandler({
 
       setIsOver(false);
 
-      const session = createDropSession({ optimisticMode });
+      const session = createDropMetricsSession({ optimisticMode });
       const validation = ensureCanDrop(pid);
       if (!validation.ok) {
         session.abort(validation.outcome);
@@ -76,10 +112,17 @@ export function useDropHandler({
       let previousPending: string[] | null = null;
       let inserted = false;
       let didPlaySound = false;
+      let stageNotifyMarked = false;
+      let stageSoundMarked = false;
+      let stageResolutionMarked = false;
       const playOnce = () => {
         if (didPlaySound) return;
         didPlaySound = true;
         playSuccessSound();
+        if (!stageSoundMarked) {
+          stageSoundMarked = true;
+          session.markStage("client.drop.t3_soundPlayedMs", { channel: "success" });
+        }
       };
       let notifiedSuccess = false;
 
@@ -103,6 +146,10 @@ export function useDropHandler({
       if (optimisticMode && inserted) {
         notify({ title: "カードを場に置きました", type: "success" });
         notifiedSuccess = true;
+        if (!stageNotifyMarked) {
+          stageNotifyMarked = true;
+          session.markStage("client.drop.t1_notifyShownMs", { origin: "optimistic" });
+        }
       }
 
       const request = addCardToProposal(roomId, meId);
@@ -112,6 +159,10 @@ export function useDropHandler({
 
       request
         .then((result) => {
+          if (!stageResolutionMarked) {
+            stageResolutionMarked = true;
+            session.markStage("client.drop.t2_addProposalResolvedMs", { result });
+          }
           if (result === "noop") {
             session.complete("noop");
             if (inserted && previousPending) {
@@ -137,9 +188,17 @@ export function useDropHandler({
           });
           if (!notifiedSuccess) {
             notify({ title: "カードを場に置きました", type: "success" });
+            if (!stageNotifyMarked) {
+              stageNotifyMarked = true;
+              session.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
+            }
           }
         })
         .catch((err: any) => {
+          if (!stageResolutionMarked) {
+            stageResolutionMarked = true;
+            session.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
+          }
           session.complete("error");
           traceError("interaction.drop.error", err, {
             roomId,
@@ -160,7 +219,7 @@ export function useDropHandler({
     [ensureCanDrop, meId, optimisticMode, playInvalidSound, playSuccessSound, roomId]
   );
 
-  const onDropAtPosition = useCallback(
+const onDropAtPosition = useCallback(
     (e: React.DragEvent, targetIndex: number) => {
       e.preventDefault();
       const pid = e.dataTransfer.getData("text/plain");
@@ -168,7 +227,7 @@ export function useDropHandler({
 
       setIsOver(false);
 
-      const session = createDropSession({ optimisticMode, index: targetIndex });
+      const session = createDropMetricsSession({ optimisticMode, index: targetIndex });
       const validation = ensureCanDrop(pid);
       if (!validation.ok) {
         session.abort(validation.outcome);
@@ -178,10 +237,20 @@ export function useDropHandler({
       let previous: string[] | null = null;
       let inserted = false;
       let didPlaySound = false;
+      let stageNotifyMarked = false;
+      let stageSoundMarked = false;
+      let stageResolutionMarked = false;
       const playOnce = () => {
         if (didPlaySound) return;
         didPlaySound = true;
         playSuccessSound();
+        if (!stageSoundMarked) {
+          stageSoundMarked = true;
+          session.markStage("client.drop.t3_soundPlayedMs", {
+            channel: "success",
+            index: String(targetIndex),
+          });
+        }
       };
       let notifiedSuccess = false;
 
@@ -208,6 +277,13 @@ export function useDropHandler({
       if (optimisticMode && inserted) {
         notify({ title: "カードを場に置きました", type: "success" });
         notifiedSuccess = true;
+        if (!stageNotifyMarked) {
+          stageNotifyMarked = true;
+          session.markStage("client.drop.t1_notifyShownMs", {
+            origin: "optimistic",
+            index: String(targetIndex),
+          });
+        }
       }
 
       const request = scheduleAddCardToProposalAtPosition(roomId, meId, targetIndex);
@@ -217,6 +293,13 @@ export function useDropHandler({
 
       request
         .then((result) => {
+          if (!stageResolutionMarked) {
+            stageResolutionMarked = true;
+            session.markStage("client.drop.t2_addProposalResolvedMs", {
+              result,
+              index: String(targetIndex),
+            });
+          }
           if (result === "noop") {
             session.complete("noop");
             if (inserted) {
@@ -246,9 +329,23 @@ export function useDropHandler({
           });
           if (!notifiedSuccess) {
             notify({ title: "カードをその位置に置きました", type: "success" });
+            if (!stageNotifyMarked) {
+              stageNotifyMarked = true;
+              session.markStage("client.drop.t1_notifyShownMs", {
+                origin: "post",
+                index: String(targetIndex),
+              });
+            }
           }
         })
         .catch((err: any) => {
+          if (!stageResolutionMarked) {
+            stageResolutionMarked = true;
+            session.markStage("client.drop.t2_addProposalResolvedMs", {
+              result: "error",
+              index: String(targetIndex),
+            });
+          }
           session.complete("error");
           traceError("interaction.drop.error", err, {
             roomId,
@@ -408,7 +505,7 @@ function useDropEligibility({
   return { canDrop, ensureCanDrop };
 }
 
-function createDropSession({
+export function createDropMetricsSession({
   optimisticMode,
   index,
 }: {
@@ -416,23 +513,57 @@ function createDropSession({
   index?: number;
 }) {
   const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+  const baseTags: Record<string, string> = {
+    mode: optimisticMode ? "optimistic" : "default",
+  };
+  if (typeof index === "number") {
+    baseTags.index = String(index);
+  }
+
+  const storeDebugMetric = (name: string, value: number) => {
+    const lastDot = name.lastIndexOf(".");
+    if (lastDot <= 0) return;
+    const scope = name.slice(0, lastDot);
+    const key = name.slice(lastDot + 1);
+    setMetric(scope, key, Number(value.toFixed(2)));
+  };
+
+  const computeSample = () => {
+    if (startedAt === null || typeof performance === "undefined") return null;
+    const sample = Number(Math.max(0, performance.now() - startedAt).toFixed(2));
+    if (!Number.isFinite(sample)) return null;
+    return sample;
+  };
+
+  const markStage = (metricId: string, extra?: Record<string, string>) => {
+    const sample = computeSample();
+    if (sample === null) return;
+    recordMetricDistribution(metricId, sample, {
+      ...baseTags,
+      ...(extra ?? {}),
+    });
+    storeDebugMetric(metricId, sample);
+  };
 
   const complete = (outcome: DropOutcome) => {
-    if (startedAt === null || typeof performance === "undefined") return;
-    const sample = Number(Math.max(0, performance.now() - startedAt).toFixed(2));
-    if (!Number.isFinite(sample)) return;
+    const sample = computeSample();
+    if (sample === null) return;
     recordMetricDistribution("client.drop.resolveMs", sample, {
       outcome,
-      mode: optimisticMode ? "optimistic" : "default",
+      ...baseTags,
     });
+    storeDebugMetric("client.drop.resolveMs", sample);
   };
 
   const abort = (outcome: DropOutcome) => {
     complete(outcome);
   };
 
+  markStage("client.drop.t0_onDropStartMs");
+
   return {
     complete,
     abort,
+    markStage,
   };
 }

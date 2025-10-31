@@ -159,9 +159,23 @@ export class SoundManager {
 
   async prepareForInteraction(): Promise<void> {
     if (!isBrowser()) return;
+    const measureNow =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? () => performance.now()
+        : () => Date.now();
+    const startedAt = measureNow();
     const context = this.ensureContext();
     if (!context) return;
-    await this.resumeContext();
+    try {
+      await this.resumeContext();
+    } finally {
+      const elapsed = Math.max(0, measureNow() - startedAt);
+      const sample = Number(elapsed.toFixed(2));
+      if (Number.isFinite(sample)) {
+        recordMetricDistribution("client.audio.unlockMs", sample);
+        setMetric("client.audio", "unlockMs", sample);
+      }
+    }
   }
 
   async play(
