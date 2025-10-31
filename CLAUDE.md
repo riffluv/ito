@@ -130,3 +130,14 @@ npx playwright test  # Playwright（必要なファイルのみ指定して実�
 - 2025-10：`docs/OPERATIONS.md` を新設し、運用/テレメトリ/トラブルシュートを整理。
 
 必要に応じてこのドキュメントに追記し、Claude と Codex 双方が同じ状況を把握できるようにしてください。*** End Patch
+
+---
+
+## 10. サーバー主導（Server-Authoritative）ポリシー（重要）
+
+- Claude からの提案・修正でも、待機戻し（waiting reset）と `ui.recallOpen` の決定はサーバー API を正規ルートとする。
+  - 正規 API: `app/api/rooms/[roomId]/reset/route.ts`
+  - ルーム更新は `composeWaitingResetPayload()` を唯一の真実として用いる（`lib/server/roomActions.ts`）。
+- クライアント側で Firestore へ直接 `status`/`ui.recallOpen` を書かない。ネットワーク断時のみ安全なフォールバックを許可。
+- ホスト権限/観戦復帰など決定処理も API/Functions 側に集約。提案時は該当ルートの有無を確認。
+- Presence は RTDB を唯一のソースとし、UI 側では `presenceReady` 待ちを徹底。

@@ -147,3 +147,19 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 - `.env` 系で管理している据え置き関連フラグ（`NEXT_PUBLIC_PERF_INTERACTION_TAGS` / `NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER` / `NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER` / `NEXT_PUBLIC_UI_DROP_OPTIMISTIC`）は、検証が完了したら本番環境でも `1` にして常時有効化する想定。
 - 本番で有効化後は、`dumpItoMetrics()` などでメトリクスをモニタリングし、数値に問題がなければ旧挙動用の分岐・フォールバックコードを順次削除・リファクタリングしておくことが推奨。
 以上。作業前にこのドキュメントをざっと確認し、タスクに取りかかってください。必要があれば自由に追記・修正して構いません。*** End Patch
+
+---
+
+## 10. サーバー主導（Server-Authoritative）ポリシー（重要）
+
+- 待機戻し（waiting reset）と `ui.recallOpen` の決定は、常にサーバー API を正規ルートとする。
+  - 正規 API: `app/api/rooms/[roomId]/reset/route.ts`
+  - ルーム更新は `composeWaitingResetPayload()` を唯一の真実として用いる（`lib/server/roomActions.ts`）。
+- クライアントは Firestore に直接 `status` や `ui.recallOpen` を書かない。
+  - 例外: ネットワーク断・認証不可時のみ、既存の安全なトランザクション・フォールバックを発火（ログに `traceAction("resetRoomWithPrune.fallback")`）。
+- ホスト権限/観戦復帰などの“決定処理”は API/Functions に集約。
+  - 例: ホストクレーム `app/api/rooms/[roomId]/claim-host/route.ts`
+  - Functions 側の自動処理は補助であり、正規経路は API である旨をコメントで明示済み。
+- Presence は RTDB を唯一のソースとし、人数・入席可否の判定は `presenceReady` 待ちを徹底。
+- UI は“処理中”の体感を優先してよいが、状態の確定はサーバー応答に従う。
+  - 実装例: リセット押下直後に `notify("待機状態に戻しています…")` を表示し、応答後に success/rollback。

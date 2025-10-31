@@ -28,7 +28,7 @@ import { SortableItem } from "@/components/sortable/SortableItem";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { EmptyCard } from "@/components/cards";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
-import { useDropHandler } from "@/components/hooks/useDropHandler";
+import { useDropHandler, DROP_OPTIMISTIC_ENABLED, createDropMetricsSession } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import {
   useBoardSlots,
@@ -1516,6 +1516,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
+            let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
             let previousPending: string[] | undefined;
             let insertedPending = false;
             let didPlaySound = false;
@@ -1523,8 +1524,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               if (didPlaySound) return;
               didPlaySound = true;
               playCardPlace();
+              dropSession?.markStage("client.drop.t3_soundPlayedMs", { channel: "success" });
             };
             if (!alreadyInProposal) {
+              dropSession = createDropMetricsSession({
+                optimisticMode: DROP_OPTIMISTIC_ENABLED,
+                index: slotIndex,
+              });
               updatePendingState((prev) => {
                 previousPending = prev.slice();
                 const next = [...prev];
@@ -1554,7 +1560,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             }
             request
               .then((result) => {
+                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result });
                 if (result === "noop") {
+                  dropSession?.complete("noop");
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
                     updatePendingState(() => snapshot);
@@ -1565,17 +1573,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                     type: "info",
                   });
                   playDropInvalid();
+                  dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
                   return;
                 }
                 playOnce();
+                dropSession?.complete("success");
               })
               .catch((error) => {
+                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
+                dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
                 if (previousPending !== undefined) {
                   const snapshot = previousPending.slice();
                   updatePendingState(() => snapshot);
                 }
                 playDropInvalid();
+                dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
               });
             return;
           }

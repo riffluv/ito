@@ -1,3 +1,5 @@
+import { setMetric } from "@/lib/utils/metrics";
+
 type MetricTags = Record<string, string | undefined> | undefined;
 
 type MetricsApi = {
@@ -33,6 +35,21 @@ export function recordMetricDistribution(
 ): void {
   if (!Number.isFinite(value)) return;
   try {
+    const sample = Number(value.toFixed(2));
+    if (Number.isFinite(sample)) {
+      const lastDot = name.lastIndexOf(".");
+      if (lastDot > 0) {
+        const scope = name.slice(0, lastDot);
+        const key = name.slice(lastDot + 1);
+        setMetric(scope, key, sample);
+      } else {
+        setMetric("metrics", name, sample);
+      }
+    }
+  } catch {
+    // ignore local cache failures
+  }
+  try {
     const metrics = getMetricsApi();
     const sanitizedTags = sanitizeTags(tags);
     if (metrics?.distribution) {
@@ -47,11 +64,6 @@ export function recordMetricDistribution(
       level: "info",
       extra: { value, tags: sanitizedTags },
     } as any);
-
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.debug(`[metrics:fallback] ${name}`, { value, tags: sanitizedTags });
-    }
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
