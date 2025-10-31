@@ -1327,15 +1327,32 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const isJoiningOrRetrying =
     !seatAcceptanceActive && joinStatus !== "idle" && joinStatus !== "joined";
 
-const shouldShowSpectator =
-  uid !== null &&
-  !isHost &&
-  !isMember &&
-  !hasOptimisticSeat &&
-  !isJoiningOrRetrying &&
-  !seatRequestPending &&
-  !loading;
-  const isSpectatorMode = shouldShowSpectator;
+  const spectatorCandidate =
+    uid !== null &&
+    !isHost &&
+    !isMember &&
+    !hasOptimisticSeat &&
+    !seatAcceptanceActive &&
+    !isJoiningOrRetrying &&
+    !seatRequestPending &&
+    !loading;
+  const [isSpectatorMode, setSpectatorMode] = useState(false);
+  useEffect(() => {
+    if (!spectatorCandidate) {
+      setSpectatorMode((prev) => (prev ? false : prev));
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        setSpectatorMode(true);
+      }
+    }, 220);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [spectatorCandidate]);
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
     traceAction("spectator.mode", {
