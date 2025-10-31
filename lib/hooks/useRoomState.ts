@@ -326,6 +326,23 @@ export function useRoomState(
     () => !!(uid && players.some((p) => p.id === uid)),
     [uid, players]
   );
+  const prevMembershipRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!uid || !roomId) {
+      prevMembershipRef.current = null;
+      return;
+    }
+    if (prevMembershipRef.current === isMember) return;
+    prevMembershipRef.current = isMember;
+    traceAction("membership.state", {
+      roomId,
+      uid,
+      isMember,
+      joinStatus,
+      players: players.map((p) => p.id),
+    });
+  }, [roomId, uid, isMember, players, joinStatus]);
 
   useEffect(() => {
     if (!isMember) {

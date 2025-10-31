@@ -120,7 +120,8 @@ function applyCluePhaseAdjustments({
   const shouldFinishByTotal =
     remainingCount > 0 &&
     typeof nextTotal === "number" &&
-    nextTotal >= 0 &&
+    Number.isFinite(nextTotal) &&
+    nextTotal > 0 &&
     nextListLength >= nextTotal;
 
   const shouldFinishByFailure = remainingCount > 0 && nextFailed && !allowContinue;
