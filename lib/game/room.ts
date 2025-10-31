@@ -4,6 +4,7 @@ import { sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
 import { enqueueFirestoreWrite } from "@/lib/firebase/writeQueue";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
+import { recordProposalWriteMetrics } from "@/lib/metrics/proposalMetrics";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
 import {
@@ -49,6 +50,10 @@ async function broadcastNotify(
 type DealCandidate = { id: string; uid?: string; lastSeen?: any };
 
 const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 0;
+
+function proposalQueueKey(roomId: string, playerId: string) {
+  return `proposal:${roomId}:player:${playerId}`;
+}
 
 function readProposal(source: unknown): (string | null)[] {
   if (!Array.isArray(source)) return [];
@@ -280,6 +285,7 @@ export async function addCardToProposalAtPosition(
   targetIndex: number = -1
 ): Promise<ProposalWriteResult> {
   const roomRef = doc(db!, "rooms", roomId);
+  const queueScope = proposalQueueKey(roomId, playerId);
 
   const runOnce = (attemptIndex: number) => {
     const readTimestamp =
@@ -288,7 +294,7 @@ export async function addCardToProposalAtPosition(
         : () => Date.now();
     const enqueuedAt = readTimestamp();
     return enqueueFirestoreWrite<ProposalWriteResult>(
-      `proposal:${roomId}`,
+      queueScope,
       async () => {
         const dequeuedAt = readTimestamp();
         const queueWaitMs = Math.max(0, Math.round(dequeuedAt - enqueuedAt));
@@ -298,6 +304,7 @@ export async function addCardToProposalAtPosition(
           playerId,
           attempt: String(attemptIndex),
           queueWaitMs,
+          queueScope,
         };
         traceAction("lag.drop.tx.start", attemptContext);
         let txResult: ProposalWriteResult | "error" | null = null;
@@ -468,6 +475,12 @@ export async function addCardToProposalAtPosition(
             result: txResult ?? "unknown",
             elapsedMs,
           });
+          recordProposalWriteMetrics({
+            scope: queueScope,
+            queueWaitMs,
+            elapsedMs,
+            result: txResult ?? "unknown",
+          });
         }
       },
       { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
@@ -518,8 +531,9 @@ export async function addCardToProposalAtPosition(
 // proposal からカードを取り除き、待機エリアへ戻す
 export async function removeCardFromProposal(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
+  const queueScope = proposalQueueKey(roomId, playerId);
   await enqueueFirestoreWrite(
-    `proposal:${roomId}`,
+    queueScope,
     async () => {
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);
@@ -554,8 +568,9 @@ export async function moveCardInProposalToPosition(
   targetIndex: number
 ) {
   const roomRef = doc(db!, "rooms", roomId);
+  const queueScope = proposalQueueKey(roomId, playerId);
   await enqueueFirestoreWrite(
-    `proposal:${roomId}`,
+    queueScope,
     async () => {
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);

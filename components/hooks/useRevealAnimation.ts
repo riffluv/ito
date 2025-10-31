@@ -7,7 +7,18 @@ import {
   REVEAL_LINGER,
   REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  clearSortedRevealCache,
+  readSortedRevealCache,
+  touchSortedRevealCache,
+} from "@/lib/game/resultPrefetch";
 
 type RevealPersistenceDeps = {
   requireDb: typeof import("@/lib/firebase/require").requireDb;
@@ -102,6 +113,19 @@ export function useRevealAnimation({
     }
   }, [resolveMode, orderListLength]);
 
+  useEffect(() => {
+    if (
+      resolveMode !== "sort-submit" ||
+      !orderData ||
+      !Array.isArray(orderData.list) ||
+      orderData.list.length === 0 ||
+      !orderData.numbers
+    ) {
+      return;
+    }
+    touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
+  }, [orderData?.list, orderData?.numbers, resolveMode, roomId]);
+
   // Start reveal animation: useLayoutEffect so we set the flag before the
   // browser paints. This avoids a render where `roomStatus === 'reveal'` but
   // `revealAnimating` is still false, which caused a brief undesired frame
@@ -136,6 +160,7 @@ export function useRevealAnimation({
     if (revealIndex >= orderListLength && orderListLength > 0) {
       logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
       finalizePendingRef.current = true;
+      clearSortedRevealCache(roomId);
       const attemptFinalize = () => {
         if (!finalizePendingRef.current) return;
         if (roomStatus === "reveal") {
@@ -166,7 +191,12 @@ export function useRevealAnimation({
         try {
           if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
             const currentList = orderData.list.slice(0, nextIndex);
-            const result = evaluateSorted(currentList, orderData.numbers);
+            const cached = readSortedRevealCache(roomId, nextIndex);
+            const result =
+              cached ?? evaluateSorted(currentList, orderData.numbers);
+            if (!cached) {
+              touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
+            }
             logDebug("reveal", "step", { nextIndex, result });
 
             // 失敗 or 成功をめくり完了後にUIへ反映
@@ -254,6 +284,12 @@ export function useRevealAnimation({
       /* ignore */
     }
   }, [revealAnimating, roomId]);
+
+  useEffect(() => {
+    return () => {
+      clearSortedRevealCache(roomId);
+    };
+  }, [roomId]);
 
   return {
     revealAnimating,

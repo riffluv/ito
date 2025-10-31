@@ -16,7 +16,7 @@ export interface ComputeCardStateParams {
   id: string;
   idx?: number; // index within ordered/reveal context
   orderList?: string[]; // confirmed order
-  pending: string[]; // local optimistic placements
+  pending: (string | null)[]; // local optimistic placements
   proposal?: string[]; // sort-submit local proposal
   resolveMode?: ResolveMode;
   roomStatus?: RoomStatus;

@@ -143,7 +143,10 @@ const createInitialMagnetState = (): MagnetResult => ({
   shouldSnap: false,
 });
 
-const shallowArrayEqual = (a: readonly string[], b: readonly string[]) => {
+const shallowArrayEqual = (
+  a: readonly (string | null)[],
+  b: readonly (string | null)[]
+) => {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -967,7 +970,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     });
 
   const updatePendingState = useCallback(
-    (updater: (prev: string[]) => string[]) => {
+    (updater: (prev: (string | null)[]) => (string | null)[]) => {
       setPending((prev) => {
         const next = updater(prev);
         if (next === prev) return prev;
@@ -1126,13 +1129,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   useEffect(() => {
     if (!orderList || orderList.length === 0) return;
-    updatePendingState((cur) => cur.filter((id) => !orderListSet.has(id)));
+    updatePendingState((cur) =>
+      cur.filter((id) => {
+        if (typeof id !== "string") return false;
+        return !orderListSet.has(id);
+      })
+    );
   }, [orderListSet, orderList?.length, updatePendingState]);
 
   useEffect(() => {
     if (!proposal || proposal.length === 0) return;
     const present = new Set((proposal as (string | null)[]).filter(Boolean) as string[]);
-    updatePendingState((cur) => cur.filter((id) => !present.has(id)));
+    updatePendingState((cur) =>
+      cur.filter((id) => {
+        if (typeof id !== "string") return false;
+        return !present.has(id);
+      })
+    );
   }, [proposal?.join(","), updatePendingState]);
 
   useEffect(() => {
@@ -1517,7 +1530,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             }
 
             let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
-            let previousPending: string[] | undefined;
+            let previousPending: (string | null)[] | undefined;
             let insertedPending = false;
             let didPlaySound = false;
             const playOnce = () => {

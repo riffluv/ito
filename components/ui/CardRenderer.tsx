@@ -9,7 +9,7 @@ interface CardRendererProps {
   player: (PlayerDoc & { id: string }) | undefined;
   idx?: number;
   orderList?: string[];
-  pending: string[];
+  pending: (string | null)[];
   proposal?: string[];
   resolveMode?: string;
   roomStatus?: string;

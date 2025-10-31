@@ -26,7 +26,7 @@ type UseBoardSlotsParams = {
   slotCountDragging: number;
   slotCountStatic: number;
   activeProposal: (string | null)[];
-  pending: string[];
+  pending: (string | null)[];
   playerReadyMap: Map<string, boolean>;
   optimisticReturningIds: string[];
   isGameActive: boolean;
@@ -63,7 +63,9 @@ export function useBoardSlots({
   const dragSlots = useMemo<DragSlotDescriptor[]>(() => {
     return Array.from({ length: Math.max(0, slotCountDragging) }).map((_, idx) => {
       const proposalCardId = activeProposal[idx] ?? null;
-      const pendingCardId = pending?.[idx] ?? null;
+      const pendingRaw = pending?.[idx] ?? null;
+      const pendingCardId =
+        typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
       const cardId = proposalCardId ?? pendingCardId ?? null;
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
       const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
@@ -86,7 +88,9 @@ export function useBoardSlots({
     return Array.from({ length: Math.max(0, slotCountStatic) }).map((_, idx) => {
       const proposalCardId = activeProposal[idx] ?? null;
       const orderCardId = orderList?.[idx] ?? null;
-      const pendingCardId = pending?.[idx] ?? null;
+      const pendingRaw = pending?.[idx] ?? null;
+      const pendingCardId =
+        typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
       const cardId = proposalCardId ?? orderCardId ?? pendingCardId ?? null;
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
       const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
