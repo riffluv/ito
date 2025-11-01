@@ -25,6 +25,7 @@ const rtdb = admin.database ? admin.database() : (null as any);
 const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 
 const PRESENCE_STALE_THRESHOLD_MS = PRESENCE_STALE_MS;
+const REJOIN_GRACE_MS = Math.min(PRESENCE_STALE_THRESHOLD_MS, 20_000);
 
 const DEBUG_LOGGING_ENABLED =
   process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
@@ -180,6 +181,18 @@ export const onPresenceWrite = functions.database
           .doc(uid)
           .get();
         if (!playerDoc.exists) {
+          return null;
+        }
+
+        const playerData = playerDoc.data() as Record<string, any> | undefined;
+        const lastSeenMs = toMillis(playerData?.lastSeen);
+        if (lastSeenMs && now - lastSeenMs <= REJOIN_GRACE_MS) {
+          logDebug("presence", "skip-leave-grace", {
+            roomId,
+            uid,
+            lastSeenMs,
+            now,
+          });
           return null;
         }
 
