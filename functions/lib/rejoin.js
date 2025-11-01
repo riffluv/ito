@@ -212,13 +212,37 @@ async function finalizeAcceptedRequest(roomId, uid, desiredName) {
         };
         const currentDeal = roomData?.deal;
         let totalPlayers = null;
-        if (currentDeal && Array.isArray(currentDeal.players)) {
-            const uniquePlayers = currentDeal.players.filter((playerId) => typeof playerId === "string");
-            if (!uniquePlayers.includes(uid)) {
-                uniquePlayers.push(uid);
-                roomUpdates["deal.players"] = uniquePlayers;
+        if (currentDeal) {
+            const currentPlayers = Array.isArray(currentDeal.players)
+                ? currentDeal.players.filter((playerId) => typeof playerId === "string" && playerId.length > 0)
+                : [];
+            const seatHistorySource = currentDeal.seatHistory;
+            const seatHistory = seatHistorySource && typeof seatHistorySource === "object"
+                ? { ...seatHistorySource }
+                : {};
+            let targetIndex = null;
+            const recordedIndex = seatHistory[uid];
+            if (typeof recordedIndex === "number" && recordedIndex >= 0) {
+                targetIndex = recordedIndex;
             }
-            totalPlayers = uniquePlayers.length;
+            if (targetIndex === null) {
+                const existingIndex = currentPlayers.indexOf(uid);
+                if (existingIndex >= 0) {
+                    targetIndex = existingIndex;
+                }
+            }
+            let nextPlayers = currentPlayers.filter((playerId) => playerId !== uid);
+            if (targetIndex === null || targetIndex < 0 || targetIndex > nextPlayers.length) {
+                targetIndex = nextPlayers.length;
+            }
+            nextPlayers.splice(targetIndex, 0, uid);
+            const nextSeatHistory = { ...seatHistory };
+            nextPlayers.forEach((playerId, index) => {
+                nextSeatHistory[playerId] = index;
+            });
+            roomUpdates["deal.players"] = nextPlayers;
+            roomUpdates["deal.seatHistory"] = nextSeatHistory;
+            totalPlayers = nextPlayers.length;
         }
         if (totalPlayers !== null && roomData?.order) {
             roomUpdates["order.total"] = totalPlayers;

@@ -50,6 +50,7 @@ const rtdb = admin.database ? admin.database() : null;
 // 以降の定期ジョブ/トリガは早期 return して何もしない
 const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 const PRESENCE_STALE_THRESHOLD_MS = presence_1.PRESENCE_STALE_MS;
+const REJOIN_GRACE_MS = Math.min(PRESENCE_STALE_THRESHOLD_MS, 20000);
 const DEBUG_LOGGING_ENABLED = process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
     process.env.NODE_ENV !== "production";
 const logDebug = DEBUG_LOGGING_ENABLED ? (...args) => console.debug(...args) : () => { };
@@ -192,6 +193,17 @@ exports.onPresenceWrite = functions.database
                 .doc(uid)
                 .get();
             if (!playerDoc.exists) {
+                return null;
+            }
+            const playerData = playerDoc.data();
+            const lastSeenMs = toMillis(playerData?.lastSeen);
+            if (lastSeenMs && now - lastSeenMs <= REJOIN_GRACE_MS) {
+                logDebug("presence", "skip-leave-grace", {
+                    roomId,
+                    uid,
+                    lastSeenMs,
+                    now,
+                });
                 return null;
             }
             logDebug("leaveRoomServer cleanup invoked", {

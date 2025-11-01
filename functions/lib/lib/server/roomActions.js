@@ -45,6 +45,15 @@ function applyCluePhaseAdjustments({ room, updates, filteredPlayers, filteredLis
     if (filteredPlayers.length !== (room?.deal?.players?.length ?? 0)) {
         updates["deal.players"] = filteredPlayers;
         updates["order.total"] = filteredPlayers.length;
+        const seatHistorySource = room?.deal?.seatHistory;
+        const baseSeatHistory = seatHistorySource && typeof seatHistorySource === "object"
+            ? { ...seatHistorySource }
+            : {};
+        const nextSeatHistory = { ...baseSeatHistory };
+        filteredPlayers.forEach((pid, index) => {
+            nextSeatHistory[pid] = index;
+        });
+        updates["deal.seatHistory"] = nextSeatHistory;
     }
     if (filteredList.length !== (room?.order?.list?.length ?? 0)) {
         updates["order.list"] = filteredList;
@@ -69,7 +78,8 @@ function applyCluePhaseAdjustments({ room, updates, filteredPlayers, filteredLis
     const nextListLength = filteredList.length;
     const shouldFinishByTotal = remainingCount > 0 &&
         typeof nextTotal === "number" &&
-        nextTotal >= 0 &&
+        Number.isFinite(nextTotal) &&
+        nextTotal > 0 &&
         nextListLength >= nextTotal;
     const shouldFinishByFailure = remainingCount > 0 && nextFailed && !allowContinue;
     if (shouldFinishByTotal || shouldFinishByFailure) {
@@ -443,6 +453,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
             if (remainingCount === 0) {
                 const serverNow = firestore_1.FieldValue.serverTimestamp();
                 delete updates["deal.players"];
+                delete updates["deal.seatHistory"];
                 delete updates["order.total"];
                 delete updates["order.list"];
                 delete updates["order.proposal"];
