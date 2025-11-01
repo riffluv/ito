@@ -11,3 +11,5 @@ yarn.lock
 
 .vercel
 service-account-key.json
+functions/lib/
+tsconfig.tsbuildinfo

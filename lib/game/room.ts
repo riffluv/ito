@@ -26,8 +26,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 
-const DEAL_MISMATCH_RETRY_DELAYS_MS = [900, 1500, 2400];
-const MAX_DEAL_MISMATCH_RETRIES = DEAL_MISMATCH_RETRY_DELAYS_MS.length;
 // 乱数はクライアントで自分の番号計算に使用
 
 // 通知ブロードキャスト関数
@@ -152,29 +150,26 @@ export async function startGame(roomId: string) {
 }
 
 // ホストがトピック選択後に配札（重複なし）
-export async function dealNumbers(
-  roomId: string,
-  attempt = 0
-): Promise<number> {
+export async function dealNumbers(roomId: string, attempt = 0): Promise<number> {
   const startedAt = Date.now();
   traceAction("deal.start", { roomId, attempt: String(attempt) });
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const presenceSupportedNow = presenceSupported();
+  const presencePromise: Promise<string[] | null> = presenceSupportedNow
+    ? fetchPresenceUids(roomId)
+        .then((fetched) =>
+          Array.isArray(fetched) && fetched.length > 0 ? fetched : null
+        )
+        .catch(() => null)
+    : Promise.resolve(null);
+
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: DealCandidate[] = [];
   snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
   const now = Date.now();
 
-  let presenceUids: string[] | null = null;
-  if (presenceSupported()) {
-    try {
-      const fetched = await fetchPresenceUids(roomId);
-      if (Array.isArray(fetched) && fetched.length > 0) {
-        presenceUids = fetched;
-      }
-    } catch {
-      presenceUids = null;
-    }
-  }
+  const presenceUids = await presencePromise;
 
   const target = selectDealTargetPlayers(all, presenceUids, now);
 
@@ -187,24 +182,6 @@ export async function dealNumbers(
     return typeof uid === "string" && uid.trim().length > 0;
   }).length;
   const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
-
-  if (suspectedMismatch && attempt < MAX_DEAL_MISMATCH_RETRIES) {
-    const delayMs =
-      DEAL_MISMATCH_RETRY_DELAYS_MS[
-        Math.min(attempt, DEAL_MISMATCH_RETRY_DELAYS_MS.length - 1)
-      ];
-    traceAction("deal.retry.wait", {
-      roomId,
-      attempt: String(attempt),
-      eligibleCount: String(eligibleCount),
-      assignedCount: String(ordered.length),
-      delayMs: String(delayMs),
-    });
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, delayMs);
-    });
-    return dealNumbers(roomId, attempt + 1);
-  }
 
   if (suspectedMismatch) {
     traceError(
