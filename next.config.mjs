@@ -1,6 +1,24 @@
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const commitSha =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+  process.env.GIT_COMMIT ||
+  process.env.GIT_COMMIT_SHA ||
+  "";
+
+const shortCommit = commitSha ? commitSha.slice(0, 7) : "local";
+const timestamp = new Date().toISOString().replace(/[-:TZ]/g, "").slice(0, 12);
+const fallbackVersion = `${timestamp}-${shortCommit}`;
+
+if (
+  !process.env.NEXT_PUBLIC_APP_VERSION ||
+  !process.env.NEXT_PUBLIC_APP_VERSION.trim()
+) {
+  process.env.NEXT_PUBLIC_APP_VERSION = fallbackVersion;
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 開発環境でのカード描画・アニメーション問題を回避するため無効化
