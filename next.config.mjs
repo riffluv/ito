@@ -9,7 +9,7 @@ const commitSha =
   "";
 
 const shortCommit = commitSha ? commitSha.slice(0, 7) : "local";
-const timestamp = new Date().toISOString().replace(/[-:TZ]/g, "").slice(0, 12);
+const timestamp = new Date().toISOString().replace(/[-:TZ]/g, "").slice(0, 14);
 const fallbackVersion = `${timestamp}-${shortCommit}`;
 
 if (
