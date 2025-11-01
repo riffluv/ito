@@ -7,6 +7,9 @@ import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms"
 
 const TOKEN_KEY_PREFIX = "leaveToken:"
 const REJOIN_KEY_PREFIX = "pendingRejoin:"
+const RECALL_V2_ENABLED =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_RECALL_V2 === "1"
 
 function setSessionValue(key: string | null, value: string | null) {
   if (!key || typeof window === "undefined") return
@@ -173,10 +176,12 @@ export function useLeaveCleanup({
     try {
       forceDetachAll(roomId, uid).catch(() => {})
     } catch {}
-    sendLeaveBeacon()
-    try {
-      Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
-    } catch {}
+    if (!RECALL_V2_ENABLED) {
+      sendLeaveBeacon()
+      try {
+        Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
+      } catch {}
+    }
   }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey])
 
   const performCleanupRef = useRef(performCleanup)
