@@ -500,23 +500,31 @@ export async function addCardToProposalAtPosition(
           playerId,
           attempt: String(attempt),
         });
-        await dealNumbers(roomId).catch(() => {});
+        traceAction("lag.drop.missingDeal.retry.wait", {
+          roomId,
+          playerId,
+          attempt: String(attempt),
+          delayMs: "400",
+        });
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 400);
+        });
       } else if (attempt === 1) {
         traceAction("lag.drop.retry.wait", {
           roomId,
           playerId,
           attempt: String(attempt),
-          delayMs: "200",
+          delayMs: "800",
         });
         await new Promise<void>((resolve) => {
-          setTimeout(resolve, 200);
+          setTimeout(resolve, 800);
         });
       } else {
         traceAction("lag.drop.missingDeal.exhausted", {
           roomId,
           playerId,
         });
-        throw new Error("カードの提出準備が整っていません");
+        throw new Error("カードの提出準備が整っていません。通信状況をご確認のうえ、再接続またはホストに確認してください。");
       }
       continue;
     }
