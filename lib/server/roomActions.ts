@@ -83,6 +83,16 @@ function applyCluePhaseAdjustments({
   if (filteredPlayers.length !== (room?.deal?.players?.length ?? 0)) {
     updates["deal.players"] = filteredPlayers;
     updates["order.total"] = filteredPlayers.length;
+    const seatHistorySource = (room?.deal as Record<string, unknown>)?.seatHistory;
+    const baseSeatHistory: Record<string, number> =
+      seatHistorySource && typeof seatHistorySource === "object"
+        ? { ...(seatHistorySource as Record<string, number>) }
+        : {};
+    const nextSeatHistory: Record<string, number> = { ...baseSeatHistory };
+    filteredPlayers.forEach((pid, index) => {
+      nextSeatHistory[pid] = index;
+    });
+    updates["deal.seatHistory"] = nextSeatHistory;
   }
 
   if (filteredList.length !== (room?.order?.list?.length ?? 0)) {
@@ -535,6 +545,7 @@ export async function leaveRoomServer(
       if (remainingCount === 0) {
         const serverNow = FieldValue.serverTimestamp();
         delete updates["deal.players"];
+        delete updates["deal.seatHistory"];
         delete updates["order.total"];
         delete updates["order.list"];
         delete updates["order.proposal"];

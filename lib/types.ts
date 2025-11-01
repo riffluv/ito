@@ -71,6 +71,7 @@ export type RoomDoc = {
     min: number;
     max: number;
     players?: string[];
+    seatHistory?: Record<string, number>;
   } | null;
   round?: number;
   // MVP投票 (記録簿内で完結)
