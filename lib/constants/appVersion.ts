@@ -16,4 +16,8 @@ if (rawVersion && rawVersion.trim().length > 0) {
   resolved = shortCommit;
 }
 
+if (typeof console !== "undefined") {
+  console.log("[APP_VERSION] raw:", rawVersion, "commit:", commitSha, "resolved:", resolved);
+}
+
 export const APP_VERSION: string = resolved ?? "dev";
