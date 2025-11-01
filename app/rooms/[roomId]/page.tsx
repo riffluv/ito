@@ -664,7 +664,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (typeof window === "undefined") {
       return;
     }
-    if (!safeUpdateFeatureEnabled || !versionMismatch) {
+    if (!safeUpdateFeatureEnabled || (!versionMismatch && !hasWaitingUpdate)) {
       setVersionMismatchGuarded(false);
       if (versionGuardTimerRef.current !== null) {
         window.clearTimeout(versionGuardTimerRef.current);
@@ -672,22 +672,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
       return;
     }
+    setVersionMismatchGuarded(true);
     if (versionGuardTimerRef.current !== null) {
       window.clearTimeout(versionGuardTimerRef.current);
+      versionGuardTimerRef.current = null;
     }
-    versionGuardTimerRef.current = window.setTimeout(() => {
-      setVersionMismatchGuarded(true);
-    }, 6000);
     return () => {
       if (versionGuardTimerRef.current !== null) {
         window.clearTimeout(versionGuardTimerRef.current);
         versionGuardTimerRef.current = null;
       }
     };
-  }, [safeUpdateFeatureEnabled, versionMismatch]);
+  }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
   const versionMismatchHandledRef = useRef(false);
   const safeUpdateEnteredRef = useRef(false);
   const safeUpdateStatusRef = useRef<string | null>(null);
+  const safeUpdateAutoApplyRef = useRef(false);
   const idleTimerRef = useRef<number | null>(null);
   const lastInteractionTsRef = useRef<number>(
     typeof window === "undefined" ? 0 : Date.now()
@@ -708,6 +708,40 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       safeUpdateEnteredRef.current = false;
     }
   }, [safeUpdateActive, safeUpdateFeatureEnabled]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) {
+      safeUpdateAutoApplyRef.current = false;
+      return;
+    }
+    if (spectatorUpdateApplying) {
+      return;
+    }
+    if (!versionMismatch && !hasWaitingUpdate) {
+      safeUpdateAutoApplyRef.current = false;
+      return;
+    }
+    if (safeUpdateAutoApplyRef.current) {
+      return;
+    }
+    if (!hasWaitingUpdate) {
+      void resyncWaitingServiceWorker("room:auto-init");
+      return;
+    }
+    safeUpdateAutoApplyRef.current = true;
+    const applied = applyServiceWorkerUpdate({
+      reason: versionMismatch ? "room:auto-mismatch" : "room:auto-waiting",
+      safeMode: true,
+    });
+    if (!applied) {
+      safeUpdateAutoApplyRef.current = false;
+      void resyncWaitingServiceWorker("room:auto-retry");
+    }
+  }, [
+    safeUpdateFeatureEnabled,
+    versionMismatch,
+    hasWaitingUpdate,
+    spectatorUpdateApplying,
+  ]);
   const tryApplyServiceWorker = useCallback(
     (reason: SafeUpdateTrigger) => {
       if (!safeUpdateFeatureEnabled) return false;
@@ -3184,9 +3218,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const safeUpdateBannerNode = shouldShowUpdateBanner ? (
     <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
   ) : null;
+  const shouldBlockUpdateOverlay =
+    safeUpdateFeatureEnabled &&
+    versionMismatchGuarded &&
+    (safeUpdateActive || hasWaitingUpdate);
   // プレイ中は強制的な更新オーバーレイとボタンを出さない（waiting時のみ表示）
-  const versionMismatchOverlay =
-    safeUpdateActive && versionMismatchGuarded && currentRoomStatus === "waiting" ? (
+  const versionMismatchOverlay = shouldBlockUpdateOverlay ? (
       <Box
         position="fixed"
         inset={0}

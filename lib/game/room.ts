@@ -15,7 +15,7 @@ import {
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
 import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
-import { traceAction } from "@/lib/utils/trace";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   collection,
   doc,
@@ -25,6 +25,9 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
+
+const DEAL_MISMATCH_RETRY_DELAYS_MS = [900, 1500, 2400];
+const MAX_DEAL_MISMATCH_RETRIES = DEAL_MISMATCH_RETRY_DELAYS_MS.length;
 // 乱数はクライアントで自分の番号計算に使用
 
 // 通知ブロードキャスト関数
@@ -90,8 +93,7 @@ export function selectDealTargetPlayers(
     const presenceSet = new Set(presenceUids);
     const online = fallbackPool.filter((p) => presenceSet.has(p.id));
     if (online.length > 0) {
-      const others = fallbackPool.filter((p) => !presenceSet.has(p.id));
-      return [...online, ...others];
+      return online;
     }
   }
   return fallbackPool;
@@ -149,9 +151,12 @@ export async function startGame(roomId: string) {
 }
 
 // ホストがトピック選択後に配札（重複なし）
-export async function dealNumbers(roomId: string): Promise<number> {
+export async function dealNumbers(
+  roomId: string,
+  attempt = 0
+): Promise<number> {
   const startedAt = Date.now();
-  traceAction("deal.start", { roomId });
+  traceAction("deal.start", { roomId, attempt: String(attempt) });
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: DealCandidate[] = [];
@@ -176,7 +181,43 @@ export async function dealNumbers(roomId: string): Promise<number> {
     String(a.uid || a.id).localeCompare(String(b.uid || b.id))
   );
 
-  // 各自が自身のDocのみ更新できるルールに対応するため、部屋のdealに配布順のIDリストを保存
+  const eligibleCount = all.filter((candidate) => {
+    const uid = (candidate as any)?.uid;
+    return typeof uid === "string" && uid.trim().length > 0;
+  }).length;
+  const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+
+  if (suspectedMismatch && attempt < MAX_DEAL_MISMATCH_RETRIES) {
+    const delayMs =
+      DEAL_MISMATCH_RETRY_DELAYS_MS[
+        Math.min(attempt, DEAL_MISMATCH_RETRY_DELAYS_MS.length - 1)
+      ];
+    traceAction("deal.retry.wait", {
+      roomId,
+      attempt: String(attempt),
+      eligibleCount: String(eligibleCount),
+      assignedCount: String(ordered.length),
+      delayMs: String(delayMs),
+    });
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+    return dealNumbers(roomId, attempt + 1);
+  }
+
+  if (suspectedMismatch) {
+    traceError(
+      "deal.mismatch",
+      new Error("dealPlayersMismatch"),
+      {
+        roomId,
+        eligibleCount,
+        assignedCount: ordered.length,
+        attempt: String(attempt),
+      }
+    );
+  }
+
   await updateDoc(doc(db!, "rooms", roomId), {
     deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
     "order.total": ordered.length,
@@ -185,6 +226,8 @@ export async function dealNumbers(roomId: string): Promise<number> {
   traceAction("deal.end", {
     roomId,
     count: ordered.length,
+    eligibleCount,
+    attempt: String(attempt),
     elapsedMs: Math.max(0, Date.now() - startedAt),
   });
   return ordered.length;
