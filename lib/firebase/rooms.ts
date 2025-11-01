@@ -112,7 +112,21 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
           (pid) => pid !== userId
         );
         if (filteredPlayers.length !== data.deal.players.length) {
-          updates.deal = { ...data.deal, players: filteredPlayers };
+          const seatHistorySource = (data.deal as Record<string, unknown>).seatHistory;
+          const baseSeatHistory: Record<string, number> =
+            seatHistorySource && typeof seatHistorySource === "object"
+              ? { ...(seatHistorySource as Record<string, number>) }
+              : {};
+          const nextSeatHistory: Record<string, number> = { ...baseSeatHistory };
+          filteredPlayers.forEach((pid, index) => {
+            nextSeatHistory[pid] = index;
+          });
+
+          updates.deal = {
+            ...data.deal,
+            players: filteredPlayers,
+            seatHistory: nextSeatHistory,
+          };
           dealPlayersChanged = true;
         }
       }

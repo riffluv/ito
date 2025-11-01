@@ -178,7 +178,7 @@ export async function dealNumbers(
 
   const target = selectDealTargetPlayers(all, presenceUids, now);
 
-  const ordered = [...target].sort((a, b) =>
+  let ordered = [...target].sort((a, b) =>
     String(a.uid || a.id).localeCompare(String(b.uid || b.id))
   );
 
@@ -217,10 +217,27 @@ export async function dealNumbers(
         attempt: String(attempt),
       }
     );
+    const fallbackOrdered = [...all].sort((a, b) =>
+      String(a.uid || a.id).localeCompare(String(b.uid || b.id))
+    );
+    if (fallbackOrdered.length > ordered.length) {
+      ordered = fallbackOrdered;
+    }
   }
 
+  const playerIds = ordered.map((p) => p.id);
+  const seatHistory = Object.fromEntries(
+    playerIds.map((id, index) => [id, index])
+  );
+
   await updateDoc(doc(db!, "rooms", roomId), {
-    deal: { seed, min: 1, max: 100, players: ordered.map((p) => p.id) },
+    deal: {
+      seed,
+      min: 1,
+      max: 100,
+      players: playerIds,
+      seatHistory,
+    },
     "order.total": ordered.length,
     lastActiveAt: serverTimestamp(),
   });

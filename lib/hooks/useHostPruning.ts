@@ -42,8 +42,8 @@ export function useHostPruning({
     if (onlineUids.length === 0) return;
     if (!players.length) return;
 
-    const OFFLINE_GRACE_MS = Math.min(8_000, Math.floor(PRESENCE_STALE_MS / 2));
-    const STALE_THRESHOLD_MS = PRESENCE_STALE_MS;
+    const OFFLINE_GRACE_MS = Math.max(20_000, PRESENCE_STALE_MS);
+    const STALE_THRESHOLD_MS = Math.max(PRESENCE_STALE_MS * 2, 40_000);
     const now = Date.now();
     const onlineSet = new Set(onlineUids);
 

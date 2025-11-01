@@ -67,11 +67,12 @@ service cloud.firestore {
 
     function isValidDealMap(deal) {
       return deal is map
-        && deal.keys().hasOnly(['seed', 'min', 'max', 'players'])
+        && deal.keys().hasOnly(['seed', 'min', 'max', 'players', 'seatHistory'])
         && safeText(deal.seed, 1, 64)
         && deal.min is number && deal.min >= 0 && deal.min <= 120
         && deal.max is number && deal.max >= deal.min && deal.max <= 120
-        && (!('players' in deal) || (deal.players is list && deal.players.size() <= 16));
+        && (!('players' in deal) || (deal.players is list && deal.players.size() <= 16))
+        && (!('seatHistory' in deal) || deal.seatHistory == null || (deal.seatHistory is map && deal.seatHistory.size() <= 64));
     }
 
     function isValidMvpVotesMap(votes) {

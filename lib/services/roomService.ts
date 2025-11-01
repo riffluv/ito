@@ -289,26 +289,53 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
   await runTransaction(db!, async (tx) => {
     const snap = await tx.get(roomRef);
     if (!snap.exists()) return;
-    const data = snap.data() as RoomDoc & any;
+    const data = snap.data() as RoomDoc & Record<string, any>;
     const deal = data?.deal || null;
-    const currentPlayers: string[] = Array.isArray(deal?.players)
-      ? [...(deal.players as string[])]
+    const playersSource: unknown = deal?.players;
+    let players: string[] = Array.isArray(playersSource)
+      ? (playersSource as string[]).filter(
+          (value): value is string => typeof value === "string" && value.length > 0
+        )
       : [];
 
-    if (currentPlayers.includes(uid)) {
-      return;
+    const seatHistorySource: unknown = deal?.seatHistory;
+    const seatHistory: Record<string, number> =
+      seatHistorySource && typeof seatHistorySource === "object"
+        ? { ...(seatHistorySource as Record<string, number>) }
+        : {};
+
+    const alreadyPresent = players.includes(uid);
+
+    if (!alreadyPresent) {
+      let targetIndex: number | null = null;
+      const recorded = seatHistory[uid];
+      if (typeof recorded === "number" && recorded >= 0) {
+        targetIndex = recorded;
+      }
+      if (targetIndex === null || targetIndex > players.length) {
+        targetIndex = players.length;
+      }
+      players = players.filter((id) => id !== uid);
+      players.splice(targetIndex, 0, uid);
     }
 
-    currentPlayers.push(uid);
+    const nextSeatHistory: Record<string, number> = { ...seatHistory };
+    players.forEach((id, index) => {
+      nextSeatHistory[id] = index;
+    });
 
     const patch: Record<string, any> = {
-      deal: { ...(deal || {}), players: currentPlayers },
+      deal: {
+        ...(deal || {}),
+        players,
+        seatHistory: nextSeatHistory,
+      },
     };
 
     if (data?.order) {
-      patch.order = { ...(data.order || {}), total: currentPlayers.length };
+      patch.order = { ...(data.order || {}), total: players.length };
     } else if (data?.status === "clue") {
-      patch.order = { total: currentPlayers.length };
+      patch.order = { total: players.length };
     }
 
     tx.update(roomRef, patch);
