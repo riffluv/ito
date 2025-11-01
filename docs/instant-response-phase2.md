@@ -33,6 +33,7 @@
 ### 提案
 - `components/hooks/useDropHandler.ts` を更新し、`pending` を `Array<string | null>` へ型拡張。`scheduleOptimisticRollback` と `clearOptimisticEntry` を追加し、一定時間応答が無い場合は過去スナップショットに自動巻き戻し、通知を表示。
 - サーバー `proposal` を監視する `useEffect` を追加し、確定済みカードを `pending` から除去して二重表示を防止。`useBoardSlots` / `CardRenderer` / `lib/cards/logic.ts` も `null` 対応に調整。
+- Presence 切断に伴う“観戦落ち”を緩和するため、`PRESENCE_DISAPPEAR_GRACE_MS` を 5 秒に延長（`.env` で上書き可）。通信揺らぎで一瞬 Presence が途切れても UI が即座に観戦へ落ちなくなった。
 - Typecheck: `npm run typecheck`。
 
 ### 懸念
@@ -52,6 +53,7 @@
 ### 提案
 - `lib/game/resultPrefetch.ts` を新規作成し、`primeSortedRevealCache` で prefix 評価を事前計算してメモリ保持。`useRevealAnimation` から Clue 中に `touchSortedRevealCache` を呼び、Reveal 中は `readSortedRevealCache` を優先使用、未ヒット時のみ従来の評価を実行。
 - Reveal 完了・コンポーネント破棄時に `clearSortedRevealCache` を呼びメモリ解放。Typecheck: `npm run typecheck`。
+- `missing-deal` フォールバックで数字を再配布しないようにし、通信ゆらぎ時に誤って全員の番号が変わる現象を防止。必要に応じてホストが手動で再配布できるようログを残す。
 - サウンド/アセットのプリロードは SoundProvider 連携フックを別タスクとして設計メモ化。
 
 ### 懸念
