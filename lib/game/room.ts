@@ -93,7 +93,8 @@ export function selectDealTargetPlayers(
     const presenceSet = new Set(presenceUids);
     const online = fallbackPool.filter((p) => presenceSet.has(p.id));
     if (online.length > 0) {
-      return online;
+      const others = fallbackPool.filter((p) => !presenceSet.has(p.id));
+      return [...online, ...others];
     }
   }
   return fallbackPool;
