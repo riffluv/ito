@@ -51,6 +51,7 @@ export function useLeaveCleanup({
   const tokenRef = useRef<string | null>(null)
   const tokenKey = uid ? `${TOKEN_KEY_PREFIX}${uid}` : null
   const rejoinKey = uid ? `${REJOIN_KEY_PREFIX}${roomId}` : null
+  const reloadIntentRef = useRef(false)
 
   useEffect(() => {
     tokenRef.current = null
@@ -168,21 +169,102 @@ export function useLeaveCleanup({
     }
   }, [uid, rejoinKey])
 
+  useEffect(() => {
+    if (!enabled) {
+      reloadIntentRef.current = false
+      return
+    }
+    if (typeof window === "undefined") return
+
+    const markReloadIntent = () => {
+      reloadIntentRef.current = true
+    }
+
+    const nav: any = (window as any).navigation
+    let detachNavigate: (() => void) | null = null
+    if (nav && typeof nav.addEventListener === "function") {
+      const handleNavigate = (event: any) => {
+        try {
+          if (event?.navigationType === "reload") {
+            markReloadIntent()
+          }
+        } catch {}
+      }
+      nav.addEventListener("navigate", handleNavigate)
+      detachNavigate = () => {
+        try {
+          nav.removeEventListener("navigate", handleNavigate)
+        } catch {}
+      }
+    }
+
+    const keydownHandler = (event: KeyboardEvent) => {
+      if (!event) return
+      if (event.defaultPrevented) return
+      const key = event.key
+      if (key === "F5") {
+        markReloadIntent()
+        return
+      }
+      const isReloadShortcut = (key === "r" || key === "R") && (event.ctrlKey || event.metaKey)
+      if (isReloadShortcut && !event.altKey) {
+        markReloadIntent()
+      }
+    }
+
+    window.addEventListener("keydown", keydownHandler, true)
+
+    const restoreReload = (() => {
+      const locationObj: any = window.location
+      const originalReload: ((...args: any[]) => any) | undefined = locationObj?.reload?.bind(locationObj)
+      if (typeof originalReload !== "function") {
+        return () => {}
+      }
+      const patchedReload = (...args: any[]) => {
+        markReloadIntent()
+        return originalReload(...args)
+      }
+      try {
+        locationObj.reload = patchedReload
+      } catch {}
+      return () => {
+        try {
+          if (typeof originalReload === "function") {
+            locationObj.reload = originalReload
+          }
+        } catch {}
+      }
+    })()
+
+    return () => {
+      reloadIntentRef.current = false
+      window.removeEventListener("keydown", keydownHandler, true)
+      detachNavigate?.()
+      restoreReload()
+    }
+  }, [enabled])
+
   const performCleanup = useCallback(() => {
     if (!uid) return
     if (leavingRef.current) return
+    const isReloadIntent = reloadIntentRef.current
+    reloadIntentRef.current = false
     leavingRef.current = true
-    setSessionValue(rejoinKey, uid)
+    if (isReloadIntent) setSessionValue(rejoinKey, uid)
+    else setSessionValue(rejoinKey, null)
     try {
       Promise.resolve(detachNow()).catch(() => {})
     } catch {}
-    if (FORCE_DETACH_ON_LEAVE) {
+    if (!isReloadIntent && FORCE_DETACH_ON_LEAVE) {
       try {
         forceDetachAll(roomId, uid).catch(() => {})
       } catch {}
     }
-    if (!RECALL_V2_ENABLED) {
-      sendLeaveBeacon()
+    const shouldSendLeave = !isReloadIntent
+    if (shouldSendLeave) {
+      if (!isReloadIntent) {
+        sendLeaveBeacon()
+      }
       try {
         Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
       } catch {}
@@ -198,6 +280,7 @@ export function useLeaveCleanup({
 
   useEffect(() => {
     if (!enabled) return
+    reloadIntentRef.current = false
 
     skipCleanupRef.current = true
     let timeout: ReturnType<typeof setTimeout> | null = null
