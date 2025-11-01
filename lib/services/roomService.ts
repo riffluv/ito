@@ -136,8 +136,38 @@ export async function ensureMember({
     // 互換性のため、undefined は "開放中" とみなす（初期waitingでの入席可）
     const recallOpen = room?.ui?.recallOpen ?? true;
 
+    const dealPlayers: string[] = Array.isArray(room?.deal?.players)
+      ? (room.deal.players as string[]).filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0
+        )
+      : [];
+    const seatHistoryRaw =
+      room?.deal && typeof (room.deal as any)?.seatHistory === "object"
+        ? ((room.deal as any).seatHistory as Record<string, unknown>)
+        : null;
+    const seatHistoryHas =
+      !!seatHistoryRaw && typeof seatHistoryRaw[uid] === "number";
+    const orderList: string[] = Array.isArray(room?.order?.list)
+      ? (room.order.list as string[]).filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0
+        )
+      : [];
+    const orderProposal: string[] = Array.isArray(room?.order?.proposal)
+      ? (room.order.proposal as (string | null)[]).filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0
+        )
+      : [];
+    const wasSeatedBefore =
+      dealPlayers.includes(uid) ||
+      seatHistoryHas ||
+      orderList.includes(uid) ||
+      orderProposal.includes(uid);
+
     // ゲーム進行中は入席拒否（ホスト以外）
-    if (!isHost && status && status !== "waiting") {
+    if (!isHost && status && status !== "waiting" && !wasSeatedBefore) {
       logWarn("roomService", "ensureMember-blocked-in-progress", {
         roomId,
         uid,
@@ -148,7 +178,7 @@ export async function ensureMember({
     }
 
     // waiting でも recallOpen=false なら入席拒否（ホスト以外）
-    if (!isHost && status === "waiting" && !recallOpen) {
+    if (!isHost && status === "waiting" && !recallOpen && !wasSeatedBefore) {
       logWarn("roomService", "ensureMember-blocked-recall-disabled", {
         roomId,
         uid,
@@ -420,10 +450,7 @@ export async function joinRoomFully({
     throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
 
-  const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
-  if (!recallV2Enabled) {
-    await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
-  }
+  await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
   await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
   await updateLastActive(roomId).catch(() => void 0);
 
