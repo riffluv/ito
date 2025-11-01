@@ -10,6 +10,9 @@ const REJOIN_KEY_PREFIX = "pendingRejoin:"
 const RECALL_V2_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_RECALL_V2 === "1"
+const FORCE_DETACH_ON_LEAVE =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_FORCE_DETACH_ON_LEAVE !== "0"
 
 function setSessionValue(key: string | null, value: string | null) {
   if (!key || typeof window === "undefined") return
@@ -173,10 +176,12 @@ export function useLeaveCleanup({
     try {
       Promise.resolve(detachNow()).catch(() => {})
     } catch {}
-    if (!RECALL_V2_ENABLED) {
+    if (FORCE_DETACH_ON_LEAVE) {
       try {
         forceDetachAll(roomId, uid).catch(() => {})
       } catch {}
+    }
+    if (!RECALL_V2_ENABLED) {
       sendLeaveBeacon()
       try {
         Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
