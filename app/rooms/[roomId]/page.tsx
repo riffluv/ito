@@ -745,7 +745,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const tryApplyServiceWorker = useCallback(
     (reason: SafeUpdateTrigger) => {
       if (!safeUpdateFeatureEnabled) return false;
-      if (currentRoomStatus !== "waiting") {
+      if (currentRoomStatus && currentRoomStatus !== "waiting") {
         return false;
       }
       const registration = getWaitingServiceWorker();
@@ -795,7 +795,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         releaseForceApplyTimer(holdReason);
       };
     }
-    if (safeUpdateActive && currentRoomStatus !== "waiting") {
+    if (safeUpdateActive && currentRoomStatus && currentRoomStatus !== "waiting") {
       holdForceApplyTimer(holdReason);
       return () => {
         releaseForceApplyTimer(holdReason);

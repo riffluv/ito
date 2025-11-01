@@ -197,6 +197,8 @@ export const onPresenceWrite = functions.database
         });
       });
 
+      const rejoinWindowMs = Math.max(graceDelayMs, 750);
+
       try {
         const playerDoc = await db
           .collection("rooms")
@@ -210,18 +212,40 @@ export const onPresenceWrite = functions.database
 
         const playerData = playerDoc.data() as Record<string, any> | undefined;
         const lastSeenMs = toMillis(playerData?.lastSeen);
-        if (
-          lastSeenMs &&
-          nowAfterDelay - lastSeenMs <= Math.max(graceDelayMs, 750)
-        ) {
-          logDebug("presence", "skip-leave-grace", {
-            roomId,
-            uid,
-            lastSeenMs,
-            now: nowAfterDelay,
-            grace: graceDelayMs,
-          });
-          return null;
+        if (lastSeenMs && nowAfterDelay - lastSeenMs <= rejoinWindowMs) {
+          const remaining = rejoinWindowMs - (nowAfterDelay - lastSeenMs) + 500;
+          if (remaining > 0) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.min(remaining, 5_000))
+            );
+          }
+          const postDelaySnap = await db
+            .collection("rooms")
+            .doc(roomId)
+            .collection("players")
+            .doc(uid)
+            .get();
+          const postDelayNow = Date.now();
+          if (!postDelaySnap.exists) {
+            return null;
+          }
+          const postData = postDelaySnap.data() as
+            | Record<string, any>
+            | undefined;
+          const postLastSeenMs = toMillis(postData?.lastSeen);
+          if (
+            postLastSeenMs &&
+            postDelayNow - postLastSeenMs <= rejoinWindowMs
+          ) {
+            logDebug("presence", "skip-leave-grace", {
+              roomId,
+              uid,
+              lastSeenMs: postLastSeenMs,
+              now: postDelayNow,
+              grace: rejoinWindowMs,
+            });
+            return null;
+          }
         }
 
         logDebug("leaveRoomServer cleanup invoked", {
