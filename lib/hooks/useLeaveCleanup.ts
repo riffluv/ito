@@ -173,10 +173,10 @@ export function useLeaveCleanup({
     try {
       Promise.resolve(detachNow()).catch(() => {})
     } catch {}
+    try {
+      forceDetachAll(roomId, uid).catch(() => {})
+    } catch {}
     if (!RECALL_V2_ENABLED) {
-      try {
-        forceDetachAll(roomId, uid).catch(() => {})
-      } catch {}
       sendLeaveBeacon()
       try {
         Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})

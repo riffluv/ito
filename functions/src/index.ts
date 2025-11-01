@@ -26,6 +26,7 @@ const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 
 const PRESENCE_STALE_THRESHOLD_MS = PRESENCE_STALE_MS;
 const REJOIN_GRACE_MS = Math.min(PRESENCE_STALE_THRESHOLD_MS, 20_000);
+const FAST_REJOIN_GRACE_MS = Math.min(REJOIN_GRACE_MS, 2_000);
 
 const DEBUG_LOGGING_ENABLED =
   process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
@@ -164,6 +165,29 @@ export const onPresenceWrite = functions.database
         return null;
       }
 
+      const graceDelayMs = FAST_REJOIN_GRACE_MS;
+      if (graceDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, graceDelayMs));
+      }
+
+      const recheckSnap = await userRef.get();
+      const nowAfterDelay = Date.now();
+      const recheckVal = recheckSnap.val() as Record<string, any> | null;
+      const activeAfterDelay = recheckVal
+        ? Object.values(recheckVal).some((conn) =>
+            isPresenceConnActive(conn, nowAfterDelay)
+          )
+        : false;
+
+      if (activeAfterDelay) {
+        logDebug("presence", "skip-leave-reconnected", {
+          roomId,
+          uid,
+          delay: graceDelayMs,
+        });
+        return null;
+      }
+
       // 完全に切断されたのでノードを掃除し、部屋から退室させる
       await userRef.remove().catch((err) => {
         console.warn("Failed to remove user from room presence", {
@@ -186,12 +210,16 @@ export const onPresenceWrite = functions.database
 
         const playerData = playerDoc.data() as Record<string, any> | undefined;
         const lastSeenMs = toMillis(playerData?.lastSeen);
-        if (lastSeenMs && now - lastSeenMs <= REJOIN_GRACE_MS) {
+        if (
+          lastSeenMs &&
+          nowAfterDelay - lastSeenMs <= Math.max(graceDelayMs, 750)
+        ) {
           logDebug("presence", "skip-leave-grace", {
             roomId,
             uid,
             lastSeenMs,
-            now,
+            now: nowAfterDelay,
+            grace: graceDelayMs,
           });
           return null;
         }
@@ -200,6 +228,7 @@ export const onPresenceWrite = functions.database
           roomId,
           uid,
           flags: { wentOffline, removed, markedOffline },
+          waitedMs: graceDelayMs,
         });
         await leaveRoomServer(roomId, uid, null);
         logDebug("leaveRoomServer cleanup succeeded", { roomId, uid });
