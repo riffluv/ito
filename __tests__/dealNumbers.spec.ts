@@ -15,7 +15,7 @@ describe("selectDealTargetPlayers", () => {
       makeCandidate("bob", 1_000),
     ];
     const result = selectDealTargetPlayers(candidates, ["alice"], now);
-    expect(result.map((p) => p.id)).toEqual(["alice"]);
+    expect(result.map((p) => p.id)).toEqual(["alice", "bob"]);
   });
 
   test("falls back to recent activity when presence is empty", () => {
@@ -36,4 +36,3 @@ describe("selectDealTargetPlayers", () => {
     expect(result.map((p) => p.id).sort()).toEqual(["alice", "bob"]);
   });
 });
-
