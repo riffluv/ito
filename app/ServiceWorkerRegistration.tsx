@@ -25,6 +25,14 @@ const APP_VERSION =
   "dev";
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
+if (typeof window !== "undefined") {
+  try {
+    console.log("[APP_VERSION] runtime:", APP_VERSION);
+  } catch {
+    // noop
+  }
+}
+
 const shouldRegister = () => {
   if (ENABLE_FLAG === "0") {
     return false;
