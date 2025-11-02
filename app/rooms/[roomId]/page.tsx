@@ -2997,184 +2997,190 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </AppButton>
   ) : null;
 
-  const spectatorNotice = isSpectatorMode ? (
-    <Box
-      position="relative"
-      border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-      borderRadius={0}
-      boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-      bg={UI_TOKENS.GRADIENTS.dqPanel}
-      color={UI_TOKENS.COLORS.textBase}
-      px={{ base: 5, md: 6 }}
-      py={{ base: 5, md: 5 }}
-      display="flex"
-      flexDirection="column"
-      gap={3}
-      maxW={{ base: "100%", md: "520px" }}
-      mx="auto"
-      _before={{
-        content: '""',
-        position: "absolute",
-        inset: "8px",
-        border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-        pointerEvents: "none",
-      }}
-    >
-      <Box display="flex" flexDir="column" gap={3} alignItems="center">
-        <Text
-          fontSize={{ base: "sm", md: "md" }}
-          fontWeight={800}
-          letterSpacing="0.2em"
-          textTransform="uppercase"
-          fontFamily="monospace"
-        >
-          ▼ 観戦中 ▼
-        </Text>
-        <Box textAlign="center">
-          {spectatorReason === "version-mismatch" ? (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                アップデートがあります。アップデートしてください！
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                下の「今すぐ更新」ボタンを押してページを更新してください。
-              </Text>
-            </>
-          ) : spectatorReason === "waiting-open" ? (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                ホストが再開準備中だよ
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                少し待つか「席に戻れるか試す」を押して席へ戻ろう！
-              </Text>
-            </>
-          ) : spectatorReason === "waiting-closed" ? (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                次のゲーム準備中です
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                ホストが席を開放すると戻れるようになります。しばらくお待ちください。
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                ホストが承認すると席に戻れるよ
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                「席に戻れるか試す」を押して復帰を申請し、ホストの呼び込みを待とう。
-              </Text>
-            </>
-          )}
-        </Box>
-      </Box>
-      <Box
-        display="flex"
-        flexDir={{ base: "column", md: "row" }}
-        gap={3}
-        justifyContent="center"
-      >
-        {spectatorReason === "version-mismatch" ? (
-          <>
-            {spectatorUpdateButton}
-            <AppButton
-              palette={spectatorUpdateButton ? "gray" : "brand"}
-              size="md"
-              onClick={() => {
-                try {
-                  window.location.reload();
-                } catch {
-                  // ignore
-                }
-              }}
+  const spectatorNotice = isSpectatorMode
+    ? spectatorReason === "version-mismatch"
+      ? (
+          <VStack
+            gap={3}
+            align="center"
+            justify="center"
+            py={{ base: 3, md: 4 }}
+            px={{ base: 3, md: 4 }}
+          >
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              fontWeight={700}
+              color="rgba(255,255,255,0.95)"
+              textShadow="0 2px 4px rgba(0,0,0,0.55)"
+              textAlign="center"
             >
-              今すぐ更新
-            </AppButton>
-            <AppButton
-              palette="gray"
-              visual="outline"
-              size="md"
-              onClick={handleRetryJoin}
-              disabled={seatRequestButtonDisabled}
+              新しいバージョンがあります。アップデートしてください！
+            </Text>
+            <Text
+              fontSize={{ base: "sm", md: "md" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              textAlign="center"
             >
-              {seatRequestPending ? (
-                <HStack gap={2} align="center">
-                  <Spinner size="sm" />
-                  <Text as="span">申請中...</Text>
-                </HStack>
-              ) : (
-                "席に戻れるか試す"
-              )}
-            </AppButton>
-            <AppButton palette="gray" size="md" onClick={handleForcedExitLeaveNow}>
-              ロビーへ戻る
-            </AppButton>
-          </>
-        ) : (
-          <>
-            {spectatorUpdateButton}
-            <AppButton
-              palette="gray"
-              visual="outline"
-              size="md"
-              onClick={handleRetryJoin}
-              disabled={seatRequestButtonDisabled}
+              下の「今すぐ更新」ボタンから更新を適用してください。
+            </Text>
+            <HStack gap={3} flexWrap="wrap" justify="center">
+              {spectatorUpdateButton}
+              <AppButton
+                palette={spectatorUpdateButton ? "gray" : "brand"}
+                size="md"
+                onClick={() => {
+                  try {
+                    window.location.reload();
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                今すぐ更新
+              </AppButton>
+              <AppButton
+                palette="gray"
+                visual="outline"
+                size="md"
+                onClick={handleRetryJoin}
+                disabled={seatRequestButtonDisabled}
+              >
+                {seatRequestPending ? (
+                  <HStack gap={2} align="center">
+                    <Spinner size="sm" />
+                    <Text as="span">申請中...</Text>
+                  </HStack>
+                ) : (
+                  "席に戻れるか試す"
+                )}
+              </AppButton>
+              <AppButton palette="gray" size="md" onClick={handleForcedExitLeaveNow}>
+                ロビーへ戻る
+              </AppButton>
+            </HStack>
+          </VStack>
+        )
+      : (
+          <Box
+            position="relative"
+            border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+            borderRadius={0}
+            boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+            bg={UI_TOKENS.GRADIENTS.dqPanel}
+            color={UI_TOKENS.COLORS.textBase}
+            px={{ base: 5, md: 6 }}
+            py={{ base: 5, md: 5 }}
+            display="flex"
+            flexDirection="column"
+            gap={3}
+            maxW={{ base: "100%", md: "520px" }}
+            mx="auto"
+            _before={{
+              content: '""',
+              position: "absolute",
+              inset: "8px",
+              border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+              pointerEvents: "none",
+            }}
+          >
+            <Box display="flex" flexDir="column" gap={3} alignItems="center">
+              <Text
+                fontSize={{ base: "sm", md: "md" }}
+                fontWeight={800}
+                letterSpacing="0.2em"
+                textTransform="uppercase"
+                fontFamily="monospace"
+              >
+                ▼ 観戦中 ▼
+              </Text>
+              <Box textAlign="center">
+                {spectatorReason === "waiting-open" ? (
+                  <>
+                    <Text
+                      fontSize={{ base: "md", md: "lg" }}
+                      fontWeight={700}
+                      textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+                    >
+                      ホストが再開準備中だよ
+                    </Text>
+                    <Text
+                      fontSize={{ base: "sm", md: "md" }}
+                      color={UI_TOKENS.COLORS.whiteAlpha80}
+                      lineHeight={1.7}
+                      mt={1}
+                    >
+                      少し待つか「席に戻れるか試す」を押して席へ戻ろう！
+                    </Text>
+                  </>
+                ) : spectatorReason === "waiting-closed" ? (
+                  <>
+                    <Text
+                      fontSize={{ base: "md", md: "lg" }}
+                      fontWeight={700}
+                      textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+                    >
+                      次のゲーム準備中です
+                    </Text>
+                    <Text
+                      fontSize={{ base: "sm", md: "md" }}
+                      color={UI_TOKENS.COLORS.whiteAlpha80}
+                      lineHeight={1.7}
+                      mt={1}
+                    >
+                      ホストが席を開放すると戻れるようになります。しばらくお待ちください。
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text
+                      fontSize={{ base: "md", md: "lg" }}
+                      fontWeight={700}
+                      textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+                    >
+                      ホストが承認すると席に戻れるよ
+                    </Text>
+                    <Text
+                      fontSize={{ base: "sm", md: "md" }}
+                      color={UI_TOKENS.COLORS.whiteAlpha80}
+                      lineHeight={1.7}
+                      mt={1}
+                    >
+                      「席に戻れるか試す」を押して復帰を申請し、ホストの呼び込みを待とう。
+                    </Text>
+                  </>
+                )}
+              </Box>
+            </Box>
+            <Box
+              display="flex"
+              flexDir={{ base: "column", md: "row" }}
+              gap={3}
+              justifyContent="center"
             >
-              {seatRequestPending ? (
-                <HStack gap={2} align="center">
-                  <Spinner size="sm" />
-                  <Text as="span">申請中...</Text>
-                </HStack>
-              ) : (
-                "席に戻れるか試す"
-              )}
-            </AppButton>
-            <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
-              ロビーへ戻る
-            </AppButton>
-          </>
-        )}
-      </Box>
-    </Box>
-  ) : null;
+              {spectatorUpdateButton}
+              <AppButton
+                palette="gray"
+                visual="outline"
+                size="md"
+                onClick={handleRetryJoin}
+                disabled={seatRequestButtonDisabled}
+              >
+                {seatRequestPending ? (
+                  <HStack gap={2} align="center">
+                    <Spinner size="sm" />
+                    <Text as="span">申請中...</Text>
+                  </HStack>
+                ) : (
+                  "席に戻れるか試す"
+                )}
+              </AppButton>
+              <AppButton palette="brand" size="md" onClick={handleForcedExitLeaveNow}>
+                ロビーへ戻る
+              </AppButton>
+            </Box>
+          </Box>
+        )
+    : null;
 
   const showHand =
     !!me &&
