@@ -20,6 +20,7 @@ interface UseForcedExitParams {
   setForcedExitReason: (reason: "game-in-progress" | null) => void;
   roomId: string;
   displayName?: string | null;
+  skip?: boolean;
 }
 
 /**
@@ -41,11 +42,17 @@ export function useForcedExit({
   setForcedExitReason,
   roomId,
   displayName,
+  skip = false,
 }: UseForcedExitParams) {
   const forcedExitScheduledRef = useRef(false);
   const forcedExitCleanupRef = useRef(false);
 
   useEffect(() => {
+    if (skip) {
+      forcedExitScheduledRef.current = false;
+      forcedExitCleanupRef.current = false;
+      return;
+    }
     if (!uid) return;
     if (leavingRef.current) return;
     if (lastKnownHostId === uid) return;
@@ -137,5 +144,6 @@ export function useForcedExit({
     roomId,
     displayName,
     detachNow,
+    skip,
   ]);
 }
