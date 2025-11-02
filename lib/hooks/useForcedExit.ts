@@ -64,22 +64,30 @@ export function useForcedExit({
     }
     if (pendingRejoin) return;
 
-    if (!canAccess && roomStatus !== "waiting") {
+    if (!canAccess) {
+      if (roomStatus !== "waiting") {
+        if (!forcedExitScheduledRef.current) {
+          forcedExitScheduledRef.current = true;
+          setPendingRejoinFlag();
+          try {
+            notify({
+              title: "通信が不安定です",
+              description:
+                "ネットワークの復旧を待っています。回復すると自動で席へ戻ります。",
+              type: "info",
+            });
+          } catch (error) {
+            logDebug("room-page", "notify-force-exit-init-failed", error);
+          }
+          bumpMetric("forcedExit", "gameInProgress");
+        }
+        setForcedExitReason("game-in-progress");
+        return;
+      }
+
       if (!forcedExitScheduledRef.current) {
         forcedExitScheduledRef.current = true;
         setPendingRejoinFlag();
-        try {
-          notify({
-            title: "ゲームの席から外れました",
-            description:
-              "ホストに呼び込みをお願いするか、「席に戻れるか試す」で復帰を申請してください。",
-            type: "info",
-          });
-        } catch (error) {
-          logDebug("room-page", "notify-force-exit-init-failed", error);
-        }
-        setForcedExitReason("game-in-progress");
-        bumpMetric("forcedExit", "gameInProgress");
       }
 
       if (!forcedExitCleanupRef.current) {
@@ -106,6 +114,7 @@ export function useForcedExit({
             forcedExitCleanupRef.current = false;
           });
       }
+      return;
     }
 
     // waiting状態に戻った、またはアクセス可能になった → 観戦パネルをクリア
