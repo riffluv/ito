@@ -38,8 +38,9 @@ import { KEYBOARD_KEYS } from "./hints/constants";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
-import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
+import { UpdateAvailableBadgeControlled } from "@/components/ui/UpdateAvailableBadge";
 import { APP_VERSION } from "@/lib/constants/appVersion";
+import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 
 type HostPanelIconProps = {
   src: string;
@@ -327,6 +328,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     presenceReady = true,
     phaseMessage,
   } = props;
+
+  const serviceWorkerUpdateState = useServiceWorkerUpdate();
+  const updateBadgeVisible = React.useMemo(
+    () =>
+      serviceWorkerUpdateState.isUpdateReady ||
+      serviceWorkerUpdateState.isApplying ||
+      serviceWorkerUpdateState.hasError ||
+      serviceWorkerUpdateState.autoApplySuppressed,
+    [
+      serviceWorkerUpdateState.autoApplySuppressed,
+      serviceWorkerUpdateState.hasError,
+      serviceWorkerUpdateState.isApplying,
+      serviceWorkerUpdateState.isUpdateReady,
+    ]
+  );
+  const phaseMessageBottom = React.useMemo(
+    () =>
+      updateBadgeVisible
+        ? { base: "calc(16px + 118px)", md: "calc(20px + 120px)" }
+        : { base: "calc(16px + 60px)", md: "calc(20px + 62px)" },
+    [updateBadgeVisible]
+  );
 
   const hostClaimActive =
     !isHost && !!hostClaimStatus && hostClaimStatus !== "idle";
@@ -723,7 +746,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           },
         }}
       >
-        <UpdateAvailableBadge />
+        <UpdateAvailableBadgeControlled state={serviceWorkerUpdateState} />
 
         {/* 数字カード（大きく・モダン） */}
         <Box
@@ -929,7 +952,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {(inlineFeedback || phaseMessage) && (
         <Box
           position="fixed"
-          bottom={{ base: "calc(16px + 60px)", md: "calc(20px + 62px)" }}
+          bottom={phaseMessageBottom}
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}

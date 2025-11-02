@@ -728,20 +728,30 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (spectatorUpdateApplying) {
       return;
     }
+    if (spectatorUpdateFailed) {
+      safeUpdateAutoApplyRef.current = false;
+    }
     if (!versionMismatch && !hasWaitingUpdate) {
       safeUpdateAutoApplyRef.current = false;
       return;
     }
-    if (safeUpdateAutoApplyRef.current) {
+    if (safeUpdateAutoApplyRef.current && !spectatorUpdateFailed) {
       return;
     }
     if (!hasWaitingUpdate) {
-      void resyncWaitingServiceWorker("room:auto-init");
+      void resyncWaitingServiceWorker(
+        spectatorUpdateFailed ? "room:auto-retry-failed-resync" : "room:auto-init"
+      );
       return;
     }
+    const reason = spectatorUpdateFailed
+      ? "room:auto-retry-failed"
+      : versionMismatch
+      ? "room:auto-mismatch"
+      : "room:auto-waiting";
     safeUpdateAutoApplyRef.current = true;
     const applied = applyServiceWorkerUpdate({
-      reason: versionMismatch ? "room:auto-mismatch" : "room:auto-waiting",
+      reason,
       safeMode: true,
     });
     if (!applied) {
@@ -753,6 +763,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     versionMismatch,
     hasWaitingUpdate,
     spectatorUpdateApplying,
+    spectatorUpdateFailed,
   ]);
   const tryApplyServiceWorker = useCallback(
     (reason: SafeUpdateTrigger) => {
