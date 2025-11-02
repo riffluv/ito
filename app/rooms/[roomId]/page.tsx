@@ -16,7 +16,6 @@ import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
 
 import { lazy, Suspense } from "react";
-import { keyframes } from "@emotion/react";
 const SettingsModal = lazy(() => import("@/components/SettingsModal"));
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
@@ -94,21 +93,6 @@ const ROOM_CORE_ASSETS = [
   "/images/hanepen2.webp",
   "/images/backgrounds/hd2d/bg1.png",
 ] as const;
-
-const rejoinTextPulse = keyframes`
-  0% {
-    opacity: 0.6;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-1.5px);
-  }
-  100% {
-    opacity: 0.6;
-    transform: translateY(0);
-  }
-`;
 
 const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
   ssr: false,
@@ -2774,22 +2758,19 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const meHasPlacedCard = submittedPlayerIds.includes(meId);
   const playerCount = playersWithOptimistic.length;
   const meIsReady = me?.ready === true;
-  const baseOverlayMessage = useMemo(() => {
-    if (!room || !isMember) return null;
+  let baseOverlayMessage: string | null = null;
+  if (room && isMember) {
     const status = room.status ?? null;
     if (status === "waiting") {
-      return `メンバー待機中（参加人数：${playerCount}人）`;
-    }
-    if (status === "clue") {
+      baseOverlayMessage = `メンバー待機中（参加人数：${playerCount}人）`;
+    } else if (status === "clue") {
       if (meHasPlacedCard) {
-        return "みんなで話し合って順番を決めよう！";
-      }
-      if (meIsReady) {
-        return "上の空きスロットにカードをドラッグだ！";
+        baseOverlayMessage = "みんなで話し合って順番を決めよう！";
+      } else if (meIsReady) {
+        baseOverlayMessage = "上の空きスロットにカードをドラッグだ！";
       }
     }
-    return null;
-  }, [room?.status, isMember, playerCount, meHasPlacedCard, meIsReady]);
+  }
 
   if (!firebaseEnabled) {
     return (
@@ -3201,6 +3182,18 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       seatAcceptanceActive ||
       (uid ? players.some((player) => player.id === uid) : false));
 
+  const showRejoinOverlay =
+    (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
+  const prioritizedTransitionMessage = isMember ? transitionMessage : null;
+  let phaseMessage: string | null = null;
+  if (showRejoinOverlay) {
+    phaseMessage = "ルームへ再参加中です...";
+  } else if (prioritizedTransitionMessage) {
+    phaseMessage = prioritizedTransitionMessage;
+  } else if (baseOverlayMessage) {
+    phaseMessage = baseOverlayMessage;
+  }
+
   const handAreaNode = (
     <Box display="flex" flexDirection="column" gap={spectatorNotice ? 4 : 0}>
       {spectatorNotice}
@@ -3226,45 +3219,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           onLeaveRoom={leaveRoom}
           pop={pop}
           hostClaimStatus={hostClaimStatus}
+          phaseMessage={phaseMessage}
         />
       ) : spectatorNotice ? null : (
         <Box h="1px" />
       )}
     </Box>
   );
-
-  const showRejoinOverlay =
-    (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
-  const prioritizedTransitionMessage = isMember ? transitionMessage : null;
-  const overlayMessage = showRejoinOverlay
-    ? "ルームへ再参加中です..."
-    : prioritizedTransitionMessage ?? baseOverlayMessage;
-  const statusOverlayNode = overlayMessage ? (
-    <Box
-      position="fixed"
-      top={{ base: "min(65vh, calc(100dvh - 320px))", md: "min(60vh, calc(100dvh - 360px))" }}
-      left="50%"
-      transform="translate(-50%, -50%)"
-      zIndex={54}
-      pointerEvents="none"
-      css={{
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          top: "min(62vh, calc(100dvh - 340px))",
-        },
-      }}
-    >
-      <Text
-        fontSize="sm"
-        fontWeight="bold"
-        color="rgba(255,255,255,0.95)"
-        textAlign="center"
-        pointerEvents="none"
-        animation={`${rejoinTextPulse} 1.7s ease-in-out infinite`}
-      >
-        {overlayMessage}
-      </Text>
-    </Box>
-  ) : null;
 
   const joinStatusMessage =
     joinStatus === "retrying"
@@ -3297,61 +3258,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const safeUpdateBannerNode = shouldShowUpdateBanner ? (
     <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
   ) : null;
-  const shouldBlockUpdateOverlay =
-    safeUpdateFeatureEnabled &&
-    versionMismatchGuarded &&
-    (hasWaitingUpdate || spectatorUpdateApplying);
-  // プレイ中は強制的な更新オーバーレイとボタンを出さない（waiting時のみ表示）
-  const versionMismatchOverlay = shouldBlockUpdateOverlay ? (
-      <Box
-        position="fixed"
-        inset={0}
-        zIndex={1600}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        bg="rgba(6, 10, 18, 0.88)"
-        pointerEvents="all"
-      >
-        <VStack
-          gap={4}
-          maxW="360px"
-          px={6}
-          py={8}
-          bg="rgba(14, 20, 32, 0.9)"
-          border="1px solid rgba(255,255,255,0.18)"
-          borderRadius="12px"
-          boxShadow="0 18px 38px rgba(0,0,0,0.5)"
-        >
-          <Text fontSize="lg" fontWeight="bold" color="rgba(255,255,255,0.92)">
-            新しいバージョンを適用しています
-          </Text>
-          <Text fontSize="sm" color="rgba(255,255,255,0.76)" textAlign="center" lineHeight={1.8}>
-            ゲームを安全に続行するため、このままお待ちください。
-            自動で切り替わらない場合は下のボタンで今すぐ更新できます。
-          </Text>
-          <AppButton
-            palette="brand"
-            size="md"
-            w="100%"
-            onClick={spectatorUpdateFailed ? retrySpectatorUpdate : applySpectatorUpdate}
-            disabled={spectatorUpdateApplying}
-          >
-            {spectatorUpdateApplying
-              ? "更新を適用中..."
-              : spectatorUpdateFailed
-                ? "再試行する"
-                : "今すぐ更新"}
-          </AppButton>
-        </VStack>
-      </Box>
-    ) : null;
+  const shouldBlockUpdateOverlay = false;
+  const versionMismatchOverlay = null;
 
   
   return (
     <>
       {joinStatusBanner}
-      {statusOverlayNode}
       {safeUpdateBannerNode}
       {versionMismatchOverlay}
       <RoomNotifyBridge roomId={roomId} />

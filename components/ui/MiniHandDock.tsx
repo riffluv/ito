@@ -125,6 +125,21 @@ const orangeGlowNext = keyframes`
   }
 `;
 
+const phaseMessagePulse = keyframes`
+  0% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1.5px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+`;
+
 const subtleTextPulse = keyframes`
   0% {
     opacity: 0.6;
@@ -285,6 +300,7 @@ interface MiniHandDockProps {
   currentTopic?: string | null;
   hostClaimStatus?: HostClaimStatus;
   presenceReady?: boolean;
+  phaseMessage?: string | null;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -309,6 +325,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     currentTopic,
     hostClaimStatus,
     presenceReady = true,
+    phaseMessage,
   } = props;
 
   const hostClaimActive =
@@ -465,13 +482,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const effectiveDefaultTopicType = hostDefaultTopicType;
 
   React.useEffect(() => {
-    if (!inlineFeedback) return;
-    if (inlineFeedback.tone === "info") return;
-    const timer = setTimeout(() => setInlineFeedback(null), 2000);
-    return () => clearTimeout(timer);
-  }, [inlineFeedback]);
-
-  React.useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = (event: Event) => {
       const detail = (
@@ -513,6 +523,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       el.blur();
     }
   }, [ready]);
+
+  React.useEffect(() => {
+    if (!inlineFeedback) return;
+    if (inlineFeedback.tone === "info") return;
+    const timer = setTimeout(() => setInlineFeedback(null), 2000);
+    return () => clearTimeout(timer);
+  }, [inlineFeedback]);
 
   React.useEffect(() => {
     if (!clueEditable) {
@@ -908,32 +925,30 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       </Flex>
       )}
 
-      {/* フィードバックメッセージ (中央入力エリアの上) */}
-      {inlineFeedback && (
-        <Text
+      {/* 状況アナウンス */}
+      {(inlineFeedback || phaseMessage) && (
+        <Box
           position="fixed"
           bottom={{ base: "calc(16px + 60px)", md: "calc(20px + 62px)" }}
           left="50%"
           transform="translateX(-50%)"
           zIndex={55}
-          fontSize="0.75rem"
-          color={
-            inlineFeedback.tone === "success"
-              ? UI_TOKENS.COLORS.whiteAlpha90
-              : UI_TOKENS.COLORS.whiteAlpha60
-          }
-          fontFamily="monospace"
-          bg="rgba(10, 15, 25, 0.95)"
-          px="14px"
-          py="7px"
-          borderRadius="3px"
-          border={`1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`}
-          boxShadow="0 2px 8px rgba(0,0,0,0.4)"
-          whiteSpace="nowrap"
           pointerEvents="none"
         >
-          {inlineFeedback.message}
-        </Text>
+          <Text
+            display="inline-block"
+            fontSize="0.85rem"
+            fontWeight="bold"
+            color="rgba(255,255,255,0.95)"
+            letterSpacing="0.04em"
+            textAlign="center"
+            textShadow="0 1px 3px rgba(0,0,0,0.55)"
+            whiteSpace="nowrap"
+            animation={`${phaseMessagePulse} 1.7s ease-in-out infinite`}
+          >
+            {inlineFeedback ? inlineFeedback.message : phaseMessage}
+          </Text>
+        </Box>
       )}
 
       {/* 右端: 共通ボタン (設定・退出のみ) */}
