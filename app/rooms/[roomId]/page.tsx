@@ -1136,10 +1136,37 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
+  const pendingSeatRequestRef = useRef<SeatRequestSource | null>(null);
+  const requestSeatNow = useCallback(
+    (source: SeatRequestSource) => {
+      if (!uid) return;
+      pendingSeatRequestRef.current = null;
+      leavingRef.current = true;
+      void requestSeat(roomId, uid, displayName ?? null, source).catch(
+        (error) => {
+          traceError("spectator.requestSeat.client", error, {
+            roomId,
+            uid,
+            source,
+          });
+          setSeatRequestState({
+            status: "idle",
+            source: null,
+            requestedAt: null,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          leavingRef.current = false;
+        }
+      );
+    },
+    [uid, roomId, displayName, leavingRef, setSeatRequestState]
+  );
+
   const setPendingRejoinFlag = useCallback(
     (source: SeatRequestSource = "manual") => {
       if (!uid) return;
-      if (!spectatorRecallEnabled) {
+      const canRequestNow = spectatorRecallEnabled;
+      if (!canRequestNow && roomStatus === "waiting") {
         logDebug("room-page", "seat-request-blocked", {
           roomId,
           uid,
@@ -1157,35 +1184,38 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         error: null,
       });
       setSeatRequestTimedOut(false);
-      leavingRef.current = true;
-      void requestSeat(roomId, uid, displayName ?? null, source).catch(
-        (error) => {
-          traceError("spectator.requestSeat.client", error, {
-            roomId,
-            uid,
-            source,
-          });
-          setSeatRequestState({
-            status: "idle",
-            source: null,
-            requestedAt: null,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          leavingRef.current = false;
-          }
-        );
+      if (canRequestNow) {
+        requestSeatNow(source);
+      } else {
+        pendingSeatRequestRef.current = source;
+        logDebug("room-page", "seat-request-queued", {
+          roomId,
+          uid,
+          source,
+          roomStatus,
+        });
+      }
     },
     [
       uid,
-      roomId,
-      displayName,
-      leavingRef,
       spectatorRecallEnabled,
       roomStatus,
       recallOpen,
       clearSeatAcceptanceHold,
+      setSeatRequestState,
+      setSeatRequestTimedOut,
+      requestSeatNow,
+      roomId,
     ]
   );
+
+  useEffect(() => {
+    if (!uid) return;
+    const queued = pendingSeatRequestRef.current;
+    if (!queued) return;
+    if (!spectatorRecallEnabled) return;
+    requestSeatNow(queued);
+  }, [uid, spectatorRecallEnabled, requestSeatNow]);
 
   useEffect(() => {
     if (!versionMismatchBlocksAccess) {
@@ -3137,7 +3167,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                       fontWeight={700}
                       textShadow="2px 2px 0 rgba(0,0,0,0.8)"
                     >
-                      ホストが承認すると席に戻れるよ
+                      通信復旧待機中
                     </Text>
                     <Text
                       fontSize={{ base: "sm", md: "md" }}
@@ -3145,7 +3175,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                       lineHeight={1.7}
                       mt={1}
                     >
-                      「席に戻れるか試す」を押して復帰を申請し、ホストの呼び込みを待とう。
+                      接続が安定すると自動で席へ戻ります。しばらくこのままお待ちください。
                     </Text>
                   </>
                 )}
@@ -3198,6 +3228,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     phaseMessage = prioritizedTransitionMessage;
   } else if (baseOverlayMessage) {
     phaseMessage = baseOverlayMessage;
+  } else if (forcedExitReason === "game-in-progress") {
+    phaseMessage = "通信が一時的に不安定です。復帰待機中...";
   }
 
   const handAreaNode = (
