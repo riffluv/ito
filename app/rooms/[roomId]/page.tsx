@@ -566,6 +566,34 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [transitionMessage, setTransitionMessage] = useState<string | null>(null);
+  const transitionTimerRef = useRef<number | null>(null);
+  const overlayStatusRef = useRef<string | null>(null);
+  const showTransitionMessage = useCallback(
+    (message: string, durationMs = 3000) => {
+      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+      setTransitionMessage(message);
+      if (typeof window === "undefined" || durationMs <= 0) {
+        return;
+      }
+      transitionTimerRef.current = window.setTimeout(() => {
+        transitionTimerRef.current = null;
+        setTransitionMessage((current) => (current === message ? null : current));
+      }, durationMs);
+    },
+    []
+  );
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+    };
+  }, []);
   const [dealRecoveryDismissed, setDealRecoveryDismissed] = useState(false);
   const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
   const dealRecoveryTimerRef = useRef<number | null>(null);
@@ -2260,6 +2288,34 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [room?.status, room?.result?.success]);
 
+  useEffect(() => {
+    const status = room?.status ?? null;
+    if (!isMember) {
+      overlayStatusRef.current = status;
+      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+      if (transitionMessage !== null) {
+        setTransitionMessage(null);
+      }
+      return;
+    }
+    const prev = overlayStatusRef.current;
+    if (status && prev !== status) {
+      if (prev === "waiting" && status === "clue") {
+        showTransitionMessage("配られた数字にぴったりなワードを考えよう！", 3000);
+      } else if (status === "waiting" && prev && prev !== "waiting") {
+        if (prev === "finished") {
+          showTransitionMessage("次のゲームに移行中…", 3000);
+        } else {
+          showTransitionMessage("リセット中…", 3000);
+        }
+      }
+    }
+    overlayStatusRef.current = status;
+  }, [room?.status, isMember, showTransitionMessage, transitionMessage]);
+
 
 
 
@@ -2716,6 +2772,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [room?.order?.proposal, orderList]);
 
   const meHasPlacedCard = submittedPlayerIds.includes(meId);
+  const playerCount = playersWithOptimistic.length;
+  const meIsReady = me?.ready === true;
+  const baseOverlayMessage = useMemo(() => {
+    if (!room || !isMember) return null;
+    const status = room.status ?? null;
+    if (status === "waiting") {
+      return `メンバー待機中（参加人数：${playerCount}人）`;
+    }
+    if (status === "clue") {
+      if (meHasPlacedCard) {
+        return "みんなで話し合って順番を決めよう！";
+      }
+      if (meIsReady) {
+        return "上の空きスロットにカードをドラッグだ！";
+      }
+    }
+    return null;
+  }, [room?.status, isMember, playerCount, meHasPlacedCard, meIsReady]);
 
   if (!firebaseEnabled) {
     return (
@@ -3161,16 +3235,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const showRejoinOverlay =
     (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
-  const rejoinOverlayNode = showRejoinOverlay ? (
+  const prioritizedTransitionMessage = isMember ? transitionMessage : null;
+  const overlayMessage = showRejoinOverlay
+    ? "ルームへ再参加中です..."
+    : prioritizedTransitionMessage ?? baseOverlayMessage;
+  const statusOverlayNode = overlayMessage ? (
     <Box
       position="fixed"
-      bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
+      top={{ base: "min(65vh, calc(100dvh - 320px))", md: "min(60vh, calc(100dvh - 360px))" }}
       left="50%"
-      transform="translateX(-50%)"
+      transform="translate(-50%, -50%)"
       zIndex={54}
+      pointerEvents="none"
       css={{
         [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          bottom: "clamp(100px, 15vh, 180px)",
+          top: "min(62vh, calc(100dvh - 340px))",
         },
       }}
     >
@@ -3182,7 +3261,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         pointerEvents="none"
         animation={`${rejoinTextPulse} 1.7s ease-in-out infinite`}
       >
-        ゲームに参加中...
+        {overlayMessage}
       </Text>
     </Box>
   ) : null;
@@ -3221,7 +3300,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const shouldBlockUpdateOverlay =
     safeUpdateFeatureEnabled &&
     versionMismatchGuarded &&
-    (safeUpdateActive || hasWaitingUpdate);
+    (hasWaitingUpdate || spectatorUpdateApplying);
   // プレイ中は強制的な更新オーバーレイとボタンを出さない（waiting時のみ表示）
   const versionMismatchOverlay = shouldBlockUpdateOverlay ? (
       <Box
@@ -3272,7 +3351,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   return (
     <>
       {joinStatusBanner}
-      {rejoinOverlayNode}
+      {statusOverlayNode}
       {safeUpdateBannerNode}
       {versionMismatchOverlay}
       <RoomNotifyBridge roomId={roomId} />
