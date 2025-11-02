@@ -84,7 +84,7 @@ export function useCardFlipAnimation({
     resetTween();
 
     const duration = preset === "result" ? durations.result : durations.default;
-    const ease = preset === "result" ? "back.out(1.65)" : "power2.out";
+    const ease = preset === "result" ? "back.out(1.35)" : "power3.out";
 
     flipTweenRef.current = gsap.to(el, {
       duration,

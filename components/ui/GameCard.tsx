@@ -1,5 +1,5 @@
 "use client";
-import { CARD_FLIP_EASING, HOVER_EASING } from "@/lib/ui/motion";
+import { CARD_FLIP_EASING, FLIP_DURATION_MS, HOVER_EASING } from "@/lib/ui/motion";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
@@ -39,8 +39,8 @@ import {
   type GameCardState,
 } from "../cards/card.styles";
 
-const FLIP_DURATION_DEFAULT = 0.35;
-const FLIP_DURATION_RESULT = 0.4;
+const FLIP_DURATION_DEFAULT = FLIP_DURATION_MS / 1000;
+const FLIP_DURATION_RESULT = Math.max(FLIP_DURATION_DEFAULT + 0.04, 0.36);
 const FLIP_DURATIONS = {
   default: FLIP_DURATION_DEFAULT,
   result: FLIP_DURATION_RESULT,
