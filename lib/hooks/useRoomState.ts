@@ -20,6 +20,10 @@ import {
   type RoomMachineActorRef,
   type RoomMachineClientEvent,
   type RoomMachineSnapshot,
+  type SpectatorReason,
+  type SpectatorRequestSource,
+  type SpectatorStatus,
+  type SpectatorRejoinSnapshot,
 } from "@/lib/state/roomMachine";
 import { createActor } from "xstate";
 import {
@@ -44,6 +48,13 @@ export type RoomState = {
   phase: RoomDoc["status"];
   fsmEnabled: boolean;
   sendRoomEvent?: (event: RoomMachineClientEvent) => void;
+  spectatorStatus: SpectatorStatus;
+  spectatorReason: SpectatorReason;
+  spectatorRequestSource: SpectatorRequestSource;
+  spectatorError: string | null;
+  spectatorRequestStatus: "idle" | "pending" | "accepted" | "rejected";
+  spectatorRequestCreatedAt: number | null;
+  spectatorRequestFailure: string | null;
 };
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
@@ -107,6 +118,72 @@ export function useRoomState(
     [deferEnabled]
   );
 
+  const subscribeSpectatorRejoin = useCallback(
+    ({
+      roomId: targetRoomId,
+      uid: targetUid,
+      onSnapshot: handleSnapshot,
+      onError,
+    }: {
+      roomId: string;
+      uid: string;
+      onSnapshot: (snapshot: SpectatorRejoinSnapshot) => void;
+      onError?: (error: unknown) => void;
+    }) => {
+      if (!firebaseEnabled || !db) {
+        return () => {};
+      }
+      try {
+        const requestRef = doc(db, "rooms", targetRoomId, "rejoinRequests", targetUid);
+        const unsubscribe = onSnapshot(
+          requestRef,
+          (snap) => {
+            try {
+              if (!snap.exists()) {
+                handleSnapshot({ exists: false });
+                return;
+              }
+              const data = snap.data() as Record<string, any>;
+              const statusRaw = typeof data?.status === "string" ? data.status : "pending";
+              const status: "pending" | "accepted" | "rejected" =
+                statusRaw === "accepted" || statusRaw === "rejected" ? statusRaw : "pending";
+              const sourceRaw = typeof data?.source === "string" ? data.source : "manual";
+              const source: Exclude<SpectatorRequestSource, null> =
+                sourceRaw === "auto" ? "auto" : "manual";
+              const createdAt =
+                typeof data?.createdAt?.toMillis === "function"
+                  ? Number(data.createdAt.toMillis())
+                  : typeof data?.createdAt === "number"
+                  ? data.createdAt
+                  : null;
+              const failure =
+                typeof data?.failureReason === "string" ? data.failureReason : null;
+              handleSnapshot({
+                exists: true,
+                status,
+                source,
+                createdAt: createdAt ?? null,
+                failure,
+              });
+            } catch (error) {
+              onError?.(error);
+            }
+          },
+          (error) => {
+            onError?.(error);
+          }
+        );
+        return () => {
+          unsubscribe();
+        };
+      } catch (error) {
+        onError?.(error);
+        return () => {};
+      }
+    },
+    [db, firebaseEnabled]
+  );
+
   useEffect(() => {
     if (!roomId || typeof window === "undefined") {
       prefetchedAppliedRef.current = false;
@@ -166,6 +243,10 @@ export function useRoomState(
         players: [],
         onlineUids: undefined,
         presenceReady: false,
+        viewerUid: uid ?? null,
+        deps: {
+          subscribeSpectatorRejoin: firebaseEnabled ? subscribeSpectatorRejoin : undefined,
+        },
       })
     );
     actor.start();
@@ -185,7 +266,7 @@ export function useRoomState(
         machineRef.current = null;
       }
     };
-  }, [fsmEnabled, roomId]);
+  }, [fsmEnabled, roomId, uid, firebaseEnabled, subscribeSpectatorRejoin]);
 
   // subscribe room
   useEffect(() => {
@@ -696,6 +777,49 @@ export function useRoomState(
     return { ...room, status: statusFromMachine };
   }, [room, fsmEnabled, machineSnapshot]);
 
+  const spectatorState = useMemo<{
+    spectatorStatus: SpectatorStatus;
+    spectatorReason: SpectatorReason;
+    spectatorRequestSource: SpectatorRequestSource;
+    spectatorError: string | null;
+    spectatorRequestStatus: "idle" | "pending" | "accepted" | "rejected";
+    spectatorRequestCreatedAt: number | null;
+    spectatorRequestFailure: string | null;
+  }>(() => {
+    if (!fsmEnabled) {
+      return {
+        spectatorStatus: "idle",
+        spectatorReason: null,
+        spectatorRequestSource: null,
+        spectatorError: null,
+        spectatorRequestStatus: "idle",
+        spectatorRequestCreatedAt: null,
+        spectatorRequestFailure: null,
+      };
+    }
+    const snapshot = machineSnapshot;
+    if (!snapshot) {
+      return {
+        spectatorStatus: "idle",
+        spectatorReason: null,
+        spectatorRequestSource: null,
+        spectatorError: null,
+        spectatorRequestStatus: "idle",
+        spectatorRequestCreatedAt: null,
+        spectatorRequestFailure: null,
+      };
+    }
+    return {
+      spectatorStatus: snapshot.context.spectatorStatus,
+      spectatorReason: snapshot.context.spectatorReason,
+      spectatorRequestSource: snapshot.context.spectatorRequestSource,
+      spectatorError: snapshot.context.spectatorError,
+      spectatorRequestStatus: snapshot.context.spectatorRequestStatus,
+      spectatorRequestCreatedAt: snapshot.context.spectatorRequestCreatedAt,
+      spectatorRequestFailure: snapshot.context.spectatorRequestFailure,
+    };
+  }, [fsmEnabled, machineSnapshot]);
+
   const sendRoomEvent = useCallback(
     (event: RoomMachineClientEvent) => {
       if (!fsmEnabled) return;
@@ -720,6 +844,13 @@ export function useRoomState(
       phase: effectivePhase,
       fsmEnabled,
       sendRoomEvent: fsmEnabled ? sendRoomEvent : undefined,
+      spectatorStatus: spectatorState.spectatorStatus,
+      spectatorReason: spectatorState.spectatorReason,
+      spectatorRequestSource: spectatorState.spectatorRequestSource,
+      spectatorError: spectatorState.spectatorError,
+      spectatorRequestStatus: spectatorState.spectatorRequestStatus,
+      spectatorRequestCreatedAt: spectatorState.spectatorRequestCreatedAt,
+      spectatorRequestFailure: spectatorState.spectatorRequestFailure,
     }),
     [
       effectiveRoom,
@@ -735,6 +866,13 @@ export function useRoomState(
       effectivePhase,
       fsmEnabled,
       sendRoomEvent,
+      spectatorState.spectatorStatus,
+      spectatorState.spectatorReason,
+      spectatorState.spectatorRequestSource,
+      spectatorState.spectatorError,
+      spectatorState.spectatorRequestStatus,
+      spectatorState.spectatorRequestCreatedAt,
+      spectatorState.spectatorRequestFailure,
     ]
   );
 

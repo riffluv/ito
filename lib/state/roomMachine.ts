@@ -13,18 +13,37 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   assign,
   createMachine,
+  fromCallback,
   type ActorRefFrom,
   type StateFrom,
 } from "xstate";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 
+export type SpectatorReason = "mid-game" | "waiting-open" | "waiting-closed" | "version-mismatch" | null;
+export type SpectatorStatus =
+  | "idle"
+  | "watching"
+  | "requesting"
+  | "waiting-host"
+  | "approved"
+  | "rejected";
+export type SpectatorRequestSource = "manual" | "auto" | null;
+
 export type RoomMachineContext = {
   roomId: string;
+  viewerUid: string | null;
   room: (RoomDoc & { id?: string }) | null;
   players: PlayerWithId[];
   onlineUids?: string[];
   presenceReady: boolean;
+  spectatorStatus: SpectatorStatus;
+  spectatorReason: SpectatorReason;
+  spectatorRequestSource: SpectatorRequestSource;
+  spectatorError: string | null;
+  spectatorRequestStatus: "idle" | "pending" | "accepted" | "rejected";
+  spectatorRequestCreatedAt: number | null;
+  spectatorRequestFailure: string | null;
 };
 
 export type RoomMachineClientEvent =
@@ -36,10 +55,38 @@ export type RoomMachineClientEvent =
       type: "RESET";
       keepIds?: ResetRoomKeepIds;
       options?: ResetRoomOptions;
+    }
+  | { type: "SPECTATOR_ENTER"; reason: Exclude<SpectatorReason, null> }
+  | { type: "SPECTATOR_LEAVE" }
+  | { type: "SPECTATOR_REQUEST"; source: Exclude<SpectatorRequestSource, null> }
+  | { type: "SPECTATOR_WAIT_HOST" }
+  | { type: "SPECTATOR_CANCEL" }
+  | { type: "SPECTATOR_APPROVED" }
+  | { type: "SPECTATOR_REJECTED"; error?: string | null }
+  | { type: "SPECTATOR_TIMEOUT" }
+  | { type: "SPECTATOR_ERROR"; error: string }
+  | { type: "SPECTATOR_REASON_UPDATE"; reason: SpectatorReason }
+  | { type: "SPECTATOR_RESET" };
+
+export type SpectatorRejoinSnapshot =
+  | { exists: false }
+  | {
+      exists: true;
+      status: "pending" | "accepted" | "rejected";
+      source: Exclude<SpectatorRequestSource, null>;
+      createdAt: number | null;
+      failure: string | null;
     };
 
+export type SpectatorRejoinSnapshotEvent = {
+  type: "SPECTATOR_REQUEST_SNAPSHOT";
+  snapshot: SpectatorRejoinSnapshot;
+};
+
+export type RoomMachineEvent = RoomMachineClientEvent | SpectatorRejoinSnapshotEvent;
+
 type RoomMachineInternalEvent =
-  | RoomMachineClientEvent
+  | RoomMachineEvent
   | {
       type: "SYNC";
       room: (RoomDoc & { id?: string }) | null;
@@ -48,12 +95,20 @@ type RoomMachineInternalEvent =
       presenceReady?: boolean;
     };
 
+type SubscribeSpectatorRejoinParams = {
+  roomId: string;
+  uid: string;
+  onSnapshot: (snapshot: SpectatorRejoinSnapshot) => void;
+  onError?: (error: unknown) => void;
+};
+
 type RoomMachineDeps = {
   startGame: typeof GameService.startGame;
   dealNumbers: typeof GameService.dealNumbers;
   submitSortedOrder: typeof GameService.submitSortedOrder;
   finalizeReveal: typeof GameService.finalizeReveal;
   resetRoomWithPrune: typeof GameService.resetRoomWithPrune;
+  subscribeSpectatorRejoin?: (params: SubscribeSpectatorRejoinParams) => void | (() => void);
 };
 
 const defaultDeps: RoomMachineDeps = {
@@ -62,6 +117,7 @@ const defaultDeps: RoomMachineDeps = {
   submitSortedOrder: GameService.submitSortedOrder,
   finalizeReveal: GameService.finalizeReveal,
   resetRoomWithPrune: GameService.resetRoomWithPrune,
+  subscribeSpectatorRejoin: undefined,
 };
 
 type RoomMachineInput = {
@@ -70,6 +126,7 @@ type RoomMachineInput = {
   players?: PlayerWithId[];
   onlineUids?: string[] | null;
   presenceReady?: boolean;
+  viewerUid?: string | null;
   deps?: Partial<RoomMachineDeps>;
 };
 
@@ -120,16 +177,71 @@ export function createRoomMachine(input: RoomMachineInput) {
       id: "roomMachine",
       context: (): RoomMachineContext => ({
         roomId: input.roomId,
+        viewerUid: input.viewerUid ?? null,
         room: sanitizedRoom,
         players: sanitizedPlayers,
         onlineUids: sanitizedOnline,
         presenceReady: input.presenceReady ?? false,
+        spectatorStatus: "idle",
+        spectatorReason: null,
+        spectatorRequestSource: null,
+        spectatorError: null,
+        spectatorRequestStatus: "idle",
+        spectatorRequestCreatedAt: null,
+        spectatorRequestFailure: null,
       }),
       types: {} as {
         context: RoomMachineContext;
         events: RoomMachineInternalEvent;
       },
       initial: resolveStatus(sanitizedRoom),
+      on: {
+        SPECTATOR_REQUEST_SNAPSHOT: {
+          actions: ["spectatorRequestSnapshot"],
+        },
+        SPECTATOR_ENTER: {
+          actions: ["spectatorEnter"],
+        },
+        SPECTATOR_LEAVE: {
+          actions: ["spectatorLeave"],
+        },
+        SPECTATOR_REQUEST: {
+          actions: ["spectatorRequest"],
+        },
+        SPECTATOR_WAIT_HOST: {
+          actions: ["spectatorWaitHost"],
+        },
+        SPECTATOR_CANCEL: {
+          actions: ["spectatorCancel"],
+        },
+        SPECTATOR_APPROVED: {
+          actions: ["spectatorApproved"],
+        },
+        SPECTATOR_REJECTED: {
+          actions: ["spectatorRejected"],
+        },
+        SPECTATOR_TIMEOUT: {
+          actions: ["spectatorTimeout"],
+        },
+        SPECTATOR_ERROR: {
+          actions: ["spectatorError"],
+        },
+        SPECTATOR_REASON_UPDATE: {
+          actions: ["spectatorReasonUpdate"],
+        },
+        SPECTATOR_RESET: {
+          actions: ["spectatorReset"],
+        },
+      },
+      invoke: [
+        {
+          src: "spectatorRejoinListener",
+          input: ({ context }) => ({
+            roomId: context.roomId,
+            viewerUid: context.viewerUid,
+          }),
+        },
+      ],
       states: {
         waiting: {
           on: {
@@ -283,6 +395,59 @@ export function createRoomMachine(input: RoomMachineInput) {
             presenceReady: event.presenceReady ?? context.presenceReady,
           };
         }),
+        spectatorRequestSnapshot: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_REQUEST_SNAPSHOT") {
+            return context;
+          }
+          if (!event.snapshot.exists) {
+            const shouldResetToWatching =
+              context.spectatorStatus === "waiting-host" ||
+              context.spectatorStatus === "approved" ||
+              context.spectatorStatus === "rejected";
+            const nextStatus: SpectatorStatus = shouldResetToWatching
+              ? "watching"
+              : context.spectatorStatus;
+            return {
+              ...context,
+              spectatorStatus: nextStatus,
+              spectatorRequestStatus: "idle" as const,
+              spectatorRequestSource: null,
+              spectatorRequestCreatedAt: null,
+              spectatorRequestFailure: null,
+              spectatorError: nextStatus === "watching" ? null : context.spectatorError,
+            };
+          }
+          const snapshot = event.snapshot;
+          const source = snapshot.source ?? context.spectatorRequestSource ?? "manual";
+          let spectatorStatus: SpectatorStatus = context.spectatorStatus;
+          let spectatorError = context.spectatorError;
+          switch (snapshot.status) {
+            case "pending":
+              spectatorStatus =
+                context.spectatorStatus === "idle" ? "watching" : "waiting-host";
+              spectatorError = null;
+              break;
+            case "accepted":
+              spectatorStatus = "approved";
+              spectatorError = null;
+              break;
+            case "rejected":
+              spectatorStatus = "rejected";
+              spectatorError = snapshot.failure ?? context.spectatorError;
+              break;
+            default:
+              break;
+          }
+          return {
+            ...context,
+            spectatorStatus,
+            spectatorRequestStatus: snapshot.status,
+            spectatorRequestSource: source,
+            spectatorRequestCreatedAt: snapshot.createdAt ?? null,
+            spectatorRequestFailure: snapshot.failure ?? null,
+            spectatorError,
+          };
+        }),
         markClue: assign(({ context }) => {
           if (!context.room) return context;
           return {
@@ -331,6 +496,151 @@ export function createRoomMachine(input: RoomMachineInput) {
             .resetRoomWithPrune(context.roomId, event.keepIds, event.options)
             .catch(() => {});
         },
+        spectatorEnter: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_ENTER") return context;
+          return {
+            ...context,
+            spectatorStatus: "watching" as const,
+            spectatorReason: event.reason ?? null,
+            spectatorRequestSource: null,
+            spectatorError: null,
+            spectatorRequestStatus: "idle" as const,
+            spectatorRequestCreatedAt: null,
+            spectatorRequestFailure: null,
+          };
+        }),
+        spectatorLeave: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "idle" as const,
+          spectatorReason: null,
+          spectatorRequestSource: null,
+          spectatorError: null,
+          spectatorRequestStatus: "idle" as const,
+          spectatorRequestCreatedAt: null,
+          spectatorRequestFailure: null,
+        })),
+        spectatorRequest: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_REQUEST") return context;
+          return {
+            ...context,
+            spectatorStatus: "requesting" as const,
+            spectatorRequestSource: event.source,
+            spectatorError: null,
+            spectatorRequestStatus: "pending" as const,
+          };
+        }),
+        spectatorWaitHost: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "waiting-host" as const,
+          spectatorRequestStatus: "pending" as const,
+        })),
+        spectatorCancel: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "watching" as const,
+          spectatorRequestSource: null,
+          spectatorError: null,
+          spectatorRequestStatus: "idle" as const,
+          spectatorRequestCreatedAt: null,
+          spectatorRequestFailure: null,
+        })),
+        spectatorApproved: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "approved" as const,
+          spectatorRequestSource: null,
+          spectatorError: null,
+          spectatorRequestStatus: "accepted" as const,
+        })),
+        spectatorRejected: assign(({ context, event }) => {
+          const error =
+            event.type === "SPECTATOR_REJECTED"
+              ? event.error ?? null
+              : context.spectatorError;
+          return {
+            ...context,
+            spectatorStatus: "rejected" as const,
+            spectatorRequestSource: null,
+            spectatorError: error,
+            spectatorRequestStatus: "rejected" as const,
+            spectatorRequestFailure: error,
+          };
+        }),
+        spectatorTimeout: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "watching" as const,
+          spectatorRequestSource: null,
+          spectatorError: null,
+          spectatorRequestStatus: "idle" as const,
+          spectatorRequestFailure: null,
+        })),
+        spectatorError: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_ERROR") return context;
+          const resetRequest =
+            context.spectatorRequestStatus === "pending" ||
+            context.spectatorRequestStatus === "accepted" ||
+            context.spectatorRequestStatus === "rejected";
+          return {
+            ...context,
+            spectatorStatus:
+              context.spectatorStatus === "idle" ? "idle" : "watching",
+            spectatorRequestStatus: resetRequest ? "idle" : context.spectatorRequestStatus,
+            spectatorRequestSource: resetRequest ? null : context.spectatorRequestSource,
+            spectatorRequestCreatedAt: resetRequest ? null : context.spectatorRequestCreatedAt,
+            spectatorRequestFailure: resetRequest ? null : context.spectatorRequestFailure,
+            spectatorError: event.error,
+          };
+        }),
+        spectatorReasonUpdate: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_REASON_UPDATE") return context;
+          return {
+            ...context,
+            spectatorReason: event.reason,
+          };
+        }),
+        spectatorReset: assign(({ context }) => ({
+          ...context,
+          spectatorStatus: "idle" as const,
+          spectatorReason: null,
+          spectatorRequestSource: null,
+          spectatorError: null,
+          spectatorRequestStatus: "idle" as const,
+          spectatorRequestCreatedAt: null,
+          spectatorRequestFailure: null,
+        })),
+      },
+      actors: {
+        spectatorRejoinListener: fromCallback(({ input, sendBack }) => {
+          const payload = input as { roomId?: string; viewerUid?: string | null } | undefined;
+          const subscribe = deps.subscribeSpectatorRejoin;
+          const roomId = payload?.roomId ?? null;
+          const uid = payload?.viewerUid ?? null;
+          if (typeof subscribe !== "function" || !roomId || !uid) {
+            return () => {};
+          }
+          const unsubscribe = subscribe({
+            roomId,
+            uid,
+            onSnapshot: (snapshot) => {
+              sendBack({ type: "SPECTATOR_REQUEST_SNAPSHOT", snapshot });
+            },
+            onError: (error) => {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : typeof error === "string"
+                  ? error
+                  : JSON.stringify(error);
+              sendBack({
+                type: "SPECTATOR_ERROR",
+                error: message ?? "unknown",
+              });
+            },
+          });
+          return () => {
+            if (typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          };
+        }),
       },
       guards: {
         canStart: ({ context }) => computeTargetIds(context).length >= 2,
