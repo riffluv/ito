@@ -3,10 +3,14 @@
 import { useCallback, useMemo } from "react";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
-import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
+import {
+  ServiceWorkerUpdateState,
+  useServiceWorkerUpdate,
+} from "@/lib/hooks/useServiceWorkerUpdate";
 
-type UpdateAvailableBadgeProps = {
+type UpdateAvailableBadgeControlledProps = {
   preview?: boolean;
+  state: ServiceWorkerUpdateState;
 };
 
 const containerStyles = {
@@ -20,7 +24,10 @@ const containerStyles = {
   fontFamily: "'Courier New', monospace",
 };
 
-export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgeProps) {
+function UpdateAvailableBadgeContent({
+  preview = false,
+  state,
+}: UpdateAvailableBadgeControlledProps) {
   const {
     isUpdateReady,
     isApplying,
@@ -31,7 +38,7 @@ export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgePr
     waitingSince,
     applyUpdate,
     retryUpdate,
-  } = useServiceWorkerUpdate();
+  } = state;
 
   const effectiveReady =
     preview || isUpdateReady || isApplying || hasError || autoApplySuppressed;
@@ -154,4 +161,17 @@ export function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgePr
   );
 }
 
-export default UpdateAvailableBadge;
+export function UpdateAvailableBadgeControlled(
+  props: UpdateAvailableBadgeControlledProps
+) {
+  return <UpdateAvailableBadgeContent {...props} />;
+}
+
+type UpdateAvailableBadgeProps = {
+  preview?: boolean;
+};
+
+export default function UpdateAvailableBadge({ preview = false }: UpdateAvailableBadgeProps) {
+  const state = useServiceWorkerUpdate();
+  return <UpdateAvailableBadgeContent preview={preview} state={state} />;
+}

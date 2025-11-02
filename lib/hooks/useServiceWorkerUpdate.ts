@@ -7,7 +7,7 @@ import {
   subscribeToSafeUpdateSnapshot,
 } from "@/lib/serviceWorker/updateChannel";
 
-type UpdateState = {
+export type ServiceWorkerUpdateState = {
   isUpdateReady: boolean;
   isApplying: boolean;
   hasError: boolean;
@@ -34,7 +34,7 @@ const EMPTY_SNAPSHOT: SafeUpdateSnapshot = {
   applyReason: null,
 };
 
-export function useServiceWorkerUpdate(): UpdateState {
+export function useServiceWorkerUpdate(): ServiceWorkerUpdateState {
   const [snapshot, setSnapshot] = useState<SafeUpdateSnapshot>(() => {
     if (typeof window === "undefined") {
       return EMPTY_SNAPSHOT;

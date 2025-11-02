@@ -275,6 +275,7 @@ function markApplyFailure(detail: string, reason: string, safeMode: boolean) {
   broadcast?.postMessage({ type: "update-failed", detail });
   pendingApplyContext = null;
   notifyListeners();
+  scheduleForceApplyTimer();
 }
 
 function handleBroadcastMessage(message: unknown) {
