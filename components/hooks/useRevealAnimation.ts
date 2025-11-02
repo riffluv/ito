@@ -3,6 +3,7 @@ import { evaluateSorted } from "@/lib/game/rules";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { logDebug, logWarn } from "@/lib/utils/log";
 import {
+  FLIP_DURATION_MS,
   REVEAL_FIRST_DELAY,
   REVEAL_LINGER,
   REVEAL_STEP_DELAY,
@@ -69,6 +70,9 @@ const scheduleRevealPersistenceTask = (task: () => void) => {
   }
   window.setTimeout(task, 0);
 };
+
+const FINAL_TWO_BONUS_DELAY = 260; // adds extra dwell for the last two reveals (ms)
+const FLIP_EVALUATION_DELAY = Math.max(Math.round(FLIP_DURATION_MS * 0.8), 220);
 
 interface RealtimeResult {
   success: boolean;
@@ -175,7 +179,12 @@ export function useRevealAnimation({
     }
 
     // First card has shorter delay to avoid "frozen" impression
-    const delay = revealIndex === 0 ? REVEAL_FIRST_DELAY : REVEAL_STEP_DELAY;
+    const remainingCards = Math.max(orderListLength - revealIndex, 0);
+    const isFinalStretch = remainingCards > 0 && remainingCards <= 2;
+    const delay =
+      revealIndex === 0
+        ? REVEAL_FIRST_DELAY
+        : REVEAL_STEP_DELAY + (isFinalStretch ? FINAL_TWO_BONUS_DELAY : 0);
     
     const timer = setTimeout(async () => {
 
@@ -185,9 +194,7 @@ export function useRevealAnimation({
       // インデックスを進める（めくり開始）
       setRevealIndex((i) => (i >= orderListLength ? i : i + 1));
 
-
-      // めくり完了後に色付与（350ms後 = めくりアニメーション完了後）
-      setTimeout(() => {
+      const handleRealtimeEvaluation = () => {
         try {
           if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
             const currentList = orderData.list.slice(0, nextIndex);
@@ -254,7 +261,8 @@ export function useRevealAnimation({
       } catch (e) {
         logDebug("reveal", "realtime-eval-error", e);
       }
-      }, 350); // めくり完了後に色付与（350ms = GSAPアニメーション時間）
+      };
+      setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // align evaluation with visible flip
     }, delay);
 
     return () => clearTimeout(timer);
