@@ -7,6 +7,7 @@ import deepEqual from "fast-deep-equal/es6";
 import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { clearSpectatorFlags } from "@/lib/spectator/sessionFlags";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -46,8 +47,7 @@ export type RoomState = {
   isHost: boolean;
   joinStatus?: "idle" | "joining" | "retrying" | "joined";
   phase: RoomDoc["status"];
-  fsmEnabled: boolean;
-  sendRoomEvent?: (event: RoomMachineClientEvent) => void;
+  sendRoomEvent: (event: RoomMachineClientEvent) => void;
   spectatorStatus: SpectatorStatus;
   spectatorReason: SpectatorReason;
   spectatorRequestSource: SpectatorRequestSource;
@@ -85,7 +85,6 @@ export function useRoomState(
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
     null
   );
-  const fsmEnabled = process.env.NEXT_PUBLIC_FSM_ENABLE === "1";
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED && typeof startTransition === "function";
@@ -226,16 +225,6 @@ export function useRoomState(
   }, []);
 
   useEffect(() => {
-    if (!fsmEnabled) {
-      const existing = machineRef.current;
-      if (existing) {
-        existing.stop();
-        machineRef.current = null;
-      }
-      setMachineSnapshot(null);
-      return;
-    }
-
     const actor = createActor(
       createRoomMachine({
         roomId,
@@ -266,7 +255,7 @@ export function useRoomState(
         machineRef.current = null;
       }
     };
-  }, [fsmEnabled, roomId, uid, firebaseEnabled, subscribeSpectatorRejoin]);
+  }, [roomId, uid, firebaseEnabled, subscribeSpectatorRejoin]);
 
   // subscribe room
   useEffect(() => {
@@ -465,7 +454,6 @@ export function useRoomState(
   }, [fetchedPlayers, partLoading, enqueueCommit]);
 
   useEffect(() => {
-    if (!fsmEnabled) return;
     const actor = machineRef.current;
     if (!actor) return;
     actor.send({
@@ -475,7 +463,7 @@ export function useRoomState(
       onlineUids,
       presenceReady: presenceOperational,
     });
-  }, [fsmEnabled, room, players, onlineUids, presenceOperational]);
+  }, [room, players, onlineUids, presenceOperational]);
 
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
@@ -497,20 +485,14 @@ export function useRoomState(
 
     // Spectator V3:
     // - 原則: 観戦→復帰は rejoinRequests 経由（page.tsx 側で実装）
-    // - 例外: 初回/一般参加（waiting かつ recallOpen≠false）は従来どおり自動参加を許可
-    if (recallV2Enabled && !isMember) {
-      const status = (room as any)?.status as string | undefined;
-      const recallOpen = (room as any)?.ui?.recallOpen as boolean | undefined;
-      const allowDirectJoin = status === "waiting" && (recallOpen !== false);
-      if (!allowDirectJoin) {
-        return;
-      }
-    }
-
+    // - 例外: 初回/一般参加（waiting かつ recallOpen が閉じられていない場合）は従来どおり自動参加を許可
     let pendingRejoin = false;
-    if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
+    if (rejoinSessionKey && typeof window !== "undefined") {
       try {
-        pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
+        const stored = window.sessionStorage.getItem(rejoinSessionKey);
+        if (stored !== null) {
+          pendingRejoin = stored === uid;
+        }
       } catch {}
     }
 
@@ -523,17 +505,13 @@ export function useRoomState(
     }
 
     const clearPending = () => {
-      if (!pendingRejoin) return;
-      if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
-        try {
-          window.sessionStorage.removeItem(rejoinSessionKey);
-        } catch {}
-      }
-      if (autoJoinSuppressKey && typeof window !== "undefined") {
-        try {
-          window.sessionStorage.removeItem(autoJoinSuppressKey);
-        } catch {}
-      }
+      if (!pendingRejoin || !uid) return;
+      clearSpectatorFlags({
+        roomId,
+        uid,
+        rejoinSessionKey,
+        autoJoinSuppressKey,
+      });
     };
 
     const clearRetryTimer = () => {
@@ -544,6 +522,21 @@ export function useRoomState(
     };
 
     if (room.status === "waiting") {
+      if (recallV2Enabled && !isMember) {
+        const status = (room as any)?.status as string | undefined;
+        const recallOpenValue = (room as any)?.ui?.recallOpen as boolean | undefined;
+        const isRejoinIntent = pendingRejoin;
+        const allowDirectJoin =
+          status === "waiting" &&
+          (!isRejoinIntent || recallOpenValue !== false);
+        const allowFromIntent = isRejoinIntent && !autoJoinSuppressed;
+        if (!allowDirectJoin && !allowFromIntent) {
+          joinAttemptRef.current = 0;
+          clearRetryTimer();
+          setJoinStatus("idle");
+          return;
+        }
+      }
       if (!pendingRejoin && !isMember && autoJoinSuppressed) {
         joinAttemptRef.current = 0;
         clearRetryTimer();
@@ -778,19 +771,15 @@ export function useRoomState(
   ]);
 
   const effectivePhase = useMemo<RoomDoc["status"]>(() => {
-    if (!fsmEnabled) {
-      return room?.status ?? "waiting";
-    }
     const snapshot = machineSnapshot;
     if (!snapshot) {
       return room?.status ?? "waiting";
     }
     return snapshot.value as RoomDoc["status"];
-  }, [fsmEnabled, machineSnapshot, room?.status]);
+  }, [machineSnapshot, room?.status]);
 
   const effectiveRoom = useMemo<(RoomDoc & { id: string }) | null>(() => {
     if (!room) return null;
-    if (!fsmEnabled) return room;
     const snapshot = machineSnapshot;
     if (!snapshot) return room;
     const statusFromMachine = snapshot.value as RoomDoc["status"];
@@ -798,7 +787,7 @@ export function useRoomState(
       return room;
     }
     return { ...room, status: statusFromMachine };
-  }, [room, fsmEnabled, machineSnapshot]);
+  }, [room, machineSnapshot]);
 
   const spectatorState = useMemo<{
     spectatorStatus: SpectatorStatus;
@@ -809,17 +798,6 @@ export function useRoomState(
     spectatorRequestCreatedAt: number | null;
     spectatorRequestFailure: string | null;
   }>(() => {
-    if (!fsmEnabled) {
-      return {
-        spectatorStatus: "idle",
-        spectatorReason: null,
-        spectatorRequestSource: null,
-        spectatorError: null,
-        spectatorRequestStatus: "idle",
-        spectatorRequestCreatedAt: null,
-        spectatorRequestFailure: null,
-      };
-    }
     const snapshot = machineSnapshot;
     if (!snapshot) {
       return {
@@ -841,14 +819,13 @@ export function useRoomState(
       spectatorRequestCreatedAt: snapshot.context.spectatorRequestCreatedAt,
       spectatorRequestFailure: snapshot.context.spectatorRequestFailure,
     };
-  }, [fsmEnabled, machineSnapshot]);
+  }, [machineSnapshot]);
 
   const sendRoomEvent = useCallback(
     (event: RoomMachineClientEvent) => {
-      if (!fsmEnabled) return;
       machineRef.current?.send(event);
     },
-    [fsmEnabled]
+    []
   );
 
   // メモ化されたstateオブジェクトで不必要な再レンダリングを防ぐ
@@ -865,8 +842,7 @@ export function useRoomState(
       isMember,
       isHost,
       phase: effectivePhase,
-      fsmEnabled,
-      sendRoomEvent: fsmEnabled ? sendRoomEvent : undefined,
+      sendRoomEvent,
       spectatorStatus: spectatorState.spectatorStatus,
       spectatorReason: spectatorState.spectatorReason,
       spectatorRequestSource: spectatorState.spectatorRequestSource,
@@ -887,7 +863,6 @@ export function useRoomState(
       isMember,
       isHost,
       effectivePhase,
-      fsmEnabled,
       sendRoomEvent,
       spectatorState.spectatorStatus,
       spectatorState.spectatorReason,

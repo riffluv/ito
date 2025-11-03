@@ -4,8 +4,10 @@ import { notify } from "@/components/ui/notify";
 import { cancelSeatRequest } from "@/lib/game/service";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { forceDetachAll } from "@/lib/firebase/presence";
+import { logSpectatorForceExitDetected, logSpectatorForceExitCleanup, logSpectatorForceExitRecovered } from "@/lib/spectator/telemetry";
 import { logDebug, logError } from "@/lib/utils/log";
 import { bumpMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 import type {
   RoomMachineClientEvent,
   SpectatorReason as MachineSpectatorReason,
@@ -26,8 +28,7 @@ interface UseForcedExitParams {
   setForcedExitReason: (reason: "game-in-progress" | null) => void;
   roomId: string;
   displayName?: string | null;
-  sendRoomEvent?: (event: RoomMachineClientEvent) => void;
-  fsmEnabled: boolean;
+  sendRoomEvent: (event: RoomMachineClientEvent) => void;
   recallOpen: boolean;
   skip?: boolean;
 }
@@ -52,7 +53,6 @@ export function useForcedExit({
   roomId,
   displayName,
   sendRoomEvent,
-  fsmEnabled,
   recallOpen,
   skip = false,
 }: UseForcedExitParams) {
@@ -80,23 +80,24 @@ export function useForcedExit({
     }
   };
 
-  const clearAutoJoinSuppressed = () => {
-    if (!autoJoinSuppressKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.removeItem(autoJoinSuppressKey);
-    } catch (error) {
-      logDebug("useForcedExit", "auto-join-unsuppress-failed", error);
-    }
-  };
-
   useEffect(() => {
     if (skip) {
+      if (
+        forcedExitScheduledRef.current ||
+        forcedExitCleanupRef.current ||
+        forcedExitNotifiedRef.current ||
+        forcedExitReasonRef.current !== null
+      ) {
+        traceAction("spectator.forceExit.skip", {
+          roomId,
+          uid,
+          skipReason: "skip-flag",
+        });
+      }
       forcedExitScheduledRef.current = false;
       forcedExitCleanupRef.current = false;
       forcedExitNotifiedRef.current = false;
       forcedExitReasonRef.current = null;
-      clearAutoJoinSuppressed();
       return;
     }
     if (!uid) return;
@@ -117,8 +118,6 @@ export function useForcedExit({
     if (pendingRejoin) return;
 
     const dispatchSpectatorForceExit = (reason: MachineSpectatorReason | null) => {
-      if (!fsmEnabled) return;
-      if (!sendRoomEvent) return;
       sendRoomEvent({ type: "SPECTATOR_FORCE_EXIT", reason });
     };
 
@@ -134,6 +133,14 @@ export function useForcedExit({
 
       if (!forcedExitScheduledRef.current) {
         forcedExitScheduledRef.current = true;
+        logSpectatorForceExitDetected({
+          roomId,
+          uid,
+          reason: forceExitReason,
+          canAccess,
+          recallOpen,
+          status: roomStatus,
+        });
       }
       setAutoJoinSuppressed();
       if (forcedExitReasonRef.current === null) {
@@ -172,6 +179,11 @@ export function useForcedExit({
         forcedExitCleanupRef.current = true;
         const runCleanup = async () => {
           leavingRef.current = true;
+          logSpectatorForceExitCleanup({
+            roomId,
+            uid,
+            reason: forcedExitReasonRef.current ?? forceExitReason,
+          });
           if (uid) {
             try {
               await cancelSeatRequest(roomId, uid);
@@ -208,9 +220,15 @@ export function useForcedExit({
     }
 
     if ((canAccess || roomStatus === "waiting") && forcedExitScheduledRef.current) {
+      logSpectatorForceExitRecovered({
+        roomId,
+        uid,
+        status: roomStatus,
+        canAccess,
+      });
       forcedExitScheduledRef.current = false;
       forcedExitNotifiedRef.current = false;
-      clearAutoJoinSuppressed();
+      // 注意: autoJoinSuppress は観戦者の明示操作でのみ解除する
       // 注意: forcedExitReason は page.tsx 側の自動再参加ロジックが参照するためここではクリアしない
     }
   }, [
@@ -228,7 +246,6 @@ export function useForcedExit({
     displayName,
     detachNow,
     sendRoomEvent,
-    fsmEnabled,
     recallOpen,
     skip,
     autoJoinSuppressKey,
