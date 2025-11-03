@@ -17,6 +17,8 @@ import {
   type ActorRefFrom,
   type StateFrom,
 } from "xstate";
+import { bumpMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 
@@ -419,6 +421,7 @@ export function createRoomMachine(input: RoomMachineInput) {
           }
           const snapshot = event.snapshot;
           const source = snapshot.source ?? context.spectatorRequestSource ?? "manual";
+          const previousStatus = context.spectatorRequestStatus;
           let spectatorStatus: SpectatorStatus = context.spectatorStatus;
           let spectatorError = context.spectatorError;
           switch (snapshot.status) {
@@ -437,6 +440,16 @@ export function createRoomMachine(input: RoomMachineInput) {
               break;
             default:
               break;
+          }
+          if (previousStatus !== snapshot.status) {
+            const uid = context.viewerUid ?? undefined;
+            if (snapshot.status === "accepted") {
+              traceAction("spectator.recallAccepted", { roomId: context.roomId, uid });
+              bumpMetric("recall", "accepted");
+            } else if (snapshot.status === "rejected") {
+              traceAction("spectator.recallRejected", { roomId: context.roomId, uid });
+              bumpMetric("recall", "rejected");
+            }
           }
           return {
             ...context,
@@ -564,14 +577,19 @@ export function createRoomMachine(input: RoomMachineInput) {
             spectatorRequestFailure: error,
           };
         }),
-        spectatorTimeout: assign(({ context }) => ({
-          ...context,
-          spectatorStatus: "watching" as const,
-          spectatorRequestSource: null,
-          spectatorError: null,
-          spectatorRequestStatus: "idle" as const,
-          spectatorRequestFailure: null,
-        })),
+        spectatorTimeout: assign(({ context }) => {
+          const uid = context.viewerUid ?? undefined;
+          traceAction("spectator.recallTimeout", { roomId: context.roomId, uid });
+          bumpMetric("recall", "timeout");
+          return {
+            ...context,
+            spectatorStatus: "watching" as const,
+            spectatorRequestSource: null,
+            spectatorError: null,
+            spectatorRequestStatus: "idle" as const,
+            spectatorRequestFailure: null,
+          };
+        }),
         spectatorError: assign(({ context, event }) => {
           if (event.type !== "SPECTATOR_ERROR") return context;
           const resetRequest =

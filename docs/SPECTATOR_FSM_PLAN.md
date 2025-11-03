@@ -89,3 +89,7 @@
 ---
 
 今後はこのメモをベースに、具体的な state machine 実装と UI リファクタを段階的に進める。
+
+- (2025-11-02) recall accepted/rejected/timeout の trace/bumpMetric を machine actions へ移譲済み
+- (2025-11-02) クライアント側の観戦申請は常に SPECTATOR_REQUEST を machine に送信し、API 実行待ちキューも FSM 管理下に統一
+- (2025-11-02) リセット後の自動再参加を停止し、観戦UIの「席に戻る」操作でのみ申請が発火するよう調整
