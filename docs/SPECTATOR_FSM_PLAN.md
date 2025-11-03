@@ -5,6 +5,7 @@
 - 観戦モード判定は `app/rooms/[roomId]/page.tsx` 内部の `isSpectatorMode`（一連の `useEffect` と `useRef`）で実装されており、XState の `roomMachine` とは独立。
 - 主なロジック断片  
   - `useForcedExit`: プレイヤーの強制退出・再入室補助。現状はホスト / メンバー判定でスキップしているが、トースト抑止・離席フローの判定は React 側の副作用に依存。  
+
   - `setPendingRejoinFlag` + `pendingSeatRequestRef`: 観戦者からの席リクエストを local state に積み、即時送信 or 後追い送信。  
   - Firestore 監視 (`rooms/{roomId}/rejoinRequests/{uid}`): リクエスト状態の更新に応じて `seatRequestState` やタイマーを更新。  
   - `attemptAutoSeatRecovery`: 待機状態かつ `pendingSeatRequestRef` / `seatRequestSource === "auto"` のときに自動で `performSeatRecovery` を再実行。  
@@ -71,6 +72,7 @@
 3. `app/rooms/[roomId]/page.tsx`  
    - 観戦 UI に必要な情報を machine state から受け取る props へ置き換える準備。  
    - `useForcedExit` などの呼び出し元を暫定ラッパに差し替え、machine イベントに委譲できるようにする。
+   - TODO: requestSeat / cancelSeatRequest / forceDetachAll �Ȃǂ̑��M������ machine actions �ւēč����AUI �� sendRoomEvent ��n���ł����悤�ɂ���B
 4. Firestore サブスクのラップ  
    - 新しい invoke サービスのインターフェースを定義し、既存 `onSnapshot` ロジックを切り出す。  
    - サービスから `send` するイベントの payload 形式を決めておく。
@@ -93,3 +95,6 @@
 - (2025-11-02) recall accepted/rejected/timeout の trace/bumpMetric を machine actions へ移譲済み
 - (2025-11-02) クライアント側の観戦申請は常に SPECTATOR_REQUEST を machine に送信し、API 実行待ちキューも FSM 管理下に統一
 - (2025-11-02) リセット後の自動再参加を停止し、観戦UIの「席に戻る」操作でのみ申請が発火するよう調整
+
+- (2025-11-03) seatRequestSignalsRef / spectatorAutoRetryStateRef ��폜���A machine context �� requestedAt ��p����^�C���A�E�g/�Đ؂����[���̃��W�b�N���V����
+- (2025-11-03) SPECTATOR_TIMEOUT �C�x���g�̊�{����n sendRoomEvent + machine actions ���P���ɂ��A UI ��表示と再通知のみに絞り込み
