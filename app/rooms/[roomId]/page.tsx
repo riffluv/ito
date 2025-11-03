@@ -64,6 +64,8 @@ import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
+import { clearAutoJoinSuppressFlag } from "@/lib/spectator/sessionFlags";
+import { logSpectatorRequestEnqueue } from "@/lib/spectator/telemetry";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   applyServiceWorkerUpdate,
@@ -544,7 +546,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     reattachPresence,
     leavingRef,
     joinStatus,
-    fsmEnabled,
     sendRoomEvent,
     spectatorStatus: fsmSpectatorStatus,
     spectatorReason: fsmSpectatorReason,
@@ -564,10 +565,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   const emitSpectatorEvent = useCallback(
     (event: RoomMachineClientEvent) => {
-      if (!fsmEnabled || !sendRoomEvent) return;
       sendRoomEvent(event);
     },
-    [fsmEnabled, sendRoomEvent]
+    [sendRoomEvent]
   );
 
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
@@ -635,13 +635,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [rejoinSessionKey]);
   const clearAutoJoinSuppress = useCallback(() => {
     if (!autoJoinSuppressKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.removeItem(autoJoinSuppressKey);
-    } catch (error) {
-      logDebug("room-page", "auto-join-unsuppress-failed", error);
-    }
-  }, [autoJoinSuppressKey]);
+    clearAutoJoinSuppressFlag({
+      roomId,
+      uid,
+      autoJoinSuppressKey,
+      context: "manual",
+    });
+  }, [autoJoinSuppressKey, roomId, uid]);
 
 
   // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
@@ -1156,37 +1156,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastAutoRetryTimestampRef.current = 0;
     lastAutoRetryKeyRef.current = null;
   }, []);
-  const [legacySeatRequestState, setLegacySeatRequestState] = useState<SeatRequestViewState>({
-    status: "idle",
-    source: null,
-    requestedAt: null,
-    error: null,
-  });
-  const seatRequestState: SeatRequestViewState = fsmEnabled
-    ? {
-        status: fsmSpectatorRequestStatus,
-        source: fsmSpectatorRequestSource,
-        requestedAt: fsmSpectatorRequestCreatedAt,
-        error: fsmSpectatorRequestFailure ?? fsmSpectatorError ?? null,
-      }
-    : legacySeatRequestState;
-  const setSeatRequestState = useCallback(
-    (
-      value:
-        | SeatRequestViewState
-        | ((prev: SeatRequestViewState) => SeatRequestViewState)
-    ) => {
-      if (fsmEnabled) {
-        return;
-      }
-      if (typeof value === "function") {
-        setLegacySeatRequestState((prev) => (value as (prev: SeatRequestViewState) => SeatRequestViewState)(prev));
-      } else {
-        setLegacySeatRequestState(value);
-      }
-    },
-    [fsmEnabled]
-  );
+  const seatRequestState: SeatRequestViewState = {
+    status: fsmSpectatorRequestStatus,
+    source: fsmSpectatorRequestSource,
+    requestedAt: fsmSpectatorRequestCreatedAt,
+    error: fsmSpectatorRequestFailure ?? fsmSpectatorError ?? null,
+  };
   const [seatRequestTimedOut, setSeatRequestTimedOut] = useState(false);
   const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(seatRequestState.status);
   const seatRequestTimeoutTriggeredRef = useRef(false);
@@ -1231,12 +1206,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!uid) return;
     pendingSeatRequestRef.current = null;
     clearSeatAcceptanceHold();
-    setSeatRequestState({
-      status: "idle",
-      source: null,
-      requestedAt: null,
-      error: null,
-    });
+    emitSpectatorEvent({ type: "SPECTATOR_RESET" });
     setSeatRequestTimedOut(false);
     clearRejoinIntent();
     void cancelSeatRequest(roomId, uid)
@@ -1250,6 +1220,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     roomId,
     clearSeatAcceptanceHold,
     clearRejoinIntent,
+    emitSpectatorEvent,
   ]);
   useEffect(() => {
     if (seatRequestState.status === "pending") return;
@@ -1276,27 +1247,47 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
       void requestSeat(roomId, uid, displayName ?? null, source).catch(
         (error) => {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const errorCode =
+            error && typeof error === "object" && "code" in error
+              ? (error as { code?: string }).code
+              : undefined;
+
           traceError("spectator.requestSeat.client", error, {
             roomId,
             uid,
             source,
+            recallState: spectatorRecallEnabled ? "open" : "closed",
+            errorCode,
           });
-          setSeatRequestState({
-            status: "idle",
-            source: null,
-            requestedAt: null,
-            error: error instanceof Error ? error.message : String(error),
-          });
+
+          if (errorCode === "recall-closed") {
+            pendingSeatRequestRef.current = source;
+            leavingRef.current = false;
+            setSeatRequestTimedOut(false);
+            return;
+          }
+
           emitSpectatorEvent({
             type: "SPECTATOR_ERROR",
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           });
           leavingRef.current = false;
           clearRejoinIntent();
         }
       );
     },
-    [uid, roomId, displayName, leavingRef, setSeatRequestState, clearRejoinIntent]
+    [
+      uid,
+      roomId,
+      displayName,
+      leavingRef,
+      clearRejoinIntent,
+      emitSpectatorEvent,
+      spectatorRecallEnabled,
+      setSeatRequestTimedOut,
+    ]
   );
 
   const setPendingRejoinFlag = useCallback(
@@ -1304,15 +1295,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       if (!uid) return;
       const canRequestNow = spectatorRecallEnabled;
       clearSeatAcceptanceHold();
-      setSeatRequestState({
-        status: "pending",
-        source,
-        requestedAt: Date.now(),
-        error: null,
-      });
       setSeatRequestTimedOut(false);
       rememberRejoinIntent();
       clearAutoJoinSuppress();
+      logSpectatorRequestEnqueue({
+        roomId,
+        uid,
+        source,
+        canRequestNow,
+        roomStatus,
+        recallOpen,
+      });
       emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
       if (canRequestNow) {
         leavingRef.current = true;
@@ -1335,7 +1328,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       roomStatus,
       recallOpen,
       clearSeatAcceptanceHold,
-      setSeatRequestState,
       setSeatRequestTimedOut,
       requestSeatNow,
       emitSpectatorEvent,
@@ -1420,15 +1412,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             : "waiting-closed"
           : "mid-game";
 
-      if (fsmEnabled) {
-        emitSpectatorEvent({ type: "SPECTATOR_FORCE_EXIT", reason: forceExitReason });
-      } else if (uid) {
-        try {
-          await cancelSeatRequest(roomId, uid);
-        } catch (error) {
-          logError("room-page", "forced-exit-cancel-seat-request", error);
-        }
-      }
+      emitSpectatorEvent({ type: "SPECTATOR_FORCE_EXIT", reason: forceExitReason });
 
       try {
         await detachNow();
@@ -1484,7 +1468,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     router,
     transition,
     emitSpectatorEvent,
-    fsmEnabled,
     recallOpen,
     roomStatus,
   ]);
@@ -1567,8 +1550,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     !isJoiningOrRetrying &&
     !seatRequestPending &&
     !loading;
-  const [legacySpectatorMode, setLegacySpectatorMode] = useState(false);
-  const isSpectatorMode = fsmEnabled ? fsmSpectatorStatus !== "idle" : legacySpectatorMode;
+  const isSpectatorMode = fsmSpectatorStatus !== "idle";
   const spectatorEnterReason = useMemo<Exclude<MachineSpectatorReason, null>>(() => {
     if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
       return "version-mismatch";
@@ -1580,36 +1562,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [versionMismatchBlocksAccess, forcedExitReason, roomStatus, recallOpen]);
 
   useEffect(() => {
-    if (fsmEnabled) {
-      if (!spectatorCandidate) {
-        if (fsmSpectatorStatus !== "idle") {
-          emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
-          emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-        }
-        return;
-      }
-      if (fsmSpectatorStatus !== "idle") {
-        return;
-      }
-      let cancelled = false;
-      const timer = window.setTimeout(() => {
-        if (cancelled) return;
-        emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: spectatorEnterReason });
-      }, 220);
-      return () => {
-        cancelled = true;
-        window.clearTimeout(timer);
-      };
-    }
     if (!spectatorCandidate) {
-      setLegacySpectatorMode((prev) => (prev ? false : prev));
+      if (fsmSpectatorStatus !== "idle") {
+        // 観戦リクエスト中や強制退席直後は状態を維持する
+        if (seatRequestPending || seatAcceptanceActive || forcedExitReason) {
+          return;
+        }
+        emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
+        emitSpectatorEvent({ type: "SPECTATOR_RESET" });
+      }
+      return;
+    }
+    if (fsmSpectatorStatus !== "idle") {
       return;
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      if (!cancelled) {
-        setLegacySpectatorMode(true);
-      }
+      if (cancelled) return;
+      emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: spectatorEnterReason });
     }, 220);
     return () => {
       cancelled = true;
@@ -1617,10 +1587,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
   }, [
     emitSpectatorEvent,
-    fsmEnabled,
     fsmSpectatorStatus,
     spectatorCandidate,
     spectatorEnterReason,
+    seatRequestPending,
+    seatAcceptanceActive,
+    forcedExitReason,
   ]);
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
@@ -1650,15 +1622,19 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
       // 他の残留状態もクリア
       if (seatRequestState.status !== "idle") {
-        setSeatRequestState({
-          status: "idle",
-          source: null,
-          requestedAt: null,
-          error: null,
-        });
+        emitSpectatorEvent({ type: "SPECTATOR_RESET" });
       }
     }
-  }, [roomId, uid, isSpectatorMode, isMember, room?.status, versionMismatchBlocksAccess]);
+  }, [
+    roomId,
+    uid,
+    isSpectatorMode,
+    isMember,
+    room?.status,
+    versionMismatchBlocksAccess,
+    emitSpectatorEvent,
+    seatRequestState.status,
+  ]);
   useEffect(() => {
     if (!uid) {
       if (optimisticMe) {
@@ -1720,9 +1696,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
   // 観戦理由の判定（文言出し分け用）
   const spectatorReason: MachineSpectatorReason | null = isSpectatorMode
-    ? fsmEnabled
-      ? fsmSpectatorReason ?? spectatorEnterReason
-      : spectatorEnterReason
+    ? fsmSpectatorReason ?? spectatorEnterReason
     : null;
   const spectatorReasonPrevRef = useRef<MachineSpectatorReason | null>(null);
   const waitingToRejoin = roomStatus === "waiting";
@@ -1732,10 +1706,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     seatAcceptanceActive ||
     !spectatorRecallEnabled;
   useEffect(() => {
-    if (!fsmEnabled) {
-      spectatorReasonPrevRef.current = null;
-      return;
-    }
     if (!isSpectatorMode) {
       spectatorReasonPrevRef.current = null;
       return;
@@ -1748,14 +1718,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       });
       spectatorReasonPrevRef.current = spectatorReason ?? null;
     }
-  }, [emitSpectatorEvent, fsmEnabled, isSpectatorMode, spectatorReason]);
+  }, [emitSpectatorEvent, isSpectatorMode, spectatorReason]);
 
 
   useEffect(() => {
-    if (!fsmEnabled) {
-      spectatorTimeoutPrevRef.current = false;
-      return;
-    }
     if (!isSpectatorMode) {
       spectatorTimeoutPrevRef.current = false;
       return;
@@ -1764,7 +1730,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       emitSpectatorEvent({ type: "SPECTATOR_TIMEOUT" });
     }
     spectatorTimeoutPrevRef.current = seatRequestTimedOut;
-  }, [emitSpectatorEvent, fsmEnabled, isSpectatorMode, seatRequestTimedOut]);
+  }, [emitSpectatorEvent, isSpectatorMode, seatRequestTimedOut]);
 
   const spectatorEnteredRef = useRef(false);
   useEffect(() => {
@@ -1777,11 +1743,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     spectatorEnteredRef.current = true;
     clearSeatAcceptanceHold();
-    setSeatRequestState((prev) =>
-      prev.status === "idle"
-        ? prev
-        : { status: "idle", source: null, requestedAt: null, error: null }
-    );
+    if (seatRequestState.status !== "idle") {
+      emitSpectatorEvent({ type: "SPECTATOR_RESET" });
+    }
     pendingSeatRequestRef.current = null;
     setSeatRequestTimedOut(false);
     leavingRef.current = false;
@@ -1797,12 +1761,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [
     isSpectatorMode,
     uid,
-    setSeatRequestState,
     setSeatRequestTimedOut,
     leavingRef,
     roomId,
     seatRequestState.status,
     clearSeatAcceptanceHold,
+    emitSpectatorEvent,
   ]);
 
   useEffect(() => {
@@ -1879,7 +1843,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
   ]);
 
-  const skipForcedExit = !isHost && !isMember;
+  const skipForcedExit = !uid || (!isHost && !isMember && !isSpectatorMode);
 
   useForcedExit({
     uid,
@@ -1896,8 +1860,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     setForcedExitReason,
     roomId,
     displayName,
-    sendRoomEvent: fsmEnabled ? emitSpectatorEvent : undefined,
-    fsmEnabled,
+    sendRoomEvent: emitSpectatorEvent,
     recallOpen,
     skip: skipForcedExit,
   });

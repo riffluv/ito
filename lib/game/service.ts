@@ -230,7 +230,9 @@ export async function requestSeat(
 
   if (status !== "waiting" || !recallOpen) {
     traceAction("spectator.requestSeat.blocked", { roomId, uid, status, recallOpen });
-    throw new Error("現在は席に戻ることができません");
+    const error = new Error("現在は席に戻ることができません");
+    (error as Error & { code?: string }).code = "recall-closed";
+    throw error;
   }
 
   try {
@@ -240,7 +242,6 @@ export async function requestSeat(
         status: "pending",
         displayName: cappedName.length > 0 ? cappedName : null,
         source,
-        createdAt: serverTimestamp(),
       },
       { merge: true }
     );

@@ -634,7 +634,7 @@ export function createRoomMachine(input: RoomMachineInput) {
           if (event.type !== "SPECTATOR_FORCE_EXIT") return context;
           return {
             ...context,
-            spectatorStatus: "idle" as const,
+            spectatorStatus: "watching" as const,
             spectatorReason: event.reason ?? null,
             spectatorRequestSource: null,
             spectatorError: null,
