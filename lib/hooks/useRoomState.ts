@@ -481,6 +481,10 @@ export function useRoomState(
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [roomId, uid]
   );
+  const autoJoinSuppressKey = useMemo(
+    () => (uid ? `autoJoinSuppress:${roomId}:${uid}` : null),
+    [roomId, uid]
+  );
   // auto-join
   // V2: 待機中のみ自動参加。ゲーム中の途中参加は禁止。
   // V3(Recall V2 有効時): 観戦→復帰は rejoinRequests 経由に統一するため、
@@ -510,11 +514,24 @@ export function useRoomState(
       } catch {}
     }
 
+    let autoJoinSuppressed = false;
+    if (autoJoinSuppressKey && typeof window !== "undefined") {
+      try {
+        autoJoinSuppressed =
+          window.sessionStorage.getItem(autoJoinSuppressKey) === "1";
+      } catch {}
+    }
+
     const clearPending = () => {
       if (!pendingRejoin) return;
       if (!recallV2Enabled && rejoinSessionKey && typeof window !== "undefined") {
         try {
           window.sessionStorage.removeItem(rejoinSessionKey);
+        } catch {}
+      }
+      if (autoJoinSuppressKey && typeof window !== "undefined") {
+        try {
+          window.sessionStorage.removeItem(autoJoinSuppressKey);
         } catch {}
       }
     };
@@ -527,6 +544,12 @@ export function useRoomState(
     };
 
     if (room.status === "waiting") {
+      if (!pendingRejoin && !isMember && autoJoinSuppressed) {
+        joinAttemptRef.current = 0;
+        clearRetryTimer();
+        setJoinStatus("idle");
+        return;
+      }
       if (pendingRejoin) {
         joinCompletedRef.current = false;
         joinAttemptRef.current = 0;

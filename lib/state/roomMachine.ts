@@ -18,7 +18,7 @@ import {
   type StateFrom,
 } from "xstate";
 import { bumpMetric } from "@/lib/utils/metrics";
-import { traceAction } from "@/lib/utils/trace";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 
@@ -68,7 +68,8 @@ export type RoomMachineClientEvent =
   | { type: "SPECTATOR_TIMEOUT" }
   | { type: "SPECTATOR_ERROR"; error: string }
   | { type: "SPECTATOR_REASON_UPDATE"; reason: SpectatorReason }
-  | { type: "SPECTATOR_RESET" };
+  | { type: "SPECTATOR_RESET" }
+  | { type: "SPECTATOR_FORCE_EXIT"; reason?: SpectatorReason | null };
 
 export type SpectatorRejoinSnapshot =
   | { exists: false }
@@ -110,6 +111,7 @@ type RoomMachineDeps = {
   submitSortedOrder: typeof GameService.submitSortedOrder;
   finalizeReveal: typeof GameService.finalizeReveal;
   resetRoomWithPrune: typeof GameService.resetRoomWithPrune;
+  cancelSeatRequest: typeof GameService.cancelSeatRequest;
   subscribeSpectatorRejoin?: (params: SubscribeSpectatorRejoinParams) => void | (() => void);
 };
 
@@ -119,6 +121,7 @@ const defaultDeps: RoomMachineDeps = {
   submitSortedOrder: GameService.submitSortedOrder,
   finalizeReveal: GameService.finalizeReveal,
   resetRoomWithPrune: GameService.resetRoomWithPrune,
+  cancelSeatRequest: GameService.cancelSeatRequest,
   subscribeSpectatorRejoin: undefined,
 };
 
@@ -233,6 +236,9 @@ export function createRoomMachine(input: RoomMachineInput) {
         },
         SPECTATOR_RESET: {
           actions: ["spectatorReset"],
+        },
+        SPECTATOR_FORCE_EXIT: {
+          actions: ["spectatorForceExit", "spectatorForceExitCleanup"],
         },
       },
       invoke: [
@@ -624,6 +630,52 @@ export function createRoomMachine(input: RoomMachineInput) {
           spectatorRequestCreatedAt: null,
           spectatorRequestFailure: null,
         })),
+        spectatorForceExit: assign(({ context, event }) => {
+          if (event.type !== "SPECTATOR_FORCE_EXIT") return context;
+          return {
+            ...context,
+            spectatorStatus: "idle" as const,
+            spectatorReason: event.reason ?? null,
+            spectatorRequestSource: null,
+            spectatorError: null,
+            spectatorRequestStatus: "idle" as const,
+            spectatorRequestCreatedAt: null,
+            spectatorRequestFailure: null,
+          };
+        }),
+        spectatorForceExitCleanup: ({ context, event, self }) => {
+          if (event.type !== "SPECTATOR_FORCE_EXIT") return;
+          const uid = context.viewerUid;
+          traceAction("spectator.forceExit", {
+            roomId: context.roomId,
+            uid,
+            reason: event.reason ?? null,
+          });
+          if (!uid) return;
+          void (async () => {
+            try {
+              await deps.cancelSeatRequest(context.roomId, uid);
+            } catch (error) {
+              traceError("spectator.forceExit.cancel", error as any, {
+                roomId: context.roomId,
+                uid,
+              });
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : typeof error === "string"
+                  ? error
+                  : (() => {
+                      try {
+                        return JSON.stringify(error);
+                      } catch {
+                        return "unknown";
+                      }
+                    })();
+              self.send({ type: "SPECTATOR_ERROR", error: message ?? "unknown" });
+            }
+          })();
+        },
       },
       actors: {
         spectatorRejoinListener: fromCallback(({ input, sendBack }) => {
