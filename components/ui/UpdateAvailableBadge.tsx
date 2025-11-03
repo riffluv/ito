@@ -54,8 +54,11 @@ function UpdateAvailableBadgeContent({
     if (phase === "failed") {
       return "更新に失敗しました";
     }
-    if (autoApplySuppressed) {
+    if (phase === "suppressed" || autoApplySuppressed) {
       return "自動更新を保留中";
+    }
+    if (phase === "auto_pending") {
+      return "自動適用を準備中";
     }
     return "新しいバージョン";
   }, [autoApplySuppressed, effectiveApplying, phase, preview]);
@@ -83,8 +86,14 @@ function UpdateAvailableBadgeContent({
           return "更新に失敗しました。";
       }
     }
-    if (autoApplySuppressed) {
+    if (phase === "suppressed" || autoApplySuppressed) {
       return "ループガードのため手動適用が必要です。";
+    }
+    if (phase === "auto_pending") {
+      return "自動適用を待機しています。";
+    }
+    if (phase === "waiting_user" || phase === "update_detected") {
+      return "手動で適用すると最新の修正が反映されます。";
     }
     if (waitingSince) {
       const elapsed = Date.now() - waitingSince;

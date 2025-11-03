@@ -19,6 +19,8 @@ export type ServiceWorkerUpdateState = {
   autoApplySuppressed: boolean;
   isReloadPending: boolean;
   applyReason: string | null;
+  autoApplyAt: number | null;
+  retryCount: number;
   applyUpdate: () => void;
   retryUpdate: () => void;
 };
@@ -32,6 +34,8 @@ const EMPTY_SNAPSHOT: SafeUpdateSnapshot = {
   autoApplySuppressed: false,
   pendingReload: false,
   applyReason: null,
+  autoApplyAt: null,
+  retryCount: 0,
 };
 
 export function useServiceWorkerUpdate(): ServiceWorkerUpdateState {
@@ -60,7 +64,10 @@ export function useServiceWorkerUpdate(): ServiceWorkerUpdateState {
   }, []);
 
   const isUpdateReady =
-    snapshot.phase === "ready" ||
+    snapshot.phase === "update_detected" ||
+    snapshot.phase === "auto_pending" ||
+    snapshot.phase === "waiting_user" ||
+    snapshot.phase === "suppressed" ||
     snapshot.phase === "applying" ||
     snapshot.phase === "failed";
 
@@ -76,6 +83,8 @@ export function useServiceWorkerUpdate(): ServiceWorkerUpdateState {
     autoApplySuppressed: snapshot.autoApplySuppressed,
     isReloadPending: snapshot.pendingReload,
     applyReason: snapshot.applyReason,
+    autoApplyAt: snapshot.autoApplyAt,
+    retryCount: snapshot.retryCount,
     applyUpdate,
     retryUpdate,
   };
