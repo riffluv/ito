@@ -607,6 +607,41 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
   const spectatorRecallEnabled = recallOpen && roomStatus === "waiting";
+  const rejoinSessionKey = useMemo(
+    () => (uid ? `pendingRejoin:${roomId}` : null),
+    [uid, roomId]
+  );
+  const autoJoinSuppressKey = useMemo(
+    () => (uid ? `autoJoinSuppress:${roomId}:${uid}` : null),
+    [uid, roomId]
+  );
+  const rememberRejoinIntent = useCallback(() => {
+    if (!rejoinSessionKey || !uid) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(rejoinSessionKey, uid);
+    } catch (error) {
+      logDebug("room-page", "rejoin-session-write-failed", error);
+    }
+  }, [rejoinSessionKey, uid]);
+  const clearRejoinIntent = useCallback(() => {
+    if (!rejoinSessionKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.removeItem(rejoinSessionKey);
+    } catch (error) {
+      logDebug("room-page", "rejoin-session-clear-failed", error);
+    }
+  }, [rejoinSessionKey]);
+  const clearAutoJoinSuppress = useCallback(() => {
+    if (!autoJoinSuppressKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.removeItem(autoJoinSuppressKey);
+    } catch (error) {
+      logDebug("room-page", "auto-join-unsuppress-failed", error);
+    }
+  }, [autoJoinSuppressKey]);
 
 
   // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
@@ -1192,6 +1227,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     if (seatRequestState.status !== "pending") return;
     if (spectatorRecallEnabled) return;
+    if (pendingSeatRequestRef.current) return;
     if (!uid) return;
     pendingSeatRequestRef.current = null;
     clearSeatAcceptanceHold();
@@ -1202,6 +1238,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       error: null,
     });
     setSeatRequestTimedOut(false);
+    clearRejoinIntent();
     void cancelSeatRequest(roomId, uid)
       .catch((error) => {
         logDebug("room-page", "spectator-cancel-pending", { roomId, uid, error });
@@ -1212,7 +1249,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
     roomId,
     clearSeatAcceptanceHold,
+    clearRejoinIntent,
   ]);
+  useEffect(() => {
+    if (seatRequestState.status === "pending") return;
+    clearRejoinIntent();
+  }, [seatRequestState.status, clearRejoinIntent]);
   // V3: recallV2はデフォルトで有効
   const seatRequestPending = seatRequestState.status === "pending";
   const seatRequestAccepted = seatRequestState.status === "accepted";
@@ -1250,26 +1292,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             error: error instanceof Error ? error.message : String(error),
           });
           leavingRef.current = false;
+          clearRejoinIntent();
         }
       );
     },
-    [uid, roomId, displayName, leavingRef, setSeatRequestState]
+    [uid, roomId, displayName, leavingRef, setSeatRequestState, clearRejoinIntent]
   );
 
   const setPendingRejoinFlag = useCallback(
     (source: SeatRequestSource = "manual") => {
       if (!uid) return;
       const canRequestNow = spectatorRecallEnabled;
-      if (!canRequestNow && roomStatus === "waiting") {
-        logDebug("room-page", "seat-request-blocked", {
-          roomId,
-          uid,
-          source,
-          roomStatus,
-          recallOpen,
-        });
-        return;
-      }
       clearSeatAcceptanceHold();
       setSeatRequestState({
         status: "pending",
@@ -1278,15 +1311,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         error: null,
       });
       setSeatRequestTimedOut(false);
+      rememberRejoinIntent();
+      clearAutoJoinSuppress();
+      emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
       if (canRequestNow) {
+        leavingRef.current = true;
         requestSeatNow(source);
       } else {
         pendingSeatRequestRef.current = source;
+        leavingRef.current = false;
         logDebug("room-page", "seat-request-queued", {
           roomId,
           uid,
           source,
           roomStatus,
+          recallOpen,
         });
       }
     },
@@ -1299,7 +1338,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       setSeatRequestState,
       setSeatRequestTimedOut,
       requestSeatNow,
+      emitSpectatorEvent,
       roomId,
+      rememberRejoinIntent,
+      clearAutoJoinSuppress,
+      leavingRef,
     ]
   );
 
@@ -1370,6 +1413,23 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
 
     const performExit = async () => {
+      const forceExitReason: MachineSpectatorReason =
+        roomStatus === "waiting"
+          ? recallOpen
+            ? "waiting-open"
+            : "waiting-closed"
+          : "mid-game";
+
+      if (fsmEnabled) {
+        emitSpectatorEvent({ type: "SPECTATOR_FORCE_EXIT", reason: forceExitReason });
+      } else if (uid) {
+        try {
+          await cancelSeatRequest(roomId, uid);
+        } catch (error) {
+          logError("room-page", "forced-exit-cancel-seat-request", error);
+        }
+      }
+
       try {
         await detachNow();
       } catch (error) {
@@ -1423,7 +1483,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     displayName,
     router,
     transition,
-    setPendingRejoinFlag,
+    emitSpectatorEvent,
+    fsmEnabled,
+    recallOpen,
+    roomStatus,
   ]);
 
   useEffect(() => {
@@ -1824,16 +1887,18 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     canAccess,
     loading,
     authLoading,
-    
-    rejoinSessionKey: null, // V3
+    rejoinSessionKey,
+    autoJoinSuppressKey,
     redirectGuard,
     lastKnownHostId,
     leavingRef,
     detachNow,
-    setPendingRejoinFlag: () => {},
     setForcedExitReason,
     roomId,
     displayName,
+    sendRoomEvent: fsmEnabled ? emitSpectatorEvent : undefined,
+    fsmEnabled,
+    recallOpen,
     skip: skipForcedExit,
   });
 
@@ -1854,12 +1919,15 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       if (!spectatorRecallEnabled) {
         const description =
           roomStatus === "waiting"
-            ? "ホストが席を開放すると席に戻れます。"
-            : "ゲーム進行中は席に戻れません。ラウンド終了後にもう一度お試しください。";
+            ? "\u30db\u30b9\u30c8\u304c\u89b3\u6226\u67a0\u3092\u958b\u304f\u307e\u3067\u3001\u3057\u3070\u3089\u304f\u304a\u5f85\u3061\u304f\u3060\u3055\u3044\u3002"
+            : "\u30b2\u30fc\u30e0\u304c\u9032\u884c\u4e2d\u306e\u305f\u3081\u73fe\u5728\u306f\u623b\u308c\u307e\u305b\u3093\u3002\u30db\u30b9\u30c8\u306e\u64cd\u4f5c\u304c\u5b8c\u4e86\u3059\u308b\u307e\u3067\u304a\u5f85\u3061\u304f\u3060\u3055\u3044\u3002";
         if (!silent) {
           try {
             notify({
-              title: roomStatus === "waiting" ? "まだ席に戻れません" : "ゲーム進行中です",
+              title:
+                roomStatus === "waiting"
+                  ? "\u307e\u3060\u623b\u308c\u307e\u305b\u3093"
+                  : "\u30b2\u30fc\u30e0\u9032\u884c\u4e2d\u3067\u3059",
               description,
               type: "info",
             });
@@ -1875,15 +1943,17 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
             recallOpen,
           });
         }
-        return false;
+        setPendingRejoinFlag(source);
+        return true;
       }
 
       if (versionMismatchBlocksAccess) {
         if (!silent) {
           try {
             notify({
-              title: "最新バージョンへ更新してください",
-              description: "ページを更新して最新バージョンをご利用ください",
+              title: "\u65b0\u3057\u3044\u30d0\u30fc\u30b8\u30e7\u30f3\u304c\u5fc5\u8981\u3067\u3059",
+              description:
+                "\u30da\u30fc\u30b8\u3092\u518d\u8aad\u307f\u8fbc\u307f\u3057\u3001\u6700\u65b0\u30d0\u30fc\u30b8\u30e7\u30f3\u3078\u66f4\u65b0\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
               type: "warning",
             });
           } catch (notifyError) {
@@ -1904,8 +1974,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       setPendingRejoinFlag(source);
       try {
         notify({
-          title: "�Ȃ֖߂郊�N�G�X�g�𑗂�܂���",
-          description: "�z�X�g�̏��F�����҂���������",
+          title: "\u518d\u5165\u5ba4\u30ea\u30af\u30a8\u30b9\u30c8\u3092\u9001\u4fe1\u3057\u307e\u3057\u305f",
+          description: "\u30db\u30b9\u30c8\u306e\u627f\u8a8d\u3092\u304a\u5f85\u3061\u304f\u3060\u3055\u3044\u3002",
           type: "info",
         });
       } catch (notifyError) {
@@ -1924,9 +1994,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       roomId,
       leavingRef,
     ]
-  );
-
-  const handleRetryJoin = useCallback(async () => {
+  );  const handleRetryJoin = useCallback(async () => {
     await performSeatRecovery({ silent: false, source: "manual" });
   }, [performSeatRecovery]);
 
@@ -3371,6 +3439,21 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

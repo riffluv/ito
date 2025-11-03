@@ -1,9 +1,15 @@
 import { useEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
 import { notify } from "@/components/ui/notify";
+import { cancelSeatRequest } from "@/lib/game/service";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { forceDetachAll } from "@/lib/firebase/presence";
 import { logDebug, logError } from "@/lib/utils/log";
 import { bumpMetric } from "@/lib/utils/metrics";
+import type {
+  RoomMachineClientEvent,
+  SpectatorReason as MachineSpectatorReason,
+} from "@/lib/state/roomMachine";
 
 interface UseForcedExitParams {
   uid: string | null;
@@ -12,20 +18,23 @@ interface UseForcedExitParams {
   loading: boolean;
   authLoading: boolean;
   rejoinSessionKey: string | null;
+  autoJoinSuppressKey?: string | null;
   redirectGuard: boolean;
   lastKnownHostId: string | null;
-  leavingRef: React.MutableRefObject<boolean>;
+  leavingRef: MutableRefObject<boolean>;
   detachNow: () => Promise<void> | void;
-  setPendingRejoinFlag: () => void;
   setForcedExitReason: (reason: "game-in-progress" | null) => void;
   roomId: string;
   displayName?: string | null;
+  sendRoomEvent?: (event: RoomMachineClientEvent) => void;
+  fsmEnabled: boolean;
+  recallOpen: boolean;
   skip?: boolean;
 }
 
 /**
- * ⚡ PERFORMANCE: 37行の強制退出処理をカスタムフック化
- * ゲーム進行中の部屋にアクセスできない場合に強制退出
+ * プレイヤー・観戦者の強制退席処理をまとめたフック。
+ * 強制退席がスケジュールされた場合は座席リクエストのクリーンアップと通知を行う。
  */
 export function useForcedExit({
   uid,
@@ -34,30 +43,66 @@ export function useForcedExit({
   loading,
   authLoading,
   rejoinSessionKey,
+  autoJoinSuppressKey,
   redirectGuard,
   lastKnownHostId,
   leavingRef,
   detachNow,
-  setPendingRejoinFlag,
   setForcedExitReason,
   roomId,
   displayName,
+  sendRoomEvent,
+  fsmEnabled,
+  recallOpen,
   skip = false,
 }: UseForcedExitParams) {
   const forcedExitScheduledRef = useRef(false);
   const forcedExitCleanupRef = useRef(false);
+  const forcedExitNotifiedRef = useRef(false);
+  const forcedExitReasonRef = useRef<MachineSpectatorReason | null>(null);
+  const clearPendingRejoin = () => {
+    if (!rejoinSessionKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.removeItem(rejoinSessionKey);
+    } catch (error) {
+      logDebug("useForcedExit", "rejoin-session-clear-failed", error);
+    }
+  };
+
+  const setAutoJoinSuppressed = () => {
+    if (!autoJoinSuppressKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(autoJoinSuppressKey, "1");
+    } catch (error) {
+      logDebug("useForcedExit", "auto-join-suppress-failed", error);
+    }
+  };
+
+  const clearAutoJoinSuppressed = () => {
+    if (!autoJoinSuppressKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.removeItem(autoJoinSuppressKey);
+    } catch (error) {
+      logDebug("useForcedExit", "auto-join-unsuppress-failed", error);
+    }
+  };
 
   useEffect(() => {
     if (skip) {
       forcedExitScheduledRef.current = false;
       forcedExitCleanupRef.current = false;
+      forcedExitNotifiedRef.current = false;
+      forcedExitReasonRef.current = null;
+      clearAutoJoinSuppressed();
       return;
     }
     if (!uid) return;
     if (leavingRef.current) return;
     if (lastKnownHostId === uid) return;
-    // プレイヤー状態が変わる間に焦って抜けない(ハードリダイレクト防止)
-    // F5リロード時にAuthContextとuseRoomStateの両方が安定するまで待つ
+    // プレイヤー情報が揃うまで待つ
     if (loading || authLoading) return;
     if (redirectGuard) return;
 
@@ -71,16 +116,37 @@ export function useForcedExit({
     }
     if (pendingRejoin) return;
 
-    if (!canAccess) {
+    const dispatchSpectatorForceExit = (reason: MachineSpectatorReason | null) => {
+      if (!fsmEnabled) return;
+      if (!sendRoomEvent) return;
+      sendRoomEvent({ type: "SPECTATOR_FORCE_EXIT", reason });
+    };
+
+    const resolveForceExitReason = (): MachineSpectatorReason => {
       if (roomStatus !== "waiting") {
-        if (!forcedExitScheduledRef.current) {
-          forcedExitScheduledRef.current = true;
-          setPendingRejoinFlag();
+        return "mid-game";
+      }
+      return recallOpen ? "waiting-open" : "waiting-closed";
+    };
+
+    if (!canAccess) {
+      const forceExitReason = resolveForceExitReason();
+
+      if (!forcedExitScheduledRef.current) {
+        forcedExitScheduledRef.current = true;
+      }
+      setAutoJoinSuppressed();
+      if (forcedExitReasonRef.current === null) {
+        forcedExitReasonRef.current = forceExitReason;
+      }
+
+      if (roomStatus !== "waiting") {
+        if (!forcedExitNotifiedRef.current) {
+          forcedExitNotifiedRef.current = true;
           try {
             notify({
-              title: "通信が不安定です",
-              description:
-                "ネットワークの復旧を待っています。回復すると自動で席へ戻ります。",
+              title: "観戦枠が閉じられました",
+              description: "ホストの操作が完了するまで、再入室はしばらくお待ちください。",
               type: "info",
             });
           } catch (error) {
@@ -88,19 +154,35 @@ export function useForcedExit({
           }
           bumpMetric("forcedExit", "gameInProgress");
         }
+        dispatchSpectatorForceExit(forceExitReason);
+        if (uid) {
+          void cancelSeatRequest(roomId, uid)
+            .then(() => {
+              clearPendingRejoin();
+            })
+            .catch((error) => {
+              logDebug("useForcedExit", "manual-force-exit-cancel-seat-request", error);
+            });
+        }
         setForcedExitReason("game-in-progress");
         return;
-      }
-
-      if (!forcedExitScheduledRef.current) {
-        forcedExitScheduledRef.current = true;
-        setPendingRejoinFlag();
       }
 
       if (!forcedExitCleanupRef.current) {
         forcedExitCleanupRef.current = true;
         const runCleanup = async () => {
           leavingRef.current = true;
+          if (uid) {
+            try {
+              await cancelSeatRequest(roomId, uid);
+              clearPendingRejoin();
+            } catch (error) {
+              logDebug("useForcedExit", "auto-cancel-seat-request-failed", error);
+            }
+          }
+          setAutoJoinSuppressed();
+          const cleanupReason = forcedExitReasonRef.current ?? forceExitReason;
+          dispatchSpectatorForceExit(cleanupReason);
           try {
             await detachNow();
           } catch (error) {
@@ -119,15 +201,17 @@ export function useForcedExit({
           })
           .finally(() => {
             forcedExitCleanupRef.current = false;
+            forcedExitReasonRef.current = null;
           });
       }
       return;
     }
 
-    // waiting状態に戻った、またはアクセス可能になった → 観戦パネルをクリア
     if ((canAccess || roomStatus === "waiting") && forcedExitScheduledRef.current) {
       forcedExitScheduledRef.current = false;
-      // 注意: forcedExitReasonはクリアしない（page.tsxの自動再参加ロジックが動作するため）
+      forcedExitNotifiedRef.current = false;
+      clearAutoJoinSuppressed();
+      // 注意: forcedExitReason は page.tsx 側の自動再参加ロジックが参照するためここではクリアしない
     }
   }, [
     roomStatus,
@@ -139,11 +223,20 @@ export function useForcedExit({
     redirectGuard,
     lastKnownHostId,
     leavingRef,
-    setPendingRejoinFlag,
     setForcedExitReason,
     roomId,
     displayName,
     detachNow,
+    sendRoomEvent,
+    fsmEnabled,
+    recallOpen,
     skip,
+    autoJoinSuppressKey,
   ]);
 }
+
+
+
+
+
+
