@@ -1330,8 +1330,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (versionMismatchHandledRef.current) return;
     versionMismatchHandledRef.current = true;
     bumpMetric("forcedExit", "versionMismatch");
-    setPendingRejoinFlag("auto");
-    setForcedExitReason("version-mismatch");
+    bumpMetric("forcedExit", "versionMismatch");
     leavingRef.current = true;
 
     void (async () => {
@@ -1369,7 +1368,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     if (!uid) return;
 
     forcedExitRecoveryPendingRef.current = false;
-    setPendingRejoinFlag("auto");
 
     if (!leavingRef.current) {
       leavingRef.current = true;
@@ -1839,7 +1837,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     lastKnownHostId,
     leavingRef,
     detachNow,
-    setPendingRejoinFlag: () => setPendingRejoinFlag("auto"),
+    setPendingRejoinFlag: () => {},
     setForcedExitReason,
     roomId,
     displayName,
@@ -1906,26 +1904,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         }
         return false;
       }
-
-      setPendingRejoinFlag(source);
-      if (!silent) {
-        try {
-          notify({
-            title: "席へ戻るリクエストを送りました",
-            description: "ホストの承認をお待ちください",
-            type: "info",
-          });
-        } catch (notifyError) {
-          logDebug("room-page", "notify-seat-request", notifyError);
-        }
-      } else {
-        logDebug("room-page", "auto-seat-request-issued", {
-          roomId,
-          uid,
-          source,
-        });
+      if (silent) {
         return false;
       }
+
+      setPendingRejoinFlag(source);
+      try {
+        notify({
+          title: "�Ȃ֖߂郊�N�G�X�g�𑗂�܂���",
+          description: "�z�X�g�̏��F�����҂���������",
+          type: "info",
+        });
+      } catch (notifyError) {
+        logDebug("room-page", "notify-seat-request", notifyError);
+      }
+      return true;
     },
     [
       uid,
@@ -2226,21 +2219,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
 
     if (room?.status === "waiting" && forcedExitRecoveryPendingRef.current) {
       forcedExitRecoveryPendingRef.current = false;
-      setPendingRejoinFlag("auto");
-      if (uid) {
-        const normalizedDisplayName =
-          typeof displayName === "string" && displayName.trim().length > 0
-            ? displayName.trim()
-            : null;
-        void joinRoomFully({
-          roomId,
-          uid,
-          displayName: normalizedDisplayName,
-          notifyChat: false,
-        }).catch((error) => {
-          logDebug("room-page", "forced-exit-auto-rejoin", error);
-        });
-      }
     } else {
       forcedExitRecoveryPendingRef.current = false;
     }
@@ -2248,9 +2226,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     forcedExitReason,
     canAccess,
     room?.status,
-    setPendingRejoinFlag,
     uid,
-    roomId,
     displayName,
   ]);
 
@@ -3531,3 +3507,8 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
+
+
+
+
+
