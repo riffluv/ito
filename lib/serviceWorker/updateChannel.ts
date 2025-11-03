@@ -1,4 +1,12 @@
 import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
+import { traceAction, traceError } from "@/lib/utils/trace";
+import {
+  assign,
+  createActor,
+  setup,
+  type ActorRefFrom,
+  type StateFrom,
+} from "xstate";
 
 type UpdateListener = (registration: ServiceWorkerRegistration | null) => void;
 type SnapshotListener = (snapshot: SafeUpdateSnapshot) => void;
@@ -6,7 +14,10 @@ type SnapshotListener = (snapshot: SafeUpdateSnapshot) => void;
 export type SafeUpdatePhase =
   | "idle"
   | "checking"
-  | "ready"
+  | "update_detected"
+  | "auto_pending"
+  | "waiting_user"
+  | "suppressed"
   | "applying"
   | "applied"
   | "failed";
@@ -20,6 +31,8 @@ export type SafeUpdateSnapshot = {
   autoApplySuppressed: boolean;
   pendingReload: boolean;
   applyReason: string | null;
+  autoApplyAt: number | null;
+  retryCount: number;
 };
 
 export type ApplyServiceWorkerOptions = {
@@ -27,12 +40,112 @@ export type ApplyServiceWorkerOptions = {
   safeMode?: boolean;
 };
 
+type ForceHoldMap = Record<string, number>;
+type ClearResult = "activated" | "redundant" | "manual";
+
+type InternalApplyContext = {
+  reason: string;
+  safeMode: boolean;
+  startedAt: number;
+  attemptId: number;
+  automatic: boolean;
+};
+
+type SafeUpdateContext = {
+  waitingRegistration: ServiceWorkerRegistration | null;
+  waitingVersion: string | null;
+  waitingSince: number | null;
+  lastCheckAt: number | null;
+  lastError: string | null;
+  autoApplySuppressed: boolean;
+  autoApplyHolds: ForceHoldMap;
+  autoApplyAt: number | null;
+  pendingReload: boolean;
+  applyReason: string | null;
+  pendingApply: InternalApplyContext | null;
+  retryCount: number;
+  attemptSeq: number;
+  applyTimeoutId: number | null;
+  autoApplyTimerId: number | null;
+};
+
+type WaitingDetectedEvent = {
+  type: "WAITING_DETECTED";
+  registration: ServiceWorkerRegistration;
+  source?: string;
+  broadcast?: boolean;
+};
+
+type WaitingClearedEvent = {
+  type: "WAITING_CLEARED";
+  result: ClearResult;
+  source?: string;
+  broadcast?: boolean;
+};
+
+type ApplyRequestEvent = {
+  type: "APPLY_REQUEST";
+  reason: string;
+  safeMode: boolean;
+  automatic: boolean;
+};
+
+type ApplyFailureEvent = {
+  type: "APPLY_FAILURE";
+  detail: string;
+  reason: string;
+  safeMode: boolean;
+  broadcast?: boolean;
+};
+
+type ApplySuccessEvent = {
+  type: "APPLY_SUCCESS";
+  broadcast?: boolean;
+};
+
+type AutoControlEvent =
+  | { type: "AUTO_SUPPRESS"; reason?: string; broadcast?: boolean }
+  | { type: "AUTO_RESUME"; reason?: string; broadcast?: boolean };
+
+type HoldEvent =
+  | { type: "FORCE_HOLD"; key: string; broadcast?: boolean }
+  | { type: "FORCE_RELEASE"; key: string; broadcast?: boolean };
+
+type RetryEvent = { type: "RETRY"; reason: string; safeMode: boolean; automatic: boolean };
+
+type SafeUpdateEvent =
+  | { type: "CHECK_STARTED"; timestamp: number }
+  | { type: "CHECK_COMPLETED" }
+  | { type: "CHECK_FAILED"; detail: string }
+  | WaitingDetectedEvent
+  | WaitingClearedEvent
+  | { type: "READY_AUTO" }
+  | { type: "READY_MANUAL" }
+  | { type: "READY_SUPPRESSED" }
+  | AutoControlEvent
+  | HoldEvent
+  | { type: "AUTO_TIMER_EXPIRED" }
+  | ApplyRequestEvent
+  | ApplySuccessEvent
+  | ApplyFailureEvent
+  | { type: "APPLY_TIMEOUT" }
+  | RetryEvent
+  | { type: "RELOAD_CONSUMED" }
+  | { type: "PENDING_APPLY_CONSUMED" };
+
+type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
+
+const APPLY_TIMEOUT_MS = 12_000;
+const AUTO_APPLY_DELAY_MS = 60_000;
+const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
+const FORCE_APPLY_HOLD_DEFAULT = "__default__";
+const AUTO_APPLY_REASON = "auto-timer";
+
 const updateListeners = new Set<UpdateListener>();
 const snapshotListeners = new Set<SnapshotListener>();
 
-let waitingRegistration: ServiceWorkerRegistration | null = null;
-
-const state: SafeUpdateSnapshot = {
+let currentWaitingRegistration: ServiceWorkerRegistration | null = null;
+let currentSnapshot: SafeUpdateSnapshot = {
   phase: "idle",
   waitingSince: null,
   waitingVersion: null,
@@ -41,59 +154,26 @@ const state: SafeUpdateSnapshot = {
   autoApplySuppressed: false,
   pendingReload: false,
   applyReason: null,
+  autoApplyAt: null,
+  retryCount: 0,
 };
+let previousPhase: SafeUpdatePhase = "idle";
 
-let pendingReload = false;
-
-type InternalApplyContext = ApplyServiceWorkerOptions & {
-  startedAt: number;
-  attemptId: number;
-};
-
-let pendingApplyContext: InternalApplyContext | null = null;
-let applyTimeoutId: number | null = null;
-let forceApplyTimerId: number | null = null;
-let preCheckPhase: SafeUpdatePhase | null = null;
-let applyAttemptSequence = 0;
-let autoApplySuppressed = false;
-
-const FORCE_APPLY_HOLD_DEFAULT = "__default__";
-const forceApplyHolds = new Map<string, number>();
-
-const APPLY_TIMEOUT_MS = 12_000;
-const FORCE_APPLY_DELAY_MS = 60_000;
-const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
+const isBrowser =
+  typeof window !== "undefined" && typeof navigator !== "undefined" && "serviceWorker" in navigator;
 
 const broadcast =
-  typeof window !== "undefined" && "BroadcastChannel" in window
+  isBrowser && "BroadcastChannel" in window
     ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
     : null;
 
-if (broadcast) {
-  broadcast.addEventListener("message", (event) => {
-    handleBroadcastMessage(event.data);
-  });
+function normalizeHoldReason(reason?: string): string {
+  const trimmed = typeof reason === "string" ? reason.trim() : "";
+  return trimmed.length > 0 ? trimmed : FORCE_APPLY_HOLD_DEFAULT;
 }
 
-function cloneSnapshot(): SafeUpdateSnapshot {
-  return { ...state };
-}
-
-function notifyListeners() {
-  snapshotListeners.forEach((listener) => {
-    try {
-      listener(cloneSnapshot());
-    } catch {
-      /* ignore listener failure */
-    }
-  });
-  updateListeners.forEach((listener) => {
-    try {
-      listener(waitingRegistration);
-    } catch {
-      /* ignore listener failure */
-    }
-  });
+function hasForceHold(holds: ForceHoldMap): boolean {
+  return Object.values(holds).some((count) => count > 0);
 }
 
 function extractVersionTag(registration: ServiceWorkerRegistration): string | null {
@@ -110,232 +190,763 @@ function extractVersionTag(registration: ServiceWorkerRegistration): string | nu
   }
 }
 
-function setWaitingRegistration(
-  registration: ServiceWorkerRegistration | null,
-  shouldBroadcast: boolean,
-  source?: string
-) {
-  waitingRegistration = registration;
-  if (registration) {
-    state.waitingSince = state.waitingSince ?? Date.now();
-    state.waitingVersion = extractVersionTag(registration);
-    if (state.phase !== "applying") {
-      state.phase = "ready";
-    }
-    state.lastError = null;
-    scheduleForceApplyTimer();
-    if (shouldBroadcast) {
-      broadcast?.postMessage({
-        type: "update-ready",
-        version: state.waitingVersion,
-        source,
+function now(): number {
+  return Date.now();
+}
+
+function createInitialContext(): SafeUpdateContext {
+  return {
+    waitingRegistration: null,
+    waitingVersion: null,
+    waitingSince: null,
+    lastCheckAt: null,
+    lastError: null,
+    autoApplySuppressed: false,
+    autoApplyHolds: {},
+    autoApplyAt: null,
+    pendingReload: false,
+    applyReason: null,
+    pendingApply: null,
+    retryCount: 0,
+    attemptSeq: 0,
+    applyTimeoutId: null,
+    autoApplyTimerId: null,
+  };
+}
+const safeUpdateMachine = setup({
+  types: {
+    context: {} as SafeUpdateContext,
+    events: {} as SafeUpdateEvent,
+  },
+  guards: {
+    hasWaiting: ({ context }) => Boolean(context.waitingRegistration?.waiting),
+    clearResultActivated: ({ event }: { event: SafeUpdateEvent }) =>
+      event.type === "WAITING_CLEARED" && event.result === "activated",
+    clearResultRedundant: ({ event }: { event: SafeUpdateEvent }) =>
+      event.type === "WAITING_CLEARED" && event.result === "redundant",
+    isSuppressed: ({ context }) =>
+      context.autoApplySuppressed || hasForceHold(context.autoApplyHolds),
+  },
+  actions: {
+    setCheckStart: assign(({ context, event }) => {
+      if (event.type !== "CHECK_STARTED") return {};
+      return { lastCheckAt: event.timestamp };
+    }),
+    setCheckFailure: assign(({ event }) => {
+      if (event.type !== "CHECK_FAILED") return {};
+      return { lastError: event.detail };
+    }),
+    storeWaiting: assign(({ context, event }) => {
+      if (event.type !== "WAITING_DETECTED") return {};
+      return {
+        waitingRegistration: event.registration,
+        waitingVersion: extractVersionTag(event.registration),
+        waitingSince: context.waitingSince ?? now(),
+        lastError: null,
+      };
+    }),
+    clearWaiting: assign(() => ({
+      waitingRegistration: null,
+      waitingVersion: null,
+      waitingSince: null,
+      autoApplyAt: null,
+    })),
+    queueEvaluateReady: ({ context, self }) => {
+      if (!context.waitingRegistration?.waiting) {
+        self.send({ type: "READY_MANUAL" });
+        return;
+      }
+      if (context.autoApplySuppressed || hasForceHold(context.autoApplyHolds)) {
+        self.send({ type: "READY_SUPPRESSED" });
+        return;
+      }
+      self.send({ type: "READY_AUTO" });
+    },
+    setAutoSuppressed: assign(({ context }) => {
+      if (context.autoApplySuppressed) return {};
+      traceAction("safeUpdate.autoApply.suppressed");
+      return { autoApplySuppressed: true };
+    }),
+    clearAutoSuppressed: assign(({ context }) => {
+      if (!context.autoApplySuppressed) return {};
+      traceAction("safeUpdate.autoApply.resumed");
+      return { autoApplySuppressed: false };
+    }),
+    addForceHold: assign(({ context, event }) => {
+      if (event.type !== "FORCE_HOLD") return {};
+      const holds = { ...context.autoApplyHolds };
+      holds[event.key] = (holds[event.key] ?? 0) + 1;
+      return { autoApplyHolds: holds };
+    }),
+    releaseForceHold: assign(({ context, event }) => {
+      if (event.type !== "FORCE_RELEASE") return {};
+      const holds = { ...context.autoApplyHolds };
+      const current = holds[event.key] ?? 0;
+      if (current <= 1) {
+        delete holds[event.key];
+      } else {
+        holds[event.key] = current - 1;
+      }
+      return { autoApplyHolds: holds };
+    }),
+    scheduleAutoApplyTimer: assign(({ context, self }) => {
+      if (!isBrowser || !context.waitingRegistration?.waiting) {
+        return { autoApplyAt: null, autoApplyTimerId: null };
+      }
+      if (context.autoApplyTimerId !== null) {
+        window.clearTimeout(context.autoApplyTimerId);
+      }
+      const targetAt = now() + AUTO_APPLY_DELAY_MS;
+      const timerId = window.setTimeout(() => {
+        self.send({ type: "AUTO_TIMER_EXPIRED" });
+      }, AUTO_APPLY_DELAY_MS);
+      traceAction("safeUpdate.autoApply.scheduled", { delayMs: AUTO_APPLY_DELAY_MS });
+      return { autoApplyAt: targetAt, autoApplyTimerId: timerId };
+    }),
+    clearAutoApplyTimer: assign(({ context }) => {
+      if (isBrowser && context.autoApplyTimerId !== null) {
+        window.clearTimeout(context.autoApplyTimerId);
+      }
+      return { autoApplyTimerId: null, autoApplyAt: null };
+    }),
+    scheduleApplyTimeout: assign(({ context, self }) => {
+      if (!isBrowser) {
+        return { applyTimeoutId: null };
+      }
+      if (context.applyTimeoutId !== null) {
+        window.clearTimeout(context.applyTimeoutId);
+      }
+      const timeoutId = window.setTimeout(() => {
+        self.send({ type: "APPLY_TIMEOUT" });
+      }, APPLY_TIMEOUT_MS);
+      return { applyTimeoutId: timeoutId };
+    }),
+    clearApplyTimeout: assign(({ context }) => {
+      if (isBrowser && context.applyTimeoutId !== null) {
+        window.clearTimeout(context.applyTimeoutId);
+      }
+      return { applyTimeoutId: null };
+    }),
+    startManualApplying: assign(({ context, event }) => {
+      if (event.type !== "APPLY_REQUEST" && event.type !== "RETRY") {
+        return {};
+      }
+      return startApply(context, {
+        reason: event.reason,
+        safeMode: event.safeMode,
+        automatic: event.automatic,
+        broadcast: true,
       });
+    }),
+    startAutoApplying: assign(({ context }) =>
+      startApply(context, {
+        reason: AUTO_APPLY_REASON,
+        safeMode: false,
+        automatic: true,
+        broadcast: true,
+      })
+    ),
+    startRetryApplying: assign(({ context, event }) => {
+      if (event.type !== "RETRY") return {};
+      return startApply(context, {
+        reason: event.reason,
+        safeMode: event.safeMode,
+        automatic: event.automatic,
+        broadcast: true,
+      });
+    }),
+    handleApplySuccess: assign(({ context, event }) => {
+      const pending = context.pendingApply;
+      const reason = pending?.reason ?? "manual";
+      const safeMode = pending?.safeMode ?? false;
+      logSafeUpdateTelemetry("applied", { reason, safeMode });
+      traceAction("safeUpdate.apply.success", {
+        reason,
+        safeMode,
+        attemptId: pending?.attemptId ?? null,
+      });
+      if (event.type === "APPLY_SUCCESS" ? event.broadcast !== false : true) {
+        broadcast?.postMessage({ type: "update-applied" });
+      }
+      return {
+        pendingApply: null,
+        retryCount: 0,
+        lastError: null,
+        pendingReload: true,
+      };
+    }),
+    handleApplyFailure: assign(({ context, event }) => {
+      if (event.type !== "APPLY_FAILURE") return {};
+      const detail = event.detail ?? "unknown";
+      const reason = event.reason ?? context.pendingApply?.reason ?? "manual";
+      const safeMode = event.safeMode ?? context.pendingApply?.safeMode ?? false;
+      logSafeUpdateTelemetry("failure", { reason, safeMode, detail });
+      traceError("safeUpdate.apply.failed", detail, {
+        reason,
+        safeMode,
+        attemptId: context.pendingApply?.attemptId ?? null,
+      });
+      if (event.broadcast !== false) {
+        broadcast?.postMessage({ type: "update-failed", detail });
+      }
+      return {
+        pendingApply: null,
+        pendingReload: false,
+        lastError: detail,
+      };
+    }),
+    handleApplyTimeout: assign(({ context }) => {
+      const reason = context.pendingApply?.reason ?? AUTO_APPLY_REASON;
+      const safeMode = context.pendingApply?.safeMode ?? false;
+      logSafeUpdateTelemetry("failure", { reason, safeMode, detail: "timeout" });
+      traceError("safeUpdate.apply.timeout", "timeout", {
+        reason,
+        safeMode,
+        attemptId: context.pendingApply?.attemptId ?? null,
+      });
+      broadcast?.postMessage({ type: "update-failed", detail: "timeout" });
+      return {
+        pendingApply: null,
+        pendingReload: false,
+        lastError: "timeout",
+      };
+    }),
+    handleApplyRedundant: assign(({ context }) => {
+      const reason = context.pendingApply?.reason ?? "manual";
+      const safeMode = context.pendingApply?.safeMode ?? false;
+      logSafeUpdateTelemetry("failure", { reason, safeMode, detail: "redundant" });
+      traceError("safeUpdate.apply.redundant", "redundant", {
+        reason,
+        safeMode,
+        attemptId: context.pendingApply?.attemptId ?? null,
+      });
+      broadcast?.postMessage({ type: "update-failed", detail: "redundant" });
+      return {
+        pendingApply: null,
+        pendingReload: false,
+        lastError: "redundant",
+      };
+    }),
+    noWaitingFailure: assign(({ event }) => {
+      const reason =
+        event.type === "APPLY_REQUEST" || event.type === "RETRY"
+          ? event.reason
+          : event.type === "AUTO_TIMER_EXPIRED"
+          ? AUTO_APPLY_REASON
+          : "manual";
+      logSafeUpdateTelemetry("no_waiting", { reason });
+      return {
+        lastError: "no_waiting",
+        pendingReload: false,
+        applyReason: reason,
+      };
+    }),
+    incrementRetry: assign(({ context }) => ({
+      retryCount: context.retryCount + 1,
+    })),
+    resetRetry: assign(() => ({ retryCount: 0 })),
+    consumePendingReload: assign(() => ({ pendingReload: false })),
+    consumePendingApply: assign(() => ({ pendingApply: null, applyReason: null })),
+    announceWaiting: ({ event }) => {
+      if (event.type !== "WAITING_DETECTED") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "update-ready", source: event.source });
+    },
+    announceCleared: ({ event }) => {
+      if (event.type !== "WAITING_CLEARED") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "update-cleared", source: event.source });
+    },
+    announceSuppressed: ({ event }) => {
+      if (event.type !== "AUTO_SUPPRESS") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "suppress" });
+    },
+    announceResume: ({ event }) => {
+      if (event.type !== "AUTO_RESUME") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "resume-auto" });
+    },
+    announceForceHold: ({ event }) => {
+      if (event.type !== "FORCE_HOLD") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "force-hold", detail: event.key });
+    },
+    announceForceRelease: ({ event }) => {
+      if (event.type !== "FORCE_RELEASE") return;
+      if (event.broadcast === false) return;
+      broadcast?.postMessage({ type: "force-release", detail: event.key });
+    },
+  },
+}).createMachine({
+  id: "safeUpdate",
+  initial: "idle",
+  context: createInitialContext(),
+  on: {
+    RELOAD_CONSUMED: { actions: "consumePendingReload" },
+    PENDING_APPLY_CONSUMED: { actions: "consumePendingApply" },
+  },
+  states: {
+    idle: {
+      on: {
+        CHECK_STARTED: { target: "checking", actions: "setCheckStart" },
+        WAITING_DETECTED: {
+          target: "update_detected",
+          actions: ["storeWaiting", "announceWaiting", "queueEvaluateReady"],
+        },
+        AUTO_SUPPRESS: { actions: ["setAutoSuppressed", "announceSuppressed"] },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume"] },
+        FORCE_HOLD: { actions: ["addForceHold", "announceForceHold"] },
+        FORCE_RELEASE: { actions: ["releaseForceHold", "announceForceRelease"] },
+      },
+    },
+    checking: {
+      entry: "setCheckStart",
+      on: {
+        WAITING_DETECTED: {
+          target: "update_detected",
+          actions: ["storeWaiting", "announceWaiting", "queueEvaluateReady"],
+        },
+        CHECK_COMPLETED: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "update_detected",
+            actions: "queueEvaluateReady",
+          },
+          { target: "idle" },
+        ],
+        CHECK_FAILED: { target: "idle", actions: "setCheckFailure" },
+        AUTO_SUPPRESS: { actions: ["setAutoSuppressed", "announceSuppressed"] },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume"] },
+        FORCE_HOLD: { actions: ["addForceHold", "announceForceHold"] },
+        FORCE_RELEASE: { actions: ["releaseForceHold", "announceForceRelease"] },
+      },
+    },
+    update_detected: {
+      entry: "queueEvaluateReady",
+      on: {
+        READY_SUPPRESSED: { target: "suppressed" },
+        READY_AUTO: { target: "auto_pending" },
+        READY_MANUAL: { target: "waiting_user" },
+        WAITING_DETECTED: {
+          target: "update_detected",
+          internal: false,
+          actions: ["storeWaiting", "announceWaiting", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        AUTO_SUPPRESS: { target: "suppressed", actions: ["setAutoSuppressed", "announceSuppressed"] },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"] },
+        FORCE_HOLD: {
+          target: "suppressed",
+          actions: ["addForceHold", "announceForceHold"],
+        },
+        FORCE_RELEASE: { actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"] },
+        APPLY_REQUEST: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startManualApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+      },
+    },
+    auto_pending: {
+      entry: "scheduleAutoApplyTimer",
+      exit: "clearAutoApplyTimer",
+      on: {
+        AUTO_TIMER_EXPIRED: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startAutoApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+        APPLY_REQUEST: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startManualApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+        AUTO_SUPPRESS: {
+          target: "suppressed",
+          actions: ["setAutoSuppressed", "announceSuppressed"],
+        },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume"] },
+        FORCE_HOLD: {
+          target: "suppressed",
+          actions: ["addForceHold", "announceForceHold"],
+        },
+        FORCE_RELEASE: {
+          actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        WAITING_DETECTED: {
+          target: "auto_pending",
+          internal: false,
+          actions: ["storeWaiting", "announceWaiting"],
+        },
+      },
+    },
+    waiting_user: {
+      entry: "clearAutoApplyTimer",
+      on: {
+        APPLY_REQUEST: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startManualApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+        AUTO_SUPPRESS: {
+          target: "suppressed",
+          actions: ["setAutoSuppressed", "announceSuppressed"],
+        },
+        AUTO_RESUME: {
+          actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"],
+        },
+        FORCE_HOLD: {
+          target: "suppressed",
+          actions: ["addForceHold", "announceForceHold"],
+        },
+        FORCE_RELEASE: {
+          actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        WAITING_DETECTED: {
+          target: "waiting_user",
+          internal: false,
+          actions: ["storeWaiting", "announceWaiting"],
+        },
+        READY_AUTO: { target: "auto_pending" },
+        READY_SUPPRESSED: { target: "suppressed" },
+      },
+    },
+    suppressed: {
+      entry: "clearAutoApplyTimer",
+      on: {
+        APPLY_REQUEST: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startManualApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+        AUTO_RESUME: {
+          actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"],
+        },
+        AUTO_SUPPRESS: { actions: "setAutoSuppressed" },
+        FORCE_HOLD: { actions: ["addForceHold", "announceForceHold"] },
+        FORCE_RELEASE: {
+          actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        WAITING_DETECTED: {
+          target: "suppressed",
+          internal: false,
+          actions: ["storeWaiting", "announceWaiting"],
+        },
+        READY_AUTO: { target: "auto_pending" },
+        READY_MANUAL: { target: "waiting_user" },
+        READY_SUPPRESSED: { target: "suppressed" },
+      },
+    },
+    applying: {
+      entry: ["clearAutoApplyTimer", "scheduleApplyTimeout"],
+      exit: "clearApplyTimeout",
+      on: {
+        APPLY_SUCCESS: { target: "applied", actions: "handleApplySuccess" },
+        APPLY_FAILURE: { target: "failed", actions: "handleApplyFailure" },
+        APPLY_TIMEOUT: { target: "failed", actions: "handleApplyTimeout" },
+        WAITING_CLEARED: [
+          {
+            guard: { type: "clearResultActivated" },
+            target: "applied",
+            actions: "handleApplySuccess",
+          },
+          {
+            guard: { type: "clearResultRedundant" },
+            target: "failed",
+            actions: "handleApplyRedundant",
+          },
+          { target: "idle", actions: ["clearWaiting", "announceCleared"] },
+        ],
+      },
+    },
+    applied: {
+      entry: "resetRetry",
+      on: {
+        WAITING_DETECTED: {
+          target: "update_detected",
+          actions: ["storeWaiting", "announceWaiting", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        AUTO_SUPPRESS: { actions: ["setAutoSuppressed", "announceSuppressed"] },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"] },
+        FORCE_HOLD: { actions: ["addForceHold", "announceForceHold"] },
+        FORCE_RELEASE: { actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"] },
+      },
+    },
+    failed: {
+      entry: "incrementRetry",
+      on: {
+        RETRY: [
+          {
+            guard: { type: "hasWaiting" },
+            target: "applying",
+            actions: "startRetryApplying",
+          },
+          { target: "failed", actions: "noWaitingFailure" },
+        ],
+        WAITING_DETECTED: {
+          target: "update_detected",
+          actions: ["storeWaiting", "announceWaiting", "queueEvaluateReady"],
+        },
+        WAITING_CLEARED: {
+          target: "idle",
+          actions: ["clearWaiting", "announceCleared"],
+        },
+        AUTO_SUPPRESS: { actions: ["setAutoSuppressed", "announceSuppressed"] },
+        AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"] },
+        FORCE_HOLD: { actions: ["addForceHold", "announceForceHold"] },
+        FORCE_RELEASE: { actions: ["releaseForceHold", "announceForceRelease", "queueEvaluateReady"] },
+      },
+    },
+  },
+});
+function resolvePhase(state: SafeUpdateSnapshotState): SafeUpdatePhase {
+  const value = state.value;
+  return typeof value === "string" ? (value as SafeUpdatePhase) : "idle";
+}
+
+function createSnapshot(state: SafeUpdateSnapshotState): SafeUpdateSnapshot {
+  const phase = resolvePhase(state);
+  const {
+    waitingSince,
+    waitingVersion,
+    lastCheckAt,
+    lastError,
+    autoApplySuppressed,
+    pendingReload,
+    applyReason,
+    autoApplyAt,
+    retryCount,
+  } = state.context;
+  return {
+    phase,
+    waitingSince,
+    waitingVersion,
+    lastCheckAt,
+    lastError,
+    autoApplySuppressed,
+    pendingReload,
+    applyReason,
+    autoApplyAt,
+    retryCount,
+  };
+}
+
+function notifyListeners(snapshot: SafeUpdateSnapshot) {
+  snapshotListeners.forEach((listener) => {
+    try {
+      listener({ ...snapshot });
+    } catch {
+      /* ignore */
     }
-  } else {
-    clearForceApplyTimer();
-    state.waitingSince = null;
-    state.waitingVersion = null;
-    if (state.phase === "checking" && preCheckPhase) {
-      state.phase = preCheckPhase;
-    } else if (state.phase !== "applying" && state.phase !== "failed") {
-      state.phase = "idle";
+  });
+  updateListeners.forEach((listener) => {
+    try {
+      listener(currentWaitingRegistration);
+    } catch {
+      /* ignore */
     }
-    if (shouldBroadcast) {
-      broadcast?.postMessage({ type: "update-cleared", source });
-    }
-  }
-  notifyListeners();
+  });
 }
 
-function clearApplyTimeout() {
-  if (typeof window === "undefined") {
-    return;
-  }
-  if (applyTimeoutId !== null) {
-    window.clearTimeout(applyTimeoutId);
-    applyTimeoutId = null;
-  }
-}
+function handleStateChange(state: SafeUpdateSnapshotState) {
+  currentWaitingRegistration = state.context.waitingRegistration ?? null;
+  const nextSnapshot = createSnapshot(state);
+  const nextPhase = nextSnapshot.phase;
+  const eventType = ((state as unknown as { event?: SafeUpdateEvent }).event?.type) ?? "INIT";
+  const changed =
+    nextPhase !== currentSnapshot.phase ||
+    nextSnapshot.lastError !== currentSnapshot.lastError ||
+    nextSnapshot.pendingReload !== currentSnapshot.pendingReload ||
+    nextSnapshot.autoApplySuppressed !== currentSnapshot.autoApplySuppressed ||
+    nextSnapshot.autoApplyAt !== currentSnapshot.autoApplyAt ||
+    nextSnapshot.waitingSince !== currentSnapshot.waitingSince ||
+    nextSnapshot.retryCount !== currentSnapshot.retryCount ||
+    nextSnapshot.waitingVersion !== currentSnapshot.waitingVersion;
 
-function clearForceApplyTimer() {
-  if (typeof window === "undefined") {
-    forceApplyTimerId = null;
-    return;
+  const previousSnapshot = currentSnapshot;
+  currentSnapshot = nextSnapshot;
+
+  const transitionChanged =
+    ((state as unknown as { changed?: boolean }).changed ?? false) ||
+    nextPhase !== previousSnapshot.phase;
+
+  if (transitionChanged && previousPhase !== nextPhase) {
+    traceAction("safeUpdate.transition", {
+      from: previousPhase,
+      to: nextPhase,
+      event: eventType,
+      version: nextSnapshot.waitingVersion ?? null,
+    });
+    previousPhase = nextPhase;
   }
-  if (forceApplyTimerId !== null) {
-    window.clearTimeout(forceApplyTimerId);
-    forceApplyTimerId = null;
-  }
-}
 
-function scheduleApplyTimeout(reason: string, safeMode: boolean) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  clearApplyTimeout();
-  applyTimeoutId = window.setTimeout(() => {
-    if (state.phase === "applying") {
-      const contextReason = pendingApplyContext?.reason ?? reason;
-      const contextSafeMode = pendingApplyContext?.safeMode ?? safeMode;
-      markApplyFailure("timeout", contextReason, contextSafeMode);
-    }
-  }, APPLY_TIMEOUT_MS);
-}
-
-function normalizeForceHoldReason(reason?: string): string {
-  const trimmed = typeof reason === "string" ? reason.trim() : "";
-  return trimmed.length > 0 ? trimmed : FORCE_APPLY_HOLD_DEFAULT;
-}
-
-function hasForceApplyHold(): boolean {
-  return forceApplyHolds.size > 0;
-}
-
-function registerForceApplyHold(reason: string | undefined, shouldBroadcast: boolean) {
-  const key = normalizeForceHoldReason(reason);
-  const nextCount = (forceApplyHolds.get(key) ?? 0) + 1;
-  forceApplyHolds.set(key, nextCount);
-  clearForceApplyTimer();
-  if (shouldBroadcast) {
-    broadcast?.postMessage({ type: "force-hold", detail: key });
+  if (changed) {
+    notifyListeners(nextSnapshot);
   }
 }
 
-function registerForceApplyRelease(reason: string | undefined, shouldBroadcast: boolean) {
-  const key = normalizeForceHoldReason(reason);
-  const current = forceApplyHolds.get(key);
-  if (!current) {
-    return;
+let safeUpdateActor: ActorRefFrom<typeof safeUpdateMachine> | null = null;
+
+function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
+  if (safeUpdateActor || !isBrowser) {
+    return safeUpdateActor;
   }
-  if (current <= 1) {
-    forceApplyHolds.delete(key);
-  } else {
-    forceApplyHolds.set(key, current - 1);
-  }
-  if (shouldBroadcast) {
-    broadcast?.postMessage({ type: "force-release", detail: key });
-  }
-  if (!hasForceApplyHold()) {
-    scheduleForceApplyTimer();
-  }
+  safeUpdateActor = createActor(safeUpdateMachine);
+  safeUpdateActor.subscribe(handleStateChange);
+  safeUpdateActor.start();
+  return safeUpdateActor;
 }
 
-function scheduleForceApplyTimer() {
-  if (typeof window === "undefined") {
-    return;
-  }
-  if (!waitingRegistration?.waiting) {
-    clearForceApplyTimer();
-    return;
-  }
-  if (hasForceApplyHold()) {
-    clearForceApplyTimer();
-    return;
-  }
-  clearForceApplyTimer();
-  forceApplyTimerId = window.setTimeout(() => {
-    forceApplyTimerId = null;
-    if (!waitingRegistration?.waiting) {
+if (broadcast) {
+  broadcast.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || typeof data !== "object") {
       return;
     }
-    if (state.phase === "applying" || pendingReload) {
-      return;
-    }
-    applyServiceWorkerUpdate({ reason: "timeout" });
-  }, FORCE_APPLY_DELAY_MS);
+    void handleBroadcastMessage(data as { type?: string; detail?: string });
+  });
 }
 
-function handleApplySuccess(options?: { broadcastEvent?: boolean }) {
-  const broadcastEvent = options?.broadcastEvent !== false;
-  clearApplyTimeout();
-  clearForceApplyTimer();
-  state.lastError = null;
-  state.phase = "applied";
-  state.pendingReload = pendingReload;
-  state.applyReason = pendingApplyContext?.reason ?? state.applyReason;
-  notifyListeners();
-  if (broadcastEvent) {
-    broadcast?.postMessage({ type: "update-applied" });
-  }
-}
-
-function markApplyFailure(detail: string, reason: string, safeMode: boolean) {
-  clearApplyTimeout();
-  clearForceApplyTimer();
-  pendingReload = false;
-  state.pendingReload = false;
-  state.phase = "failed";
-  state.lastError = detail;
-  state.applyReason = reason;
-  logSafeUpdateTelemetry("failure", { reason, safeMode, detail });
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.warn("[sw] applying service worker failed", { reason, detail });
-  }
-  broadcast?.postMessage({ type: "update-failed", detail });
-  pendingApplyContext = null;
-  notifyListeners();
-  scheduleForceApplyTimer();
-}
-
-function handleBroadcastMessage(message: unknown) {
-  if (!message || typeof message !== "object") {
-    return;
-  }
-  const payload = message as { type?: string; detail?: string };
-  switch (payload.type) {
+async function handleBroadcastMessage(message: { type?: string; detail?: string }) {
+  const actor = ensureActor();
+  if (!actor) return;
+  switch (message.type) {
     case "update-ready":
-      void resyncWaitingServiceWorker("broadcast-ready");
-      break;
-    case "force-hold":
-      registerForceApplyHold(payload.detail, false);
-      break;
-    case "force-release":
-      registerForceApplyRelease(payload.detail, false);
+      await resyncWaitingServiceWorker("broadcast-ready");
       break;
     case "update-cleared":
-      if (!pendingReload) {
-        setWaitingRegistration(null, false, "broadcast-cleared");
-      }
+      actor.send({ type: "WAITING_CLEARED", result: "manual", source: "broadcast", broadcast: false });
       break;
     case "update-applied":
-      if (waitingRegistration || state.phase === "applying" || state.waitingSince) {
-        handleApplySuccess({ broadcastEvent: false });
-      }
+      actor.send({ type: "APPLY_SUCCESS", broadcast: false });
+      actor.send({ type: "WAITING_CLEARED", result: "activated", source: "broadcast", broadcast: false });
       break;
-    case "update-failed": {
-      clearApplyTimeout();
-      pendingReload = false;
-      state.pendingReload = false;
-      state.phase = "failed";
-      state.lastError =
-        typeof payload.detail === "string" ? payload.detail : "unknown";
-      state.applyReason = pendingApplyContext?.reason ?? state.applyReason;
-      pendingApplyContext = null;
-      notifyListeners();
+    case "update-failed":
+      actor.send({
+        type: "APPLY_FAILURE",
+        detail: typeof message.detail === "string" ? message.detail : "unknown",
+        reason: "remote",
+        safeMode: false,
+        broadcast: false,
+      });
       break;
-    }
     case "suppress":
-      autoApplySuppressed = true;
-      state.autoApplySuppressed = true;
-      notifyListeners();
+      actor.send({ type: "AUTO_SUPPRESS", reason: "broadcast", broadcast: false });
       break;
     case "resume-auto":
-      autoApplySuppressed = false;
-      state.autoApplySuppressed = false;
-      notifyListeners();
+      actor.send({ type: "AUTO_RESUME", reason: "broadcast", broadcast: false });
+      break;
+    case "force-hold":
+      actor.send({
+        type: "FORCE_HOLD",
+        key: normalizeHoldReason(message.detail),
+        broadcast: false,
+      });
+      break;
+    case "force-release":
+      actor.send({
+        type: "FORCE_RELEASE",
+        key: normalizeHoldReason(message.detail),
+        broadcast: false,
+      });
       break;
     default:
       break;
   }
 }
+function startApply(
+  context: SafeUpdateContext,
+  params: { reason: string; safeMode: boolean; automatic: boolean; broadcast: boolean }
+): Partial<SafeUpdateContext> {
+  const registration = context.waitingRegistration;
+  const waiting = registration?.waiting ?? null;
+  if (!registration || !waiting) {
+    return {
+      lastError: "no_waiting",
+      pendingReload: false,
+      applyReason: params.reason,
+    };
+  }
+  try {
+    waiting.postMessage({ type: "SKIP_WAITING" });
+  } catch (error) {
+    traceError("safeUpdate.apply.postMessage", error, {
+      reason: params.reason,
+      safeMode: params.safeMode,
+    });
+  }
+  logSafeUpdateTelemetry("triggered", { reason: params.reason, safeMode: params.safeMode });
+  traceAction("safeUpdate.apply.start", {
+    reason: params.reason,
+    safeMode: params.safeMode,
+    automatic: params.automatic,
+  });
+  if (params.broadcast) {
+    broadcast?.postMessage({ type: "update-applying", reason: params.reason });
+  }
+  return {
+    pendingReload: true,
+    applyReason: params.reason,
+    pendingApply: {
+      reason: params.reason,
+      safeMode: params.safeMode,
+      startedAt: now(),
+      attemptId: context.attemptSeq + 1,
+      automatic: params.automatic,
+    },
+    attemptSeq: context.attemptSeq + 1,
+    lastError: null,
+  };
+}
 
 export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
+  const actor = ensureActor();
+  if (!actor) {
+    listener(null);
+    return () => {
+      /* noop */
+    };
+  }
   updateListeners.add(listener);
   try {
-    listener(waitingRegistration);
+    listener(currentWaitingRegistration);
   } catch {
-    /* ignore immediate listener failure */
+    /* ignore */
   }
   return () => {
     updateListeners.delete(listener);
@@ -343,11 +954,18 @@ export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () =>
 }
 
 export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () => void {
+  const actor = ensureActor();
+  if (!actor) {
+    listener({ ...currentSnapshot });
+    return () => {
+      /* noop */
+    };
+  }
   snapshotListeners.add(listener);
   try {
-    listener(cloneSnapshot());
+    listener({ ...currentSnapshot });
   } catch {
-    /* ignore immediate listener failure */
+    /* ignore */
   }
   return () => {
     snapshotListeners.delete(listener);
@@ -355,178 +973,185 @@ export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () =>
 }
 
 export function getSafeUpdateSnapshot(): SafeUpdateSnapshot {
-  return cloneSnapshot();
+  ensureActor();
+  return { ...currentSnapshot };
 }
 
 export function getWaitingServiceWorker(): ServiceWorkerRegistration | null {
-  return waitingRegistration;
+  ensureActor();
+  return currentWaitingRegistration;
 }
 
 export function announceServiceWorkerUpdate(
   registration: ServiceWorkerRegistration | null
-) {
-  setWaitingRegistration(registration, true, "announce");
+): void {
+  const actor = ensureActor();
+  if (!actor) return;
+  if (registration) {
+    actor.send({
+      type: "WAITING_DETECTED",
+      registration,
+      source: "announce",
+      broadcast: true,
+    });
+  } else {
+    actor.send({
+      type: "WAITING_CLEARED",
+      result: "manual",
+      source: "announce",
+      broadcast: true,
+    });
+  }
 }
 
-export function applyServiceWorkerUpdate(
-  options?: ApplyServiceWorkerOptions
-): boolean {
+export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): boolean {
+  const actor = ensureActor();
+  if (!actor) return false;
   const reason = options?.reason ?? "manual";
   const safeMode = options?.safeMode === true;
-  const isAutomatic = reason !== "manual";
-
-  if (autoApplySuppressed && isAutomatic) {
+  const automatic = reason !== "manual";
+  const snapshot = actor.getSnapshot();
+  const context = snapshot?.context;
+  if (automatic && context?.autoApplySuppressed) {
     logSafeUpdateTelemetry("suppressed", { reason, safeMode });
-    state.lastError = "suppressed";
-    notifyListeners();
+    traceAction("safeUpdate.apply.suppressed", { reason, safeMode });
     return false;
   }
-
-  const registration = waitingRegistration;
-  const waitingWorker = registration?.waiting;
-  if (!registration || !waitingWorker) {
-    logSafeUpdateTelemetry("no_waiting", { reason, safeMode });
-    state.lastError = "no_waiting";
-    state.phase = "failed";
-    notifyListeners();
-    return false;
-  }
-
-  try {
-    pendingReload = true;
-    state.pendingReload = true;
-    state.phase = "applying";
-    state.lastError = null;
-    state.applyReason = reason;
-    clearForceApplyTimer();
-    applyAttemptSequence += 1;
-    pendingApplyContext = {
-      reason,
-      safeMode,
-      startedAt: Date.now(),
-      attemptId: applyAttemptSequence,
-    };
-    waitingWorker.postMessage({ type: "SKIP_WAITING" });
-    scheduleApplyTimeout(reason, safeMode);
-    logSafeUpdateTelemetry("triggered", { reason, safeMode });
-    broadcast?.postMessage({ type: "update-applying", reason });
-    notifyListeners();
-    return true;
-  } catch {
-    markApplyFailure("exception", reason, safeMode);
-    return false;
-  }
+  actor.send({ type: "APPLY_REQUEST", reason, safeMode, automatic });
+  const nextPhase = resolvePhase(actor.getSnapshot());
+  return nextPhase === "applying";
 }
 
 export function consumePendingReloadFlag(): boolean {
-  if (!pendingReload) {
+  const actor = ensureActor();
+  if (!actor) return false;
+  if (!currentSnapshot.pendingReload) {
     return false;
   }
-  pendingReload = false;
-  state.pendingReload = false;
-  notifyListeners();
+  actor.send({ type: "RELOAD_CONSUMED" });
   return true;
 }
 
 export function consumePendingApplyContext(): ApplyServiceWorkerOptions | null {
-  if (!pendingApplyContext) {
+  const actor = ensureActor();
+  if (!actor) return null;
+  const pending = actor.getSnapshot().context.pendingApply;
+  if (!pending) {
     return null;
   }
-  const { reason, safeMode } = pendingApplyContext;
-  pendingApplyContext = null;
-  state.applyReason = null;
-  notifyListeners();
-  return { reason, safeMode };
+  actor.send({ type: "PENDING_APPLY_CONSUMED" });
+  return { reason: pending.reason, safeMode: pending.safeMode };
 }
 
 export function holdForceApplyTimer(reason?: string) {
-  registerForceApplyHold(reason, true);
+  const actor = ensureActor();
+  if (!actor) return;
+  actor.send({
+    type: "FORCE_HOLD",
+    key: normalizeHoldReason(reason),
+    broadcast: true,
+  });
 }
 
 export function releaseForceApplyTimer(reason?: string) {
-  registerForceApplyRelease(reason, true);
+  const actor = ensureActor();
+  if (!actor) return;
+  actor.send({
+    type: "FORCE_RELEASE",
+    key: normalizeHoldReason(reason),
+    broadcast: true,
+  });
 }
 
 export function suppressAutoApply() {
-  autoApplySuppressed = true;
-  state.autoApplySuppressed = true;
-  broadcast?.postMessage({ type: "suppress" });
-  notifyListeners();
+  const actor = ensureActor();
+  if (!actor) return;
+  actor.send({ type: "AUTO_SUPPRESS", reason: "manual", broadcast: true });
 }
 
 export function clearAutoApplySuppression() {
-  autoApplySuppressed = false;
-  state.autoApplySuppressed = false;
-  broadcast?.postMessage({ type: "resume-auto" });
-  notifyListeners();
+  const actor = ensureActor();
+  if (!actor) return;
+  actor.send({ type: "AUTO_RESUME", reason: "manual", broadcast: true });
 }
 
 export function isAutoApplySuppressed(): boolean {
-  return autoApplySuppressed;
+  ensureActor();
+  return currentSnapshot.autoApplySuppressed;
 }
 
-type ClearResult = "activated" | "redundant" | "manual";
-
 export function clearWaitingServiceWorker(options?: { result?: ClearResult }) {
+  const actor = ensureActor();
+  if (!actor) return;
   const result: ClearResult = options?.result ?? "manual";
-  if (result === "redundant" && pendingApplyContext) {
-    const { reason = "manual", safeMode = false } = pendingApplyContext;
-    markApplyFailure("redundant", reason, safeMode);
-    setWaitingRegistration(null, true, "clear");
-    return;
+  if (result === "redundant") {
+    const pending = actor.getSnapshot().context.pendingApply;
+    actor.send({
+      type: "APPLY_FAILURE",
+      detail: "redundant",
+      reason: pending?.reason ?? "manual",
+      safeMode: pending?.safeMode ?? false,
+      broadcast: true,
+    });
+  } else if (result === "activated") {
+    actor.send({ type: "APPLY_SUCCESS", broadcast: true });
   }
-
-  setWaitingRegistration(null, true, "clear");
-
-  if (state.phase === "applying") {
-    handleApplySuccess();
-  } else if (result === "manual") {
-    state.lastError = null;
-    notifyListeners();
-  }
+  actor.send({
+    type: "WAITING_CLEARED",
+    result,
+    source: "clear",
+    broadcast: true,
+  });
 }
 
 export function markUpdateCheckStart() {
-  if (state.phase === "applying") {
-    return;
-  }
-  preCheckPhase = state.phase;
-  state.phase = "checking";
-  state.lastCheckAt = Date.now();
-  notifyListeners();
+  const actor = ensureActor();
+  if (!actor) return;
+  const phase = resolvePhase(actor.getSnapshot());
+  if (phase === "applying") return;
+  actor.send({ type: "CHECK_STARTED", timestamp: now() });
 }
 
 export function markUpdateCheckEnd() {
-  if (state.phase !== "checking") {
-    return;
-  }
-  state.phase = waitingRegistration ? "ready" : preCheckPhase ?? "idle";
-  preCheckPhase = null;
-  notifyListeners();
+  const actor = ensureActor();
+  if (!actor) return;
+  const phase = resolvePhase(actor.getSnapshot());
+  if (phase === "applying") return;
+  actor.send({ type: "CHECK_COMPLETED" });
 }
 
 export function markUpdateCheckError(detail: string) {
-  if (state.phase !== "checking") {
-    return;
-  }
-  state.phase = preCheckPhase ?? "idle";
-  preCheckPhase = null;
-  state.lastError = detail;
-  notifyListeners();
+  const actor = ensureActor();
+  if (!actor) return;
+  const phase = resolvePhase(actor.getSnapshot());
+  if (phase === "applying") return;
+  actor.send({ type: "CHECK_FAILED", detail });
 }
 
 export async function resyncWaitingServiceWorker(source?: string): Promise<void> {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
-    return;
-  }
+  if (!isBrowser) return;
   try {
     const registration = await navigator.serviceWorker.getRegistration();
+    const actor = ensureActor();
+    if (!actor) return;
     if (registration?.waiting) {
-      setWaitingRegistration(registration, false, source ?? "resync");
-    } else if (!pendingReload) {
-      setWaitingRegistration(null, false, source ?? "resync");
+      actor.send({
+        type: "WAITING_DETECTED",
+        registration,
+        source: source ?? "resync",
+        broadcast: false,
+      });
+    } else {
+      actor.send({
+        type: "WAITING_CLEARED",
+        result: "manual",
+        source: source ?? "resync",
+        broadcast: false,
+      });
     }
-  } catch {
-    // ignore resync failures
+  } catch (error) {
+    traceError("safeUpdate.resync.failed", error, { source });
   }
 }
+
+export const __safeUpdateMachine = safeUpdateMachine;

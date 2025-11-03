@@ -28,8 +28,14 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     if (hasError || phase === "failed") {
       return "更新に失敗しました";
     }
-    if (autoApplySuppressed) {
+    if (phase === "suppressed" || autoApplySuppressed) {
       return "自動更新を保留中";
+    }
+    if (phase === "auto_pending") {
+      return "自動適用を準備中";
+    }
+    if (phase === "update_detected" || phase === "waiting_user") {
+      return "新バージョン待機中";
     }
     return "新バージョン待機中";
   }, [autoApplySuppressed, hasError, isApplying, phase]);
@@ -41,10 +47,15 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     if (hasError || phase === "failed") {
       return "retry" as const;
     }
-    if (autoApplySuppressed) {
+    if (phase === "suppressed" || autoApplySuppressed) {
       return "apply" as const;
     }
-    if (phase === "ready" || isUpdateReady) {
+    if (
+      phase === "auto_pending" ||
+      phase === "waiting_user" ||
+      phase === "update_detected" ||
+      isUpdateReady
+    ) {
       return "apply" as const;
     }
     return null;
@@ -68,8 +79,14 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
           return "自動更新に失敗しました。手動更新を試してください。";
       }
     }
-    if (autoApplySuppressed) {
+    if (phase === "suppressed" || autoApplySuppressed) {
       return "ループガードのため自動適用を停止しています。手動で適用できます。";
+    }
+    if (phase === "auto_pending") {
+      return "進行中のゲームに影響がないタイミングで自動適用します。";
+    }
+    if (phase === "waiting_user" || phase === "update_detected") {
+      return "更新を適用すると最新の修正が反映されます。";
     }
     return "進行中のゲームに影響がないタイミングで自動適用します。";
   }, [autoApplySuppressed, hasError, isApplying, lastError, phase]);

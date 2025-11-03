@@ -45,6 +45,13 @@
 - iOS Safari (standalone) での挙動を実機確認し、追加のワークアラウンドが必要か検証。  
 - 長時間（24h 以上）起動セッションに対する E2E テストを追加する案を検討。
 
+## 付記（2025-11-03）
+- XState ベースの Safe Update マシン（`lib/serviceWorker/updateChannel.ts`）を導入し、BroadcastChannel 同期・force apply hold・auto apply タイマーを FSM 内に集約。
+- `traceAction("safeUpdate.transition", ...)` を遷移毎に記録し、適用成功 / 失敗 / タイマー起動のテレメトリを正規化。
+- `__tests__/safeUpdateMachine.test.ts` を追加し、自動適用・手動適用・失敗からの再試行シナリオをユニットテストでカバー。
+- UI フロー（`useServiceWorkerUpdate` / `SafeUpdateBanner` / `UpdateAvailableBadge`）が新しい `SafeUpdatePhase` に対応。
+- 手動検証手順 `docs/SAFE_UPDATE_TEST_PLAN.md` を FSM フローへ合わせて更新予定（自動適用/手動適用/失敗復旧/ PWA）。
+
 ---
 作成者: Codex（2025-10-25）  
 対象コミット: safe-update manager 再構築一式
