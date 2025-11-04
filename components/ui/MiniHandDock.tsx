@@ -296,6 +296,7 @@ interface MiniHandDockProps {
   pop?: boolean;
   // 在席者のみでリセットするための補助情報
   onlineUids?: string[];
+  playerCount?: number;
   roundIds?: string[];
   // カスタムお題（現在値）
   currentTopic?: string | null;
@@ -322,6 +323,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     onLeaveRoom,
     pop = false,
     onlineUids,
+    playerCount,
     roundIds,
     currentTopic,
     hostClaimStatus,
@@ -496,6 +498,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     defaultTopicType: computedDefaultTopicType,
     roundIds,
     onlineUids,
+    playerCount,
     proposal,
     currentTopic,
     presenceReady,

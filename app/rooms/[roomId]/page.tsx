@@ -1565,6 +1565,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     seatAcceptanceActive,
     forcedExitReason,
   ]);
+
+  useEffect(() => {
+    if (!uid) return;
+    if (!isSpectatorMode) return;
+    if (!isMember && !isHost && !hasOptimisticSeat) return;
+    if (seatRequestPending || seatAcceptanceActive) return;
+    emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
+    emitSpectatorEvent({ type: "SPECTATOR_RESET" });
+  }, [
+    uid,
+    isSpectatorMode,
+    isMember,
+    isHost,
+    hasOptimisticSeat,
+    seatRequestPending,
+    seatAcceptanceActive,
+    emitSpectatorEvent,
+  ]);
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
     traceAction("spectator.mode", {
@@ -1675,10 +1693,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       return;
     }
     if (seatRequestTimedOut && !spectatorTimeoutPrevRef.current) {
+      traceAction("spectator.request.timeout", {
+        roomId,
+        uid,
+        source: seatRequestState.source ?? null,
+      });
       emitSpectatorEvent({ type: "SPECTATOR_TIMEOUT" });
     }
     spectatorTimeoutPrevRef.current = seatRequestTimedOut;
-  }, [emitSpectatorEvent, isSpectatorMode, seatRequestTimedOut]);
+  }, [
+    emitSpectatorEvent,
+    isSpectatorMode,
+    seatRequestTimedOut,
+    roomId,
+    uid,
+    seatRequestState.source,
+  ]);
 
   const spectatorEnteredRef = useRef(false);
   useEffect(() => {
@@ -1964,16 +1994,33 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     const previousStatus = prevSeatRequestStatusRef.current;
     if (currentStatus !== previousStatus) {
       if (currentStatus === "accepted") {
+        traceAction("spectator.request.accepted", {
+          roomId,
+          uid,
+          source: seatRequestState.source ?? null,
+        });
         leavingRef.current = false;
         forcedExitScheduledRef.current = false;
         forcedExitRecoveryPendingRef.current = false;
         setForcedExitReason(null);
         setSeatRequestTimedOut(false);
       } else if (currentStatus === "rejected") {
+        traceAction("spectator.request.rejected", {
+          roomId,
+          uid,
+          source: seatRequestState.source ?? null,
+          failure: seatRequestState.error ?? null,
+        });
         leavingRef.current = false;
         forcedExitRecoveryPendingRef.current = false;
         setSeatRequestTimedOut(false);
-      } else if (currentStatus !== "pending") {
+      } else if (currentStatus === "pending") {
+        traceAction("spectator.request.pending", {
+          roomId,
+          uid,
+          source: seatRequestState.source ?? null,
+        });
+      } else {
         setSeatRequestTimedOut(false);
       }
       prevSeatRequestStatusRef.current = currentStatus;
@@ -1983,10 +2030,14 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
   }, [
     seatRequestState.status,
+    seatRequestState.source,
+    seatRequestState.error,
     leavingRef,
     forcedExitScheduledRef,
     forcedExitRecoveryPendingRef,
     setForcedExitReason,
+    roomId,
+    uid,
   ]);
 
   useEffect(() => {
@@ -2851,7 +2902,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </AppButton>
   ) : null;
 
-  const spectatorNotice = isSpectatorMode
+  const spectatorNotice = isSpectatorMode && !isMember
     ? spectatorReason === "version-mismatch"
       ? (
           <VStack
@@ -3004,6 +3055,42 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
                   </>
                 )}
               </Box>
+              <Box mt={3}>
+                {seatRequestState.status === "pending" ? (
+                  <Text
+                    fontSize={{ base: "sm", md: "md" }}
+                    color={UI_TOKENS.COLORS.whiteAlpha80}
+                    lineHeight={1.6}
+                  >
+                    席に戻る申請を送信しました。ホストの承認を待っています…
+                  </Text>
+                ) : seatRequestState.status === "accepted" ? (
+                  <Text
+                    fontSize={{ base: "sm", md: "md" }}
+                    color={UI_TOKENS.COLORS.whiteAlpha90}
+                    fontWeight={600}
+                    lineHeight={1.6}
+                  >
+                    席の準備ができました。まもなく自動で戻ります！
+                  </Text>
+                ) : seatRequestState.status === "rejected" ? (
+                  <Text
+                    fontSize={{ base: "sm", md: "md" }}
+                    color={UI_TOKENS.COLORS.orangeRed}
+                    lineHeight={1.6}
+                  >
+                    席に戻る申請が見送られました。もう少し待ってから再度お試しください。
+                  </Text>
+                ) : seatRequestTimedOut ? (
+                  <Text
+                    fontSize={{ base: "sm", md: "md" }}
+                    color={UI_TOKENS.COLORS.whiteAlpha60}
+                    lineHeight={1.6}
+                  >
+                    応答がありませんでした。電波状況を確認して「席に戻れるか試す」を押すか、ロビーへ戻って入り直してください。
+                  </Text>
+                ) : null}
+              </Box>
             </Box>
             <Box
               display="flex"
@@ -3075,6 +3162,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           roomName={displayRoomName}
           currentTopic={room.topic || null}
           onlineUids={onlineUids}
+          playerCount={players.length}
           roundIds={clueTargetIds}
           presenceReady={presenceReady}
           onOpenSettings={() => setIsSettingsOpen(true)}

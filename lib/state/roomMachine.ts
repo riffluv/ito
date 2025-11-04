@@ -203,28 +203,28 @@ export function createRoomMachine(input: RoomMachineInput) {
       on: {
         SPECTATOR_REQUEST_SNAPSHOT: [
           {
-            guard: "snapshotIsPendingwaiting-host",
-            target: "spectator.waiting-host",
+            guard: "snapshotIsPendingWaitingHost",
+            target: "#roomMachine.spectator.waiting-host",
             actions: ["spectatorRequestSnapshot"],
           },
           {
             guard: "snapshotIsPendingWatching",
-            target: "spectator.watching",
+            target: "#roomMachine.spectator.watching",
             actions: ["spectatorRequestSnapshot"],
           },
           {
             guard: "snapshotIsAccepted",
-            target: "spectator.approved",
+            target: "#roomMachine.spectator.approved",
             actions: ["spectatorRequestSnapshot"],
           },
           {
             guard: "snapshotIsRejected",
-            target: "spectator.rejected",
+            target: "#roomMachine.spectator.rejected",
             actions: ["spectatorRequestSnapshot"],
           },
           {
             guard: "snapshotClearsToWatching",
-            target: "spectator.watching",
+            target: "#roomMachine.spectator.watching",
             actions: ["spectatorRequestSnapshot"],
           },
           {
@@ -232,35 +232,35 @@ export function createRoomMachine(input: RoomMachineInput) {
           },
         ],
         SPECTATOR_ENTER: {
-          target: "spectator.watching",
+          target: "#roomMachine.spectator.watching",
           actions: ["spectatorEnter"],
         },
         SPECTATOR_LEAVE: {
-          target: "spectator.idle",
+          target: "#roomMachine.spectator.idle",
           actions: ["spectatorLeave"],
         },
         SPECTATOR_REQUEST: {
-          target: "spectator.requesting",
+          target: "#roomMachine.spectator.requesting",
           actions: ["spectatorRequest"],
         },
         SPECTATOR_WAIT_HOST: {
-          target: "spectator.waiting-host",
+          target: "#roomMachine.spectator.waiting-host",
           actions: ["spectatorWaitHost"],
         },
         SPECTATOR_CANCEL: {
-          target: "spectator.watching",
+          target: "#roomMachine.spectator.watching",
           actions: ["spectatorCancel"],
         },
         SPECTATOR_APPROVED: {
-          target: "spectator.approved",
+          target: "#roomMachine.spectator.approved",
           actions: ["spectatorApproved"],
         },
         SPECTATOR_REJECTED: {
-          target: "spectator.rejected",
+          target: "#roomMachine.spectator.rejected",
           actions: ["spectatorRejected"],
         },
         SPECTATOR_TIMEOUT: {
-          target: "spectator.watching",
+          target: "#roomMachine.spectator.watching",
           actions: ["spectatorTimeout"],
         },
         SPECTATOR_ERROR: {
@@ -270,11 +270,11 @@ export function createRoomMachine(input: RoomMachineInput) {
           actions: ["spectatorReasonUpdate"],
         },
         SPECTATOR_RESET: {
-          target: "spectator.idle",
+          target: "#roomMachine.spectator.idle",
           actions: ["spectatorReset"],
         },
         SPECTATOR_FORCE_EXIT: {
-          target: "spectator.watching",
+          target: "#roomMachine.spectator.watching",
           actions: ["spectatorForceExit", "spectatorForceExitCleanup"],
         },
       },
@@ -295,7 +295,7 @@ export function createRoomMachine(input: RoomMachineInput) {
               on: {
                 START: {
                   guard: "canStart",
-                  target: "phase.clue",
+                  target: "#roomMachine.phase.clue",
                   actions: ["markClue", "callStartGame"],
                 },
                 RESET: {
@@ -308,17 +308,17 @@ export function createRoomMachine(input: RoomMachineInput) {
                   },
                   {
                     guard: "syncToClue",
-                    target: "phase.clue",
+                    target: "#roomMachine.phase.clue",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToReveal",
-                    target: "phase.reveal",
+                    target: "#roomMachine.phase.reveal",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToFinished",
-                    target: "phase.finished",
+                    target: "#roomMachine.phase.finished",
                     actions: "assignSnapshot",
                   },
                   {
@@ -335,27 +335,27 @@ export function createRoomMachine(input: RoomMachineInput) {
                 },
                 SUBMIT_ORDER: {
                   guard: "canSubmitOrder",
-                  target: "phase.reveal",
+                  target: "#roomMachine.phase.reveal",
                   actions: ["markReveal", "callSubmitOrder"],
                 },
                 RESET: {
-                  target: "phase.waiting",
+                  target: "#roomMachine.phase.waiting",
                   actions: ["markWaiting", "callReset"],
                 },
                 SYNC: [
                   {
                     guard: "syncToWaiting",
-                    target: "phase.waiting",
+                    target: "#roomMachine.phase.waiting",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToReveal",
-                    target: "phase.reveal",
+                    target: "#roomMachine.phase.reveal",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToFinished",
-                    target: "phase.finished",
+                    target: "#roomMachine.phase.finished",
                     actions: "assignSnapshot",
                   },
                   {
@@ -367,27 +367,27 @@ export function createRoomMachine(input: RoomMachineInput) {
             reveal: {
               on: {
                 REVEAL_DONE: {
-                  target: "phase.finished",
+                  target: "#roomMachine.phase.finished",
                   actions: ["markFinished", "callFinalizeReveal"],
                 },
                 RESET: {
-                  target: "phase.waiting",
+                  target: "#roomMachine.phase.waiting",
                   actions: ["markWaiting", "callReset"],
                 },
                 SYNC: [
                   {
                     guard: "syncToWaiting",
-                    target: "phase.waiting",
+                    target: "#roomMachine.phase.waiting",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToClue",
-                    target: "phase.clue",
+                    target: "#roomMachine.phase.clue",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToFinished",
-                    target: "phase.finished",
+                    target: "#roomMachine.phase.finished",
                     actions: "assignSnapshot",
                   },
                   {
@@ -399,28 +399,28 @@ export function createRoomMachine(input: RoomMachineInput) {
             finished: {
               on: {
                 RESET: {
-                  target: "phase.waiting",
+                  target: "#roomMachine.phase.waiting",
                   actions: ["markWaiting", "callReset"],
                 },
                 SYNC: [
                   {
                     guard: "syncToWaiting",
-                    target: "phase.waiting",
+                    target: "#roomMachine.phase.waiting",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToClue",
-                    target: "phase.clue",
+                    target: "#roomMachine.phase.clue",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToReveal",
-                    target: "phase.reveal",
+                    target: "#roomMachine.phase.reveal",
                     actions: "assignSnapshot",
                   },
                   {
                     guard: "syncToFinished",
-                    target: "phase.finished",
+                    target: "#roomMachine.phase.finished",
                     actions: "assignSnapshot",
                   },
                   {
@@ -508,10 +508,10 @@ export function createRoomMachine(input: RoomMachineInput) {
           if (previousStatus !== snapshot.status) {
             const uid = context.viewerUid ?? undefined;
             if (snapshot.status === "accepted") {
-              traceAction("spectator.recallAccepted", { roomId: context.roomId, uid });
+              traceAction("#roomMachine.spectator.recallAccepted", { roomId: context.roomId, uid });
               bumpMetric("recall", "accepted");
             } else if (snapshot.status === "rejected") {
-              traceAction("spectator.recallRejected", { roomId: context.roomId, uid });
+              traceAction("#roomMachine.spectator.recallRejected", { roomId: context.roomId, uid });
               bumpMetric("recall", "rejected");
             }
           }
@@ -643,7 +643,7 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         spectatorTimeout: assign(({ context }) => {
           const uid = context.viewerUid ?? undefined;
-          traceAction("spectator.recallTimeout", { roomId: context.roomId, uid });
+          traceAction("#roomMachine.spectator.recallTimeout", { roomId: context.roomId, uid });
           bumpMetric("recall", "timeout");
           return {
             ...context,
@@ -704,7 +704,7 @@ export function createRoomMachine(input: RoomMachineInput) {
         spectatorForceExitCleanup: ({ context, event, self }) => {
           if (event.type !== "SPECTATOR_FORCE_EXIT") return;
           const uid = context.viewerUid;
-          traceAction("spectator.forceExit", {
+          traceAction("#roomMachine.spectator.forceExit", {
             roomId: context.roomId,
             uid,
             reason: event.reason ?? null,
@@ -714,7 +714,7 @@ export function createRoomMachine(input: RoomMachineInput) {
             try {
               await deps.cancelSeatRequest(context.roomId, uid);
             } catch (error) {
-              traceError("spectator.forceExit.cancel", error as any, {
+              traceError("#roomMachine.spectator.forceExit.cancel", error as any, {
                 roomId: context.roomId,
                 uid,
               });
@@ -771,8 +771,34 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
       },
       guards: {
-        canStart: ({ context }) => computeTargetIds(context).length >= 2,
-        canDeal: ({ context }) => computeTargetIds(context).length >= 2,
+        canStart: ({ context }) => {
+          const targets = computeTargetIds(context);
+          if (targets.length < 1) {
+            return false;
+          }
+          if (targets.length < 2) {
+            traceAction("roomMachine.start.singlePlayer", {
+              roomId: context.roomId,
+              count: String(targets.length),
+              players: targets,
+            });
+          }
+          return true;
+        },
+        canDeal: ({ context }) => {
+          const targets = computeTargetIds(context);
+          if (targets.length < 1) {
+            return false;
+          }
+          if (targets.length < 2) {
+            traceAction("roomMachine.deal.singlePlayer", {
+              roomId: context.roomId,
+              count: String(targets.length),
+              players: targets,
+            });
+          }
+          return true;
+        },
         canSubmitOrder: ({ context, event }) => {
           if (event.type !== "SUBMIT_ORDER") return false;
           const list = sanitizeOrderList(event.list);
