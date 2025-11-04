@@ -55,6 +55,7 @@ export type RoomState = {
   spectatorRequestStatus: "idle" | "pending" | "accepted" | "rejected";
   spectatorRequestCreatedAt: number | null;
   spectatorRequestFailure: string | null;
+  spectatorNode: SpectatorStatus;
 };
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
@@ -776,15 +777,28 @@ export function useRoomState(
     if (!snapshot) {
       return room?.status ?? "waiting";
     }
-    return snapshot.value as RoomDoc["status"];
+    const rawValue = snapshot.value as any;
+    let phaseState: RoomDoc["status"] | null = null;
+    if (typeof rawValue === "string") {
+      phaseState = rawValue as RoomDoc["status"];
+    } else if (rawValue && typeof rawValue === "object" && typeof rawValue.phase === "string") {
+      phaseState = rawValue.phase as RoomDoc["status"];
+    }
+    return phaseState ?? room?.status ?? "waiting";
   }, [machineSnapshot, room?.status]);
 
   const effectiveRoom = useMemo<(RoomDoc & { id: string }) | null>(() => {
     if (!room) return null;
     const snapshot = machineSnapshot;
     if (!snapshot) return room;
-    const statusFromMachine = snapshot.value as RoomDoc["status"];
-    if (statusFromMachine === room.status) {
+    const rawValue = snapshot.value as any;
+    let statusFromMachine: RoomDoc["status"] | null = null;
+    if (typeof rawValue === "string") {
+      statusFromMachine = rawValue as RoomDoc["status"];
+    } else if (rawValue && typeof rawValue === "object" && typeof rawValue.phase === "string") {
+      statusFromMachine = rawValue.phase as RoomDoc["status"];
+    }
+    if (!statusFromMachine || statusFromMachine === room.status) {
       return room;
     }
     return { ...room, status: statusFromMachine };
@@ -798,6 +812,7 @@ export function useRoomState(
     spectatorRequestStatus: "idle" | "pending" | "accepted" | "rejected";
     spectatorRequestCreatedAt: number | null;
     spectatorRequestFailure: string | null;
+    spectatorNode: SpectatorStatus;
   }>(() => {
     const snapshot = machineSnapshot;
     if (!snapshot) {
@@ -809,7 +824,15 @@ export function useRoomState(
         spectatorRequestStatus: "idle",
         spectatorRequestCreatedAt: null,
         spectatorRequestFailure: null,
+        spectatorNode: "idle",
       };
+    }
+    const rawValue = snapshot.value as any;
+    let spectatorNode: SpectatorStatus = snapshot.context.spectatorStatus;
+    if (typeof rawValue === "object" && rawValue !== null && typeof rawValue.spectator === "string") {
+      spectatorNode = rawValue.spectator as SpectatorStatus;
+    } else if (typeof rawValue === "string") {
+      spectatorNode = rawValue as SpectatorStatus;
     }
     return {
       spectatorStatus: snapshot.context.spectatorStatus,
@@ -819,6 +842,7 @@ export function useRoomState(
       spectatorRequestStatus: snapshot.context.spectatorRequestStatus,
       spectatorRequestCreatedAt: snapshot.context.spectatorRequestCreatedAt,
       spectatorRequestFailure: snapshot.context.spectatorRequestFailure,
+      spectatorNode,
     };
   }, [machineSnapshot]);
 
@@ -851,6 +875,7 @@ export function useRoomState(
       spectatorRequestStatus: spectatorState.spectatorRequestStatus,
       spectatorRequestCreatedAt: spectatorState.spectatorRequestCreatedAt,
       spectatorRequestFailure: spectatorState.spectatorRequestFailure,
+      spectatorNode: spectatorState.spectatorNode,
     }),
     [
       effectiveRoom,
@@ -872,6 +897,7 @@ export function useRoomState(
       spectatorState.spectatorRequestStatus,
       spectatorState.spectatorRequestCreatedAt,
       spectatorState.spectatorRequestFailure,
+      spectatorState.spectatorNode,
     ]
   );
 

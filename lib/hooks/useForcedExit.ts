@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { notify } from "@/components/ui/notify";
-import { cancelSeatRequest } from "@/lib/game/service";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { forceDetachAll } from "@/lib/firebase/presence";
 import { logSpectatorForceExitDetected, logSpectatorForceExitCleanup, logSpectatorForceExitRecovered } from "@/lib/spectator/telemetry";
@@ -11,16 +10,20 @@ import { traceAction } from "@/lib/utils/trace";
 import type {
   RoomMachineClientEvent,
   SpectatorReason as MachineSpectatorReason,
+  SpectatorStatus,
 } from "@/lib/state/roomMachine";
 
 interface UseForcedExitParams {
   uid: string | null;
   roomStatus: string | undefined;
   canAccess: boolean;
+  spectatorNode: SpectatorStatus;
   loading: boolean;
   authLoading: boolean;
-  rejoinSessionKey: string | null;
-  autoJoinSuppressKey?: string | null;
+  hasRejoinIntent: () => boolean;
+  clearRejoinIntent: () => void;
+  suppressAutoJoinIntent: () => void;
+  cancelSeatRequestSafely: () => Promise<boolean>;
   redirectGuard: boolean;
   lastKnownHostId: string | null;
   leavingRef: MutableRefObject<boolean>;
@@ -41,10 +44,13 @@ export function useForcedExit({
   uid,
   roomStatus,
   canAccess,
+  spectatorNode,
   loading,
   authLoading,
-  rejoinSessionKey,
-  autoJoinSuppressKey,
+  hasRejoinIntent,
+  clearRejoinIntent,
+  suppressAutoJoinIntent,
+  cancelSeatRequestSafely,
   redirectGuard,
   lastKnownHostId,
   leavingRef,
@@ -60,25 +66,6 @@ export function useForcedExit({
   const forcedExitCleanupRef = useRef(false);
   const forcedExitNotifiedRef = useRef(false);
   const forcedExitReasonRef = useRef<MachineSpectatorReason | null>(null);
-  const clearPendingRejoin = () => {
-    if (!rejoinSessionKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.removeItem(rejoinSessionKey);
-    } catch (error) {
-      logDebug("useForcedExit", "rejoin-session-clear-failed", error);
-    }
-  };
-
-  const setAutoJoinSuppressed = () => {
-    if (!autoJoinSuppressKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(autoJoinSuppressKey, "1");
-    } catch (error) {
-      logDebug("useForcedExit", "auto-join-suppress-failed", error);
-    }
-  };
 
   useEffect(() => {
     if (skip) {
@@ -92,6 +79,7 @@ export function useForcedExit({
           roomId,
           uid,
           skipReason: "skip-flag",
+          spectatorNode,
         });
       }
       forcedExitScheduledRef.current = false;
@@ -107,15 +95,7 @@ export function useForcedExit({
     if (loading || authLoading) return;
     if (redirectGuard) return;
 
-    let pendingRejoin = false;
-    if (rejoinSessionKey && typeof window !== "undefined") {
-      try {
-        pendingRejoin = window.sessionStorage.getItem(rejoinSessionKey) === uid;
-      } catch (error) {
-        logDebug("room-page", "session-storage-read-failed", error);
-      }
-    }
-    if (pendingRejoin) return;
+    if (hasRejoinIntent()) return;
 
     const dispatchSpectatorForceExit = (reason: MachineSpectatorReason | null) => {
       sendRoomEvent({ type: "SPECTATOR_FORCE_EXIT", reason });
@@ -140,9 +120,10 @@ export function useForcedExit({
           canAccess,
           recallOpen,
           status: roomStatus,
+          spectatorNode,
         });
       }
-      setAutoJoinSuppressed();
+      suppressAutoJoinIntent();
       if (forcedExitReasonRef.current === null) {
         forcedExitReasonRef.current = forceExitReason;
       }
@@ -163,9 +144,11 @@ export function useForcedExit({
         }
         dispatchSpectatorForceExit(forceExitReason);
         if (uid) {
-          void cancelSeatRequest(roomId, uid)
-            .then(() => {
-              clearPendingRejoin();
+          void cancelSeatRequestSafely()
+            .then((canceled) => {
+              if (canceled) {
+                clearRejoinIntent();
+              }
             })
             .catch((error) => {
               logDebug("useForcedExit", "manual-force-exit-cancel-seat-request", error);
@@ -186,13 +169,15 @@ export function useForcedExit({
           });
           if (uid) {
             try {
-              await cancelSeatRequest(roomId, uid);
-              clearPendingRejoin();
+              const canceled = await cancelSeatRequestSafely();
+              if (canceled) {
+                clearRejoinIntent();
+              }
             } catch (error) {
               logDebug("useForcedExit", "auto-cancel-seat-request-failed", error);
             }
           }
-          setAutoJoinSuppressed();
+          suppressAutoJoinIntent();
           const cleanupReason = forcedExitReasonRef.current ?? forceExitReason;
           dispatchSpectatorForceExit(cleanupReason);
           try {
@@ -225,6 +210,7 @@ export function useForcedExit({
         uid,
         status: roomStatus,
         canAccess,
+        spectatorNode,
       });
       forcedExitScheduledRef.current = false;
       forcedExitNotifiedRef.current = false;
@@ -235,9 +221,13 @@ export function useForcedExit({
     roomStatus,
     uid,
     canAccess,
+    spectatorNode,
     loading,
     authLoading,
-    rejoinSessionKey,
+    hasRejoinIntent,
+    clearRejoinIntent,
+    suppressAutoJoinIntent,
+    cancelSeatRequestSafely,
     redirectGuard,
     lastKnownHostId,
     leavingRef,
@@ -248,7 +238,6 @@ export function useForcedExit({
     sendRoomEvent,
     recallOpen,
     skip,
-    autoJoinSuppressKey,
   ]);
 }
 
