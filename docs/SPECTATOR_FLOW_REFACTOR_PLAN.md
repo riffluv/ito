@@ -82,8 +82,8 @@ useForcedExit
    - [x] `useRoomState` から観戦関連の state/副作用を切り出し
 
 2. **副作用の移行**
-   - [ ] 既存の `pendingSeatRequestRef`, `seatAcceptanceHold`, `autoJoinSuppress` 処理を新フックへ移動
-   - [ ] `notify`, `traceAction`, `logSpectator*` の呼び出しを整理し重複を解消
+   - [x] 既存の `pendingSeatRequestRef`, `seatAcceptanceHold`, `autoJoinSuppress` 処理を新フックへ移動
+   - [x] `notify`, `traceAction`, `logSpectator*` の呼び出しを整理し重複を解消
 
 3. **UI の再配線**
    - [ ] `page.tsx` を新フックの戻り値に合わせて書き換え
@@ -134,3 +134,6 @@ useForcedExit
 - クイック開始時に参加プレイヤー数を検証するガードを追加し、プレイヤードキュメントが揃う前に startGame/dealNumbers を呼び出さないよう調整。MiniHandDock から host actions へ在席人数を伝播することで、配札が行われず waiting に戻れない不具合を解消。
 - 観戦専用通知パネルの文言とボタンを `seatRequestState` に合わせて再整理し、承認・却下・タイムアウト時のガイダンスとトースト重複を解消。タイムアウト発生時の自動トレース (`spectator.request.timeout`) も追加。
 - `useSpectatorFlow` のユニットテストを追加し、再入室フラグ／キュー制御／キャンセル API の挙動を検証。観戦テレメトリ (`spectator.request.*`) のログ出力も受け側 UI と同期。
+- 観戦パネルは `isSpectatorMode && !isMember` 条件に限定し、プレイヤー席に戻ったユーザーへ観戦UIが残留しないよう調整。FSM が再接続状態に揺れても観戦メッセージが出ないことを確認。
+- `seatAcceptanceHold` のローカル state を削除し、観戦再入室待機は `seatRequestStatus` のみで制御。不要なタイマーやクリーンアップを排除し、`useSpectatorFlow` の責務を明確化。
+- `handleSeatRecovery` の通知・トレース呼び出しを共通化し、`spectator.request.intent` / `spectator.request.blocked.*` で観戦リクエストの流れを可視化。今後は Playwright 観戦シナリオでトレースの整合を確認する。

@@ -43,10 +43,8 @@ const createHook = (
       autoJoinSuppressKey: suppressKey,
       isSpectatorMode: true,
       spectatorMachineState: { ...baseMachineState, ...(overrides ?? {}) },
-      seatAcceptanceHold: false,
       versionMismatchBlocksAccess: false,
       emitSpectatorEvent: jest.fn(),
-      clearSeatAcceptanceHold: jest.fn(),
       setSeatRequestTimedOut: jest.fn(),
       leavingRef: { current: false },
     })
