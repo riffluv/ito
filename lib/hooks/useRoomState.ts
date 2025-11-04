@@ -78,6 +78,7 @@ export function useRoomState(
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [spectatorRejoinDocExists, setSpectatorRejoinDocExists] = useState<boolean | null>(null);
   const leavingRef = useRef(false);
   const [joinStatus, setJoinStatus] = useState<"idle" | "joining" | "retrying" | "joined">(
     "idle"
@@ -139,6 +140,7 @@ export function useRoomState(
           requestRef,
           (snap) => {
             try {
+              setSpectatorRejoinDocExists(snap.exists());
               if (!snap.exists()) {
                 handleSnapshot({ exists: false });
                 return;
@@ -181,7 +183,7 @@ export function useRoomState(
         return () => {};
       }
     },
-    [db, firebaseEnabled]
+    [db, firebaseEnabled, setSpectatorRejoinDocExists]
   );
 
   useEffect(() => {
@@ -207,6 +209,10 @@ export function useRoomState(
   }, [roomId, room?.id, enqueueCommit]);
 
   // reset leaving flag & join state when room/user changes
+  useEffect(() => {
+    setSpectatorRejoinDocExists(null);
+  }, [roomId, uid]);
+
   useEffect(() => {
     leavingRef.current = false;
     joinCompletedRef.current = false;
@@ -496,6 +502,20 @@ export function useRoomState(
         }
       } catch {}
     }
+    const rejoinDocState = spectatorRejoinDocExists;
+    if (pendingRejoin && rejoinDocState === false && uid && rejoinSessionKey) {
+      const { pendingCleared } = clearSpectatorFlags({
+        roomId,
+        uid,
+        rejoinSessionKey,
+        autoJoinSuppressKey,
+      });
+      if (pendingCleared) {
+        pendingRejoin = false;
+      }
+    }
+    const activeRejoinIntent =
+      pendingRejoin && (rejoinDocState === null || rejoinDocState === true);
 
     let autoJoinSuppressed = false;
     if (autoJoinSuppressKey && typeof window !== "undefined") {
@@ -529,7 +549,7 @@ export function useRoomState(
         const isRejoinIntent = pendingRejoin;
         const allowDirectJoin =
           status === "waiting" &&
-          (!isRejoinIntent || recallOpenValue !== false);
+          (!activeRejoinIntent || recallOpenValue !== false);
         const allowFromIntent = isRejoinIntent && !autoJoinSuppressed;
         if (!allowDirectJoin && !allowFromIntent) {
           joinAttemptRef.current = 0;
@@ -664,6 +684,8 @@ export function useRoomState(
     isMember,
     joinAttemptToken,
     recallV2Enabled,
+    spectatorRejoinDocExists,
+    autoJoinSuppressKey,
   ]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;

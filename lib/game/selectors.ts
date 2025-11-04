@@ -35,7 +35,12 @@ export function getPresenceEligibleIds({
     return [...baseIds];
   }
 
-  return filtered;
+  if (filtered.length === baseIds.length) {
+    return filtered;
+  }
+
+  const missing = baseIds.filter((id) => !onlineSet.has(id));
+  return [...filtered, ...missing];
 }
 
 export function getClueTargetIds({
@@ -139,7 +144,7 @@ export function computeSlotCount(opts: {
       return opts.onlineUids.length;
     })();
     if (onlineCount > 0) {
-      return Math.max(propLen, onlineCount);
+      return Math.max(propLen, dealLen, onlineCount, opts.playersCount);
     }
   }
 
