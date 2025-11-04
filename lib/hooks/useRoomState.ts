@@ -592,6 +592,7 @@ export function useRoomState(
           joinAttemptRef.current = 0;
           clearRetryTimer();
           setJoinStatus("joined");
+          clearPending();
         })
         .catch((error) => {
           joinCompletedRef.current = false;
@@ -627,11 +628,11 @@ export function useRoomState(
               attempt: nextAttempt,
             });
             setJoinStatus("retrying");
+            clearPending();
           }
         })
         .finally(() => {
           joinInFlightRef.current = null;
-          clearPending();
         });
 
       joinInFlightRef.current = joinTask;
