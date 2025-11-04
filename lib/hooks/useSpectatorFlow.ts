@@ -11,6 +11,7 @@ import { logDebug } from "@/lib/utils/log";
 import { logSpectatorRequestEnqueue } from "@/lib/spectator/telemetry";
 import type { RoomStatus } from "@/lib/state/guards";
 import { cancelSeatRequest } from "@/lib/game/service";
+import { traceAction } from "@/lib/utils/trace";
 
 type NotifyPayload =
   | string
@@ -58,10 +59,8 @@ type UseSpectatorFlowParams = {
   autoJoinSuppressKey: string | null;
   isSpectatorMode: boolean;
   spectatorMachineState: SpectatorMachineState;
-  seatAcceptanceHold: boolean;
   versionMismatchBlocksAccess: boolean;
   emitSpectatorEvent: (event: RoomMachineClientEvent) => void;
-  clearSeatAcceptanceHold: () => void;
   setSeatRequestTimedOut: Dispatch<SetStateAction<boolean>>;
   leavingRef: MutableRefObject<boolean>;
 };
@@ -96,10 +95,8 @@ export function useSpectatorFlow({
   autoJoinSuppressKey,
   isSpectatorMode,
   spectatorMachineState,
-  seatAcceptanceHold,
   versionMismatchBlocksAccess,
   emitSpectatorEvent,
-  clearSeatAcceptanceHold,
   setSeatRequestTimedOut,
   leavingRef,
 }: UseSpectatorFlowParams): UseSpectatorFlowResult {
@@ -122,7 +119,7 @@ export function useSpectatorFlow({
   const seatRequestPending = seatRequestState.status === "pending";
   const seatRequestAccepted = seatRequestState.status === "accepted";
   const seatRequestRejected = seatRequestState.status === "rejected";
-  const seatAcceptanceActive = seatRequestAccepted || seatAcceptanceHold;
+  const seatAcceptanceActive = seatRequestAccepted;
   const seatRequestSource = seatRequestState.source;
 
   const spectatorReason = useMemo<SpectatorReason | null>(() => {
@@ -259,9 +256,16 @@ export function useSpectatorFlow({
 
       const canRequestNow = spectatorRecallEnabled;
       const emitSeatIntent = () => {
-        clearSeatAcceptanceHold();
         setSeatRequestTimedOut(false);
         markSeatRequestIntent(source, canRequestNow);
+        traceAction("spectator.request.intent", {
+          roomId,
+          uid,
+          source,
+          canRequestNow: canRequestNow ? "1" : "0",
+          roomStatus,
+          recallOpen,
+        });
         logSpectatorRequestEnqueue({
           roomId,
           uid,
@@ -286,23 +290,35 @@ export function useSpectatorFlow({
         }
       };
 
+      const safeNotify = (payload: NotifyPayload) => {
+        try {
+          notify(payload);
+        } catch (error) {
+          logDebug("spectator-flow", "notify-seat-recovery-failed", error);
+        }
+      };
+
       if (!spectatorRecallEnabled) {
+        traceAction("spectator.request.blocked.recall", {
+          roomId,
+          uid,
+          source,
+          roomStatus,
+          recallOpen,
+          silent: silent ? "1" : "0",
+        });
         if (!silent) {
-          try {
-            notify({
-              title:
-                roomStatus === "waiting"
-                  ? "まだ戻れません"
-                  : "ゲーム進行中です",
-              description:
-                roomStatus === "waiting"
-                  ? "ホストが観戦枠を開くまで、しばらくお待ちください。"
-                  : "ゲームが進行中のため現在は戻れません。ホストの操作が完了するまでお待ちください。",
-              type: "info",
-            });
-          } catch (notifyError) {
-            logDebug("room-page", "notify-seat-request-blocked", notifyError);
-          }
+          safeNotify({
+            title:
+              roomStatus === "waiting"
+                ? "まだ戻れません"
+                : "ゲーム進行中です",
+            description:
+              roomStatus === "waiting"
+                ? "ホストが観戦枠を開くまで、しばらくお待ちください。"
+                : "ゲームが進行中のため現在は戻れません。ホストの操作が完了するまでお待ちください。",
+            type: "info",
+          });
         } else {
           logDebug("room-page", "auto-seat-recovery-blocked-recall", {
             roomId,
@@ -317,17 +333,20 @@ export function useSpectatorFlow({
       }
 
       if (versionMismatchBlocksAccess) {
+        traceAction("spectator.request.blocked.versionMismatch", {
+          roomId,
+          uid,
+          source,
+          roomStatus,
+          silent: silent ? "1" : "0",
+        });
         if (!silent) {
-          try {
-            notify({
-              title: "新しいバージョンが必要です",
-              description:
-                "ページを再読み込みし、最新バージョンへ更新してください。",
-              type: "warning",
-            });
-          } catch (notifyError) {
-            logDebug("room-page", "notify-version-mismatch-retry", notifyError);
-          }
+          safeNotify({
+            title: "新しいバージョンが必要です",
+            description:
+              "ページを再読み込みし、最新バージョンへ更新してください。",
+            type: "warning",
+          });
         } else {
           logDebug("room-page", "auto-seat-recovery-blocked-version-mismatch", {
             roomId,
@@ -344,21 +363,16 @@ export function useSpectatorFlow({
       }
 
       emitSeatIntent();
-      try {
-        notify({
-          title: "再入室リクエストを送信しました",
-          description: "ホストの承認をお待ちください。",
-          type: "info",
-        });
-      } catch (notifyError) {
-        logDebug("room-page", "notify-seat-request", notifyError);
-      }
+      safeNotify({
+        title: "再入室リクエストを送信しました",
+        description: "ホストの承認をお待ちください。",
+        type: "info",
+      });
       return true;
     },
     [
       uid,
       versionMismatchBlocksAccess,
-      clearSeatAcceptanceHold,
       setSeatRequestTimedOut,
       markSeatRequestIntent,
       roomId,
