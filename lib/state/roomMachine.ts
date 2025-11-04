@@ -199,33 +199,68 @@ export function createRoomMachine(input: RoomMachineInput) {
         context: RoomMachineContext;
         events: RoomMachineInternalEvent;
       },
-      initial: resolveStatus(sanitizedRoom),
+      type: "parallel",
       on: {
-        SPECTATOR_REQUEST_SNAPSHOT: {
-          actions: ["spectatorRequestSnapshot"],
-        },
+        SPECTATOR_REQUEST_SNAPSHOT: [
+          {
+            guard: "snapshotIsPendingwaiting-host",
+            target: "spectator.waiting-host",
+            actions: ["spectatorRequestSnapshot"],
+          },
+          {
+            guard: "snapshotIsPendingWatching",
+            target: "spectator.watching",
+            actions: ["spectatorRequestSnapshot"],
+          },
+          {
+            guard: "snapshotIsAccepted",
+            target: "spectator.approved",
+            actions: ["spectatorRequestSnapshot"],
+          },
+          {
+            guard: "snapshotIsRejected",
+            target: "spectator.rejected",
+            actions: ["spectatorRequestSnapshot"],
+          },
+          {
+            guard: "snapshotClearsToWatching",
+            target: "spectator.watching",
+            actions: ["spectatorRequestSnapshot"],
+          },
+          {
+            actions: ["spectatorRequestSnapshot"],
+          },
+        ],
         SPECTATOR_ENTER: {
+          target: "spectator.watching",
           actions: ["spectatorEnter"],
         },
         SPECTATOR_LEAVE: {
+          target: "spectator.idle",
           actions: ["spectatorLeave"],
         },
         SPECTATOR_REQUEST: {
+          target: "spectator.requesting",
           actions: ["spectatorRequest"],
         },
         SPECTATOR_WAIT_HOST: {
+          target: "spectator.waiting-host",
           actions: ["spectatorWaitHost"],
         },
         SPECTATOR_CANCEL: {
+          target: "spectator.watching",
           actions: ["spectatorCancel"],
         },
         SPECTATOR_APPROVED: {
+          target: "spectator.approved",
           actions: ["spectatorApproved"],
         },
         SPECTATOR_REJECTED: {
+          target: "spectator.rejected",
           actions: ["spectatorRejected"],
         },
         SPECTATOR_TIMEOUT: {
+          target: "spectator.watching",
           actions: ["spectatorTimeout"],
         },
         SPECTATOR_ERROR: {
@@ -235,9 +270,11 @@ export function createRoomMachine(input: RoomMachineInput) {
           actions: ["spectatorReasonUpdate"],
         },
         SPECTATOR_RESET: {
+          target: "spectator.idle",
           actions: ["spectatorReset"],
         },
         SPECTATOR_FORCE_EXIT: {
+          target: "spectator.watching",
           actions: ["spectatorForceExit", "spectatorForceExitCleanup"],
         },
       },
@@ -251,137 +288,158 @@ export function createRoomMachine(input: RoomMachineInput) {
         },
       ],
       states: {
-        waiting: {
-          on: {
-            START: {
-              guard: "canStart",
-              target: "clue",
-              actions: ["markClue", "callStartGame"],
+        phase: {
+          initial: resolveStatus(sanitizedRoom),
+          states: {
+            waiting: {
+              on: {
+                START: {
+                  guard: "canStart",
+                  target: "phase.clue",
+                  actions: ["markClue", "callStartGame"],
+                },
+                RESET: {
+                  actions: "callReset",
+                },
+                SYNC: [
+                  {
+                    guard: "syncToWaiting",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToClue",
+                    target: "phase.clue",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToReveal",
+                    target: "phase.reveal",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToFinished",
+                    target: "phase.finished",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    actions: "assignSnapshot",
+                  },
+                ],
+              },
             },
-            RESET: {
-              actions: "callReset",
+            clue: {
+              on: {
+                DEAL_READY: {
+                  guard: "canDeal",
+                  actions: "callDealNumbers",
+                },
+                SUBMIT_ORDER: {
+                  guard: "canSubmitOrder",
+                  target: "phase.reveal",
+                  actions: ["markReveal", "callSubmitOrder"],
+                },
+                RESET: {
+                  target: "phase.waiting",
+                  actions: ["markWaiting", "callReset"],
+                },
+                SYNC: [
+                  {
+                    guard: "syncToWaiting",
+                    target: "phase.waiting",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToReveal",
+                    target: "phase.reveal",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToFinished",
+                    target: "phase.finished",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    actions: "assignSnapshot",
+                  },
+                ],
+              },
             },
-            SYNC: [
-              {
-                guard: "syncToWaiting",
-                actions: "assignSnapshot",
+            reveal: {
+              on: {
+                REVEAL_DONE: {
+                  target: "phase.finished",
+                  actions: ["markFinished", "callFinalizeReveal"],
+                },
+                RESET: {
+                  target: "phase.waiting",
+                  actions: ["markWaiting", "callReset"],
+                },
+                SYNC: [
+                  {
+                    guard: "syncToWaiting",
+                    target: "phase.waiting",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToClue",
+                    target: "phase.clue",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToFinished",
+                    target: "phase.finished",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    actions: "assignSnapshot",
+                  },
+                ],
               },
-              {
-                guard: "syncToClue",
-                target: "clue",
-                actions: "assignSnapshot",
+            },
+            finished: {
+              on: {
+                RESET: {
+                  target: "phase.waiting",
+                  actions: ["markWaiting", "callReset"],
+                },
+                SYNC: [
+                  {
+                    guard: "syncToWaiting",
+                    target: "phase.waiting",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToClue",
+                    target: "phase.clue",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToReveal",
+                    target: "phase.reveal",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    guard: "syncToFinished",
+                    target: "phase.finished",
+                    actions: "assignSnapshot",
+                  },
+                  {
+                    actions: "assignSnapshot",
+                  },
+                ],
               },
-              {
-                guard: "syncToReveal",
-                target: "reveal",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToFinished",
-                target: "finished",
-                actions: "assignSnapshot",
-              },
-              {
-                actions: "assignSnapshot",
-              },
-            ],
+            },
           },
         },
-        clue: {
-          on: {
-            DEAL_READY: {
-              guard: "canDeal",
-              actions: "callDealNumbers",
-            },
-            SUBMIT_ORDER: {
-              guard: "canSubmitOrder",
-              target: "reveal",
-              actions: ["markReveal", "callSubmitOrder"],
-            },
-            RESET: {
-              target: "waiting",
-              actions: ["markWaiting", "callReset"],
-            },
-            SYNC: [
-              {
-                guard: "syncToWaiting",
-                target: "waiting",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToReveal",
-                target: "reveal",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToFinished",
-                target: "finished",
-                actions: "assignSnapshot",
-              },
-              {
-                actions: "assignSnapshot",
-              },
-            ],
-          },
-        },
-        reveal: {
-          on: {
-            REVEAL_DONE: {
-              target: "finished",
-              actions: ["markFinished", "callFinalizeReveal"],
-            },
-            RESET: {
-              target: "waiting",
-              actions: ["markWaiting", "callReset"],
-            },
-            SYNC: [
-              {
-                guard: "syncToWaiting",
-                target: "waiting",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToClue",
-                target: "clue",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToFinished",
-                target: "finished",
-                actions: "assignSnapshot",
-              },
-              {
-                actions: "assignSnapshot",
-              },
-            ],
-          },
-        },
-        finished: {
-          on: {
-            RESET: {
-              target: "waiting",
-              actions: ["markWaiting", "callReset"],
-            },
-            SYNC: [
-              {
-                guard: "syncToWaiting",
-                target: "waiting",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToClue",
-                target: "clue",
-                actions: "assignSnapshot",
-              },
-              {
-                guard: "syncToReveal",
-                target: "reveal",
-                actions: "assignSnapshot",
-              },
-              {
-                actions: "assignSnapshot",
-              },
-            ],
+        spectator: {
+          initial: "idle",
+          states: {
+            idle: {},
+            watching: {},
+            requesting: {},
+            "waiting-host": {},
+            approved: {},
+            rejected: {},
           },
         },
       },
@@ -738,6 +796,26 @@ export function createRoomMachine(input: RoomMachineInput) {
           event.type === "SYNC" && resolveStatus(event.room ?? null) === "reveal",
         syncToFinished: ({ event }) =>
           event.type === "SYNC" && resolveStatus(event.room ?? null) === "finished",
+        snapshotIsPendingWaitingHost: ({ context, event }) =>
+          event.type === "SPECTATOR_REQUEST_SNAPSHOT" &&
+          event.snapshot.exists &&
+          event.snapshot.status === "pending" &&
+          context.spectatorStatus !== "idle",
+        snapshotIsPendingWatching: ({ context, event }) =>
+          event.type === "SPECTATOR_REQUEST_SNAPSHOT" &&
+          event.snapshot.exists &&
+          event.snapshot.status === "pending" &&
+          context.spectatorStatus === "idle",
+        snapshotIsAccepted: ({ event }) =>
+          event.type === "SPECTATOR_REQUEST_SNAPSHOT" &&
+          event.snapshot.exists &&
+          event.snapshot.status === "accepted",
+        snapshotIsRejected: ({ event }) =>
+          event.type === "SPECTATOR_REQUEST_SNAPSHOT" &&
+          event.snapshot.exists &&
+          event.snapshot.status === "rejected",
+        snapshotClearsToWatching: ({ event }) =>
+          event.type === "SPECTATOR_REQUEST_SNAPSHOT" && !event.snapshot.exists,
       },
     }
   );

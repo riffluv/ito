@@ -23,6 +23,7 @@ export function logSpectatorForceExitDetected(detail: {
   canAccess: boolean;
   recallOpen: boolean;
   status: RoomStatus;
+  spectatorNode?: string | null;
 }): void {
   traceAction("spectator.forceExit.detected", detail);
 }
@@ -40,6 +41,7 @@ export function logSpectatorForceExitRecovered(detail: {
   uid: string | null;
   status: RoomStatus;
   canAccess: boolean;
+  spectatorNode?: string | null;
 }): void {
   traceAction("spectator.forceExit.recovered", detail);
 }
