@@ -13,6 +13,7 @@ import {
 import { topicControls } from "@/lib/game/topicControls";
 import { db } from "@/lib/firebase/client";
 import { bumpMetric } from "@/lib/utils/metrics";
+import { logDebug } from "@/lib/utils/log";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   deleteDoc,
@@ -236,14 +237,23 @@ export async function requestSeat(
   }
 
   try {
+    const requestRef = doc(db!, "rooms", roomId, "rejoinRequests", uid);
+    try {
+      await deleteDoc(requestRef);
+    } catch (cleanupError) {
+      logDebug("spectator-flow", "request-seat-cleanup-failed", {
+        roomId,
+        uid,
+        cleanupError,
+      });
+    }
     await setDoc(
-      doc(db!, "rooms", roomId, "rejoinRequests", uid),
+      requestRef,
       {
         status: "pending",
         displayName: cappedName.length > 0 ? cappedName : null,
         source,
       },
-      { merge: true }
     );
     bumpMetric("recall", "requested");
   } catch (error) {

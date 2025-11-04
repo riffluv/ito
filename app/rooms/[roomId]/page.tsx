@@ -1227,8 +1227,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [seatRequestState.status, clearRejoinIntent]);
   const recallJoinHandledRef = useRef(false);
   const assignNumberRetrySignatureRef = useRef<string | null>(null);
+  const reattachScheduledRef = useRef(false);
+  useEffect(() => {
+    if (!seatRequestAccepted) {
+      reattachScheduledRef.current = false;
+      return;
+    }
+    if (typeof reattachPresence !== "function") return;
+    if (reattachScheduledRef.current) return;
+    reattachScheduledRef.current = true;
+    Promise.resolve(reattachPresence()).catch((error) => {
+      logDebug("room-page", "reattach-presence-failed", error);
+      reattachScheduledRef.current = false;
+    });
+  }, [seatRequestAccepted, reattachPresence]);
 
- 
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
   const requestSeatNow = useCallback(
@@ -1769,7 +1782,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
   ]);
 
-  const skipForcedExit = !uid || (!isHost && !isMember && !isSpectatorMode);
+  const skipForcedExit = !uid || !isMember;
 
   useForcedExit({
     uid,
