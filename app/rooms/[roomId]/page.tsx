@@ -1701,10 +1701,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const spectatorReasonPrevRef = useRef<MachineSpectatorReason | null>(null);
   const waitingToRejoin = roomStatus === "waiting";
   const seatRequestButtonDisabled =
-    versionMismatchBlocksAccess ||
-    seatRequestPending ||
-    seatAcceptanceActive ||
-    !spectatorRecallEnabled;
+    versionMismatchBlocksAccess || seatRequestPending || seatAcceptanceActive;
   useEffect(() => {
     if (!isSpectatorMode) {
       spectatorReasonPrevRef.current = null;
