@@ -77,7 +77,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ### 6.3 手動復旧
 - ハードリロードでも解消しない場合は以下の手順を案内する。  
-  1. DevTools > Application > Clear storage で「Unregister service workers」「Clear site data」を実行。  
+1. DevTools > Application > Clear storage で「Unregister service workers」「Clear site data」を実行。  
   2. ブラウザを再起動して再アクセス。  
 - 組織内での対応履歴は `docs/safe-update-incident-*.md` にまとめる。最新のメモは `docs/safe-update-incident-20251025.md`。  
 
@@ -98,7 +98,29 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ---
 
-## 9. よく使うコマンド／スクリプト
+## 9. 観戦フロー運用メモ
+観戦UIと再入室フローは XState + `useSpectatorFlow` で統合管理される。観戦チケット販売や大規模イベントに備えて、以下の点を確認する。
+
+### 9.1 再入室フローの確認項目
+1. ホストが待機状態のルームを開き、別ブラウザで観戦者として入室する。  
+2. 観戦者が「席に戻る」を押すと `rooms/{roomId}/rejoinRequests/{uid}` に `status=pending` が生成されること。  
+3. `DevTools > Application > Session Storage` で `pendingRejoin:*` が観戦者 UID になっていること。  
+4. ホスト承認後、観戦者が即座にプレイヤーへ戻り、観戦パネルが消えること。  
+5. DevTools Console のトレースに `spectator.request.intent` / `spectator.request.blocked.*` / `spectator.request.timeout` が出力されていること。  
+
+### 9.2 便利なテストコマンド
+- 単体テスト（観戦フロー）: `npm test -- useSpectatorFlow`  
+- Playwright 観戦シナリオ（個別実行）: `npx playwright test tests/spectatorFlow.spec.ts`  
+- セッションフラグ掃除の確認: `npm test -- tests/spectatorFlow.spec.ts`  
+
+### 9.3 トラブルシュートのヒント
+- 観戦者が戻れない場合は `rooms/{roomId}/ui.recallOpen` が `false` になっていないか確認する。  
+- 観戦パネルがプレイヤーに残る場合は `traceAction("spectator.mode")` の値が `isSpectatorMode=false` になっているかチェック。  
+- 連続して再入室が失敗する際は、`pendingRejoin:*` や `autoJoinSuppress:*` が sessionStorage に残っていないか削除して再検証する。  
+
+---
+
+## 10. よく使うコマンド／スクリプト
 - **Playwright 個別実行**: `npx playwright test tests/roomMachine.spec.ts`  
 - **Firestore ルールのデプロイ**: `firebase deploy --only firestore:rules`  
 - **Functions ローカルテスト**: `npm --prefix functions run lint && npm --prefix functions test`  
@@ -106,7 +128,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ---
 
-## 10. ドキュメント更新の運用
+## 11. ドキュメント更新の運用
 - 仕様や運用手順を変更した場合は、PR の一部として `docs/` 以下も更新する。  
 - `AGENTS.md`, `CLAUDE.md`, `docs/SAFE_UPDATE_TEST_PLAN.md` などロール別ハンドブックとの整合を保つ。  
 - 重大な更新を行ったときは `CHANGELOG.md`（未整備の場合は新規作成）やチーム内共有ツールで告知する。  

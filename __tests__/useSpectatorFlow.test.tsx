@@ -5,10 +5,17 @@ import {
   type SpectatorMachineState,
 } from "@/lib/hooks/useSpectatorFlow";
 import { cancelSeatRequest } from "@/lib/game/service";
+import { traceAction } from "@/lib/utils/trace";
 
 jest.mock("@/lib/game/service", () => ({
   cancelSeatRequest: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock("@/lib/utils/trace", () => ({
+  traceAction: jest.fn(),
+}));
+
+const traceActionMock = traceAction as jest.MockedFunction<typeof traceAction>;
 
 const baseMachineState: SpectatorMachineState = {
   status: "watching",
@@ -100,5 +107,79 @@ describe("useSpectatorFlow", () => {
     });
     expect(success).toBe(false);
     expect(cancelSeatRequest).not.toHaveBeenCalled();
+  });
+
+  test("handleSeatRecovery blocks when recall is閉じている", async () => {
+    const { result } = createHook();
+    const notify = jest.fn();
+    const requestSeatNow = jest.fn();
+
+    let handled = false;
+    await act(async () => {
+      handled = await result.current.handleSeatRecovery({
+        silent: false,
+        source: "manual",
+        spectatorRecallEnabled: false,
+        roomStatus: "waiting",
+        recallOpen: false,
+        notify,
+        requestSeatNow,
+      });
+    });
+
+    expect(handled).toBe(true);
+    expect(traceActionMock).toHaveBeenCalledWith(
+      "spectator.request.intent",
+      expect.objectContaining({
+        roomId: "room-test",
+        uid: "user-1",
+        source: "manual",
+        canRequestNow: "0",
+      })
+    );
+    expect(traceActionMock).toHaveBeenCalledWith(
+      "spectator.request.blocked.recall",
+      expect.objectContaining({
+        roomId: "room-test",
+        uid: "user-1",
+        roomStatus: "waiting",
+        recallOpen: false,
+        silent: "0",
+      })
+    );
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(requestSeatNow).not.toHaveBeenCalled();
+  });
+
+  test("handleSeatRecovery requests seat immediately when recall open", async () => {
+    const { result } = createHook();
+    const notify = jest.fn();
+    const requestSeatNow = jest.fn();
+
+    let handled = false;
+    await act(async () => {
+      handled = await result.current.handleSeatRecovery({
+        silent: false,
+        source: "manual",
+        spectatorRecallEnabled: true,
+        roomStatus: "waiting",
+        recallOpen: true,
+        notify,
+        requestSeatNow,
+      });
+    });
+
+    expect(handled).toBe(true);
+    expect(requestSeatNow).toHaveBeenCalledWith("manual");
+    expect(traceActionMock).toHaveBeenCalledWith(
+      "spectator.request.intent",
+      expect.objectContaining({
+        roomId: "room-test",
+        uid: "user-1",
+        source: "manual",
+        canRequestNow: "1",
+      })
+    );
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 });
