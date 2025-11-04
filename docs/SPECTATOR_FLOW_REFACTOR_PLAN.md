@@ -128,6 +128,9 @@ useForcedExit
 ### 進捗メモ (2025-11-04)
 - useSpectatorFlow に観戦席リカバリ用の API を拡張し、hasRejoinIntent / suppressAutoJoinIntent / cancelSeatRequestSafely を追加。再入室フラグと席リクエストのキャンセル処理をフック内に集約。
 - useForcedExit は観戦フック経由のコールバックを受け取る構造に刷新し、sessionStorage 操作や cancelSeatRequest 直呼びを排除。観戦中の強制退席フローとリカバリ処理が競合しにくくなった。
- - roomMachine に phase/spectator の並列サブステートを導入し、FSM とフック双方で観戦状態が 1:1 で同期する構造に移行。SPECTATOR_REQUEST_SNAPSHOT イベントもサブステート遷移を通じて整合性を保つように修正。
+- roomMachine に phase/spectator の並列サブステートを導入し、FSM とフック双方で観戦状態が 1:1 で同期する構造に移行。SPECTATOR_REQUEST_SNAPSHOT イベントもサブステート遷移を通じて整合性を保つように修正。
 - page.tsx や useRoomState で spectatorNode を参照できるよう整備し、観戦サブステートに基づくログ出力と判定条件を更新。
 - useForcedExit が spectatorNode と新しい再入室APIを利用するように更新され、観戦状態と連動した強制退席テレメトリを送出。
+- クイック開始時に参加プレイヤー数を検証するガードを追加し、プレイヤードキュメントが揃う前に startGame/dealNumbers を呼び出さないよう調整。MiniHandDock から host actions へ在席人数を伝播することで、配札が行われず waiting に戻れない不具合を解消。
+- 観戦専用通知パネルの文言とボタンを `seatRequestState` に合わせて再整理し、承認・却下・タイムアウト時のガイダンスとトースト重複を解消。タイムアウト発生時の自動トレース (`spectator.request.timeout`) も追加。
+- `useSpectatorFlow` のユニットテストを追加し、再入室フラグ／キュー制御／キャンセル API の挙動を検証。観戦テレメトリ (`spectator.request.*`) のログ出力も受け側 UI と同期。

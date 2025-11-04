@@ -15,6 +15,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logInfo } from "@/lib/utils/log";
+import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
@@ -57,6 +58,7 @@ type UseHostActionsOptions = {
   currentTopic?: string | null;
   onFeedback?: (payload: HostActionFeedback) => void;
   presenceReady?: boolean;
+  playerCount?: number;
 };
 
 export function useHostActions({
@@ -75,6 +77,7 @@ export function useHostActions({
   currentTopic,
   onFeedback,
   presenceReady = false,
+  playerCount,
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -111,6 +114,38 @@ export function useHostActions({
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
+      const basePlayerCount =
+        typeof playerCount === "number" && Number.isFinite(playerCount)
+          ? Math.max(0, playerCount)
+          : 0;
+      const onlineCount =
+        presenceReady && Array.isArray(onlineUids)
+          ? onlineUids.filter(
+              (id): id is string =>
+                typeof id === "string" && id.trim().length > 0
+            ).length
+          : undefined;
+      const activeCount = calculateEffectiveActive(
+        onlineCount,
+        basePlayerCount,
+        { maxDrift: 3 }
+      );
+      if (activeCount < 2 && basePlayerCount < 2) {
+        traceAction("ui.host.quickStart.warning", {
+          roomId,
+          reason: "insufficient-players",
+          active: String(activeCount),
+          players: String(basePlayerCount),
+          online: String(onlineCount ?? -1),
+        });
+        notify({
+          id: toastIds.numberDealWarningPlayers(roomId),
+          title: "プレイヤーが1人のままです",
+          description: "デバッグ用途であれば、このまま開始できます。",
+          type: "info",
+          duration: 2600,
+        });
+      }
       if (!ensurePresenceReady()) {
         return false;
       }
@@ -239,6 +274,9 @@ export function useHostActions({
       playOrderConfirm,
       roomId,
       ensurePresenceReady,
+      playerCount,
+      presenceReady,
+      onlineUids,
     ]
   );
 
