@@ -1122,12 +1122,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     playersSignature: string;
     waitingToRejoin: boolean;
   } | null>(null);
-  const lastAutoRetryTimestampRef = useRef(0);
-  const lastAutoRetryKeyRef = useRef<string | null>(null);
-  const resetAutoRetryState = useCallback(() => {
-    lastAutoRetryTimestampRef.current = 0;
-    lastAutoRetryKeyRef.current = null;
-  }, []);
   const [seatRequestTimedOut, setSeatRequestTimedOut] = useState(false);
   const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(fsmSpectatorRequestStatus);
   const seatRequestTimeoutTriggeredRef = useRef(false);
@@ -1842,92 +1836,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     await performSeatRecovery({ silent: false, source: "manual" });
   }, [performSeatRecovery]);
 
-  const attemptAutoSeatRecovery = useCallback(async () => {
-    await performSeatRecovery({ silent: true, source: "auto" });
-  }, [performSeatRecovery]);
-
-  useEffect(() => {
-    if (!waitingToRejoin || !isSpectatorMode) {
-      resetAutoRetryState();
-      return;
-    }
-    if (leavingRef.current) {
-      return;
-    }
-    if (spectatorReason !== "waiting-open") {
-      return;
-    }
-    if (!spectatorRecallEnabled) {
-      resetAutoRetryState();
-      return;
-    }
-    const hasAutoRejoinIntent =
-      hasPendingSeatRequest() || seatRequestSource === "auto";
-    if (!hasAutoRejoinIntent) {
-      resetAutoRetryState();
-      return;
-    }
-    if (versionMismatchBlocksAccess) {
-      return;
-    }
-    if (seatRequestPending || seatAcceptanceActive) {
-      return;
-    }
-    if (!uid) {
-      return;
-    }
-    const isJoiningOrRetrying = joinStatus !== "idle" && joinStatus !== "joined";
-    if (isJoiningOrRetrying) {
-      return;
-    }
-
-    const statusKey = `${room?.id ?? ""}:${room?.status ?? ""}:${seatRequestState.requestedAt ?? 0}`;
-    const previousKey = lastAutoRetryKeyRef.current;
-    const lastAttemptTs = lastAutoRetryTimestampRef.current;
-    const now = Date.now();
-    const minInterval = previousKey === statusKey ? 1500 : 400;
-    if (now - lastAttemptTs < minInterval) {
-      return;
-    }
-
-    lastAutoRetryTimestampRef.current = now;
-    lastAutoRetryKeyRef.current = statusKey;
-
-    logDebug("room-page", "auto-seat-recovery-attempt", {
-      roomId,
-      uid,
-      joinStatus,
-      statusKey,
-      spectatorReason,
-      waitingToRejoin,
-      players: playersSignature
-        ? playersSignature.split(",").filter((id) => id)
-        : [],
-    });
-    void attemptAutoSeatRecovery();
-  }, [
-    waitingToRejoin,
-    isSpectatorMode,
-    spectatorReason,
-    spectatorRecallEnabled,
-    seatRequestSource,
-    versionMismatchBlocksAccess,
-    seatRequestPending,
-    seatAcceptanceActive,
-    uid,
-    joinStatus,
-    room?.id,
-    room?.status,
-    seatRequestState.requestedAt,
-    playersSignature,
-    attemptAutoSeatRecovery,
-    hasPendingSeatRequest,
-    markSeatRequestIntent,
-    roomId,
-    resetAutoRetryState,
-    leavingRef,
-  ]);
-
 
   useEffect(() => {
     if (seatRequestState.status !== "pending" || !seatRequestState.requestedAt) {
@@ -1986,6 +1894,21 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           uid,
           source: seatRequestState.source ?? null,
         });
+      } else if (
+        previousStatus === "pending" &&
+        currentStatus === "idle" &&
+        isSpectatorMode &&
+        room?.status === "waiting"
+      ) {
+        try {
+          notify({
+            title: "リクエストをリセットしました",
+            description: "ホストの操作に合わせて再度「席に戻る」を押してください。",
+            type: "info",
+          });
+        } catch (error) {
+          logDebug("room-page", "notify-seat-request-reset-failed", error);
+        }
       } else {
         setSeatRequestTimedOut(false);
       }
