@@ -616,47 +616,36 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (roomStatus === "waiting" || roomStatus === "clue");
 
   // デプロイ直後の“初回だけ遅いことがある”告知（バージョンごとに1回）
-  const [showColdStartNotice, setShowColdStartNotice] = React.useState(() => {
+  const coldNoticeStorageKey = React.useMemo(
+    () => `ito:coldNotice:${APP_VERSION}`,
+    []
+  );
+  const [showColdStartNotice, setShowColdStartNotice] = React.useState(false);
+  const [coldNoticeEligible, setColdNoticeEligible] = React.useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      const key = `ito:coldNotice:${APP_VERSION}`;
-      return window.localStorage.getItem(key) === "1";
+      const seen = window.localStorage.getItem(coldNoticeStorageKey);
+      return seen !== "1";
     } catch {
-      return false;
+      return true;
     }
   });
-  React.useEffect(() => {
-    if (!showQuickStartProgress) return undefined;
-    try {
-      const key = `ito:coldNotice:${APP_VERSION}`;
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(key);
-        window.localStorage.setItem(key, "1");
-      }
-      setShowColdStartNotice(true);
-      const t = window.setTimeout(() => setShowColdStartNotice(false), 4000);
-      return () => window.clearTimeout(t);
-    } catch {
-      setShowColdStartNotice(true);
-      const t = window.setTimeout(() => setShowColdStartNotice(false), 4000);
-      return () => window.clearTimeout(t);
-    }
-  }, [showQuickStartProgress]);
 
   React.useEffect(() => {
     if (!showQuickStartProgress) return;
+    if (!coldNoticeEligible) return;
+    setShowColdStartNotice(true);
+    setColdNoticeEligible(false);
     try {
-      if (typeof window === "undefined") return;
-      const key = `ito:coldNotice:${APP_VERSION}`;
-      const seen = localStorage.getItem(key);
-      if (!seen) {
-        setShowColdStartNotice(true);
-        localStorage.setItem(key, "1");
-        const t = setTimeout(() => setShowColdStartNotice(false), 4000);
-        return () => clearTimeout(t);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(coldNoticeStorageKey, "1");
       }
-    } catch {}
-  }, [showQuickStartProgress]);
+    } catch {
+      // ignore storage failure
+    }
+    const timer = window.setTimeout(() => setShowColdStartNotice(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [showQuickStartProgress, coldNoticeEligible, coldNoticeStorageKey]);
 
   const LOADING_BG = "rgba(42,48,58,0.95)";
   const preparing = !!(

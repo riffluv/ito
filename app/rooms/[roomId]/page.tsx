@@ -1697,6 +1697,31 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     (joinEstablished || seatAcceptanceActive) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
 
+  const serverAssignedSeatIds = useMemo(() => {
+    const assigned = new Set<string>();
+    const pushList = (list: unknown) => {
+      if (!Array.isArray(list)) return;
+      for (const value of list) {
+        if (typeof value === "string" && value.trim().length > 0) {
+          assigned.add(value);
+        }
+      }
+    };
+    pushList(room?.deal?.players ?? null);
+    pushList(room?.order?.list ?? null);
+    pushList(room?.order?.proposal ?? null);
+    return assigned;
+  }, [room?.deal?.players, room?.order?.list, room?.order?.proposal]);
+
+  const hasServerAssignedSeat = !!(uid && serverAssignedSeatIds.has(uid));
+  const allowSpectatorWhileLoading =
+    loading &&
+    !isHost &&
+    !hasServerAssignedSeat &&
+    room?.status !== "waiting";
+
+  const loadingForSpectator = loading && !allowSpectatorWhileLoading;
+
   const { isJoiningOrRetrying, spectatorCandidate } = deriveSpectatorFlags({
     hasUid: uid !== null,
     isHost,
@@ -1705,7 +1730,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     seatAcceptanceActive,
     seatRequestPending,
     joinStatus,
-    loading,
+    loading: loadingForSpectator,
   });
 
   useEffect(() => {
