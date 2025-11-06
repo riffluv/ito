@@ -112,6 +112,7 @@ interface RoomDocLike {
   - presence を考慮して `effectiveActive` を計算し、`placedCount` と突き合わせて進行を制御。
 - `useHostActions`:
   - Firestore 書き込み（status 遷移 / order 更新 / result 設定）をラップ。
+  - `quickStart` 呼び出しは Cloud Functions（Callable）経由に一本化済み。ホストの開始操作は `httpsCallable("quickStart")` を叩き、サーバー側でトピック決定・配札・`roomProposals` 初期化まで行う。カスタムお題も同じ関数を使用。
 - `useDropHandler`:
   - DnD のドロップイベントを受け、sequential では `order.list` を即時更新、sort-submit では `proposal` を更新。
 
