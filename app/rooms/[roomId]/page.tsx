@@ -22,6 +22,7 @@ import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
 import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
+import { SpectatorRejoinManager } from "@/components/ui/SpectatorRejoinManager";
 import { notify } from "@/components/ui/notify";
 import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import { useTransition } from "@/components/ui/TransitionProvider";
@@ -72,6 +73,9 @@ import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
 import { initMetricsExport } from "@/lib/utils/metricsExport";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
+import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
+import type { SpectatorHostRequest } from "@/lib/spectator/v2/useSpectatorHostQueue";
 import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
@@ -88,7 +92,15 @@ import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { PRUNE_PROPOSAL_DEBOUNCE_MS } from '@/lib/constants/uiTimings';
@@ -104,6 +116,27 @@ const ROOM_CORE_ASSETS = [
   "/images/hanepen2.webp",
   "/images/backgrounds/hd2d/bg1.png",
 ] as const;
+
+const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
+  "auth-required": "認証情報が無効です。再度ログインしてください。",
+  unauthorized: "認証情報が無効です。再度ログインしてください。",
+  forbidden: "承認操作を行えるのはホストのみです。",
+  "rejoin-not-pending": "この申請はすでに処理されています。",
+  "viewer-mismatch": "観戦者情報の確認に失敗しました。再読み込みしてください。",
+  "room-mismatch": "申請対象のルームが一致しません。",
+  "session-not-found": "申請セッションが見つかりませんでした。",
+};
+
+const formatSpectatorHostError = (code: string): string => {
+  if (!code) {
+    return "処理に失敗しました。時間をおいて再度お試しください。";
+  }
+  const normalized = code.toLowerCase();
+  return (
+    SPECTATOR_HOST_ERROR_MESSAGES[normalized] ??
+    "処理に失敗しました。時間をおいて再度お試しください。"
+  );
+};
 
 const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
   ssr: false,
@@ -143,8 +176,30 @@ type RoomPageContentProps = {
   roomId: string;
 };
 
+type AuthContextValue = ReturnType<typeof useAuth>;
+type RoomStateSnapshot = ReturnType<typeof useRoomState>;
+
+type RoomPageContentInnerProps = RoomStateSnapshot & {
+  roomId: string;
+  router: ReturnType<typeof useRouter>;
+  transition: ReturnType<typeof useTransition> | null;
+  auth: AuthContextValue;
+  uid: string | null;
+  safeUpdateFeatureEnabled: boolean;
+  idleApplyMs: number;
+  passwordVerified: boolean;
+  setPasswordVerified: Dispatch<SetStateAction<boolean>>;
+  passwordDialogOpen: boolean;
+  setPasswordDialogOpen: Dispatch<SetStateAction<boolean>>;
+  passwordDialogLoading: boolean;
+  setPasswordDialogLoading: Dispatch<SetStateAction<boolean>>;
+  passwordDialogError: string | null;
+  setPasswordDialogError: Dispatch<SetStateAction<string | null>>;
+};
+
 function RoomPageContent({ roomId }: RoomPageContentProps) {
-  const { user, displayName, setDisplayName, loading: authLoading } = useAuth();
+  const auth = useAuth();
+  const { user, displayName, setDisplayName, loading: authLoading } = auth;
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
@@ -513,11 +568,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
   }, []);
   useEffect(() => {
-    return subscribeToServiceWorkerUpdates((registration) => {
-      setHasWaitingUpdate(!!registration);
-    });
-  }, []);
-  useEffect(() => {
     void resyncWaitingServiceWorker("room:mount");
     if (typeof document === "undefined") {
       return;
@@ -538,8 +588,13 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [passwordDialogError, setPasswordDialogError] = useState<string | null>(
     null
   );
+  const roomState = useRoomState(
+    roomId,
+    uid,
+    passwordVerified ? (displayName ?? null) : null
+  );
   const {
-    room,
+    room: roomData,
     players,
     onlineUids,
     presenceReady,
@@ -560,12 +615,199 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     spectatorRequestFailure: fsmSpectatorRequestFailure,
     spectatorError: fsmSpectatorError,
     spectatorNode: fsmSpectatorNode,
-  } = useRoomState(
-    roomId,
-    uid,
-    passwordVerified ? (displayName ?? null) : null
+  } = roomState;
+  const room = roomData;
+
+
+
+  if (!firebaseEnabled) {
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+      >
+        <Text>
+          Firebase が無効になっています。.env.local を設定してから再度お試しください。
+        </Text>
+      </Box>
+    );
+  }
+
+  if (loading || authLoading) {
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+      >
+        <Spinner />
+      </Box>
+    );
+  }
+
+  if (!room) {
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition(
+          "/",
+          {
+            direction: "fade",
+            duration: 1.0,
+            showLoading: true,
+            loadingSteps: [
+              { id: "disconnect", message: "せつだん中です...", duration: 730 },
+              { id: "return", message: "ロビーへ もどります...", duration: 880 },
+              { id: "done", message: "かんりょう！", duration: 390 },
+            ],
+          }
+        );
+      } else {
+        router.push("/");
+      }
+    };
+
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        bg="rgba(8,9,15,1)"
+      >
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg="rgba(8,9,15,0.9)"
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "520px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text
+              fontSize={{ base: "xl", md: "2xl" }}
+              fontWeight="800"
+              fontFamily="monospace"
+              letterSpacing="0.1em"
+              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              mb={3}
+            >
+              ▼ 404 - Not Found ▼
+            </Text>
+            <Text
+              fontSize={{ base: "lg", md: "xl" }}
+              fontWeight="700"
+              lineHeight={1.6}
+              textShadow="1px 1px 0 rgba(0,0,0,0.8)"
+            >
+              おっと、部屋が見つかりません
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              部屋が削除されたか、URLが間違っているようです
+            </Text>
+          </Box>
+          <Box display="flex" justifyContent="center">
+            <AppButton
+              onClick={handleBackToLobby}
+              palette="brand"
+              size="md"
+              minW="180px"
+            >
+              ロビーへ戻る
+            </AppButton>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <RoomPageContentInner
+      roomId={roomId}
+      router={router}
+      transition={transition}
+      auth={auth}
+      uid={uid}
+      safeUpdateFeatureEnabled={safeUpdateFeatureEnabled}
+      idleApplyMs={idleApplyMs}
+      passwordVerified={passwordVerified}
+      setPasswordVerified={setPasswordVerified}
+      passwordDialogOpen={passwordDialogOpen}
+      setPasswordDialogOpen={setPasswordDialogOpen}
+      passwordDialogLoading={passwordDialogLoading}
+      setPasswordDialogLoading={setPasswordDialogLoading}
+      passwordDialogError={passwordDialogError}
+      setPasswordDialogError={setPasswordDialogError}
+      {...roomState}
+    />
   );
 
+}
+
+function RoomPageContentInner(props: RoomPageContentInnerProps) {
+  const {
+    roomId,
+    router,
+    transition,
+    auth,
+    uid,
+    safeUpdateFeatureEnabled,
+    idleApplyMs,
+    passwordVerified,
+    setPasswordVerified,
+    passwordDialogOpen,
+    setPasswordDialogOpen,
+    passwordDialogLoading,
+    setPasswordDialogLoading,
+    passwordDialogError,
+    setPasswordDialogError,
+    room: roomData,
+    players,
+    onlineUids,
+    presenceReady,
+    onlinePlayers,
+    loading,
+    isHost,
+    isMember,
+    detachNow,
+    reattachPresence,
+    leavingRef,
+    joinStatus,
+    sendRoomEvent,
+    spectatorStatus: fsmSpectatorStatus,
+    spectatorReason: fsmSpectatorReason,
+    spectatorRequestStatus: fsmSpectatorRequestStatus,
+    spectatorRequestSource: fsmSpectatorRequestSource,
+    spectatorRequestCreatedAt: fsmSpectatorRequestCreatedAt,
+    spectatorRequestFailure: fsmSpectatorRequestFailure,
+    spectatorError: fsmSpectatorError,
+    spectatorNode: fsmSpectatorNode,
+  } = props;
+  if (!roomData) {
+    throw new Error("RoomPageContentInner requires room data");
+  }
+  const room = roomData;
+  const { user, displayName, setDisplayName, loading: authLoading } = auth;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -613,6 +855,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
   const spectatorRecallEnabled = recallOpen && roomStatus === "waiting";
+  const {
+    requests: spectatorHostRequests,
+    loading: spectatorHostLoading,
+    error: spectatorHostError,
+  } = useSpectatorHostQueue(isHost ? roomId : null);
   const rejoinSessionKey = useMemo(
     () => (uid ? `pendingRejoin:${roomId}` : null),
     [uid, roomId]
@@ -621,6 +868,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     () => (uid ? `autoJoinSuppress:${roomId}:${uid}` : null),
     [uid, roomId]
   );
+
+  const spectatorSession = useSpectatorSession({
+    roomId,
+    viewerUid: uid,
+  });
+  const { approveRejoin: approveSpectatorRejoin, rejectRejoin: rejectSpectatorRejoin } = spectatorSession.actions;
 
 
   // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
@@ -644,6 +897,11 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
     typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
   );
+  useEffect(() => {
+    return subscribeToServiceWorkerUpdates((registration) => {
+      setHasWaitingUpdate(!!registration);
+    });
+  }, []);
   const [versionMismatchGuarded, setVersionMismatchGuarded] = useState(false);
   const {
     isUpdateReady: spectatorUpdateReady,
@@ -663,6 +921,24 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     }
     return [...players, optimisticMe];
   }, [players, optimisticMe]);
+  const playerNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const player of playersWithOptimistic) {
+      map.set(player.id, player.name ?? "");
+    }
+    return map;
+  }, [playersWithOptimistic]);
+  const resolveSpectatorDisplayName = useCallback(
+    (viewerUid: string | null) => {
+      if (!viewerUid) return "観戦者";
+      const name = playerNameById.get(viewerUid)?.trim();
+      if (name && name.length > 0) {
+        return name;
+      }
+      return `観戦者(${viewerUid.slice(0, 6)})`;
+    },
+    [playerNameById]
+  );
   const playersSignature = useMemo(
     () => playersWithOptimistic.map((p) => p.id).join(","),
     [playersWithOptimistic]
@@ -1126,8 +1402,8 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(fsmSpectatorRequestStatus);
   const seatRequestTimeoutTriggeredRef = useRef(false);
   const spectatorTimeoutPrevRef = useRef(false);
-  // V3: recallV2はデフォルトで有効
-  const isSpectatorMode = fsmSpectatorNode !== "idle";
+  // V3: recallV2はデフォルトで有効。参加メンバーやホストは観戦扱いにしない。
+  const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
   const spectatorEnterReason = useMemo<Exclude<MachineSpectatorReason, null>>(() => {
     if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
       return "version-mismatch";
@@ -2565,132 +2841,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       }
     }
   }
-
-  if (!firebaseEnabled) {
-    return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-      >
-        <Text>
-          Firebase が無効になっています。.env.local を設定してから再度お試しください。
-        </Text>
-      </Box>
-    );
-  }
-
-  if (loading || authLoading) {
-    return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-      >
-        <Spinner />
-      </Box>
-    );
-  }
-
-
   const displayRoomName = stripMinimalTag(room?.name) || "";
-
-  if (!room) {
-    const handleBackToLobby = async () => {
-      if (transition) {
-        await transition.navigateWithTransition(
-          "/",
-          {
-            direction: "fade",
-            duration: 1.0,
-            showLoading: true,
-            loadingSteps: [
-              { id: "disconnect", message: "せつだん中です...", duration: 730 },
-              { id: "return", message: "ロビーへ もどります...", duration: 880 },
-              { id: "done", message: "かんりょう！", duration: 390 },
-            ],
-          }
-        );
-      } else {
-        router.push("/");
-      }
-    };
-
-    return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "520px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text
-              fontSize={{ base: "xl", md: "2xl" }}
-              fontWeight="800"
-              fontFamily="monospace"
-              letterSpacing="0.1em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              mb={3}
-            >
-              ▼ 404 - Not Found ▼
-            </Text>
-            <Text
-              fontSize={{ base: "lg", md: "xl" }}
-              fontWeight="700"
-              lineHeight={1.6}
-              textShadow="1px 1px 0 rgba(0,0,0,0.8)"
-            >
-              おっと、部屋が見つかりません
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              部屋が削除されたか、URLが間違っているようです
-            </Text>
-          </Box>
-          <Box display="flex" justifyContent="center">
-            <AppButton
-              onClick={handleBackToLobby}
-              palette="brand"
-              size="md"
-              minW="180px"
-            >
-              ロビーへ戻る
-            </AppButton>
-          </Box>
-        </Box>
-      </Box>
-    );
-  }
-
-
 
   // Layout nodes split to avoid JSX nesting pitfalls
   const headerNode = undefined;
@@ -2791,6 +2942,76 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     </AppButton>
   ) : null;
 
+  const handleSpectatorApprove = useCallback(
+    async (request: SpectatorHostRequest) => {
+      try {
+        await approveSpectatorRejoin(request.sessionId);
+        traceAction("spectatorV2.host.approve", {
+          roomId,
+          sessionId: request.sessionId,
+          viewerUid: request.viewerUid ?? null,
+          source: request.source,
+        });
+        notify({
+          type: "success",
+          title: "復帰を承認しました",
+          description: `${resolveSpectatorDisplayName(request.viewerUid)} が席へ戻ります。`,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        traceError("spectatorV2.host.approve", error, {
+          roomId,
+          sessionId: request.sessionId,
+          viewerUid: request.viewerUid ?? null,
+        });
+        notify({
+          type: "error",
+          title: "復帰の承認に失敗しました",
+          description: formatSpectatorHostError(message),
+        });
+        throw error;
+      }
+    },
+    [approveSpectatorRejoin, notify, resolveSpectatorDisplayName, roomId]
+  );
+
+  const handleSpectatorReject = useCallback(
+    async (request: SpectatorHostRequest, reason: string | null) => {
+      try {
+        await rejectSpectatorRejoin(request.sessionId, reason ?? null);
+        traceAction("spectatorV2.host.reject", {
+          roomId,
+          sessionId: request.sessionId,
+          viewerUid: request.viewerUid ?? null,
+          source: request.source,
+          hasReason: Boolean(reason && reason.trim().length > 0),
+        });
+        notify({
+          type: "info",
+          title: "復帰申請を見送りました",
+          description:
+            reason && reason.trim().length > 0
+              ? `${resolveSpectatorDisplayName(request.viewerUid)} に理由を伝えました。`
+              : `${resolveSpectatorDisplayName(request.viewerUid)} へ見送りを通知しました。`,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        traceError("spectatorV2.host.reject", error, {
+          roomId,
+          sessionId: request.sessionId,
+          viewerUid: request.viewerUid ?? null,
+        });
+        notify({
+          type: "error",
+          title: "復帰申請の見送りに失敗しました",
+          description: formatSpectatorHostError(message),
+        });
+        throw error;
+      }
+    },
+    [rejectSpectatorRejoin, notify, resolveSpectatorDisplayName, roomId]
+  );
+
   const spectatorNotice =
     isSpectatorMode && !isMember ? (
       <SpectatorNotice
@@ -2804,6 +3025,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         onForceExit={handleForcedExitLeaveNow}
       />
     ) : null;
+  const shouldShowHostPanel =
+    isHost &&
+    (spectatorHostRequests.length > 0 || spectatorHostLoading) &&
+    spectatorHostError === null;
+  const spectatorHostPanel = shouldShowHostPanel ? (
+    <SpectatorRejoinManager
+      roomId={roomId}
+      requests={spectatorHostRequests}
+      loading={spectatorHostLoading}
+      error={spectatorHostError}
+      spectatorRecallEnabled={spectatorRecallEnabled}
+      players={playersWithOptimistic}
+      onApprove={handleSpectatorApprove}
+      onReject={handleSpectatorReject}
+    />
+  ) : null;
 
   const showHand =
     !!me &&
@@ -2826,7 +3063,12 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }
 
   const handAreaNode = (
-    <Box display="flex" flexDirection="column" gap={spectatorNotice ? 4 : 0}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      gap={spectatorHostPanel || spectatorNotice ? 4 : 0}
+    >
+      {spectatorHostPanel}
       {spectatorNotice}
       {showHand ? (
         <MiniHandDock
@@ -2853,7 +3095,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
           hostClaimStatus={hostClaimStatus}
           phaseMessage={phaseMessage}
         />
-      ) : spectatorNotice ? null : (
+      ) : spectatorNotice || spectatorHostPanel ? null : (
         <Box h="1px" />
       )}
     </Box>
@@ -3051,6 +3293,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   );
 }
 
+
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params?.roomId;
@@ -3059,21 +3302,6 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
