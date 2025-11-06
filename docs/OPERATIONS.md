@@ -99,24 +99,24 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 ---
 
 ## 9. 観戦フロー運用メモ
-観戦UIと再入室フローは XState + `useSpectatorFlow` で統合管理される。観戦チケット販売や大規模イベントに備えて、以下の点を確認する。
+観戦UIと再入室フローは XState + `useSpectatorController` / `useSpectatorSession` で統合管理される。観戦チケット販売や大規模イベントに備えて、以下の点を確認する。
 
 ### 9.1 再入室フローの確認項目
 1. ホストが待機状態のルームを開き、別ブラウザで観戦者として入室する。  
-2. 観戦者が「席に戻る」を押すと `rooms/{roomId}/rejoinRequests/{uid}` に `status=pending` が生成されること。  
-3. `DevTools > Application > Session Storage` で `pendingRejoin:*` が観戦者 UID になっていること。  
+2. 観戦者が「席に戻る」を押すと `spectatorSessions/{sessionId}.rejoinRequest.status` が `pending` になること。  
+3. Firestore の `spectatorSessions/{sessionId}` に `rejoinRequest.source` が `manual`/`auto` として記録されること。  
 4. ホスト承認後、観戦者が即座にプレイヤーへ戻り、観戦パネルが消えること。  
 5. DevTools Console のトレースに `spectator.request.intent` / `spectator.request.blocked.*` / `spectator.request.timeout` が出力されていること。  
 
 ### 9.2 便利なテストコマンド
-- 単体テスト（観戦フロー）: `npm test -- useSpectatorFlow`  
-- Playwright 観戦シナリオ（個別実行）: `npx playwright test tests/spectatorFlow.spec.ts`  
-- セッションフラグ掃除の確認: `npm test -- tests/spectatorFlow.spec.ts`  
+- 単体テスト（観戦セッション）: `npm test -- useSpectatorSession`  
+- Route Handler テスト: `npm test -- spectatorHostFlow.spec.ts`  
+- Playwright 観戦シナリオ（個別実行）: `npx playwright test tests/spectatorHostFlow.spec.ts tests/spectatorSessionRoutes.spec.ts`  
 
 ### 9.3 トラブルシュートのヒント
 - 観戦者が戻れない場合は `rooms/{roomId}/ui.recallOpen` が `false` になっていないか確認する。  
 - 観戦パネルがプレイヤーに残る場合は `traceAction("spectator.mode")` の値が `isSpectatorMode=false` になっているかチェック。  
-- 連続して再入室が失敗する際は、`pendingRejoin:*` や `autoJoinSuppress:*` が sessionStorage に残っていないか削除して再検証する。  
+- 連続して再入室が失敗する際は、`spectatorSessions/{sessionId}.rejoinRequest` が `pending` のまま残っていないか、API `/api/spectator/sessions/*` のレスポンスコードを確認する。  
 
 ---
 
