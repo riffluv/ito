@@ -155,11 +155,15 @@ export function useRoomState(
               const createdAt =
                 typeof data?.createdAt?.toMillis === "function"
                   ? Number(data.createdAt.toMillis())
-                  : typeof data?.createdAt === "number"
-                  ? data.createdAt
-                  : null;
+              : typeof data?.createdAt === "number"
+              ? data.createdAt
+              : null;
               const failure =
-                typeof data?.failureReason === "string" ? data.failureReason : null;
+                typeof data?.reason === "string"
+                  ? data.reason
+                  : typeof data?.failureReason === "string"
+                  ? data.failureReason
+                  : null;
               handleSnapshot({
                 exists: true,
                 status,

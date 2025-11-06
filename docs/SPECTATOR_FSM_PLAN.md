@@ -2,6 +2,8 @@
 
 - 2025-11-03: 観戦UIのトースト文面を整備し、「席に戻れるか試す」押下時はホスト承認待ちである旨を明示。
 - 2025-11-03: ホストリセット後も観戦者が自動で着席しないよう、強制退席時に席リクエストを再生成しないよう調整。UIから「席に戻れるか試す」を押した場合のみ再リクエストされる。
+- 2025-11-06: `SpectatorNotice` の主要文言を Jest + Chakra Provider 付きでスナップせず検証する `__tests__/SpectatorNotice.test.tsx` を追加。
+- 2025-11-06: Playwright では UI コンポーネント単体レンダリングが Chakra の `structuredClone` 依存で失敗するため、API ベースの Playwright シナリオ + Jest コンポーネントテストの二段構えでカバレッジを確保。
 ## 進捗メモ
 
 - 2025-11-03: 観戦者の強制退席時に `cancelSeatRequest` を確実に実行し、`SPECTATOR_FORCE_EXIT` イベントで FSM 側の状態リセットとエラーハンドリングを行う対応を完了。ホストリセット後も `rejoinRequests/{uid}` が残存しないようになった。
@@ -65,7 +67,7 @@
    - トースト表示やトランジションは machine の actions から実施。
 5. **テスト整備**  
    - XState の state test（`createTestModel` 等）で観戦フローを検証。  
-   - Playwright で「観戦入室→リクエスト→承認」「観戦入室→リクエスト→拒否」「観戦入室→無操作→ホストリセット」などの E2E を追加。
+   - Playwright で「観戦入室→リクエスト→承認」「観戦入室→リクエスト→拒否」「観戦入室→無操作→ホストリセット」などの E2E を追加。現状は Route Handler ベースの API テスト（`tests/spectatorSessionRoutes.spec.ts` / `tests/spectatorHostFlow.spec.ts`）まで整備済み。
 
 ## 6. 初期リファクタ ToDo（実装順想定）
 

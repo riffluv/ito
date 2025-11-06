@@ -4,7 +4,34 @@ import { TextDecoder, TextEncoder } from "util";
 
 // Add structuredClone polyfill for Node.js environments
 if (!global.structuredClone) {
-  global.structuredClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
+  global.structuredClone = <T>(obj: T): T => {
+    if (obj === undefined || obj === null) {
+      return obj;
+    }
+    if (obj instanceof Date) {
+      return new Date(obj.getTime()) as T;
+    }
+    if (obj instanceof ArrayBuffer) {
+      return obj.slice(0) as T;
+    }
+    if (ArrayBuffer.isView(obj)) {
+      if (obj instanceof DataView) {
+        const cloned = obj.buffer.slice(0);
+        return new DataView(cloned, obj.byteOffset, obj.byteLength) as unknown as T;
+      }
+      const ctor = (obj as any).constructor;
+      try {
+        return new ctor(obj as any);
+      } catch {
+        return obj;
+      }
+    }
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  };
 }
 
 if (typeof global.TextEncoder === "undefined") {
