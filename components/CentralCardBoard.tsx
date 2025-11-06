@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, VisuallyHidden } from "@chakra-ui/react";
+import { Box, Flex, Spinner, Text, VisuallyHidden } from "@chakra-ui/react";
 import {
   DndContext,
   DragEndEvent,
@@ -75,6 +75,7 @@ interface CentralCardBoardProps {
   topic?: string | null;
   revealedAt?: unknown;
   uiRevealPending?: boolean;
+  dealPlayers?: string[] | null;
 }
 
 interface MagnetSnapshot {
@@ -606,6 +607,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   slotCount,
   revealedAt,
   uiRevealPending = false,
+  dealPlayers = null,
 }) => {
   const [localRevealPending, setLocalRevealPending] = useState(false);
   const lastKnownCardRef = useRef(new Map<string, PlayerDoc & { id: string }>());
@@ -713,6 +715,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const me = useMemo(() => playerMap.get(meId), [playerMap, meId]);
   const hasNumber = useMemo(() => !!me?.number, [me?.number]);
   const mePlaced = useMemo(() => placedIds.has(meId), [placedIds, meId]);
+  const normalizedDealPlayers = useMemo(() => {
+    if (!Array.isArray(dealPlayers)) return null;
+    const filtered = dealPlayers.filter(
+      (id): id is string => typeof id === "string" && id.trim().length > 0
+    );
+    return filtered.length > 0 ? filtered : null;
+  }, [dealPlayers]);
+  const dealReadyForMe = useMemo(() => {
+    if (!me) return true;
+    if (roomStatus !== "clue") return true;
+    if (typeof me.number === "number") return true;
+    if (!normalizedDealPlayers) return true;
+    return normalizedDealPlayers.includes(meId);
+  }, [me, roomStatus, normalizedDealPlayers, meId]);
+  const dealGuardActive =
+    Boolean(me) &&
+    roomStatus === "clue" &&
+    normalizedDealPlayers !== null &&
+    !dealReadyForMe;
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
@@ -967,6 +988,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       proposal,
       hasNumber,
       mePlaced,
+      dealReady: dealReadyForMe,
     });
 
   const updatePendingState = useCallback(
@@ -1677,20 +1699,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       </VisuallyHidden>
 
       <Box
-        textAlign="center"
-        marginBottom={{ base: "0.5rem", md: "0.75rem" }}
-        flex="0 0 auto"
-        width="100%"
-        maxWidth="var(--board-max-width)"
-        marginInline="auto"
-        css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            marginBottom: "0.5rem",
-          },
-        }}
-      />
-
-      <Box
         flex="1"
         display="flex"
         flexDirection="column"
@@ -1712,6 +1720,38 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           },
         }}
       >
+        {dealGuardActive ? (
+          <Flex
+            direction="column"
+            align="center"
+            gap="0.35rem"
+            px="1rem"
+            py="0.75rem"
+            borderRadius="md"
+            bg="rgba(6, 22, 42, 0.82)"
+            border="1px solid rgba(255, 255, 255, 0.18)"
+            boxShadow="0 12px 28px rgba(0, 0, 0, 0.45)"
+            backdropFilter="blur(4px)"
+            pointerEvents="none"
+            position="absolute"
+            top={{ base: "1rem", md: "1.5rem" }}
+            left="50%"
+            transform="translateX(-50%)"
+            zIndex={2}
+            maxW="min(92%, 480px)"
+            textAlign="center"
+          >
+            <Flex align="center" gap="0.6rem">
+              <Spinner size="sm" color="whiteAlpha.900" />
+              <Text fontSize="sm" fontWeight={700} color="whiteAlpha.900">
+                配札を待っています…
+              </Text>
+            </Flex>
+            <Text fontSize="xs" color="whiteAlpha.700">
+              数字の配布が完了するとカードを動かせます
+            </Text>
+          </Flex>
+        ) : null}
         {activeBoard ? (
           <InteractiveBoard
             slots={dragSlots}

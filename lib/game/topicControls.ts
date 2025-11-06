@@ -2,7 +2,10 @@
 import { notify } from "@/components/ui/notify";
 import { db } from "@/lib/firebase/client";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { dealNumbers as dealNumbersRoom } from "@/lib/game/room";
+import {
+  dealNumbers as dealNumbersRoom,
+  type DealNumbersOptions,
+} from "@/lib/game/room";
 import { sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
 import { emergencyResetPlayerStates, verifyPlayerStatesCleared } from "@/lib/utils/emergencyRecovery";
@@ -224,9 +227,9 @@ export const topicControls = {
   },
 
   // 数字を配布
-  async dealNumbers(roomId: string) {
+  async dealNumbers(roomId: string, options?: DealNumbersOptions) {
     try {
-      const assignedCount = await dealNumbersRoom(roomId);
+      const assignedCount = await dealNumbersRoom(roomId, 0, options);
       await broadcastNotify(
         roomId,
         "success",

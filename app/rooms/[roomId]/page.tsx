@@ -916,15 +916,19 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
     return "匿名";
   }, [displayName]);
-  const dealPlayers = useMemo(() => {
+  const dealPlayers = useMemo((): string[] | null => {
     const list = room?.deal?.players;
     if (!Array.isArray(list)) {
-      return [] as string[];
+      return null;
     }
-    return list.filter((id): id is string => typeof id === "string");
+    const filtered = list.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+    return filtered.length > 0 ? filtered : null;
   }, [room?.deal]);
   const dealPlayersSignature = useMemo(
-    () => (dealPlayers.length > 0 ? dealPlayers.join(",") : ""),
+    () =>
+      Array.isArray(dealPlayers) && dealPlayers.length > 0
+        ? dealPlayers.join(",")
+        : "",
     [dealPlayers]
   );
   const requiredSwVersion = useMemo(() => {
@@ -2845,6 +2849,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           topic={room.topic ?? null}
           revealedAt={room.result?.revealedAt ?? null}
           uiRevealPending={(room as any)?.ui?.revealPending === true}
+          dealPlayers={dealPlayers}
         />
       </Box>
     </Box>
