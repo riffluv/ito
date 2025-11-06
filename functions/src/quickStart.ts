@@ -47,6 +47,20 @@ const FALLBACK_TOPIC_TYPE: TopicType = topicTypeLabels[0];
 let cachedTopicSections: TopicSections | null = null;
 let lastTopicFetchErrorLoggedAt = 0;
 
+type StageTimings = Record<string, number>;
+
+function createStageTimer(base: number) {
+  const timings: StageTimings = {};
+  return {
+    mark(stage: string) {
+      timings[stage] = Date.now() - base;
+    },
+    result() {
+      return timings;
+    },
+  };
+}
+
 function traceAction(name: string, detail: Record<string, unknown>) {
   console.log(`[trace] action:${name}`, detail);
 }
@@ -142,10 +156,14 @@ function orderPlayerIds(
     });
 }
 
-async function resetPlayerState(roomId: string) {
+async function resetPlayerState(
+  roomId: string
+): Promise<
+  FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[]
+> {
   const playersRef = db.collection("rooms").doc(roomId).collection("players");
   const snap = await playersRef.get();
-  if (snap.empty) return;
+  if (snap.empty) return [];
   const batch = db.batch();
   snap.docs.forEach((doc) => {
     batch.update(doc.ref, {
@@ -156,11 +174,13 @@ async function resetPlayerState(roomId: string) {
     });
   });
   await batch.commit();
+  return snap.docs;
 }
 
 export const quickStart = functions.https.onCall(
   async (data: QuickStartRequest, context): Promise<QuickStartResult> => {
     const startedAt = Date.now();
+    const stageTimer = createStageTimer(startedAt);
     const uid = context.auth?.uid ?? null;
     if (!uid) {
       throw new functions.https.HttpsError("unauthenticated", "Authentication required.");
@@ -219,7 +239,7 @@ export const quickStart = functions.https.onCall(
       throw new functions.https.HttpsError("internal", "Failed to start the room.", `${error}`);
     }
 
-    await resetPlayerState(roomId);
+    stageTimer.mark("transaction");
 
     const roomDataAny = roomData as Record<string, any> | null;
     const roomOptions =
@@ -236,6 +256,13 @@ export const quickStart = functions.https.onCall(
       typeof requestedTopicType === "string" && requestedTopicType.trim() === "カスタム";
     const providedCustomTopic =
       typeof options.customTopic === "string" ? options.customTopic.trim() : "";
+    const skipPresence = options.skipPresence === true;
+
+    const presencePromise = skipPresence ? Promise.resolve(null) : fetchPresenceUids(roomId);
+    const topicPromise = customRequested ? null : resolveTopic(normalizedTopicType);
+    const playerDocs = await resetPlayerState(roomId);
+    stageTimer.mark("resetPlayers");
+
     if (customRequested) {
       const existingTopic =
         roomDataAny && typeof roomDataAny.topic === "string" ? (roomDataAny.topic as string).trim() : "";
@@ -253,28 +280,31 @@ export const quickStart = functions.https.onCall(
         topicOptions: null,
         lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      stageTimer.mark("topicApply");
     } else {
-      resolvedTopic = await resolveTopic(normalizedTopicType);
+      resolvedTopic = await (topicPromise ?? Promise.resolve(null));
+      stageTimer.mark("topicResolved");
       await roomRef.update({
         topicBox: normalizedTopicType,
         topic: resolvedTopic ?? null,
         topicOptions: null,
         lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      stageTimer.mark("topicApply");
     }
 
-    const playersRef = roomRef.collection("players");
-    const playerSnap = await playersRef.get();
-    if (playerSnap.empty) {
+    if (playerDocs.length === 0) {
       throw new functions.https.HttpsError(
         "failed-precondition",
         "Cannot start without any players."
       );
     }
 
-    const skipPresence = options.skipPresence === true;
-    const presenceUids = skipPresence ? null : await fetchPresenceUids(roomId);
-    const orderedPlayerIds = orderPlayerIds(playerSnap.docs, presenceUids);
+    const presenceUids = await presencePromise;
+    stageTimer.mark("presence");
+
+    const orderedPlayerIds = orderPlayerIds(playerDocs, presenceUids);
+    stageTimer.mark("orderReady");
 
     const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const numbers = generateDeterministicNumbers(orderedPlayerIds.length, 1, 100, seed);
@@ -299,6 +329,7 @@ export const quickStart = functions.https.onCall(
       "order.numbers": numberMap,
       lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    stageTimer.mark("dealUpdate");
 
     try {
       await db.collection("roomProposals").doc(roomId).set(
@@ -312,6 +343,7 @@ export const quickStart = functions.https.onCall(
     } catch (error) {
       console.warn("[quickStart] Failed to reset roomProposals", { roomId, error });
     }
+    stageTimer.mark("proposalReset");
 
     const durationMs = Date.now() - startedAt;
     const result: QuickStartResult = {
@@ -327,6 +359,7 @@ export const quickStart = functions.https.onCall(
       durationMs,
       assigned: String(orderedPlayerIds.length),
       topicType: result.topicType,
+      stages: stageTimer.result(),
     });
 
     return result;
