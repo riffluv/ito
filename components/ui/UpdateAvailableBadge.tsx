@@ -40,8 +40,9 @@ function UpdateAvailableBadgeContent({
     retryUpdate,
   } = state;
 
+  const suppressedWithWaiting = autoApplySuppressed && !!waitingSince;
   const effectiveReady =
-    preview || isUpdateReady || isApplying || hasError || autoApplySuppressed;
+    preview || isUpdateReady || isApplying || hasError || suppressedWithWaiting;
   const effectiveApplying = preview ? false : isApplying;
 
   const statusText = useMemo(() => {
@@ -54,14 +55,14 @@ function UpdateAvailableBadgeContent({
     if (phase === "failed") {
       return "更新に失敗しました";
     }
-    if (phase === "suppressed" || autoApplySuppressed) {
+    if (phase === "suppressed" || suppressedWithWaiting) {
       return "自動更新を保留中";
     }
     if (phase === "auto_pending") {
       return "自動適用を準備中";
     }
     return "新しいバージョン";
-  }, [autoApplySuppressed, effectiveApplying, phase, preview]);
+  }, [suppressedWithWaiting, effectiveApplying, phase, preview]);
 
   const helperText = useMemo(() => {
     if (preview) {
@@ -86,7 +87,7 @@ function UpdateAvailableBadgeContent({
           return "更新に失敗しました。";
       }
     }
-    if (phase === "suppressed" || autoApplySuppressed) {
+    if (phase === "suppressed" || suppressedWithWaiting) {
       return "ループガードのため手動適用が必要です。";
     }
     if (phase === "auto_pending") {
@@ -108,7 +109,7 @@ function UpdateAvailableBadgeContent({
       return `約${hours}時間前に検知しました。`;
     }
     return "安全なタイミングで自動適用されます。";
-  }, [autoApplySuppressed, effectiveApplying, lastError, phase, preview, waitingSince]);
+  }, [suppressedWithWaiting, effectiveApplying, lastError, phase, preview, waitingSince]);
 
   const handleClick = useCallback(() => {
     if (preview) return;
