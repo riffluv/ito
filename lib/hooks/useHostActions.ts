@@ -3,7 +3,6 @@ import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
 import {
   resetRoomWithPrune,
-  startGame,
   submitSortedOrder,
   topicControls,
   beginRevealPending,
@@ -20,6 +19,8 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase/functions";
 import { useCallback, useMemo, useState } from "react";
 
 type QuickStartOptions = {
@@ -208,26 +209,36 @@ export function useHostActions({
 
       let success = false;
       try {
+        const callable = functions
+          ? httpsCallable<
+              { roomId: string; options?: Record<string, unknown> },
+              { assignedCount?: number; topicType?: string; topic?: string | null; durationMs?: number }
+            >(functions, "quickStart")
+          : null;
+        if (!callable) {
+          throw new Error("firebase-functions-unavailable");
+        }
+        const response = await callable({
+          roomId,
+          options: {
+            defaultTopicType: effectiveType,
+            skipPresence: shouldSkipPresenceCheck,
+          },
+        });
+        const payload = response?.data ?? {};
+        traceAction("ui.host.quickStart.result", {
+          roomId,
+          assigned: String(payload.assignedCount ?? -1),
+          topicType: payload.topicType ?? effectiveType,
+          topic: payload.topic ?? "",
+        });
         if (shouldPlaySound) {
           playOrderConfirm();
         }
-        await startGame(roomId);
+
         try {
           delete (window as any).__ITO_LAST_RESET;
         } catch {}
-
-        if (effectiveType === "カスタム") {
-          await topicControls.dealNumbers(roomId, {
-            skipPresence: shouldSkipPresenceCheck,
-          });
-        } else {
-          const selectType =
-            effectiveType === "カスタム" ? "通常版" : effectiveType;
-          await topicControls.selectCategory(roomId, selectType as any);
-          await topicControls.dealNumbers(roomId, {
-            skipPresence: shouldSkipPresenceCheck,
-          });
-        }
 
         try {
           postRoundReset(roomId);
@@ -281,6 +292,7 @@ export function useHostActions({
       playerCount,
       presenceReady,
       onlineUids,
+      functions,
     ]
   );
 
@@ -567,25 +579,30 @@ export function useHostActions({
           if (!ensurePresenceReady()) {
             return;
           }
+          const callable = functions
+            ? httpsCallable<
+                { roomId: string; options?: Record<string, unknown> },
+                { assignedCount?: number; topicType?: string; topic?: string | null; durationMs?: number }
+              >(functions, "quickStart")
+            : null;
+          if (!callable) {
+            throw new Error("firebase-functions-unavailable");
+          }
+          const result = await callable({
+            roomId,
+            options: {
+              defaultTopicType: "カスタム",
+              customTopic: trimmed,
+            },
+          });
+          traceAction("ui.topic.customSubmit.quickStartResult", {
+            roomId,
+            assigned: String(result?.data?.assignedCount ?? -1),
+          });
           playOrderConfirm();
           try {
-            await startGame(roomId);
-          } catch (error) {
-            traceError("ui.topic.customSubmit", error, {
-              roomId,
-              stage: "startGame",
-            });
-            throw error;
-          }
-          try {
-            await topicControls.dealNumbers(roomId);
-          } catch (error) {
-            traceError("ui.topic.customSubmit", error, {
-              roomId,
-              stage: "dealNumbers",
-            });
-            throw error;
-          }
+            postRoundReset(roomId);
+          } catch {}
           notify({
             id: toastIds.gameStart(roomId),
             title: "カスタムお題で開始",
@@ -605,6 +622,7 @@ export function useHostActions({
       actualResolveMode,
       playOrderConfirm,
       ensurePresenceReady,
+      functions,
     ]
   );
 

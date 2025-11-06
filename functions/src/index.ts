@@ -855,3 +855,5 @@ export {
   onRejoinRequestUpdate,
   onRoomWaitingProcessRejoins,
 } from "./rejoin";
+
+export { quickStart } from "./quickStart";

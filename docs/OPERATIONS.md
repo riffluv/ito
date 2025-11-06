@@ -120,7 +120,34 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ---
 
-## 10. よく使うコマンド／スクリプト
+## 10. Quick Start（サーバー主導）運用メモ
+ホストの「クイック開始」は Cloud Functions（Callable）`quickStart` が一括処理する。クライアントは Function を呼び出すだけで、以下がサーバー側で順番に実行される。
+
+1. `rooms/{roomId}` の `status` が `waiting` であることを検証し、`hostId` と呼び出しユーザー UID が一致するか確認。  
+2. `status: "clue"` へ遷移し、`result` / `deal` / `order` / `mvpVotes` を初期化、`ui.recallOpen` を `false` に設定。  
+3. プレイヤードキュメントを一括でリセット（`number`/`clue1`/`ready`/`orderIndex`）。  
+4. トピックを決定。`カスタム` 以外は `public/itoword.md` からカテゴリ別にランダム抽選（取得失敗時は `defaultTopics` へフォールバック）。  
+5. Presence (RTDB) のオンライン情報を加味してプレイヤー順を確定し、番号を生成。  
+6. `roomProposals/{roomId}` を初期化して提案キューを空にする。  
+
+### 10.1 デプロイとエミュレータ
+- 関数を更新したら `firebase deploy --only functions:quickStart` で反映する。  
+- ローカル検証は `firebase emulators:start --only "functions,firestore,auth,database"` を推奨。`.env.local` で  
+  `NEXT_PUBLIC_FIREBASE_USE_EMULATOR=true` および必要なら `NEXT_PUBLIC_FUNCTIONS_EMULATOR_HOST=localhost` / `NEXT_PUBLIC_FUNCTIONS_EMULATOR_PORT=5001` を設定する。  
+
+### 10.2 クライアント側メモ
+- `lib/hooks/useHostActions.ts` が `httpsCallable("quickStart")` を利用するよう更新済み。`startGame` / `topicControls.dealNumbers` を直接呼ぶ実装は残さない。  
+- カスタムお題サブミット (`handleSubmitCustom`) も同じ Function を使用する。  
+- 成功時は `traceAction("ui.host.quickStart.result")`（通常）/`traceAction("ui.topic.customSubmit.quickStartResult")`（カスタム）で結果が記録されるので Console で確認できる。  
+
+### 10.3 トラブルシュート
+- 401/403 → 認証未完了またはホスト以外が呼んでいる。  
+- `failed-precondition` → ルームが `waiting` 以外、カスタムお題が空、またはプレイヤー数が 0。  
+- トピック取得に失敗した場合は警告を残しつつ `defaultTopics` へフォールバックする。継続的に発生する場合は `TOPIC_SOURCE_URL` を確認。  
+
+---
+
+## 11. よく使うコマンド／スクリプト
 - **Playwright 個別実行**: `npx playwright test tests/roomMachine.spec.ts`  
 - **Firestore ルールのデプロイ**: `firebase deploy --only firestore:rules`  
 - **Functions ローカルテスト**: `npm --prefix functions run lint && npm --prefix functions test`  
@@ -128,12 +155,12 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ---
 
-## 11. ドキュメント更新の運用
+## 12. ドキュメント更新の運用
 - 仕様や運用手順を変更した場合は、PR の一部として `docs/` 以下も更新する。  
 - `AGENTS.md`, `CLAUDE.md`, `docs/SAFE_UPDATE_TEST_PLAN.md` などロール別ハンドブックとの整合を保つ。  
 - 重大な更新を行ったときは `CHANGELOG.md`（未整備の場合は新規作成）やチーム内共有ツールで告知する。  
 
 ---
 
-最終更新日: 2025-10-25  
+最終更新日: 2025-11-06  
 編集者: Codex（GPT-5 ベース）
