@@ -22,19 +22,11 @@ const CRITICAL_PREWARM_IDS = new Set<SoundId>([
   "ui_click",
   "card_flip",
   "card_place",
-  "drag_pickup",
   "drop_success",
-  "drop_invalid",
   "clue_decide",
   "order_confirm",
 ]);
-const PRIORITY_STAGE_ONE: SoundId[] = [
-  "card_deal",
-  "clue_decide",
-  "drag_pickup",
-  "drop_success",
-  "drop_invalid",
-];
+const PRIORITY_STAGE_ONE: SoundId[] = ["card_deal", "clue_decide", "drop_success"];
 const HEAVY_PREWARM_IDS = new Set<SoundId>([
   "clear_success1",
   "clear_success2",
@@ -48,9 +40,7 @@ const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
   "ui_click",
   "card_flip",
   "card_place",
-  "drag_pickup",
   "drop_success",
-  "drop_invalid",
 ]);
 const RESUME_ON_POINTER = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
 
@@ -91,11 +81,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     if (!mgr) return;
     const didWarmRef = { current: false };
 
-    const candidates = [
-      "card_flip",
-      "ui_click",
-      "drag_pickup",
-    ] as SoundId[];
+    const candidates = ["card_flip", "ui_click"] as SoundId[];
     const prewarmIds: SoundId[] = candidates.filter((id) =>
       (PREWARM_SOUND_IDS as ReadonlyArray<SoundId>).includes(id)
     );

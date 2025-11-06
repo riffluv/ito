@@ -1022,9 +1022,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return map;
   }, [playerMap]);
 
-  const playDropInvalid = useSoundEffect("drop_invalid");
+  const playDropInvalid = useSoundEffect(undefined);
   const playCardPlace = useSoundEffect("card_place");
-  const playDragPickup = useSoundEffect("drag_pickup");
+  const playDragPickup = useSoundEffect(undefined);
 
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
