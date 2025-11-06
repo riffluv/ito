@@ -250,6 +250,9 @@ const safeUpdateMachine = setup({
       waitingVersion: null,
       waitingSince: null,
       autoApplyAt: null,
+      autoApplyTimerId: null,
+      autoApplySuppressed: false,
+      autoApplyHolds: {},
     })),
     queueEvaluateReady: ({ context, self }) => {
       if (!context.waitingRegistration?.waiting) {
@@ -535,7 +538,7 @@ const safeUpdateMachine = setup({
         },
         WAITING_CLEARED: {
           target: "idle",
-          actions: ["clearWaiting", "announceCleared"],
+          actions: ["clearAutoApplyTimer", "clearWaiting", "announceCleared"],
         },
         AUTO_SUPPRESS: { target: "suppressed", actions: ["setAutoSuppressed", "announceSuppressed"] },
         AUTO_RESUME: { actions: ["clearAutoSuppressed", "announceResume", "queueEvaluateReady"] },
@@ -588,7 +591,7 @@ const safeUpdateMachine = setup({
         },
         WAITING_CLEARED: {
           target: "idle",
-          actions: ["clearWaiting", "announceCleared"],
+          actions: ["clearAutoApplyTimer", "clearWaiting", "announceCleared"],
         },
         WAITING_DETECTED: {
           target: "auto_pending",
@@ -624,7 +627,7 @@ const safeUpdateMachine = setup({
         },
         WAITING_CLEARED: {
           target: "idle",
-          actions: ["clearWaiting", "announceCleared"],
+          actions: ["clearAutoApplyTimer", "clearWaiting", "announceCleared"],
         },
         WAITING_DETECTED: {
           target: "waiting_user",
@@ -656,7 +659,7 @@ const safeUpdateMachine = setup({
         },
         WAITING_CLEARED: {
           target: "idle",
-          actions: ["clearWaiting", "announceCleared"],
+          actions: ["clearAutoApplyTimer", "clearWaiting", "announceCleared"],
         },
         WAITING_DETECTED: {
           target: "suppressed",
@@ -686,7 +689,7 @@ const safeUpdateMachine = setup({
             target: "failed",
             actions: "handleApplyRedundant",
           },
-          { target: "idle", actions: ["clearWaiting", "announceCleared"] },
+          { target: "idle", actions: ["clearAutoApplyTimer", "clearWaiting", "announceCleared"] },
         ],
       },
     },
