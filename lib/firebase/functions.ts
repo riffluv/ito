@@ -12,7 +12,12 @@ const state: ModuleState = {
 function init(): Functions | null {
   if (!firebaseEnabled || !app) return null;
   if (state.instance) return state.instance;
-  const instance = getFunctions(app);
+  const region =
+    process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION &&
+    process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION.trim().length > 0
+      ? process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION.trim()
+      : undefined;
+  const instance = region ? getFunctions(app, region) : getFunctions(app);
   if (process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR === "true") {
     const host = process.env.NEXT_PUBLIC_FUNCTIONS_EMULATOR_HOST || "localhost";
     const port = Number(process.env.NEXT_PUBLIC_FUNCTIONS_EMULATOR_PORT || 5001);

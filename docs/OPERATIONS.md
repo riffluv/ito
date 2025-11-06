@@ -134,6 +134,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 - 関数を更新したら `firebase deploy --only functions:quickStart` で反映する。  
 - ローカル検証は `firebase emulators:start --only "functions,firestore,auth,database"` を推奨。`.env.local` で  
   `NEXT_PUBLIC_FIREBASE_USE_EMULATOR=true` および必要なら `NEXT_PUBLIC_FUNCTIONS_EMULATOR_HOST=localhost` / `NEXT_PUBLIC_FUNCTIONS_EMULATOR_PORT=5001` を設定する。  
+- 本番接続時は `NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION` を設定する（例: `asia-northeast1`）。未設定の場合は `us-central1` が使われる。  
 
 ### 10.2 クライアント側メモ
 - `lib/hooks/useHostActions.ts` が `httpsCallable("quickStart")` を利用するよう更新済み。`startGame` / `topicControls.dealNumbers` を直接呼ぶ実装は残さない。  
