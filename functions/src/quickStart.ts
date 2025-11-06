@@ -1,5 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import {
   defaultTopics,
   getTopicsByType,
@@ -40,12 +42,19 @@ const rtdb = (() => {
 
 const TOPIC_SOURCE_URL =
   process.env.TOPIC_SOURCE_URL || "https://online-ito.vercel.app/itoword.md";
+const requireForTopics = createRequire(__filename);
 
 const TOPIC_TYPE_SET = new Set<string>(topicTypeLabels as readonly string[]);
 const FALLBACK_TOPIC_TYPE: TopicType = topicTypeLabels[0];
 
 let cachedTopicSections: TopicSections | null = null;
+let cachedTopicSectionsSource: "local" | "remote" | "fallback" | null = null;
 let lastTopicFetchErrorLoggedAt = 0;
+let lastTopicReadErrorLoggedAt = 0;
+const PRESENCE_FETCH_TIMEOUT_MS = (() => {
+  const raw = Number(process.env.PRESENCE_FETCH_TIMEOUT_MS || 240);
+  return Number.isFinite(raw) && raw > 0 ? raw : 240;
+})();
 
 type StageTimings = Record<string, number>;
 
@@ -85,6 +94,30 @@ function normalizeTopicType(type: unknown): TopicType {
 
 async function loadTopicSections(): Promise<TopicSections | null> {
   if (cachedTopicSections) return cachedTopicSections;
+  const localPath = (() => {
+    const envPath = process.env.TOPIC_SOURCE_PATH?.trim();
+    if (envPath) return envPath;
+    try {
+      return requireForTopics.resolve("online-ito/public/itoword.md");
+    } catch {
+      return null;
+    }
+  })();
+
+  if (localPath) {
+    try {
+      const text = readFileSync(localPath, "utf8");
+      cachedTopicSections = parseItoWordMarkdown(text);
+      cachedTopicSectionsSource = "local";
+      return cachedTopicSections;
+    } catch (error) {
+      const now = Date.now();
+      if (now - lastTopicReadErrorLoggedAt > 60_000) {
+        console.warn("[quickStart] Failed to load local topic source", { error });
+        lastTopicReadErrorLoggedAt = now;
+      }
+    }
+  }
   try {
     const res = await fetch(TOPIC_SOURCE_URL);
     if (!res.ok) {
@@ -92,6 +125,7 @@ async function loadTopicSections(): Promise<TopicSections | null> {
     }
     const text = await res.text();
     cachedTopicSections = parseItoWordMarkdown(text);
+    cachedTopicSectionsSource = "remote";
     return cachedTopicSections;
   } catch (error) {
     const now = Date.now();
@@ -99,7 +133,13 @@ async function loadTopicSections(): Promise<TopicSections | null> {
       console.warn("[quickStart] Failed to load topic sections", error);
       lastTopicFetchErrorLoggedAt = now;
     }
-    return null;
+    cachedTopicSections = {
+      normal: defaultTopics,
+      rainbow: defaultTopics,
+      classic: defaultTopics,
+    };
+    cachedTopicSectionsSource = "fallback";
+    return cachedTopicSections;
   }
 }
 
@@ -257,8 +297,31 @@ export const quickStart = functions.region("asia-northeast1").https.onCall(
     const providedCustomTopic =
       typeof options.customTopic === "string" ? options.customTopic.trim() : "";
     const skipPresence = options.skipPresence === true;
-
-    const presencePromise = skipPresence ? Promise.resolve(null) : fetchPresenceUids(roomId);
+let presenceTimedOut = false;
+const presencePromise = skipPresence
+  ? Promise.resolve<string[] | null>(null)
+  : new Promise<string[] | null>((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        presenceTimedOut = true;
+        settled = true;
+        resolve(null);
+      }, PRESENCE_FETCH_TIMEOUT_MS);
+      fetchPresenceUids(roomId)
+        .then((uids) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(uids);
+        })
+        .catch(() => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(null);
+        });
+    });
     const topicPromise = customRequested ? null : resolveTopic(normalizedTopicType);
     const playerDocs = await resetPlayerState(roomId);
     stageTimer.mark("resetPlayers");
@@ -359,9 +422,13 @@ export const quickStart = functions.region("asia-northeast1").https.onCall(
       durationMs,
       assigned: String(orderedPlayerIds.length),
       topicType: result.topicType,
+      topicSource: cachedTopicSectionsSource ?? "unknown",
+      presenceTimeoutMs: PRESENCE_FETCH_TIMEOUT_MS,
+      presenceTimedOut: presenceTimedOut ? "1" : "0",
       stages: stageTimer.result(),
     });
 
     return result;
   }
 );
+
