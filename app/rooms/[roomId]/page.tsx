@@ -8,30 +8,21 @@
 // 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
-import NameDialog from "@/components/NameDialog";
-import RoomNotifyBridge from "@/components/RoomNotifyBridge";
-import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
-import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
 import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
 
-import { lazy, Suspense } from "react";
-const SettingsModal = lazy(() => import("@/components/SettingsModal"));
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
-import GameLayout from "@/components/ui/GameLayout";
 import MiniHandDock from "@/components/ui/MiniHandDock";
-import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
-import { SpectatorRejoinManager } from "@/components/ui/SpectatorRejoinManager";
+import { SpectatorHUD } from "@/components/rooms/SpectatorHUD";
+import { RoomView } from "@/components/rooms/RoomView";
 import { notify } from "@/components/ui/notify";
-import { SimplePhaseDisplay } from "@/components/ui/SimplePhaseDisplay";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
-import {
-  useSpectatorFlow,
-  type SeatRequestViewState,
-  type SpectatorMachineState,
+import type {
+  SeatRequestViewState,
+  SpectatorMachineState,
 } from "@/lib/hooks/useSpectatorFlow";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -50,6 +41,7 @@ import { requestSeat, SeatRequestSource, pruneProposalByEligible } from "@/lib/g
 import { clearRevealPending } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
+import { deriveSpectatorFlags } from "@/lib/room/spectatorRoles";
 import type {
   RoomMachineClientEvent,
   SpectatorReason as MachineSpectatorReason,
@@ -66,7 +58,7 @@ import {
   getRoomServiceErrorCode,
   joinRoomFully,
 } from "@/lib/services/roomService";
-import type { PlayerDoc } from "@/lib/types";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
@@ -75,6 +67,7 @@ import { initMetricsExport } from "@/lib/utils/metricsExport";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
+import { useSpectatorController } from "@/lib/spectator/v2/useSpectatorController";
 import type { SpectatorHostRequest } from "@/lib/spectator/v2/useSpectatorHostQueue";
 import {
   applyServiceWorkerUpdate,
@@ -137,27 +130,6 @@ const formatSpectatorHostError = (code: string): string => {
     "処理に失敗しました。時間をおいて再度お試しください。"
   );
 };
-
-const MinimalChat = dynamic(() => import("@/components/ui/MinimalChat"), {
-  ssr: false,
-  loading: () => null,
-});
-
-const MvpLedger = dynamic(
-  () => import("@/components/ui/MvpLedger").then((mod) => ({ default: mod.MvpLedger })),
-  {
-    ssr: false,
-    loading: () => null,
-  }
-);
-
-const RoomPasswordPrompt = dynamic(
-  () =>
-    import("@/components/RoomPasswordPrompt").then((mod) => ({
-      default: mod.RoomPasswordPrompt,
-    })),
-  { ssr: false, loading: () => null }
-);
 
 const PREFETCH_COMPONENT_LOADERS: Array<() => Promise<unknown>> = [
   () => import("@/components/SettingsModal"),
@@ -1402,7 +1374,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(fsmSpectatorRequestStatus);
   const seatRequestTimeoutTriggeredRef = useRef(false);
   const spectatorTimeoutPrevRef = useRef(false);
-  // V3: recallV2はデフォルトで有効。参加メンバーやホストは観戦扱いにしない。
   const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
   const spectatorEnterReason = useMemo<Exclude<MachineSpectatorReason, null>>(() => {
     if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
@@ -1437,32 +1408,11 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     ]
   );
 
-  const {
-    spectatorReason,
-    seatRequestSource,
-    seatRequestPending,
-    seatRequestAccepted,
-    seatRequestRejected,
-    seatAcceptanceActive,
-  seatRequestState,
-  seatRequestButtonDisabled,
-  rememberRejoinIntent,
-  clearRejoinIntent,
-  hasRejoinIntent,
-  clearAutoJoinSuppress,
-  suppressAutoJoinIntent,
-  queuePendingSeatRequest,
-  clearPendingSeatRequest,
-  consumePendingSeatRequest,
-  hasPendingSeatRequest,
-  markSeatRequestIntent,
-  handleSeatRecovery,
-  cancelSeatRequestSafely,
-} = useSpectatorFlow({
-  roomId,
-  uid,
-  rejoinSessionKey,
-  autoJoinSuppressKey,
+  const spectatorController = useSpectatorController({
+    roomId,
+    uid,
+    rejoinSessionKey,
+    autoJoinSuppressKey,
     isSpectatorMode,
     spectatorMachineState,
     versionMismatchBlocksAccess,
@@ -1470,6 +1420,34 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     setSeatRequestTimedOut,
     leavingRef,
   });
+  const {
+    state: {
+      reason: spectatorReason,
+      seatRequest: seatRequestState,
+      seatRequestPending,
+      seatRequestAccepted,
+      seatRequestRejected,
+      seatAcceptanceActive,
+      seatRequestButtonDisabled,
+      seatRequestSource,
+    },
+    actions: {
+      rememberRejoinIntent,
+      clearRejoinIntent,
+      clearAutoJoinSuppress,
+      suppressAutoJoinIntent,
+      queuePendingSeatRequest,
+      clearPendingSeatRequest,
+      markSeatRequestIntent,
+      handleSeatRecovery,
+      cancelSeatRequestSafely,
+    },
+    utils: {
+      hasRejoinIntent,
+      consumePendingSeatRequest,
+      hasPendingSeatRequest,
+    },
+  } = spectatorController;
   useEffect(() => {
     if (seatRequestState.status !== "pending") return;
     if (spectatorRecallEnabled) return;
@@ -1764,20 +1742,16 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     (joinEstablished || seatAcceptanceActive) &&
     !(forcedExitReason || versionMismatchBlocksAccess);
 
-
-  // Spectator V3: シンプルな観戦判定
-  const isJoiningOrRetrying =
-    !seatAcceptanceActive && joinStatus !== "idle" && joinStatus !== "joined";
-
-  const spectatorCandidate =
-    uid !== null &&
-    !isHost &&
-    !isMember &&
-    !hasOptimisticSeat &&
-    !seatAcceptanceActive &&
-    !isJoiningOrRetrying &&
-    !seatRequestPending &&
-    !loading;
+  const { isJoiningOrRetrying, spectatorCandidate } = deriveSpectatorFlags({
+    hasUid: uid !== null,
+    isHost,
+    isMember,
+    hasOptimisticSeat,
+    seatAcceptanceActive,
+    seatRequestPending,
+    joinStatus,
+    loading,
+  });
 
   useEffect(() => {
     if (!spectatorCandidate) {
@@ -3012,36 +2986,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     [rejectSpectatorRejoin, notify, resolveSpectatorDisplayName, roomId]
   );
 
-  const spectatorNotice =
-    isSpectatorMode && !isMember ? (
-      <SpectatorNotice
-        reason={spectatorReason}
-        seatRequestState={seatRequestState}
-        seatRequestPending={seatRequestPending}
-        seatRequestTimedOut={seatRequestTimedOut}
-        seatRequestButtonDisabled={seatRequestButtonDisabled}
-        spectatorUpdateButton={spectatorUpdateButton}
-        onRetryJoin={handleRetryJoin}
-        onForceExit={handleForcedExitLeaveNow}
-      />
-    ) : null;
-  const shouldShowHostPanel =
-    isHost &&
-    (spectatorHostRequests.length > 0 || spectatorHostLoading) &&
-    spectatorHostError === null;
-  const spectatorHostPanel = shouldShowHostPanel ? (
-    <SpectatorRejoinManager
-      roomId={roomId}
-      requests={spectatorHostRequests}
-      loading={spectatorHostLoading}
-      error={spectatorHostError}
-      spectatorRecallEnabled={spectatorRecallEnabled}
-      players={playersWithOptimistic}
-      onApprove={handleSpectatorApprove}
-      onReject={handleSpectatorReject}
-    />
-  ) : null;
-
   const showHand =
     !!me &&
     (isMember ||
@@ -3062,43 +3006,57 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     phaseMessage = "通信が一時的に不安定です。復帰待機中...";
   }
 
+  const handNode = showHand ? (
+    <MiniHandDock
+      roomId={roomId}
+      me={me}
+      resolveMode={room.options?.resolveMode}
+      proposal={room.order?.proposal || []}
+      eligibleIds={eligibleIds}
+      cluesReady={allCluesReady}
+      isHost={isHost}
+      roomStatus={room.status}
+      defaultTopicType={room.options?.defaultTopicType || "\u901a\u5e38\u7248"}
+      topicBox={room.topicBox ?? null}
+      allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
+      roomName={displayRoomName}
+      currentTopic={room.topic || null}
+      onlineUids={onlineUids}
+      playerCount={players.length}
+      roundIds={clueTargetIds}
+      presenceReady={presenceReady}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      onLeaveRoom={leaveRoom}
+      pop={pop}
+      hostClaimStatus={hostClaimStatus}
+      phaseMessage={phaseMessage}
+    />
+  ) : undefined;
+
   const handAreaNode = (
-    <Box
-      display="flex"
-      flexDirection="column"
-      gap={spectatorHostPanel || spectatorNotice ? 4 : 0}
-    >
-      {spectatorHostPanel}
-      {spectatorNotice}
-      {showHand ? (
-        <MiniHandDock
-          roomId={roomId}
-          me={me}
-          resolveMode={room.options?.resolveMode}
-          proposal={room.order?.proposal || []}
-          eligibleIds={eligibleIds}
-          cluesReady={allCluesReady}
-          isHost={isHost}
-          roomStatus={room.status}
-          defaultTopicType={room.options?.defaultTopicType || "\u901a\u5e38\u7248"}
-          topicBox={room.topicBox ?? null}
-          allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
-          roomName={displayRoomName}
-          currentTopic={room.topic || null}
-          onlineUids={onlineUids}
-          playerCount={players.length}
-          roundIds={clueTargetIds}
-          presenceReady={presenceReady}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onLeaveRoom={leaveRoom}
-          pop={pop}
-          hostClaimStatus={hostClaimStatus}
-          phaseMessage={phaseMessage}
-        />
-      ) : spectatorNotice || spectatorHostPanel ? null : (
-        <Box h="1px" />
-      )}
-    </Box>
+    <SpectatorHUD
+      controller={spectatorController}
+      seatRequestTimedOut={seatRequestTimedOut}
+      spectatorUpdateButton={spectatorUpdateButton}
+      onRetryJoin={handleRetryJoin}
+      onForceExit={handleForcedExitLeaveNow}
+      isSpectatorMode={isSpectatorMode}
+      isMember={isMember}
+      showHand={showHand}
+      handNode={handNode}
+      host={{
+        enabled: isHost,
+        roomId,
+        requests: spectatorHostRequests,
+        loading: spectatorHostLoading,
+        error: spectatorHostError,
+        spectatorRecallEnabled,
+        players: playersWithOptimistic,
+        onApprove: handleSpectatorApprove,
+        onReject: handleSpectatorReject,
+        autoApprove: true,
+      }}
+    />
   );
 
   const joinStatusMessage =
@@ -3136,162 +3094,73 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const versionMismatchOverlay = null;
 
   
+  if (!room) {
+    return null;
+  }
+
   return (
-    <>
-      {joinStatusBanner}
-      {safeUpdateBannerNode}
-      {versionMismatchOverlay}
-      <RoomNotifyBridge roomId={roomId} />
-      <GameLayout
-        variant="immersive"
-        header={headerNode}
-        sidebar={sidebarNode}
-        main={mainNode}
-        handArea={handAreaNode}
-      />
-
-      <Dialog.Root
-        open={dealRecoveryOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleDealRecoveryDismiss();
-          }
-        }}
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner
-          position="fixed"
-          top="50%"
-          left="50%"
-          transform="translate(-50%, -50%)"
-          zIndex={9999}
-        >
-          <Dialog.Content
-            css={{
-              background: UI_TOKENS.COLORS.panelBg,
-              border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-              borderRadius: 0,
-              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-              maxWidth: "480px",
-              width: "90vw",
-            }}
-          >
-            <Box
-              p={5}
-              css={{
-                borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-              }}
-            >
-              <Dialog.Title>
-                <Text
-                  fontSize="lg"
-                  fontWeight="bold"
-                  color="white"
-                  fontFamily="monospace"
-                >
-                  あれれ？カードが配れていないよ！
-                </Text>
-              </Dialog.Title>
-            </Box>
-            <Dialog.Body p={6}>
-              <VStack align="stretch" gap={4}>
-                <Text
-                  color={UI_TOKENS.COLORS.whiteAlpha90}
-                  fontSize="md"
-                  fontFamily="monospace"
-                  lineHeight={1.7}
-                >
-                  前のホストが急にいなくなっちゃったから、数字の配布が途中で止まってしまったんだ。
-                  右下の「リセット」を押して最初に戻してから、もう一度「ゲーム開始」してね！
-                </Text>
-                <Text
-                  color={UI_TOKENS.COLORS.whiteAlpha80}
-                >
-                  リセットすれば、ちゃんとカードが配り直されるから安心してね！
-                </Text>
-                <HStack justify="flex-end" pt={2}>
-                  <AppButton palette="brand" size="md" onClick={handleDealRecoveryDismiss}>
-                    わかった！
-                  </AppButton>
-                </HStack>
-              </VStack>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
-
-      <NameDialog
-        isOpen={needName}
-        defaultValue=""
-        onCancel={() => {
-          /* keep open until set */
-        }}
-        onSubmit={handleSubmitName}
-        submitting={false}
-        mode="create"
-      />
-
-      <SimplePhaseDisplay
-        roomStatus={room?.status || "waiting"}
-        canStartSorting={canStartSorting}
-        topicText={room?.topic || null}
-      />
-
-      <MinimalChat
-        roomId={roomId}
-        players={playersWithOptimistic}
-        hostId={room?.hostId ?? null}
-        onOpenLedger={() => setIsLedgerOpen(true)}
-        isGameFinished={room?.status === "finished"}
-      />
-
-      <RoomPasswordPrompt
-        isOpen={passwordDialogOpen}
-        roomName={room ? stripMinimalTag(room.name) : undefined}
-        isLoading={passwordDialogLoading}
-        error={passwordDialogError}
-        onSubmit={handleRoomPasswordSubmit}
-        onCancel={handleRoomPasswordCancel}
-      />
-
-
-      <Suspense fallback={null}>
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          roomId={roomId}
-          currentOptions={room.options || {}}
-          isHost={isHost}
-          roomStatus={room.status}
-        />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <MvpLedger
-          isOpen={isLedgerOpen}
-          onClose={() => setIsLedgerOpen(false)}
-          players={playersWithOptimistic}
-          orderList={room.order?.list || []}
-          topic={room.topic || null}
-          failed={!!room.order?.failed}
-          roomId={roomId}
-          myId={meId}
-          mvpVotes={room.mvpVotes ?? null}
-        />
-      </Suspense>
-
-      <DebugMetricsHUD />
-
-      {/* 🎮 Pure PixiJS版ガイドボタン */}
-      <PixiGuideButtonsAuto
-        currentPhase={room?.status}
-        me={me}
-        disabled={isSpectatorMode}
-        hasPlacedCard={meHasPlacedCard}
-      />
-    </>
+    <RoomView
+      roomId={roomId}
+      room={room}
+      nodes={{
+        header: headerNode,
+        sidebar: sidebarNode,
+        main: mainNode,
+        handArea: handAreaNode,
+      }}
+      overlays={{
+        joinStatusBanner,
+        safeUpdateBannerNode,
+        versionMismatchOverlay,
+      }}
+      dealRecoveryOpen={dealRecoveryOpen}
+      onDealRecoveryDismiss={handleDealRecoveryDismiss}
+      needName={needName}
+      onSubmitName={handleSubmitName}
+      simplePhase={{
+        status: room.status || "waiting",
+        canStartSorting,
+        topic: room.topic || null,
+      }}
+      chat={{
+        players: playersWithOptimistic,
+        hostId: room.hostId ?? null,
+        isFinished: room.status === "finished",
+        onOpenLedger: () => setIsLedgerOpen(true),
+      }}
+      passwordDialog={{
+        isOpen: passwordDialogOpen,
+        roomName: stripMinimalTag(room.name),
+        isLoading: passwordDialogLoading,
+        error: passwordDialogError,
+        onSubmit: handleRoomPasswordSubmit,
+        onCancel: handleRoomPasswordCancel,
+      }}
+      settings={{
+        isOpen: isSettingsOpen,
+        onClose: () => setIsSettingsOpen(false),
+        options: room.options ?? ({} as RoomDoc["options"]),
+        isHost,
+        roomStatus: room.status || "waiting",
+      }}
+      ledger={{
+        isOpen: isLedgerOpen,
+        onClose: () => setIsLedgerOpen(false),
+        players: playersWithOptimistic,
+        orderList: room.order?.list || [],
+        topic: room.topic || null,
+        failed: !!room.order?.failed,
+        roomId,
+        myId: meId,
+        mvpVotes: room.mvpVotes ?? null,
+      }}
+      me={me}
+      isSpectatorMode={isSpectatorMode}
+      meHasPlacedCard={meHasPlacedCard}
+    />
   );
 }
+
 
 
 export default function RoomPage() {
@@ -3302,10 +3171,3 @@ export default function RoomPage() {
   }
   return <RoomPageContent roomId={roomId} />;
 }
-
-
-
-
-
-
-
