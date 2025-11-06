@@ -6,9 +6,7 @@ import { UI_TOKENS } from "@/theme/layout";
 const SOUND_SLOTS = [
   "ui_click",
   "card_flip",
-  "drag_pickup",
   "drop_success",
-  "drop_invalid",
   "notify_success",
   "notify_error",
   "result_victory",

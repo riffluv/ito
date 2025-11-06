@@ -111,7 +111,7 @@ export function useCardSubmission({
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
 
   const playCardPlace = useSoundEffect("card_place");
-  const playDropInvalid = useSoundEffect("drop_invalid");
+  const playDropInvalid = useSoundEffect(undefined);
 
   const submitHintShownRef = useRef(false);
   const [shouldShowSubmitHint, setShouldShowSubmitHint] = useState(false);

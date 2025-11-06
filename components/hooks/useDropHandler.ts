@@ -546,7 +546,7 @@ const onDropAtPosition = useCallback(
 
 function useDropSounds(roomId: string) {
   const playCardPlace = useSoundEffect("card_place");
-  const playDropInvalid = useSoundEffect("drop_invalid");
+  const playDropInvalid = useCallback(() => {}, []);
   const soundManager = useSoundManager();
   const prewarmRoomRef = useRef<string | null>(null);
   const dropSoundReady = useRef(false);
@@ -556,7 +556,7 @@ function useDropSounds(roomId: string) {
     if (prewarmRoomRef.current === roomId && dropSoundReady.current) return;
     const targetRoom = roomId;
     prewarmRoomRef.current = targetRoom;
-    const dropSoundIds: SoundId[] = ["card_place", "drop_success", "drop_invalid", "drag_pickup"];
+      const dropSoundIds: SoundId[] = ["card_place", "drop_success"];
     void soundManager
       .prewarm(dropSoundIds)
       .then(() => {
