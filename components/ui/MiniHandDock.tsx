@@ -616,12 +616,39 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (roomStatus === "waiting" || roomStatus === "clue");
 
   // デプロイ直後の“初回だけ遅いことがある”告知（バージョンごとに1回）
-  const [showColdStartNotice, setShowColdStartNotice] = React.useState(false);
+  const [showColdStartNotice, setShowColdStartNotice] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const key = `ito:coldNotice:${APP_VERSION}`;
+      return window.localStorage.getItem(key) === "1";
+    } catch {
+      return false;
+    }
+  });
+  React.useEffect(() => {
+    if (!showQuickStartProgress) return undefined;
+    try {
+      const key = `ito:coldNotice:${APP_VERSION}`;
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(key);
+        window.localStorage.setItem(key, "1");
+      }
+      setShowColdStartNotice(true);
+      const t = window.setTimeout(() => setShowColdStartNotice(false), 4000);
+      return () => window.clearTimeout(t);
+    } catch {
+      setShowColdStartNotice(true);
+      const t = window.setTimeout(() => setShowColdStartNotice(false), 4000);
+      return () => window.clearTimeout(t);
+    }
+  }, [showQuickStartProgress]);
+
   React.useEffect(() => {
     if (!showQuickStartProgress) return;
     try {
+      if (typeof window === "undefined") return;
       const key = `ito:coldNotice:${APP_VERSION}`;
-      const seen = typeof window !== "undefined" ? localStorage.getItem(key) : "1";
+      const seen = localStorage.getItem(key);
       if (!seen) {
         setShowColdStartNotice(true);
         localStorage.setItem(key, "1");
