@@ -177,7 +177,7 @@ async function resetPlayerState(
   return snap.docs;
 }
 
-export const quickStart = functions.https.onCall(
+export const quickStart = functions.region("asia-northeast1").https.onCall(
   async (data: QuickStartRequest, context): Promise<QuickStartResult> => {
     const startedAt = Date.now();
     const stageTimer = createStageTimer(startedAt);

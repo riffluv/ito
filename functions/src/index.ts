@@ -11,6 +11,8 @@ import { systemMessagePlayerJoined } from "@/lib/server/systemMessages";
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
+const regionFunctions = functions.region("asia-northeast1");
+
 // Initialize admin if not already
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -88,7 +90,7 @@ async function recalcRoomCounts(roomId: string) {
 // 旧 onPlayerCreate / onPlayerDelete は onPlayerCreated / onPlayerDeleted に統合
 
 // Trigger on player update (e.g., lastSeen updates)
-export const onPlayerUpdate = functions.firestore
+export const onPlayerUpdate = regionFunctions.firestore
   .document("rooms/{roomId}/players/{playerId}")
   .onUpdate(async (change, ctx) => {
     const roomId = ctx.params.roomId as string;
@@ -121,7 +123,7 @@ function isPresenceConnActive(conn: any, now: number): boolean {
   return now - ts <= PRESENCE_STALE_THRESHOLD_MS;
 }
 
-export const onPresenceWrite = functions.database
+export const onPresenceWrite = regionFunctions.database
   .ref("presence/{roomId}/{uid}/{connId}")
   .onWrite(async (change, ctx) => {
     if (EMERGENCY_STOP) return null;
@@ -266,7 +268,7 @@ export const onPresenceWrite = functions.database
   });
 
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
-export const cleanupExpiredRooms = functions.pubsub
+export const cleanupExpiredRooms = regionFunctions.pubsub
   .schedule("every 10 minutes")
   .onRun(async (context) => {
     if (EMERGENCY_STOP) return null;
@@ -302,7 +304,7 @@ export const cleanupExpiredRooms = functions.pubsub
   });
 
 // 定期実行: 古いチャットの削除（14日以上前を削除）
-export const pruneOldChat = functions.pubsub
+export const pruneOldChat = regionFunctions.pubsub
   .schedule("every 24 hours")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
@@ -334,7 +336,7 @@ export const pruneOldChat = functions.pubsub
  * - Not in-progress (or in-progress but stale for long time)
  * Then delete players/chat and the room itself.
  */
-export const cleanupGhostRooms = functions.pubsub
+export const cleanupGhostRooms = regionFunctions.pubsub
   .schedule("every 15 minutes")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
@@ -450,7 +452,7 @@ export const cleanupGhostRooms = functions.pubsub
     return null;
   });
 
-export const presenceCleanup = functions.pubsub
+export const presenceCleanup = regionFunctions.pubsub
   .schedule("every 1 minutes")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
@@ -513,7 +515,7 @@ export const presenceCleanup = functions.pubsub
     return null;
   });
 
-export const pruneIdleRooms = functions.pubsub
+export const pruneIdleRooms = regionFunctions.pubsub
   .schedule("every 5 minutes")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
@@ -663,7 +665,7 @@ export const pruneIdleRooms = functions.pubsub
   });
 
 // ルームが新ラウンド（status: clue に遷移し round が増加）になったら、その部屋のチャットをクリア
-export const purgeChatOnRoundStart = functions.firestore
+export const purgeChatOnRoundStart = regionFunctions.firestore
   .document("rooms/{roomId}")
   .onUpdate(async (change, ctx) => {
     if (EMERGENCY_STOP) return null;
@@ -689,7 +691,7 @@ export const purgeChatOnRoundStart = functions.firestore
   });
 
 // players ドキュメント削除時: lastActiveAt を更新し、最後の1人が抜けた場合はルームを初期化＋クローズ
-export const onPlayerDeleted = functions.firestore
+export const onPlayerDeleted = regionFunctions.firestore
   .document("rooms/{roomId}/players/{playerId}")
   .onDelete(async (snap, ctx) => {
     if (EMERGENCY_STOP) return null;
@@ -753,7 +755,7 @@ export const onPlayerDeleted = functions.firestore
   });
 
 // 定期実行: オーファン（無人）ルームの削除（最終活動が24h以上前かつplayers=0）
-export const purgeOrphanRooms = functions.pubsub
+export const purgeOrphanRooms = regionFunctions.pubsub
   .schedule("every 60 minutes")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
@@ -776,7 +778,7 @@ export const purgeOrphanRooms = functions.pubsub
   });
 
 // 参加者作成時: ルームをアクティブ扱いに（expiresAt解除 + lastActiveAt更新）
-export const onPlayerCreated = functions.firestore
+export const onPlayerCreated = regionFunctions.firestore
   .document("rooms/{roomId}/players/{playerId}")
   .onCreate(async (_snap, ctx) => {
     if (EMERGENCY_STOP) return null;
@@ -818,7 +820,7 @@ export const onPlayerCreated = functions.firestore
 
 // 定期実行: 古い events の削除（右上トースト用イベントの整理）
 // 既定で 7 日より古いものを削除（環境変数 EVENT_RETENTION_DAYS で日数変更可能）
-export const pruneOldEvents = functions.pubsub
+export const pruneOldEvents = regionFunctions.pubsub
   .schedule("every 24 hours")
   .onRun(async () => {
     if (EMERGENCY_STOP) return null;
