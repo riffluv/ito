@@ -23,7 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 import type {
   SeatRequestViewState,
   SpectatorMachineState,
-} from "@/lib/hooks/useSpectatorFlow";
+} from "@/lib/spectator/v2/useSpectatorController";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
@@ -37,7 +37,7 @@ import { forceDetachAll } from "@/lib/firebase/presence";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
-import { requestSeat, SeatRequestSource, pruneProposalByEligible } from "@/lib/game/service";
+import { pruneProposalByEligible } from "@/lib/game/service";
 import { clearRevealPending } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
@@ -45,6 +45,7 @@ import { deriveSpectatorFlags } from "@/lib/room/spectatorRoles";
 import type {
   RoomMachineClientEvent,
   SpectatorReason as MachineSpectatorReason,
+  SpectatorRequestSource,
 } from "@/lib/state/roomMachine";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
@@ -832,15 +833,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     loading: spectatorHostLoading,
     error: spectatorHostError,
   } = useSpectatorHostQueue(isHost ? roomId : null);
-  const rejoinSessionKey = useMemo(
-    () => (uid ? `pendingRejoin:${roomId}` : null),
-    [uid, roomId]
-  );
-  const autoJoinSuppressKey = useMemo(
-    () => (uid ? `autoJoinSuppress:${roomId}:${uid}` : null),
-    [uid, roomId]
-  );
-
   const spectatorSession = useSpectatorSession({
     roomId,
     viewerUid: uid,
@@ -1411,14 +1403,13 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const spectatorController = useSpectatorController({
     roomId,
     uid,
-    rejoinSessionKey,
-    autoJoinSuppressKey,
     isSpectatorMode,
     spectatorMachineState,
     versionMismatchBlocksAccess,
     emitSpectatorEvent,
     setSeatRequestTimedOut,
     leavingRef,
+    spectatorSession,
   });
   const {
     state: {
@@ -1432,13 +1423,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       seatRequestSource,
     },
     actions: {
-      rememberRejoinIntent,
       clearRejoinIntent,
-      clearAutoJoinSuppress,
       suppressAutoJoinIntent,
-      queuePendingSeatRequest,
       clearPendingSeatRequest,
-      markSeatRequestIntent,
       handleSeatRecovery,
       cancelSeatRequestSafely,
     },
@@ -1492,66 +1479,30 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
-  const requestSeatNow = useCallback(
-    (source: SeatRequestSource) => {
-      if (!uid) return;
-      clearPendingSeatRequest();
-      leavingRef.current = true;
-      emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
-      void requestSeat(roomId, uid, displayName ?? null, source).catch(
-        (error) => {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          const errorCode =
-            error && typeof error === "object" && "code" in error
-              ? (error as { code?: string }).code
-              : undefined;
-
-          traceError("spectator.requestSeat.client", error, {
-            roomId,
-            uid,
-            source,
-            recallState: spectatorRecallEnabled ? "open" : "closed",
-            errorCode,
-          });
-
-          if (errorCode === "recall-closed") {
-            queuePendingSeatRequest(source);
-            leavingRef.current = false;
-            setSeatRequestTimedOut(false);
-            return;
-          }
-
-          emitSpectatorEvent({
-            type: "SPECTATOR_ERROR",
-            error: errorMessage,
-          });
-          leavingRef.current = false;
-          clearRejoinIntent();
-        }
-      );
-    },
-    [
-      uid,
-      roomId,
-      displayName,
-      leavingRef,
-      clearRejoinIntent,
-      emitSpectatorEvent,
-      spectatorRecallEnabled,
-      setSeatRequestTimedOut,
-    ]
-  );
-
   useEffect(() => {
     if (!uid) return;
     if (!hasPendingSeatRequest()) return;
     if (!spectatorRecallEnabled) return;
     const queued = consumePendingSeatRequest();
     if (!queued) return;
-    requestSeatNow(queued);
-  }, [uid, spectatorRecallEnabled, hasPendingSeatRequest,
-    markSeatRequestIntent, consumePendingSeatRequest, requestSeatNow]);
+    void handleSeatRecovery({
+      silent: true,
+      source: queued,
+      spectatorRecallEnabled,
+      roomStatus,
+      recallOpen,
+      notify,
+    });
+  }, [
+    uid,
+    spectatorRecallEnabled,
+    hasPendingSeatRequest,
+    consumePendingSeatRequest,
+    handleSeatRecovery,
+    roomStatus,
+    recallOpen,
+    notify,
+  ]);
 
   useEffect(() => {
     if (!versionMismatchBlocksAccess) {
@@ -2061,7 +2012,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       source,
     }: {
       silent: boolean;
-      source: SeatRequestSource;
+      source: Exclude<SpectatorRequestSource, null>;
     }) => {
       return handleSeatRecovery({
         silent,
@@ -2070,7 +2021,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         roomStatus,
         recallOpen,
         notify,
-        requestSeatNow,
       });
     },
     [
@@ -2079,7 +2029,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       roomStatus,
       recallOpen,
       notify,
-      requestSeatNow,
     ]
   );
   const handleRetryJoin = useCallback(async () => {

@@ -3,7 +3,7 @@ import React from "react";
 import { ChakraProvider } from "@chakra-ui/react";
 
 import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
-import type { SeatRequestViewState } from "@/lib/hooks/useSpectatorFlow";
+import type { SeatRequestViewState } from "@/lib/spectator/v2/useSpectatorController";
 import system from "@/theme";
 
 function renderNotice(

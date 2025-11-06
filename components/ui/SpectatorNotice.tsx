@@ -1,5 +1,5 @@
 import { AppButton } from "@/components/ui/AppButton";
-import type { SeatRequestViewState } from "@/lib/hooks/useSpectatorFlow";
+import type { SeatRequestViewState } from "@/lib/spectator/v2/useSpectatorController";
 import type { SpectatorReason } from "@/lib/state/roomMachine";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, HStack, Spinner, Text, VStack } from "@chakra-ui/react";

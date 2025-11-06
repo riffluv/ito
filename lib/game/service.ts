@@ -13,17 +13,19 @@ import {
 import { topicControls } from "@/lib/game/topicControls";
 import { db } from "@/lib/firebase/client";
 import { bumpMetric } from "@/lib/utils/metrics";
-import { logDebug } from "@/lib/utils/log";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
-  deleteDoc,
+  collection,
   doc,
-  getDoc,
+  getDocs,
   updateDoc,
   runTransaction,
   serverTimestamp,
   setDoc,
+  query,
+  where,
 } from "firebase/firestore";
+import { spectatorV2Service } from "@/lib/spectator/v2/service";
 
 export type ResetRoomKeepIds = Parameters<
   typeof resetRoomWithPruneInternal
@@ -204,69 +206,41 @@ export async function pruneProposalByEligible(
 
 export { topicControls };
 
-export type SeatRequestSource = "manual" | "auto";
-
-export async function requestSeat(
-  roomId: string,
-  uid: string,
-  displayName?: string | null,
-  source: SeatRequestSource = "manual"
-) {
-  const normalizedName =
-    typeof displayName === "string" ? displayName.trim() : "";
-  const cappedName =
-    normalizedName.length > 32 ? normalizedName.slice(0, 32) : normalizedName;
-
-  traceAction("spectator.requestSeat", { roomId, uid, source });
-
-  // Spectator V3: recallOpen チェック
-  const roomRef = doc(db!, "rooms", roomId);
-  const roomSnap = await getDoc(roomRef);
-  if (!roomSnap.exists()) {
-    throw new Error("部屋が見つかりません");
-  }
-  const room: any = roomSnap.data();
-  const recallOpen = room?.ui?.recallOpen ?? false;
-  const status = room?.status;
-
-  if (status !== "waiting" || !recallOpen) {
-    traceAction("spectator.requestSeat.blocked", { roomId, uid, status, recallOpen });
-    const error = new Error("現在は席に戻ることができません");
-    (error as Error & { code?: string }).code = "recall-closed";
-    throw error;
-  }
-
-  try {
-    const requestRef = doc(db!, "rooms", roomId, "rejoinRequests", uid);
-    try {
-      await deleteDoc(requestRef);
-    } catch (cleanupError) {
-      logDebug("spectator-flow", "request-seat-cleanup-failed", {
-        roomId,
-        uid,
-        cleanupError,
-      });
-    }
-    await setDoc(
-      requestRef,
-      {
-        status: "pending",
-        displayName: cappedName.length > 0 ? cappedName : null,
-        source,
-      },
-    );
-    bumpMetric("recall", "requested");
-  } catch (error) {
-    traceError("spectator.requestSeat", error, { roomId, uid, source });
-    throw error;
-  }
-}
-
 export async function cancelSeatRequest(roomId: string, uid: string) {
   traceAction("spectator.cancelSeatRequest", { roomId, uid });
   try {
-    await deleteDoc(doc(db!, "rooms", roomId, "rejoinRequests", uid));
-    bumpMetric("recall", "cancelled");
+    if (!db) {
+      throw new Error("firebase-unavailable");
+    }
+    const sessionQuery = query(
+      collection(db, "spectatorSessions"),
+      where("roomId", "==", roomId),
+      where("viewerUid", "==", uid)
+    );
+    const snapshot = await getDocs(sessionQuery);
+    if (snapshot.empty) {
+      return;
+    }
+    let cancelled = false;
+    const tasks: Promise<void>[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data() as Record<string, unknown>;
+      const rejoin = data.rejoinRequest as Record<string, unknown> | undefined;
+      if (!rejoin || rejoin.status !== "pending") {
+        return;
+      }
+      tasks.push(
+        spectatorV2Service
+          .cancelRejoin({ sessionId: docSnap.id, roomId })
+          .then(() => {
+            cancelled = true;
+          })
+      );
+    });
+    await Promise.all(tasks);
+    if (cancelled) {
+      bumpMetric("recall", "cancelled");
+    }
   } catch (error) {
     traceError("spectator.cancelSeatRequest", error, { roomId, uid });
     throw error;
@@ -283,7 +257,6 @@ export const GameService = {
   resetRoomWithPrune,
   finalizeReveal,
   topicControls,
-  requestSeat,
   cancelSeatRequest,
   pruneProposalByEligible,
   beginRevealPending,

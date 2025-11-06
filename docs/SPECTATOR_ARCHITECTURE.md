@@ -139,7 +139,7 @@
 
 ### 6.2 クライアントサービス層
 - `lib/spectator/v2/service.ts` で API 呼び出し／Firestore 読み込みラッパを提供。
-- `lib/spectator/v2/adapters` にて既存 hook との互換用ヘルパーを実装。
+- `lib/spectator/v2/useSpectatorController.ts` にて UI 向けの統合ステート／アクションを提供。
 
 ## 7. テレメトリ・ログ
 - `traceAction("spectatorV2.*")` を新設し、セッション開始／観戦開始／復帰申請／承認／拒否を計測。
@@ -150,10 +150,10 @@
 
 1. **設計確定**: 本ドキュメントをレビューし、データモデル・API・FSM の仕様を固める。
 2. **基盤実装**: `spectatorSessionMachine`・サービス層・API を実装し、ユニットテストを整備。
-3. **UI 組み込み（ベータフラグ）**: フラグ `NEXT_PUBLIC_SPECTATOR_V2` 有効時に新フローを有効化。旧フローは並存させる。
+3. **UI 組み込み**: フラグ `NEXT_PUBLIC_SPECTATOR_V2` は廃止し、新フローを常時有効化する。
 4. **E2E 検証**: Playwright で観戦入室→承認のシナリオをカバー。
 5. **計測・安定化**: ラグ改善を確認したら旧フローを無効化する時期を決定。
-6. **旧フロー撤去**: 旧 `useSpectatorFlow` 等を削除し、関連ドキュメントを更新。
+6. **旧フロー撤去**: 旧 `useSpectatorFlow` 等を削除し、`useSpectatorController` に一本化。（本ドキュメント反映済み）
 7. **公開観戦準備**: 招待以外の観戦導線（公開ロビー、チケット）に着手。
 
 ## 9. 未確定事項 / ToDo
@@ -169,7 +169,7 @@
 
 ## 10. 2025-11-05 Hook 順序リファクタリングメモ
 
-- `app/rooms/[roomId]/page.tsx` で観戦用 Hook 群（`useSpectatorSession` / `useSpectatorFlow` など）を `RoomPageContentInner` に集約し、認証・ルーム読み込み中の早期 return では **React Hook が追加されない** ことを保証。`React error #310` の再発を防止。
+- `app/rooms/[roomId]/page.tsx` で観戦用 Hook 群（`useSpectatorSession` / `useSpectatorController` など）を `RoomPageContentInner` に集約し、認証・ルーム読み込み中の早期 return では **React Hook が追加されない** ことを保証。`React error #310` の再発を防止。
 - レンダー中に `notify` / `setState` を実行していた箇所を `useEffect`／`useCallback` 内へ整理し、副作用の発火タイミングを安定化。
 - Service Worker 更新監視 (`subscribeToServiceWorkerUpdates`) を内側へ移動しつつ、`RoomPageContent` ではローディング判定とルーター遷移処理のみを担当する構造に変更。
 - Jest (`__tests__/SpectatorNotice.test.tsx`) と `npm run typecheck` で回帰を確認済み。観戦ベータの検証手順に影響はなく、FSM/Service Worker の流れも従来通り。

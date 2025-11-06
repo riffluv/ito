@@ -36,6 +36,7 @@ export type UseSpectatorSessionResult = {
     reset: () => void;
     approveRejoin: (sessionId: string) => Promise<void>;
     rejectRejoin: (sessionId: string, reason?: string | null) => Promise<void>;
+    cancelRejoin: (sessionId?: string | null) => Promise<void>;
   };
   is: {
     idle: boolean;
@@ -92,6 +93,7 @@ export function useSpectatorSession(options: UseSpectatorSessionOptions): UseSpe
     }
   }, [options?.roomId, options?.viewerUid, send, state.context.roomId, state.value]);
 
+  const context = state.context;
   const actions = useMemo(
     () => ({
       consumeInvite: (inviteId: string) => {
@@ -120,11 +122,21 @@ export function useSpectatorSession(options: UseSpectatorSessionOptions): UseSpe
         }
         await services.rejectRejoin({ sessionId, roomId, reason });
       },
+      cancelRejoin: async (sessionId?: string | null) => {
+        const resolvedSessionId = sessionId ?? context.sessionId;
+        if (!resolvedSessionId) {
+          return;
+        }
+        const roomId = activeRoomId;
+        if (!roomId) {
+          throw new Error("room-not-initialized");
+        }
+        await services.cancelRejoin({ sessionId: resolvedSessionId, roomId });
+      },
     }),
-    [send, services, activeRoomId]
+    [send, services, activeRoomId, context.sessionId]
   );
 
-  const context = state.context;
   const status = context.status;
 
   const is = {
