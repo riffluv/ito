@@ -611,6 +611,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       roomStatus === "finished");
 
   const quickStartDisabled = autoStartLocked || quickStartPending;
+  const showQuickStartProgress = isHost && quickStartPending;
 
   const LOADING_BG = "rgba(42,48,58,0.95)";
   const preparing = !!(
@@ -649,6 +650,35 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       )}
 
       {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
+      {showQuickStartProgress && (
+        <Box
+          position="fixed"
+          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={56}
+          bg="rgba(22,26,36,0.92)"
+          border="1px solid rgba(255,255,255,0.25)"
+          borderRadius="4px"
+          px={4}
+          py={3}
+          boxShadow="3px 3px 0 rgba(0,0,0,0.6)"
+          pointerEvents="none"
+        >
+          <HStack gap="10px" align="center">
+            <Spinner size="sm" color="rgba(255,255,255,0.9)" />
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="rgba(255,255,255,0.92)"
+              letterSpacing="0.04em"
+            >
+              カードを配布しています…
+            </Text>
+          </HStack>
+        </Box>
+      )}
+
       {(roomStatus === "waiting" && !preparing && (isHost || hostClaimActive)) && (
         <Box
           position="fixed"
