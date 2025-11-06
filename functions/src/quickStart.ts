@@ -217,7 +217,7 @@ async function resetPlayerState(
   return snap.docs;
 }
 
-export const quickStart = functions.region("asia-northeast1").https.onCall(
+export const quickStart = functions.region("asia-northeast1").runWith({ minInstances: 1, memory: "256MB" }).https.onCall(
   async (data: QuickStartRequest, context): Promise<QuickStartResult> => {
     const startedAt = Date.now();
     const stageTimer = createStageTimer(startedAt);
@@ -431,4 +431,5 @@ const presencePromise = skipPresence
     return result;
   }
 );
+
 

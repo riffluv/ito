@@ -611,7 +611,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       roomStatus === "finished");
 
   const quickStartDisabled = autoStartLocked || quickStartPending;
-  const showQuickStartProgress = isHost && quickStartPending;
+  const showQuickStartProgress =
+    (quickStartPending || autoStartLocked) &&
+    (roomStatus === "waiting" || roomStatus === "clue");
+
+  // デプロイ直後の“初回だけ遅いことがある”告知（バージョンごとに1回）
+  const [showColdStartNotice, setShowColdStartNotice] = React.useState(false);
+  React.useEffect(() => {
+    if (!showQuickStartProgress) return;
+    try {
+      const key = `ito:coldNotice:${APP_VERSION}`;
+      const seen = typeof window !== "undefined" ? localStorage.getItem(key) : "1";
+      if (!seen) {
+        setShowColdStartNotice(true);
+        localStorage.setItem(key, "1");
+        const t = setTimeout(() => setShowColdStartNotice(false), 4000);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, [showQuickStartProgress]);
 
   const LOADING_BG = "rgba(42,48,58,0.95)";
   const preparing = !!(
@@ -665,17 +683,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           boxShadow="3px 3px 0 rgba(0,0,0,0.6)"
           pointerEvents="none"
         >
-          <HStack gap="10px" align="center">
-            <Spinner size="sm" color="rgba(255,255,255,0.9)" />
-            <Text
-              fontSize="sm"
-              fontWeight="bold"
-              color="rgba(255,255,255,0.92)"
-              letterSpacing="0.04em"
-            >
-              カードを配布しています…
-            </Text>
-          </HStack>
+          <VStack gap="6px" align="center">
+            <HStack gap="10px" align="center">
+              <Spinner size="sm" color="rgba(255,255,255,0.9)" />
+              <Text
+                fontSize="sm"
+                fontWeight="bold"
+                color="rgba(255,255,255,0.92)"
+                letterSpacing="0.04em"
+              >
+                カードを配布しています…
+              </Text>
+            </HStack>
+            {showColdStartNotice ? (
+              <Text
+                fontSize="xs"
+                color="rgba(255,255,255,0.75)"
+                letterSpacing="0.02em"
+              >
+                初回は数秒遅いことがあります
+              </Text>
+            ) : null}
+          </VStack>
         </Box>
       )}
 
@@ -1335,6 +1364,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     </>
   );
 }
+
+
 
 
 
