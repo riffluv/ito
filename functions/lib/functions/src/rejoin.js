@@ -301,8 +301,33 @@ exports.onRoomWaitingProcessRejoins = functions.firestore
     if (requestsSnapshot.empty) {
         return;
     }
+    const roomUpdateTime = typeof change.after.updateTime?.toMillis === "function"
+        ? change.after.updateTime.toMillis()
+        : null;
     for (const doc of requestsSnapshot.docs) {
         const uid = doc.id;
+        const requestUpdateTime = typeof doc.updateTime?.toMillis === "function"
+            ? doc.updateTime.toMillis()
+            : 0;
+        if (roomUpdateTime !== null && requestUpdateTime < roomUpdateTime) {
+            try {
+                await doc.ref.delete();
+                logger.debug("rejoin.onWaiting.stale", {
+                    roomId,
+                    uid,
+                    roomUpdateTime,
+                    requestUpdateTime,
+                });
+            }
+            catch (error) {
+                logger.error("rejoin.onWaiting.stale.error", {
+                    roomId,
+                    uid,
+                    error,
+                });
+            }
+            continue;
+        }
         try {
             const result = await handleRejoinRequest(roomId, uid, "roomWaiting");
             logger.debug("rejoin.onWaiting.result", { roomId, uid, result });
