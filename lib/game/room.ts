@@ -21,6 +21,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  setDoc,
   runTransaction,
   serverTimestamp,
   updateDoc,
@@ -52,8 +53,32 @@ type DealCandidate = { id: string; uid?: string; lastSeen?: any };
 
 const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 0;
 
+export type DealNumbersOptions = {
+  skipPresence?: boolean;
+};
+
 function proposalQueueKey(roomId: string, playerId: string) {
   return `proposal:${roomId}:player:${playerId}`;
+}
+
+const ROOM_PROPOSAL_COLLECTION = "roomProposals";
+
+function proposalRef(roomId: string) {
+  return doc(db!, ROOM_PROPOSAL_COLLECTION, roomId);
+}
+
+async function syncRoomProposal(
+  roomId: string,
+  proposal: (string | null)[]
+) {
+  try {
+    await updateDoc(doc(db!, "rooms", roomId), {
+      "order.proposal": proposal,
+      lastActiveAt: serverTimestamp(),
+    });
+  } catch (error) {
+    traceError("proposal.syncRoom", error, { roomId });
+  }
 }
 
 function readProposal(source: unknown): (string | null)[] {
@@ -150,12 +175,23 @@ export async function startGame(roomId: string) {
 }
 
 // ホストがトピック選択後に配札（重複なし）
-export async function dealNumbers(roomId: string, attempt = 0): Promise<number> {
+export async function dealNumbers(
+  roomId: string,
+  attempt = 0,
+  options?: DealNumbersOptions
+): Promise<number> {
   const startedAt = Date.now();
-  traceAction("deal.start", { roomId, attempt: String(attempt) });
+  const skipPresence = options?.skipPresence === true;
+  traceAction("deal.start", {
+    roomId,
+    attempt: String(attempt),
+    skipPresence: skipPresence ? "1" : "0",
+  });
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const min = 1;
+  const max = 100;
 
-  const presenceSupportedNow = presenceSupported();
+  const presenceSupportedNow = !skipPresence && presenceSupported();
   const presencePromise: Promise<string[] | null> = presenceSupportedNow
     ? fetchPresenceUids(roomId)
         .then((fetched) =>
@@ -206,18 +242,48 @@ export async function dealNumbers(roomId: string, attempt = 0): Promise<number> 
   const seatHistory = Object.fromEntries(
     playerIds.map((id, index) => [id, index])
   );
+  const generatedNumbers = generateDeterministicNumbers(
+    playerIds.length,
+    min,
+    max,
+    seed
+  );
+  const numberMap = playerIds.reduce<Record<string, number | null>>(
+    (acc, id, index) => {
+      acc[id] =
+        typeof generatedNumbers[index] === "number"
+          ? generatedNumbers[index]
+          : null;
+      return acc;
+    },
+    {}
+  );
 
   await updateDoc(doc(db!, "rooms", roomId), {
     deal: {
       seed,
-      min: 1,
-      max: 100,
+      min,
+      max,
       players: playerIds,
       seatHistory,
     },
     "order.total": ordered.length,
+    "order.numbers": numberMap,
     lastActiveAt: serverTimestamp(),
   });
+  try {
+    await setDoc(
+      proposalRef(roomId),
+      {
+        proposal: [],
+        seed,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    traceError("proposal.reset", error, { roomId });
+  }
   traceAction("deal.end", {
     roomId,
     count: ordered.length,
@@ -302,7 +368,22 @@ export async function resetRoom(roomId: string) {
 // 並べ替え提案を保存（ルームの order.proposal に保存）
 export async function setOrderProposal(roomId: string, proposal: string[]) {
   const _db = requireDb();
-  await updateDoc(doc(_db, "rooms", roomId), { "order.proposal": proposal });
+  const normalized = Array.isArray(proposal)
+    ? proposal.map((value) =>
+        typeof value === "string" && value.length > 0 ? value : null
+      )
+    : [];
+  await Promise.all([
+    updateDoc(doc(_db, "rooms", roomId), { "order.proposal": normalized }),
+    setDoc(
+      doc(_db, ROOM_PROPOSAL_COLLECTION, roomId),
+      {
+        proposal: normalized,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    ),
+  ]);
 }
 
 export type ProposalWriteResult = "ok" | "noop" | "missing-deal";
@@ -323,15 +404,18 @@ export async function addCardToProposalAtPosition(
   targetIndex: number = -1
 ): Promise<ProposalWriteResult> {
   const roomRef = doc(db!, "rooms", roomId);
+  const proposalDocRef = proposalRef(roomId);
   const queueScope = proposalQueueKey(roomId, playerId);
 
-  const runOnce = (attemptIndex: number) => {
+  const runOnce = async (attemptIndex: number): Promise<ProposalWriteResult> => {
     const readTimestamp =
       typeof performance !== "undefined" && typeof performance.now === "function"
         ? () => performance.now()
         : () => Date.now();
     const enqueuedAt = readTimestamp();
-    return enqueueFirestoreWrite<ProposalWriteResult>(
+    let proposalToSync: (string | null)[] | null = null;
+
+    const result = await enqueueFirestoreWrite<ProposalWriteResult>(
       queueScope,
       async () => {
         const dequeuedAt = readTimestamp();
@@ -344,7 +428,9 @@ export async function addCardToProposalAtPosition(
           queueWaitMs,
           queueScope,
         };
+
         traceAction("lag.drop.tx.start", attemptContext);
+
         let txResult: ProposalWriteResult | "error" | null = null;
         let detailMetrics:
           | {
@@ -356,19 +442,25 @@ export async function addCardToProposalAtPosition(
               finalIndex: number;
               targetIndex: number;
               roomGetMs: number;
+              proposalGetMs: number;
               playerGetMs: number;
               prepareMs: number;
             }
           | null = null;
+
         try {
-          const result = await runTransaction(db!, async (tx) => {
+          const transactionResult = await runTransaction(db!, async (tx) => {
             const readStart = readTimestamp();
             const roomSnap = await tx.get(roomRef);
             const afterRoomGet = readTimestamp();
             if (!roomSnap.exists()) throw new Error("room not found");
             const room: any = roomSnap.data();
-            if (room.status !== "clue") return "noop";
-            if (room?.options?.resolveMode !== "sort-submit") return "noop";
+            if (room.status !== "clue") {
+              return { status: "noop" as ProposalWriteResult };
+            }
+            if (room?.options?.resolveMode !== "sort-submit") {
+              return { status: "noop" as ProposalWriteResult };
+            }
 
             const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
               ? (room.deal.players as string[])
@@ -380,7 +472,7 @@ export async function addCardToProposalAtPosition(
                 attempt: String(attemptIndex),
                 reason: "no-round-players",
               });
-              return "missing-deal";
+              return { status: "missing-deal" as ProposalWriteResult };
             }
             if (!roundPlayers.includes(playerId)) {
               traceAction("lag.drop.missingDeal", {
@@ -389,12 +481,10 @@ export async function addCardToProposalAtPosition(
                 attempt: String(attemptIndex),
                 reason: "player-not-in-round",
               });
-              return "missing-deal";
+              return { status: "missing-deal" as ProposalWriteResult };
             }
 
-            const afterPlayerGet = afterRoomGet;
-
-            const maxCount: number = roundPlayers.length;
+            const maxCount = roundPlayers.length;
             if (maxCount <= 0) {
               traceAction("lag.drop.missingDeal", {
                 roomId,
@@ -402,11 +492,28 @@ export async function addCardToProposalAtPosition(
                 attempt: String(attemptIndex),
                 reason: "invalid-max-count",
               });
-              return "missing-deal";
+              return { status: "missing-deal" as ProposalWriteResult };
             }
 
-            const current = readProposal(room?.order?.proposal);
-            if (current.includes(playerId)) return "noop";
+            const proposalSnap = await tx.get(proposalDocRef);
+            const afterProposalGet = readTimestamp();
+            const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+
+            const roomSeed =
+              typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+            const docSeed =
+              typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+
+            let current = readProposal(
+              proposalData?.proposal ?? room?.order?.proposal
+            );
+            if (docSeed && roomSeed && docSeed !== roomSeed) {
+              current = [];
+            }
+
+            if (current.includes(playerId)) {
+              return { status: "noop" as ProposalWriteResult };
+            }
 
             let next = [...current];
 
@@ -426,7 +533,7 @@ export async function addCardToProposalAtPosition(
               const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
               if (clamped < next.length) {
                 if (typeof next[clamped] === "string" && next[clamped]) {
-                  return "noop";
+                  return { status: "noop" as ProposalWriteResult };
                 }
               } else {
                 next.length = clamped + 1;
@@ -463,17 +570,28 @@ export async function addCardToProposalAtPosition(
               finalIndex: normalized.indexOf(playerId),
               targetIndex,
               roomGetMs: Math.max(0, Math.round(afterRoomGet - readStart)),
+              proposalGetMs: Math.max(0, Math.round(afterProposalGet - afterRoomGet)),
               playerGetMs: 0,
-              prepareMs: Math.max(0, Math.round(afterPrepare - afterPlayerGet)),
+              prepareMs: Math.max(0, Math.round(afterPrepare - afterProposalGet)),
             };
 
-            tx.update(roomRef, {
-              "order.proposal": normalized,
-              lastActiveAt: serverTimestamp(),
-            });
+            tx.set(
+              proposalDocRef,
+              {
+                proposal: normalized,
+                seed: roomSeed ?? docSeed ?? null,
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
 
-            return "ok";
+            return {
+              status: "ok" as ProposalWriteResult,
+              proposal: normalized,
+            };
           });
+
+          txResult = transactionResult.status;
           if (detailMetrics) {
             const {
               roundPlayerCount,
@@ -484,6 +602,7 @@ export async function addCardToProposalAtPosition(
               finalIndex,
               targetIndex: detailTargetIndex,
               roomGetMs,
+              proposalGetMs,
               playerGetMs,
               prepareMs,
             } = detailMetrics;
@@ -497,12 +616,20 @@ export async function addCardToProposalAtPosition(
               finalIndex,
               targetIndex: detailTargetIndex,
               roomGetMs,
+              proposalGetMs,
               playerGetMs,
               prepareMs,
             });
           }
-          txResult = result;
-          return result;
+
+          if (
+            transactionResult.status === "ok" &&
+            transactionResult.proposal
+          ) {
+            proposalToSync = transactionResult.proposal;
+          }
+
+          return transactionResult.status;
         } catch (error) {
           txResult = "error";
           throw error;
@@ -523,6 +650,12 @@ export async function addCardToProposalAtPosition(
       },
       { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
     );
+
+    if (proposalToSync) {
+      await syncRoomProposal(roomId, proposalToSync);
+    }
+
+    return result;
   };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -562,7 +695,9 @@ export async function addCardToProposalAtPosition(
           roomId,
           playerId,
         });
-        throw new Error("カードの提出準備が整っていません。通信状況をご確認のうえ、再接続またはホストに確認してください。");
+        throw new Error(
+          "カードの提出準備が整っていません。通信状況をご確認のうえ、再接続またはホストに確認してください。"
+        );
       }
       continue;
     }
@@ -577,10 +712,12 @@ export async function addCardToProposalAtPosition(
 // proposal からカードを取り除き、待機エリアへ戻す
 export async function removeCardFromProposal(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
+  const proposalDocRef = proposalRef(roomId);
   const queueScope = proposalQueueKey(roomId, playerId);
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
+      let proposalToSync: (string | null)[] | null = null;
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);
         if (!roomSnap.exists()) throw new Error("room not found");
@@ -594,16 +731,36 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
         if (!roundPlayers.includes(playerId)) return;
         const maxCount: number = roundPlayers.length;
         if (maxCount <= 0) return;
-        const current = readProposal(room?.order?.proposal);
+        const proposalSnap = await tx.get(proposalDocRef);
+        const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+        const roomSeed =
+          typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+        const docSeed =
+          typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+        let current = readProposal(
+          proposalData?.proposal ?? room?.order?.proposal
+        );
+        if (docSeed && roomSeed && docSeed !== roomSeed) {
+          current = [];
+        }
         const targetIndex = current.findIndex((v) => v === playerId);
         if (targetIndex < 0) return;
         current[targetIndex] = null;
         const normalized = normalizeProposal(current, maxCount);
-        tx.update(roomRef, {
-          "order.proposal": normalized,
-          lastActiveAt: serverTimestamp(),
-        });
+        tx.set(
+          proposalDocRef,
+          {
+            proposal: normalized,
+            seed: roomSeed ?? docSeed ?? null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        proposalToSync = normalized;
       });
+      if (proposalToSync) {
+        await syncRoomProposal(roomId, proposalToSync);
+      }
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );
@@ -614,10 +771,12 @@ export async function moveCardInProposalToPosition(
   targetIndex: number
 ) {
   const roomRef = doc(db!, "rooms", roomId);
+  const proposalDocRef = proposalRef(roomId);
   const queueScope = proposalQueueKey(roomId, playerId);
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
+      let proposalToSync: (string | null)[] | null = null;
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);
         if (!roomSnap.exists()) throw new Error("room not found");
@@ -631,7 +790,18 @@ export async function moveCardInProposalToPosition(
         if (!roundPlayers.includes(playerId)) return;
         const maxCount: number = roundPlayers.length;
         if (maxCount <= 0) return;
-        const current = readProposal(room?.order?.proposal);
+        const proposalSnap = await tx.get(proposalDocRef);
+        const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+        const roomSeed =
+          typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+        const docSeed =
+          typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+        let current = readProposal(
+          proposalData?.proposal ?? room?.order?.proposal
+        );
+        if (docSeed && roomSeed && docSeed !== roomSeed) {
+          current = [];
+        }
         const fromIdx = current.findIndex((v) => v === playerId);
         if (fromIdx < 0) return;
         const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
@@ -648,11 +818,20 @@ export async function moveCardInProposalToPosition(
           current.length = maxCount;
         }
         const normalized = normalizeProposal(current, maxCount);
-        tx.update(roomRef, {
-          "order.proposal": normalized,
-          lastActiveAt: serverTimestamp(),
-        });
+        tx.set(
+          proposalDocRef,
+          {
+            proposal: normalized,
+            seed: roomSeed ?? docSeed ?? null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        proposalToSync = normalized;
       });
+      if (proposalToSync) {
+        await syncRoomProposal(roomId, proposalToSync);
+      }
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );

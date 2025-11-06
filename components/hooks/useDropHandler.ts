@@ -26,6 +26,7 @@ interface UseDropHandlerProps {
   proposal?: string[];
   hasNumber: boolean;
   mePlaced: boolean;
+  dealReady: boolean;
 }
 
 export function useDropHandler({
@@ -37,6 +38,7 @@ export function useDropHandler({
   proposal: _proposal,
   hasNumber,
   mePlaced: _mePlaced,
+  dealReady,
 }: UseDropHandlerProps) {
   const soundManager = useSoundManager();
   const { playSuccessSound, playInvalidSound } = useDropSounds(roomId);
@@ -47,6 +49,7 @@ export function useDropHandler({
     meId,
     roomId,
     playInvalidSound,
+    dealReady,
   });
 
   const [pending, setPending] = useState<(string | null)[]>([]);
@@ -150,6 +153,12 @@ export function useDropHandler({
       }
     };
   }, [roomStatus, soundManager]);
+
+  useEffect(() => {
+    if (!soundManager) return;
+    if (!dealReady) return;
+    void soundManager.prepareForInteraction();
+  }, [dealReady, soundManager]);
 
   useEffect(() => {
     if (Array.isArray(_proposal)) {
@@ -590,6 +599,7 @@ type DropEligibilityOptions = {
   meId: string;
   roomId: string;
   playInvalidSound: () => void;
+  dealReady: boolean;
 };
 
 type DropValidationResult =
@@ -606,17 +616,36 @@ function useDropEligibility({
   meId,
   roomId,
   playInvalidSound,
+  dealReady,
 }: DropEligibilityOptions) {
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
+    if (!dealReady) return false;
     const ready = !!(me && typeof me.clue1 === "string" && me.clue1.trim());
     if (!ready) return false;
     return true;
-  }, [roomStatus, hasNumber, me?.clue1]);
+  }, [roomStatus, hasNumber, dealReady, me?.clue1]);
 
   const ensureCanDrop = useCallback(
     (pid: string): DropValidationResult => {
+      if (!dealReady) {
+        traceAction("interaction.drop.blocked", {
+          roomId,
+          playerId: meId,
+          reason: "deal-pending",
+        });
+        playInvalidSound();
+        notify({
+          id: `${roomId}-deal-pending`,
+          title: "配札を待っています",
+          description: "数字の配布が終わるまでカードは動かせません。",
+          type: "info",
+          duration: 1800,
+        });
+        return { ok: false, outcome: "error" };
+      }
+
       if (!canDrop) {
         traceAction("interaction.drop.blocked", {
           roomId,
@@ -652,7 +681,7 @@ function useDropEligibility({
 
       return { ok: true };
     },
-    [canDrop, me, meId, playInvalidSound, roomId]
+    [canDrop, dealReady, me, meId, playInvalidSound, roomId]
   );
 
   return { canDrop, ensureCanDrop };

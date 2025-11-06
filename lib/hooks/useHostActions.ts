@@ -7,7 +7,6 @@ import {
   submitSortedOrder,
   topicControls,
   beginRevealPending,
-  clearRevealPending,
 } from "@/lib/game/service";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import {
@@ -130,6 +129,7 @@ export function useHostActions({
         basePlayerCount,
         { maxDrift: 3 }
       );
+      const shouldSkipPresenceCheck = activeCount <= 2;
       if (activeCount < 2 && basePlayerCount < 2) {
         traceAction("ui.host.quickStart.warning", {
           roomId,
@@ -217,12 +217,16 @@ export function useHostActions({
         } catch {}
 
         if (effectiveType === "カスタム") {
-          await topicControls.dealNumbers(roomId);
+          await topicControls.dealNumbers(roomId, {
+            skipPresence: shouldSkipPresenceCheck,
+          });
         } else {
           const selectType =
             effectiveType === "カスタム" ? "通常版" : effectiveType;
           await topicControls.selectCategory(roomId, selectType as any);
-          await topicControls.dealNumbers(roomId);
+          await topicControls.dealNumbers(roomId, {
+            skipPresence: shouldSkipPresenceCheck,
+          });
         }
 
         try {
@@ -469,6 +473,8 @@ export function useHostActions({
     clearAutoStartLock,
   ]);
 
+  const REVEAL_DELAY_MS = 500;
+
   const evalSorted = useCallback(async () => {
     if (!proposal || proposal.length === 0) return;
     const list = proposal.filter(
@@ -480,18 +486,8 @@ export function useHostActions({
 
     const startedAt =
       typeof performance !== "undefined" ? performance.now() : null;
-    let revealPendingStarted = false;
-
     try {
       traceAction("ui.order.submit", { roomId, count: list.length });
-      try {
-        void beginRevealPending(roomId);
-        revealPendingStarted = true;
-      } catch (revealError) {
-        traceError("ui.order.submit.revealPending", revealError, {
-          roomId,
-        });
-      }
       await submitSortedOrder(roomId, list);
       if (startedAt !== null) {
         setMetric(
@@ -500,6 +496,16 @@ export function useHostActions({
           Math.round(performance.now() - startedAt)
         );
       }
+      if (REVEAL_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, REVEAL_DELAY_MS));
+      }
+      try {
+        await beginRevealPending(roomId);
+      } catch (revealError) {
+        traceError("ui.order.submit.revealPending", revealError, {
+          roomId,
+        });
+      }
     } catch (error: any) {
       if (startedAt !== null) {
         setMetric(
@@ -507,9 +513,6 @@ export function useHostActions({
           "submitSortedOrderFailureMs",
           Math.round(performance.now() - startedAt)
         );
-      }
-      if (revealPendingStarted) {
-        void clearRevealPending(roomId);
       }
       traceError("ui.order.submit", error, { roomId, count: list.length });
       notify({

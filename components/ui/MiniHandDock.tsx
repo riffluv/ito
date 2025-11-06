@@ -638,9 +638,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           isVisible
           disabled={!allSubmitted}
           onClick={async () => {
-            beginReveal();
             try {
               await evalSorted();
+              beginReveal();
             } catch {
               endReveal();
             }

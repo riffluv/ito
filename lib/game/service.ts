@@ -6,6 +6,7 @@ import {
   startGame as startGameInternal,
   submitSortedOrder as submitSortedOrderInternal,
   finalizeReveal as finalizeRevealInternal,
+  type DealNumbersOptions,
 } from "@/lib/game/room";
 import {
   resetRoomWithPrune as resetRoomWithPruneInternal,
@@ -44,10 +45,13 @@ export async function startGame(roomId: string) {
   }
 }
 
-export async function dealNumbers(roomId: string) {
+export async function dealNumbers(
+  roomId: string,
+  options?: DealNumbersOptions
+) {
   traceAction("numbers.deal", { roomId });
   try {
-    return await dealNumbersInternal(roomId);
+    return await dealNumbersInternal(roomId, 0, options);
   } catch (error) {
     traceError("numbers.deal", error, { roomId });
     throw error;
