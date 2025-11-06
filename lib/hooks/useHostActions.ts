@@ -209,6 +209,9 @@ export function useHostActions({
 
       let success = false;
       try {
+        if (shouldPlaySound) {
+          playOrderConfirm();
+        }
         const callable = functions
           ? httpsCallable<
               { roomId: string; options?: Record<string, unknown> },
@@ -232,9 +235,6 @@ export function useHostActions({
           topicType: payload.topicType ?? effectiveType,
           topic: payload.topic ?? "",
         });
-        if (shouldPlaySound) {
-          playOrderConfirm();
-        }
 
         try {
           delete (window as any).__ITO_LAST_RESET;
@@ -579,6 +579,7 @@ export function useHostActions({
           if (!ensurePresenceReady()) {
             return;
           }
+          playOrderConfirm();
           const callable = functions
             ? httpsCallable<
                 { roomId: string; options?: Record<string, unknown> },
@@ -599,7 +600,6 @@ export function useHostActions({
             roomId,
             assigned: String(result?.data?.assignedCount ?? -1),
           });
-          playOrderConfirm();
           try {
             postRoundReset(roomId);
           } catch {}

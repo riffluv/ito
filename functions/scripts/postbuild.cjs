@@ -20,6 +20,14 @@ const artifacts = [
     from: path.join(srcDir, 'rejoin.js.map'),
     to: path.join(root, 'lib', 'rejoin.js.map'),
   },
+  {
+    from: path.join(srcDir, 'quickStart.js'),
+    to: path.join(root, 'lib', 'quickStart.js'),
+  },
+  {
+    from: path.join(srcDir, 'quickStart.js.map'),
+    to: path.join(root, 'lib', 'quickStart.js.map'),
+  },
 ];
 
 for (const { from, to } of artifacts) {

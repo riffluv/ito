@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestUpdate = exports.onRejoinRequestCreate = exports.pruneOldEvents = exports.onPlayerCreated = exports.purgeOrphanRooms = exports.onPlayerDeleted = exports.purgeChatOnRoundStart = exports.pruneIdleRooms = exports.presenceCleanup = exports.cleanupGhostRooms = exports.pruneOldChat = exports.cleanupExpiredRooms = exports.onPresenceWrite = exports.onPlayerUpdate = void 0;
+exports.quickStart = exports.onRoomWaitingProcessRejoins = exports.onRejoinRequestUpdate = exports.onRejoinRequestCreate = exports.pruneOldEvents = exports.onPlayerCreated = exports.purgeOrphanRooms = exports.onPlayerDeleted = exports.purgeChatOnRoundStart = exports.pruneIdleRooms = exports.presenceCleanup = exports.cleanupGhostRooms = exports.pruneOldChat = exports.cleanupExpiredRooms = exports.onPresenceWrite = exports.onPlayerUpdate = void 0;
 const presence_1 = require("@/lib/constants/presence");
 const roomActions_1 = require("@/lib/server/roomActions");
 const systemMessages_1 = require("@/lib/server/systemMessages");
@@ -51,6 +51,7 @@ const rtdb = admin.database ? admin.database() : null;
 const EMERGENCY_STOP = process.env.EMERGENCY_READS_FREEZE === "1";
 const PRESENCE_STALE_THRESHOLD_MS = presence_1.PRESENCE_STALE_MS;
 const REJOIN_GRACE_MS = Math.min(PRESENCE_STALE_THRESHOLD_MS, 20000);
+const FAST_REJOIN_GRACE_MS = Math.min(REJOIN_GRACE_MS, 2000);
 const DEBUG_LOGGING_ENABLED = process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
     process.env.NODE_ENV !== "production";
 const logDebug = DEBUG_LOGGING_ENABLED ? (...args) => console.debug(...args) : () => { };
@@ -177,6 +178,24 @@ exports.onPresenceWrite = functions.database
         if (stillActive) {
             return null;
         }
+        const graceDelayMs = FAST_REJOIN_GRACE_MS;
+        if (graceDelayMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, graceDelayMs));
+        }
+        const recheckSnap = await userRef.get();
+        const nowAfterDelay = Date.now();
+        const recheckVal = recheckSnap.val();
+        const activeAfterDelay = recheckVal
+            ? Object.values(recheckVal).some((conn) => isPresenceConnActive(conn, nowAfterDelay))
+            : false;
+        if (activeAfterDelay) {
+            logDebug("presence", "skip-leave-reconnected", {
+                roomId,
+                uid,
+                delay: graceDelayMs,
+            });
+            return null;
+        }
         // 完全に切断されたのでノードを掃除し、部屋から退室させる
         await userRef.remove().catch((err) => {
             console.warn("Failed to remove user from room presence", {
@@ -185,6 +204,7 @@ exports.onPresenceWrite = functions.database
                 err,
             });
         });
+        const rejoinWindowMs = Math.max(graceDelayMs, 750);
         try {
             const playerDoc = await db
                 .collection("rooms")
@@ -197,19 +217,40 @@ exports.onPresenceWrite = functions.database
             }
             const playerData = playerDoc.data();
             const lastSeenMs = toMillis(playerData?.lastSeen);
-            if (lastSeenMs && now - lastSeenMs <= REJOIN_GRACE_MS) {
-                logDebug("presence", "skip-leave-grace", {
-                    roomId,
-                    uid,
-                    lastSeenMs,
-                    now,
-                });
-                return null;
+            if (lastSeenMs && nowAfterDelay - lastSeenMs <= rejoinWindowMs) {
+                const remaining = rejoinWindowMs - (nowAfterDelay - lastSeenMs) + 500;
+                if (remaining > 0) {
+                    await new Promise((resolve) => setTimeout(resolve, Math.min(remaining, 5000)));
+                }
+                const postDelaySnap = await db
+                    .collection("rooms")
+                    .doc(roomId)
+                    .collection("players")
+                    .doc(uid)
+                    .get();
+                const postDelayNow = Date.now();
+                if (!postDelaySnap.exists) {
+                    return null;
+                }
+                const postData = postDelaySnap.data();
+                const postLastSeenMs = toMillis(postData?.lastSeen);
+                if (postLastSeenMs &&
+                    postDelayNow - postLastSeenMs <= rejoinWindowMs) {
+                    logDebug("presence", "skip-leave-grace", {
+                        roomId,
+                        uid,
+                        lastSeenMs: postLastSeenMs,
+                        now: postDelayNow,
+                        grace: rejoinWindowMs,
+                    });
+                    return null;
+                }
             }
             logDebug("leaveRoomServer cleanup invoked", {
                 roomId,
                 uid,
                 flags: { wentOffline, removed, markedOffline },
+                waitedMs: graceDelayMs,
             });
             await (0, roomActions_1.leaveRoomServer)(roomId, uid, null);
             logDebug("leaveRoomServer cleanup succeeded", { roomId, uid });
@@ -798,3 +839,5 @@ var rejoin_1 = require("./rejoin");
 Object.defineProperty(exports, "onRejoinRequestCreate", { enumerable: true, get: function () { return rejoin_1.onRejoinRequestCreate; } });
 Object.defineProperty(exports, "onRejoinRequestUpdate", { enumerable: true, get: function () { return rejoin_1.onRejoinRequestUpdate; } });
 Object.defineProperty(exports, "onRoomWaitingProcessRejoins", { enumerable: true, get: function () { return rejoin_1.onRoomWaitingProcessRejoins; } });
+var quickStart_1 = require("./quickStart");
+Object.defineProperty(exports, "quickStart", { enumerable: true, get: function () { return quickStart_1.quickStart; } });
