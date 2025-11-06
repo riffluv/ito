@@ -84,6 +84,7 @@ export function useRoomState(
     "idle"
   );
   const machineRef = useRef<RoomMachineActorRef | null>(null);
+  const pendingMachineEventsRef = useRef<RoomMachineClientEvent[]>([]);
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
     null
   );
@@ -258,6 +259,13 @@ export function useRoomState(
       machineRef.current.stop();
     }
     machineRef.current = actor;
+    if (pendingMachineEventsRef.current.length > 0) {
+      const pendingEvents = pendingMachineEventsRef.current.slice();
+      pendingMachineEventsRef.current = [];
+      for (const pendingEvent of pendingEvents) {
+        actor.send(pendingEvent);
+      }
+    }
 
     return () => {
       subscription.unsubscribe();
@@ -874,7 +882,12 @@ export function useRoomState(
 
   const sendRoomEvent = useCallback(
     (event: RoomMachineClientEvent) => {
-      machineRef.current?.send(event);
+      const actor = machineRef.current;
+      if (actor) {
+        actor.send(event);
+        return;
+      }
+      pendingMachineEventsRef.current.push(event);
     },
     []
   );
