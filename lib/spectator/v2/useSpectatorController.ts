@@ -314,17 +314,6 @@ export function useSpectatorController({
         recallOpen,
       });
 
-      logSpectatorRequestEnqueue({
-        roomId,
-        uid,
-        source,
-        canRequestNow,
-        roomStatus,
-        recallOpen,
-      });
-
-      emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
-
       if (!spectatorRecallEnabled) {
         if (!silent) {
           safeNotify(notify, {
@@ -348,6 +337,15 @@ export function useSpectatorController({
         return true;
       }
 
+      logSpectatorRequestEnqueue({
+        roomId,
+        uid,
+        source,
+        canRequestNow,
+        roomStatus,
+        recallOpen,
+      });
+
       if (versionMismatchBlocksAccess) {
         traceAction("spectator.request.blocked.versionMismatch", {
           roomId,
@@ -365,6 +363,8 @@ export function useSpectatorController({
         }
         return false;
       }
+
+      emitSpectatorEvent({ type: "SPECTATOR_REQUEST", source });
 
       leavingRef.current = true;
 

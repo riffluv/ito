@@ -1435,14 +1435,11 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     },
     utils: {
       hasRejoinIntent,
-      consumePendingSeatRequest,
-      hasPendingSeatRequest,
     },
   } = spectatorController;
   useEffect(() => {
     if (seatRequestState.status !== "pending") return;
     if (spectatorRecallEnabled) return;
-    if (hasPendingSeatRequest()) return;
     if (!uid) return;
     clearPendingSeatRequest();
     emitSpectatorEvent({ type: "SPECTATOR_RESET" });
@@ -1452,7 +1449,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, [
     seatRequestState.status,
     spectatorRecallEnabled,
-    hasPendingSeatRequest,
     clearPendingSeatRequest,
     uid,
     roomId,
@@ -1483,30 +1479,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const forcedExitScheduledRef = useRef(false);
   const forcedExitRecoveryPendingRef = useRef(false);
-  useEffect(() => {
-    if (!uid) return;
-    if (!hasPendingSeatRequest()) return;
-    if (!spectatorRecallEnabled) return;
-    const queued = consumePendingSeatRequest();
-    if (!queued) return;
-    void handleSeatRecovery({
-      silent: true,
-      source: queued,
-      spectatorRecallEnabled,
-      roomStatus,
-      recallOpen,
-      notify,
-    });
-  }, [
-    uid,
-    spectatorRecallEnabled,
-    hasPendingSeatRequest,
-    consumePendingSeatRequest,
-    handleSeatRecovery,
-    roomStatus,
-    recallOpen,
-    notify,
-  ]);
 
   useEffect(() => {
     if (!versionMismatchBlocksAccess) {

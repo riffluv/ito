@@ -51,7 +51,7 @@
 
 | 工程 | min人月 | most likely人月 | max人月 | 根拠 |
 |------|--------|----------------|--------|------|
-| 設計（roomMachine + spectator FSM） | 1.0 | 1.5 | 2.5 | `lib/state/roomMachine.ts` のコア状態遷移＋観戦FSM（`docs/SPECTATOR_FSM_PLAN.md`）。 |
+| 設計（roomMachine + spectator FSM） | 1.0 | 1.5 | 2.5 | `lib/state/roomMachine.ts` のコア状態遷移＋観戦FSM（`docs/SPECTATOR_ARCHITECTURE.md`）。 |
 | 実装（guards/actions/services） | 2.0 | 3.0 | 4.5 | 状態遷移・ガード条件・invoke/callback、観戦リクエストのFirestore購読統合。 |
 | UI統合（hooks: useRoomState等） | 1.0 | 2.0 | 3.0 | `lib/hooks/useRoomState.ts`, `lib/hooks/useOptimizedRoomState.ts` での最適化。 |
 | テスト | 0.5 | 1.0 | 1.5 | `tests/roomMachine.spec.ts` 相当の状態遷移テスト。 |
