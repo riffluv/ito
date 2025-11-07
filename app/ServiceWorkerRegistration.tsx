@@ -13,10 +13,12 @@ import {
   markUpdateCheckError,
   markUpdateCheckStart,
   resyncWaitingServiceWorker,
+  subscribeToSafeUpdateSnapshot,
   suppressAutoApply,
 } from "@/lib/serviceWorker/updateChannel";
 import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 
 const SW_PATH = "/sw.js";
 const APP_VERSION =
@@ -36,6 +38,66 @@ const LOOP_GUARD_THRESHOLD = 3;
 let controllerChangeBound = false;
 let controllerChangeAutoCount = 0;
 const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const RELOAD_FALLBACK_DELAY_MS = 4000;
+let reloadFallbackTimer: number | null = null;
+
+const clearReloadFallbackTimer = () => {
+  if (reloadFallbackTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(reloadFallbackTimer);
+    reloadFallbackTimer = null;
+  }
+};
+
+const handlePendingReload = (origin: "controllerchange" | "fallback") => {
+  const pendingReload = consumePendingReloadFlag();
+  const context = consumePendingApplyContext();
+  if (!pendingReload) {
+    controllerChangeAutoCount = 0;
+    return false;
+  }
+  const isAuto = context?.reason ? context.reason !== "manual" : false;
+  const detailBase = isAuto ? "auto" : "manual";
+  const telemetryDetail =
+    origin === "controllerchange" ? detailBase : `${detailBase}:fallback`;
+  logSafeUpdateTelemetry("applied", {
+    reason: context?.reason,
+    safeMode: context?.safeMode,
+    detail: telemetryDetail,
+  });
+  if (isAuto) {
+    controllerChangeAutoCount += 1;
+  } else {
+    controllerChangeAutoCount = 0;
+  }
+  bumpMetric("sw", "applied.count");
+  if (context?.safeMode) {
+    bumpMetric("safeUpdate", "applied");
+  }
+  if (origin === "fallback") {
+    traceAction("safeUpdate.reload.fallback", {
+      reason: context?.reason ?? "unknown",
+      safeMode: context?.safeMode ?? null,
+      delayMs: RELOAD_FALLBACK_DELAY_MS,
+    });
+  }
+  if (isAuto && controllerChangeAutoCount > LOOP_GUARD_THRESHOLD) {
+    suppressAutoApply();
+    setMetric("sw", "loopGuard.tripped", 1);
+  }
+  window.location.reload();
+  return true;
+};
+
+const scheduleReloadFallback = () => {
+  if (typeof window === "undefined") return;
+  if (reloadFallbackTimer !== null) {
+    return;
+  }
+  reloadFallbackTimer = window.setTimeout(() => {
+    reloadFallbackTimer = null;
+    handlePendingReload("fallback");
+  }, RELOAD_FALLBACK_DELAY_MS);
+};
 
 const performRegistrationUpdate = async (
   registration: ServiceWorkerRegistration,
@@ -136,32 +198,8 @@ const bindControllerChangeListener = () => {
   if (controllerChangeBound) return;
   controllerChangeBound = true;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    const pendingReload = consumePendingReloadFlag();
-    const context = consumePendingApplyContext();
-    if (pendingReload) {
-      const isAuto = context?.reason ? context.reason !== "manual" : false;
-      logSafeUpdateTelemetry("applied", {
-        reason: context?.reason,
-        safeMode: context?.safeMode,
-        detail: isAuto ? "auto" : "manual",
-      });
-      if (isAuto) {
-        controllerChangeAutoCount += 1;
-      } else {
-        controllerChangeAutoCount = 0;
-      }
-      bumpMetric("sw", "applied.count");
-      if (context?.safeMode) {
-        bumpMetric("safeUpdate", "applied");
-      }
-      if (isAuto && controllerChangeAutoCount > LOOP_GUARD_THRESHOLD) {
-        suppressAutoApply();
-        setMetric("sw", "loopGuard.tripped", 1);
-      }
-      window.location.reload();
-    } else {
-      controllerChangeAutoCount = 0;
-    }
+    clearReloadFallbackTimer();
+    handlePendingReload("controllerchange");
   });
 };
 
@@ -238,6 +276,13 @@ export default function ServiceWorkerRegistration() {
 
     const cleanupVisibilityAutoApply = bindVisibilityHiddenAutoApply();
     const unbindMessageListener = bindServiceWorkerMessages();
+    const unsubscribeSnapshot = subscribeToSafeUpdateSnapshot((snapshot) => {
+      if (snapshot.pendingReload && snapshot.phase !== "applying") {
+        scheduleReloadFallback();
+      } else {
+        clearReloadFallbackTimer();
+      }
+    });
 
     void resyncWaitingServiceWorker("mount");
 
@@ -262,8 +307,10 @@ export default function ServiceWorkerRegistration() {
       cancelled = true;
       cleanupVisibilityAutoApply();
       unbindMessageListener();
+      unsubscribeSnapshot();
       stopPeriodicChecks?.();
       stopVisibilityChecks?.();
+      clearReloadFallbackTimer();
     };
   }, []);
 
