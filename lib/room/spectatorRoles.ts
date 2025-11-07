@@ -32,9 +32,7 @@ export function deriveSpectatorFlags({
     !isHost &&
     !isMember &&
     !hasOptimisticSeat &&
-    !seatAcceptanceActive &&
     !isJoiningOrRetrying &&
-    !seatRequestPending &&
     !loading;
 
   return {
