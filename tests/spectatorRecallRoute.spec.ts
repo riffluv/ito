@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { POST } from "../app/api/rooms/[roomId]/reset/route";
 
-const ROOM_ID = "room-reset-spec";
+import { POST } from "../app/api/rooms/[roomId]/spectators/recall/route";
+
+const ROOM_ID = "room-spectator-recall-spec";
 const originalNodeEnv = process.env.NODE_ENV;
 
 const buildRequest = (body: Record<string, unknown>) =>
@@ -11,13 +12,13 @@ const buildRequest = (body: Record<string, unknown>) =>
 
 declare global {
   // eslint-disable-next-line no-var
-  var __setResetRouteOverrides:
+  var __setSpectatorRecallRouteOverrides:
     | ((overrides: Record<string, unknown> | null) => void)
     | undefined;
 }
 
 const setOverrides = (overrides: Record<string, unknown> | null) => {
-  const setter = globalThis.__setResetRouteOverrides;
+  const setter = globalThis.__setSpectatorRecallRouteOverrides;
   if (typeof setter === "function") {
     setter(overrides as any);
   }
@@ -35,7 +36,7 @@ test.afterAll(() => {
   process.env.NODE_ENV = originalNodeEnv;
 });
 
-test.describe("rooms reset API route", () => {
+test.describe("spectator recall API route", () => {
   test("returns 401 when token verification fails", async () => {
     setOverrides({
       auth: {
@@ -45,21 +46,19 @@ test.describe("rooms reset API route", () => {
       } as any,
     });
 
-    const response = await POST(
-      buildRequest({ token: "bad-token" }) as any,
-      { params: { roomId: ROOM_ID } }
-    );
+    const response = await POST(buildRequest({ token: "bad-token" }) as any, {
+      params: { roomId: ROOM_ID },
+    });
 
     expect(response.status).toBe(401);
     const json = await response.json();
     expect(json.error).toBe("unauthorized");
   });
 
-  test("updates recallOpen=true via compose payload", async () => {
-    let updatedPayload: any = null;
+  test("returns 403 when caller is not host/creator/admin", async () => {
     setOverrides({
       auth: {
-        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
+        verifyIdToken: async () => ({ uid: "guest-1", admin: false }),
       } as any,
       db: {
         collection: () => ({
@@ -69,32 +68,54 @@ test.describe("rooms reset API route", () => {
               data: () => ({
                 hostId: "host-1",
                 creatorId: "creator-9",
+                status: "waiting",
               }),
             }),
-            update: async (payload: any) => {
-              updatedPayload = payload;
-            },
           }),
         }),
       } as any,
     });
 
-    const response = await POST(
-      buildRequest({ token: "valid-token", recallSpectators: true }) as any,
-      { params: { roomId: ROOM_ID } }
-    );
+    const response = await POST(buildRequest({ token: "valid-token" }) as any, {
+      params: { roomId: ROOM_ID },
+    });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
     const json = await response.json();
-    expect(json.ok).toBe(true);
-    expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload.status).toBe("waiting");
-    expect(updatedPayload["ui.recallOpen"]).toBe(true);
-    expect(updatedPayload.round).toBe(0);
-    expect(updatedPayload.topic).toBeNull();
+    expect(json.error).toBe("forbidden");
   });
 
-  test("defaults recallOpen=true when option omitted", async () => {
+  test("returns 409 when room is not waiting", async () => {
+    setOverrides({
+      auth: {
+        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
+      } as any,
+      db: {
+        collection: () => ({
+          doc: () => ({
+            get: async () => ({
+              exists: true,
+              data: () => ({
+                hostId: "host-1",
+                creatorId: "creator-9",
+                status: "clue",
+              }),
+            }),
+          }),
+        }),
+      } as any,
+    });
+
+    const response = await POST(buildRequest({ token: "valid-token" }) as any, {
+      params: { roomId: ROOM_ID },
+    });
+
+    expect(response.status).toBe(409);
+    const json = await response.json();
+    expect(json.error).toBe("not_waiting");
+  });
+
+  test("opens recall window when caller is authorized", async () => {
     let updatedPayload: any = null;
     setOverrides({
       auth: {
@@ -108,6 +129,7 @@ test.describe("rooms reset API route", () => {
               data: () => ({
                 hostId: "host-1",
                 creatorId: "creator-9",
+                status: "waiting",
               }),
             }),
             update: async (payload: any) => {
@@ -123,43 +145,10 @@ test.describe("rooms reset API route", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload["ui.recallOpen"]).toBe(true);
-  });
-
-  test("updates recallOpen=false when option is false", async () => {
-    let updatedPayload: any = null;
-    setOverrides({
-      auth: {
-        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
-      } as any,
-      db: {
-        collection: () => ({
-          doc: () => ({
-            get: async () => ({
-              exists: true,
-              data: () => ({
-                hostId: "host-1",
-                creatorId: "creator-9",
-              }),
-            }),
-            update: async (payload: any) => {
-              updatedPayload = payload;
-            },
-          }),
-        }),
-      } as any,
-    });
-
-    const response = await POST(
-      buildRequest({ token: "valid-token", recallSpectators: false }) as any,
-      { params: { roomId: ROOM_ID } }
-    );
-
-    expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.ok).toBe(true);
     expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload["ui.recallOpen"]).toBe(false);
+    expect(updatedPayload["ui.recallOpen"]).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(updatedPayload, "lastActiveAt")).toBe(true);
   });
 });

@@ -52,6 +52,37 @@ export function clearSpectatorFlags({
   return { pendingCleared, autoJoinCleared };
 }
 
+export function readPendingRejoinFlag({
+  rejoinSessionKey,
+  uid,
+}: {
+  rejoinSessionKey: string | null;
+  uid: string | null;
+}): boolean {
+  if (!rejoinSessionKey || typeof window === "undefined" || !uid) {
+    return false;
+  }
+  try {
+    const stored = window.sessionStorage.getItem(rejoinSessionKey);
+    return stored !== null && stored === uid;
+  } catch {
+    return false;
+  }
+}
+
+export function readAutoJoinSuppressFlag(
+  autoJoinSuppressKey: string | null
+): boolean {
+  if (!autoJoinSuppressKey || typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.sessionStorage.getItem(autoJoinSuppressKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function clearAutoJoinSuppressFlag({
   roomId,
   uid,

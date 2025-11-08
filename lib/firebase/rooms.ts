@@ -2,7 +2,7 @@ import { sendSystemMessage } from "@/lib/firebase/chat";
 import { auth, db } from "@/lib/firebase/client";
 import { presenceSupported } from "@/lib/firebase/presence";
 import { logWarn } from "@/lib/utils/log";
-import { traceAction } from "@/lib/utils/trace";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
 import type { PlayerDoc, RoomOptions } from "@/lib/types";
 import {
@@ -333,7 +333,7 @@ export async function resetRoomWithPrune(
   opts?: { notifyChat?: boolean; recallSpectators?: boolean }
 ) {
   const recallSpectators =
-    typeof opts?.recallSpectators === "boolean" ? opts.recallSpectators : false;
+    typeof opts?.recallSpectators === "boolean" ? opts.recallSpectators : true;
   const keepArr = Array.isArray(keepIds) ? keepIds : [];
   const keepSet = new Set(keepArr);
   const roomRef = doc(db!, "rooms", roomId);
@@ -536,4 +536,100 @@ export async function resetRoomWithPrune(
       );
     } catch {}
   }
+}
+
+export async function requestSpectatorRecall(roomId: string): Promise<void> {
+  const currentUser = auth?.currentUser;
+  if (!currentUser) {
+    throw new Error("観戦者を呼び戻すにはログインが必要です。");
+  }
+
+  traceAction("spectator.recall.initiated", { roomId });
+
+  const obtainToken = async (forceRefresh: boolean): Promise<string | null> => {
+    try {
+      const raw = await currentUser.getIdToken(forceRefresh);
+      return raw ?? null;
+    } catch (error) {
+      logWarn(
+        "rooms",
+        forceRefresh
+          ? "spectator-recall-token-refresh-failed"
+          : "spectator-recall-token-fetch-failed",
+        error
+      );
+      return null;
+    }
+  };
+
+  const sendRecall = async (token: string): Promise<Response | null> => {
+    try {
+      return await fetch(`/api/rooms/${roomId}/spectators/recall`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+        keepalive: true,
+      });
+    } catch (error) {
+      logWarn("rooms", "spectator-recall-api-network-failed", error);
+      return null;
+    }
+  };
+
+  let token = await obtainToken(false);
+  if (!token) {
+    token = await obtainToken(true);
+  }
+  if (!token) {
+    traceError("spectator.recall", new Error("auth-token-unavailable"), {
+      roomId,
+      stage: "token",
+    });
+    throw new Error("認証に失敗しました。時間を置いて再度お試しください。");
+  }
+
+  let response = await sendRecall(token);
+  if (response && response.status === 401) {
+    const refreshed = await obtainToken(true);
+    if (refreshed) {
+      token = refreshed;
+      response = await sendRecall(refreshed);
+    }
+  }
+
+  if (!response) {
+    traceError("spectator.recall", new Error("network"), { roomId });
+    throw new Error("観戦者の呼び戻しに失敗しました。通信状態を確認してください。");
+  }
+
+  if (!response.ok) {
+    let detail: any = null;
+    try {
+      detail = await response.json();
+    } catch {}
+    const code =
+      typeof detail?.error === "string" ? detail.error : "recall_failed";
+    traceError("spectator.recall", new Error(code), {
+      roomId,
+      status: response.status,
+    });
+    const resolveErrorMessage = (errorCode: string): string => {
+      switch (errorCode) {
+        case "forbidden":
+          return "ホストのみが観戦者を呼び戻せます。";
+        case "not_waiting":
+          return "待機中のみ観戦者を呼び戻せます。";
+        case "room_not_found":
+          return "ルームが見つかりませんでした。";
+        case "unauthorized":
+        case "auth_required":
+          return "認証に失敗しました。再度ログインしてください。";
+        default:
+          return "観戦者の呼び戻しに失敗しました。時間を置いて再度お試しください。";
+      }
+    };
+    throw new Error(resolveErrorMessage(code));
+  }
+
+  traceAction("spectator.recall.success", { roomId });
 }

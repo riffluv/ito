@@ -1,16 +1,17 @@
-import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
-import { composeWaitingResetPayload } from "@/lib/server/roomActions";
-import { logDebug, logError } from "@/lib/utils/log";
+import { FieldValue } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
+
+import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
+import { logDebug, logError } from "@/lib/utils/log";
 
 export const runtime = "nodejs";
 
-type ResetRouteTestOverrides = {
+type RecallRouteTestOverrides = {
   auth?: ReturnType<typeof getAdminAuth>;
   db?: ReturnType<typeof getAdminDb>;
 };
 
-let testOverrides: ResetRouteTestOverrides | null = null;
+let testOverrides: RecallRouteTestOverrides | null = null;
 
 function resolveAdminAuth() {
   return testOverrides?.auth ?? getAdminAuth();
@@ -22,12 +23,12 @@ function resolveAdminDb() {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __setResetRouteOverrides:
-    | ((overrides: ResetRouteTestOverrides | null) => void)
+  var __setSpectatorRecallRouteOverrides:
+    | ((overrides: RecallRouteTestOverrides | null) => void)
     | undefined;
 }
 
-globalThis.__setResetRouteOverrides = (overrides) => {
+globalThis.__setSpectatorRecallRouteOverrides = (overrides) => {
   if (process.env.NODE_ENV !== "test") return;
   testOverrides = overrides;
 };
@@ -41,24 +42,14 @@ export async function POST(
     return NextResponse.json({ error: "room_id_required" }, { status: 400 });
   }
 
-  let payload: unknown;
+  let body: unknown = null;
   try {
-    payload = await req.json();
+    body = await req.json();
   } catch {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+    body = null;
   }
 
-  const body =
-    payload && typeof payload === "object"
-      ? (payload as Record<string, unknown>)
-      : null;
-
-  const token = typeof body?.token === "string" ? (body.token as string) : null;
-  const recallSpectators =
-    typeof body?.recallSpectators === "boolean"
-      ? (body.recallSpectators as boolean)
-      : true;
-
+  const token = typeof (body as any)?.token === "string" ? ((body as any).token as string) : null;
   if (!token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
@@ -70,7 +61,7 @@ export async function POST(
     requesterUid = decoded.uid ?? null;
     isAdmin = decoded.admin === true;
   } catch (error) {
-    logError("rooms", "reset-route verify failed", { roomId, error });
+    logError("rooms", "spectator-recall-verify-failed", { roomId, error });
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -85,43 +76,41 @@ export async function POST(
     if (!roomSnap.exists) {
       return NextResponse.json({ error: "room_not_found" }, { status: 404 });
     }
-
     const roomData = roomSnap.data() as Record<string, unknown> | undefined;
     const hostId =
       typeof roomData?.hostId === "string" ? (roomData.hostId as string) : null;
     const creatorId =
-      typeof roomData?.creatorId === "string"
-        ? (roomData.creatorId as string)
-        : null;
+      typeof roomData?.creatorId === "string" ? (roomData.creatorId as string) : null;
+    const roomStatus =
+      typeof roomData?.status === "string" ? (roomData.status as string) : "waiting";
 
-    const authorized =
-      isAdmin || requesterUid === hostId || requesterUid === creatorId;
-
+    const authorized = isAdmin || requesterUid === hostId || requesterUid === creatorId;
     if (!authorized) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
-    const resetPayload = composeWaitingResetPayload({
-      recallOpen: recallSpectators,
-      resetRound: true,
-      clearTopic: true,
-      closedAt: null,
-      expiresAt: null,
+    if (roomStatus !== "waiting") {
+      return NextResponse.json({ error: "not_waiting" }, { status: 409 });
+    }
+
+    logDebug("rooms", "spectator-recall-request", {
+      roomId,
+      requesterUid,
     });
 
-    const recallOpen =
-      typeof resetPayload["ui.recallOpen"] === "boolean"
-        ? (resetPayload["ui.recallOpen"] as boolean)
-        : true;
+    await roomRef.update({
+      "ui.recallOpen": true,
+      lastActiveAt: FieldValue.serverTimestamp(),
+    });
 
-    logDebug("rooms", "reset-request", { roomId, recallOpen });
+    logDebug("rooms", "spectator-recall-success", {
+      roomId,
+      requesterUid,
+    });
 
-    await roomRef.update(resetPayload);
-
-    logDebug("rooms", "reset-success", { roomId, recallOpen });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    logError("rooms", "reset-route error", { roomId, error });
-    return NextResponse.json({ error: "reset_failed" }, { status: 500 });
+    logError("rooms", "spectator-recall-error", { roomId, error });
+    return NextResponse.json({ error: "recall_failed" }, { status: 500 });
   }
 }

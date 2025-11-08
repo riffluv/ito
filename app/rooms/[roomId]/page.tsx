@@ -34,7 +34,10 @@ import {
 } from "@/lib/constants/presence";
 import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { forceDetachAll } from "@/lib/firebase/presence";
-import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
+import {
+  leaveRoom as leaveRoomAction,
+  requestSpectatorRecall,
+} from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
 import { pruneProposalByEligible } from "@/lib/game/service";
@@ -120,6 +123,8 @@ const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
   "room-mismatch": "申請対象のルームが一致しません。",
   "session-not-found": "申請セッションが見つかりませんでした。",
 };
+
+const SPECTATOR_HOST_PANEL_ENABLED = false;
 
 const formatSpectatorHostError = (code: string): string => {
   if (!code) {
@@ -822,17 +827,24 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, []);
   const [dealRecoveryDismissed, setDealRecoveryDismissed] = useState(false);
   const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
+  const [recallPending, setRecallPending] = useState(false);
   const dealRecoveryTimerRef = useRef<number | null>(null);
   const isGameFinished = room?.status === "finished";
 
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
   const spectatorRecallEnabled = recallOpen && roomStatus === "waiting";
+  const spectatorHostPanelEnabled = SPECTATOR_HOST_PANEL_ENABLED;
+  const canRecallSpectators =
+    spectatorHostPanelEnabled && isHost && roomStatus === "waiting";
+  const spectatorHostQueue = spectatorHostPanelEnabled && isHost
+    ? useSpectatorHostQueue(roomId)
+    : { requests: [], loading: false, error: null, hasPending: false };
   const {
     requests: spectatorHostRequests,
     loading: spectatorHostLoading,
     error: spectatorHostError,
-  } = useSpectatorHostQueue(isHost ? roomId : null);
+  } = spectatorHostQueue;
   const spectatorSession = useSpectatorSession({
     roomId,
     viewerUid: uid,
@@ -2895,6 +2907,55 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     </AppButton>
   ) : null;
 
+  const handleSpectatorRecall = useCallback(async () => {
+    if (!spectatorHostPanelEnabled) {
+      return;
+    }
+    if (recallPending) return;
+    if (!canRecallSpectators) {
+      notify({
+        type: "info",
+        title: "観戦者を呼び戻せません",
+        description: "ホストのみ、かつ待機状態で操作できます。",
+      });
+      return;
+    }
+    if (spectatorRecallEnabled) {
+      notify({
+        type: "info",
+        title: "観戦ウィンドウは開放済みです",
+        description: "観戦者は「席にもどる」から復帰できます。",
+      });
+      return;
+    }
+    setRecallPending(true);
+    try {
+      await requestSpectatorRecall(roomId);
+      notify({
+        type: "success",
+        title: "観戦者を呼び戻しました",
+        description: "観戦者に再入室を案内してください。",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "観戦者の呼び戻しに失敗しました。";
+      notify({
+        type: "error",
+        title: "観戦者を呼べませんでした",
+        description: message,
+      });
+    } finally {
+      setRecallPending(false);
+    }
+  }, [
+    spectatorHostPanelEnabled,
+    recallPending,
+    canRecallSpectators,
+    spectatorRecallEnabled,
+    roomId,
+    notify,
+  ]);
+
   const handleSpectatorApprove = useCallback(
     async (request: SpectatorHostRequest) => {
       try {
@@ -3023,6 +3084,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       isMember={isMember}
       showHand={showHand}
       handNode={handNode}
+      hostPanelEnabled={spectatorHostPanelEnabled}
       host={{
         enabled: isHost,
         roomId,
@@ -3030,6 +3092,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         loading: spectatorHostLoading,
         error: spectatorHostError,
         spectatorRecallEnabled,
+        canRecallSpectators,
+        recallPending,
+        onRecallSpectators: handleSpectatorRecall,
         players: playersWithOptimistic,
         onApprove: handleSpectatorApprove,
         onReject: handleSpectatorReject,
