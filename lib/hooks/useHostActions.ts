@@ -17,6 +17,10 @@ import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
+import type {
+  ShowtimeIntentHandlers,
+  ShowtimeIntentMetadata,
+} from "@/lib/showtime/types";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -26,6 +30,8 @@ import { useCallback, useMemo, useState } from "react";
 type QuickStartOptions = {
   broadcast?: boolean;
   playSound?: boolean;
+  markShowtimeStart?: boolean;
+  intentMeta?: ShowtimeIntentMetadata;
 };
 
 type ResetOptions = {
@@ -59,6 +65,7 @@ type UseHostActionsOptions = {
   onFeedback?: (payload: HostActionFeedback) => void;
   presenceReady?: boolean;
   playerCount?: number;
+  showtimeIntents?: ShowtimeIntentHandlers;
 };
 
 export function useHostActions({
@@ -78,6 +85,7 @@ export function useHostActions({
   onFeedback,
   presenceReady = false,
   playerCount,
+  showtimeIntents,
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -151,6 +159,13 @@ export function useHostActions({
         return false;
       }
       setQuickStartPending(true);
+
+      if (options?.markShowtimeStart ?? true) {
+        showtimeIntents?.markStartIntent?.({
+          action: options?.intentMeta?.action ?? "quickStart",
+          source: options?.intentMeta?.source ?? "useHostActions",
+        });
+      }
 
       let effectiveType = effectiveDefaultTopicType;
       let latestTopic: string | null | undefined = currentTopic ?? null;
@@ -293,6 +308,7 @@ export function useHostActions({
       presenceReady,
       onlineUids,
       functions,
+      showtimeIntents,
     ]
   );
 
@@ -443,6 +459,8 @@ export function useHostActions({
         return await quickStart({
           broadcast: false,
           playSound,
+          markShowtimeStart: false,
+          intentMeta: { action: "quickStart:restart" },
         });
       } catch (error) {
         traceError("ui.host.restart", error, { roomId });
@@ -494,6 +512,10 @@ export function useHostActions({
     );
     if (list.length === 0) return;
 
+    showtimeIntents?.markRevealIntent?.({
+      action: "evalSorted",
+      source: "useHostActions",
+    });
     playOrderConfirm();
 
     const startedAt =
@@ -537,7 +559,7 @@ export function useHostActions({
       });
       throw error;
     }
-  }, [proposal, playOrderConfirm, roomId]);
+  }, [proposal, playOrderConfirm, roomId, showtimeIntents]);
 
   const handleSubmitCustom = useCallback(
     async (value: string) => {
@@ -579,6 +601,10 @@ export function useHostActions({
           if (!ensurePresenceReady()) {
             return;
           }
+          showtimeIntents?.markStartIntent?.({
+            action: "quickStart:customTopic",
+            source: "useHostActions",
+          });
           playOrderConfirm();
           const callable = functions
             ? httpsCallable<
@@ -623,6 +649,7 @@ export function useHostActions({
       playOrderConfirm,
       ensurePresenceReady,
       functions,
+      showtimeIntents,
     ]
   );
 

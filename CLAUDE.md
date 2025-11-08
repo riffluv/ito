@@ -10,7 +10,7 @@
 - ジャンル: ブラウザで遊べる「ito」系協力推理ゲーム（HD-2D / ドラクエ風 UI）
 - 技術スタック: Next.js 14 / TypeScript / Chakra UI v3 / Pixi.js 8 / GSAP 3 / Firebase (Firestore + RTDB + Auth + Functions) / Stripe
 - Presence は RTDB が単独のソース。`.env.local` に `NEXT_PUBLIC_DISABLE_FS_FALLBACK=1` を設定済み。
-- FSM (XState) 実装が feature flag (`NEXT_PUBLIC_FSM_ENABLE`) で導入済み。現在は 1 にして動作確認中。
+- FSM (XState) 実装は常時有効化済み。旧ロジックへ戻す feature flag (`NEXT_PUBLIC_FSM_ENABLE`) は撤廃済み。
 
 ---
 
@@ -91,11 +91,11 @@ npx playwright test  # Playwright（必要なファイルのみ指定して実�
 
 ---
 
-## 6. FSM フラグについて
+## 6. FSM 状態機械について
 
-- `.env.local` の `NEXT_PUBLIC_FSM_ENABLE=1` で状態機械（`lib/state/roomMachine.ts`）を有効化。
-- 有効時でも UI 挙動は既存と同じになるよう設計済み。トラブルがあれば値を `0` に戻して旧ロジックに切り替え可能。
-- 安定確認後はフラグ分岐を削る予定。レビュー時は両モードでの差分がないか留意する。
+- XState ベースの状態機械（`lib/state/roomMachine.ts`）は常時有効です。
+- `NEXT_PUBLIC_FSM_ENABLE` フラグは削除済みのため、旧ロジックへ切り替える手段は不要になりました。
+- レビュー時は FSM 前提の実装／テストで問題ないかを確認してください。
 
 ---
 

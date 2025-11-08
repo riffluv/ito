@@ -1,5 +1,13 @@
 import type { Scenario } from "@/lib/showtime/types";
 
+/**
+ * SHOWTIME (Phase 0)
+ *
+ * `room.status` が `reveal` / `finished` に遷移したタイミングだけで呼ばれる
+ * 既存のシナリオ。Phase 2 以降で intent 駆動イベントと統合する前提のため、
+ * 現状問題（RESET でも回ってしまう）をコメントに残す。
+ */
+
 type RevealContext = {
   success?: boolean | null;
 };
