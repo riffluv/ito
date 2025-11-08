@@ -14,6 +14,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/postbuild.cjs",
-    "serve": "firebase emulators:start --only functions"
+    "serve": "firebase emulators:start --only functions",
+    "sync-topics": "node scripts/sync-topics.cjs",
+    "postinstall": "npm run sync-topics"
   }
 }

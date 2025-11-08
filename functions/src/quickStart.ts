@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { createRequire } from "node:module";
 import {
   defaultTopics,
@@ -40,9 +41,24 @@ const rtdb = (() => {
   }
 })();
 
-const TOPIC_SOURCE_URL =
-  process.env.TOPIC_SOURCE_URL || "https://online-ito.vercel.app/itoword.md";
+const DEFAULT_TOPIC_SOURCE_URL = "https://numberlink.vercel.app/itoword.md";
+const EMBEDDED_TOPIC_PATH = path.resolve(__dirname, "..", "assets", "itoword.md");
 const requireForTopics = createRequire(__filename);
+
+type FunctionsTopicsConfig = {
+  source_url?: string;
+  source_path?: string;
+};
+
+const functionsConfig = (() => {
+  try {
+    return functions.config();
+  } catch {
+    return {} as Record<string, unknown>;
+  }
+})();
+
+const topicsConfig = (functionsConfig?.topics ?? {}) as FunctionsTopicsConfig;
 
 const TOPIC_TYPE_SET = new Set<string>(topicTypeLabels as readonly string[]);
 const FALLBACK_TOPIC_TYPE: TopicType = topicTypeLabels[0];
@@ -94,32 +110,31 @@ function normalizeTopicType(type: unknown): TopicType {
 
 async function loadTopicSections(): Promise<TopicSections | null> {
   if (cachedTopicSections) return cachedTopicSections;
-  const localPath = (() => {
-    const envPath = process.env.TOPIC_SOURCE_PATH?.trim();
-    if (envPath) return envPath;
-    try {
-      return requireForTopics.resolve("online-ito/public/itoword.md");
-    } catch {
-      return null;
-    }
-  })();
 
-  if (localPath) {
+  const candidatePaths = [
+    getConfiguredTopicPath(),
+    resolveRepoTopicPath(),
+    EMBEDDED_TOPIC_PATH,
+  ].filter((value, index, arr) => value && arr.indexOf(value) === index) as string[];
+
+  for (const candidate of candidatePaths) {
     try {
-      const text = readFileSync(localPath, "utf8");
+      const text = readFileSync(candidate, "utf8");
       cachedTopicSections = parseItoWordMarkdown(text);
       cachedTopicSectionsSource = "local";
       return cachedTopicSections;
     } catch (error) {
       const now = Date.now();
       if (now - lastTopicReadErrorLoggedAt > 60_000) {
-        console.warn("[quickStart] Failed to load local topic source", { error });
+        console.warn("[quickStart] Failed to load local topic source", { candidate, error });
         lastTopicReadErrorLoggedAt = now;
       }
     }
   }
+
+  const topicSourceUrl = getConfiguredTopicUrl();
   try {
-    const res = await fetch(TOPIC_SOURCE_URL);
+    const res = await fetch(topicSourceUrl);
     if (!res.ok) {
       throw new Error(`fetch failed (${res.status})`);
     }
@@ -130,7 +145,10 @@ async function loadTopicSections(): Promise<TopicSections | null> {
   } catch (error) {
     const now = Date.now();
     if (now - lastTopicFetchErrorLoggedAt > 60_000) {
-      console.warn("[quickStart] Failed to load topic sections", error);
+      console.warn("[quickStart] Failed to load topic sections remotely", {
+        topicSourceUrl,
+        error,
+      });
       lastTopicFetchErrorLoggedAt = now;
     }
     cachedTopicSections = {
@@ -141,6 +159,24 @@ async function loadTopicSections(): Promise<TopicSections | null> {
     cachedTopicSectionsSource = "fallback";
     return cachedTopicSections;
   }
+}
+
+function getConfiguredTopicPath(): string | null {
+  const envPath = (process.env.TOPIC_SOURCE_PATH ?? topicsConfig.source_path ?? "").trim();
+  return envPath.length > 0 ? envPath : null;
+}
+
+function resolveRepoTopicPath(): string | null {
+  try {
+    return requireForTopics.resolve("online-ito/public/itoword.md");
+  } catch {
+    return null;
+  }
+}
+
+function getConfiguredTopicUrl(): string {
+  const configuredUrl = (process.env.TOPIC_SOURCE_URL ?? topicsConfig.source_url ?? "").trim();
+  return configuredUrl.length > 0 ? configuredUrl : DEFAULT_TOPIC_SOURCE_URL;
 }
 
 async function resolveTopic(type: TopicType): Promise<string | null> {
