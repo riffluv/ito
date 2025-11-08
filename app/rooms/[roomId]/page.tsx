@@ -1664,6 +1664,12 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const joinInProgress = joinStatus === "joining";
   const joinEstablished = joinStatus === "joined";
+  const spectatorJoinStatus = useMemo(() => {
+    if (room?.status === "waiting") {
+      return joinStatus;
+    }
+    return joinStatus === "joined" ? "joined" : "idle";
+  }, [joinStatus, room?.status]);
   const hasOptimisticSeat =
     !!optimisticMe &&
     (joinEstablished || seatAcceptanceActive) &&
@@ -1701,9 +1707,31 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     hasOptimisticSeat,
     seatAcceptanceActive,
     seatRequestPending,
-    joinStatus,
+    joinStatus: spectatorJoinStatus,
     loading: loadingForSpectator,
   });
+
+  useEffect(() => {
+    traceAction("spectator.candidate", {
+      roomId,
+      uid,
+      spectatorCandidate,
+      joinStatus: spectatorJoinStatus,
+      seatRequestPending,
+      seatAcceptanceActive,
+      hasOptimisticSeat,
+      spectatorNode: fsmSpectatorNode,
+    });
+  }, [
+    roomId,
+    uid,
+    spectatorCandidate,
+    spectatorJoinStatus,
+    seatRequestPending,
+    seatAcceptanceActive,
+    hasOptimisticSeat,
+    fsmSpectatorNode,
+  ]);
 
   useEffect(() => {
     if (!spectatorCandidate) {

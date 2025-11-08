@@ -434,6 +434,18 @@ export async function resetRoomWithPrune(
 
       if (response && response.ok) {
         apiSuccess = true;
+      } else if (
+        response &&
+        (response.status === 401 || response.status === 403 || response.status === 404)
+      ) {
+        const failureReason =
+          response.status === 401
+            ? "auth-unauthorized"
+            : response.status === 403
+            ? "auth-forbidden"
+            : "room-not-found";
+        markFallback(failureReason);
+        response = null;
       } else if (!response && fallbackReason) {
         // ネットワーク系は fallback へ移行
       } else if (response) {
