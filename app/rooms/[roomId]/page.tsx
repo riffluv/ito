@@ -56,6 +56,15 @@ import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import { selectHostCandidate } from "@/lib/host/HostManager";
 import { showtime } from "@/lib/showtime";
+import {
+  publishShowtimeEvent,
+  subscribeShowtimeEvents,
+} from "@/lib/showtime/events";
+import type {
+  ShowtimeEventType,
+  ShowtimeIntentHandlers,
+  ShowtimeIntentMetadata,
+} from "@/lib/showtime/types";
 import { verifyPassword } from "@/lib/security/password";
 import {
   assignNumberIfNeeded,
@@ -137,6 +146,26 @@ const formatSpectatorHostError = (code: string): string => {
   );
 };
 
+const resolveRevealedMs = (value: unknown): number | null => {
+  if (!value) return null;
+  if (typeof value === "object" && value !== null) {
+    if (value instanceof Date) {
+      return value.getTime();
+    }
+    if (typeof (value as any).toMillis === "function") {
+      try {
+        return (value as any).toMillis();
+      } catch {
+        return null;
+      }
+    }
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  return null;
+};
+
 const PREFETCH_COMPONENT_LOADERS: Array<() => Promise<unknown>> = [
   () => import("@/components/SettingsModal"),
   () => import("@/components/ui/MinimalChat"),
@@ -156,6 +185,14 @@ type RoomPageContentProps = {
 
 type AuthContextValue = ReturnType<typeof useAuth>;
 type RoomStateSnapshot = ReturnType<typeof useRoomState>;
+
+type ShowtimeIntentState = {
+  pending: boolean;
+  intentId: string | null;
+  markedAt: number | null;
+  lastPublishedId: string | null;
+  meta?: ShowtimeIntentMetadata | null;
+};
 
 type RoomPageContentInnerProps = RoomStateSnapshot & {
   roomId: string;
@@ -788,6 +825,211 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const { user, displayName, setDisplayName, loading: authLoading } = auth;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const showtimeProcessedRef = useRef<Set<string>>(new Set());
+  const lastShowtimePlayRef = useRef<{ type: ShowtimeEventType; ts: number } | null>(null);
+  const lastStartRoundRef = useRef<number | null>(null);
+  const showtimeStartIntentRef = useRef<ShowtimeIntentState>({
+    pending: false,
+    intentId: null,
+    markedAt: null,
+    lastPublishedId: null,
+    meta: null,
+  });
+  const showtimeRevealIntentRef = useRef<ShowtimeIntentState>({
+    pending: false,
+    intentId: null,
+    markedAt: null,
+    lastPublishedId: null,
+    meta: null,
+  });
+
+  const getIntentRef = useCallback(
+    (kind: "start" | "reveal") =>
+      kind === "start" ? showtimeStartIntentRef : showtimeRevealIntentRef,
+    []
+  );
+
+  const generateIntentId = useCallback(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      try {
+        return crypto.randomUUID();
+      } catch {
+        /* ignore */
+      }
+    }
+    return `intent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }, []);
+
+  const markShowtimeIntent = useCallback(
+    (kind: "start" | "reveal", meta?: ShowtimeIntentMetadata) => {
+      const ref = getIntentRef(kind);
+      const intentId = generateIntentId();
+      ref.current = {
+        pending: true,
+        intentId,
+        markedAt: Date.now(),
+        lastPublishedId: ref.current.lastPublishedId ?? null,
+        meta: meta ?? null,
+      };
+      traceAction("debug.showtime.intent", {
+        roomId,
+        action: "mark",
+        kind,
+        intentId,
+        meta: meta ?? null,
+      });
+    },
+    [generateIntentId, getIntentRef, roomId]
+  );
+
+  const clearShowtimeIntent = useCallback(
+    (kind: "start" | "reveal") => {
+      const ref = getIntentRef(kind);
+      ref.current = {
+        pending: false,
+        intentId: null,
+        markedAt: null,
+        lastPublishedId: ref.current.lastPublishedId ?? null,
+        meta: null,
+      };
+      traceAction("debug.showtime.intent", {
+        roomId,
+        action: "clear",
+        kind,
+      });
+    },
+    [getIntentRef, roomId]
+  );
+
+  const consumeShowtimeIntent = useCallback(
+    (kind: "start" | "reveal"): ShowtimeIntentState | null => {
+      const ref = getIntentRef(kind);
+      if (!ref.current.pending || !ref.current.intentId) {
+        return null;
+      }
+      const snapshot: ShowtimeIntentState = { ...ref.current };
+      ref.current.pending = false;
+      ref.current.lastPublishedId = snapshot.intentId;
+      return snapshot;
+    },
+    [getIntentRef]
+  );
+
+  const showtimeIntentHandlers = useMemo<ShowtimeIntentHandlers>(
+    () => ({
+      markStartIntent: (meta) => markShowtimeIntent("start", meta),
+      markRevealIntent: (meta) => markShowtimeIntent("reveal", meta),
+      clearIntent: (kind) => clearShowtimeIntent(kind),
+    }),
+    [clearShowtimeIntent, markShowtimeIntent]
+  );
+
+  const recordShowtimePlayback = useCallback(
+    (
+      type: ShowtimeEventType,
+      context: Record<string, unknown>,
+      meta: { origin: "intent" | "subscription" | "fallback"; intentId?: string | null; eventId?: string | null }
+    ) => {
+      lastShowtimePlayRef.current = { type, ts: Date.now() };
+      traceAction("debug.showtime.event.play", {
+        roomId,
+        type,
+        origin: meta.origin,
+        intentId: meta.intentId ?? null,
+        eventId: meta.eventId ?? null,
+        round: typeof (context as any).round === "number" ? (context as any).round : null,
+        status: typeof (context as any).status === "string" ? (context as any).status : null,
+        success:
+          typeof (context as any).success === "boolean"
+            ? (context as any).success
+            : ((context as any).success ?? null),
+      });
+      void showtime.play(type, context as Record<string, unknown>);
+    },
+    [roomId]
+  );
+
+  const publishIntentPlayback = useCallback(
+    async (
+      type: ShowtimeEventType,
+      context: { round?: number | null; status?: string | null; success?: boolean | null; revealedMs?: number | null },
+      intentSnapshot: ShowtimeIntentState
+    ) => {
+      const intentKey = intentSnapshot.intentId ? `intent:${intentSnapshot.intentId}` : null;
+      if (intentKey) {
+        showtimeProcessedRef.current.add(intentKey);
+      }
+      recordShowtimePlayback(type, context, {
+        origin: "intent",
+        intentId: intentSnapshot.intentId ?? null,
+      });
+      try {
+        const eventId = await publishShowtimeEvent(roomId, {
+          type,
+          round: context.round ?? null,
+          status: context.status ?? null,
+          success: context.success ?? null,
+          revealedMs: context.revealedMs ?? null,
+          intentId: intentSnapshot.intentId ?? null,
+          source: "intent",
+        });
+        if (eventId) {
+          showtimeProcessedRef.current.add(eventId);
+        }
+      } catch (error) {
+        traceError("debug.showtime.intent.publish", error, {
+          roomId,
+          type,
+          intentId: intentSnapshot.intentId ?? null,
+        });
+      }
+    },
+    [recordShowtimePlayback, roomId]
+  );
+
+  useEffect(() => {
+    if (!roomId) {
+      return;
+    }
+    showtimeProcessedRef.current.clear();
+    lastShowtimePlayRef.current = null;
+    lastStartRoundRef.current = null;
+    const unsubscribe = subscribeShowtimeEvents(roomId, (event) => {
+      const eventKey = event.intentId ? `intent:${event.intentId}` : event.id;
+      if (eventKey && showtimeProcessedRef.current.has(eventKey)) {
+        return;
+      }
+      if (eventKey) {
+        showtimeProcessedRef.current.add(eventKey);
+      }
+      if (event.intentId) {
+        if (showtimeStartIntentRef.current.lastPublishedId === event.intentId) {
+          showtimeStartIntentRef.current.pending = false;
+          showtimeStartIntentRef.current.intentId = null;
+        }
+        if (showtimeRevealIntentRef.current.lastPublishedId === event.intentId) {
+          showtimeRevealIntentRef.current.pending = false;
+          showtimeRevealIntentRef.current.intentId = null;
+        }
+      }
+      if (event.type === "round:reveal" && typeof event.revealedMs === "number") {
+        lastRevealTsRef.current = event.revealedMs;
+      }
+      const context =
+        event.type === "round:start"
+          ? { round: event.round ?? null, status: event.status ?? null }
+          : { success: event.success ?? null };
+      recordShowtimePlayback(event.type, context, {
+        origin: "subscription",
+        intentId: event.intentId ?? null,
+        eventId: event.id,
+      });
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [recordShowtimePlayback, roomId]);
+
 
   const emitSpectatorEvent = useCallback(
     (event: RoomMachineClientEvent) => {
@@ -865,9 +1107,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
-  const previousRoundRef = useRef<number | null>(null);
-  const previousStatusRef = useRef<string | null>(null);
-  const initialStatusHydratedRef = useRef(false);
   const lastRevealTsRef = useRef<number | null>(null);
   const [joinVersion, setJoinVersion] = useState(0);
   const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
@@ -2236,76 +2475,75 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     roomId,
     me?.id,
   ]);
+
   useEffect(() => {
     if (!room) {
-      previousRoundRef.current = null;
+      lastStartRoundRef.current = null;
+      return;
+    }
+    if (!showtimeStartIntentRef.current.pending) {
       return;
     }
     const currentRound =
       typeof room.round === "number" && room.round > 0 ? room.round : null;
-    if (
-      currentRound &&
-      previousRoundRef.current !== currentRound
-    ) {
-      void showtime.play("round:start", {
-        round: currentRound,
-        status: room.status,
-      });
+    if (!currentRound) {
+      return;
     }
-    previousRoundRef.current = currentRound;
-  }, [room?.round, room?.status]);
+    if (lastStartRoundRef.current === currentRound) {
+      return;
+    }
+    const intentSnapshot = consumeShowtimeIntent("start");
+    if (!intentSnapshot) {
+      return;
+    }
+    lastStartRoundRef.current = currentRound;
+    void publishIntentPlayback(
+      "round:start",
+      { round: currentRound, status: room.status ?? null },
+      intentSnapshot
+    );
+  }, [room, room?.round, room?.status, consumeShowtimeIntent, publishIntentPlayback]);
 
   useEffect(() => {
     if (!room) {
-      previousStatusRef.current = null;
-      initialStatusHydratedRef.current = false;
-      lastRevealTsRef.current = null;
+      return;
+    }
+    if (!showtimeRevealIntentRef.current.pending) {
       return;
     }
     const status = room.status ?? null;
-    const prev = previousStatusRef.current;
-    const revealedAt = room.result?.revealedAt;
-    const revealedMs = (() => {
-      if (!revealedAt) return null;
-      if (
-        typeof revealedAt === "object" &&
-        typeof (revealedAt as any).toMillis === "function"
-      ) {
-        try {
-          return (revealedAt as any).toMillis();
-        } catch {
-          return null;
-        }
-      }
-      if (revealedAt instanceof Date) {
-        return revealedAt.getTime();
-      }
-      return null;
-    })();
-    if (!initialStatusHydratedRef.current) {
-      previousStatusRef.current = status;
-      initialStatusHydratedRef.current = true;
-      lastRevealTsRef.current = revealedMs;
+    const revealedMs = resolveRevealedMs(room.result?.revealedAt);
+    const enteringReveal = status === "reveal";
+    const finishingReveal =
+      status === "finished" &&
+      revealedMs !== null &&
+      (lastRevealTsRef.current === null || revealedMs !== lastRevealTsRef.current);
+    if (!enteringReveal && !finishingReveal) {
       return;
     }
-    if (status && prev !== status) {
-      const enteringReveal = status === "reveal" && prev !== "reveal";
-      const finishingReveal =
-        status === "finished" &&
-        prev === "reveal" &&
-        (revealedMs === null || revealedMs !== lastRevealTsRef.current);
-      if (enteringReveal || finishingReveal) {
-        void showtime.play("round:reveal", {
-          success: room.result?.success ?? null,
-        });
-      }
+    const intentSnapshot = consumeShowtimeIntent("reveal");
+    if (!intentSnapshot) {
+      return;
     }
-    previousStatusRef.current = status;
-    if (revealedMs !== null && revealedMs !== lastRevealTsRef.current) {
+    if (revealedMs !== null) {
       lastRevealTsRef.current = revealedMs;
     }
-  }, [room?.status, room?.result?.success]);
-
+    void publishIntentPlayback(
+      "round:reveal",
+      {
+        success: room.result?.success ?? null,
+        revealedMs,
+      },
+      intentSnapshot
+    );
+  }, [
+    room,
+    room?.status,
+    room?.result?.success,
+    room?.result?.revealedAt,
+    consumeShowtimeIntent,
+    publishIntentPlayback,
+  ]);
   useEffect(() => {
     const status = room?.status ?? null;
     if (!isMember) {
@@ -3070,6 +3308,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       pop={pop}
       hostClaimStatus={hostClaimStatus}
       phaseMessage={phaseMessage}
+      showtimeIntentHandlers={showtimeIntentHandlers}
     />
   ) : undefined;
 

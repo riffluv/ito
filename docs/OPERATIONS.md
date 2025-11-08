@@ -10,7 +10,7 @@
   - `NEXT_PUBLIC_APP_VERSION`: ビルド識別子。Safe Update の差分判定にも利用。  
   - `NEXT_PUBLIC_ENABLE_PWA`: PWA / Service Worker を有効化。  
   - `NEXT_PUBLIC_FEATURE_SAFE_UPDATE`: Safe Update フローを有効化。  
-  - `NEXT_PUBLIC_FSM_ENABLE`: XState ベースの新ルームマシンを切り替え。  
+  - `NEXT_PUBLIC_FSM_*`: （廃止済み）XState は常時有効なため不要。  
   - `NEXT_PUBLIC_PRESENCE_*`: RTDB プレゼンス調整用。  
 - **基本コマンド**  
   - `npm run dev`: 開発サーバー  

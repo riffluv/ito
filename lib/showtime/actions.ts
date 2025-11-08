@@ -3,6 +3,15 @@ import type { SoundId } from "@/lib/audio/types";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
 import type { ActionExecutor, ShowtimeContext } from "./types";
 
+/**
+ * SHOWTIME (Phase 0)
+ *
+ * ここに定義されているアクションは、RoomPage が差分監視で `showtime.play()` を呼んだ際に
+ * そのままクライアント UI を操作するだけの仕組み。サーバー由来の intent や
+ * Firestore publish とはまだ接続されておらず、window.bg / audio といった副作用を
+ * 直接叩く現状を記録している。
+ */
+
 const SCOPE = "showtime";
 export const SHOWTIME_BANNER_EVENT = "showtime:banner";
 

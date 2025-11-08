@@ -123,10 +123,9 @@ http://localhost:3000 でアクセス可能
 | Playwright テスト | `npx playwright test` <br> ※特定ファイルだけ走らせる場合は `npx playwright test tests/roomMachine.spec.ts` のように指定 |
 | 本番ビルド＋起動 | `npm run build && npm run start` |
 
-### Feature Flag: FSM
+### FSM (XState) 状態機械
 
-- `.env.local` の `NEXT_PUBLIC_FSM_ENABLE` を `1` にすると、新しい状態機械 (`lib/state/roomMachine.ts`) を利用します。
-- 既定値 `0` のままでもゲームは従来ロジックで動作します。切り替え後は `npm run dev` を再起動して変化を確認してください。
+- 現在は XState ベースの状態機械 (`lib/state/roomMachine.ts`) が常時有効です。旧ロジックへの切り替え用フラグ（`NEXT_PUBLIC_FSM_ENABLE`）は撤廃済みです。
 
 ## 🏗️ アーキテクチャ
 

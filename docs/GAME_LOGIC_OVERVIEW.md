@@ -113,6 +113,10 @@ interface RoomDocLike {
 - `useHostActions`:
   - Firestore 書き込み（status 遷移 / order 更新 / result 設定）をラップ。
   - `quickStart` 呼び出しは Cloud Functions（Callable）経由に一本化済み。ホストの開始操作は `httpsCallable("quickStart")` を叩き、サーバー側でトピック決定・配札・`roomProposals` 初期化まで行う。カスタムお題も同じ関数を使用。
+- SHOWTIME intent:
+  - `MiniHandDock → useHostActions → RoomPage` で `showtimeIntentHandlers` を受け渡し、ホストの「演出を伴う操作」（クイック開始 / カスタム開始 / 並べ提出）だけに `markStartIntent` / `markRevealIntent` を付与。
+  - RoomPage 側では intent を `consumeStartIntent` / `consumeRevealIntent` したタイミングで `round:start` / `round:reveal` を Firestore (`rooms/{id}/showtime`) に publish しつつ、ローカルでも即 `showtime.play()` を実行。
+  - 全クライアントは `subscribeShowtimeEvents` でイベントを購読し、`processedShowtimeRef` により重複再生を防ぐ。意図しない差分で旧ロジックが動いた場合は `traceAction("debug.showtime.fallback")` が出る。
 - `useDropHandler`:
   - DnD のドロップイベントを受け、sequential では `order.list` を即時更新、sort-submit では `proposal` を更新。
 
@@ -166,6 +170,7 @@ interface RoomDocLike {
 
 ## 12. 改善ポイント（Backlog）
 
+- SHOWTIME: intent publish + Firestore 購読に一本化済み。`NEXT_PUBLIC_FSM_ENABLE` も撤廃し、FSM 前提の実装に統一（詳細: `docs/SHOWTIME_REFACTOR_PLAN.md`）。
 - 状態管理: 状態遷移図ベース（XState 等）での一元管理
 - テスト: hostActionsModel / evaluate / sequential のユニットテスト充実
 - アクセシビリティ: DnD のキーボード操作対応（modifiers）

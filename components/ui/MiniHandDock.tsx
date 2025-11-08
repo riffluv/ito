@@ -12,6 +12,7 @@ import { topicControls } from "@/lib/game/service";
 import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
+import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
 import { useRevealGate } from "@/lib/hooks/useRevealGate";
 import type { PlayerDoc } from "@/lib/types";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
@@ -303,6 +304,7 @@ interface MiniHandDockProps {
   hostClaimStatus?: HostClaimStatus;
   presenceReady?: boolean;
   phaseMessage?: string | null;
+  showtimeIntentHandlers?: ShowtimeIntentHandlers;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -329,6 +331,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     hostClaimStatus,
     presenceReady = true,
     phaseMessage,
+    showtimeIntentHandlers,
   } = props;
 
   const serviceWorkerUpdateState = useServiceWorkerUpdate();
@@ -503,6 +506,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     currentTopic,
     presenceReady,
     onFeedback: setInlineFeedback,
+    showtimeIntents: showtimeIntentHandlers,
   });
 
   const effectiveDefaultTopicType = hostDefaultTopicType;

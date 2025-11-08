@@ -107,7 +107,7 @@ npx playwright test tests/spectatorFlow.spec.ts
 
 ---
 
-補足: `.env.local` から `NEXT_PUBLIC_FSM_ENABLE` を削除済み。必要なら `.env.local.bak` を参照。性能計測フラグ類 (`*_PERF_*`) は現行のまま維持。
+補足: `NEXT_PUBLIC_FSM_ENABLE` は完全に廃止済み（`.env.local` / `.env.local.bak` いずれにも存在しません）。性能計測フラグ類 (`*_PERF_*`) は現行のまま維持。
 
 ---
 

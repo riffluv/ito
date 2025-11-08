@@ -2,6 +2,15 @@ import { ACTION_EXECUTORS } from "./actions";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import type { Scenario, ScenarioStep, ShowtimeContext } from "./types";
 
+/**
+ * SHOWTIME (Phase 0)
+ *
+ * Manager 自体は完全にクライアントサイドのキュー制御のみを担い、FSM intent や
+ * Firestore のイベント系列とは無関係。RoomPage の `room.status` / `room.round`
+ * ウォッチャーから直接 `showtime.play()` が呼ばれ、ここでは順番保証とメトリクス計測だけを行う。
+ * リファクタ前の責務を明確にするために残している。
+ */
+
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
     if (!ms || ms <= 0) {

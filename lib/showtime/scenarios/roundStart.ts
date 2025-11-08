@@ -1,5 +1,12 @@
 import type { Scenario } from "@/lib/showtime/types";
 
+/**
+ * SHOWTIME (Phase 0)
+ *
+ * RoomPage が Firestore の `room.round` 変化を検知したときだけ再生される
+ * 既存の演出シナリオ。FSM intent や phaseEvent からはまだ呼び出されない。
+ */
+
 type RoundContext = {
   round?: number;
   status?: string;

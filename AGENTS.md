@@ -9,7 +9,7 @@
 - タイトル: **序の紋章 III（オンライン版）**
 - ゲーム内容: 「ito」ライクな協力推理ゲーム。ブラウザ上で数字カードを推理・並べ替えて遊ぶ。
 - 技術スタック: Next.js 14 App Router / TypeScript / Chakra UI / Pixi.js 8 / GSAP 3 / Firebase (Firestore + RTDB + Auth + Functions) / Stripe
-- 現行ブランチでは **FSM（XState）実装** が feature flag 付きで導入済み。`NEXT_PUBLIC_FSM_ENABLE=1` で新実装が動作。
+- 現行ブランチでは **FSM（XState）実装** が常時有効。旧ロジックへ戻すフラグは撤廃済み。
 - Presence は Firestore の `lastSeen` ではなく **RTDB を唯一のソース** とする設計。
 
 ---
@@ -71,12 +71,11 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 
 ## 4. 状態管理まわりのポイント
 
-### Feature Flag: FSM
+### FSM 状態機械
 
-- `.env.local` に `NEXT_PUBLIC_FSM_ENABLE` を追加することで、新旧ロジックを切り替えられる。
-- `1`: `lib/state/roomMachine.ts` の XState ベース状態機械を利用。`useRoomState` が machine を interpret し、イベントで進行。
-- `0` または未設定: 旧ロジック（手書きステート管理）を使用。
-- FSM 有効時は `roomStatus` だけでなく `phase`・`sendRoomEvent` が expose されるので、UI 側の条件分岐に注意。
+- `lib/state/roomMachine.ts` (XState) が常時有効です。`useRoomState` が machine を interpret し、イベントで進行します。
+- 以前の `NEXT_PUBLIC_FSM_ENABLE` フラグは撤廃済みです。
+- FSM では `roomStatus` だけでなく `phase`・`sendRoomEvent` が expose されるので、UI 側の条件分岐に注意。
 
 ### トレース（trace）
 
@@ -127,11 +126,11 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 
 ---
 
-## 7. 今後の推奨フロー（FSM を前提にする場合）
+## 7. 今後の推奨フロー（FSM 前提）
 
-1. `.env.local` に `NEXT_PUBLIC_FSM_ENABLE=1` を設定して動作確認。
-2. 問題なければフラグ分岐を削除し、新しい状態機械に完全移行。
-3. 移行後は不要になった旧ロジック／ユーティリティを整理していく。
+1. FSM は常時オンなので、XState 前提で実装・テストする。
+2. 旧ロジックに依存したユーティリティを見つけたら削除・整理する。
+3. テストやドキュメントも FSM 前提の内容に統一する。
 
 ---
 
