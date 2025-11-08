@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
 
 import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
+import { SpectatorRejoinManager } from "@/components/ui/SpectatorRejoinManager";
 import { HandAreaSection } from "@/components/rooms/HandAreaSection";
 import type { SpectatorHostRequest } from "@/lib/spectator/v2/useSpectatorHostQueue";
 import type { SpectatorController } from "@/lib/spectator/v2/useSpectatorController";
@@ -17,6 +18,9 @@ type HostPanelProps = {
   loading: boolean;
   error: string | null;
   spectatorRecallEnabled: boolean;
+  canRecallSpectators: boolean;
+  recallPending: boolean;
+  onRecallSpectators: () => Promise<void>;
   players: (PlayerDoc & { id: string })[];
   onApprove: (request: SpectatorHostRequest) => Promise<void>;
   onReject: (request: SpectatorHostRequest, reason: string | null) => Promise<void>;
@@ -34,6 +38,7 @@ type SpectatorHUDProps = {
   showHand: boolean;
   handNode?: ReactNode;
   host: HostPanelProps;
+  hostPanelEnabled?: boolean;
 };
 
 export function SpectatorHUD({
@@ -47,6 +52,7 @@ export function SpectatorHUD({
   showHand,
   handNode,
   host,
+  hostPanelEnabled = true,
 }: SpectatorHUDProps) {
   const autoApprovedRef = useRef<Set<string>>(new Set());
 
@@ -92,7 +98,14 @@ export function SpectatorHUD({
           autoApprovedRef.current.delete(request.sessionId);
         });
     }
-  }, [host.enabled, host.autoApprove, host.error, host.loading, host.requests, host.onApprove]);
+  }, [
+    host.enabled,
+    host.autoApprove,
+    host.error,
+    host.loading,
+    host.requests,
+    host.onApprove,
+  ]);
 
   useEffect(() => {
     if (!host.enabled || !host.autoApprove) {
@@ -100,7 +113,21 @@ export function SpectatorHUD({
     }
   }, [host.enabled, host.autoApprove]);
 
-  const hostPanel = null;
+  const hostPanel = hostPanelEnabled && host.enabled ? (
+    <SpectatorRejoinManager
+      roomId={host.roomId}
+      requests={host.requests}
+      loading={host.loading}
+      error={host.error}
+      spectatorRecallEnabled={host.spectatorRecallEnabled}
+      canRecallSpectators={host.canRecallSpectators}
+      recallPending={host.recallPending}
+      onRecallSpectators={host.onRecallSpectators}
+      players={host.players}
+      onApprove={host.onApprove}
+      onReject={host.onReject}
+    />
+  ) : null;
 
   const renderedHand = showHand ? handNode : undefined;
 

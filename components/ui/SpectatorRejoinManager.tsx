@@ -14,6 +14,9 @@ type SpectatorRejoinManagerProps = {
   loading: boolean;
   error: string | null;
   spectatorRecallEnabled: boolean;
+  canRecallSpectators: boolean;
+  recallPending: boolean;
+  onRecallSpectators: () => Promise<void>;
   players: (PlayerDoc & { id: string })[];
   onApprove: (request: SpectatorHostRequest) => Promise<void>;
   onReject: (request: SpectatorHostRequest, reason: string | null) => Promise<void>;
@@ -43,6 +46,9 @@ export function SpectatorRejoinManager({
   loading,
   error,
   spectatorRecallEnabled,
+  canRecallSpectators,
+  recallPending,
+  onRecallSpectators,
   players,
   onApprove,
   onReject,
@@ -125,10 +131,21 @@ export function SpectatorRejoinManager({
     setRejectDialog(null);
   }, [pendingAction]);
 
-  const hasNothingToShow = !loading && !error && requests.length === 0;
-  if (hasNothingToShow) {
-    return null;
-  }
+  const recallButtonDisabled =
+    recallPending || spectatorRecallEnabled || !canRecallSpectators;
+
+  const handleSpectatorRecall = useCallback(() => {
+    if (recallPending || spectatorRecallEnabled || !canRecallSpectators) {
+      return;
+    }
+    void onRecallSpectators();
+  }, [onRecallSpectators, recallPending, spectatorRecallEnabled, canRecallSpectators]);
+
+  const recallButtonLabel = recallPending
+    ? "呼び出し中..."
+    : spectatorRecallEnabled
+    ? "観戦受付中"
+    : "観戦者を呼ぶ";
 
   return (
     <>
@@ -144,17 +161,37 @@ export function SpectatorRejoinManager({
         flexDirection="column"
         gap={3}
       >
-        <HStack justify="space-between" align="center">
+        <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
           <Text fontSize={{ base: "md", md: "lg" }} fontWeight={700}>
             観戦者の復帰申請
           </Text>
-          <HStack gap={2}>
-            <Badge colorScheme={spectatorRecallEnabled ? "green" : "gray"}>
-              {spectatorRecallEnabled ? "待機ウィンドウ開放中" : "待機ウィンドウ閉鎖中"}
-            </Badge>
-            <Badge colorScheme={requests.length > 0 ? "orange" : "gray"}>
-              {requests.length > 0 ? `${requests.length} 件待機中` : "待機なし"}
-            </Badge>
+          <HStack gap={3} align="center" flexWrap="wrap">
+            <HStack gap={2}>
+              <Badge colorScheme={spectatorRecallEnabled ? "green" : "gray"}>
+                {spectatorRecallEnabled ? "待機ウィンドウ開放中" : "待機ウィンドウ閉鎖中"}
+              </Badge>
+              <Badge colorScheme={requests.length > 0 ? "orange" : "gray"}>
+                {requests.length > 0 ? `${requests.length} 件待機中` : "待機なし"}
+              </Badge>
+            </HStack>
+            {canRecallSpectators ? (
+              <AppButton
+                palette="brand"
+                size="sm"
+                visual={spectatorRecallEnabled ? "outline" : "solid"}
+                onClick={handleSpectatorRecall}
+                disabled={recallButtonDisabled}
+              >
+                {recallPending ? (
+                  <HStack gap={2} align="center">
+                    <Spinner size="xs" />
+                    <Text as="span">呼び出し中...</Text>
+                  </HStack>
+                ) : (
+                  recallButtonLabel
+                )}
+              </AppButton>
+            ) : null}
           </HStack>
         </HStack>
         {loading ? (

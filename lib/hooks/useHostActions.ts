@@ -302,7 +302,7 @@ export function useHostActions({
       const shouldPlaySound = options?.playSound ?? true;
       const includeOnline = options?.includeOnline ?? true;
       const recallSpectators =
-        options?.recallSpectators ?? includeOnline;
+        options?.recallSpectators ?? true;
       setIsResetting(true);
       if (shouldPlaySound) {
         playResetGame();

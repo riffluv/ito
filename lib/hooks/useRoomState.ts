@@ -7,7 +7,11 @@ import deepEqual from "fast-deep-equal/es6";
 import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
-import { clearSpectatorFlags } from "@/lib/spectator/sessionFlags";
+import {
+  clearSpectatorFlags,
+  readAutoJoinSuppressFlag,
+  readPendingRejoinFlag,
+} from "@/lib/spectator/sessionFlags";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   handleFirebaseQuotaError,
@@ -507,15 +511,10 @@ export function useRoomState(
     // Spectator V3:
     // - 原則: 観戦→復帰は rejoinRequests 経由（page.tsx 側で実装）
     // - 例外: 初回/一般参加（waiting かつ recallOpen が閉じられていない場合）は従来どおり自動参加を許可
-    let pendingRejoin = false;
-    if (rejoinSessionKey && typeof window !== "undefined") {
-      try {
-        const stored = window.sessionStorage.getItem(rejoinSessionKey);
-        if (stored !== null) {
-          pendingRejoin = stored === uid;
-        }
-      } catch {}
-    }
+    let pendingRejoin = readPendingRejoinFlag({
+      rejoinSessionKey,
+      uid,
+    });
     const rejoinDocState = spectatorRejoinDocExists;
     if (pendingRejoin && rejoinDocState === false && uid && rejoinSessionKey) {
       const { pendingCleared } = clearSpectatorFlags({
@@ -531,13 +530,7 @@ export function useRoomState(
     const activeRejoinIntent =
       pendingRejoin && (rejoinDocState === null || rejoinDocState === true);
 
-    let autoJoinSuppressed = false;
-    if (autoJoinSuppressKey && typeof window !== "undefined") {
-      try {
-        autoJoinSuppressed =
-          window.sessionStorage.getItem(autoJoinSuppressKey) === "1";
-      } catch {}
-    }
+    let autoJoinSuppressed = readAutoJoinSuppressFlag(autoJoinSuppressKey);
 
     const clearPending = () => {
       if (!pendingRejoin || !uid) return;
@@ -559,13 +552,9 @@ export function useRoomState(
     if (room.status === "waiting") {
       if (recallV2Enabled && !isMember) {
         const status = (room as any)?.status as string | undefined;
-        const recallOpenValue = (room as any)?.ui?.recallOpen as boolean | undefined;
-        const isRejoinIntent = pendingRejoin;
         const allowDirectJoin =
-          status === "waiting" &&
-          (!activeRejoinIntent || recallOpenValue !== false);
-        const allowFromIntent = isRejoinIntent && !autoJoinSuppressed;
-        if (!allowDirectJoin && !allowFromIntent) {
+          status === "waiting" && !activeRejoinIntent;
+        if (!allowDirectJoin) {
           joinAttemptRef.current = 0;
           clearRetryTimer();
           setJoinStatus("idle");

@@ -108,3 +108,42 @@ npx playwright test tests/spectatorFlow.spec.ts
 ---
 
 補足: `.env.local` から `NEXT_PUBLIC_FSM_ENABLE` を削除済み。必要なら `.env.local.bak` を参照。性能計測フラグ類 (`*_PERF_*`) は現行のまま維持。
+
+---
+
+## 7. 観戦／リセット周りのリファクタリング計画（次期エージェント向け）
+
+### 目的
+
+1. **FSM ロジックへ一本化** — `pendingRejoin` / `autoJoinSuppress` / `recallOpen` など旧ロジック由来のフラグを散在させず、FSM および専用モジュールで管理する。
+2. **リセット操作と観戦復帰の完全分離** — 「ルームを waiting へ戻す」操作と「観戦者を席へ招く」操作を別経路にし、リセットでは観戦者を呼び戻さない。
+3. **拡張性／デバッグ性向上** — API と状態遷移をドキュメント化し、主要イベントを `traceAction` で可視化することで、他エージェントが即座に影響範囲を把握できるようにする。
+
+### 実装概要
+
+1. **API レベルの分割**
+   - `/api/rooms/[roomId]/reset` は既定で `ui.recallOpen=true` の待機状態へ戻すが、観戦者は自動では戻らない。ホストが観戦席を閉じたい場合は、`recallSpectators: false` を明示するか `/spectators/recall` API で個別制御できる。
+   - 観戦者を一斉に待機へ戻す専用エンドポイント `/api/rooms/[roomId]/spectators/recall` を新設し、`lib/firebase/rooms.ts` の `requestSpectatorRecall()` 経由でホスト操作からのみ叩く。
+   - `composeWaitingResetPayload` の既定値は `true` に戻しつつ、UI では観戦者を常に spectator HUD 上に留めるため、自動再入室は行わない。
+
+2. **状態管理の整理**
+   - `useRoomState` は `pendingRejoin` / `autoJoinSuppress` を直接触らず、`lib/spectator/sessionFlags.ts` の `readPendingRejoinFlag` / `readAutoJoinSuppressFlag` に委譲。
+   - `requestSpectatorRecall()` が `traceAction("spectator.recall.initiated")` / `"spectator.recall.success"` を記録し、失敗時は `traceError("spectator.recall", …)` に集約した。
+   - `recallOpen` は「サーバーが観戦者再入室を受け入れているか」のフラグに限定され、UI の可否判定は新 API とリクエスト状態に依存する。
+
+3. **UI / UX の調整**
+   - 観戦 UI（SpectatorNotice）は常に表示し、`席に戻れるか試す` ボタンから手動で再入室フローを開始する。リセット後は `ui.recallOpen=true` のため、ボタンを押せば即時承認（自動承認）で席に戻れる。
+   - 観戦者復帰パネル（観戦者の復帰申請）はデザインが固まるまで非表示にしつつ、裏側の自動承認ロジックだけを残してあるため、再度有効化したい場合はフラグを戻すだけで良い。
+
+4. **トレースとドキュメント**
+   - 新しい `spectator.recall.*` トレースで API 呼び出しを可視化し、観戦者まわりの調査ポイントをダッシュボードから即確認できるようにした。
+   - 本ドキュメントを最新仕様に更新し、API / FSM / UI の分離を随時参照できるようにした。
+
+### 完了定義
+
+- リセット後に観戦者が自動で席へ戻らない（`ui.recallOpen` の既定値は常に `false`）。
+- 観戦者は「席にもどる」ボタンとホスト承認なしにはプレイヤー席に復帰できない。
+- FSM／API／フラグ管理の責務が明確に分かれ、他エージェントが観戦ロジックを触っても副作用を即座に把握できる。
+- 本ドキュメントなどに最新仕様が記載され、ハンドオフ情報として参照可能になっている。
+
+> この計画を次期エージェントへ引き継ぎ、実装着手前に API 設計と state machine 図を更新すること。
