@@ -83,6 +83,8 @@ export function useRoomState(
   const [joinStatus, setJoinStatus] = useState<"idle" | "joining" | "retrying" | "joined">(
     "idle"
   );
+  const prevJoinStatusRef = useRef<typeof joinStatus | null>(null);
+  const prevJoinRoomStatusRef = useRef<RoomDoc["status"] | null>(null);
   const machineRef = useRef<RoomMachineActorRef | null>(null);
   const pendingMachineEventsRef = useRef<RoomMachineClientEvent[]>([]);
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
@@ -942,6 +944,22 @@ export function useRoomState(
 
   const detachNow = detach;
   const reattachPresence = reattachNow;
+  useEffect(() => {
+    const previousStatus = prevJoinStatusRef.current;
+    const previousRoomStatus = prevJoinRoomStatusRef.current;
+    if (previousStatus === joinStatus && previousRoomStatus === room?.status) {
+      return;
+    }
+    prevJoinStatusRef.current = joinStatus;
+    prevJoinRoomStatusRef.current = room?.status ?? null;
+    traceAction("room.joinStatus", {
+      roomId,
+      uid,
+      joinStatus,
+      roomStatus: room?.status ?? null,
+      isMember,
+    });
+  }, [roomId, uid, joinStatus, room?.status, isMember]);
   return {
     ...state,
     detachNow,

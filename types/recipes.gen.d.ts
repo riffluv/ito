@@ -230,6 +230,7 @@ export interface CheckmarkVariant {
   size?: "xs" | "sm" | "md" | "lg" | undefined
   /** @default "solid" */
   variant?: "solid" | "outline" | "subtle" | "plain" | "inverted" | undefined
+  filled?: boolean | undefined
 }
 
 export type CheckmarkVariantProps = {
@@ -245,6 +246,7 @@ export interface RadiomarkVariant {
   variant?: "solid" | "subtle" | "outline" | "inverted" | undefined
   /** @default "md" */
   size?: "xs" | "sm" | "md" | "lg" | undefined
+  filled?: boolean | undefined
 }
 
 export type RadiomarkVariantProps = {
@@ -286,9 +288,11 @@ export type AppButtonVariantMap = {
 }
 
 export interface AppCardVariant {
+  /** @default false */
   interactive?: boolean | undefined
   /** @default "comfortable" */
   density?: "compact" | "comfortable" | "spacious" | undefined
+  /** @default false */
   selected?: boolean | undefined
   /** @default "default" */
   variant?: "default" | "elevated" | "outlined" | "success" | "danger" | "highlight" | undefined
@@ -409,6 +413,7 @@ export type AlertSlot = "title" | "description" | "root" | "indicator" | "conten
 export interface AlertVariant {
   /** @default "info" */
   status?: "info" | "warning" | "success" | "error" | "neutral" | undefined
+  /** @default false */
   inline?: boolean | undefined
   /** @default "subtle" */
   variant?: "subtle" | "surface" | "outline" | "solid" | undefined
@@ -501,6 +506,20 @@ export type CardVariantProps = {
 
 export type CardVariantMap = {
   [K in keyof CardVariant]: Array<CardVariant[K]>
+}
+
+// Carousel
+
+export type CarouselSlot = "root" | "itemGroup" | "item" | "control" | "nextTrigger" | "prevTrigger" | "indicatorGroup" | "indicator" | "autoplayTrigger"
+
+export interface CarouselVariant {}
+
+export type CarouselVariantProps = {
+  [K in keyof CarouselVariant]?: ConditionalValue<CarouselVariant[K]> | undefined
+}
+
+export type CarouselVariantMap = {
+  [K in keyof CarouselVariant]: Array<CarouselVariant[K]>
 }
 
 // Checkbox
@@ -807,6 +826,34 @@ export type ListVariantProps = {
 
 export type ListVariantMap = {
   [K in keyof ListVariant]: Array<ListVariant[K]>
+}
+
+// Listbox
+
+export type ListboxSlot =
+  | "label"
+  | "input"
+  | "item"
+  | "itemText"
+  | "itemIndicator"
+  | "itemGroup"
+  | "itemGroupLabel"
+  | "content"
+  | "root"
+  | "valueText"
+  | "empty"
+
+export interface ListboxVariant {
+  /** @default "subtle" */
+  variant?: "subtle" | "solid" | "plain" | undefined
+}
+
+export type ListboxVariantProps = {
+  [K in keyof ListboxVariant]?: ConditionalValue<ListboxVariant[K]> | undefined
+}
+
+export type ListboxVariantMap = {
+  [K in keyof ListboxVariant]: Array<ListboxVariant[K]>
 }
 
 // Menu
@@ -1129,6 +1176,7 @@ export type ComboboxSlot =
   | "list"
   | "positioner"
   | "trigger"
+  | "empty"
   | "indicatorGroup"
   | "empty"
 
@@ -1311,6 +1359,25 @@ export type TagVariantMap = {
   [K in keyof TagVariant]: Array<TagVariant[K]>
 }
 
+// TagsInput
+
+export type TagsInputSlot = "root" | "label" | "control" | "input" | "clearTrigger" | "item" | "itemPreview" | "itemInput" | "itemText" | "itemDeleteTrigger"
+
+export interface TagsInputVariant {
+  /** @default "md" */
+  size?: "xs" | "sm" | "md" | "lg" | undefined
+  /** @default "outline" */
+  variant?: "outline" | "subtle" | "flushed" | undefined
+}
+
+export type TagsInputVariantProps = {
+  [K in keyof TagsInputVariant]?: ConditionalValue<TagsInputVariant[K]> | undefined
+}
+
+export type TagsInputVariantMap = {
+  [K in keyof TagsInputVariant]: Array<TagsInputVariant[K]>
+}
+
 // Toast
 
 export type ToastSlot = "root" | "title" | "description" | "indicator" | "closeTrigger" | "actionTrigger"
@@ -1363,6 +1430,8 @@ export type TimelineSlot = "root" | "item" | "content" | "separator" | "indicato
 export interface TimelineVariant {
   /** @default "solid" */
   variant?: "subtle" | "solid" | "outline" | "plain" | undefined
+  /** @default false */
+  showLastSeparator?: boolean | undefined
   /** @default "md" */
   size?: "sm" | "md" | "lg" | "xl" | undefined
 }
@@ -1452,6 +1521,7 @@ export type TreeViewSlot =
   | "itemText"
   | "label"
   | "nodeCheckbox"
+  | "nodeRenameInput"
   | "root"
   | "tree"
 
@@ -1479,6 +1549,7 @@ export interface ConfigSlotRecipes {
   blockquote: SystemSlotRecipeFn<BlockquoteSlot, BlockquoteVariantProps, BlockquoteVariantMap>
   breadcrumb: SystemSlotRecipeFn<BreadcrumbSlot, BreadcrumbVariantProps, BreadcrumbVariantMap>
   card: SystemSlotRecipeFn<CardSlot, CardVariantProps, CardVariantMap>
+  carousel: SystemSlotRecipeFn<CarouselSlot, CarouselVariantProps, CarouselVariantMap>
   checkbox: SystemSlotRecipeFn<CheckboxSlot, CheckboxVariantProps, CheckboxVariantMap>
   checkboxCard: SystemSlotRecipeFn<CheckboxCardSlot, CheckboxCardVariantProps, CheckboxCardVariantMap>
   codeBlock: SystemSlotRecipeFn<CodeBlockSlot, CodeBlockVariantProps, CodeBlockVariantMap>
@@ -1493,6 +1564,7 @@ export interface ConfigSlotRecipes {
   fileUpload: SystemSlotRecipeFn<FileUploadSlot, FileUploadVariantProps, FileUploadVariantMap>
   hoverCard: SystemSlotRecipeFn<HoverCardSlot, HoverCardVariantProps, HoverCardVariantMap>
   list: SystemSlotRecipeFn<ListSlot, ListVariantProps, ListVariantMap>
+  listbox: SystemSlotRecipeFn<ListboxSlot, ListboxVariantProps, ListboxVariantMap>
   menu: SystemSlotRecipeFn<MenuSlot, MenuVariantProps, MenuVariantMap>
   nativeSelect: SystemSlotRecipeFn<NativeSelectSlot, NativeSelectVariantProps, NativeSelectVariantMap>
   numberInput: SystemSlotRecipeFn<NumberInputSlot, NumberInputVariantProps, NumberInputVariantMap>
@@ -1514,6 +1586,7 @@ export interface ConfigSlotRecipes {
   table: SystemSlotRecipeFn<TableSlot, TableVariantProps, TableVariantMap>
   tabs: SystemSlotRecipeFn<TabsSlot, TabsVariantProps, TabsVariantMap>
   tag: SystemSlotRecipeFn<TagSlot, TagVariantProps, TagVariantMap>
+  tagsInput: SystemSlotRecipeFn<TagsInputSlot, TagsInputVariantProps, TagsInputVariantMap>
   toast: SystemSlotRecipeFn<ToastSlot, ToastVariantProps, ToastVariantMap>
   tooltip: SystemSlotRecipeFn<TooltipSlot, TooltipVariantProps, TooltipVariantMap>
   status: SystemSlotRecipeFn<StatusSlot, StatusVariantProps, StatusVariantMap>
@@ -1531,6 +1604,7 @@ export interface ConfigRecipeSlots {
   blockquote: BlockquoteSlot
   breadcrumb: BreadcrumbSlot
   card: CardSlot
+  carousel: CarouselSlot
   checkbox: CheckboxSlot
   checkboxCard: CheckboxCardSlot
   codeBlock: CodeBlockSlot
@@ -1545,6 +1619,7 @@ export interface ConfigRecipeSlots {
   fileUpload: FileUploadSlot
   hoverCard: HoverCardSlot
   list: ListSlot
+  listbox: ListboxSlot
   menu: MenuSlot
   nativeSelect: NativeSelectSlot
   numberInput: NumberInputSlot
@@ -1566,6 +1641,7 @@ export interface ConfigRecipeSlots {
   table: TableSlot
   tabs: TabsSlot
   tag: TagSlot
+  tagsInput: TagsInputSlot
   toast: ToastSlot
   tooltip: TooltipSlot
   status: StatusSlot

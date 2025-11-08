@@ -11,5 +11,7 @@ yarn.lock
 
 .vercel
 service-account-key.json
+online-ito-firebase-adminsdk-*.json
+*.Zone.Identifier
 functions/lib/
 tsconfig.tsbuildinfo
