@@ -21,7 +21,7 @@ import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/e
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import * as PIXI from "pixi.js";
+import PIXI from "@/lib/pixi/instance";
 import { drawChatPanelBackground } from "@/lib/pixi/chatPanelBackground";
 
 /**

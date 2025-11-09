@@ -1,4 +1,6 @@
 import type * as PIXI from "pixi.js";
+import { safeDestroy } from "./safeDestroy";
+import { loadPixi } from "./loadPixi";
 
 const nextFrame = () =>
   new Promise<void>((resolve) => {
@@ -109,7 +111,7 @@ const createParticles = (
 export async function createDragonQuestBackground(
   options: DragonQuestBackgroundOptions
 ): Promise<DragonQuestBackgroundController> {
-  const pixi = (await import("pixi.js")) as typeof PIXI;
+  const pixi = await loadPixi();
   const BLEND_MODES = (pixi as unknown as {
     BLEND_MODES?: Record<string, number>;
   }).BLEND_MODES;
@@ -275,7 +277,7 @@ export async function createDragonQuestBackground(
     if (graphicsPool.length < 200) { // プールサイズ上限
       graphicsPool.push(graphics);
     } else {
-      graphics.destroy();
+      safeDestroy(graphics, "dragonQuest.graphicsPool");
     }
   };
 
@@ -594,16 +596,22 @@ export async function createDragonQuestBackground(
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
-      particles.forEach((particle) => {
-        particle.sprite?.destroy();
+      particles.forEach((particle, index) => {
+        safeDestroy(
+          particle.sprite,
+          `dragonQuest.destroy.particle#${index}`
+        );
       });
-      fireworks.forEach((fw) => {
-        fw.sprite?.destroy();
+      fireworks.forEach((fw, index) => {
+        safeDestroy(fw.sprite, `dragonQuest.destroy.firework#${index}`);
       });
       fireworks.length = 0;
-      meteors.forEach((m) => {
-        m.sprite?.destroy();
-        m.trail?.destroy();
+      meteors.forEach((meteor, index) => {
+        safeDestroy(meteor.sprite, `dragonQuest.destroy.meteor#${index}`);
+        safeDestroy(
+          meteor.trail,
+          `dragonQuest.destroy.meteorTrail#${index}`
+        );
       });
       meteors.length = 0;
       if (typeof window !== "undefined") {
