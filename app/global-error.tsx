@@ -19,17 +19,21 @@ export default function GlobalError({
     hasError: safeUpdateHasError,
     hydrated: safeUpdateHydrated,
   } = useSafeUpdateStatus();
-  const safeUpdateActive = safeUpdateVisible && !safeUpdateHasError;
+  const safeUpdateInProgress =
+    safeUpdateHydrated && safeUpdateVisible && !safeUpdateHasError;
+  const showCriticalErrorPanel =
+    !safeUpdateInProgress &&
+    (!safeUpdateHydrated || safeUpdateHasError || !safeUpdateVisible);
   const safeUpdateHandledRef = useRef(false);
 
   useEffect(() => {
-    if (safeUpdateActive) {
+    if (safeUpdateInProgress) {
       safeUpdateHandledRef.current = true;
     } else if (safeUpdateHandledRef.current && !safeUpdateVisible) {
       safeUpdateHandledRef.current = false;
       reset();
     }
-  }, [safeUpdateActive, safeUpdateVisible, reset]);
+  }, [safeUpdateInProgress, safeUpdateVisible, reset]);
 
   const handleBackToLobby = () => {
     window.location.href = "/";
@@ -58,7 +62,34 @@ export default function GlobalError({
             boxShadow: "2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)",
           }}
         >
-          {safeUpdateHydrated && (!safeUpdateActive || safeUpdateHasError) && (
+          {safeUpdateInProgress && (
+            <>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  textShadow: "1px 1px 0px #000",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                最新バージョンを適用しています
+              </h1>
+              <p
+                style={{
+                  marginTop: "16px",
+                  lineHeight: 1.8,
+                  color: "rgba(255,255,255,0.9)",
+                  textShadow: "1px 1px 0px rgba(0,0,0,0.6)",
+                }}
+              >
+                アップデートの準備中です。完了すると自動的に画面が切り替わります。
+                <br />
+                しばらく経っても切り替わらない場合は、下のボタンから手動で適用できます。
+              </p>
+            </>
+          )}
+          {showCriticalErrorPanel && (
             <>
               <h1 style={{
                 margin: 0,
