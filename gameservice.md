@@ -28,7 +28,6 @@ lib/game/service.ts
 lib/hooks/useClueInput.ts
 lib/hooks/useHostActions.ts
 lib/hooks/useRoomState.ts
-lib/hooks/useOptimizedRoomState.ts
 components/ui/MiniHandDock.tsx（Firestore import 残骸の撤去）
 参照のみ（低レイヤ実装はそのまま活用）:
 lib/firebase/*.ts（players.ts / rooms.ts など）
@@ -50,7 +49,7 @@ Phase 2（購読の入り口を用意：安全に）
 GameService に購読 I/F を追加（購読解除を返す形で）。
 watchRoom(roomId: string, cb: (room: RoomDoc | null) => void): () => void
 watchPlayers(roomId: string, cb: (players: PlayerDoc[]) => void): () => void
-useRoomState.ts / useOptimizedRoomState.ts のうち、影響が小さい購読 1〜2 箇所を watch* I/F 経由に置き換え（挙動一致確認のため段階導入）。
+useRoomState.ts のうち、影響が小さい購読 1〜2 箇所を watch* I/F 経由に置き換え（挙動一致確認のため段階導入）。
 ここでも成功/失敗を trace（traceAction('watch.room.start') / traceError('watch.room.error') 等）し、メトリクスへ最小値を記録。
 Phase 3（ガードとチェック）
 

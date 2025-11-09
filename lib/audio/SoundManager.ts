@@ -187,7 +187,7 @@ export class SoundManager {
     if (this.settings.muted || this.settings.masterVolume <= 0) return;
 
     const definition = SOUND_INDEX[soundId];
-    if (!definition) return;
+    if (!definition || definition.variants.length === 0) return;
 
     const context = this.ensureContext();
     if (!context || !this.masterGain) return;
