@@ -22,8 +22,9 @@ export default function GlobalError({
   const safeUpdateInProgress =
     safeUpdateHydrated && safeUpdateVisible && !safeUpdateHasError;
   const showCriticalErrorPanel =
+    safeUpdateHydrated &&
     !safeUpdateInProgress &&
-    (!safeUpdateHydrated || safeUpdateHasError || !safeUpdateVisible);
+    (safeUpdateHasError || !safeUpdateVisible);
   const safeUpdateHandledRef = useRef(false);
 
   useEffect(() => {
@@ -62,6 +63,31 @@ export default function GlobalError({
             boxShadow: "2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)",
           }}
         >
+          {!safeUpdateHydrated && (
+            <>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  textShadow: "1px 1px 0px #000",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                最新情報を取得中です
+              </h1>
+              <p
+                style={{
+                  marginTop: "16px",
+                  lineHeight: 1.8,
+                  color: "rgba(255,255,255,0.9)",
+                  textShadow: "1px 1px 0px rgba(0,0,0,0.6)",
+                }}
+              >
+                少しだけお待ちください…
+              </p>
+            </>
+          )}
           {safeUpdateInProgress && (
             <>
               <h1
