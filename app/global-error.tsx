@@ -14,7 +14,11 @@ export default function GlobalError({
     logError("app", "global-error", error);
   }, [error]);
 
-  const { shouldShow: safeUpdateVisible, hasError: safeUpdateHasError } = useSafeUpdateStatus();
+  const {
+    shouldShow: safeUpdateVisible,
+    hasError: safeUpdateHasError,
+    hydrated: safeUpdateHydrated,
+  } = useSafeUpdateStatus();
   const safeUpdateActive = safeUpdateVisible && !safeUpdateHasError;
   const safeUpdateHandledRef = useRef(false);
 
@@ -54,7 +58,7 @@ export default function GlobalError({
             boxShadow: "2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)",
           }}
         >
-          {!safeUpdateActive && (
+          {safeUpdateHydrated && (!safeUpdateActive || safeUpdateHasError) && (
             <>
               <h1 style={{
                 margin: 0,

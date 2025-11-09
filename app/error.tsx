@@ -18,6 +18,7 @@ export default function RouteError({
   const {
     shouldShow: safeUpdateVisible,
     hasError: safeUpdateHasError,
+    hydrated: safeUpdateHydrated,
   } = useSafeUpdateStatus();
   const safeUpdateActive = safeUpdateVisible && !safeUpdateHasError;
   const safeUpdateHandledRef = useRef(false);
@@ -68,7 +69,7 @@ export default function RouteError({
         boxShadow="2px 2px 0 rgba(0,0,0,0.8), 4px 4px 0 rgba(0,0,0,0.6)"
       >
         <Stack gap={4}>
-          {!safeUpdateActive && (
+          {safeUpdateHydrated && (!safeUpdateActive || safeUpdateHasError) && (
             <>
               <Heading
                 size="md"

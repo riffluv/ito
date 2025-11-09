@@ -158,7 +158,7 @@ self.addEventListener("fetch", (event) => {
               scope: "navigation",
               error: `response_${response.status}`,
             });
-            throw new Error("navigation fetch failed");
+            return response;
           }
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
@@ -174,7 +174,10 @@ self.addEventListener("fetch", (event) => {
             });
           }
           const fallback = await caches.match(request);
-          return fallback || (await caches.match("/"));
+          if (fallback) {
+            return fallback;
+          }
+          return Response.error();
         }
       })()
     );
