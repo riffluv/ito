@@ -19,13 +19,15 @@ export default function GlobalError({
     hasError: safeUpdateHasError,
     hydrated: safeUpdateHydrated,
   } = useSafeUpdateStatus();
+  const safeUpdateHandledRef = useRef(false);
   const safeUpdateInProgress =
     safeUpdateHydrated && safeUpdateVisible && !safeUpdateHasError;
+  const awaitingReset = safeUpdateHandledRef.current && !safeUpdateVisible;
   const showCriticalErrorPanel =
     safeUpdateHydrated &&
     !safeUpdateInProgress &&
+    !awaitingReset &&
     (safeUpdateHasError || !safeUpdateVisible);
-  const safeUpdateHandledRef = useRef(false);
 
   useEffect(() => {
     if (safeUpdateInProgress) {
@@ -112,6 +114,31 @@ export default function GlobalError({
                 アップデートの準備中です。完了すると自動的に画面が切り替わります。
                 <br />
                 しばらく経っても切り替わらない場合は、下のボタンから手動で適用できます。
+              </p>
+            </>
+          )}
+          {awaitingReset && (
+            <>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  textShadow: "1px 1px 0px #000",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                更新が完了しました
+              </h1>
+              <p
+                style={{
+                  marginTop: "16px",
+                  lineHeight: 1.8,
+                  color: "rgba(255,255,255,0.9)",
+                  textShadow: "1px 1px 0px rgba(0,0,0,0.6)",
+                }}
+              >
+                最新バージョンへ切り替えています…
               </p>
             </>
           )}
