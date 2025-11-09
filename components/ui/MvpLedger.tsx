@@ -19,7 +19,7 @@ import { notify } from "@/components/ui/notify";
 import { castMvpVote } from "@/lib/game/mvp";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import * as PIXI from "pixi.js";
+import PIXI from "@/lib/pixi/instance";
 import { drawBattleRecordsBoard, createBattleRecordsAmbient } from "@/lib/pixi/battleRecordsBackground";
 import type { BattleRecordsAmbient } from "@/lib/pixi/battleRecordsAmbient";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";

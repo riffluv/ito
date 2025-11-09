@@ -1,4 +1,6 @@
 import type * as PIXI from "pixi.js";
+import { safeDestroy } from "./safeDestroy";
+import { loadPixi } from "./loadPixi";
 
 const nextFrame = () =>
   new Promise<void>((resolve) => {
@@ -110,7 +112,7 @@ const createInfernoParticles = (
 export async function createInfernoBackground(
   options: InfernoBackgroundOptions
 ): Promise<InfernoBackgroundController> {
-  const pixi = (await import("pixi.js")) as typeof PIXI;
+  const pixi = await loadPixi();
   const BLEND_MODES = (pixi as unknown as {
     BLEND_MODES?: Record<string, number>;
   }).BLEND_MODES;
@@ -299,7 +301,7 @@ export async function createInfernoBackground(
     if (graphicsPool.length < 200) {
       graphicsPool.push(graphics);
     } else {
-      graphics.destroy();
+      safeDestroy(graphics, "inferno.graphicsPool");
     }
   };
 
@@ -662,16 +664,16 @@ export async function createInfernoBackground(
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
-      particles.forEach((particle) => {
-        particle.sprite?.destroy();
+      particles.forEach((particle, index) => {
+        safeDestroy(particle.sprite, `inferno.destroy.particle#${index}`);
       });
-      fireworks.forEach((fw) => {
-        fw.sprite?.destroy();
+      fireworks.forEach((fw, index) => {
+        safeDestroy(fw.sprite, `inferno.destroy.firework#${index}`);
       });
       fireworks.length = 0;
-      meteors.forEach((m) => {
-        m.sprite?.destroy();
-        m.trail?.destroy();
+      meteors.forEach((meteor, index) => {
+        safeDestroy(meteor.sprite, `inferno.destroy.meteor#${index}`);
+        safeDestroy(meteor.trail, `inferno.destroy.meteorTrail#${index}`);
       });
       meteors.length = 0;
       sweepActive = false;

@@ -1,4 +1,5 @@
 import type * as PIXI from "pixi.js";
+import { loadPixi } from "./loadPixi";
 import { gsap } from "gsap";
 
 const RAY_ANGLES = [0, 43, 88, 137, 178, 223, 271, 316] as const;
@@ -25,7 +26,7 @@ export interface VictoryRaysOptions {
 export async function createVictoryRays(
   options: VictoryRaysOptions
 ): Promise<VictoryRaysController> {
-  const pixi = (await import("pixi.js")) as typeof PIXI;
+  const pixi = await loadPixi();
   const { PixiPlugin } = await import("gsap/PixiPlugin");
 
   gsap.registerPlugin(PixiPlugin);

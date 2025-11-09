@@ -1,4 +1,5 @@
 import type * as PIXI from "pixi.js";
+import { loadPixi } from "./loadPixi";
 
 export type BackgroundQuality = "low" | "med" | "high";
 
@@ -172,7 +173,7 @@ const createDiagonalGradientTexture = (
 export async function createSimpleBackground(
   options: SimpleBackgroundOptions
 ): Promise<SimpleBackgroundController> {
-  const pixi = (await import("pixi.js")) as typeof PIXI;
+  const pixi = await loadPixi();
   const BLEND_MODES = (pixi as unknown as {
     BLEND_MODES?: Record<string, number>;
   }).BLEND_MODES;

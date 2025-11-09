@@ -13,7 +13,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { useEffect, useState as useLocalState, useState, useRef, useCallback } from "react";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import * as PIXI from "pixi.js";
+import PIXI from "@/lib/pixi/instance";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 

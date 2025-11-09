@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Application, Container } from "pixi.js";
+import { Application, Container } from "@/lib/pixi/instance";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 
