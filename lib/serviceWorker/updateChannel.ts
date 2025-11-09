@@ -1,4 +1,8 @@
-import { logSafeUpdateTelemetry } from "@/lib/telemetry/safeUpdate";
+import { APP_VERSION } from "@/lib/constants/appVersion";
+import {
+  logSafeUpdateTelemetry,
+  type SafeUpdateTelemetryOptions,
+} from "@/lib/telemetry/safeUpdate";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   assign,
@@ -69,6 +73,18 @@ type SafeUpdateContext = {
   autoApplyTimerId: number | null;
 };
 
+function buildTelemetryOptions(
+  context: SafeUpdateContext,
+  extra?: SafeUpdateTelemetryOptions
+): SafeUpdateTelemetryOptions {
+  return {
+    ...extra,
+    waitingVersion: context.waitingVersion ?? undefined,
+    appVersion: DEFAULT_TELEMETRY_APP_VERSION,
+    requiredSwVersion: requiredSwVersionHint ?? undefined,
+  };
+}
+
 type WaitingDetectedEvent = {
   type: "WAITING_DETECTED";
   registration: ServiceWorkerRegistration;
@@ -138,6 +154,8 @@ type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
 const APPLY_TIMEOUT_MS = 12_000;
 const AUTO_APPLY_DELAY_MS = 60_000;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
+const DEFAULT_TELEMETRY_APP_VERSION = APP_VERSION ?? "unknown";
+let requiredSwVersionHint: string | null = null;
 const FORCE_APPLY_HOLD_DEFAULT = "__default__";
 const AUTO_APPLY_REASON = "auto-timer";
 
@@ -362,7 +380,7 @@ const safeUpdateMachine = setup({
       const pending = context.pendingApply;
       const reason = pending?.reason ?? "manual";
       const safeMode = pending?.safeMode ?? false;
-      logSafeUpdateTelemetry("applied", { reason, safeMode });
+      logSafeUpdateTelemetry("applied", buildTelemetryOptions(context, { reason, safeMode }));
       traceAction("safeUpdate.apply.success", {
         reason,
         safeMode,
@@ -383,7 +401,10 @@ const safeUpdateMachine = setup({
       const detail = event.detail ?? "unknown";
       const reason = event.reason ?? context.pendingApply?.reason ?? "manual";
       const safeMode = event.safeMode ?? context.pendingApply?.safeMode ?? false;
-      logSafeUpdateTelemetry("failure", { reason, safeMode, detail });
+      logSafeUpdateTelemetry(
+        "failure",
+        buildTelemetryOptions(context, { reason, safeMode, detail })
+      );
       traceError("safeUpdate.apply.failed", detail, {
         reason,
         safeMode,
@@ -401,7 +422,10 @@ const safeUpdateMachine = setup({
     handleApplyTimeout: assign(({ context }) => {
       const reason = context.pendingApply?.reason ?? AUTO_APPLY_REASON;
       const safeMode = context.pendingApply?.safeMode ?? false;
-      logSafeUpdateTelemetry("failure", { reason, safeMode, detail: "timeout" });
+      logSafeUpdateTelemetry(
+        "failure",
+        buildTelemetryOptions(context, { reason, safeMode, detail: "timeout" })
+      );
       traceError("safeUpdate.apply.timeout", "timeout", {
         reason,
         safeMode,
@@ -417,7 +441,10 @@ const safeUpdateMachine = setup({
     handleApplyRedundant: assign(({ context }) => {
       const reason = context.pendingApply?.reason ?? "manual";
       const safeMode = context.pendingApply?.safeMode ?? false;
-      logSafeUpdateTelemetry("failure", { reason, safeMode, detail: "redundant" });
+      logSafeUpdateTelemetry(
+        "failure",
+        buildTelemetryOptions(context, { reason, safeMode, detail: "redundant" })
+      );
       traceError("safeUpdate.apply.redundant", "redundant", {
         reason,
         safeMode,
@@ -430,14 +457,14 @@ const safeUpdateMachine = setup({
         lastError: "redundant",
       };
     }),
-    noWaitingFailure: assign(({ event }) => {
+    noWaitingFailure: assign(({ context, event }) => {
       const reason =
         event.type === "APPLY_REQUEST" || event.type === "RETRY"
           ? event.reason
           : event.type === "AUTO_TIMER_EXPIRED"
           ? AUTO_APPLY_REASON
           : "manual";
-      logSafeUpdateTelemetry("no_waiting", { reason });
+      logSafeUpdateTelemetry("no_waiting", buildTelemetryOptions(context, { reason }));
       return {
         lastError: "no_waiting",
         pendingReload: false,
@@ -835,6 +862,11 @@ function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
   return safeUpdateActor;
 }
 
+function getCurrentContext(): SafeUpdateContext {
+  const actor = ensureActor();
+  return actor?.getSnapshot().context ?? createInitialContext();
+}
+
 if (broadcast) {
   broadcast.addEventListener("message", (event) => {
     const data = event.data;
@@ -913,7 +945,10 @@ function startApply(
       safeMode: params.safeMode,
     });
   }
-  logSafeUpdateTelemetry("triggered", { reason: params.reason, safeMode: params.safeMode });
+  logSafeUpdateTelemetry(
+    "triggered",
+    buildTelemetryOptions(context, { reason: params.reason, safeMode: params.safeMode })
+  );
   traceAction("safeUpdate.apply.start", {
     reason: params.reason,
     safeMode: params.safeMode,
@@ -1016,7 +1051,10 @@ export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): b
   const snapshot = actor.getSnapshot();
   const context = snapshot?.context;
   if (automatic && context?.autoApplySuppressed) {
-    logSafeUpdateTelemetry("suppressed", { reason, safeMode });
+    logSafeUpdateTelemetry(
+      "suppressed",
+      buildTelemetryOptions(context ?? createInitialContext(), { reason, safeMode })
+    );
     traceAction("safeUpdate.apply.suppressed", { reason, safeMode });
     return false;
   }
@@ -1063,6 +1101,49 @@ export function releaseForceApplyTimer(reason?: string) {
     type: "FORCE_RELEASE",
     key: normalizeHoldReason(reason),
     broadcast: true,
+  });
+}
+
+type SafeUpdateFetchErrorPayload = {
+  url: string;
+  status?: number | null;
+  version?: string | null;
+  method?: string | null;
+  scope?: string | null;
+  error?: string | null;
+};
+
+export function setRequiredSwVersionHint(version: string | null | undefined) {
+  if (typeof version === "string" && version.trim().length > 0) {
+    requiredSwVersionHint = version.trim();
+  } else {
+    requiredSwVersionHint = null;
+  }
+}
+
+export function getRequiredSwVersionHint(): string | null {
+  return requiredSwVersionHint;
+}
+
+export function handleServiceWorkerFetchError(detail: SafeUpdateFetchErrorPayload) {
+  const context = getCurrentContext();
+  const detailTag =
+    typeof detail.status === "number"
+      ? `fetch_${detail.status}`
+      : detail.error ?? "fetch_error";
+  logSafeUpdateTelemetry(
+    "failure",
+    buildTelemetryOptions(context, {
+      reason: "sw.fetch",
+      detail: detailTag,
+    })
+  );
+  traceError("safeUpdate.fetchError", detail.error ?? "sw fetch error", {
+    url: detail.url,
+    status: detail.status ?? null,
+    swVersion: detail.version ?? null,
+    method: detail.method ?? null,
+    scope: detail.scope ?? null,
   });
 }
 

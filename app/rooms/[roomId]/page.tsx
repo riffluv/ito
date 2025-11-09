@@ -8,7 +8,6 @@
 // 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
-import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import dynamic from "next/dynamic";
 
 import { AppButton } from "@/components/ui/AppButton";
@@ -89,6 +88,7 @@ import {
   subscribeToServiceWorkerUpdates,
   holdForceApplyTimer,
   releaseForceApplyTimer,
+  setRequiredSwVersionHint,
 } from "@/lib/serviceWorker/updateChannel";
 import {
   getCachedRoomPasswordHash,
@@ -122,6 +122,8 @@ const ROOM_CORE_ASSETS = [
   "/images/hanepen2.webp",
   "/images/backgrounds/hd2d/bg1.png",
 ] as const;
+
+const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
 
 const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
   "auth-required": "認証情報が無効です。再度ログインしてください。",
@@ -1203,6 +1205,14 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
   }, [requiredSwVersion]);
   useEffect(() => {
+    setRequiredSwVersionHint(requiredSwVersion || null);
+  }, [requiredSwVersion]);
+  useEffect(() => {
+    return () => {
+      setRequiredSwVersionHint(null);
+    };
+  }, []);
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -1231,6 +1241,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const safeUpdateStatusRef = useRef<string | null>(null);
   const safeUpdateAutoApplyRef = useRef(false);
   const idleTimerRef = useRef<number | null>(null);
+  const forceApplyTimerRef = useRef<number | null>(null);
   const lastInteractionTsRef = useRef<number>(
     typeof window === "undefined" ? 0 : Date.now()
   );
@@ -1342,23 +1353,52 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   ]);
   useEffect(() => {
     const holdReason = "room:safe-update";
+    const clearForceApplyTimer = () => {
+      if (typeof window !== "undefined" && forceApplyTimerRef.current !== null) {
+        window.clearTimeout(forceApplyTimerRef.current);
+        forceApplyTimerRef.current = null;
+      }
+    };
     if (!safeUpdateFeatureEnabled) {
+      clearForceApplyTimer();
       releaseForceApplyTimer(holdReason);
       return () => {
+        clearForceApplyTimer();
         releaseForceApplyTimer(holdReason);
       };
     }
-    if (safeUpdateActive && currentRoomStatus && currentRoomStatus !== "waiting") {
+    const shouldHold = safeUpdateActive && currentRoomStatus && currentRoomStatus !== "waiting";
+    if (shouldHold) {
       holdForceApplyTimer(holdReason);
-      return () => {
-        releaseForceApplyTimer(holdReason);
-      };
+      if (typeof window !== "undefined") {
+        clearForceApplyTimer();
+        forceApplyTimerRef.current = window.setTimeout(() => {
+          forceApplyTimerRef.current = null;
+          releaseForceApplyTimer(holdReason);
+          const applied = applyServiceWorkerUpdate({
+            reason: "room:force-apply",
+            safeMode: safeUpdateActive,
+          });
+          if (!applied) {
+            void resyncWaitingServiceWorker("room:force-apply");
+          }
+        }, SAFE_UPDATE_FORCE_APPLY_DELAY_MS);
+      }
+    } else {
+      clearForceApplyTimer();
+      releaseForceApplyTimer(holdReason);
     }
-    releaseForceApplyTimer(holdReason);
     return () => {
+      clearForceApplyTimer();
       releaseForceApplyTimer(holdReason);
     };
-  }, [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]);
+  }, [
+    safeUpdateFeatureEnabled,
+    safeUpdateActive,
+    currentRoomStatus,
+    applyServiceWorkerUpdate,
+    resyncWaitingServiceWorker,
+  ]);
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) return;
     if (!hasWaitingUpdate) return;
@@ -3342,6 +3382,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     />
   );
 
+  const globalSafeUpdateActive =
+    safeUpdateFeatureEnabled && (hasWaitingUpdate || safeUpdateActive);
+
   const joinStatusMessage =
     joinStatus === "retrying"
       ? "再接続を試行しています..."
@@ -3352,7 +3395,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const joinStatusBanner = joinStatusMessage ? (
     <Box
       position="fixed"
-      top="12px"
+      top={globalSafeUpdateActive ? "64px" : "12px"}
       right="16px"
       zIndex={1200}
       padding="10px 14px"
@@ -3367,14 +3410,81 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       {joinStatusMessage}
     </Box>
   ) : null;
-  // 更新告知の見える化: バージョン不一致だけでなく、SWが待機中でも表示
-  const shouldShowUpdateBanner =
-    safeUpdateFeatureEnabled && (hasWaitingUpdate || safeUpdateActive);
-  const safeUpdateBannerNode = shouldShowUpdateBanner ? (
-    <SafeUpdateBanner offsetTop={joinStatusMessage ? 60 : 12} />
+  const handleManualVersionUpdate = useCallback(() => {
+    const applied = applyServiceWorkerUpdate({
+      reason: "room:version-mismatch",
+      safeMode: safeUpdateActive,
+    });
+    if (!applied) {
+      void resyncWaitingServiceWorker("room:version-mismatch");
+    }
+  }, [applyServiceWorkerUpdate, resyncWaitingServiceWorker, safeUpdateActive]);
+
+  const handleHardReload = useCallback(() => {
+    try {
+      window.location.reload();
+    } catch (error) {
+      logInfo("room-page", "hard-reload-failed", error);
+    }
+  }, []);
+
+  const safeUpdateBannerNode = null;
+  const shouldBlockUpdateOverlay = versionMismatch;
+  const versionMismatchOverlay = shouldBlockUpdateOverlay ? (
+    <Box
+      position="fixed"
+      inset={0}
+      zIndex={1400}
+      bg="rgba(4, 6, 12, 0.88)"
+      backdropFilter="blur(2px)"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+    >
+      <Box
+        maxW="520px"
+        w="90%"
+        bg="rgba(12,16,28,0.95)"
+        border="3px solid rgba(255,255,255,0.85)"
+        borderRadius={0}
+        boxShadow="0 12px 32px rgba(0,0,0,0.65)"
+        p={{ base: 5, md: 6 }}
+      >
+        <VStack align="stretch" gap={4}>
+          <Text
+            fontSize="lg"
+            fontWeight={700}
+            color="white"
+            textAlign="center"
+            textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+          >
+            最新バージョンへの更新が必要です
+          </Text>
+          <Text color="rgba(255,255,255,0.9)" fontSize="sm" lineHeight={1.7}>
+            サーバーはバージョン{" "}
+            <strong>{requiredSwVersion || "unknown"}</strong> を要求しています。現在のクライアント
+            ({APP_VERSION}) のままではゲームを続行できないため、更新を適用してから再開してください。
+          </Text>
+          <HStack gap={3} flexWrap="wrap" justify="center">
+            <AppButton
+              palette="brand"
+              size="md"
+              onClick={handleManualVersionUpdate}
+              disabled={spectatorUpdateApplying}
+            >
+              {spectatorUpdateApplying ? "適用中..." : "今すぐ更新"}
+            </AppButton>
+            <AppButton palette="gray" size="md" visual="outline" onClick={handleHardReload}>
+              ハードリロード
+            </AppButton>
+          </HStack>
+          <Text color="rgba(255,255,255,0.7)" fontSize="xs" textAlign="center">
+            更新が進まない場合はブラウザのキャッシュをクリアしてから再読み込みしてください。
+          </Text>
+        </VStack>
+      </Box>
+    </Box>
   ) : null;
-  const shouldBlockUpdateOverlay = false;
-  const versionMismatchOverlay = null;
 
   
   if (!room) {

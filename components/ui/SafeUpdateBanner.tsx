@@ -21,6 +21,22 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     retryUpdate,
   } = useServiceWorkerUpdate();
 
+  const shouldShow =
+    isApplying ||
+    phase === "applying" ||
+    hasError ||
+    phase === "failed" ||
+    autoApplySuppressed ||
+    phase === "suppressed" ||
+    phase === "auto_pending" ||
+    phase === "waiting_user" ||
+    phase === "update_detected" ||
+    isUpdateReady;
+
+  if (!shouldShow) {
+    return null;
+  }
+
   const headline = useMemo(() => {
     if (isApplying || phase === "applying") {
       return "更新を適用中";
