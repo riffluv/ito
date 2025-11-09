@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import {
   applyServiceWorkerUpdate,
@@ -33,6 +40,10 @@ const INLINE_STYLE: CSSProperties = {
 export function useSafeUpdateStatus() {
   const status = useServiceWorkerUpdate();
   const { phase, autoApplySuppressed, hasError, isApplying, isUpdateReady } = status;
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
   const shouldShow =
     isApplying ||
     phase === "applying" ||
@@ -47,6 +58,7 @@ export function useSafeUpdateStatus() {
   return {
     ...status,
     shouldShow,
+    hydrated,
   };
 }
 
