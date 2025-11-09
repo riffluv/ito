@@ -51,6 +51,34 @@ const notifyUpdateChannels = async (eventType) => {
   }
 };
 
+const reportFetchError = async (detail) => {
+  if (!self.clients?.matchAll) {
+    return;
+  }
+  try {
+    const clients = await self.clients.matchAll({
+      includeUncontrolled: true,
+      type: "window",
+    });
+    const payload = {
+      type: "SAFE_UPDATE_FETCH_ERROR",
+      detail: {
+        url: detail.url,
+        status: typeof detail.status === "number" ? detail.status : null,
+        method: detail.method ?? null,
+        scope: detail.scope ?? null,
+        version: SW_VERSION,
+        error: detail.error ?? null,
+      },
+    };
+    for (const client of clients) {
+      client.postMessage(payload);
+    }
+  } catch {
+    /* ignore client report failure */
+  }
+};
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -117,13 +145,38 @@ self.addEventListener("fetch", (event) => {
 
   if (isNavigationRequest(request)) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
+      (async () => {
+        let reported = false;
+        try {
+          const response = await fetch(request);
+          if (!response.ok) {
+            reported = true;
+            await reportFetchError({
+              url: request.url,
+              status: response.status,
+              method: request.method,
+              scope: "navigation",
+              error: `response_${response.status}`,
+            });
+            throw new Error("navigation fetch failed");
+          }
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
-        })
-        .catch(() => caches.match(request).then((match) => match || caches.match("/")))
+        } catch (error) {
+          if (!reported) {
+            await reportFetchError({
+              url: request.url,
+              status: null,
+              method: request.method,
+              scope: "navigation",
+              error: error?.message ?? "network",
+            });
+          }
+          const fallback = await caches.match(request);
+          return fallback || (await caches.match("/"));
+        }
+      })()
     );
     return;
   }

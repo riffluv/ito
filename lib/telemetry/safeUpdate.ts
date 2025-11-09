@@ -9,10 +9,13 @@ type SafeUpdateTelemetryEvent =
   | "no_waiting"
   | "failure";
 
-type SafeUpdateTelemetryOptions = {
+export type SafeUpdateTelemetryOptions = {
   reason?: string;
   safeMode?: boolean;
   detail?: string;
+  appVersion?: string;
+  waitingVersion?: string;
+  requiredSwVersion?: string;
 };
 
 type SentryGlobal = {
@@ -52,6 +55,15 @@ function toTags(options?: SafeUpdateTelemetryOptions): Record<string, string> | 
   if (typeof options.safeMode === "boolean") {
     tags.safeMode = options.safeMode ? "1" : "0";
   }
+  if (typeof options.appVersion === "string" && options.appVersion.length > 0) {
+    tags.appVersion = options.appVersion.slice(0, 80);
+  }
+  if (typeof options.waitingVersion === "string" && options.waitingVersion.length > 0) {
+    tags.waitingVersion = options.waitingVersion.slice(0, 80);
+  }
+  if (typeof options.requiredSwVersion === "string" && options.requiredSwVersion.length > 0) {
+    tags.requiredSwVersion = options.requiredSwVersion.slice(0, 80);
+  }
   return Object.keys(tags).length > 0 ? tags : undefined;
 }
 
@@ -74,6 +86,9 @@ export function logSafeUpdateTelemetry(
           reason: options?.reason,
           detail: options?.detail,
           safeMode: options?.safeMode ?? null,
+          appVersion: options?.appVersion ?? null,
+          waitingVersion: options?.waitingVersion ?? null,
+          requiredSwVersion: options?.requiredSwVersion ?? null,
         },
       });
     }

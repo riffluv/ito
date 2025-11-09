@@ -9,6 +9,7 @@ import {
   consumePendingApplyContext,
   consumePendingReloadFlag,
   getWaitingServiceWorker,
+  handleServiceWorkerFetchError,
   markUpdateCheckEnd,
   markUpdateCheckError,
   markUpdateCheckStart,
@@ -156,6 +157,10 @@ const bindServiceWorkerMessages = () => {
   const handler = (event: MessageEvent<any>) => {
     const data = event.data;
     if (!data || typeof data !== "object") {
+      return;
+    }
+    if (data.type === "SAFE_UPDATE_FETCH_ERROR") {
+      handleServiceWorkerFetchError(data.detail ?? data);
       return;
     }
     if (data.type === "SAFE_UPDATE_SYNC") {
