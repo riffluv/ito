@@ -20,6 +20,7 @@ export default function GlobalError({
     hydrated: safeUpdateHydrated,
   } = useSafeUpdateStatus();
   const safeUpdateHandledRef = useRef(false);
+  const resetTriggeredRef = useRef(false);
   const safeUpdateInProgress =
     safeUpdateHydrated && safeUpdateVisible && !safeUpdateHasError;
   const awaitingReset = safeUpdateHandledRef.current && !safeUpdateVisible;
@@ -27,13 +28,21 @@ export default function GlobalError({
     safeUpdateHydrated &&
     !safeUpdateInProgress &&
     !awaitingReset &&
+    !resetTriggeredRef.current &&
     (safeUpdateHasError || !safeUpdateVisible);
 
   useEffect(() => {
     if (safeUpdateInProgress) {
       safeUpdateHandledRef.current = true;
-    } else if (safeUpdateHandledRef.current && !safeUpdateVisible) {
-      safeUpdateHandledRef.current = false;
+      resetTriggeredRef.current = false;
+      return;
+    }
+    if (
+      safeUpdateHandledRef.current &&
+      !safeUpdateVisible &&
+      !resetTriggeredRef.current
+    ) {
+      resetTriggeredRef.current = true;
       reset();
     }
   }, [safeUpdateInProgress, safeUpdateVisible, reset]);
