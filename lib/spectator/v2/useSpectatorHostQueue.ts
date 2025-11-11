@@ -36,6 +36,10 @@ type SpectatorHostQueueState = {
   error: string | null;
 };
 
+type UseSpectatorHostQueueOptions = {
+  enabled?: boolean;
+};
+
 const INITIAL_STATE: SpectatorHostQueueState = {
   requests: [],
   loading: true,
@@ -71,17 +75,26 @@ const mapDocument = (doc: DocumentData): SpectatorHostRequest | null => {
   };
 };
 
-export function useSpectatorHostQueue(roomId: string | null | undefined) {
+export function useSpectatorHostQueue(
+  roomId: string | null | undefined,
+  options?: UseSpectatorHostQueueOptions
+) {
   const [state, setState] = useState<SpectatorHostQueueState>(INITIAL_STATE);
+  const enabled = options?.enabled ?? true;
 
   useEffect(() => {
+    const noopCleanup = () => {};
+    if (!enabled) {
+      setState({ requests: [], loading: false, error: null });
+      return noopCleanup;
+    }
     if (!roomId || !firebaseEnabled || !db) {
       setState({
         requests: [],
         loading: false,
         error: firebaseEnabled ? null : "firebase-disabled",
       });
-      return;
+      return noopCleanup;
     }
 
     setState((prev) => ({
@@ -90,48 +103,49 @@ export function useSpectatorHostQueue(roomId: string | null | undefined) {
       error: null,
     }));
 
-    try {
-      const collectionRef = collection(db, SESSION_COLLECTION);
-      const q = query(collectionRef, where("roomId", "==", roomId));
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const next: SpectatorHostRequest[] = [];
-          snapshot.forEach((docSnap) => {
-            const mapped = mapDocument({ id: docSnap.id, ...docSnap.data() });
-            if (mapped) {
-              next.push(mapped);
-            }
-          });
-          next.sort((a, b) => (a.requestedAt ?? 0) - (b.requestedAt ?? 0));
-          setState({
-            requests: next,
-            loading: false,
-            error: null,
-          });
-        },
-        (error) => {
-          traceError("spectatorV2.host.queue", error, { roomId });
-          setState({
-            requests: [],
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      );
-      return () => {
-        unsubscribe();
-      };
-    } catch (error) {
-      traceError("spectatorV2.host.queue.setup", error, { roomId });
-      setState({
-        requests: [],
-        loading: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return;
+    const unsubscribe = (() => {
+      try {
+        const collectionRef = collection(db, SESSION_COLLECTION);
+        const q = query(collectionRef, where("roomId", "==", roomId));
+        return onSnapshot(
+          q,
+          (snapshot) => {
+            const next: SpectatorHostRequest[] = [];
+            snapshot.forEach((docSnap) => {
+              const mapped = mapDocument({ id: docSnap.id, ...docSnap.data() });
+              if (mapped) {
+                next.push(mapped);
+              }
+            });
+            next.sort((a, b) => (a.requestedAt ?? 0) - (b.requestedAt ?? 0));
+            setState({
+              requests: next,
+              loading: false,
+              error: null,
+            });
+          },
+          (error) => {
+            traceError("spectatorV2.host.queue", error, { roomId });
+            setState({
+              requests: [],
+              loading: false,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        );
+      } catch (error) {
+        traceError("spectatorV2.host.queue.setup", error, { roomId });
+        return null;
+      }
+    })();
+
+    if (!unsubscribe) {
+      return noopCleanup;
     }
-  }, [roomId, firebaseEnabled, db]);
+    return () => {
+      unsubscribe();
+    };
+  }, [roomId, enabled]);
 
   return {
     requests: state.requests,

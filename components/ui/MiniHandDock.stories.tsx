@@ -1,3 +1,4 @@
+import type { PlayerDoc } from "@/lib/types";
 import system from "@/theme";
 import { ChakraProvider } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
@@ -28,7 +29,7 @@ export default meta;
 
 type Story = StoryObj<typeof MiniHandDock>;
 
-const basePlayer = {
+const basePlayer: PlayerDoc & { id: string } = {
   id: "u1",
   name: "Alice",
   avatar: "a",
@@ -36,7 +37,7 @@ const basePlayer = {
   clue1: "",
   ready: true,
   orderIndex: 0,
-} as any;
+};
 
 export const Sequential: Story = {
   args: { me: { ...basePlayer }, resolveMode: "sequential" },

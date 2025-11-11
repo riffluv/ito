@@ -27,15 +27,11 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
   const [snapshots, setSnapshots] = useState<DebugSnapshot[]>([]);
   const [isRecording, setIsRecording] = useState(true);
   const lastSnapshotRef = useRef<string>("");
-
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
+  const isDev = process.env.NODE_ENV === "development";
 
   // Capture snapshots when room state changes
   useEffect(() => {
-    if (!isRecording || !room) return;
+    if (!isDev || !isRecording || !room) return;
 
     const snapshot: DebugSnapshot = {
       timestamp: Date.now(),
@@ -44,18 +40,18 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
       orderList: room.order?.list || [],
       proposal: room.order?.proposal || undefined,
       failed: room.order?.failed || false,
-      resolveMode: room.options?.resolveMode || 'sequential',
+      resolveMode: room.options?.resolveMode || "sequential",
       action: lastAction,
     };
 
-    const snapshotKey = `${snapshot.roomStatus}-${snapshot.orderList.join(',')}-${snapshot.proposal?.join(',') || ''}-${snapshot.failed}`;
-    
+    const snapshotKey = `${snapshot.roomStatus}-${snapshot.orderList.join(",")}-${snapshot.proposal?.join(",") || ""}-${snapshot.failed}`;
+
     // Only add if state actually changed
     if (snapshotKey !== lastSnapshotRef.current) {
-      setSnapshots(prev => [...prev.slice(-19), snapshot]); // Keep last 20 snapshots
+      setSnapshots((prev) => [...prev.slice(-19), snapshot]); // Keep last 20 snapshots
       lastSnapshotRef.current = snapshotKey;
     }
-  }, [room?.status, room?.order, players.length, lastAction, isRecording]);
+  }, [isDev, isRecording, room, players.length, lastAction]);
 
   const clearSnapshots = () => {
     setSnapshots([]);
@@ -91,6 +87,10 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (!isDev) {
+    return null;
+  }
 
   return (
     <Box
@@ -194,7 +194,7 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
           <Box>
             <Text fontWeight="bold" mb={1}>Players ({players.length}):</Text>
             <VStack align="stretch" fontSize="10px" gap={1}>
-              {players.map((player, idx) => (
+              {players.map((player) => (
                 <HStack key={player.id} justify="space-between">
                   <Text>{player.name}</Text>
                   <Text>{player.number !== null ? `#${player.number}` : 'No number'}</Text>
@@ -242,8 +242,30 @@ function getStatusColor(status?: string): string {
 }
 
 // Debug helper to inject global debug information
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  (window as any).__GAME_DEBUG = {
+declare global {
+  interface Window {
+    __GAME_DEBUG?: {
+      getSnapshot: () => {
+        roomId: string | null | undefined;
+        timestamp: string;
+        location: string;
+      };
+      exportLogs: () => {
+        console: unknown[];
+        errors: unknown[];
+        timestamp: string;
+      };
+    };
+    _errors?: unknown[];
+  }
+
+  interface Console {
+    _logs?: unknown[];
+  }
+}
+
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  window.__GAME_DEBUG = {
     getSnapshot: () => {
       const roomElement = document.querySelector('[data-room-id]');
       const roomId = roomElement?.getAttribute('data-room-id');
@@ -255,9 +277,12 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       };
     },
     exportLogs: () => {
+      /* eslint-disable no-console */
+      const consoleLogs = console._logs || [];
+      /* eslint-enable no-console */
       const logs = {
-        console: (console as any)._logs || [],
-        errors: (window as any)._errors || [],
+        console: consoleLogs,
+        errors: window._errors || [],
         timestamp: new Date().toISOString(),
       };
       logDebug("game-debugger", "logs", logs);

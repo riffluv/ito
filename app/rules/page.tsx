@@ -1,18 +1,7 @@
 "use client";
 
 import { AppButton } from "@/components/ui/AppButton";
-import {
-  Badge,
-  Box,
-  Container,
-  Flex,
-  Heading,
-  HStack,
-  Image,
-  List,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, Container, Flex, Heading, HStack, Image, List, Text, VStack } from "@chakra-ui/react";
 import { ArrowLeft, BookOpen } from "lucide-react";
 
 import { useRouter } from "next/navigation";

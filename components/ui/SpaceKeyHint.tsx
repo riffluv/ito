@@ -6,7 +6,6 @@ import { FaArrowDown } from "react-icons/fa";
 import {
   HINT_POSITIONS,
   HINT_COMMON_STYLES,
-  PARTICLE_CONFIG,
   HINT_ANIMATION_CONFIG,
 } from "./hints/constants";
 
@@ -36,18 +35,20 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
   const hasAnimatedRef = React.useRef(false); // 実行済みフラグ
 
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return () => {};
+    }
+
+    let timer: number | null = null;
 
     if (shouldShow && !hasAnimatedRef.current) {
       hasAnimatedRef.current = true; // 実行済みマーク
       setIsVisible(true);
 
       // 少し遅延してアニメーション開始（DOMマウント待ち）
-      const timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         runAnimation();
       }, HINT_ANIMATION_CONFIG.startDelay);
-
-      return () => clearTimeout(timer);
     }
 
     // shouldShowがfalseになったらリセット
@@ -55,6 +56,12 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
       hasAnimatedRef.current = false;
       setIsVisible(false);
     }
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
   }, [shouldShow]);
 
   const runAnimation = () => {
@@ -69,7 +76,7 @@ export default function SpaceKeyHint({ shouldShow }: SpaceKeyHintProps) {
     const tl = gsap.timeline({
       onComplete: () => {
         // アニメーション終了後に非表示
-        setTimeout(() => setIsVisible(false), HINT_ANIMATION_CONFIG.endDelay);
+        window.setTimeout(() => setIsVisible(false), HINT_ANIMATION_CONFIG.endDelay);
       },
     });
 

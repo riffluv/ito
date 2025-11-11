@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { usePixiHudLayer } from "./PixiHudStage";
-import { createSpaceGuide, createSubmitEGuide } from "@/lib/pixi/GuideButton";
-import type { GuideButton } from "@/lib/pixi/GuideButton";
+import { createSpaceGuide, createSubmitEGuide, type GuideButton } from "@/lib/pixi/GuideButton";
 
 type GuideLayoutBounds = {
   left: number;
@@ -196,12 +195,12 @@ export function PixiGuideButtons({
 
   // 初期化: ガイドボタンを作成してレイヤーに追加
   useEffect(() => {
-    if (!layer || isInitializedRef.current) return;
+    if (!layer || isInitializedRef.current) return undefined;
 
     if (disabled) {
       spaceGuideRef.current?.hide();
       eGuideRef.current?.hide();
-      return;
+      return undefined;
     }
 
     isInitializedRef.current = true;

@@ -17,17 +17,32 @@ function detectRendererString(): string | null {
   if (typeof window === "undefined") return null;
   try {
     const canvas = document.createElement("canvas");
-    const gl2 = canvas.getContext("webgl2");
-    const gl = gl2 || (canvas.getContext("webgl") as WebGLRenderingContext | null) || (canvas.getContext("experimental-webgl") as any);
+    const gl2 = canvas.getContext("webgl2") as WebGL2RenderingContext | null;
+    const gl1 =
+      (canvas.getContext("webgl") as WebGLRenderingContext | null) ??
+      (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null);
+    const gl = gl2 ?? gl1;
     if (!gl) return null;
-    const ext = (gl as any).getExtension?.("WEBGL_debug_renderer_info");
-    if (ext) {
-      const renderer = (gl as any).getParameter?.(ext.UNMASKED_RENDERER_WEBGL);
-      if (renderer && typeof renderer === "string") return renderer;
+
+    const rendererInfo = gl.getExtension?.("WEBGL_debug_renderer_info") as
+      | WEBGL_debug_renderer_info
+      | null
+      | undefined;
+    if (rendererInfo) {
+      const renderer = gl.getParameter?.(rendererInfo.UNMASKED_RENDERER_WEBGL);
+      if (typeof renderer === "string") return renderer;
     }
-    // Fallbacks
-    const fallback = (gl as any).getParameter?.((gl as any).RENDERER);
-    return typeof fallback === "string" ? fallback : null;
+
+    const rendererEnum =
+      (gl as WebGLRenderingContext).RENDERER ??
+      (gl as WebGL2RenderingContext).RENDERER;
+    if (typeof rendererEnum === "number") {
+      const fallback = gl.getParameter?.(rendererEnum);
+      if (typeof fallback === "string") {
+        return fallback;
+      }
+    }
+    return null;
   } catch {
     return null;
   }

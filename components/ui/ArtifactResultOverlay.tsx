@@ -13,7 +13,7 @@ export default function ArtifactResultOverlay({
   success,
   correctCount,
   totalCount,
-  onClose,
+  onClose: _onClose,
 }: ArtifactResultProps) {
   // 自動クローズは開発時の警告を避けるため無効化（ユーザークリックで閉じる）
   return (

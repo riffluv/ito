@@ -22,7 +22,7 @@ export function ResponsiveImage({ sizes = "100vw", quality = 85, loading = "lazy
       sizes={sizes}
       quality={quality}
       loading={loading}
-      decoding={decoding as any}
+      decoding={decoding}
       referrerPolicy="no-referrer"
       {...rest}
     />
@@ -30,4 +30,3 @@ export function ResponsiveImage({ sizes = "100vw", quality = 85, loading = "lazy
 }
 
 export default ResponsiveImage;
-

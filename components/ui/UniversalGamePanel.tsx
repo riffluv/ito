@@ -2,7 +2,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 // ドラクエ風フェーズアナウンス
 const getPhaseInfo = (status: string) => {
@@ -51,9 +51,6 @@ interface UniversalGamePanelProps {
 
 export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const iconRef = useRef<HTMLSpanElement>(null);
-
   const previousStatus = useRef<string>(roomStatus);
 
   const phaseInfo = getPhaseInfo(roomStatus);
@@ -62,7 +59,9 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   const playersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof document === "undefined") {
+      return () => {};
+    }
     let paused = false;
 
     const handleVisibility = () => {
@@ -79,7 +78,7 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibility, { passive: true } as any);
+    document.addEventListener("visibilitychange", handleVisibility);
     handleVisibility();
 
     return () => {
@@ -97,9 +96,9 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   const maxPlayers = 0;
   const onlineCount = 0;
   const displayMode = "phase" as const;
-  const setDisplayMode = (s: string) => {};
-  const notificationRef: any = useRef(null);
-  const currentNotification: any = null;
+  const setDisplayMode = (_mode: string) => {};
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const currentNotification = useMemo<NotificationInfo | null>(() => null, []);
   // ----------------------------------------------------------------------
 
   // フェーズ変更時の特別なアニメーション
@@ -175,7 +174,7 @@ export function UniversalGamePanel({ roomStatus }: UniversalGamePanelProps) {
   }, [displayMode]);
 
   // 通知の色を取得
-  const getNotificationColor = (type: string) => {
+  const getNotificationColor = (type: NotificationInfo["type"]) => {
     switch (type) {
       case "success":
         return UI_TOKENS.COLORS.limeGreen;

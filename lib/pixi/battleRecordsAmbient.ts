@@ -104,7 +104,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
    * アニメーション開始
    */
   private startAnimations(): void {
-    const { width, height, failed } = this.options;
+    const { height, failed } = this.options;
 
     // パーティクルアニメーション
     this.particles.forEach((particle, index) => {

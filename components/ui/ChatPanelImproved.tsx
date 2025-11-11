@@ -159,13 +159,16 @@ export function ChatPanel({
 
   // Pixi背景の描画とDOM同期
   useEffect(() => {
-    if (!pixiContainer) {
-      // Pixiコンテナがない場合はリソース破棄
+    const destroyGraphics = () => {
       if (pixiGraphicsRef.current) {
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
-      return;
+    };
+
+    if (!pixiContainer) {
+      destroyGraphics();
+      return destroyGraphics;
     }
 
     // Graphicsオブジェクトを作成
@@ -175,12 +178,7 @@ export function ChatPanel({
     pixiGraphicsRef.current = graphics;
 
     // クリーンアップ
-    return () => {
-      if (pixiGraphicsRef.current) {
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-    };
+    return destroyGraphics;
   }, [pixiContainer]);
 
   // DOM要素とPixiコンテナの位置・サイズ同期

@@ -4,7 +4,6 @@ import { Box } from "@chakra-ui/react";
 interface CardTextProps {
   text?: string | number;
   textType: "clue" | "number";
-  fontSize: string;
   color: string;
   textShadow?: string;
   waitingInCentral?: boolean;
@@ -86,7 +85,6 @@ const getNumberFontSize = (number: number | null): string => {
 export function CardText({
   text,
   textType,
-  fontSize,
   color,
   textShadow,
   waitingInCentral = false,

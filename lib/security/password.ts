@@ -40,7 +40,7 @@ async function resolveCrypto(): Promise<Crypto> {
         }
         return webcrypto as Crypto;
       }
-    } catch (error) {
+    } catch {
       // fall through to error below
     }
   }

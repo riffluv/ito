@@ -127,13 +127,17 @@ const debugLog: ActionExecutor<ShowtimeContext, { level?: "debug" | "info" | "wa
     }
   };
 
+const asGenericExecutor = <P extends Record<string, unknown> | void>(
+  executor: ActionExecutor<ShowtimeContext, P>
+): ActionExecutor => executor as ActionExecutor;
+
 export const ACTION_EXECUTORS: Record<string, ActionExecutor> = {
-  "background.lightSweep": backgroundLightSweep,
-  "background.fireworks": backgroundFireworks,
-  "background.meteors": backgroundMeteors,
-  "background.pointerGlow": backgroundPointerGlow,
-  "audio.play": audioPlay,
-  "banner.show": bannerShow,
-  log: debugLog,
+  "background.lightSweep": asGenericExecutor(backgroundLightSweep),
+  "background.fireworks": asGenericExecutor(backgroundFireworks),
+  "background.meteors": asGenericExecutor(backgroundMeteors),
+  "background.pointerGlow": asGenericExecutor(backgroundPointerGlow),
+  "audio.play": asGenericExecutor(audioPlay),
+  "banner.show": asGenericExecutor(bannerShow),
+  log: asGenericExecutor(debugLog),
 };
 

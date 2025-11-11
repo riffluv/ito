@@ -24,7 +24,11 @@ export const defaultTopics = [
 
 // itoword.md から利用する3つの版（表示候補用）。番号は付さない。
 export const topicTypeLabels = ["通常版", "レインボー版", "クラシック版"] as const;
-export type TopicType = typeof topicTypeLabels[number];
+export type TopicType = (typeof topicTypeLabels)[number];
+
+export const isTopicType = (value: unknown): value is TopicType =>
+  typeof value === "string" &&
+  (topicTypeLabels as readonly string[]).includes(value as TopicType);
 
 export type TopicSections = {
   normal: string[];
@@ -112,6 +116,8 @@ export function getTopicsByType(sections: TopicSections, type: TopicType): strin
       return sections.rainbow;
     case "クラシック版":
       return sections.classic;
+    default:
+      return sections.normal;
   }
 }
 

@@ -1,3 +1,5 @@
+import type { FieldValue, Timestamp } from "firebase/firestore";
+
 // アバター配列（参加順で配布）
 export const AVATAR_LIST = [
   "/avatars/knight1.webp",
@@ -8,7 +10,7 @@ export const AVATAR_LIST = [
   "/avatars/siifu.webp",
   "/avatars/arrow.webp",
   "/avatars/guitar.webp",
-  "/avatars/ankoku.webp"
+  "/avatars/ankoku.webp",
 ];
 
 // 参加順でアバターを取得（重複なし）
@@ -28,12 +30,51 @@ export function hashCode(s: string): number {
   return h;
 }
 
-export function range(n: number): number[] { return Array.from({ length: n }, (_, i) => i); }
+export function range(n: number): number[] {
+  return Array.from({ length: n }, (_, i) => i);
+}
+
+type TimestampInput =
+  | number
+  | { seconds?: number | undefined }
+  | { toMillis?: () => number | undefined }
+  | Timestamp
+  | FieldValue
+  | null
+  | undefined;
+
+const hasSeconds = (value: unknown): value is { seconds?: number } =>
+  typeof value === "object" && value !== null && typeof (value as { seconds?: number }).seconds === "number";
+
+const hasToMillis = (value: unknown): value is { toMillis?: () => number } =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { toMillis?: () => number }).toMillis === "function";
+
+function toSeconds(value: TimestampInput): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+  if (hasSeconds(value) && typeof value.seconds === "number") {
+    return value.seconds;
+  }
+  if (hasToMillis(value) && typeof value.toMillis === "function") {
+    try {
+      return Math.floor((value.toMillis() ?? 0) / 1000);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 // 入室順でプレイヤーIDをソートする関数
 export function sortPlayersByJoinOrder(
   playerIds: string[],
-  players: Array<{ id: string; lastSeen?: any; joinedAt?: any }>
+  players: Array<{
+    id: string;
+    lastSeen?: TimestampInput;
+    joinedAt?: TimestampInput;
+  }>
 ): string[] {
   const playerMap = new Map(players.map((p) => [p.id, p] as const));
 
@@ -41,14 +82,14 @@ export function sortPlayersByJoinOrder(
     const playerA = playerMap.get(a);
     const playerB = playerMap.get(b);
 
-    const joinedA = (playerA as any)?.joinedAt?.seconds ?? null;
-    const joinedB = (playerB as any)?.joinedAt?.seconds ?? null;
+    const joinedA = toSeconds(playerA?.joinedAt);
+    const joinedB = toSeconds(playerB?.joinedAt);
     if (joinedA !== null && joinedB !== null && joinedA !== joinedB) {
       return joinedA - joinedB;
     }
 
-    const lastSeenA = (playerA as any)?.lastSeen?.seconds ?? null;
-    const lastSeenB = (playerB as any)?.lastSeen?.seconds ?? null;
+    const lastSeenA = toSeconds(playerA?.lastSeen);
+    const lastSeenB = toSeconds(playerB?.lastSeen);
     if (lastSeenA !== null && lastSeenB !== null && lastSeenA !== lastSeenB) {
       return lastSeenA - lastSeenB;
     }
@@ -56,4 +97,3 @@ export function sortPlayersByJoinOrder(
     return playerIds.indexOf(a) - playerIds.indexOf(b);
   });
 }
-

@@ -13,7 +13,7 @@ type Task<T> = () => Promise<T>;
 interface QueueState {
   running: boolean;
   lastRun: number;
-  tasks: Array<QueuedTask<any>>;
+  tasks: Array<QueuedTask<unknown>>;
   minInterval: number;
 }
 
@@ -41,6 +41,12 @@ function getQueue(scope: string, minInterval: number): QueueState {
   return state;
 }
 
+const logQueueDebug = (...args: Parameters<typeof console.debug>) => {
+  if (!ENABLE_QUEUE_DEBUG || typeof console === "undefined") return;
+  // eslint-disable-next-line no-console
+  console.debug(...args);
+};
+
 async function runNext(scope: string) {
   const state = queues.get(scope);
   if (!state) return;
@@ -53,11 +59,9 @@ async function runNext(scope: string) {
   setMetric("firestoreQueue", `${scope}:pending`, state.tasks.length);
   setMetric("firestoreQueue", `${scope}:waitMs`, wait);
 
-  if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
-    console.debug(
-      `[FirestoreQueue] ${scope}: starting task (wait ${wait}ms, remaining ${state.tasks.length})`
-    );
-  }
+  logQueueDebug(
+    `[FirestoreQueue] ${scope}: starting task (wait ${wait}ms, remaining ${state.tasks.length})`
+  );
 
   const start = async () => {
     const startTime = ENABLE_QUEUE_DEBUG && typeof performance !== "undefined" ? performance.now() : 0;
@@ -71,9 +75,9 @@ async function runNext(scope: string) {
       bumpMetric("firestoreQueue", `${scope}:errors`);
     } finally {
       state.running = false;
-      if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
+      if (ENABLE_QUEUE_DEBUG && typeof performance !== "undefined") {
         const duration = startTime ? performance.now() - startTime : 0;
-        console.debug(
+        logQueueDebug(
           `[FirestoreQueue] ${scope}: task completed in ${duration ? duration.toFixed(2) : "?"}ms`
         );
       }
@@ -101,12 +105,17 @@ export function enqueueFirestoreWrite<T>(
   const state = getQueue(scope, options?.minIntervalMs ?? DEFAULT_MIN_INTERVAL);
 
   return new Promise<T>((resolve, reject) => {
-    state.tasks.push({ execute: task, resolve, reject });
-    if (ENABLE_QUEUE_DEBUG && typeof console !== "undefined") {
-      console.debug(
-        `[FirestoreQueue] ${scope}: enqueued (size ${state.tasks.length}${state.running ? ", running" : ""})`
-      );
-    }
+    const wrappedTask: QueuedTask<unknown> = {
+      execute: task as Task<unknown>,
+      resolve: (value: unknown | PromiseLike<unknown>) => {
+        resolve(value as T);
+      },
+      reject,
+    };
+    state.tasks.push(wrappedTask);
+    logQueueDebug(
+      `[FirestoreQueue] ${scope}: enqueued (size ${state.tasks.length}${state.running ? ", running" : ""})`
+    );
     setMetric("firestoreQueue", `${scope}:pending`, state.tasks.length);
     bumpMetric("firestoreQueue", `${scope}:enqueued`);
     void runNext(scope);

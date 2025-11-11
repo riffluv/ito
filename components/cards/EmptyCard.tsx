@@ -36,21 +36,20 @@ export function EmptyCard({
   prefersReducedMotion = false,
   ...props
 }: ExtendedEmptyCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
   const wasOverRef = useRef(false);
 
   // 資料推奨: 吸着時の音・触覚フィードバック
   const playDropSuccess = useSoundEffect("drop_success");
 
   // @dnd-kitのuseDroppable（IDがある場合のみ）
-  const dndDroppable = useDroppable({
+  const { isOver, setNodeRef } = useDroppable({
     id: id || `empty-slot-${slotNumber}`,
     disabled: !isDroppable || !id,
   });
 
   // 資料推奨: 吸着時のスケールバウンス効果 (1→1.05→1.0) + 音・触覚フィードバック
   useEffect(() => {
-    const isOver = dndDroppable.isOver;
     const wasOver = wasOverRef.current;
 
     // ドロップ完了検知: isOver が true→false に変化した瞬間
@@ -85,7 +84,7 @@ export function EmptyCard({
 
     wasOverRef.current = isOver;
   }, [
-    dndDroppable.isOver,
+    isOver,
     prefersReducedMotion,
     playDropSuccess,
     isDragActive,
@@ -113,13 +112,15 @@ export function EmptyCard({
   };
 
   // @dnd-kitとHTML5ドラッグ&ドロップの両方に対応 + スケールアニメーション用ref統合
-  const combinedRef = useCallback((element: HTMLElement | null) => {
-    // cardRefをHTMLDivElementに型変更が必要だが、ここではany経由で対応
-    (cardRef as React.MutableRefObject<HTMLElement | null>).current = element;
-    if (id && dndDroppable.setNodeRef) {
-      dndDroppable.setNodeRef(element);
-    }
-  }, [id, dndDroppable.setNodeRef]);
+  const combinedRef = useCallback(
+    (element: HTMLElement | null) => {
+      cardRef.current = element;
+      if (id && setNodeRef) {
+        setNodeRef(element);
+      }
+    },
+    [id, setNodeRef]
+  );
 
   const transformDuration = prefersReducedMotion ? 0.05 : 0.18;
   const boxShadowDuration = prefersReducedMotion ? 0.05 : 0.2;
@@ -164,13 +165,13 @@ export function EmptyCard({
         },
 
         // ドラッグ中の状態：ドロップ可能を控えめに表示
-        ...(isDragActive && isDroppable && !dndDroppable.isOver && {
+        ...(isDragActive && isDroppable && !isOver && {
           borderColor: "rgba(255, 255, 255, 0.4)",
           boxShadow: "inset 0 0 6px rgba(255, 255, 255, 0.05)",
         }),
 
         // マグネット候補の視覚強調（段階的な吸着感）
-        ...(isMagnetTarget && !dndDroppable.isOver && {
+        ...(isMagnetTarget && !isOver && {
           borderColor: `rgba(255, 255, 255, ${0.45 + Math.min(0.45, magnetStrength * 0.55)})`,
           boxShadow: `inset 0 0 ${6 + magnetStrength * 10}px rgba(255, 255, 255, ${0.05 + magnetStrength * 0.25}), 0 0 ${8 + magnetStrength * 12}px rgba(255, 255, 255, ${0.12 + magnetStrength * 0.18})`,
           transform: `scale(${1 + magnetStrength * (prefersReducedMotion ? 0.025 : 0.045)})`,
@@ -178,7 +179,7 @@ export function EmptyCard({
         }),
 
         // ドロップ可能時：ドラクエ風光る効果
-        ...(id && dndDroppable.isOver && {
+        ...(id && isOver && {
           borderColor: "rgba(255, 255, 255, 0.9)",
           borderWidth: "3px",
           borderStyle: "solid", // 実線に変更
@@ -206,7 +207,7 @@ export function EmptyCard({
       ) : "?")}
 
       {/* オーバーレイ: isOver 時の視覚強調（リング + ✓） */}
-      {id && dndDroppable.isOver && (
+      {id && isOver && (
         <span
           aria-hidden
           style={{
@@ -279,30 +280,35 @@ function SlotLabel({ slotNumber, totalSlots }: { slotNumber: number; totalSlots?
   const showLabel = isLow || isHigh;
 
   useEffect(() => {
-    if (!showLabel || !boxRef.current || !diamondTopRef.current || !diamondBottomRef.current) return;
+    const boxNode = boxRef.current;
+    const diamondTopNode = diamondTopRef.current;
+    const diamondBottomNode = diamondBottomRef.current;
+    if (!showLabel || !boxNode || !diamondTopNode || !diamondBottomNode) {
+      return () => undefined;
+    }
 
     // 枠の脈打ちアニメ（非定型値）
     const tl = gsap.timeline({ repeat: -1 });
-    tl.to(boxRef.current, {
+    tl.to(boxNode, {
       opacity: 0.96,
       duration: 0.87,
       ease: "sine.inOut",
     })
-    .to(boxRef.current, {
+    .to(boxNode, {
       opacity: 0.58,
       duration: 0.93,
       ease: "sine.inOut",
     });
 
     // ダイヤモンド装飾の回転アニメ（左右非対称）
-    gsap.to(diamondTopRef.current, {
+    gsap.to(diamondTopNode, {
       rotation: 359,
       duration: 4.2,
       repeat: -1,
       ease: "none",
     });
 
-    gsap.to(diamondBottomRef.current, {
+    gsap.to(diamondBottomNode, {
       rotation: -362,
       duration: 3.8,
       repeat: -1,
@@ -311,7 +317,7 @@ function SlotLabel({ slotNumber, totalSlots }: { slotNumber: number; totalSlots?
 
     return () => {
       tl.kill();
-      gsap.killTweensOf([boxRef.current, diamondTopRef.current, diamondBottomRef.current]);
+      gsap.killTweensOf([boxNode, diamondTopNode, diamondBottomNode]);
     };
   }, [showLabel]);
 

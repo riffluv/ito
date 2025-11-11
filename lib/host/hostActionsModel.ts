@@ -43,11 +43,19 @@ function filterValidIds(
 }
 
 function getProposalArray(room: RoomDoc): string[] {
-  return filterValidIds(room.order?.proposal as any);
+  const proposal = room.order?.proposal;
+  if (!Array.isArray(proposal)) {
+    return [];
+  }
+  return filterValidIds(proposal);
 }
 
 function getOrderList(room: RoomDoc): string[] {
-  return filterValidIds(room.order?.list as any);
+  const list = room.order?.list;
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return filterValidIds(list);
 }
 
 export function buildHostActionModel(
@@ -61,7 +69,6 @@ export function buildHostActionModel(
   const resolveMode = room.options?.resolveMode;
   const topicSelected = hasValidTopic(room);
   const proposal = getProposalArray(room);
-  const assigned = players.filter((p) => typeof p.number === "number").length;
   // アクティブ人数: realtime presence 集計があればそれを、なければ players 配列長
   const effectiveActive = calculateEffectiveActive(_onlineCount, players.length);
   const enoughPlayers = effectiveActive >= 2; // 最低2人

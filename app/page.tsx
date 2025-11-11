@@ -89,26 +89,6 @@ type WindowWithIdleCallback = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
-const DEVELOPER_NOTE_STYLES = {
-  box: {
-    p: 4,
-    bg: "rgba(12,14,20,0.6)",
-    borderRadius: 0,
-  },
-  heading: {
-    fontSize: "sm" as const,
-    fontFamily: "monospace",
-    fontWeight: 700,
-    textShadow: "0 2px 4px rgba(0,0,0,0.8)",
-  },
-  text: {
-    fontSize: "xs" as const,
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "monospace",
-    lineHeight: "1.7",
-  },
-} as const;
-
 const scaleForDpi = (value: string) => `calc(${value} * var(--dpi-scale))`;
 
 export default function MainMenu() {
@@ -1246,7 +1226,7 @@ export default function MainMenu() {
                           lineHeight="1.7"
                           textShadow="1px 1px 0px rgba(0,0,0,0.8)"
                         >
-                          "連想ワードだけで数字の大小をそろえる"という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
+                          &quot;連想ワードだけで数字の大小をそろえる&quot;という発想を、オンライン協力向けに再構成しています。共同編集・カード演出・リアルタイム同期の臨場感を目指して日々改善中です。
                         </Text>
                       </VStack>
                     </Box>

@@ -9,8 +9,8 @@ export function useAssetPreloader(
   const enabled = options?.enabled ?? true;
 
   useEffect(() => {
-    if (!enabled || !assets || assets.length === 0) return;
-    if (typeof window === "undefined") return;
+    if (!enabled || !assets || assets.length === 0) return undefined;
+    if (typeof window === "undefined") return undefined;
 
     const pending = assets.filter((asset) => {
       const href = asset.trim();
@@ -20,7 +20,7 @@ export function useAssetPreloader(
       return true;
     });
 
-    if (pending.length === 0) return;
+    if (pending.length === 0) return undefined;
 
     const images: HTMLImageElement[] = [];
 
@@ -39,4 +39,3 @@ export function useAssetPreloader(
     };
   }, [assets, enabled]);
 }
-

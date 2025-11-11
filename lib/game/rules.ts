@@ -12,7 +12,7 @@ export type OrderState = {
   lastNumber: number | null;
   failed: boolean;
   failedAt: number | null;
-  decidedAt?: any;
+  decidedAt?: number | Date | null;
   total?: number;
 };
 
@@ -35,12 +35,10 @@ export function applyPlay({
   order,
   playerId,
   myNum,
-  allowContinue,
 }: {
   order: OrderState;
   playerId: string;
   myNum: number;
-  allowContinue: boolean;
 }): {
   next: OrderState;
   violation: boolean;

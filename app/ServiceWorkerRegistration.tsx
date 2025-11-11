@@ -42,6 +42,22 @@ const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
 const RELOAD_FALLBACK_DELAY_MS = 4000;
 let reloadFallbackTimer: number | null = null;
 
+type SafeUpdateFetchErrorPayload = Parameters<typeof handleServiceWorkerFetchError>[0];
+
+type SafeUpdateMessageData =
+  | {
+      type: "SAFE_UPDATE_FETCH_ERROR";
+      detail: SafeUpdateFetchErrorPayload;
+    }
+  | {
+      type: "SAFE_UPDATE_SYNC";
+      event: string;
+      version: string;
+      timestamp: number;
+    };
+
+type ServiceWorkerMessageEventData = SafeUpdateMessageData | SafeUpdateFetchErrorPayload;
+
 const clearReloadFallbackTimer = () => {
   if (reloadFallbackTimer !== null && typeof window !== "undefined") {
     window.clearTimeout(reloadFallbackTimer);
@@ -154,18 +170,22 @@ const bindServiceWorkerMessages = () => {
       /* noop */
     };
   }
-  const handler = (event: MessageEvent<any>) => {
+  const handler = (event: MessageEvent<ServiceWorkerMessageEventData>) => {
     const data = event.data;
     if (!data || typeof data !== "object") {
       return;
     }
-    if (data.type === "SAFE_UPDATE_FETCH_ERROR") {
-      handleServiceWorkerFetchError(data.detail ?? data);
+    if ("type" in data) {
+      if (data.type === "SAFE_UPDATE_FETCH_ERROR") {
+        handleServiceWorkerFetchError(data.detail);
+        return;
+      }
+      if (data.type === "SAFE_UPDATE_SYNC") {
+        void resyncWaitingServiceWorker("sw-message");
+      }
       return;
     }
-    if (data.type === "SAFE_UPDATE_SYNC") {
-      void resyncWaitingServiceWorker("sw-message");
-    }
+    handleServiceWorkerFetchError(data);
   };
   navigator.serviceWorker.addEventListener("message", handler);
   return () => {

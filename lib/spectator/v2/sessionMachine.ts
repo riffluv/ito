@@ -1,7 +1,6 @@
 import { assign, fromCallback, fromPromise, setup, type ActorRefFrom, type StateFrom } from "xstate";
 
 import type {
-  SpectatorRejoinSnapshot,
   SpectatorSessionContext,
   SpectatorSessionEvent,
   SpectatorSessionOptions,

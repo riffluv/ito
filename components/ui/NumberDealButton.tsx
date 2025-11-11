@@ -16,22 +16,22 @@ export type NumberDealButtonProps = {
   size?: "sm" | "md" | "lg";
 };
 
-export function NumberDealButton({ 
-  roomId, 
+export function NumberDealButton({
+  roomId,
   room,
-  players, 
-  onlineCount = 0, 
-  size = "sm" 
+  players,
+  onlineCount = 0,
+  size = "sm",
 }: NumberDealButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   
   const MIN_PLAYERS_FOR_DEAL = 2;
   const effectivePlayerCount = onlineCount || players.length;
   const tooFewPlayers = effectivePlayerCount < MIN_PLAYERS_FOR_DEAL;
-  const topicSelected = !!(room as any)?.topic;
+  const topicSelected = Boolean(room.topic);
   
   // Check if numbers are already dealt
-  const numbersDealt = players.some(p => typeof p.number === 'number');
+  const numbersDealt = players.some((p) => typeof p.number === "number");
   
   const canDeal = topicSelected && !tooFewPlayers;
 
@@ -48,9 +48,9 @@ export function NumberDealButton({
     if (isLoading || !canDeal) return;
     
     if (!topicSelected) {
-      notify({ 
+      notify({
         id: toastIds.numberDealWarningNoTopic(roomId),
-        title: "先にお題を設定してください", 
+        title: "先にお題を設定してください",
         type: "warning",
         duration: 2200,
       });
@@ -58,9 +58,9 @@ export function NumberDealButton({
     }
 
     if (tooFewPlayers) {
-      notify({ 
+      notify({
         id: toastIds.numberDealWarningPlayers(roomId),
-        title: `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`, 
+        title: `プレイヤーは${MIN_PLAYERS_FOR_DEAL}人以上必要です`,
         type: "warning",
         duration: 2200,
       });
@@ -71,17 +71,17 @@ export function NumberDealButton({
     try {
       playCardDeal();
       await topicControls.dealNumbers(roomId);
-      notify({ 
+      notify({
         id: toastIds.numberDealSuccess(roomId),
         title: numbersDealt ? "数字を配り直しました" : "数字を配布しました",
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notify({
         id: toastIds.numberDealError(roomId),
         title: "数字配布に失敗",
-        description: error?.message,
+        description: error instanceof Error ? error.message : String(error ?? "unknown"),
         type: "error",
       });
     } finally {

@@ -1,8 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
 import { SpectatorRejoinManager } from "@/components/ui/SpectatorRejoinManager";
@@ -98,14 +96,7 @@ export function SpectatorHUD({
           autoApprovedRef.current.delete(request.sessionId);
         });
     }
-  }, [
-    host.enabled,
-    host.autoApprove,
-    host.error,
-    host.loading,
-    host.requests,
-    host.onApprove,
-  ]);
+  }, [host]);
 
   useEffect(() => {
     if (!host.enabled || !host.autoApprove) {

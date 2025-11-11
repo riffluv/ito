@@ -46,24 +46,24 @@ function recordRoomsMetric(
 ) {
   if (typeof window === "undefined") return;
   const w = window as typeof window & {
-    __ITO_METRICS__?: Array<{
+    __ITO_LOBBY_METRICS__?: Array<{
       name: string;
       duration: number;
       ts: number;
       extra?: Record<string, unknown>;
     }>;
   };
-  if (!Array.isArray(w.__ITO_METRICS__)) {
-    w.__ITO_METRICS__ = [];
+  if (!Array.isArray(w.__ITO_LOBBY_METRICS__)) {
+    w.__ITO_LOBBY_METRICS__ = [];
   }
-  w.__ITO_METRICS__!.push({
+  w.__ITO_LOBBY_METRICS__!.push({
     name,
     duration: durationMs,
     ts: Date.now(),
     extra,
   });
-  if (w.__ITO_METRICS__!.length > 200) {
-    w.__ITO_METRICS__!.splice(0, w.__ITO_METRICS__!.length - 200);
+  if (w.__ITO_LOBBY_METRICS__!.length > 200) {
+    w.__ITO_LOBBY_METRICS__!.splice(0, w.__ITO_LOBBY_METRICS__!.length - 200);
   }
 }
 
@@ -225,7 +225,7 @@ export function useOptimizedRooms({
         // 🔧 複合インデックス問題回避: orderByを除去してクライアント側ソート
         const qInprog = query(
           roomsCol,
-          where("status", "in", ["clue", "reveal"] as any),
+          where("status", "in", ["clue", "reveal"] as const),
           limit(Math.max(inprogLimit, ROOMS_PER_PAGE))
         );
 
@@ -290,7 +290,7 @@ export function useOptimizedRooms({
             totalCount,
           });
         }
-      } catch (err: any) {
+      } catch (err) {
         control.retryCount += 1;
         control.cooldownMs = Math.min(
           MAX_FETCH_COOLDOWN_MS,
@@ -301,7 +301,9 @@ export function useOptimizedRooms({
         } else {
           logError("useOptimizedRooms", "fetch-failed", err);
         }
-        setError(err);
+        const normalizedError =
+          err instanceof Error ? err : err ? new Error(String(err)) : null;
+        setError(normalizedError);
         if (roomsSignatureRef.current !== "[]") {
           roomsSignatureRef.current = "[]";
           setRooms([]); // フォールバック
@@ -325,7 +327,6 @@ export function useOptimizedRooms({
     },
     [
       enabled,
-      db,
       setLoadingIfNeeded,
       pageIndex,
       normalizedQuery,
@@ -336,11 +337,11 @@ export function useOptimizedRooms({
   );
 
   useEffect(() => {
-    if (!enabled || !db) {
+    if (!enabled) {
       roomsSignatureRef.current = "[]";
       setRooms([]);
       setLoadingIfNeeded(false);
-      return;
+      return undefined;
     }
 
     let mounted = true;
@@ -365,7 +366,7 @@ export function useOptimizedRooms({
       mounted = false;
       document.removeEventListener("visibilitychange", visibilityHandler);
     };
-  }, [enabled, db, fetchActiveRooms, setLoadingIfNeeded]);
+  }, [enabled, fetchActiveRooms, setLoadingIfNeeded]);
 
   const refresh = useCallback(() => {
     fetchActiveRooms({ force: true });

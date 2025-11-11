@@ -1,5 +1,6 @@
 import GameCard from "@/components/ui/GameCard";
 import { computeCardState } from "@/lib/cards/logic";
+import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc } from "@/lib/types";
 import { createBoardCardViewModel } from "./cardViewModel";
 import { useRenderMetrics } from "@/lib/perf/useRenderMetrics";
@@ -11,7 +12,7 @@ interface CardRendererProps {
   orderList?: string[];
   pending: (string | null)[];
   proposal?: string[];
-  resolveMode?: string;
+  resolveMode?: ResolveMode | null;
   roomStatus?: string;
   revealIndex: number;
   revealAnimating: boolean;
@@ -37,7 +38,7 @@ export function CardRenderer(props: CardRendererProps) {
     orderList: props.orderList,
     pending: props.pending,
     proposal: props.proposal,
-    resolveMode: props.resolveMode,
+    resolveMode: props.resolveMode ?? undefined,
     roomStatus: props.roomStatus,
     revealIndex: props.revealIndex,
     revealAnimating: props.revealAnimating,

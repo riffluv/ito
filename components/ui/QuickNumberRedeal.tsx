@@ -16,27 +16,29 @@ export type QuickNumberRedealProps = {
   size?: "sm" | "md" | "lg";
 };
 
-export function QuickNumberRedeal({ 
-  roomId, 
+export function QuickNumberRedeal({
+  roomId,
   room,
-  players, 
-  onlineCount = 0, 
-  size = "sm" 
+  players,
+  onlineCount = 0,
+  size = "sm",
 }: QuickNumberRedealProps) {
   const [isLoading, setIsLoading] = useState(false);
   
   const MIN_PLAYERS_FOR_DEAL = 2;
   const effectivePlayerCount = onlineCount || players.length;
   const tooFewPlayers = effectivePlayerCount < MIN_PLAYERS_FOR_DEAL;
-  const topicSelected = !!(room as any)?.topic;
+  const topicSelected = Boolean(room.topic);
   
   // Check if numbers are already dealt
-  const numbersDealt = players.some(p => typeof p.number === 'number');
+  const numbersDealt = players.some((p) => typeof p.number === "number");
   
   const canRedeal = topicSelected && !tooFewPlayers;
 
   const playCardDeal = useSoundEffect("card_deal");
   const effectivelyLoading = isLoading;
+  const minWidth =
+    size === "lg" ? "240px" : size === "md" ? "230px" : "220px";
 
   const subLabel = useMemo(() => {
     if (!topicSelected) return "お題未設定";
@@ -77,11 +79,13 @@ export function QuickNumberRedeal({
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const description =
+        error instanceof Error ? error.message : String(error ?? "unknown");
       notify({
         id: toastIds.numberDealError(roomId),
         title: "数字配布に失敗",
-        description: error?.message,
+        description,
         type: "error",
       });
     } finally {
@@ -106,7 +110,7 @@ export function QuickNumberRedeal({
           ? "数字を配り直す"
           : "数字を配布"
       }
-      minW="220px"
+      minW={minWidth}
     />
   );
 }

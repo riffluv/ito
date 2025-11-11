@@ -110,7 +110,7 @@ export function useHostActions({
         duration: 1800,
       });
     } catch (error) {
-      traceError("ui.order.evaluate", error as any, {
+      traceError("ui.order.evaluate", error, {
         roomId,
         count: finalOrder.length,
       });

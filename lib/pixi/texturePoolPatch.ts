@@ -5,16 +5,23 @@ const isDev = process.env.NODE_ENV !== "production";
 
 let patched = false;
 
+type TexturePoolLike = {
+  returnTexture: (
+    texture: PIXI.RenderTexture | PIXI.Texture,
+    resetStyle?: boolean
+  ) => void;
+  _poolKeyHash?: Record<number, string>;
+  _texturePool?: Record<string, Array<PIXI.RenderTexture | PIXI.Texture>>;
+};
+
 export function applyTexturePoolPatch(pixi: typeof PIXI) {
   if (patched) {
     return;
   }
 
-  const texturePool = (pixi as unknown as {
-    TexturePool?: {
-      returnTexture: (texture: any, resetStyle?: boolean) => void;
-    };
-  }).TexturePool;
+  const texturePool = pixi.TexturePool as unknown as
+    | TexturePoolLike
+    | undefined;
 
   if (!texturePool || typeof texturePool.returnTexture !== "function") {
     if (isDev) {
@@ -27,7 +34,7 @@ export function applyTexturePoolPatch(pixi: typeof PIXI) {
   const originalReturnTexture = texturePool.returnTexture;
 
   texturePool.returnTexture = function patchedReturnTexture(
-    renderTexture: any,
+    renderTexture: PIXI.RenderTexture | PIXI.Texture,
     resetStyle = false
   ) {
     if (!renderTexture) {
@@ -37,11 +44,15 @@ export function applyTexturePoolPatch(pixi: typeof PIXI) {
       return;
     }
 
-    const poolKeyHash = (this as any)?._poolKeyHash;
-    const texturePoolStore = (this as any)?._texturePool;
+    const instance = this as TexturePoolLike | undefined;
+    if (instance && !instance._texturePool) {
+      instance._texturePool = {};
+    }
+    const poolKeyHash = instance?._poolKeyHash ?? {};
+    const texturePoolStore = instance?._texturePool ?? {};
     const key = poolKeyHash?.[renderTexture.uid];
 
-    if (key == null) {
+    if (key === undefined || key === null) {
       if (isDev) {
         console.warn(
           `[pixi:TexturePoolPatch] Missing pool key for texture uid=${renderTexture.uid}. Destroying texture instead of pooling.`
@@ -56,7 +67,7 @@ export function applyTexturePoolPatch(pixi: typeof PIXI) {
     }
 
     try {
-      return originalReturnTexture.call(this, renderTexture, resetStyle);
+      originalReturnTexture.call(instance, renderTexture, resetStyle);
     } catch (error) {
       if (isDev) {
         console.warn(

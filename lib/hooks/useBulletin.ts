@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { firebaseEnabled } from "@/lib/firebase/client";
+import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, limit, type Unsubscribe } from "firebase/firestore";
+import { db, firebaseEnabled } from "@/lib/firebase/client";
 
 export type BulletinPost = {
   id: string;
@@ -19,6 +18,8 @@ export function useBulletin(enabled: boolean) {
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
+    let unsub: Unsubscribe | null = null;
+
     if (!enabled || !firebaseEnabled || !db) {
       // Fallback ダミーポスト（開発時）
       setPosts([
@@ -32,39 +33,55 @@ export function useBulletin(enabled: boolean) {
         },
       ]);
       setLoading(false);
-      return;
+    } else {
+      try {
+        const q = query(collection(db, "bulletin"), orderBy("createdAt", "desc"), limit(20));
+        unsub = onSnapshot(
+          q,
+          (snap) => {
+            const list: BulletinPost[] = snap.docs.map((d) => {
+              const raw = d.data() as Record<string, unknown>;
+              const createdAtRaw = raw.createdAt;
+              const ts =
+                typeof createdAtRaw === "object" &&
+                createdAtRaw !== null &&
+                "toDate" in createdAtRaw &&
+                typeof (createdAtRaw as { toDate?: () => Date }).toDate === "function"
+                  ? (createdAtRaw as { toDate: () => Date }).toDate()
+                  : createdAtRaw instanceof Date
+                  ? createdAtRaw
+                  : null;
+              return {
+                id: d.id,
+                title: typeof raw.title === "string" ? raw.title : "(無題)",
+                body: typeof raw.body === "string" ? raw.body : "",
+                createdAt: ts,
+                author:
+                  raw.author && typeof raw.author === "object"
+                    ? (raw.author as { uid?: string; name?: string })
+                    : null,
+                pinned: Boolean(raw.pinned),
+              };
+            });
+            setPosts(list);
+            setLoading(false);
+          },
+          (err) => {
+            setError(err);
+            setLoading(false);
+          }
+        );
+      } catch (e) {
+        setError(e);
+        setLoading(false);
+      }
     }
 
-    try {
-      const q = query(collection(db!, "bulletin"), orderBy("createdAt", "desc"), limit(20));
-      const unsub = onSnapshot(
-        q,
-        (snap) => {
-          const list: BulletinPost[] = snap.docs.map((d) => {
-            const data = d.data() as any;
-            const ts = data.createdAt?.toDate?.() ?? (data.createdAt instanceof Date ? data.createdAt : null);
-            return {
-              id: d.id,
-              title: data.title ?? "(無題)",
-              body: data.body ?? "",
-              createdAt: ts,
-              author: data.author ?? null,
-              pinned: !!data.pinned,
-            };
-          });
-          setPosts(list);
-          setLoading(false);
-        },
-        (err) => {
-          setError(err);
-          setLoading(false);
-        }
-      );
-      return () => unsub();
-    } catch (e) {
-      setError(e);
-      setLoading(false);
-    }
+    return () => {
+      if (unsub) {
+        unsub();
+      }
+    };
   }, [enabled]);
 
   const addPost = async (post: { title: string; body: string; author?: { uid?: string; name?: string } | null; pinned?: boolean }) => {
@@ -77,4 +94,3 @@ export function useBulletin(enabled: boolean) {
 
   return { posts, loading, error, addPost };
 }
-

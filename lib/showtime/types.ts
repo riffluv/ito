@@ -1,3 +1,5 @@
+import type { FieldValue } from "firebase/firestore";
+
 /**
  * SHOWTIME intent & scenario 型。
  * FSM intent ベースの publish / subscribe ルートと、
@@ -16,7 +18,7 @@ export type ShowtimeEventDoc = {
   revealedMs?: number | null;
   intentId?: string | null;
   source?: "intent" | "fallback";
-  createdAt?: any;
+  createdAt?: number | { toMillis: () => number } | FieldValue | null;
 };
 
 export type ShowtimeIntentMetadata = {
@@ -53,5 +55,8 @@ export interface ScenarioStep<
 
 export type Scenario<C extends ShowtimeContext = ShowtimeContext> = ScenarioStep<C>[];
 
-export type ActionExecutor<C extends ShowtimeContext = ShowtimeContext, P = any> =
+export type ActionExecutor<
+  C extends ShowtimeContext = ShowtimeContext,
+  P extends Record<string, unknown> | void = Record<string, unknown>
+> =
   (params: P, context: C) => void | Promise<void>;

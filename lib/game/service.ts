@@ -15,6 +15,7 @@ import { topicControls } from "@/lib/game/topicControls";
 import { db } from "@/lib/firebase/client";
 import { bumpMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import type { RoomDoc } from "@/lib/types";
 import {
   collection,
   doc,
@@ -108,14 +109,22 @@ export async function resetRoomWithPrune(
 ) {
   traceAction("room.reset", {
     roomId,
-    keep: Array.isArray(keepIds) ? String(keepIds.length) : keepIds == null ? "0" : "custom",
+    keep: Array.isArray(keepIds)
+      ? String(keepIds.length)
+      : keepIds === null || keepIds === undefined
+        ? "0"
+        : "custom",
   });
   try {
     return await resetRoomWithPruneInternal(roomId, keepIds, opts);
   } catch (error) {
     traceError("room.reset", error, {
       roomId,
-      keep: Array.isArray(keepIds) ? String(keepIds.length) : keepIds == null ? "0" : "custom",
+      keep: Array.isArray(keepIds)
+        ? String(keepIds.length)
+        : keepIds === null || keepIds === undefined
+          ? "0"
+          : "custom",
     });
     throw error;
   }
@@ -134,22 +143,29 @@ export async function finalizeReveal(roomId: string) {
 // =============================
 // UI Shared Gate: revealPending
 // =============================
+type ServerTimestamp = ReturnType<typeof serverTimestamp>;
+
+type RevealPendingPayload = {
+  ui: {
+    revealPending: boolean;
+    revealBeginAt: ServerTimestamp;
+  };
+  lastActiveAt: ServerTimestamp;
+};
+
 export async function beginRevealPending(roomId: string) {
   if (!db) return;
   const roomRef = doc(db, "rooms", roomId);
   try {
     traceAction("ui.revealPending.begin", { roomId });
-    await setDoc(
-      roomRef,
-      {
-        ui: {
-          revealPending: true,
-          revealBeginAt: serverTimestamp(),
-        },
-        lastActiveAt: serverTimestamp(),
-      } as any,
-      { merge: true }
-    );
+    const payload: RevealPendingPayload = {
+      ui: {
+        revealPending: true,
+        revealBeginAt: serverTimestamp(),
+      },
+      lastActiveAt: serverTimestamp(),
+    };
+    await setDoc(roomRef, payload, { merge: true });
   } catch (error) {
     traceError("ui.revealPending.begin", error, { roomId });
     throw error;
@@ -161,10 +177,11 @@ export async function clearRevealPending(roomId: string) {
   const roomRef = doc(db, "rooms", roomId);
   try {
     traceAction("ui.revealPending.clear", { roomId });
-    await updateDoc(roomRef, {
+    const payload = {
       "ui.revealPending": false,
       lastActiveAt: serverTimestamp(),
-    } as any);
+    } satisfies Record<string, unknown>;
+    await updateDoc(roomRef, payload);
   } catch (error) {
     traceError("ui.revealPending.clear", error, { roomId });
     // 非致命: 失敗してもUIは自動解除されるため握りつぶす
@@ -183,10 +200,11 @@ export async function pruneProposalByEligible(
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(roomRef);
       if (!snap.exists()) return;
-      const room: any = snap.data();
-      if (room?.status !== "clue") return;
-      const proposal: (string | null)[] = Array.isArray(room?.order?.proposal)
-        ? (room.order.proposal as (string | null)[])
+      const room = snap.data() as RoomDoc | undefined;
+      if (!room || room.status !== "clue") return;
+      const proposalSource = room.order?.proposal;
+      const proposal: (string | null)[] = Array.isArray(proposalSource)
+        ? [...proposalSource]
         : [];
       if (proposal.length === 0) return;
       const filtered = proposal.filter(

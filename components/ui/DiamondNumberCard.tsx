@@ -1,7 +1,6 @@
 "use client";
 import { Text } from "@chakra-ui/react";
 import React, { memo, useEffect, useRef } from "react";
-import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 
 interface DiamondNumberCardProps {
@@ -16,7 +15,7 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
 
   useEffect(() => {
     const element = textRef.current;
-    if (!element) return;
+    if (!element) return undefined;
 
     const hasNumber = typeof number === "number";
     const previous = previousNumber.current;

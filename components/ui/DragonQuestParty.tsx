@@ -32,12 +32,6 @@ const headerGlint = keyframes`
   100% { transform: translateX(140%) rotate(9deg); opacity: 0; }
 `;
 
-const pulseSweep = keyframes`
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-`;
-
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 
@@ -81,7 +75,7 @@ const shallowEqualPartyMember = (a: PartyMember, b: PartyMember) => {
 function DragonQuestParty({
   players,
   roomStatus,
-  onlineCount,
+  onlineCount: _onlineCount,
   onlineUids,
   hostId,
   roomId,
@@ -149,7 +143,17 @@ function DragonQuestParty({
       ids = [hostId, ...ids];
     }
     return ids.filter((id) => byId.has(id));
-  }, [eligibleIdsKey, effectivePlayers, hostId, onlineUidsKey, roundIdsKey, byId]);
+  }, [
+    byId,
+    effectivePlayers,
+    hostId,
+    roundIdsKey,
+    eligibleIdsKey,
+    onlineUidsKey,
+    roundIds,
+    eligibleIds,
+    onlineUids,
+  ]);
 
   const displayedPlayers: PartyMember[] = useMemo(() => {
     const cache = playerCacheRef.current;
@@ -213,7 +217,7 @@ function DragonQuestParty({
       return new Set<string>();
     }
     return new Set(submittedPlayerIds);
-  }, [submittedPlayerIds?.join(",")]);
+  }, [submittedPlayerIds]);
 
   // 実際の参加者数は表示対象の長さと一致させる（UIの一貫性を担保）
   const actualCount = displayedPlayers.length;
@@ -246,35 +250,46 @@ function DragonQuestParty({
   }, [actualCount]);
 
   useEffect(() => {
-    if (!hostOverride) return;
+    if (!hostOverride) {
+      return () => undefined;
+    }
     if (hostId === hostOverride.targetId) {
       setHostOverride(null);
-      return;
+      return () => undefined;
     }
     if (
-      hostId != null &&
+      hostId !== null &&
+      hostId !== undefined &&
       hostId !== hostOverride.previousId &&
       hostId !== hostOverride.targetId
     ) {
       setHostOverride(null);
     }
-    if (hostId == null && hostOverride.previousId == null) {
+    if (hostId === null && hostOverride.previousId === null) {
       setHostOverride(null);
     }
+    return () => undefined;
   }, [hostId, hostOverride]);
 
   useEffect(() => {
-    if (!transferTargetId) return;
+    if (!transferTargetId) {
+      return undefined;
+    }
     if (hostId === transferTargetId) {
       setTransferTargetId(null);
+      return undefined;
     }
+    return undefined;
   }, [hostId, transferTargetId]);
   useEffect(() => {
-    if (renderStart == null || typeof performance === "undefined") return;
+    if (renderStart === null || typeof performance === "undefined") {
+      return undefined;
+    }
     const duration = performance.now() - renderStart;
     setMetric("ui", "dragonQuestPartyRenderMs", Math.round(duration));
     bumpMetric("ui", "dragonQuestPartyRenderCount");
-  });
+    return undefined;
+  }, [renderStart]);
 
   const handleHostTransfer = useCallback(
     async (targetId: string, targetName: string) => {
@@ -350,7 +365,9 @@ function DragonQuestParty({
   );
 
   useEffect(() => {
-    if (!prefersReducedMotion) return;
+    if (!prefersReducedMotion) {
+      return undefined;
+    }
     const id = window.setInterval(
       () => setAmbientPhase((prev) => (prev === 0 ? 1 : 0)),
       2400
@@ -368,15 +385,18 @@ function DragonQuestParty({
     const tolerance = 12; // px
     const isOverflowing = el.scrollHeight - el.clientHeight > tolerance;
     setEnableScroll(isOverflowing);
-  }, [orderedPlayers.length]);
+  }, [orderedPlayers]);
 
   useEffect(() => {
     updateScrollOverflow();
-  }, [orderedPlayers.length, updateScrollOverflow]);
+    return undefined;
+  }, [orderedPlayers, updateScrollOverflow]);
 
   useEffect(() => {
     const el = listContainerRef.current;
-    if (!el) return;
+    if (!el) {
+      return undefined;
+    }
     updateScrollOverflow();
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined") {
@@ -419,11 +439,6 @@ function DragonQuestParty({
       ? "translateX(30%) rotate(12deg)"
       : "translateX(-30%) rotate(12deg)"
     : "translateX(-120%) rotate(12deg)";
-  const headerBoxShadow = prefersReducedMotion
-    ? ambientPhase === 1
-      ? "0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)"
-      : "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)"
-    : "0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)";
 
   return (
     <Box

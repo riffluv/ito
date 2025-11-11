@@ -5,8 +5,9 @@ import {
   Toast,
   createToaster,
 } from "@chakra-ui/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
+import type { Options as ToastOptions, StatusChangeDetails } from "@zag-js/toast";
 
 // Chakra UI v3 official toaster instance.
 // Keep placement centralized to avoid layout interference with app content.
@@ -19,52 +20,60 @@ export const toaster = createToaster({
   offsets: { top: "16px", right: "16px", bottom: "16px", left: "16px" },
 });
 
+type AnimatedToast = ToastOptions<ReactNode>;
+
 // Octopath Traveler-style GSAP toast animations
-function ToastWithAnimation({ toast }: { toast: any }) {
+function ToastWithAnimation({ toast }: { toast: AnimatedToast }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = rootRef.current;
-    if (!el) return;
-
-    // HD-2D entrance: elegant slide + scale + fade
-    gsap.fromTo(
-      el,
-      {
-        x: 60,
-        opacity: 0,
-        scale: 1.05,
-      },
-      {
-        x: 0,
-        opacity: 1,
-        scale: 1,
-        duration: 0.45,
-        ease: "power2.out",
-      }
-    );
+    if (el) {
+      // HD-2D entrance: elegant slide + scale + fade
+      gsap.fromTo(
+        el,
+        {
+          x: 60,
+          opacity: 0,
+          scale: 1.05,
+        },
+        {
+          x: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.45,
+          ease: "power2.out",
+        }
+      );
+    }
 
     return () => {
-      gsap.killTweensOf(el);
+      if (el) {
+        gsap.killTweensOf(el);
+      }
     };
   }, []);
 
   // HD-2D exit animation when toast is removed
   useEffect(() => {
-    if (toast.onStatusChange) {
-      const originalCallback = toast.onStatusChange;
-      toast.onStatusChange = (details: any) => {
-        if (details.status === "unmounted" && rootRef.current) {
-          gsap.to(rootRef.current, {
-            y: -20,
-            opacity: 0,
-            duration: 0.3,
-            ease: "power2.in",
-          });
-        }
-        if (originalCallback) originalCallback(details);
-      };
+    const originalCallback = toast.onStatusChange;
+    if (!originalCallback) {
+      return () => {};
     }
+    toast.onStatusChange = (details: StatusChangeDetails) => {
+      if (details.status === "unmounted" && rootRef.current) {
+        gsap.to(rootRef.current, {
+          y: -20,
+          opacity: 0,
+          duration: 0.3,
+          ease: "power2.in",
+        });
+      }
+      originalCallback?.(details);
+    };
+    return () => {
+      toast.onStatusChange = originalCallback;
+    };
   }, [toast]);
 
   return (

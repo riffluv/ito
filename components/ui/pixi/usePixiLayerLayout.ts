@@ -36,6 +36,8 @@ export function usePixiLayerLayout(
   pixiContainer: Container | null,
   options?: PixiLayerLayoutOptions
 ) {
+  const disabled = options?.disabled ?? false;
+  const onUpdate = options?.onUpdate;
   const rafRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const lastLayoutRef = useRef<DOMRect | null>(null);
@@ -47,8 +49,8 @@ export function usePixiLayerLayout(
     const container = pixiContainer;
 
     // 無効化されている、またはコンテナが存在しない場合は何もしない
-    if (options?.disabled || !target || !container) {
-      return;
+    if (disabled || !target || !container) {
+      return undefined;
     }
 
     let active = true;
@@ -81,15 +83,13 @@ export function usePixiLayerLayout(
         // container.position.set(rect.x, rect.y);
 
         // コールバックを呼び出し
-        if (options?.onUpdate) {
-          options.onUpdate({
-            width: rect.width,
-            height: rect.height,
-            x: rect.x,
-            y: rect.y,
-            dpr: currentDpr,
-          });
-        }
+        onUpdate?.({
+          width: rect.width,
+          height: rect.height,
+          x: rect.x,
+          y: rect.y,
+          dpr: currentDpr,
+        });
       }
 
       // 次のフレームでも監視を続ける
@@ -136,5 +136,5 @@ export function usePixiLayerLayout(
 
       lastLayoutRef.current = null;
     };
-  }, [targetRef, pixiContainer, options?.disabled, options?.onUpdate]);
+  }, [targetRef, pixiContainer, disabled, onUpdate]);
 }

@@ -22,7 +22,7 @@ export function postRoundReset(roomId: string) {
   // BroadcastChannel
   const ch = getChannel();
   if (ch) {
-    try { ch.postMessage(evt as any); } catch {}
+    try { ch.postMessage(evt); } catch {}
     try { ch.close(); } catch {}
   }
   // storage fallback
@@ -42,7 +42,7 @@ export function postRoundPrepare(roomId: string) {
   const evt: RoundEvent = { type: 'ROUND_PREPARE', roomId, at: Date.now() };
   const ch = getChannel();
   if (ch) {
-    try { ch.postMessage(evt as any); } catch {}
+    try { ch.postMessage(evt); } catch {}
     try { ch.close(); } catch {}
   }
   try {
@@ -66,15 +66,15 @@ export function subscribeRoundEvents(
   // BroadcastChannel
   const ch = getChannel();
   if (ch) {
-    const onMsg = (e: MessageEvent) => {
-      const data = e.data as RoundEvent;
-      if (data && data.type === 'ROUND_RESET' && data.roomId === roomId) {
+    const onMsg = (event: MessageEvent<RoundEvent>) => {
+      const data = event.data;
+      if (data?.type === 'ROUND_RESET' && data.roomId === roomId) {
         onReset(data.at);
       }
     };
-    ch.addEventListener('message', onMsg as any);
+    ch.addEventListener('message', onMsg);
     subs.push(() => {
-      try { ch.removeEventListener('message', onMsg as any); } catch {}
+      try { ch.removeEventListener('message', onMsg); } catch {}
       try { ch.close(); } catch {}
     });
   }
@@ -106,15 +106,15 @@ export function subscribeRoundPrepare(
   const subs: Array<() => void> = [];
   const ch = getChannel();
   if (ch) {
-    const onMsg = (e: MessageEvent) => {
-      const data = e.data as RoundEvent;
-      if (data && data.type === 'ROUND_PREPARE' && data.roomId === roomId) {
+    const onMsg = (event: MessageEvent<RoundEvent>) => {
+      const data = event.data;
+      if (data?.type === 'ROUND_PREPARE' && data.roomId === roomId) {
         onPrepare(data.at);
       }
     };
-    ch.addEventListener('message', onMsg as any);
+    ch.addEventListener('message', onMsg);
     subs.push(() => {
-      try { ch.removeEventListener('message', onMsg as any); } catch {}
+      try { ch.removeEventListener('message', onMsg); } catch {}
       try { ch.close(); } catch {}
     });
   }

@@ -714,7 +714,7 @@ export function createRoomMachine(input: RoomMachineInput) {
             try {
               await deps.cancelSeatRequest(context.roomId, uid);
             } catch (error) {
-              traceError("#roomMachine.spectator.forceExit.cancel", error as any, {
+              traceError("#roomMachine.spectator.forceExit.cancel", error, {
                 roomId: context.roomId,
                 uid,
               });

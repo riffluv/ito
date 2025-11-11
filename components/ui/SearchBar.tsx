@@ -1,8 +1,9 @@
 "use client";
 
 import { UI_TOKENS } from "@/theme/layout";
-import { Box, HStack, IconButton, Input } from "@chakra-ui/react";
-import { Search, X } from "lucide-react";
+import { Box, HStack, Input } from "@chakra-ui/react";
+import { Search } from "lucide-react";
+import type { ChangeEvent } from "react";
 
 export type SearchBarProps = {
   value: string;
@@ -20,6 +21,11 @@ export function SearchBar({
   ariaLabel = "ロビーを検索",
 }: SearchBarProps) {
   const showClear = value.trim().length > 0;
+  const focusTextShadow = UI_TOKENS.TEXT_SHADOWS.soft ?? "1px 1px 0px #000";
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onChange(event.target.value);
+  };
 
   return (
     <Box
@@ -39,7 +45,7 @@ export function SearchBar({
 
         <Input
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={handleInputChange}
           placeholder={placeholder}
           aria-label={ariaLabel}
           autoComplete="off"
@@ -57,7 +63,7 @@ export function SearchBar({
           }}
           _focusVisible={{
             outline: "none",
-            textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+            textShadow: focusTextShadow,
             bg: "whiteAlpha.50"
           }}
         />

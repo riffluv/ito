@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import type { MutableRefObject } from "react";
+import { useEffect, useRef, type MutableRefObject } from "react";
 import { notify } from "@/components/ui/notify";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
 import { forceDetachAll } from "@/lib/firebase/presence";

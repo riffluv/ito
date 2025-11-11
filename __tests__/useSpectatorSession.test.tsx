@@ -1,7 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
-import type { SpectatorRejoinSource } from "@/lib/spectator/v2";
 
 function createMockServices() {
   const listeners: { rejoin?: (snapshot: any) => void } = {};

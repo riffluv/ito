@@ -1,5 +1,5 @@
 "use client";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Text, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
@@ -29,22 +29,49 @@ interface PhaseAnnouncementProps {
 
 export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const iconRef: any = useRef(null);
+  const textRef = useRef<HTMLParagraphElement | null>(null);
+  const iconRef = useRef<HTMLSpanElement | null>(null);
   const previousStatus = useRef<string>(roomStatus);
 
   const { text, icon } = getPhaseAnnouncement(roomStatus);
 
-  const tlRef = useRef<any>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
 
   // フェーズ変更時の豪華なGSAPアニメーション
   useEffect(() => {
-    if (!containerRef.current || !textRef.current || !iconRef.current) return;
-
     const container = containerRef.current;
     const textEl = textRef.current;
     const iconEl = iconRef.current;
+
+    const cleanup = () => {
+      try {
+        if (tlRef.current) {
+          tlRef.current.kill();
+          tlRef.current = null;
+        }
+        if (container) {
+          gsap.killTweensOf(container);
+          gsap.set(container, {
+            clearProps: "transform,opacity,x,y,rotation,scale",
+          });
+        }
+        if (textEl) {
+          gsap.killTweensOf(textEl);
+          gsap.set(textEl, { clearProps: "opacity,y,scale" });
+        }
+        if (iconEl) {
+          gsap.killTweensOf(iconEl);
+          gsap.set(iconEl, { clearProps: "rotation,opacity,scale" });
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (!container || !textEl || !iconEl) {
+      return cleanup;
+    }
 
     // 初回表示時のアニメーション
     if (previousStatus.current === roomStatus) {
@@ -148,30 +175,7 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
 
     previousStatus.current = roomStatus;
 
-    return () => {
-      try {
-        if (tlRef.current) {
-          tlRef.current.kill();
-          tlRef.current = null;
-        }
-        if (containerRef.current) {
-          gsap.killTweensOf(containerRef.current);
-          gsap.set(containerRef.current, {
-            clearProps: "transform,opacity,x,y,rotation,scale",
-          });
-        }
-        if (textRef.current) {
-          gsap.killTweensOf(textRef.current);
-          gsap.set(textRef.current, { clearProps: "opacity,y,scale" });
-        }
-        if (iconRef.current) {
-          gsap.killTweensOf(iconRef.current);
-          gsap.set(iconRef.current, { clearProps: "rotation,opacity,scale" });
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
+    return cleanup;
   }, [roomStatus, text, icon, prefersReduced]);
 
   return (
@@ -199,11 +203,15 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
           backdropFilter: "blur(8px) saturate(1.2)",
         }}
       >
-        <Text as="span" ref={iconRef} fontSize="lg" display="inline-block">
+        <chakra.span
+          ref={iconRef}
+          fontSize="lg"
+          display="inline-block"
+        >
           {icon}
-        </Text>
+        </chakra.span>
 
-        <Text
+        <chakra.p
           ref={textRef}
           fontSize={{ base: "xs", md: "sm" }}
           fontWeight={600}
@@ -214,7 +222,7 @@ export function PhaseAnnouncement({ roomStatus }: PhaseAnnouncementProps) {
           whiteSpace="nowrap"
         >
           {text}
-        </Text>
+        </chakra.p>
       </Box>
     </Box>
   );

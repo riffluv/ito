@@ -1,9 +1,15 @@
 "use client";
-import { IconButton as CIconButton, useRecipe } from "@chakra-ui/react";
+import { useMemo } from "react";
+import {
+  chakra,
+  IconButton as CIconButton,
+  useRecipe,
+  type SystemStyleObject,
+} from "@chakra-ui/react";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { buttonRecipe } from "../../theme/recipes/button.recipe";
 
-type Visual = "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
+type Visual = "dq" | "solid" | "outline" | "ghost" | "danger" | "success" | "highlight" | "subtle" | "soft" | "link";
 type Palette = "brand" | "orange" | "gray";
 
 export type AppIconButtonProps = React.ComponentProps<typeof CIconButton> & {
@@ -21,29 +27,48 @@ export function AppIconButton({
   ...rest
 }: AppIconButtonProps) {
   const recipe = useRecipe({ recipe: buttonRecipe });
-  const styles = recipe({
+  const resolveVisual = (value: Visual | undefined): "dq" | "solid" | "outline" | "ghost" | "danger" | "success" | "highlight" => {
+    switch (value) {
+      case "dq":
+      case "solid":
+      case "outline":
+      case "ghost":
+      case "danger":
+      case "success":
+      case "highlight":
+        return value;
+      default:
+        return "ghost";
+    }
+  };
+  const recipeVariant = resolveVisual(visual);
+  const baseStyles = recipe({
     size,
-    variant: visual as any,
-  });
+    variant: recipeVariant,
+  }) as SystemStyleObject;
 
-  const enforcedStyles = {
-    ...styles,
+  const coarsePointerStyles =
+    (baseStyles["@media (pointer: coarse)"] as SystemStyleObject | undefined) ?? {};
+
+  const enforcedStyles: SystemStyleObject = {
+    ...baseStyles,
     "@media (pointer: coarse)": {
-      ...(styles as any)?.["@media (pointer: coarse)"] ?? {},
+      ...coarsePointerStyles,
       minHeight: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
       minWidth: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
     },
-  } as Record<string, unknown>;
+  };
 
-  const computedVariant = variant ?? visual ?? "ghost";
-  const computedPalette = colorPalette ?? palette ?? ("brand" as any);
+  const computedPalette = colorPalette ?? palette ?? "brand";
+
+  const StyledIconButton = useMemo(() => chakra(CIconButton), []);
 
   return (
-    <CIconButton
+    <StyledIconButton
       aria-label={rest["aria-label"] || "icon button"}
-      {...(enforcedStyles as any)}
-      variant={computedVariant}
-      colorPalette={computedPalette as any}
+      css={enforcedStyles}
+      variant={variant}
+      colorPalette={computedPalette}
       {...rest}
     />
   );

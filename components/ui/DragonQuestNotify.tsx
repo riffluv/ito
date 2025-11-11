@@ -206,16 +206,17 @@ function NotificationItem({
   const prefersReduced = useReducedMotionPreference();
   const mountedRef = useRef(false);
   const lastTimestampRef = useRef(notification.timestamp);
+  const accentColor = getNotificationColor(notification.type);
 
   useEffect(() => {
-    if (!containerRef.current || !contentRef.current) return;
+    if (!containerRef.current || !contentRef.current) return undefined;
     const container = containerRef.current;
     const content = contentRef.current;
 
     if (prefersReduced) {
       gsap.set(container, { opacity: 1, x: 0, scale: 1 });
       gsap.set(content, { opacity: 1 });
-      return;
+      return undefined;
     }
 
     // Octopath Traveler-style HD-2D entrance
@@ -308,7 +309,8 @@ function NotificationItem({
         ref={contentRef}
         position="relative"
         bg="rgba(12,14,20,0.92)"
-        border="2px solid rgba(255,255,255,0.85)"
+        border="2px solid"
+        borderColor={accentColor}
         borderRadius={0}
         minW="320px"
         maxW="400px"
@@ -326,7 +328,7 @@ function NotificationItem({
           <Box
             fontSize="sm"
             flexShrink={0}
-            color="rgba(255,255,255,0.9)"
+            color={accentColor}
             fontFamily="monospace"
             fontWeight="normal"
             display="flex"

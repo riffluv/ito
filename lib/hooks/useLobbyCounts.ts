@@ -12,7 +12,7 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
-import { off, onValue, ref } from "firebase/database";
+import { off, onValue, ref, type DataSnapshot } from "firebase/database";
 import {
   Timestamp,
   collection,
@@ -20,8 +20,14 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
 type VerificationCacheEntry = {
   count: number;
@@ -42,6 +48,22 @@ const HEALTH_DECAY_MS = 5 * 60 * 1000;
 const HEALTH_RECOVERY_STEP = 0.25;
 const HEALTH_PENALTY_STEP = 0.5;
 const DEFAULT_HEALTH = 1;
+const noopCleanup = () => {};
+
+type PresenceConnection = {
+  ts?: number;
+  online?: boolean;
+};
+
+type PresenceConnections = Record<string, PresenceConnection>;
+type PresenceRoomSnapshot = Record<string, PresenceConnections>;
+type CountSnapshotData = { count?: number };
+
+function readAggregateCount(snapshot: { data(): CountSnapshotData | undefined }) {
+  const data = snapshot.data();
+  const value = data?.count;
+  return typeof value === "number" ? value : Number(value ?? 0) || 0;
+}
 
 function nowMs() {
   return Date.now();
@@ -111,24 +133,24 @@ function shouldSkipVerification(
 function recordLobbyMetric(name: string, durationMs: number, roomId: string) {
   if (typeof window === "undefined") return;
   const w = window as typeof window & {
-    __ITO_METRICS__?: Array<{
+    __ITO_LOBBY_METRICS__?: Array<{
       name: string;
       duration: number;
       roomId: string;
       ts: number;
     }>;
   };
-  if (!Array.isArray(w.__ITO_METRICS__)) {
-    w.__ITO_METRICS__ = [];
+  if (!Array.isArray(w.__ITO_LOBBY_METRICS__)) {
+    w.__ITO_LOBBY_METRICS__ = [];
   }
-  w.__ITO_METRICS__!.push({
+  w.__ITO_LOBBY_METRICS__!.push({
     name,
     duration: durationMs,
     roomId,
     ts: Date.now(),
   });
-  if (w.__ITO_METRICS__!.length > 200) {
-    w.__ITO_METRICS__!.splice(0, w.__ITO_METRICS__!.length - 200);
+  if (w.__ITO_LOBBY_METRICS__!.length > 200) {
+    w.__ITO_LOBBY_METRICS__!.splice(0, w.__ITO_LOBBY_METRICS__!.length - 200);
   }
 }
 
@@ -223,41 +245,43 @@ export function useLobbyCounts(
       )
     );
   }, [options?.excludeUid]);
-  const excludeKey = normalizedExcludeUids.join(",");
-  // 緊急時に Firestore フォールバックを完全停止するフラグ（.env から）
-  const DISABLE_FS_FALLBACK =
-    typeof process !== "undefined" &&
-    (process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK?.toString() === "1" ||
-      process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK?.toLowerCase() === "true");
-  const DEBUG_FALLBACK =
-    typeof process !== "undefined" &&
-    ((process.env.NEXT_PUBLIC_LOBBY_DEBUG_FALLBACK || "")
-      .toString()
-      .toLowerCase() === "true" ||
-      (process.env.NEXT_PUBLIC_LOBBY_DEBUG_FALLBACK || "").toString().trim() ===
-        "1");
-
-  // roomIds キー以外の値をクリーンに保つ
-  const roomKey = useMemo(
-    () => Array.from(new Set(roomIds)).sort().join(","),
-    [roomIds]
+  const excludeUidSet = useMemo(
+    () => new Set(normalizedExcludeUids),
+    [normalizedExcludeUids]
   );
+  // 緊急時に Firestore フォールバックを完全停止するフラグ（.env から）
+  const disableFsFallback = useMemo(() => {
+    if (typeof process === "undefined") return false;
+    const raw = process.env.NEXT_PUBLIC_DISABLE_FS_FALLBACK?.toString().toLowerCase();
+    return raw === "1" || raw === "true";
+  }, []);
+  const debugFallback = useMemo(() => {
+    if (typeof process === "undefined") return false;
+    const raw = (process.env.NEXT_PUBLIC_LOBBY_DEBUG_FALLBACK || "").toString().toLowerCase();
+    if (!raw) return false;
+    if (raw === "1" || raw === "true") return true;
+    return (process.env.NEXT_PUBLIC_LOBBY_DEBUG_FALLBACK || "").toString().trim() === "1";
+  }, []);
+
+  const normalizedRoomIds = useMemo(() => Array.from(new Set(roomIds)).sort(), [roomIds]);
   useEffect(() => {
     setCounts((prev) => {
       const next: Record<string, number> = {};
-      for (const id of roomIds) next[id] = prev[id] ?? 0;
+      for (const id of normalizedRoomIds) {
+        next[id] = prev[id] ?? 0;
+      }
       return next;
     });
-  }, [roomKey]);
+  }, [normalizedRoomIds]);
 
   useEffect(() => {
     if (!firebaseEnabled || !enabled) {
       setCounts({});
-      return;
+      return noopCleanup;
     }
-    if (roomIds.length === 0) {
+    if (normalizedRoomIds.length === 0) {
       setCounts({});
-      return;
+      return noopCleanup;
     }
 
     // RTDB presence を部屋ごとに購読（ルール互換性のため /presence/$roomId を読む）
@@ -286,7 +310,7 @@ export function useLobbyCounts(
         if (!raw) return false; // default OFF
         return raw === "1" || raw === "true";
       })();
-      const excludeSet = new Set(normalizedExcludeUids);
+      const excludeSet = excludeUidSet;
       // ロビー表示はゴースト抑制のため、presenceの鮮度しきい値をさらに短めに（既定8s）
       const ENV_STALE = Number(
         (process.env.NEXT_PUBLIC_LOBBY_STALE_MS || "").toString()
@@ -328,7 +352,7 @@ export function useLobbyCounts(
       const multiCheckCooldown: Record<string, number> = {};
       {
         const { cache, health } = verificationStateRef.current;
-        const active = new Set(roomIds);
+        const active = new Set(normalizedRoomIds);
         for (const key of Array.from(cache.keys())) {
           if (!active.has(key)) cache.delete(key);
         }
@@ -349,17 +373,14 @@ export function useLobbyCounts(
       // players=0 と検証された単独UIDを一時的に無視するクオランティン
       const quarantine: Record<string, Record<string, number>> = {};
 
-      const offs = roomIds.map((id) => {
+      const offs = normalizedRoomIds.map((id) => {
         const roomRef = ref(rtdb!, `presence/${id}`);
-        const handler = (snap: any) => {
+        const handler = (snap: DataSnapshot) => {
           const queuedUpdates: Record<string, number> = {};
           const queueCountUpdate = (value: number) => {
             queuedUpdates[id] = value;
           };
-          const users = (snap.val() || {}) as Record<
-            string,
-            Record<string, any>
-          >; // uid -> connId -> { ts }
+          const users = (snap.val() || {}) as PresenceRoomSnapshot; // uid -> connId -> { ts }
           let n = 0;
           const now = Date.now();
           let hasFresh = false; // 直近JOIN（5s以内）の兆候
@@ -371,17 +392,17 @@ export function useLobbyCounts(
             : undefined;
           for (const uid of Object.keys(users)) {
             if (excludeSet.has(uid)) continue; // 自身など除外対象はスキップ
-            const conns = users[uid] || {};
+            const conns: PresenceConnections = users[uid] || {};
             // より厳格な判定：最新の有効なタイムスタンプのみ
             let latestValidTs = 0;
-            for (const c of Object.values(conns) as any[]) {
-              if (c?.online === false) continue;
-              if (c?.online === true && typeof c?.ts !== "number") {
+            for (const conn of Object.values<PresenceConnection>(conns)) {
+              if (conn?.online === false) continue;
+              if (conn?.online === true && typeof conn?.ts !== "number") {
                 latestValidTs = Math.max(latestValidTs, now);
                 hasFresh = true;
                 continue;
               }
-              const ts = typeof c?.ts === "number" ? c.ts : 0;
+              const ts = typeof conn?.ts === "number" ? conn.ts : 0;
               if (ts <= 0) continue; // 無効なタイムスタンプ
               if (ts - now > MAX_CLOCK_SKEW_MS) continue; // 未来すぎる
               if (now - ts > LOBBY_STALE_MS) continue; // 古すぎる（ロビーは短め）
@@ -419,7 +440,7 @@ export function useLobbyCounts(
           }
           // 特殊対策: n===1 の場合だけ、players コレクションのサーバカウントで検証（任意有効化）。
           // もし players=0 なら、presence の一時的な残骸とみなし 0 に矯正しゼロフリーズ開始。
-          if (VERIFY_SINGLE && n === 1 && !DISABLE_FS_FALLBACK) {
+          if (VERIFY_SINGLE && n === 1 && !disableFsFallback) {
             const { cache, health: healthStore } = verificationStateRef.current;
             const healthEntry = getVerificationHealth(healthStore, id);
             const cached = cache.get(id);
@@ -438,7 +459,7 @@ export function useLobbyCounts(
               updateHealthOnSuccess(healthEntry);
               verificationLastCheckRef.current.single[id] = now;
               singleCheckCooldown[id] = now + healthEntry.backoffMs;
-              if (DEBUG_FALLBACK) {
+              if (debugFallback) {
                 try {
                   logDebug("useLobbyCounts", "verify-single-cache", {
                     roomId: id,
@@ -455,7 +476,7 @@ export function useLobbyCounts(
                 shouldSkipVerification(healthEntry, lastCheck, now) ||
                 now < nextAllowed
               ) {
-                if (DEBUG_FALLBACK) {
+                if (debugFallback) {
                   try {
                     logDebug("useLobbyCounts", "verify-single-skip", {
                       roomId: id,
@@ -489,8 +510,7 @@ export function useLobbyCounts(
                     );
                     const q = query(coll, where("lastSeen", ">=", since));
                     const snap = await getCountFromServer(q);
-                    const verified =
-                      Number((snap.data() as any)?.count ?? 0) || 0;
+                    const verified = readAggregateCount(snap);
                     const now2 = Date.now();
                     cache.set(id, {
                       count: verified,
@@ -515,7 +535,7 @@ export function useLobbyCounts(
                         if (!quarantine[id]) quarantine[id] = {};
                         quarantine[id][suspect] = now2 + ZERO_FREEZE_MS_DEFAULT;
                       }
-                      if (DEBUG_UIDS || DEBUG_FALLBACK) {
+                      if (DEBUG_UIDS || debugFallback) {
                         try {
                           logDebug("useLobbyCounts", "verify-single-zero", {
                             roomId: id,
@@ -524,7 +544,7 @@ export function useLobbyCounts(
                           });
                         } catch {}
                       }
-                    } else if (verified > 0 && DEBUG_FALLBACK) {
+                    } else if (verified > 0 && debugFallback) {
                       try {
                         logDebug("useLobbyCounts", "verify-single-positive", {
                           roomId: id,
@@ -542,7 +562,7 @@ export function useLobbyCounts(
                     if (isFirebaseQuotaExceeded(error)) {
                       handleFirebaseQuotaError("ロビー人数検証");
                     }
-                    if (DEBUG_FALLBACK) {
+                    if (debugFallback) {
                       try {
                         logWarn("useLobbyCounts", "verify-single-error", {
                           roomId: id,
@@ -581,7 +601,7 @@ export function useLobbyCounts(
             }
           }
           // 任意対策: n>0 の場合でも必要に応じて検証（presenceゴースト抑止）。
-          if (VERIFY_MULTI && n > 0 && !DISABLE_FS_FALLBACK) {
+          if (VERIFY_MULTI && n > 0 && !disableFsFallback) {
             const { cache, health: healthStore } = verificationStateRef.current;
             const healthEntry = getVerificationHealth(healthStore, id);
             const cached = cache.get(id);
@@ -599,7 +619,7 @@ export function useLobbyCounts(
               updateHealthOnSuccess(healthEntry);
               verificationLastCheckRef.current.multi[id] = now;
               multiCheckCooldown[id] = now + healthEntry.backoffMs;
-              if (DEBUG_FALLBACK) {
+              if (debugFallback) {
                 try {
                   logDebug("useLobbyCounts", "verify-multi-cache", {
                     roomId: id,
@@ -615,7 +635,7 @@ export function useLobbyCounts(
                 shouldSkipVerification(healthEntry, lastCheck, now) ||
                 now < nextAllowed
               ) {
-                if (DEBUG_FALLBACK) {
+                if (debugFallback) {
                   try {
                     logDebug("useLobbyCounts", "verify-multi-skip", {
                       roomId: id,
@@ -649,8 +669,7 @@ export function useLobbyCounts(
                     );
                     const q = query(coll, where("lastSeen", ">=", since));
                     const snap = await getCountFromServer(q);
-                    const verified =
-                      Number((snap.data() as any)?.count ?? 0) || 0;
+                    const verified = readAggregateCount(snap);
                     const now2 = Date.now();
                     cache.set(id, {
                       count: verified,
@@ -668,7 +687,7 @@ export function useLobbyCounts(
                           quarantine[id][u] = now2 + ZERO_FREEZE_MS_DEFAULT;
                         }
                       }
-                    } else if (DEBUG_FALLBACK) {
+                    } else if (debugFallback) {
                       try {
                         logDebug("useLobbyCounts", "verify-multi-positive", {
                           roomId: id,
@@ -686,7 +705,7 @@ export function useLobbyCounts(
                     if (isFirebaseQuotaExceeded(error)) {
                       handleFirebaseQuotaError("ロビー人数検証");
                     }
-                    if (DEBUG_FALLBACK) {
+                    if (debugFallback) {
                       try {
                         logWarn("useLobbyCounts", "verify-multi-error", {
                           roomId: id,
@@ -749,8 +768,7 @@ export function useLobbyCounts(
                     );
                     const q = query(coll, where("lastSeen", ">=", since));
                     const snap = await getCountFromServer(q);
-                    const verified =
-                      Number((snap.data() as any)?.count ?? 0) || 0;
+                    const verified = readAggregateCount(snap);
                     const now2 = Date.now();
                     multiCheckCooldown[id] = now2 + 10_000; // 10s cooldown
                     if (verified > 0) {
@@ -795,22 +813,26 @@ export function useLobbyCounts(
         applyCountUpdates(setCounts, queuedUpdates);
         };
         const onErr = () => applyCountUpdates(setCounts, { [id]: 0 });
-        onValue(roomRef, handler, onErr as any);
+        onValue(roomRef, handler, onErr);
         return () => off(roomRef, "value", handler);
       });
-      return () => offs.forEach((fn) => fn());
+      return () => {
+        offs.forEach((fn) => {
+          fn();
+        });
+      };
     }
 
     // フォールバック: Firestore 集計クエリで players 件数を軽量取得
     // 常時 onSnapshot は使用せず、一定間隔でポーリング
-    if (DISABLE_FS_FALLBACK) {
+    if (disableFsFallback) {
       // フラグ有効時は一切の読み取りを行わず、0固定にする
-      setCounts((prev) => {
+      setCounts(() => {
         const next: Record<string, number> = {};
-        for (const id of roomIds) next[id] = 0;
+        for (const id of normalizedRoomIds) next[id] = 0;
         return next;
       });
-      return;
+      return noopCleanup;
     }
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
@@ -838,8 +860,7 @@ export function useLobbyCounts(
       try {
 
         const entries = await Promise.all(
-
-          roomIds.map(async (id) => {
+          normalizedRoomIds.map(async (id) => {
 
             try {
 
@@ -853,11 +874,9 @@ export function useLobbyCounts(
 
               const snap = await getCountFromServer(q);
 
-              // count は number | Long の可能性があるが、Web SDK は number を返す
+              const n = readAggregateCount(snap);
 
-              const n = (snap.data() as any)?.count ?? 0;
-
-              return [id, Number(n) || 0] as const;
+              return [id, n] as const;
 
             } catch (err) {
 
@@ -952,12 +971,22 @@ export function useLobbyCounts(
 
     return () => {
       cancelled = true;
-      if (timer)
+      if (timer) {
         try {
           clearInterval(timer);
-        } catch {}
+        } catch {
+          // ignore timer cleanup failures
+        }
+      }
     };
-  }, [firebaseEnabled, enabled, roomKey, refreshTrigger, excludeKey]);
+  }, [
+    enabled,
+    normalizedRoomIds,
+    refreshTrigger,
+    excludeUidSet,
+    disableFsFallback,
+    debugFallback,
+  ]);
 
   // refresh関数：手動でpresenceデータを再取得
   const refresh = () => setRefreshTrigger((prev) => prev + 1);

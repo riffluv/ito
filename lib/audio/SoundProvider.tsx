@@ -44,6 +44,15 @@ const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
 ]);
 const RESUME_ON_POINTER = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
 
+type NetworkInformationLike = {
+  effectiveType?: string;
+  saveData?: boolean;
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: NetworkInformationLike;
+};
+
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const managerRef = useRef<SoundManager | null>(null);
   if (managerRef.current === null && typeof window !== "undefined") {
@@ -56,29 +65,34 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const manager = managerRef.current;
-    if (!manager) return;
+    let unsubscribe: (() => void) | null = null;
+
+    const cleanup = () => {
+      unsubscribe?.();
+      if (!manager) return;
+      setGlobalSoundManager(null);
+      manager.destroy();
+      if (managerRef.current === manager) {
+        managerRef.current = null;
+      }
+    };
+
+    if (!manager) return cleanup;
 
     setGlobalSoundManager(manager);
 
-    const unsubscribe = manager.subscribe((event) => {
+    unsubscribe = manager.subscribe((event) => {
       if (event.type === "settings") {
         setSettings(event.settings);
       }
     });
 
-    return () => {
-      unsubscribe();
-      setGlobalSoundManager(null);
-      manager.destroy();
-      managerRef.current = null;
-    };
+    return cleanup;
   }, []);
 
   // 軽量ウォームアップ（フラグON時のみ、初回入力/可視化で一度だけ）
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_PERF_WARMUP !== "1") return;
     const mgr = managerRef.current;
-    if (!mgr) return;
     const didWarmRef = { current: false };
 
     const candidates = ["card_flip", "ui_click"] as SoundId[];
@@ -87,7 +101,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     );
 
     const runWarmup = async () => {
-      if (didWarmRef.current) return;
+      if (didWarmRef.current || !mgr) return;
       didWarmRef.current = true;
       try {
         await mgr.warmup();
@@ -98,7 +112,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         traceAction("warmup.audio");
       } catch (error) {
         console.warn("[SoundProvider] warmup failed", error);
-        traceError("warmup.audio", error as any);
+        traceError("warmup.audio", error);
       } finally {
         detach();
       }
@@ -111,33 +125,49 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       }
     };
     const detach = () => {
-      if (typeof window === "undefined") return;
+      if (typeof window === "undefined" || typeof document === "undefined") return;
       window.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("visibilitychange", onVisibility);
     };
 
+    if (process.env.NEXT_PUBLIC_PERF_WARMUP !== "1" || !mgr) {
+      return detach;
+    }
+
     if (typeof window !== "undefined") {
       window.addEventListener("pointerdown", onPointerDown, { passive: true });
-      document.addEventListener("visibilitychange", onVisibility, { passive: true } as any);
+      document.addEventListener("visibilitychange", onVisibility, { passive: true });
     }
     return detach;
   }, []);
 
   useEffect(() => {
     const manager = managerRef.current;
-    if (!manager) return;
-    if (PREWARM_SOUND_IDS.length === 0) return;
+    let cancelled = false;
+    const pendingTimeouts = new Set<number>();
+
+    const cleanup = () => {
+      cancelled = true;
+      if (typeof window !== "undefined") {
+        pendingTimeouts.forEach((handle) => window.clearTimeout(handle));
+      }
+      pendingTimeouts.clear();
+    };
+
+    if (!manager) return cleanup;
+    if (PREWARM_SOUND_IDS.length === 0) return cleanup;
 
     const connection =
-      typeof navigator !== "undefined" ? ((navigator as any).connection ?? null) : null;
+      typeof navigator !== "undefined"
+        ? ((navigator as NavigatorWithConnection).connection ?? null)
+        : null;
     const effectiveType =
       typeof connection?.effectiveType === "string"
         ? String(connection.effectiveType).toLowerCase()
         : "";
     const constrainedNetwork =
       !!connection &&
-      (connection.saveData === true ||
-        ["slow-2g", "2g", "3g"].includes(effectiveType));
+      (connection.saveData === true || ["slow-2g", "2g", "3g"].includes(effectiveType));
     setMetric("audio", "prewarm.constrained", constrainedNetwork ? 1 : 0);
 
     const criticalSet = constrainedNetwork ? CONSTRAINED_PREWARM_IDS : CRITICAL_PREWARM_IDS;
@@ -159,8 +189,6 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         stageTwo.push(id);
       });
     }
-    let cancelled = false;
-    const pendingTimeouts = new Set<number>();
 
     const recordSoundMetric = (soundId: SoundId, startedAt: number | null) => {
       if (startedAt !== null) {
@@ -203,7 +231,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         try {
           await manager.prewarm([soundId]);
         } catch (error) {
-          traceError(options.traceKey, error as any, { soundId });
+          traceError(options.traceKey, error, { soundId });
         } finally {
           recordSoundMetric(soundId, soundStartedAt);
         }
@@ -220,9 +248,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         setMetric(
           "audio",
           metricsKey,
-          Math.round(
-            Math.max(0, (performance?.now?.() ?? totalStartedAt) - totalStartedAt)
-          )
+          Math.round(Math.max(0, (performance?.now?.() ?? totalStartedAt) - totalStartedAt))
         );
       }
     };
@@ -239,7 +265,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
             try {
               await manager.prewarm([soundId]);
             } catch (soundError) {
-              traceError("audio.prewarm.critical", soundError as any, { soundId });
+              traceError("audio.prewarm.critical", soundError, { soundId });
             } finally {
               recordSoundMetric(soundId, soundStartedAt);
             }
@@ -254,7 +280,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           setMetric("audio", "prewarm.criticalMs", -1);
-          traceError("audio.prewarm.critical.batch", error as any);
+          traceError("audio.prewarm.critical.batch", error);
         }
       } else {
         setMetric("audio", "prewarm.criticalMs", 0);
@@ -283,30 +309,32 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       setMetric("audio", "prewarm.criticalMs", 0);
     }
 
-    return () => {
-      cancelled = true;
-      if (typeof window !== "undefined") {
-        pendingTimeouts.forEach((handle) => window.clearTimeout(handle));
-        pendingTimeouts.clear();
-      }
-    };
+    return cleanup;
   }, []);
 
   useEffect(() => {
     const manager = managerRef.current;
-    if (!manager || typeof window === "undefined") return;
+
     const markInteraction = () => {
+      if (!manager) return;
       manager.markUserInteraction();
       if (RESUME_ON_POINTER) {
         void manager.prepareForInteraction();
       }
     };
-    window.addEventListener("pointerdown", markInteraction, { passive: true });
-    window.addEventListener("keydown", markInteraction, { passive: true });
-    return () => {
+    const detach = () => {
+      if (typeof window === "undefined") return;
       window.removeEventListener("pointerdown", markInteraction);
       window.removeEventListener("keydown", markInteraction);
     };
+
+    if (!manager || typeof window === "undefined") {
+      return detach;
+    }
+
+    window.addEventListener("pointerdown", markInteraction, { passive: true });
+    window.addEventListener("keydown", markInteraction, { passive: true });
+    return detach;
   }, []);
 
   const value = useMemo<SoundContextValue>(() => ({

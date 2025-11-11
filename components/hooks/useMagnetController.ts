@@ -68,11 +68,11 @@ export function useMagnetController(
 
   useEffect(() => {
     return () => {
-      if (magnetFlushFrameRef.current != null) {
+      if (magnetFlushFrameRef.current !== null) {
         cancelAnimationFrame(magnetFlushFrameRef.current);
         magnetFlushFrameRef.current = null;
       }
-      if (magnetHighlightTimeoutRef.current != null) {
+      if (magnetHighlightTimeoutRef.current !== null) {
         clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
       }
@@ -100,15 +100,15 @@ export function useMagnetController(
       if (immediate || typeof window === "undefined") {
         if (
           typeof window !== "undefined" &&
-          magnetFlushFrameRef.current != null
-        ) {
-          window.cancelAnimationFrame(magnetFlushFrameRef.current);
-        }
+        magnetFlushFrameRef.current !== null
+      ) {
+        window.cancelAnimationFrame(magnetFlushFrameRef.current);
+      }
         magnetFlushFrameRef.current = null;
         flushMagnetUpdates();
         return;
       }
-      if (magnetFlushFrameRef.current != null) return;
+      if (magnetFlushFrameRef.current !== null) return;
       magnetFlushFrameRef.current = window.requestAnimationFrame(() => {
         magnetFlushFrameRef.current = null;
         flushMagnetUpdates();
@@ -162,7 +162,7 @@ export function useMagnetController(
 
       if (
         typeof window !== "undefined" &&
-        magnetHighlightTimeoutRef.current != null
+        magnetHighlightTimeoutRef.current !== null
       ) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
@@ -174,7 +174,7 @@ export function useMagnetController(
         immediate,
       });
     },
-    [enqueueMagnetUpdate, getProjectedMagnetTarget]
+    [enqueueMagnetUpdate, getProjectedMagnetState, getProjectedMagnetTarget]
   );
 
   const scheduleMagnetTarget = useCallback(
@@ -184,7 +184,7 @@ export function useMagnetController(
 
       if (
         typeof window !== "undefined" &&
-        magnetHighlightTimeoutRef.current != null
+        magnetHighlightTimeoutRef.current !== null
       ) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;

@@ -246,7 +246,7 @@ const safeUpdateMachine = setup({
       context.autoApplySuppressed || hasForceHold(context.autoApplyHolds),
   },
   actions: {
-    setCheckStart: assign(({ context, event }) => {
+    setCheckStart: assign(({ event }) => {
       if (event.type !== "CHECK_STARTED") return {};
       return { lastCheckAt: event.timestamp };
     }),

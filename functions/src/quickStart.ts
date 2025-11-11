@@ -87,11 +87,11 @@ function createStageTimer(base: number) {
 }
 
 function traceAction(name: string, detail: Record<string, unknown>) {
-  console.log(`[trace] action:${name}`, detail);
+  functions.logger.info(`[trace] action:${name}`, detail);
 }
 
 function traceError(name: string, detail: Record<string, unknown>, error: unknown) {
-  console.error(`[trace] error:${name}`, detail, error);
+  functions.logger.error(`[trace] error:${name}`, detail, error);
 }
 
 function normalizeTopicType(type: unknown): TopicType {
@@ -126,7 +126,7 @@ async function loadTopicSections(): Promise<TopicSections | null> {
     } catch (error) {
       const now = Date.now();
       if (now - lastTopicReadErrorLoggedAt > 60_000) {
-        console.warn("[quickStart] Failed to load local topic source", { candidate, error });
+        functions.logger.warn("[quickStart] Failed to load local topic source", { candidate, error });
         lastTopicReadErrorLoggedAt = now;
       }
     }
@@ -145,7 +145,7 @@ async function loadTopicSections(): Promise<TopicSections | null> {
   } catch (error) {
     const now = Date.now();
     if (now - lastTopicFetchErrorLoggedAt > 60_000) {
-      console.warn("[quickStart] Failed to load topic sections remotely", {
+      functions.logger.warn("[quickStart] Failed to load topic sections remotely", {
         topicSourceUrl,
         error,
       });
@@ -317,7 +317,7 @@ export const quickStart = functions.region("asia-northeast1").runWith({ minInsta
 
     stageTimer.mark("transaction");
 
-    const roomDataAny = roomData as Record<string, any> | null;
+    const roomDataAny = roomData as Record<string, unknown> | null;
     const roomOptions =
       roomDataAny && typeof roomDataAny.options === "object"
         ? (roomDataAny.options as Record<string, unknown>)
@@ -440,7 +440,7 @@ const presencePromise = skipPresence
         { merge: true }
       );
     } catch (error) {
-      console.warn("[quickStart] Failed to reset roomProposals", { roomId, error });
+      functions.logger.warn("[quickStart] Failed to reset roomProposals", { roomId, error });
     }
     stageTimer.mark("proposalReset");
 

@@ -21,7 +21,7 @@ test("round finishes even when an offline player is removed from deal", () => {
 
   const allowContinue = false;
   const total = deal.length;
-  let order = defaultOrderState();
+  const order = defaultOrderState();
 
   const firstPlay = applyPlay({
     order,

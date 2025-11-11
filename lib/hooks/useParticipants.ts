@@ -1,5 +1,5 @@
 "use client";
-import { PRESENCE_DISAPPEAR_GRACE_MS } from '@/lib/constants/uiTimings';
+import { PRESENCE_DISAPPEAR_GRACE_MS } from "@/lib/constants/uiTimings";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { playerConverter } from "@/lib/firebase/converters";
 import {
@@ -18,7 +18,13 @@ import {
 } from "@/lib/utils/errorHandling";
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  type FirestoreError,
+} from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 
@@ -48,6 +54,23 @@ const createPlayersSignature = (list: readonly (PlayerDoc & { id: string })[]) =
     .join(";");
 };
 
+const isPromiseLike = <T = unknown>(value: unknown): value is Promise<T> => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as Promise<T>).then === "function" &&
+    "catch" in value &&
+    typeof (value as Promise<T>).catch === "function"
+  );
+};
+
+declare global {
+  interface Window {
+    __missingSince?: Record<string, number>;
+  }
+}
+
 export function useParticipants(
   roomId: string,
   uid: string | null
@@ -57,6 +80,7 @@ export function useParticipants(
   const [stableOnlineUids, setStableOnlineUids] = useState<string[] | undefined>(
     undefined
   );
+  const stableOnlineUidsRef = useRef<string[] | undefined>(undefined);
   const [presenceReady, setPresenceReady] = useState(false);
   const [presenceDegraded, setPresenceDegraded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -74,11 +98,6 @@ export function useParticipants(
 
   // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
   useEffect(() => {
-    if (!firebaseEnabled) return;
-    if (!roomId) return;
-    setLoading(true);
-    setError(null);
-
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
@@ -100,6 +119,23 @@ export function useParticipants(
       unsubRef.current = null;
       detachVisibilityListener();
     };
+
+    const cleanup = () => {
+      if (backoffTimer) {
+        try {
+          clearTimeout(backoffTimer);
+        } catch {}
+      }
+      stop();
+      detachVisibilityListener();
+    };
+
+    if (!firebaseEnabled || !roomId) {
+      return cleanup;
+    }
+
+    setLoading(true);
+    setError(null);
 
     const maybeStart = () => {
       if (unsubRef.current) return;
@@ -173,9 +209,9 @@ export function useParticipants(
           setMetric("participants", "lastSnapshotTs", Date.now());
           setMetric("participants", "playersCount", working.length);
         },
-        (err) => {
+        (err: FirestoreError) => {
           unstable_batchedUpdates(() => {
-            setError(err as any);
+            setError(err);
             setLoading(false);
           });
           if (isFirebaseQuotaExceeded(err)) {
@@ -247,15 +283,7 @@ export function useParticipants(
       maybeStart();
     }
 
-    return () => {
-      if (backoffTimer) {
-        try {
-          clearTimeout(backoffTimer);
-        } catch {}
-      }
-      stop();
-      detachVisibilityListener();
-    };
+    return cleanup;
   }, [roomId]);
 
   const presenceHydratedRef = useRef(false);
@@ -270,10 +298,20 @@ export function useParticipants(
       clearTimeout(presenceHydrationTimerRef.current);
       presenceHydrationTimerRef.current = null;
     }
+    let unsubscribe: (() => void) | null = null;
+    const cleanup = () => {
+      if (presenceHydrationTimerRef.current) {
+        clearTimeout(presenceHydrationTimerRef.current);
+        presenceHydrationTimerRef.current = null;
+      }
+      setPresenceReady(false);
+      setOnlineUids(undefined);
+      unsubscribe?.();
+    };
     if (!roomId || !presenceSupported()) {
       setPresenceReady(false);
       setOnlineUids(undefined);
-      return;
+      return cleanup;
     }
     const markReady = (uids: string[]) => {
       presenceHydratedRef.current = true;
@@ -285,7 +323,7 @@ export function useParticipants(
         Array.isArray(uids) ? uids.length : 0
       );
     };
-    const off = subscribePresence(roomId, (uids) => {
+    unsubscribe = subscribePresence(roomId, (uids) => {
       logDebug("presence", "update", { roomId, uids });
       if (!presenceHydratedRef.current && uids.length === 0) {
         if (!presenceHydrationTimerRef.current) {
@@ -302,15 +340,7 @@ export function useParticipants(
       }
       markReady(uids);
     });
-    return () => {
-      if (presenceHydrationTimerRef.current) {
-        clearTimeout(presenceHydrationTimerRef.current);
-        presenceHydrationTimerRef.current = null;
-      }
-      setPresenceReady(false);
-      setOnlineUids(undefined);
-      off();
-    };
+    return cleanup;
   }, [roomId]);
 
   // 自分の presence アタッチ/デタッチ
@@ -331,26 +361,28 @@ export function useParticipants(
   );
 
   useEffect(() => {
+    let cancelled = false;
+    const cleanup = () => {
+      cancelled = true;
+      reattachTriggerRef.current = null;
+    };
+
     if (!presenceSupported()) {
       clearAttachRetryTimer();
       reattachTriggerRef.current = null;
       if (detachRef.current) {
         try {
           const maybePromise = detachRef.current();
-          if (
-            maybePromise &&
-            typeof (maybePromise as Promise<void>).then === "function"
-          ) {
-            (maybePromise as Promise<void>).catch(() => void 0);
+          if (isPromiseLike(maybePromise)) {
+            maybePromise.catch(() => void 0);
           }
         } catch {}
         detachRef.current = null;
       }
       activePresenceRef.current = { roomId: null, uid: null };
-      return;
+      return cleanup;
     }
 
-    let cancelled = false;
     reattachTriggerRef.current = null;
 
     const handleDetachIfNeeded = async () => {
@@ -424,60 +456,57 @@ export function useParticipants(
       }
     });
 
-    return () => {
-      cancelled = true;
-      reattachTriggerRef.current = null;
-    };
+    return cleanup;
   }, [roomId, uid]);
 
   useEffect(() => {
-    if (!presenceSupported()) {
+    let handle: number | null = null;
+    const clearExistingTimer = () => {
       if (presenceStallTimerRef.current !== null) {
         window.clearTimeout(presenceStallTimerRef.current);
         presenceStallTimerRef.current = null;
       }
-      setPresenceDegraded(false);
-      return;
-    }
-    if (!roomId) {
-      setPresenceDegraded(false);
-      if (presenceStallTimerRef.current !== null) {
-        window.clearTimeout(presenceStallTimerRef.current);
-        presenceStallTimerRef.current = null;
-      }
-      return;
-    }
-    if (presenceReady) {
-      setPresenceDegraded(false);
-      if (presenceStallTimerRef.current !== null) {
-        window.clearTimeout(presenceStallTimerRef.current);
-        presenceStallTimerRef.current = null;
-      }
-      return;
-    }
-    if (presenceStallTimerRef.current !== null) {
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      presenceStallTimerRef.current = null;
-      setPresenceDegraded(true);
-    }, PRESENCE_HEARTBEAT_MS * 2);
-    presenceStallTimerRef.current = handle;
-    return () => {
-      if (presenceStallTimerRef.current === handle) {
+    };
+    const cleanup = () => {
+      if (handle !== null && presenceStallTimerRef.current === handle) {
         window.clearTimeout(handle);
         presenceStallTimerRef.current = null;
       }
     };
+    if (!presenceSupported()) {
+      clearExistingTimer();
+      setPresenceDegraded(false);
+      return cleanup;
+    }
+    if (!roomId) {
+      setPresenceDegraded(false);
+      clearExistingTimer();
+      return cleanup;
+    }
+    if (presenceReady) {
+      setPresenceDegraded(false);
+      clearExistingTimer();
+      return cleanup;
+    }
+    if (presenceStallTimerRef.current !== null) {
+      return cleanup;
+    }
+    handle = window.setTimeout(() => {
+      presenceStallTimerRef.current = null;
+      setPresenceDegraded(true);
+    }, PRESENCE_HEARTBEAT_MS * 2);
+    presenceStallTimerRef.current = handle;
+    return cleanup;
   }, [presenceReady, roomId]);
 
   // アンマウント時のデタッチ
   useEffect(() => {
     return () => {
       try {
-        const r = detachRef.current?.();
-        if (r && typeof (r as any).then === "function")
-          (r as Promise<void>).catch(() => {});
+        const result = detachRef.current?.();
+        if (isPromiseLike(result)) {
+          result.catch(() => void 0);
+        }
       } catch {}
     };
   }, []);
@@ -485,22 +514,25 @@ export function useParticipants(
   useEffect(() => {
     if (!presenceReady || !Array.isArray(onlineUids)) {
       setStableOnlineUids(undefined);
+      stableOnlineUidsRef.current = undefined;
       return;
     }
     const GRACE_MS = PRESENCE_DISAPPEAR_GRACE_MS;
     const now = Date.now();
-    const next = new Set<string>(onlineUids || []);
-    const prev = new Set(stableOnlineUids || onlineUids);
+    const next = new Set<string>(onlineUids);
+    const prev = new Set(stableOnlineUidsRef.current ?? onlineUids);
     const missingSinceRef = new Map<string, number>();
 
-    try {
-      const store = (window as any).__missingSince as
-        | Record<string, number>
-        | undefined;
-      if (store) {
-        for (const [k, v] of Object.entries(store)) missingSinceRef.set(k, v);
-      }
-    } catch {}
+    if (typeof window !== "undefined") {
+      try {
+        const store = window.__missingSince;
+        if (store) {
+          for (const [k, v] of Object.entries(store)) {
+            missingSinceRef.set(k, v);
+          }
+        }
+      } catch {}
+    }
 
     const result = new Set<string>();
     next.forEach((id) => result.add(id));
@@ -516,13 +548,19 @@ export function useParticipants(
       }
     });
 
-    setStableOnlineUids(Array.from(result));
-    try {
-      const store: Record<string, number> = {};
-      missingSinceRef.forEach((v, k) => (store[k] = v));
-      (window as any).__missingSince = store;
-    } catch {}
-  }, [presenceReady, (onlineUids ?? []).join(",")]);
+    const nextStable = Array.from(result);
+    setStableOnlineUids(nextStable);
+    stableOnlineUidsRef.current = nextStable;
+    if (typeof window !== "undefined") {
+      try {
+        const store: Record<string, number> = {};
+        missingSinceRef.forEach((value, key) => {
+          store[key] = value;
+        });
+        window.__missingSince = store;
+      } catch {}
+    }
+  }, [presenceReady, onlineUids]);
 
   const effectiveOnlineUids = useMemo(() => {
     if (presenceReady) return onlineUids;
@@ -530,15 +568,13 @@ export function useParticipants(
       return stableOnlineUids;
     }
     return onlineUids;
-  }, [
-    presenceReady,
-    presenceDegraded,
-    Array.isArray(stableOnlineUids) ? stableOnlineUids.join(",") : "stable-null",
-    Array.isArray(onlineUids) ? onlineUids.join(",") : "online-null",
-  ]);
+  }, [presenceReady, presenceDegraded, onlineUids, stableOnlineUids]);
 
   const participants = useMemo(() => {
-    if (!Array.isArray(effectiveOnlineUids) || (!presenceReady && !presenceDegraded)) {
+    if (
+      !Array.isArray(effectiveOnlineUids) ||
+      (!presenceReady && !presenceDegraded)
+    ) {
       return players;
     }
     if (effectiveOnlineUids.length === 0) {
@@ -546,12 +582,7 @@ export function useParticipants(
     }
     const set = new Set(effectiveOnlineUids);
     return players.filter((p) => set.has(p.id));
-  }, [
-    players,
-    presenceReady,
-    presenceDegraded,
-    Array.isArray(effectiveOnlineUids) ? effectiveOnlineUids.join(",") : "effective-null",
-  ]);
+  }, [effectiveOnlineUids, players, presenceReady, presenceDegraded]);
 
   useEffect(() => {
     setMetric("participants", "activeCount", participants.length);
@@ -568,8 +599,8 @@ export function useParticipants(
     if (!current) return;
     try {
       const maybeResult = current();
-      if (maybeResult && typeof (maybeResult as Promise<void>).then === "function") {
-        await (maybeResult as Promise<void>).catch(() => void 0);
+      if (isPromiseLike(maybeResult)) {
+        await maybeResult.catch(() => void 0);
       }
     } catch {}
   };

@@ -23,10 +23,11 @@ export function applyDisplayModeToName(
   return clean;
 }
 
+type RoomDisplayOptions = RoomDoc["options"] & { displayMode?: DisplayMode };
+
 export function getDisplayMode(room: Partial<RoomDoc> | null | undefined): DisplayMode {
-  const opt: any = (room as any)?.options;
-  const v = opt?.displayMode;
+  const opts = room?.options as RoomDisplayOptions | undefined;
+  const v = opts?.displayMode;
   if (v === "minimal" || v === "full") return v;
   return hasMinimalTag(room?.name) ? "minimal" : "full";
 }
-

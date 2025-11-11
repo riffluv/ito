@@ -1,6 +1,6 @@
 "use client";
 
-import { ItoMetrics, readMetrics, subscribeMetrics } from "@/lib/utils/metrics";
+import { ItoMetrics, subscribeMetrics } from "@/lib/utils/metrics";
 
 type MetricsPayload = {
   metrics: ItoMetrics;

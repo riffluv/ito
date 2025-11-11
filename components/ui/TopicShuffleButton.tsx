@@ -20,8 +20,8 @@ export function TopicShuffleButton({
 }: TopicShuffleButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const currentTopic = (room as any)?.topic;
-  const currentTopicBox = (room as any)?.topicBox;
+  const currentTopic = room.topic ?? null;
+  const currentTopicBox = room.topicBox ?? null;
 
   const handleShuffle = async () => {
     if (isLoading || !currentTopicBox) return;
@@ -35,11 +35,13 @@ export function TopicShuffleButton({
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const description =
+        error instanceof Error ? error.message : String(error ?? "unknown");
       notify({
         id: toastIds.topicError(roomId),
         title: "シャッフルに失敗",
-        description: error?.message,
+        description,
         type: "error",
       });
     } finally {
@@ -47,7 +49,7 @@ export function TopicShuffleButton({
     }
   };
 
-  const canShuffle = currentTopic && currentTopicBox;
+  const canShuffle = Boolean(currentTopic && currentTopicBox);
 
   return (
     <OctopathDockButton

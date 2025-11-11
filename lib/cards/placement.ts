@@ -5,8 +5,10 @@ import type { PlayerDoc } from "@/lib/types";
  * CentralCardBoard.tsxから抽出した純粋関数
  */
 
-export interface PlayerMapParams {
-  players: any[];
+interface RawPlayer {
+  id?: string;
+  uid?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -15,12 +17,19 @@ export interface PlayerMapParams {
  * @returns プレイヤーID -> PlayerDocのMap
  */
 export function createPlayerMap(
-  players: any[]
+  players: RawPlayer[]
 ): Map<string, PlayerDoc & { id: string }> {
   const map = new Map<string, PlayerDoc & { id: string }>();
-  players.forEach((p: any) => {
-    if (p && (p.id || p.uid)) {
-      map.set(p.id || p.uid, { ...(p as any), id: p.id || p.uid });
+  players.forEach((player) => {
+    const playerId = player?.id || player?.uid;
+    if (player && playerId) {
+      map.set(
+        playerId,
+        {
+          ...(player as PlayerDoc),
+          id: playerId,
+        }
+      );
     }
   });
   return map;

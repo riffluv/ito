@@ -7,6 +7,17 @@ import { logDebug, logError } from "@/lib/utils/log";
 
 export const runtime = "nodejs";
 
+type SpectatorSessionMode = "private" | "public";
+
+type SpectatorInviteDoc = {
+  roomId?: string | null;
+  expiresAt?: Timestamp | number | null;
+  maxUses?: number | null;
+  usedCount?: number | null;
+  mode?: SpectatorSessionMode | string | null;
+  flags?: Record<string, unknown> | null;
+};
+
 type ConsumeInviteOverrides = {
   auth?: ReturnType<typeof getAdminAuth>;
   db?: ReturnType<typeof getAdminDb>;
@@ -105,7 +116,7 @@ export async function POST(
       return NextResponse.json({ error: "invite_not_found" }, { status: 404 });
     }
 
-    const invite = inviteSnap.data() as Record<string, any>;
+    const invite = inviteSnap.data() as SpectatorInviteDoc | undefined;
     if (!invite || invite.roomId !== roomId) {
       return NextResponse.json({ error: "invite_room_mismatch" }, { status: 400 });
     }
@@ -179,6 +190,3 @@ export async function POST(
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
-
-type SpectatorSessionMode = "private" | "public";
-

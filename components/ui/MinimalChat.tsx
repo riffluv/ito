@@ -59,12 +59,20 @@ export default function MinimalChat({
 
   // アンビエント効果のフェーズ切り替え（高頻度: 800ms）
   React.useEffect(() => {
-    if (prefersReducedMotion) return;
-    const id = window.setInterval(
-      () => setAmbientPhase((prev) => (prev === 0 ? 1 : 0)),
-      800 // 超高頻度で常に光っている感じに
-    );
-    return () => window.clearInterval(id);
+    let intervalId: number | null = null;
+
+    if (!prefersReducedMotion) {
+      intervalId = window.setInterval(
+        () => setAmbientPhase((prev) => (prev === 0 ? 1 : 0)),
+        800 // 超高頻度で常に光っている感じに
+      );
+    }
+
+    return () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
   }, [prefersReducedMotion]);
 
   // チャットパネルの「ぴょこん」アニメーション

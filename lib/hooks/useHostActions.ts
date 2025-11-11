@@ -21,11 +21,18 @@ import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
+import type { RoomDoc } from "@/lib/types";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase/functions";
 import { useCallback, useMemo, useState } from "react";
+
+declare global {
+  interface Window {
+    __ITO_LAST_RESET?: number;
+  }
+}
 
 type QuickStartOptions = {
   broadcast?: boolean;
@@ -169,7 +176,6 @@ export function useHostActions({
 
       let effectiveType = effectiveDefaultTopicType;
       let latestTopic: string | null | undefined = currentTopic ?? null;
-      let traceDetail: Record<string, unknown> | undefined;
 
       muteNotifications(
         [
@@ -184,15 +190,18 @@ export function useHostActions({
       try {
         if (db) {
           const snap = await getDoc(doc(db, "rooms", roomId));
-          const data = snap.data() as any;
-          const fetchedType = data?.options?.defaultTopicType as string | undefined;
+          const data = snap.data() as RoomDoc | undefined;
+          const fetchedType = data?.options?.defaultTopicType;
           if (fetchedType) {
             effectiveType = fetchedType;
           }
           const topicFromSnapshot = data?.topic;
           if (typeof topicFromSnapshot === "string") {
             latestTopic = topicFromSnapshot;
-          } else if (topicFromSnapshot == null) {
+          } else if (
+            topicFromSnapshot === null ||
+            typeof topicFromSnapshot === "undefined"
+          ) {
             latestTopic = null;
           }
         }
@@ -213,7 +222,7 @@ export function useHostActions({
 
       const shouldBroadcast = options?.broadcast ?? true;
       const shouldPlaySound = options?.playSound ?? true;
-      traceDetail = {
+      const traceDetail: Record<string, unknown> = {
         roomId,
         type: effectiveType,
         broadcast: shouldBroadcast ? "1" : "0",
@@ -252,7 +261,9 @@ export function useHostActions({
         });
 
         try {
-          delete (window as any).__ITO_LAST_RESET;
+          if (typeof window !== "undefined") {
+            delete window.__ITO_LAST_RESET;
+          }
         } catch {}
 
         try {
@@ -276,13 +287,14 @@ export function useHostActions({
           duration: 2000,
         });
         success = true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         clearAutoStartLock();
         traceError("ui.host.quickStart", error, traceDetail ?? { roomId });
         if (isFirebaseQuotaExceeded(error)) {
           handleFirebaseQuotaError("ゲーム開始");
         } else {
-          const message = error?.message || "処理に失敗しました";
+          const message =
+            error instanceof Error ? error.message : "処理に失敗しました";
           notify({
             id: toastIds.gameStartError(roomId),
             title: "ゲーム開始に失敗しました",
@@ -304,10 +316,10 @@ export function useHostActions({
       playOrderConfirm,
       roomId,
       ensurePresenceReady,
+      currentTopic,
       playerCount,
       presenceReady,
       onlineUids,
-      functions,
       showtimeIntents,
     ]
   );
@@ -418,9 +430,14 @@ export function useHostActions({
         try {
           postRoundReset(roomId);
         } catch {}
-      } catch (error: any) {
+      } catch (error: unknown) {
         traceError("ui.room.reset", error, { roomId });
-        const msg = String(error?.message || error || "");
+        const msg =
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "";
         console.error("❌ resetGame: 失敗", error);
         notify({
           id: toastIds.genericError(roomId, "game-reset"),
@@ -501,6 +518,7 @@ export function useHostActions({
     playOrderConfirm,
     restartGame,
     clearAutoStartLock,
+    roomId,
   ]);
 
   const REVEAL_DELAY_MS = 500;
@@ -540,7 +558,7 @@ export function useHostActions({
           roomId,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (startedAt !== null) {
         setMetric(
           "order",
@@ -549,12 +567,14 @@ export function useHostActions({
         );
       }
       traceError("ui.order.submit", error, { roomId, count: list.length });
+      const description =
+        error instanceof Error && error.message
+          ? error.message
+          : "提出枚数や並び順を確認して、もう一度お試しください。";
       notify({
         id: toastIds.genericError(roomId, "submit-order"),
         title: "並びの確定に失敗しました",
-        description:
-          error?.message ||
-          "提出枚数や並び順を確認して、もう一度お試しください。",
+        description,
         type: "error",
       });
       throw error;
@@ -641,17 +661,16 @@ export function useHostActions({
       }
     },
     [
-      roomId,
-      isHost,
-      roomStatus,
-      customStartPending,
-      actualResolveMode,
-      playOrderConfirm,
-      ensurePresenceReady,
-      functions,
-      showtimeIntents,
-    ]
-  );
+    roomId,
+    isHost,
+    roomStatus,
+    customStartPending,
+    actualResolveMode,
+    playOrderConfirm,
+    ensurePresenceReady,
+    showtimeIntents,
+  ]
+);
 
   return {
     quickStart,

@@ -12,15 +12,18 @@ export type NotifyOptions = {
   type?: "info" | "warning" | "success" | "error";
   duration?: number;
   id?: string | number;
-  [key: string]: any;
+  meta?: Record<string, unknown>;
 };
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error ?? "unknown");
 
 export function notify(opts: NotifyOptions | string): void {
   const o = typeof opts === "string" ? { title: opts } : opts;
   // Defer notification creation to avoid React warnings when called during render/effects
   queueMicrotask(() => {
     dragonQuestNotify({
-      id: o.id != null ? String(o.id) : undefined,
+      id: o.id !== undefined && o.id !== null ? String(o.id) : undefined,
       title: o.title || "通知",
       description: o.description,
       type: o.type || "info",
@@ -47,7 +50,7 @@ export async function notifyAsync<T>(
   options?: { id?: string | number }
 ): Promise<T | null> {
   const { pending, success, error } = events;
-  const finalId = options?.id != null ? String(options.id) : undefined;
+  const finalId = options?.id !== undefined && options?.id !== null ? String(options.id) : undefined;
 
   if (pending) {
     notify({ ...(typeof pending === "string" ? { title: pending } : pending), id: finalId });
@@ -62,10 +65,14 @@ export async function notifyAsync<T>(
       });
     }
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (error) {
       const base = typeof error === "string" ? { title: error } : error;
-      notify({ ...base, id: finalId, description: base.description ?? err?.message });
+      notify({
+        ...base,
+        id: finalId,
+        description: base.description ?? getErrorMessage(err),
+      });
     }
     return null;
   }
@@ -84,11 +91,11 @@ export async function notifyPromise<T>(
     const r = await p;
     if (opts?.success) notify(opts.success);
     return r;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (opts?.error) {
       const eo =
         typeof opts.error === "string" ? { title: opts.error } : opts.error;
-      notify({ ...eo, description: eo.description ?? err?.message });
+      notify({ ...eo, description: eo.description ?? getErrorMessage(err) });
     }
     return undefined;
   }

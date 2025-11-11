@@ -1,11 +1,9 @@
 "use client";
-import { CARD_FLIP_EASING, FLIP_DURATION_MS, HOVER_EASING } from "@/lib/ui/motion";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { FLIP_DURATION_MS, HOVER_EASING } from "@/lib/ui/motion";
+import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
-import { UI_TOKENS } from "@/theme/layout";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { memo } from "react";
-import type { MouseEventHandler } from "react";
+import { memo, type MouseEventHandler } from "react";
 import { getClueFontSize, getNumberFontSize } from "./CardText";
 import styles from "./GameCard.module.css";
 import { CardFaceFront, CardFaceBack } from "./CardFaces";
@@ -31,8 +29,6 @@ export type GameCardProps = {
   flipPreset?: "reveal" | "result";
 };
 
-// Import the unified card system
-import { BaseCard } from "../cards/BaseCard";
 import {
   getDragonQuestStyleOverrides,
   getDragonQuestTextColors,
@@ -45,17 +41,6 @@ const FLIP_DURATIONS = {
   default: FLIP_DURATION_DEFAULT,
   result: FLIP_DURATION_RESULT,
 } as const;
-
-// テキスト統一スタイル
-const getUnifiedTextStyle = (): React.CSSProperties => ({
-  fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif`,
-  fontWeight: 400,
-  fontStyle: "normal",
-  letterSpacing: "normal",
-  textRendering: "optimizeLegibility",
-  WebkitFontSmoothing: "antialiased",
-  MozOsxFontSmoothing: "grayscale",
-});
 
 export function GameCard({
   index,
@@ -75,6 +60,19 @@ export function GameCard({
   // スタイル取得
   const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
   const textColors = getDragonQuestTextColors(waitingInCentral);
+  const normalizeBg = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (typeof value === "number") return String(value);
+    return "transparent";
+  };
+  const cardBg = normalizeBg(styleOverrides.bg);
+  const resolveBorderColor = (value: unknown): string =>
+    typeof value === "string" ? value : UI_TOKENS.COLORS.whiteAlpha60;
+  const resolveBoxShadow = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string").join(", ");
+    return UI_TOKENS.SHADOWS.cardRaised;
+  };
 
   const playCardFlip = useSoundEffect("card_flip");
   const clickHandler: MouseEventHandler<HTMLDivElement> | undefined =
@@ -91,7 +89,7 @@ export function GameCard({
         ? UI_TOKENS.COLORS.dqRed // Red for failure
         : state === "ready"
           ? UI_TOKENS.COLORS.dqSilver // Silver for ready (with clue)
-          : styleOverrides.borderColor; // Use style system for default
+          : resolveBorderColor(styleOverrides.borderColor); // fallback to safe string
   const successShadow =
     state === "success"
       ? successLevel === "mild"
@@ -100,6 +98,8 @@ export function GameCard({
       : undefined;
   const boundaryRing =
     boundary && state !== "fail" ? UI_TOKENS.SHADOWS.ringAmber : ""; // amber accent
+
+  const baseShadow = resolveBoxShadow(styleOverrides.boxShadow);
 
   const mergeShadow = (core: string) =>
     boundaryRing ? `${boundaryRing}, ${core}` : core;
@@ -165,10 +165,10 @@ export function GameCard({
               clue={clue}
               metaColor={textColors.meta}
               clueColor={textColors.clue}
-              bg={styleOverrides.bg}
+              bg={cardBg}
               border={`${styleOverrides.borderWidth} solid`}
               borderColor={successBorder}
-              boxShadow={successShadow ? mergeShadow(styleOverrides.boxShadow) : styleOverrides.boxShadow}
+              boxShadow={successShadow ? mergeShadow(baseShadow) : baseShadow}
               waitingInCentral={waitingInCentral}
             />
           </Box>
@@ -181,10 +181,10 @@ export function GameCard({
               number={typeof number === "number" ? number : null}
               metaColor={textColors.meta}
               numberColor={textColors.number}
-              bg={styleOverrides.bg}
+              bg={cardBg}
               border={`${styleOverrides.borderWidth} solid`}
               borderColor={successBorder}
-              boxShadow={successShadow ? mergeShadow(styleOverrides.boxShadow) : styleOverrides.boxShadow}
+              boxShadow={successShadow ? mergeShadow(baseShadow) : baseShadow}
               waitingInCentral={waitingInCentral}
             />
           </Box>
@@ -195,6 +195,8 @@ export function GameCard({
   const baseTransform = "translateY(0) scale(1) rotateY(0deg)";
   const hoveredTransform = "translateY(-8px) scale(1.03) rotateY(0deg)";
   const hoveredBoxShadow = UI_TOKENS.SHADOWS.cardHover;
+
+  const borderColorFallback = resolveBorderColor(styleOverrides.borderColor);
 
   return (
     <Box
@@ -207,8 +209,8 @@ export function GameCard({
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
       border={`${styleOverrides.borderWidth} solid`}
-      borderColor={styleOverrides.borderColor}
-      bg={styleOverrides.bg}
+      borderColor={borderColorFallback}
+      bg={cardBg}
       color={textColors.text}
       display="grid"
       gridTemplateRows="16px minmax(0, 1fr) 16px"
@@ -227,7 +229,7 @@ export function GameCard({
         textRendering: "optimizeLegibility",
       }}
       transition={`transform 0.28s ${HOVER_EASING}, box-shadow 0.28s ${HOVER_EASING}`} // AI感除去: 0.3s → 0.28s
-      boxShadow={styleOverrides.boxShadow}
+      boxShadow={baseShadow}
       _hover={{
         transform: hoveredTransform,
         boxShadow: hoveredBoxShadow,

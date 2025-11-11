@@ -11,6 +11,10 @@ type RecallRouteTestOverrides = {
   db?: ReturnType<typeof getAdminDb>;
 };
 
+type SpectatorRecallRequestBody = {
+  token?: unknown;
+};
+
 let testOverrides: RecallRouteTestOverrides | null = null;
 
 function resolveAdminAuth() {
@@ -49,7 +53,13 @@ export async function POST(
     body = null;
   }
 
-  const token = typeof (body as any)?.token === "string" ? ((body as any).token as string) : null;
+  let token: string | null = null;
+  if (typeof body === "object" && body !== null) {
+    const maybeToken = (body as SpectatorRecallRequestBody).token;
+    if (typeof maybeToken === "string") {
+      token = maybeToken;
+    }
+  }
   if (!token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }

@@ -15,7 +15,7 @@ export type IconButtonDQProps = React.ComponentProps<typeof CIconButton> & {
  * - 影: panelDistinct（hoverでpanelSubtle）
  * - トランジション: 統一EASING
  */
-export function IconButtonDQ({ borderPx = 2, css, ...rest }: IconButtonDQProps) {
+export function IconButtonDQ({ borderPx = 2, ...rest }: IconButtonDQProps) {
   return (
     <CIconButton
       bg={UI_TOKENS.COLORS.panelBg}
@@ -25,11 +25,9 @@ export function IconButtonDQ({ borderPx = 2, css, ...rest }: IconButtonDQProps) 
       boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
       transition={`background-color 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}, color 0.15s ${UI_TOKENS.EASING.standard}, border-color 0.15s ${UI_TOKENS.EASING.standard}`}
       _hover={{ boxShadow: UI_TOKENS.SHADOWS.panelSubtle }}
-      css={css as any}
       {...rest}
     />
   );
 }
 
 export default IconButtonDQ;
-

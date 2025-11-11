@@ -31,6 +31,23 @@ type Subscriber = (event: SoundEvent) => void;
 
 type PendingLoad = Promise<{ buffer: AudioBuffer; url: string }>;
 
+type AudioContextConstructorLike = new (contextOptions?: AudioContextOptions) => AudioContext;
+
+type AudioContextWithOutputLatency = AudioContext & { outputLatency?: number };
+
+type StoredCategoryVolume = Partial<Record<SoundCategory, number>> & { result?: number };
+
+type CategoryVolumeWithResult = Record<SoundCategory, number> & { result?: number };
+
+type StoredSoundSettings = Partial<Omit<SoundSettings, "categoryVolume">> & {
+  categoryVolume?: StoredCategoryVolume;
+};
+
+type ErrorMetadata = {
+  name?: unknown;
+  message?: unknown;
+};
+
 class SoundAssetError extends Error {
   constructor(
     public url: string,
@@ -205,7 +222,7 @@ export class SoundManager {
         this.firstPlayRecorded = true;
       }
       if (
-        this.lastVisibilityResumeAt != null &&
+        this.lastVisibilityResumeAt !== null &&
         !this.firstSoundAfterVisibilityRecorded
       ) {
         const delta = nowTimestamp - this.lastVisibilityResumeAt;
@@ -302,7 +319,7 @@ export class SoundManager {
       cleanup();
       try {
         source.stop();
-      } catch (error) {
+      } catch {
         // ignore already stopped
       }
     };
@@ -414,22 +431,22 @@ export class SoundManager {
     if (!isBrowser()) return null;
     if (this.context) return this.context;
 
-    const Ctor = window.AudioContext ?? window.webkitAudioContext;
-    if (!Ctor) {
+    const ctorCandidate = window.AudioContext ?? window.webkitAudioContext;
+    if (!ctorCandidate) {
       console.warn("[SoundManager] Web Audio API is not available.");
       return null;
     }
+    const Ctor: AudioContextConstructorLike = ctorCandidate;
 
     let context: AudioContext;
     try {
       // 低遅延ヒント（未対応環境では無視/失敗時にフォールバック）
-      // @ts-ignore legacy webkit constructor may not accept options
-      context = new Ctor({ latencyHint: "interactive" } as any) as AudioContext;
+      context = new Ctor({ latencyHint: "interactive" });
     } catch {
-      // @ts-ignore legacy webkit fallback
-      context = new (Ctor as any)() as AudioContext;
+      // legacy webkit fallback without options
+      context = new Ctor();
     }
-    this.context = context as AudioContext;
+    this.context = context;
 
     const master = context.createGain();
     this.masterGain = master;
@@ -518,14 +535,16 @@ export class SoundManager {
         if (typeof context.baseLatency === "number") {
           setMetric("audio", "worklet.baseLatencyMs", Math.round(context.baseLatency * 1000));
         }
-        const outputLatency = (context as any)?.outputLatency;
+        const contextWithLatency = context as AudioContextWithOutputLatency;
+        const outputLatency =
+          typeof contextWithLatency.outputLatency === "number" ? contextWithLatency.outputLatency : null;
         if (typeof outputLatency === "number") {
           setMetric("audio", "worklet.outputLatencyMs", Math.round(outputLatency * 1000));
         }
         this.connectMasterGain();
         traceAction("audio.worklet.ready", {
           baseLatency: context.baseLatency ?? null,
-          outputLatency: outputLatency ?? null,
+          outputLatency,
         });
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
@@ -690,11 +709,13 @@ export class SoundManager {
 
   private isDecodePermanent(error: unknown): boolean {
     if (!error || typeof error !== "object") return false;
-    const name = (error as any).name;
+    const metadata = error as ErrorMetadata;
+    const name = typeof metadata.name === "string" ? metadata.name : "";
     if (name === "NotSupportedError" || name === "EncodingError") {
       return true;
     }
-    const message = typeof (error as any).message === "string" ? (error as any).message.toLowerCase() : "";
+    const message =
+      typeof metadata.message === "string" ? metadata.message.toLowerCase() : "";
     if (!message) return false;
     return (
       message.includes("unsupported") ||
@@ -708,7 +729,7 @@ export class SoundManager {
     try {
       const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (!raw) return cloneSettings(DEFAULT_SOUND_SETTINGS);
-      const parsed = JSON.parse(raw) as Partial<SoundSettings>;
+      const parsed = JSON.parse(raw) as StoredSoundSettings;
       const merged: SoundSettings = cloneSettings(DEFAULT_SOUND_SETTINGS);
       if (typeof parsed.masterVolume === "number") {
         merged.masterVolume = clamp(parsed.masterVolume, 0, 1);
@@ -722,12 +743,13 @@ export class SoundManager {
           merged.categoryVolume[category] = clamp(value, 0, 1);
         }
       });
-      const legacyResult = (parsed as any)?.categoryVolume?.result;
+      const legacyResult = parsed.categoryVolume?.result;
       if (typeof legacyResult === "number") {
         merged.categoryVolume.fanfare = clamp(legacyResult, 0, 1);
       }
-      if ((merged.categoryVolume as any)?.result !== undefined) {
-        delete (merged.categoryVolume as any).result;
+      const sanitizedCategoryVolume = merged.categoryVolume as CategoryVolumeWithResult;
+      if (sanitizedCategoryVolume.result !== undefined) {
+        delete sanitizedCategoryVolume.result;
       }
       if (parsed.successMode === "epic" || parsed.successMode === "normal") {
         merged.successMode = parsed.successMode;

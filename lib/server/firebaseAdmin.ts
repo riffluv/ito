@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
-import type { App, AppOptions } from "firebase-admin/app";
-import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  getApps,
+  initializeApp,
+  type App,
+  type AppOptions,
+} from "firebase-admin/app";
 import type { ServiceAccount } from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { getDatabase } from "firebase-admin/database";
