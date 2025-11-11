@@ -17,7 +17,7 @@ import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, type FirestoreError } from "firebase/firestore";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import {
@@ -129,6 +129,12 @@ export function useRoomState(
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED && typeof startTransition === "function";
+  const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
+  const roomAccessStateRef = useRef<{
+    state: "unknown" | "checking" | "granted" | "denied";
+    retryAt: number;
+  }>({ state: "unknown", retryAt: 0 });
+  const roomAccessCheckRef = useRef<Promise<boolean> | null>(null);
 
   const enqueueCommit = useCallback(
     (task: () => void, startedAt: number | null, metricKey?: string) => {
@@ -372,78 +378,146 @@ export function useRoomState(
       unsubRef.current = null;
     };
 
-    const maybeStart = () => {
-      if (unsubRef.current) return; // already subscribed
+    const scheduleRetry = (delayMs: number) => {
+      backoffUntilRef.current = Date.now() + delayMs;
+      if (backoffTimer) {
+        try {
+          clearTimeout(backoffTimer);
+        } catch {}
+      }
+      backoffTimer = setTimeout(() => {
+        backoffTimer = null;
+        maybeStart();
+      }, delayMs);
+    };
+
+    const ensureRoomAccess = () => {
+      if (!roomId || !db) return Promise.resolve(false);
       const now = Date.now();
-      if (now < backoffUntilRef.current) return; // still backing off
-      unsubRef.current = onSnapshot(
-        doc(db!, "rooms", roomId),
-        (snap) => {
-          const receivedAt = typeof performance !== "undefined" ? performance.now() : null;
-          if (!snap.exists()) {
-            enqueueCommit(() => {
-              prevRoomSnapshot = { id: null, data: null };
-              setRoom(null);
-              storePrefetchedRoom(roomId, null);
-              prefetchedAppliedRef.current = false;
-            }, receivedAt, "roomSnapshotCommitMs");
-            return;
-          }
-
-          const rawData = snap.data();
-          const sanitized = sanitizeRoom(rawData);
-          if (
-            prevRoomSnapshot.data &&
-            prevRoomSnapshot.id === snap.id &&
-            deepEqual(prevRoomSnapshot.data, sanitized)
-          ) {
-            return;
-          }
-
-          enqueueCommit(() => {
-            prevRoomSnapshot = { id: snap.id, data: sanitized };
-            setRoom({ id: snap.id, ...sanitized });
-            storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
-            prefetchedAppliedRef.current = false;
-          }, receivedAt, "roomSnapshotCommitMs");
-        },
-        (err) => {
-          if (isFirebaseQuotaExceeded(err)) {
-            handleFirebaseQuotaError("ルーム購読");
-            backoffUntilRef.current = Date.now() + 5 * 60 * 1000; // 5分バックオフ
-            stop();
-            if (backoffTimer) {
-              try {
-                clearTimeout(backoffTimer);
-              } catch {}
-              backoffTimer = null;
-            }
-            // 可視時にのみ自動再開を試みる
-            const resume = () => {
-              if (
-                typeof document !== "undefined" &&
-                document.visibilityState !== "visible"
-              )
-                return;
-              const remain = backoffUntilRef.current - Date.now();
-              if (remain > 0) {
-                backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
-              } else {
-                maybeStart();
-              }
+      const accessState = roomAccessStateRef.current;
+      if (accessState.state === "denied" && now < accessState.retryAt) {
+        return Promise.resolve(false);
+      }
+      if (roomAccessCheckRef.current) {
+        return roomAccessCheckRef.current;
+      }
+      const roomRef = doc(db!, "rooms", roomId);
+      const promise = getDoc(roomRef)
+        .then(() => {
+          roomAccessStateRef.current = { state: "granted", retryAt: 0 };
+          setRoomAccessError(null);
+          return true;
+        })
+        .catch((error) => {
+          const code =
+            (error as FirestoreError)?.code ??
+            (error as { code?: string }).code ??
+            null;
+          if (code === "permission-denied") {
+            roomAccessStateRef.current = {
+              state: "denied",
+              retryAt: Date.now() + 5000,
             };
-            resume();
-          } else {
-            // その他のエラー時は一旦nullに
-            const errorAt = typeof performance !== "undefined" ? performance.now() : null;
+            setRoomAccessError("permission-denied");
+            return false;
+          }
+          roomAccessStateRef.current = {
+            state: "unknown",
+            retryAt: Date.now() + 2000,
+          };
+          traceError("room.snapshot.prefetch", error, { roomId });
+          return false;
+        })
+        .finally(() => {
+          roomAccessCheckRef.current = null;
+        });
+      roomAccessCheckRef.current = promise;
+      return promise;
+    };
+
+    const maybeStart = () => {
+      if (unsubRef.current) return;
+      const now = Date.now();
+      if (now < backoffUntilRef.current) return;
+      const start = async () => {
+        const hasAccess = await ensureRoomAccess();
+        if (!hasAccess) {
+          scheduleRetry(5000);
+          return;
+        }
+        unsubRef.current = onSnapshot(
+          doc(db!, "rooms", roomId),
+          (snap) => {
+            const receivedAt =
+              typeof performance !== "undefined" ? performance.now() : null;
+            if (!snap.exists()) {
+              enqueueCommit(() => {
+                prevRoomSnapshot = { id: null, data: null };
+                setRoom(null);
+                storePrefetchedRoom(roomId, null);
+                prefetchedAppliedRef.current = false;
+              }, receivedAt, "roomSnapshotCommitMs");
+              return;
+            }
+
+            const rawData = snap.data();
+            const sanitized = sanitizeRoom(rawData);
+            if (
+              prevRoomSnapshot.data &&
+              prevRoomSnapshot.id === snap.id &&
+              deepEqual(prevRoomSnapshot.data, sanitized)
+            ) {
+              return;
+            }
+
+            enqueueCommit(() => {
+              prevRoomSnapshot = { id: snap.id, data: sanitized };
+              setRoom({ id: snap.id, ...sanitized });
+              storePrefetchedRoom(
+                roomId,
+                sanitized as unknown as Record<string, unknown>
+              );
+              prefetchedAppliedRef.current = false;
+              setRoomAccessError(null);
+              roomAccessStateRef.current = { state: "granted", retryAt: 0 };
+            }, receivedAt, "roomSnapshotCommitMs");
+          },
+          (err) => {
+            if (isFirebaseQuotaExceeded(err)) {
+              handleFirebaseQuotaError("ルーム購読");
+              stop();
+              scheduleRetry(5 * 60 * 1000);
+              return;
+            }
+            const code =
+              (err as FirestoreError)?.code ??
+              (err as { code?: string }).code ??
+              null;
+            if (code === "permission-denied") {
+              roomAccessStateRef.current = {
+                state: "denied",
+                retryAt: Date.now() + 5000,
+              };
+              setRoomAccessError("permission-denied");
+              stop();
+              scheduleRetry(5000);
+              return;
+            }
+            const errorAt =
+              typeof performance !== "undefined" ? performance.now() : null;
             enqueueCommit(() => {
               setRoom(null);
               storePrefetchedRoom(roomId, null);
               prefetchedAppliedRef.current = false;
             }, errorAt, "roomSnapshotCommitMs");
+            scheduleRetry(2000);
           }
-        }
-      );
+        );
+      };
+      start().catch((error) => {
+        traceError("room.snapshot.start", error, { roomId });
+        scheduleRetry(2000);
+      });
     };
 
     // 初回は1フレーム遅延して購読（フラグON時）
@@ -472,6 +546,8 @@ export function useRoomState(
           clearTimeout(backoffTimer);
         } catch {}
       }
+      roomAccessStateRef.current = { state: "unknown", retryAt: 0 };
+      roomAccessCheckRef.current = null;
       stop();
     };
   }, [roomId, enqueueCommit]);
@@ -899,6 +975,7 @@ export function useRoomState(
       spectatorRequestCreatedAt: spectatorState.spectatorRequestCreatedAt,
       spectatorRequestFailure: spectatorState.spectatorRequestFailure,
       spectatorNode: spectatorState.spectatorNode,
+      roomAccessError,
     }),
     [
       effectiveRoom,
@@ -921,6 +998,7 @@ export function useRoomState(
       spectatorState.spectatorRequestCreatedAt,
       spectatorState.spectatorRequestFailure,
       spectatorState.spectatorNode,
+      roomAccessError,
     ]
   );
 
