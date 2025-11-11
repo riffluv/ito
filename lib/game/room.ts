@@ -25,6 +25,7 @@ import {
   serverTimestamp,
   updateDoc,
   type FieldValue,
+  type FirestoreError,
   type Timestamp,
 } from "firebase/firestore";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
@@ -66,6 +67,12 @@ type RoomProposalDoc = {
 type RoomOrderState = NonNullable<RoomDoc["order"]>;
 
 const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 0;
+const RETRYABLE_TRANSACTION_ERROR_CODES = new Set([
+  "aborted",
+  "failed-precondition",
+  "deadline-exceeded",
+  "unavailable",
+]);
 
 export type DealNumbersOptions = {
   skipPresence?: boolean;
@@ -73,6 +80,19 @@ export type DealNumbersOptions = {
 
 function proposalQueueKey(roomId: string, playerId: string) {
   return `proposal:${roomId}:player:${playerId}`;
+}
+
+function isRetryableTransactionError(error: unknown): boolean {
+  const code = (error as FirestoreError | undefined)?.code;
+  if (!code) return false;
+  return RETRYABLE_TRANSACTION_ERROR_CODES.has(code);
+}
+
+function wait(delayMs: number) {
+  if (delayMs <= 0) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 }
 
 const ROOM_PROPOSAL_COLLECTION = "roomProposals";
@@ -678,14 +698,36 @@ export async function addCardToProposalAtPosition(
     return result;
   };
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const result = await runOnce(attempt);
+  const MAX_ATTEMPTS = 5;
+  let missingDealRetries = 0;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    let result: ProposalWriteResult;
+
+    try {
+      result = await runOnce(attempt);
+    } catch (error) {
+      if (isRetryableTransactionError(error) && attempt < MAX_ATTEMPTS - 1) {
+        const backoffMs = Math.min(400 * (attempt + 1), 1600);
+        traceAction("lag.drop.retry.txError", {
+          roomId,
+          playerId,
+          attempt: String(attempt),
+          backoffMs: String(backoffMs),
+          code: (error as FirestoreError)?.code ?? "unknown",
+        });
+        await wait(backoffMs);
+        continue;
+      }
+      throw error;
+    }
+
     if (result === "ok" || result === "noop") {
       return result;
     }
 
     if (result === "missing-deal") {
-      if (attempt === 0) {
+      if (missingDealRetries === 0) {
         traceAction("lag.drop.dealNumbers.triggered", {
           roomId,
           playerId,
@@ -697,19 +739,15 @@ export async function addCardToProposalAtPosition(
           attempt: String(attempt),
           delayMs: "400",
         });
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 400);
-        });
-      } else if (attempt === 1) {
+        await wait(400);
+      } else if (missingDealRetries === 1) {
         traceAction("lag.drop.retry.wait", {
           roomId,
           playerId,
           attempt: String(attempt),
           delayMs: "800",
         });
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 800);
-        });
+        await wait(800);
       } else {
         traceAction("lag.drop.missingDeal.exhausted", {
           roomId,
@@ -719,6 +757,7 @@ export async function addCardToProposalAtPosition(
           "カードの提出準備が整っていません。通信状況をご確認のうえ、再接続またはホストに確認してください。"
         );
       }
+      missingDealRetries += 1;
       continue;
     }
   }
