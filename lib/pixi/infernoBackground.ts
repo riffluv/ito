@@ -19,10 +19,12 @@ export interface InfernoBackgroundOptions {
   height: number;
   antialias?: boolean;
   resolution?: number;
+  app?: PIXI.Application;
+  container?: PIXI.Container;
 }
 
 export interface InfernoBackgroundController {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   resize(width: number, height: number): void;
   destroy(): void;
   lightSweep(): void;
@@ -119,30 +121,55 @@ export async function createInfernoBackground(
   const BLEND_MODES = (pixi as typeof PIXI & {
     BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
   }).BLEND_MODES;
-  const app = new pixi.Application();
-  await app.init({
-    width: options.width,
-    height: options.height,
-    backgroundColor: 0x1a0000, // 深い赤黒
-    antialias: options.antialias ?? true,
-    resolution: options.resolution ?? 1,
-    autoDensity: false,
-  });
+  const ownsApp = !options.app;
+  const app = options.app ?? new pixi.Application();
+  if (ownsApp) {
+    await app.init({
+      width: options.width,
+      height: options.height,
+      backgroundColor: 0x1a0000, // 深い赤黒
+      antialias: options.antialias ?? true,
+      resolution: options.resolution ?? 1,
+      autoDensity: false,
+    });
 
-  await nextFrame();
+    await nextFrame();
 
-  if (!app.canvas) {
-    throw new Error("Pixi canvas unavailable");
+    if (!app.canvas) {
+      throw new Error("Pixi canvas unavailable");
+    }
+
+    app.canvas.style.position = "absolute";
+    app.canvas.style.top = "0";
+    app.canvas.style.left = "0";
+    app.canvas.style.pointerEvents = "none";
+    app.canvas.style.width = `${options.width}px`;
+    app.canvas.style.height = `${options.height}px`;
   }
 
-  app.canvas.style.position = "absolute";
-  app.canvas.style.top = "0";
-  app.canvas.style.left = "0";
-  app.canvas.style.pointerEvents = "none";
-  app.canvas.style.width = `${options.width}px`;
-  app.canvas.style.height = `${options.height}px`;
+  let detachRoot: (() => void) | null = null;
+  let root: PIXI.Container;
+  if (options.container) {
+    root = options.container;
+    root.removeChildren();
+  } else if (ownsApp) {
+    root = app.stage;
+    root.removeChildren();
+  } else {
+    root = new pixi.Container();
+    root.eventMode = "none";
+    root.sortableChildren = true;
+    app.stage.addChildAt(root, 0);
+    detachRoot = () => {
+      if (root.parent) {
+        root.parent.removeChild(root);
+      }
+      root.destroy({ children: true });
+    };
+  }
 
-  const stage = app.stage;
+  root.eventMode = "none";
+  root.sortableChildren = true;
   const bgGradient = new pixi.Graphics();
   const mountains = new pixi.Graphics();
   const sweepOverlay = new pixi.Graphics();
@@ -156,15 +183,15 @@ export async function createInfernoBackground(
     sweepOverlay.blendMode = BLEND_MODES.ADD;
   }
 
-  stage.addChild(bgGradient);
-  stage.addChild(mountains);
-  stage.addChild(sweepOverlay);
-  stage.addChild(particlesContainer);
-  stage.addChild(meteorsContainer);
-  stage.addChild(fireworksContainer);
-  stage.addChild(foreground);
+  root.addChild(bgGradient);
+  root.addChild(mountains);
+  root.addChild(sweepOverlay);
+  root.addChild(particlesContainer);
+  root.addChild(meteorsContainer);
+  root.addChild(fireworksContainer);
+  root.addChild(foreground);
 
-  if (app.ticker) {
+  if (ownsApp && app.ticker) {
     app.ticker.stop();
     app.ticker.autoStart = false;
   }
@@ -631,17 +658,23 @@ export async function createInfernoBackground(
       }
     }
 
-    app.renderer.render(stage);
+    if (ownsApp) {
+      app.renderer.render(root);
+    }
   };
 
   frameId = requestAnimationFrame(animate);
 
   const controller: InfernoBackgroundController = {
-    canvas: app.canvas,
+    canvas: ownsApp ? app.canvas ?? undefined : undefined,
     resize(width: number, height: number) {
-      app.renderer.resize(width, height);
-      app.canvas.style.width = `${width}px`;
-      app.canvas.style.height = `${height}px`;
+      if (ownsApp) {
+        app.renderer.resize(width, height);
+        if (app.canvas) {
+          app.canvas.style.width = `${width}px`;
+          app.canvas.style.height = `${height}px`;
+        }
+      }
       rebuildBackground(width, height);
     },
     lightSweep() {
@@ -682,11 +715,19 @@ export async function createInfernoBackground(
       meteors.length = 0;
       sweepActive = false;
       sweepOverlay.alpha = 0;
-      try {
-        stage.removeChildren();
-        app.destroy(true);
-      } catch {
-        // noop
+      if (ownsApp) {
+        try {
+          root.removeChildren();
+          app.destroy(true);
+        } catch {
+          // noop
+        }
+      } else if (options.container) {
+        options.container.removeChildren();
+      }
+      if (detachRoot) {
+        detachRoot();
+        detachRoot = null;
       }
     },
   };
