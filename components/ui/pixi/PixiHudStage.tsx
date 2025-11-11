@@ -33,6 +33,7 @@ interface PixiHudContextValue {
   app: Application | null;
   registerLayer: (name: string, options?: LayerOptions) => Container | null;
   unregisterLayer: (name: string) => void;
+  backgroundLayer: Container | null;
 }
 
 const PixiHudContext = createContext<PixiHudContextValue | undefined>(undefined);
@@ -46,7 +47,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
+  const backgroundRootRef = useRef<Container | null>(null);
+  const hudRootRef = useRef<Container | null>(null);
   const [app, setApp] = useState<Application | null>(null);
+  const [backgroundLayer, setBackgroundLayer] = useState<Container | null>(null);
   const [restartKey, setRestartKey] = useState(0);
   const safeDestroyContainer = useCallback((container: Container) => {
     if ((container as unknown as { destroyed?: boolean }).destroyed) {
@@ -104,6 +108,20 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       // sortableChildren はレイヤー追加時に動的に有効化（デフォルト無効で軽量化）
       pixiApp.stage.sortableChildren = false;
       pixiApp.renderer.events.cursorStyles.default = "default";
+
+      const backgroundRoot = new Container();
+      backgroundRoot.sortableChildren = true;
+      backgroundRoot.zIndex = -1000;
+      backgroundRoot.label = "pixi-background-root";
+      pixiApp.stage.addChild(backgroundRoot);
+      backgroundRootRef.current = backgroundRoot;
+      setBackgroundLayer(backgroundRoot);
+
+      const hudRoot = new Container();
+      hudRoot.sortableChildren = true;
+      hudRoot.label = "pixi-hud-root";
+      hudRootRef.current = hudRoot;
+      pixiApp.stage.addChild(hudRoot);
 
       // バッチレンダリング最適化
       const batchController =
@@ -203,6 +221,15 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       });
       layerStore.clear();
       setApp(null);
+      setBackgroundLayer(null);
+      if (backgroundRootRef.current) {
+        safeDestroyContainer(backgroundRootRef.current);
+        backgroundRootRef.current = null;
+      }
+      if (hudRootRef.current) {
+        safeDestroyContainer(hudRootRef.current);
+        hudRootRef.current = null;
+      }
 
       if (appRef.current) {
         try {
@@ -245,13 +272,14 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       container.eventMode = "none";
     }
 
-    currentApp.stage.addChild(container);
+    const parent = hudRootRef.current ?? currentApp.stage;
+    parent.addChild(container);
 
     // レイヤー数が増えた場合のみ sortableChildren を有効化
-    if (currentApp.stage.children.length > 2) {
-      currentApp.stage.sortableChildren = true;
+    if (parent.children.length > 2) {
+      parent.sortableChildren = true;
     }
-    currentApp.stage.sortChildren();
+    parent.sortChildren();
     store.set(name, { container, refCount: 1 });
     return container;
   }, []);
@@ -279,8 +307,9 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       app,
       registerLayer,
       unregisterLayer,
+      backgroundLayer,
     }),
-    [app, registerLayer, unregisterLayer]
+    [app, registerLayer, unregisterLayer, backgroundLayer]
   );
 
   return (
@@ -307,6 +336,10 @@ export function usePixiHud(): PixiHudContextValue {
     throw new Error("usePixiHud must be used within a PixiHudStage");
   }
   return ctx;
+}
+
+export function usePixiHudContext(): PixiHudContextValue | undefined {
+  return useContext(PixiHudContext);
 }
 
 export function usePixiHudLayer(name: string, options?: LayerOptions) {

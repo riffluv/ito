@@ -16,10 +16,12 @@ export interface SimpleBackgroundOptions {
   backgroundColor?: number;
   dprCap?: number;
   onMetrics?: (metrics: SimpleBackgroundMetrics) => void;
+  app?: PIXI.Application;
+  container?: PIXI.Container;
 }
 
 export interface SimpleBackgroundController {
-  canvas: HTMLCanvasElement;
+  canvas?: HTMLCanvasElement;
   destroy(): void;
   resize(width: number, height: number): void;
   setQuality(quality: BackgroundQuality): void;
@@ -174,7 +176,8 @@ export async function createSimpleBackground(
   options: SimpleBackgroundOptions
 ): Promise<SimpleBackgroundController> {
   const pixi = await loadPixi();
-  const app = new pixi.Application();
+  const ownsApp = !options.app;
+  const app = options.app ?? new pixi.Application();
   const resolution = Math.min(
     options.dprCap ?? DPR_CAP,
     typeof window !== "undefined" && window.devicePixelRatio
@@ -182,30 +185,44 @@ export async function createSimpleBackground(
       : 1
   );
 
-  await app.init({
-    width: options.width,
-    height: options.height,
-    backgroundColor: options.backgroundColor ?? DEFAULT_BACKGROUND,
-    antialias: true,
-    resolution,
-    autoDensity: false,
-    powerPreference: "low-power",
-  });
+  if (ownsApp) {
+    await app.init({
+      width: options.width,
+      height: options.height,
+      backgroundColor: options.backgroundColor ?? DEFAULT_BACKGROUND,
+      antialias: true,
+      resolution,
+      autoDensity: false,
+      powerPreference: "low-power",
+    });
 
-  if (!app.canvas) {
-    throw new Error("Pixi canvas is unavailable");
+    if (!app.canvas) {
+      throw new Error("Pixi canvas is unavailable");
+    }
+
+    app.canvas.style.width = `${options.width}px`;
+    app.canvas.style.height = `${options.height}px`;
+    app.canvas.style.position = "absolute";
+    app.canvas.style.top = "0";
+    app.canvas.style.left = "0";
+    app.canvas.style.pointerEvents = "none";
   }
 
-  app.canvas.style.width = `${options.width}px`;
-  app.canvas.style.height = `${options.height}px`;
-  app.canvas.style.position = "absolute";
-  app.canvas.style.top = "0";
-  app.canvas.style.left = "0";
-  app.canvas.style.pointerEvents = "none";
-
-  const root = new pixi.Container();
+  let detachRoot: (() => void) | null = null;
+  const root = options.container ?? new pixi.Container();
   root.eventMode = "none";
-  app.stage.addChild(root);
+  root.sortableChildren = true;
+  if (!options.container) {
+    app.stage.addChildAt(root, 0);
+    detachRoot = () => {
+      if (root.parent) {
+        root.parent.removeChild(root);
+      }
+      root.destroy({ children: true });
+    };
+  } else {
+    root.removeChildren();
+  }
   const parallaxLayers: Array<{
     display: PIXI.Container;
     depthX: number;
@@ -309,7 +326,9 @@ export async function createSimpleBackground(
 
 
   const renderNow = () => {
-    app.renderer.render(app.stage);
+    if (ownsApp) {
+      app.renderer.render(app.stage);
+    }
   };
 
   const applyLayout = (width: number, height: number) => {
@@ -351,9 +370,13 @@ export async function createSimpleBackground(
       }
     });
 
-    app.renderer.resize(width, height);
-    app.canvas.style.width = `${width}px`;
-    app.canvas.style.height = `${height}px`;
+    if (ownsApp) {
+      app.renderer.resize(width, height);
+      if (app.canvas) {
+        app.canvas.style.width = `${width}px`;
+        app.canvas.style.height = `${height}px`;
+      }
+    }
     renderNow();
   };
 
@@ -475,16 +498,24 @@ export async function createSimpleBackground(
   };
 
   const controller: SimpleBackgroundController = {
-    canvas: app.canvas,
+    canvas: ownsApp ? app.canvas ?? undefined : undefined,
     destroy() {
       stopLoop();
       pointerGlowActive = false;
       sweepActive = false;
-      try {
-        app.stage.removeChildren();
-        app.destroy(true);
-      } catch {
-        // noop
+      if (ownsApp) {
+        try {
+          root.removeChildren();
+          app.destroy(true);
+        } catch {
+          // noop
+        }
+      } else if (options.container) {
+        options.container.removeChildren();
+      }
+      if (detachRoot) {
+        detachRoot();
+        detachRoot = null;
       }
     },
     resize(width: number, height: number) {

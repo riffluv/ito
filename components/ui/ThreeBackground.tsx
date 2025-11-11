@@ -10,6 +10,7 @@ import type { DragonQuestBackgroundController } from "@/lib/pixi/dragonQuestBack
 import type { InfernoBackgroundController } from "@/lib/pixi/infernoBackground";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
+import { usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
 
 type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
@@ -107,6 +108,13 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const legacyAppRef = useRef<PIXITypes.Application | null>(null);
   const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
     useAnimationSettings();
+  const enableSharedRenderer =
+    process.env.NEXT_PUBLIC_PIXI_BACKGROUND_SHARED === "1";
+  const pixiHud = enableSharedRenderer ? usePixiHudContext() : undefined;
+  const sharedApp = enableSharedRenderer ? pixiHud?.app ?? null : null;
+  const sharedBackgroundLayer = enableSharedRenderer
+    ? pixiHud?.backgroundLayer ?? null
+    : null;
 
   const isLowPowerDevice =
     reducedMotion || gpuCapability === "low";
@@ -263,6 +271,13 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       try {
         const module = await import("@/lib/pixi/simpleBackground");
         if (disposed) return;
+        const usingSharedRenderer = Boolean(
+          enableSharedRenderer && sharedApp && sharedBackgroundLayer
+        );
+        if (usingSharedRenderer && mountRef.current) {
+          mountRef.current.innerHTML = "";
+        }
+
         const controller = await module.createSimpleBackground({
           width: window.innerWidth,
           height: window.innerHeight,
@@ -272,38 +287,54 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onMetrics: (metrics) => {
             logPixiBackground("info", "simple-metrics", metrics);
           },
+          app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
+          container: usingSharedRenderer
+            ? sharedBackgroundLayer ?? undefined
+            : undefined,
         });
 
-        if (!mountRef.current) {
-          controller.destroy();
-          return;
-        }
-
-        mountRef.current.innerHTML = "";
-        mountRef.current.appendChild(controller.canvas);
-        simpleControllerRef.current = controller;
-        logPixiBackground("info", "simple-init-success");
-
-        const canvas = controller.canvas;
-        const onContextLost = (event: Event) => {
-          event.preventDefault?.();
-          if (!disposed) {
-            handleContextLoss("pixi-simple");
+        if (!usingSharedRenderer) {
+          if (!mountRef.current) {
+            controller.destroy();
+            return;
           }
-        };
-        const onContextRestored = () => {
-          logPixiBackground("info", "simple-context-restored");
-        };
-        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
-        detachContext = () => {
-          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.removeEventListener(
+
+          const canvas = controller.canvas;
+          if (!canvas) {
+            controller.destroy();
+            setBackgroundType("css");
+            return;
+          }
+
+          mountRef.current.innerHTML = "";
+          mountRef.current.appendChild(canvas);
+          const onContextLost = (event: Event) => {
+            event.preventDefault?.();
+            if (!disposed) {
+              handleContextLoss("pixi-simple");
+            }
+          };
+          const onContextRestored = () => {
+            logPixiBackground("info", "simple-context-restored");
+          };
+          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.addEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-        };
+          detachContext = () => {
+            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+            canvas.removeEventListener(
+              "webglcontextrestored",
+              onContextRestored as EventListener,
+              false
+            );
+          };
+        }
+
+        simpleControllerRef.current = controller;
+        logPixiBackground("info", "simple-init-success");
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -382,6 +413,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    sharedApp,
+    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
   ]);
@@ -428,7 +461,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
-    if (!mountRef.current) {
+    if (
+      !mountRef.current &&
+      !(enableSharedRenderer && sharedApp && sharedBackgroundLayer)
+    ) {
       return undefined;
     }
 
@@ -444,44 +480,64 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       try {
         const module = await import("@/lib/pixi/dragonQuestBackground");
         if (disposed) return;
+        const usingSharedRenderer = Boolean(
+          enableSharedRenderer && sharedApp && sharedBackgroundLayer
+        );
+        if (usingSharedRenderer && mountRef.current) {
+          mountRef.current.innerHTML = "";
+        }
         const controller =
           await module.createDragonQuestBackground({
             width: window.innerWidth,
             height: window.innerHeight,
             antialias: !isLowPowerDevice,
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
+            app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
+            container: usingSharedRenderer
+              ? sharedBackgroundLayer ?? undefined
+              : undefined,
           });
 
-        if (!mountRef.current) {
-          controller.destroy();
-          return;
-        }
-
-        mountRef.current.innerHTML = "";
-        mountRef.current.appendChild(controller.canvas);
-        dragonQuestControllerRef.current = controller;
-        logPixiBackground("info", "dragon-quest-init-success");
-
-        const canvas = controller.canvas;
-        const onContextLost = (event: Event) => {
-          event.preventDefault?.();
-          if (!disposed) {
-            handleContextLoss("pixi-dq");
+        if (!usingSharedRenderer) {
+          if (!mountRef.current) {
+            controller.destroy();
+            return;
           }
-        };
-        const onContextRestored = () => {
-          logPixiBackground("info", "dragon-quest-context-restored");
-        };
-        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
-        detachContext = () => {
-          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.removeEventListener(
+          const canvas = controller.canvas;
+          if (!canvas) {
+            controller.destroy();
+            setBackgroundType("css");
+            return;
+          }
+          mountRef.current.innerHTML = "";
+          mountRef.current.appendChild(canvas);
+          const onContextLost = (event: Event) => {
+            event.preventDefault?.();
+            if (!disposed) {
+              handleContextLoss("pixi-dq");
+            }
+          };
+          const onContextRestored = () => {
+            logPixiBackground("info", "dragon-quest-context-restored");
+          };
+          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.addEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-        };
+          detachContext = () => {
+            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+            canvas.removeEventListener(
+              "webglcontextrestored",
+              onContextRestored as EventListener,
+              false
+            );
+          };
+        }
+
+        dragonQuestControllerRef.current = controller;
+        logPixiBackground("info", "dragon-quest-init-success");
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -554,6 +610,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    sharedApp,
+    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
   ]);
@@ -582,7 +640,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
-    if (!mountRef.current) {
+    if (
+      !mountRef.current &&
+      !(enableSharedRenderer && sharedApp && sharedBackgroundLayer)
+    ) {
       return undefined;
     }
 
@@ -598,44 +659,64 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       try {
         const module = await import("@/lib/pixi/infernoBackground");
         if (disposed) return;
+        const usingSharedRenderer = Boolean(
+          enableSharedRenderer && sharedApp && sharedBackgroundLayer
+        );
+        if (usingSharedRenderer && mountRef.current) {
+          mountRef.current.innerHTML = "";
+        }
         const controller =
           await module.createInfernoBackground({
             width: window.innerWidth,
             height: window.innerHeight,
             antialias: !isLowPowerDevice,
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
+            app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
+            container: usingSharedRenderer
+              ? sharedBackgroundLayer ?? undefined
+              : undefined,
           });
 
-        if (!mountRef.current) {
-          controller.destroy();
-          return;
-        }
-
-        mountRef.current.innerHTML = "";
-        mountRef.current.appendChild(controller.canvas);
-        infernoControllerRef.current = controller;
-        logPixiBackground("info", "inferno-init-success");
-
-        const canvas = controller.canvas;
-        const onContextLost = (event: Event) => {
-          event.preventDefault?.();
-          if (!disposed) {
-            handleContextLoss("pixi-inferno");
+        if (!usingSharedRenderer) {
+          if (!mountRef.current) {
+            controller.destroy();
+            return;
           }
-        };
-        const onContextRestored = () => {
-          logPixiBackground("info", "inferno-context-restored");
-        };
-        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
-        detachContext = () => {
-          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.removeEventListener(
+          const canvas = controller.canvas;
+          if (!canvas) {
+            controller.destroy();
+            setBackgroundType("css");
+            return;
+          }
+          mountRef.current.innerHTML = "";
+          mountRef.current.appendChild(canvas);
+          const onContextLost = (event: Event) => {
+            event.preventDefault?.();
+            if (!disposed) {
+              handleContextLoss("pixi-inferno");
+            }
+          };
+          const onContextRestored = () => {
+            logPixiBackground("info", "inferno-context-restored");
+          };
+          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.addEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-        };
+          detachContext = () => {
+            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+            canvas.removeEventListener(
+              "webglcontextrestored",
+              onContextRestored as EventListener,
+              false
+            );
+          };
+        }
+
+        infernoControllerRef.current = controller;
+        logPixiBackground("info", "inferno-init-success");
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -714,6 +795,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    sharedApp,
+    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
   ]);
@@ -734,6 +817,13 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         contain: "strict",
         pointerEvents: "none",
         background: "var(--chakra-colors-bg-canvas)",
+        display:
+          enableSharedRenderer &&
+          sharedApp &&
+          sharedBackgroundLayer &&
+          backgroundType !== "css"
+            ? "none"
+            : undefined,
       }}
     />
   );
