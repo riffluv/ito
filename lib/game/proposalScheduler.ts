@@ -9,19 +9,24 @@ import {
 
 type MutationKind = "add" | "move";
 
-interface PendingMutation {
-  roomId: string;
-  playerId: string;
+interface PendingJob {
   kind: MutationKind;
   targetIndex: number;
   resolvers: Array<(value: unknown) => void>;
   rejecters: Array<(reason: unknown) => void>;
-  timer: ReturnType<typeof setTimeout> | null;
   enqueuedAt: number;
 }
 
+interface PendingQueue {
+  roomId: string;
+  playerId: string;
+  jobs: PendingJob[];
+  timer: ReturnType<typeof setTimeout> | null;
+  running: boolean;
+}
+
 const FLUSH_DELAY_MS = 12;
-const pending = new Map<string, PendingMutation>();
+const pending = new Map<string, PendingQueue>();
 const getNow =
   typeof performance !== "undefined" && typeof performance.now === "function"
     ? () => performance.now()
@@ -29,51 +34,66 @@ const getNow =
 
 const mutationKey = (roomId: string, playerId: string) => `${roomId}:${playerId}`;
 
-const flushMutation = async (key: string) => {
-  const queued = pending.get(key);
-  if (!queued) return;
-  pending.delete(key);
+const scheduleFlush = (key: string, state: PendingQueue, delay = FLUSH_DELAY_MS) => {
+  if (state.running) return;
+  if (state.timer) {
+    clearTimeout(state.timer);
+  }
+  state.timer = setTimeout(() => {
+    state.timer = null;
+    void flushMutation(key);
+  }, Math.max(0, delay));
+};
 
-  if (queued.timer) {
-    clearTimeout(queued.timer);
-    queued.timer = null;
+const flushMutation = async (key: string) => {
+  const queue = pending.get(key);
+  if (!queue) return;
+  if (queue.running) return;
+  if (queue.timer) {
+    clearTimeout(queue.timer);
+    queue.timer = null;
+  }
+  queue.running = true;
+
+  while (queue.jobs.length > 0) {
+    const job = queue.jobs.shift();
+    if (!job) break;
+    const queueWaitMs = Math.max(0, Math.round(getNow() - job.enqueuedAt));
+    recordMetricDistribution("client.drop.queueWaitMs", queueWaitMs, {
+      kind: job.kind,
+    });
+    setMetric(
+      "client.drop",
+      `${job.kind}.queueWaitMs`,
+      Number(queueWaitMs.toFixed(2))
+    );
+    traceAction("interaction.drop.queueWait", {
+      roomId: queue.roomId,
+      playerId: queue.playerId,
+      kind: job.kind,
+      queueWaitMs,
+    });
+
+    try {
+      let result: unknown;
+      if (job.kind === "move") {
+        await moveCardInProposalToPosition(queue.roomId, queue.playerId, job.targetIndex);
+        result = undefined;
+      } else {
+        result = await addCardToProposalAtPosition(queue.roomId, queue.playerId, job.targetIndex);
+      }
+      job.resolvers.forEach((resolve) => resolve(result));
+    } catch (error) {
+      job.rejecters.forEach((reject) => reject(error));
+    }
   }
 
-  const queueWaitMs = Math.max(0, Math.round(getNow() - queued.enqueuedAt));
-  recordMetricDistribution("client.drop.queueWaitMs", queueWaitMs, {
-    kind: queued.kind,
-  });
-  setMetric(
-    "client.drop",
-    `${queued.kind}.queueWaitMs`,
-    Number(queueWaitMs.toFixed(2))
-  );
-  traceAction("interaction.drop.queueWait", {
-    roomId: queued.roomId,
-    playerId: queued.playerId,
-    kind: queued.kind,
-    queueWaitMs,
-  });
+  queue.running = false;
 
-  try {
-    let result: unknown;
-    if (queued.kind === "move") {
-      await moveCardInProposalToPosition(
-        queued.roomId,
-        queued.playerId,
-        queued.targetIndex
-      );
-      result = undefined;
-    } else {
-      result = await addCardToProposalAtPosition(
-        queued.roomId,
-        queued.playerId,
-        queued.targetIndex
-      );
-    }
-    queued.resolvers.forEach((resolve) => resolve(result));
-  } catch (error) {
-    queued.rejecters.forEach((reject) => reject(error));
+  if (queue.jobs.length === 0) {
+    pending.delete(key);
+  } else {
+    scheduleFlush(key, queue, 0);
   }
 };
 
@@ -87,34 +107,29 @@ const queueMutation = <T>(
   const existing = pending.get(key);
 
   return new Promise<T>((resolve, reject) => {
-    if (existing) {
-      if (existing.timer) {
-        clearTimeout(existing.timer);
-      }
-      existing.kind = kind;
-      existing.targetIndex = targetIndex;
-      existing.resolvers.push(resolve as (value: unknown) => void);
-      existing.rejecters.push(reject);
-      existing.enqueuedAt = getNow();
-      existing.timer = setTimeout(() => {
-        void flushMutation(key);
-      }, FLUSH_DELAY_MS);
-      return;
-    }
-
-    const entry: PendingMutation = {
-      roomId,
-      playerId,
+    const job: PendingJob = {
       kind,
       targetIndex,
       resolvers: [resolve as (value: unknown) => void],
       rejecters: [reject],
       enqueuedAt: getNow(),
-      timer: setTimeout(() => {
-        void flushMutation(key);
-      }, FLUSH_DELAY_MS),
+    };
+
+    if (existing) {
+      existing.jobs.push(job);
+      scheduleFlush(key, existing);
+      return;
+    }
+
+    const entry: PendingQueue = {
+      roomId,
+      playerId,
+      jobs: [job],
+      timer: null,
+      running: false,
     };
     pending.set(key, entry);
+    scheduleFlush(key, entry);
   });
 };
 
