@@ -277,12 +277,36 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         simpleControllerRef.current = controller;
         logPixiBackground("info", "simple-init-success");
 
+        let resizeFrame: number | null = null;
+        let lastWidth = window.innerWidth;
+        let lastHeight = window.innerHeight;
         const handleResize = () => {
-          controller.resize(window.innerWidth, window.innerHeight);
+          const nextWidth = window.innerWidth;
+          const nextHeight = window.innerHeight;
+          if (nextWidth === lastWidth && nextHeight === lastHeight) {
+            return;
+          }
+          lastWidth = nextWidth;
+          lastHeight = nextHeight;
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+          }
+          resizeFrame = window.requestAnimationFrame(() => {
+            const active = simpleControllerRef.current;
+            if (active) {
+              active.resize(lastWidth, lastHeight);
+            }
+            resizeFrame = null;
+          });
         };
         window.addEventListener("resize", handleResize);
-        detachResize = () =>
+        detachResize = () => {
           window.removeEventListener("resize", handleResize);
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = null;
+          }
+        };
 
         updateGlobalBackground({
           renderer: "pixi",
@@ -404,12 +428,36 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         dragonQuestControllerRef.current = controller;
         logPixiBackground("info", "dragon-quest-init-success");
 
+        let resizeFrame: number | null = null;
+        let lastWidth = window.innerWidth;
+        let lastHeight = window.innerHeight;
         const handleResize = () => {
-          controller.resize(window.innerWidth, window.innerHeight);
+          const nextWidth = window.innerWidth;
+          const nextHeight = window.innerHeight;
+          if (nextWidth === lastWidth && nextHeight === lastHeight) {
+            return;
+          }
+          lastWidth = nextWidth;
+          lastHeight = nextHeight;
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+          }
+          resizeFrame = window.requestAnimationFrame(() => {
+            const active = dragonQuestControllerRef.current;
+            if (active) {
+              active.resize(lastWidth, lastHeight);
+            }
+            resizeFrame = null;
+          });
         };
         window.addEventListener("resize", handleResize);
-        detachResize = () =>
+        detachResize = () => {
           window.removeEventListener("resize", handleResize);
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = null;
+          }
+        };
 
         updateGlobalBackground({
           renderer: "pixi",
@@ -507,12 +555,36 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         infernoControllerRef.current = controller;
         logPixiBackground("info", "inferno-init-success");
 
+        let resizeFrame: number | null = null;
+        let lastWidth = window.innerWidth;
+        let lastHeight = window.innerHeight;
         const handleResize = () => {
-          controller.resize(window.innerWidth, window.innerHeight);
+          const nextWidth = window.innerWidth;
+          const nextHeight = window.innerHeight;
+          if (nextWidth === lastWidth && nextHeight === lastHeight) {
+            return;
+          }
+          lastWidth = nextWidth;
+          lastHeight = nextHeight;
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+          }
+          resizeFrame = window.requestAnimationFrame(() => {
+            const active = infernoControllerRef.current;
+            if (active) {
+              active.resize(lastWidth, lastHeight);
+            }
+            resizeFrame = null;
+          });
         };
         window.addEventListener("resize", handleResize);
-        detachResize = () =>
+        detachResize = () => {
           window.removeEventListener("resize", handleResize);
+          if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = null;
+          }
+        };
 
         updateGlobalBackground({
           renderer: "pixi",

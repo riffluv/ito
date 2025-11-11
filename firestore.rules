@@ -83,6 +83,14 @@ service cloud.firestore {
         && (!('updatedAt' in data) || isTimestampValue(data.updatedAt));
     }
 
+    function isValidUiMap(ui) {
+      return ui is map
+        && ui.keys().hasOnly(['recallOpen', 'revealPending', 'revealBeginAt'])
+        && (!('recallOpen' in ui) || ui.recallOpen is bool)
+        && (!('revealPending' in ui) || ui.revealPending is bool)
+        && (!('revealBeginAt' in ui) || isTimestampValue(ui.revealBeginAt));
+    }
+
     function isValidMvpVotesMap(votes) {
       return votes is map && votes.size() <= 16;
     }
@@ -103,7 +111,8 @@ service cloud.firestore {
           'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
           'topic', 'topicOptions', 'topicBox',
           'order', 'result', 'deal', 'round', 'mvpVotes',
-          'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion'
+          'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion',
+          'ui'
         ])
         && (!('name' in data) || safeText(data.name, 1, 48))
         && (!('hostId' in data) || (data.hostId is string && data.hostId.size() > 0))
@@ -135,6 +144,7 @@ service cloud.firestore {
         && (!('result' in data) || data.result == null || isValidResultMap(data.result))
         && (!('deal' in data) || data.deal == null || isValidDealMap(data.deal))
         && (!('mvpVotes' in data) || data.mvpVotes == null || isValidMvpVotesMap(data.mvpVotes))
+        && (!('ui' in data) || data.ui == null || isValidUiMap(data.ui))
         && (!('createdAt' in data) || data.createdAt is timestamp)
         && (!('lastActiveAt' in data) || data.lastActiveAt is timestamp)
         && (!('closedAt' in data) || isTimestampValue(data.closedAt))

@@ -20,6 +20,7 @@ import {
 
 type RoomUpdatePayload = Partial<RoomDoc> & Record<string, unknown>;
 type RoomOrderState = NonNullable<RoomDoc["order"]>;
+type OrderPatch = Pick<RoomOrderState, "list" | "proposal" | "total">;
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db!, "rooms", roomId), { options });
@@ -135,8 +136,17 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
         }
       }
 
+      const cloneOrder = (source?: RoomOrderState): OrderPatch => ({
+        list: Array.isArray(source?.list) ? [...source.list] : [],
+        proposal: Array.isArray(source?.proposal) ? [...source.proposal] : [],
+        total:
+          typeof source?.total === "number" && Number.isFinite(source.total)
+            ? source.total
+            : 0,
+      });
+
       if (data.order) {
-        const nextOrder: RoomOrderState = { ...(data.order as RoomOrderState) };
+        const nextOrder = cloneOrder(data.order as RoomOrderState);
         let orderChanged = false;
 
         if (Array.isArray(data.order.list)) {
@@ -169,9 +179,6 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
           list: [],
           proposal: [],
           total: updates.deal?.players?.length ?? 0,
-          lastNumber: null,
-          failed: false,
-          failedAt: null,
         };
       }
 
