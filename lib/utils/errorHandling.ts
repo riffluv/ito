@@ -7,14 +7,12 @@ import { logError } from "@/lib/utils/log";
 
 export type ErrorSeverity = "error" | "warning" | "info";
 
-export interface AppError extends Error {
+export class AppError extends Error {
   code?: string;
   severity?: ErrorSeverity;
   userMessage?: string;
   technicalDetails?: Record<string, unknown>;
-}
 
-export class AppError extends Error {
   constructor(
     message: string,
     options: {

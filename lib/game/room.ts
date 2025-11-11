@@ -1,9 +1,7 @@
 import { db } from "@/lib/firebase/client";
 import { fetchPresenceUids, presenceSupported } from "@/lib/firebase/presence";
-import { sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
 import { enqueueFirestoreWrite } from "@/lib/firebase/writeQueue";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { recordProposalWriteMetrics } from "@/lib/metrics/proposalMetrics";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
@@ -11,10 +9,11 @@ import {
   applyPlay,
   evaluateSorted,
   shouldFinishAfterPlay,
+  type OrderState,
 } from "@/lib/game/rules";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
-import { ACTIVE_WINDOW_MS, isActive } from "@/lib/time";
+import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   collection,
@@ -25,7 +24,10 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  type FieldValue,
+  type Timestamp,
 } from "firebase/firestore";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 // 乱数はクライアントで自分の番号計算に使用
 
@@ -49,7 +51,19 @@ async function broadcastNotify(
   }
 }
 
-type DealCandidate = { id: string; uid?: string; lastSeen?: any };
+type DealCandidate = {
+  id: string;
+  uid?: string;
+  lastSeen?: Timestamp | Date | number | FieldValue | null;
+};
+
+type RoomProposalDoc = {
+  proposal?: (string | null | undefined)[];
+  seed?: string | null;
+  updatedAt?: Timestamp | FieldValue | null;
+};
+
+type RoomOrderState = NonNullable<RoomDoc["order"]>;
 
 const PROPOSAL_QUEUE_MIN_INTERVAL_MS = 0;
 
@@ -96,7 +110,7 @@ function normalizeProposal(
   const limited: (string | null)[] = values.slice(0, maxCount).map((value) =>
     typeof value === "string" && value.length > 0 ? value : null
   );
-  while (limited.length > 0 && limited[limited.length - 1] == null) {
+  while (limited.length > 0 && limited[limited.length - 1] === null) {
     limited.pop();
   }
   return limited;
@@ -108,7 +122,7 @@ export function selectDealTargetPlayers(
   now: number
 ): DealCandidate[] {
   const activeByRecency = candidates.filter((p) =>
-    isActive((p as any)?.lastSeen, now, ACTIVE_WINDOW_MS)
+    isActive(p.lastSeen ?? null, now, ACTIVE_WINDOW_MS)
   );
   const fallbackPool =
     activeByRecency.length > 0 ? activeByRecency : candidates;
@@ -126,7 +140,7 @@ export function selectDealTargetPlayers(
 export async function startGame(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
-  const curr: any = snap.data();
+  const curr = snap.data() as RoomDoc | undefined;
   const currentStatus = curr?.status || "waiting";
   // 進行中や終了直後からの誤開始を防止（必ずwaitingからのみ開始）
   if (currentStatus !== "waiting") {
@@ -202,7 +216,14 @@ export async function dealNumbers(
 
   const snap = await getDocs(collection(db!, "rooms", roomId, "players"));
   const all: DealCandidate[] = [];
-  snap.forEach((d) => all.push({ id: d.id, ...(d.data() as any) }));
+  snap.forEach((d) => {
+    const data = d.data() as PlayerDoc | undefined;
+    all.push({
+      id: d.id,
+      uid: typeof data?.uid === "string" ? data.uid : undefined,
+      lastSeen: data?.lastSeen ?? null,
+    });
+  });
   const now = Date.now();
 
   const presenceUids = await presencePromise;
@@ -213,10 +234,9 @@ export async function dealNumbers(
     String(a.uid || a.id).localeCompare(String(b.uid || b.id))
   );
 
-  const eligibleCount = all.filter((candidate) => {
-    const uid = (candidate as any)?.uid;
-    return typeof uid === "string" && uid.trim().length > 0;
-  }).length;
+  const eligibleCount = all.filter(
+    (candidate) => typeof candidate.uid === "string" && candidate.uid.trim().length > 0
+  ).length;
   const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
 
   if (suspectedMismatch) {
@@ -299,7 +319,7 @@ export async function dealNumbers(
 export async function finishRoom(roomId: string, success: boolean) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
-  const curr: any = snap.data();
+  const curr = snap.data() as RoomDoc | undefined;
   const next = nextStatusForEvent(curr?.status || "waiting", {
     type: "FINISH",
   });
@@ -314,7 +334,7 @@ export async function continueAfterFail(roomId: string) {
   // 次ラウンドへ進む前に waiting に戻す（お題/配札はホストの開始操作で行う）
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
-  const curr: any = snap.data();
+  const curr = snap.data() as RoomDoc | undefined;
   // 誤操作防止: reveal/finished 以外では実行不可
   if (curr?.status !== "reveal" && curr?.status !== "finished") {
     throw new Error("進行中は継続できません");
@@ -333,10 +353,8 @@ export async function continueAfterFail(roomId: string) {
     const playersRef = collection(db!, "rooms", roomId, "players");
     const ps = await getDocs(playersRef);
     const batch = writeBatch(db!);
-    let updateCount = 0;
     ps.forEach((d) => {
       batch.update(d.ref, { clue1: "", ready: false, number: null, orderIndex: 0 });
-      updateCount++;
     });
     await batch.commit();
   } catch (e) {
@@ -347,7 +365,7 @@ export async function continueAfterFail(roomId: string) {
 export async function resetRoom(roomId: string) {
   const ref = doc(db!, "rooms", roomId);
   const snap = await getDoc(ref);
-  const curr: any = snap.data();
+  const curr = snap.data() as RoomDoc | undefined;
   const next = nextStatusForEvent(curr?.status || "waiting", { type: "RESET" });
   if (!next) throw new Error("invalid transition: RESET");
   await updateDoc(ref, { status: next, result: null, deal: null, order: null, mvpVotes: {}, lastActiveAt: serverTimestamp() });
@@ -454,7 +472,7 @@ export async function addCardToProposalAtPosition(
             const roomSnap = await tx.get(roomRef);
             const afterRoomGet = readTimestamp();
             if (!roomSnap.exists()) throw new Error("room not found");
-            const room: any = roomSnap.data();
+            const room = roomSnap.data() as RoomDoc;
             if (room.status !== "clue") {
               return { status: "noop" as ProposalWriteResult };
             }
@@ -497,12 +515,14 @@ export async function addCardToProposalAtPosition(
 
             const proposalSnap = await tx.get(proposalDocRef);
             const afterProposalGet = readTimestamp();
-            const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+            const proposalData = proposalSnap.exists()
+              ? (proposalSnap.data() as RoomProposalDoc)
+              : null;
 
             const roomSeed =
-              typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+              typeof room?.deal?.seed === "string" ? room.deal.seed : null;
             const docSeed =
-              typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+              typeof proposalData?.seed === "string" ? proposalData.seed : null;
 
             let current = readProposal(
               proposalData?.proposal ?? room?.order?.proposal
@@ -515,14 +535,14 @@ export async function addCardToProposalAtPosition(
               return { status: "noop" as ProposalWriteResult };
             }
 
-            let next = [...current];
+            const next = [...current];
 
             if (targetIndex === -1) {
               let placed = false;
               const limit = Math.max(next.length, maxCount);
               for (let i = 0; i < limit; i += 1) {
                 if (i >= next.length) next.length = i + 1;
-                if (next[i] == null) {
+                if (next[i] === null) {
                   next[i] = playerId;
                   placed = true;
                   break;
@@ -721,7 +741,7 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);
         if (!roomSnap.exists()) throw new Error("room not found");
-        const room: any = roomSnap.data();
+        const room = roomSnap.data() as RoomDoc;
         if (room.status !== "clue") return;
         if (room?.options?.resolveMode !== "sort-submit") return;
         const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
@@ -732,11 +752,13 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
         const maxCount: number = roundPlayers.length;
         if (maxCount <= 0) return;
         const proposalSnap = await tx.get(proposalDocRef);
-        const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+        const proposalData = proposalSnap.exists()
+          ? (proposalSnap.data() as RoomProposalDoc)
+          : null;
         const roomSeed =
-          typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+          typeof room?.deal?.seed === "string" ? room.deal.seed : null;
         const docSeed =
-          typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+          typeof proposalData?.seed === "string" ? proposalData.seed : null;
         let current = readProposal(
           proposalData?.proposal ?? room?.order?.proposal
         );
@@ -780,7 +802,7 @@ export async function moveCardInProposalToPosition(
       await runTransaction(db!, async (tx) => {
         const roomSnap = await tx.get(roomRef);
         if (!roomSnap.exists()) throw new Error("room not found");
-        const room: any = roomSnap.data();
+        const room = roomSnap.data() as RoomDoc;
         if (room.status !== "clue") return;
         if (room?.options?.resolveMode !== "sort-submit") return;
         const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
@@ -791,11 +813,13 @@ export async function moveCardInProposalToPosition(
         const maxCount: number = roundPlayers.length;
         if (maxCount <= 0) return;
         const proposalSnap = await tx.get(proposalDocRef);
-        const proposalData = proposalSnap.exists() ? (proposalSnap.data() as any) : null;
+        const proposalData = proposalSnap.exists()
+          ? (proposalSnap.data() as RoomProposalDoc)
+          : null;
         const roomSeed =
-          typeof room?.deal?.seed === "string" ? (room.deal.seed as string) : null;
+          typeof room?.deal?.seed === "string" ? room.deal.seed : null;
         const docSeed =
-          typeof proposalData?.seed === "string" ? (proposalData.seed as string) : null;
+          typeof proposalData?.seed === "string" ? proposalData.seed : null;
         let current = readProposal(
           proposalData?.proposal ?? room?.order?.proposal
         );
@@ -842,44 +866,54 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
   const meRef = doc(db!, "rooms", roomId, "players", playerId);
 
-  // 終了判定は配札済みの参加者数（deal.players）に基づくため、presenceは参照しない
-  const presenceCount: number | null = null;
-
   await runTransaction(db!, async (tx) => {
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
+    const room = roomSnap.data() as RoomDoc;
     // clue フェーズ（または legacy playing）でのみ即時判定を受け付ける
-    if (room.status !== "clue" && room.status !== "playing") return;
+    if (room.status !== "clue") return;
     const allowContinue: boolean = !!room?.options?.allowContinueAfterFail;
 
     const meSnap = await tx.get(meRef);
     if (!meSnap.exists()) throw new Error("player not found");
-    const me: any = meSnap.data();
-    const myNum: number | null = me?.number ?? null;
+    const me = meSnap.data() as PlayerDoc | undefined;
+    const myNum: number | null =
+      typeof me?.number === "number" ? me.number : null;
     if (typeof myNum !== "number") throw new Error("number not set");
 
     const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[])
       : null;
     const roundTotal: number | null = roundPlayers ? roundPlayers.length : null;
-    const currentOrder = {
-      list: room?.order?.list || [],
-      lastNumber: room?.order?.lastNumber ?? null,
+    const decidedAtSource = room?.order?.decidedAt ?? null;
+    const decidedAtMs = toMillis(decidedAtSource);
+    const currentOrder: OrderState = {
+      list: Array.isArray(room?.order?.list) ? [...room.order.list] : [],
+      lastNumber:
+        typeof room?.order?.lastNumber === "number"
+          ? room.order.lastNumber
+          : null,
       failed: !!room?.order?.failed,
-      failedAt: room?.order?.failedAt ?? null,
-      decidedAt: room?.order?.decidedAt || serverTimestamp(),
-      total: roundTotal ?? room?.order?.total ?? null,
+      failedAt:
+        typeof room?.order?.failedAt === "number"
+          ? room.order.failedAt
+          : null,
+      decidedAt: decidedAtMs > 0 ? decidedAtMs : Date.now(),
+      total:
+        typeof roundTotal === "number"
+          ? roundTotal
+          : typeof room?.order?.total === "number"
+          ? room.order.total
+          : undefined,
     };
 
     if (currentOrder.list.includes(playerId)) return; // 二重出し防止
     if (roundPlayers && !roundPlayers.includes(playerId)) return; // ラウンド対象外
 
     const { next } = applyPlay({
-      order: currentOrder as any,
+      order: currentOrder,
       playerId,
       myNum,
-      allowContinue,
     });
 
     const shouldFinish = shouldFinishAfterPlay({
@@ -914,7 +948,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     const roomRef = doc(_db, "rooms", roomId);
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new Error("room not found");
-    const room: any = roomSnap.data();
+    const room = roomSnap.data() as RoomDoc;
     const mode = normalizeResolveMode(room?.options?.resolveMode);
     const status: string = room?.status || "waiting";
     if (mode !== "sort-submit")
@@ -971,17 +1005,18 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     }
 
     if (!numbersResolved && room?.order?.numbers) {
-      const existing =
-        room.order.numbers as Record<string, number | null | undefined>;
-      numbersResolved = list.every((pid) => pid in existing);
-      if (numbersResolved) {
-        numbers = list.reduce<Record<string, number | null | undefined>>(
-          (acc, pid) => {
-            acc[pid] = existing[pid] ?? null;
-            return acc;
-          },
-          {}
-        );
+      const existing = room.order.numbers;
+      if (existing) {
+        numbersResolved = list.every((pid) => pid in existing);
+        if (numbersResolved) {
+          numbers = list.reduce<Record<string, number | null | undefined>>(
+            (acc, pid) => {
+              acc[pid] = existing[pid] ?? null;
+              return acc;
+            },
+            {}
+          );
+        }
       }
     }
 
@@ -989,7 +1024,8 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       const fetched: Record<string, number | null | undefined> = {};
       for (const pid of list) {
         const pSnap = await tx.get(doc(_db, "rooms", roomId, "players", pid));
-        fetched[pid] = (pSnap.data() as any)?.number;
+        const playerData = pSnap.data() as PlayerDoc | undefined;
+        fetched[pid] = playerData?.number;
       }
       numbers = fetched;
     }
@@ -997,14 +1033,15 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     // サーバー側でも判定を行い、結果を保存
     const judgmentResult = evaluateSorted(list, numbers);
 
-    const order = {
+    const order: RoomOrderState = {
       list,
       numbers, // プレイヤー数字を保存
       decidedAt: serverTimestamp(),
       total: expected,
       failed: !judgmentResult.success,
       failedAt: judgmentResult.failedAt,
-    } as any;
+      lastNumber: judgmentResult.last ?? null,
+    };
 
     // アニメーションを挟むため status は一旦 "reveal" にする
     tx.update(roomRef, {
@@ -1023,7 +1060,7 @@ export async function finalizeReveal(roomId: string) {
   await runTransaction(_db, async (tx) => {
     const snap = await tx.get(roomRef);
     if (!snap.exists()) return;
-    const room: any = snap.data();
+    const room = snap.data() as RoomDoc;
     if (room.status !== "reveal") return; // 予期しない呼び出しは無視
     tx.update(roomRef, { status: "finished" });
   });

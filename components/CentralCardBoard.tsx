@@ -16,7 +16,9 @@ import {
   useSensor,
   useSensors,
   type CollisionDetection,
+  type Collision,
   type DropAnimation,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
@@ -40,11 +42,7 @@ import {
   scheduleAddCardToProposalAtPosition,
   scheduleMoveCardInProposalToPosition,
 } from "@/lib/game/proposalScheduler";
-import {
-  finalizeReveal,
-  removeCardFromProposal,
-  submitSortedOrder,
-} from "@/lib/game/room";
+import { finalizeReveal, removeCardFromProposal } from "@/lib/game/room";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
@@ -168,7 +166,7 @@ const boardCollisionDetection: CollisionDetection = (args) => {
     y: collisionRect.top + collisionRect.height / 2,
   };
 
-  const distances: { id: unknown; value: number }[] = [];
+  const distances: { id: UniqueIdentifier; value: number }[] = [];
   droppableRects.forEach((rect, id) => {
     const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     const dx = dragCenter.x - dropCenter.x;
@@ -180,11 +178,12 @@ const boardCollisionDetection: CollisionDetection = (args) => {
 
   const best = distances[0];
   if (best) {
-    const rect = droppableRects.get(best.id as any);
+    const rect = droppableRects.get(best.id);
     if (rect) {
       const dynamicThreshold = Math.max(60, Math.min(140, rect.width * 0.6));
       if (best.value <= dynamicThreshold) {
-        return [{ id: best.id, data: { value: best.value } } as any];
+        const collision: Collision = { id: best.id, data: { value: best.value } };
+        return [collision];
       }
     }
   }
@@ -600,7 +599,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   failed,
   proposal,
   resolveMode = "sort-submit",
-  isHost,
+  isHost: _isHost,
   orderNumbers = {},
   orderSnapshots = null,
   displayMode = "full",
@@ -698,19 +697,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return map;
   }, [players, orderList, proposal, orderSnapshots]);
 
+  const orderListKey = useMemo(
+    () => (Array.isArray(orderList) ? orderList.join(",") : ""),
+    [orderList]
+  );
+  const proposalKey = useMemo(
+    () => (Array.isArray(proposal) ? proposal.join(",") : ""),
+    [proposal]
+  );
+  const orderListLength = Array.isArray(orderList) ? orderList.length : 0;
+
   const placedIds = useMemo(
     () => new Set<string>([...(orderList || []), ...(proposal || [])]),
-    [orderList?.join(","), proposal?.join(",")]
+    [orderList, proposal]
   );
 
   // 在室プレイヤーのみを許可（presence + players）
+  const eligibleIdsKey = useMemo(
+    () => (Array.isArray(eligibleIds) ? eligibleIds.join(",") : ""),
+    [eligibleIds]
+  );
   const eligibleIdSet = useMemo(() => {
     const set = new Set<string>();
+    if (!eligibleIdsKey && (!eligibleIds || eligibleIds.length === 0)) {
+      return set;
+    }
     (eligibleIds || []).forEach((id) => {
       if (playerMap.has(id)) set.add(id);
     });
     return set;
-  }, [Array.isArray(eligibleIds) ? eligibleIds.join(",") : "_", playerMap]);
+  }, [eligibleIds, eligibleIdsKey, playerMap]);
 
   const me = useMemo(() => playerMap.get(meId), [playerMap, meId]);
   const hasNumber = useMemo(() => !!me?.number, [me?.number]);
@@ -806,14 +822,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     (options?: { immediate?: boolean }) => {
       const immediate = options?.immediate ?? false;
       if (immediate || typeof window === "undefined") {
-        if (typeof window !== "undefined" && magnetFlushFrameRef.current != null) {
+        if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
           window.cancelAnimationFrame(magnetFlushFrameRef.current);
         }
         magnetFlushFrameRef.current = null;
         flushMagnetUpdates();
         return;
       }
-      if (magnetFlushFrameRef.current != null) return;
+      if (magnetFlushFrameRef.current !== null) return;
       magnetFlushFrameRef.current = window.requestAnimationFrame(() => {
         magnetFlushFrameRef.current = null;
         flushMagnetUpdates();
@@ -864,7 +880,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         return;
       }
 
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
       }
@@ -882,7 +898,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     (nextId: string | null) => {
       const projected = getProjectedMagnetTarget();
       if (projected === nextId) return;
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
       }
@@ -908,11 +924,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   useEffect(() => {
     return () => {
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current != null) {
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
         window.clearTimeout(magnetHighlightTimeoutRef.current);
         magnetHighlightTimeoutRef.current = null;
       }
-      if (typeof window !== "undefined" && magnetFlushFrameRef.current != null) {
+      if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
         window.cancelAnimationFrame(magnetFlushFrameRef.current);
         magnetFlushFrameRef.current = null;
       }
@@ -1029,8 +1045,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
     roomId,
     roomStatus,
-    resolveMode: (resolveMode || undefined) as any,
-    orderListLength: orderList?.length || 0,
+    resolveMode: resolveMode ?? undefined,
+    orderListLength,
     orderData:
       orderList && orderNumbers
         ? {
@@ -1064,7 +1080,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       (proposal as (string | null)[]).filter((id): id is string => typeof id === "string" && id.length > 0)
     );
     setOptimisticReturningIds((prev) => prev.filter((id) => proposalSet.has(id)));
-  }, [proposal?.join(","), optimisticReturningIds.length]);
+  }, [proposal, proposalKey, optimisticReturningIds.length]);
 
   useEffect(() => {
     if (roomStatus !== "clue") {
@@ -1127,7 +1143,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         notify({ title: "カードを戻せませんでした", type: "error", duration: 1200 });
       }
     },
-    [roomId, updatePendingState, playCardPlace, playDropInvalid, notify, logError]
+    [roomId, updatePendingState, playCardPlace, playDropInvalid]
   );
 
   const finishedToastRef = useRef(false);
@@ -1147,7 +1163,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [roomStatus, realtimeResult?.failedAt, roomId]);
 
-  const orderListSet = useMemo(() => new Set(orderList || []), [orderList?.join(",")]);
+  const orderListSet = useMemo(() => {
+    if (!orderListKey && (!orderList || orderList.length === 0)) {
+      return new Set<string>();
+    }
+    return new Set(orderList || []);
+  }, [orderList, orderListKey]);
 
   useEffect(() => {
     if (!orderList || orderList.length === 0) return;
@@ -1157,7 +1178,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         return !orderListSet.has(id);
       })
     );
-  }, [orderListSet, orderList?.length, updatePendingState]);
+  }, [orderList, orderListKey, orderListSet, updatePendingState]);
 
   useEffect(() => {
     if (!proposal || proposal.length === 0) return;
@@ -1168,7 +1189,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         return !present.has(id);
       })
     );
-  }, [proposal?.join(","), updatePendingState]);
+  }, [proposal, proposalKey, updatePendingState]);
 
   useEffect(() => {
     const onVis = () => {
@@ -1208,7 +1229,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           orderList={orderList}
           pending={pending}
           proposal={proposal}
-          resolveMode={(resolveMode || undefined) as any}
+          resolveMode={resolveMode}
           roomStatus={roomStatus}
           revealIndex={revealIndex}
           revealAnimating={revealAnimating}
@@ -1235,6 +1256,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
+    if (!orderListKey && !proposalKey) {
+      return [];
+    }
+
     const normalizedOrder = (orderList || []).map((id) =>
       typeof id === "string" && id.length > 0 ? id : null
     );
@@ -1261,7 +1286,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
 
     return [];
-  }, [roomStatus, orderList?.join(","), proposal?.join(","), eligibleIdSet]);
+  }, [roomStatus, orderList, proposal, orderListKey, proposalKey, eligibleIdSet]);
 
   const proposalLength = activeProposal.length;
 
@@ -1273,10 +1298,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const slotCountStatic = useMemo(() => {
     if (typeof slotCount === "number" && slotCount > 0) return slotCount;
     if (roomStatus === "reveal" || roomStatus === "finished") {
-      return (orderList || []).length || 0;
+      return orderListLength;
     }
     return Math.max(proposalLength, availableEligibleCount);
-  }, [slotCount, roomStatus, orderList?.length, proposalLength, availableEligibleCount]);
+  }, [slotCount, roomStatus, orderListLength, proposalLength, availableEligibleCount]);
 
   const isGameActive = useMemo(
     () => roomStatus === "clue" || roomStatus === "reveal" || roomStatus === "finished",
@@ -1306,7 +1331,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   const handleSlotEnter = useCallback(
-    (index: number) => {
+    (_index: number) => {
       if (!isOver) {
         setIsOver(true);
       }
@@ -1320,50 +1345,27 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (resolveMode === "sort-submit" && roomStatus === "reveal") {
-      const n = (orderList || []).length;
-      if (n > 0) {
-        const total = REVEAL_FIRST_DELAY + Math.max(0, n - 1) * REVEAL_STEP_DELAY + REVEAL_LINGER + 200;
-        if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
-        fallbackTimerRef.current = setTimeout(() => {
-          finalizeReveal(roomId).catch(() => void 0);
-        }, total);
-        return () => {
-          if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
-          fallbackTimerRef.current = null;
-        };
+    const clearPendingTimer = () => {
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
       }
-    }
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, [roomStatus, resolveMode, orderList?.length, roomId]);
+    };
 
-  const proposedCount = Array.isArray(proposal)
-    ? (proposal as (string | null)[]).filter(Boolean).length
-    : 0;
-  const canConfirm =
-    resolveMode === "sort-submit" &&
-    roomStatus === "clue" &&
-    proposedCount === slotCountDragging &&
-    slotCountDragging > 0 &&
-    !!isHost;
-
-  const onConfirm = useCallback(async () => {
-    if (!canConfirm) return;
-    try {
-      await submitSortedOrder(roomId, (proposal as (string | null)[]).filter(Boolean) as string[]);
-    } catch (error: any) {
-      notify({
-        title: "並びの確定に失敗しました",
-        description:
-          error?.message ||
-          "提出枚数やカードの内容を確認して、もう一度お試しください。",
-        type: "error",
-      });
+    if (resolveMode === "sort-submit" && roomStatus === "reveal" && orderListLength > 0) {
+      const total =
+        REVEAL_FIRST_DELAY + Math.max(0, orderListLength - 1) * REVEAL_STEP_DELAY + REVEAL_LINGER + 200;
+      clearPendingTimer();
+      fallbackTimerRef.current = setTimeout(() => {
+        finalizeReveal(roomId).catch(() => void 0);
+      }, total);
+      return clearPendingTimer;
     }
-  }, [canConfirm, roomId, proposal]);
+
+    clearPendingTimer();
+    return clearPendingTimer;
+  }, [roomStatus, resolveMode, orderListLength, roomId]);
+
 
   const magnetAwareDragMove = useCallback(
     (event: DragMoveEvent) => {
@@ -1484,7 +1486,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             const message =
               error instanceof Error
                 ? error.message
-                : error != null
+                : error !== null && error !== undefined
                   ? String(error)
                   : "";
             notify({
@@ -1522,7 +1524,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             const message =
               error instanceof Error
                 ? error.message
-                : error != null
+                : error !== null && error !== undefined
                   ? String(error)
                   : "";
             notify({
@@ -1692,7 +1694,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         {isRevealing
           ? `進行状況: ${revealIndex} / ${(orderList || []).length}`
           : roomStatus === "finished"
-          ? realtimeResult?.failedAt != null
+          ? realtimeResult?.failedAt !== null && realtimeResult?.failedAt !== undefined
             ? `結果: ${realtimeResult.failedAt}番目で失敗`
             : "結果: 成功"
           : ""}
@@ -1803,4 +1805,3 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 };
 
 export default CentralCardBoard;
-

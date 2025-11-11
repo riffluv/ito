@@ -19,6 +19,17 @@ import {
 } from "@/lib/topics";
 import { doc, updateDoc } from "firebase/firestore";
 
+type RoomStatus = "waiting" | "clue" | "reveal" | "finished" | string;
+
+interface RoomSnapshot {
+  status?: RoomStatus;
+  topic?: string | null;
+  topicBox?: string | null;
+}
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error ?? "");
+
 const PLAYER_RESET_BATCH_SIZE = 400;
 
 function chunkArray<T>(items: readonly T[], size: number): T[][] {
@@ -65,7 +76,7 @@ export const topicControls = {
         picked ? `お題: ${picked}` : undefined,
         `topic:select:${type}:${picked ?? "none"}`
       );
-    } catch (error: any) {
+    } catch (error) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("お題選択");
         notify({
@@ -76,7 +87,7 @@ export const topicControls = {
       } else {
         notify({
           title: "カテゴリ選択に失敗",
-          description: error?.message || String(error),
+          description: getErrorMessage(error),
           type: "error",
         });
       }
@@ -103,7 +114,7 @@ export const topicControls = {
       try {
         await sendSystemMessage(roomId, `📝 お題を変更: ${value}`);
       } catch {}
-    } catch (error: any) {
+    } catch (error) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("カスタムお題設定");
         notify({
@@ -112,7 +123,11 @@ export const topicControls = {
           type: "error",
         });
       } else {
-        notify({ title: "お題設定に失敗", description: error?.message || String(error), type: "error" });
+        notify({
+          title: "お題設定に失敗",
+          description: getErrorMessage(error),
+          type: "error",
+        });
       }
     }
   },
@@ -125,7 +140,7 @@ export const topicControls = {
       const roomRef = doc(db!, "rooms", roomId);
       const snap = await getDoc(roomRef);
       if (snap.exists()) {
-        const status = (snap.data() as any)?.status;
+        const status = (snap.data() as RoomSnapshot | undefined)?.status;
         if (status === "clue" || status === "reveal") {
           throw new Error("進行中はリセットできません");
         }
@@ -185,7 +200,7 @@ export const topicControls = {
       }
 
       await broadcastNotify(roomId, "success", "ゲームをリセットしました", undefined, "topic:reset");
-    } catch (error: any) {
+    } catch (error) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("ゲームリセット");
         notify({
@@ -194,20 +209,24 @@ export const topicControls = {
           type: "error",
         });
       } else {
-        notify({ title: "ゲームリセットに失敗", description: error?.message || String(error), type: "error" });
+        notify({
+          title: "ゲームリセットに失敗",
+          description: getErrorMessage(error),
+          type: "error",
+        });
       }
     }
   },
 
   // 現在のカテゴリでお題をシャッフル
-  async shuffleTopic(roomId: string, currentCategory: string | null) {
+  async shuffleTopic(roomId: string, currentCategory: TopicType | null) {
     if (!currentCategory) {
       notify({ title: "カテゴリが選択されていません", type: "warning" });
       return;
     }
     try {
       const sections = await getTopicSectionsCached();
-      const pool = getTopicsByType(sections, currentCategory as TopicType);
+      const pool = getTopicsByType(sections, currentCategory);
       const picked = pickOne(pool) || null;
       await updateDoc(doc(db!, "rooms", roomId), { topic: picked });
       await broadcastNotify(
@@ -217,10 +236,10 @@ export const topicControls = {
         picked ? `新しいお題: ${picked}` : undefined,
         `topic:shuffle:${currentCategory}:${picked ?? "none"}`
       );
-    } catch (error: any) {
+    } catch (error) {
       notify({
         title: "シャッフル失敗",
-        description: error?.message || String(error),
+        description: getErrorMessage(error),
         type: "error",
       });
     }
@@ -237,10 +256,10 @@ export const topicControls = {
         `対象プレイヤー: ${assignedCount}人`,
         `numbers:deal:${assignedCount}`
       );
-    } catch (error: any) {
+    } catch (error) {
       notify({
         title: "数字の配布に失敗",
-        description: error?.message || String(error),
+        description: getErrorMessage(error),
         type: "error",
       });
     }

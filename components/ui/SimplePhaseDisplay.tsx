@@ -1,7 +1,6 @@
 "use client";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Text, chakra } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
-import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import Tooltip from "@/components/ui/Tooltip";
@@ -63,8 +62,8 @@ export function SimplePhaseDisplay({
   topicText = null,
 }: SimplePhaseDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const iconRef: any = useRef(null);
+  const textRef = useRef<HTMLParagraphElement | null>(null);
+  const iconRef = useRef<HTMLSpanElement | null>(null);
   const topicRef = useRef<HTMLDivElement>(null);
   const previousStatus = useRef<string>(roomStatus);
   const previousCanStart = useRef<boolean>(canStartSorting);
@@ -72,16 +71,48 @@ export function SimplePhaseDisplay({
 
   const { text, icon } = getPhaseInfo(roomStatus, canStartSorting);
 
-  const tlRef = useRef<any>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
 
   // フェーズ変更時のGSAPアニメーション
   useEffect(() => {
-    if (!containerRef.current || !textRef.current || !iconRef.current) return;
-
     const container = containerRef.current;
     const textEl = textRef.current;
     const iconEl = iconRef.current;
+    const topicEl = topicRef.current;
+
+    const cleanup = () => {
+      try {
+        if (tlRef.current) {
+          tlRef.current.kill();
+          tlRef.current = null;
+        }
+        if (container) {
+          gsap.killTweensOf(container);
+          gsap.set(container, {
+            clearProps: "transform,opacity,x,y,rotation,scale",
+          });
+        }
+        if (textEl) {
+          gsap.killTweensOf(textEl);
+          gsap.set(textEl, { clearProps: "opacity,y,scale" });
+        }
+        if (iconEl) {
+          gsap.killTweensOf(iconEl);
+          gsap.set(iconEl, { clearProps: "rotation,opacity,scale" });
+        }
+        if (topicEl) {
+          gsap.killTweensOf(topicEl);
+          gsap.set(topicEl, { clearProps: "scale,y" });
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (!container || !textEl || !iconEl) {
+      return cleanup;
+    }
 
     // 初回表示の場合 または 状態変更がない場合
     if (
@@ -187,34 +218,7 @@ export function SimplePhaseDisplay({
     previousStatus.current = roomStatus;
     previousCanStart.current = canStartSorting;
 
-    return () => {
-      try {
-        if (tlRef.current) {
-          tlRef.current.kill();
-          tlRef.current = null;
-        }
-        if (containerRef.current) {
-          gsap.killTweensOf(containerRef.current);
-          gsap.set(containerRef.current, {
-            clearProps: "transform,opacity,x,y,rotation,scale",
-          });
-        }
-        if (textRef.current) {
-          gsap.killTweensOf(textRef.current);
-          gsap.set(textRef.current, { clearProps: "opacity,y,scale" });
-        }
-        if (iconRef.current) {
-          gsap.killTweensOf(iconRef.current);
-          gsap.set(iconRef.current, { clearProps: "rotation,opacity,scale" });
-        }
-        if (topicRef.current) {
-          gsap.killTweensOf(topicRef.current);
-          gsap.set(topicRef.current, { clearProps: "scale,y" });
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
+    return cleanup;
   }, [roomStatus, canStartSorting, text, icon, prefersReduced]);
 
   // お題テキスト変更時のぴょーん！アニメーション
@@ -296,13 +300,17 @@ export function SimplePhaseDisplay({
     >
       {/* フェーズアナウンス（シームレス・大きく・真っ白） */}
       <Box display="flex" alignItems="center" gap={{ base: "9px", md: "11px" }}>
-        <Text as="span" ref={iconRef} fontSize={{ base: "lg", md: "xl" }} display="inline-block" flexShrink={0}
+        <chakra.span
+          ref={iconRef}
+          fontSize={{ base: "lg", md: "xl" }}
+          display="inline-block"
+          flexShrink={0}
           css={{
             filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.9)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7))",
           }}
         >
           {icon}
-        </Text>
+        </chakra.span>
         <Text
           ref={textRef}
           fontSize={{ base: "sm", md: "md" }}

@@ -1,8 +1,6 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Avatar, Box, HStack, Stack, Text } from "@chakra-ui/react";
-import { CheckCircle2 } from "lucide-react";
+import { Box, Text } from "@chakra-ui/react";
 import { memo } from "react";
 
 export const Participants = memo(function Participants({

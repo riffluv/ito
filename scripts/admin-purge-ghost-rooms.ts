@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
   管理スクリプト: ゴースト部屋を検出して削除する
 
@@ -13,6 +14,49 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getDatabase } from "firebase-admin/database";
 import { getFirestore } from "firebase-admin/firestore";
+
+type RoomStatus = "waiting" | "completed" | string;
+type TimestampLike =
+  | { toMillis?: () => number }
+  | Date
+  | number
+  | null
+  | undefined;
+
+interface RoomSnapshot {
+  status?: RoomStatus;
+  name?: string;
+  lastActiveAt?: TimestampLike;
+  createdAt?: TimestampLike;
+}
+
+type ConnectionInfo = { ts?: number | null } | null | undefined;
+type ConnectionMap = Record<string, ConnectionInfo | undefined>;
+type PresenceSnapshot = Record<string, ConnectionMap | undefined>;
+
+const toMillis = (value: TimestampLike): number => {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "object" && typeof value.toMillis === "function") {
+    try {
+      return value.toMillis() ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+};
+
+const isConnectionOnline = (
+  connection: ConnectionInfo,
+  nowLocal: number,
+  staleMs: number
+): boolean => {
+  if (!connection || typeof connection.ts !== "number") return false;
+  if (connection.ts - nowLocal > staleMs) return false;
+  return nowLocal - connection.ts <= staleMs;
+};
 
 async function main() {
   if (!getApps().length) {
@@ -39,24 +83,26 @@ async function main() {
 
   for (const roomDoc of roomsSnap.docs) {
     try {
-      const room = roomDoc.data() as any;
+      const room = roomDoc.data() as RoomSnapshot;
       const roomId = roomDoc.id;
 
       // presence count from RTDB
       const presSnap = await rtdb.ref(`${PRESENCE_ROOT}/${roomId}`).get();
       let presenceCount = 0;
       if (presSnap.exists()) {
-        const val = presSnap.val() as Record<string, any>;
-        for (const uid of Object.keys(val)) {
-          const conns = val[uid] || {};
+        const val = presSnap.val() as PresenceSnapshot;
+        if (val) {
           const nowLocal = Date.now();
-          const online = Object.values(conns).some((c: any) => {
-            const ts = typeof c?.ts === "number" ? c.ts : 0;
-            if (!ts) return false;
-            if (ts - nowLocal > STALE_MS) return false;
-            return nowLocal - ts <= STALE_MS;
+          Object.keys(val).forEach((uid) => {
+            const conns = val[uid] ?? {};
+            const connectionValues = Object.values(conns ?? {});
+            const online = connectionValues.some((connection) =>
+              isConnectionOnline(connection, nowLocal, STALE_MS)
+            );
+            if (online) {
+              presenceCount += 1;
+            }
           });
-          if (online) presenceCount++;
         }
       }
 
@@ -69,24 +115,8 @@ async function main() {
       const playersCount = playersSnap.size;
 
       // newer timestamp
-      const lastActive = room?.lastActiveAt;
-      const createdAt = room?.createdAt;
-      const lastActiveMs =
-        lastActive && typeof lastActive.toMillis === "function"
-          ? lastActive.toMillis()
-          : lastActive instanceof Date
-            ? lastActive.getTime()
-            : typeof lastActive === "number"
-              ? lastActive
-              : 0;
-      const createdMs =
-        createdAt && typeof createdAt.toMillis === "function"
-          ? createdAt.toMillis()
-          : createdAt instanceof Date
-            ? createdAt.getTime()
-            : typeof createdAt === "number"
-              ? createdAt
-              : 0;
+      const lastActiveMs = toMillis(room?.lastActiveAt);
+      const createdMs = toMillis(room?.createdAt);
       const newerMs = Math.max(lastActiveMs || 0, createdMs || 0);
 
       // decide

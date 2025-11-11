@@ -332,9 +332,7 @@ export function CardFaceBack({
           whiteSpace="nowrap"
 
           letterSpacing={
-
-            typeof number === "number" && String(number).length >= 3 ? ("-0.8px" as any) : undefined
-
+            typeof number === "number" && String(number).length >= 3 ? "-0.8px" : undefined
           }
 
         >

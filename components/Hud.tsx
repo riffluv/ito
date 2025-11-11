@@ -26,19 +26,15 @@ export type HudProps = {
 export function Hud({
   roomName,
   phase,
-  activeCount = 0,
-  totalCount = 0,
-  remainMs,
-  totalMs,
-  hostPrimary,
-  isHost = false,
+  activeCount: _activeCount = 0,
+  totalCount: _totalCount = 0,
+  remainMs: _remainMs,
+  totalMs: _totalMs,
+  hostPrimary: _hostPrimary,
+  isHost: _isHost = false,
   onOpenSettings,
   onLeaveRoom,
 }: HudProps) {
-  const pct =
-    totalMs && remainMs != null && totalMs > 0
-      ? Math.max(0, Math.min(100, (remainMs / totalMs) * 100))
-      : undefined;
   const phaseLabel = {
     waiting: "待機",
     clue: "入力",

@@ -23,6 +23,12 @@ type LayerRecord = {
   refCount: number;
 };
 
+type BatchCapableRenderer = {
+  batch?: {
+    setMaxTextures?: (count: number) => void;
+  };
+};
+
 interface PixiHudContextValue {
   app: Application | null;
   registerLayer: (name: string, options?: LayerOptions) => Container | null;
@@ -56,14 +62,15 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   }, []);
 
   useEffect(() => {
-    if (!hostRef.current) {
-      return;
+    const host = hostRef.current;
+    if (!host) {
+      return () => {};
     }
 
     let disposed = false;
     let resizeObserver: ResizeObserver | null = null;
-    const host = hostRef.current;
     const pixiApp = new Application();
+    const layerStore = layersRef.current;
 
     const init = async () => {
       try {
@@ -93,11 +100,13 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       pixiApp.renderer.events.cursorStyles.default = "default";
 
       // バッチレンダリング最適化
-      if ('batch' in pixiApp.renderer && typeof (pixiApp.renderer as any).batch?.setMaxTextures === 'function') {
+      const batchController =
+        (pixiApp.renderer as typeof pixiApp.renderer & BatchCapableRenderer).batch;
+      if (batchController && typeof batchController.setMaxTextures === "function") {
         try {
-          (pixiApp.renderer as any).batch.setMaxTextures(16); // デフォルト8から倍増
-        } catch (e) {
-          console.warn("[PixiHudStage] batch.setMaxTextures not available", e);
+          batchController.setMaxTextures(16); // デフォルト8から倍増
+        } catch (error) {
+          console.warn("[PixiHudStage] batch.setMaxTextures not available", error);
         }
       }
 
@@ -134,7 +143,8 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
                 traceAction("warmup.pixi");
               } catch (e) {
                 console.warn("[PixiHudStage] warmup render failed", e);
-                traceError("warmup.pixi", e as any);
+                const err = e instanceof Error ? e : new Error(String(e));
+                traceError("warmup.pixi", err);
               }
             })
           );
@@ -152,10 +162,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         resizeObserver.disconnect();
         resizeObserver = null;
       }
-      layersRef.current.forEach(({ container }) => {
+      layerStore.forEach(({ container }) => {
         safeDestroyContainer(container);
       });
-      layersRef.current.clear();
+      layerStore.clear();
       setApp(null);
 
       if (appRef.current) {
@@ -167,7 +177,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         appRef.current = null;
       }
     };
-  }, []);
+  }, [safeDestroyContainer]);
 
   const registerLayer = useCallback((name: string, options?: LayerOptions) => {
     const currentApp = appRef.current;
@@ -271,7 +281,7 @@ export function usePixiHudLayer(name: string, options?: LayerOptions) {
   useEffect(() => {
     if (!app) {
       setContainer(null);
-      return;
+      return () => {};
     }
     const layer = registerLayer(name, options);
     setContainer(layer);

@@ -181,13 +181,17 @@ export function InputModal({
 
   // Pixi背景の描画とDOM同期
   useEffect(() => {
-    if (!isOpen || !pixiContainer) {
-      // モーダルが閉じられたらPixiリソースを破棄
+    const destroyGraphics = () => {
       if (pixiGraphicsRef.current) {
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
-      return;
+    };
+
+    if (!isOpen || !pixiContainer) {
+      // モーダルが閉じられたらPixiリソースを破棄
+      destroyGraphics();
+      return destroyGraphics;
     }
 
     // Graphicsオブジェクトを作成
@@ -197,12 +201,7 @@ export function InputModal({
     pixiGraphicsRef.current = graphics;
 
     // クリーンアップ
-    return () => {
-      if (pixiGraphicsRef.current) {
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-    };
+    return destroyGraphics;
   }, [isOpen, pixiContainer]);
 
   // DOM要素とPixiコンテナの位置・サイズ同期

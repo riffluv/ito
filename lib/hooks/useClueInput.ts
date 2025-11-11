@@ -100,7 +100,9 @@ export function useClueInput({
   }, [ready, inputRef]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return undefined;
+    }
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (shouldFocusClueInput(event, clueEditable)) {
         event.preventDefault();
@@ -122,7 +124,7 @@ export function useClueInput({
         message: "連想ワードを保存しました",
         tone: "success",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("連想ワード記録");
         notify({
@@ -133,10 +135,12 @@ export function useClueInput({
           type: "error",
         });
       } else {
+        const message =
+          error instanceof Error ? error.message : String(error ?? "unknown");
         notify({
           id: toastIds.clueSaveError(roomId),
           title: "記録に失敗しました",
-          description: error?.message,
+          description: message,
           type: "error",
         });
       }
@@ -152,11 +156,13 @@ export function useClueInput({
         message: "連想ワードをクリアしました",
         tone: "info",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : String(error ?? "unknown");
       notify({
         id: toastIds.clueClearError(roomId),
         title: "クリアに失敗しました",
-        description: error?.message,
+        description: message,
         type: "error",
       });
     }

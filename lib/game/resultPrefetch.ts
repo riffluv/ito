@@ -12,7 +12,7 @@ const sortedRevealCache = new Map<string, SortedRevealCacheEntry>();
 
 function normalizeNumberValue(value: number | null | undefined): string {
   if (typeof value === "number") return String(value);
-  return value == null ? "null" : "invalid";
+  return value === null || value === undefined ? "null" : "invalid";
 }
 
 function createSignature(

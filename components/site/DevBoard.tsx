@@ -1,7 +1,6 @@
 "use client";
 import { Box, Heading, HStack, Text, VStack } from "@chakra-ui/react";
 import { useBulletin } from "@/lib/hooks/useBulletin";
-import { firebaseEnabled } from "@/lib/firebase/client";
 
 
 export default function DevBoard() {
@@ -38,7 +37,7 @@ export default function DevBoard() {
                   {p.title}
                 </Text>
                 <Text fontSize="xs" color="fgSubtle">
-                  {p.createdAt ? new Date(p.createdAt as any).toLocaleString() : "-"}
+                  {p.createdAt ? new Date(p.createdAt).toLocaleString() : "-"}
                 </Text>
               </HStack>
               <Text fontSize="sm" color="fgMuted" whiteSpace="pre-wrap">

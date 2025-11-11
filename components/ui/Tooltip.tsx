@@ -8,7 +8,7 @@ export interface TooltipProps
   showArrow?: boolean;
   portalled?: boolean;
   portalRef?: React.RefObject<HTMLElement>;
-  contentProps?: any;
+  contentProps?: React.ComponentProps<typeof ChakraTooltip.Content>;
   disabled?: boolean;
 }
 

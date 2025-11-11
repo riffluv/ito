@@ -20,7 +20,7 @@ export function deriveSpectatorFlags({
   isMember,
   hasOptimisticSeat,
   seatAcceptanceActive,
-  seatRequestPending,
+  seatRequestPending: _seatRequestPending,
   joinStatus,
   loading,
 }: DeriveSpectatorFlagsInput): SpectatorRoleFlags {

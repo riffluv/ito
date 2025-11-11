@@ -19,8 +19,11 @@ import {
   set,
   update,
   type Database,
+  type DataSnapshot,
 } from "firebase/database";
 import type { Unsubscribe } from "firebase/auth";
+
+type PresenceTimestamp = number | ReturnType<typeof serverTimestamp> | null;
 
 // ルーム配下: presence/<roomId>/<uid>/<connId> = { online: true, ts }
 // 同一uidの複数タブでも衝突しないよう、接続単位で管理する
@@ -30,11 +33,11 @@ const CONN_PATH = (roomId: string, uid: string, connId: string) =>
 
 export type PresenceConn = {
   online?: boolean;
-  ts?: any;
-  offlineAt?: any;
-  connectedAt?: any;
+  ts?: PresenceTimestamp;
+  offlineAt?: PresenceTimestamp;
+  connectedAt?: PresenceTimestamp;
   swVersion?: string | null;
-  swReadyAt?: any;
+  swReadyAt?: PresenceTimestamp;
 };
 export type PresenceUserMap = Record<string, PresenceConn>; // connId -> PresenceConn
 export type PresenceRoomMap = Record<string, PresenceUserMap>; // uid -> PresenceUserMap
@@ -54,13 +57,13 @@ const toNumber = (value: unknown): number =>
   typeof value === "number" && Number.isFinite(value) ? value : 0;
 
 export function isPresenceConnectionActive(
-  conn: PresenceConn | Record<string, any> | null | undefined,
+  conn: PresenceConn | Record<string, unknown> | null | undefined,
   now: number
 ): boolean {
   if (!conn) return false;
-  const onlineFlag = (conn as PresenceConn | Record<string, any>)?.online;
-  if (onlineFlag === false) return false;
-  const offlineAt = toNumber((conn as any)?.offlineAt);
+  const record = conn as PresenceConn;
+  if (record.online === false) return false;
+  const offlineAt = toNumber(record.offlineAt);
   if (offlineAt && now - offlineAt > PRESENCE_STALE_MS * 2) {
     return false;
   }
@@ -84,7 +87,7 @@ async function cleanupResidualConnections(
       if (keepConnId && connId === keepConnId) continue;
       if (!payload) continue;
       if (payload.online === true) continue;
-      const offlineAt = toNumber((payload as any)?.offlineAt);
+      const offlineAt = toNumber(payload.offlineAt);
       if (!offlineAt || now - offlineAt <= PRESENCE_STALE_MS * 2) continue;
       const targetRef = ref(db, CONN_PATH(roomId, uid, connId));
       tasks.push(remove(targetRef).catch((err) => {
@@ -205,16 +208,18 @@ export async function attachPresence(roomId: string, uid: string) {
     heartbeatInFlight = true;
     const meConnRef = ref(db, meConnPath);
     try {
-      const __payload: Record<string, any> = {
-        ts: serverTimestamp() as any,
+      const payload: PresenceConn = {
+        ts: serverTimestamp(),
         online: true,
       };
       try {
-        const ver = (process as any)?.env?.NEXT_PUBLIC_APP_VERSION ||
-          (process as any)?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev';
-        __payload.swVersion = ver;
+        const ver =
+          process?.env?.NEXT_PUBLIC_APP_VERSION ??
+          process?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+          "dev";
+        payload.swVersion = ver;
       } catch {}
-      await update(meConnRef, __payload);
+      await update(meConnRef, payload);
       incrementPresenceMetric("heartbeat.ok");
       presenceLog("heartbeat", { roomId, uid, connId: meConnId, reason });
       heartbeatRetryIndex = 0;
@@ -330,7 +335,7 @@ export async function attachPresence(roomId: string, uid: string) {
     throw lastError ?? new Error(`${label}-failed`);
   };
 
-  const connectedHandler = async (snap: any) => {
+  const connectedHandler = async (snap: DataSnapshot) => {
     const isConnected = !!snap.val();
     if (!isConnected) {
       presenceLog("connection-offline", { roomId, uid, connId: meConnId });
@@ -361,8 +366,8 @@ export async function attachPresence(roomId: string, uid: string) {
       () =>
         onDisconnect(meRef).set({
           online: false,
-          ts: serverTimestamp() as any,
-          offlineAt: serverTimestamp() as any,
+          ts: serverTimestamp(),
+          offlineAt: serverTimestamp(),
         }),
       context
     );
@@ -372,8 +377,8 @@ export async function attachPresence(roomId: string, uid: string) {
       () =>
         set(meRef, {
           online: true,
-          ts: serverTimestamp() as any,
-          connectedAt: serverTimestamp() as any,
+          ts: serverTimestamp(),
+          connectedAt: serverTimestamp(),
         }),
       context
     );
@@ -383,17 +388,17 @@ export async function attachPresence(roomId: string, uid: string) {
       const version = ((): string => {
         try {
           return (
-            (process as any)?.env?.NEXT_PUBLIC_APP_VERSION ||
-            (process as any)?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
-            'dev'
+            process?.env?.NEXT_PUBLIC_APP_VERSION ||
+            process?.env?.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+            "dev"
           );
         } catch {
-          return 'dev';
+          return "dev";
         }
       })();
       await update(meRef, {
         swVersion: version,
-        swReadyAt: serverTimestamp() as any,
+        swReadyAt: serverTimestamp(),
       });
     } catch {}
 
@@ -408,7 +413,7 @@ export async function attachPresence(roomId: string, uid: string) {
     disposed = true;
     presenceLog("detach", { uid, roomId, connId: meConnId });
     try {
-      off(connectedRef, "value", connectedHandler as any);
+      off(connectedRef, "value", connectedHandler);
     } catch {}
     clearHeartbeatTimer();
     detachListeners();
@@ -428,8 +433,8 @@ export async function attachPresence(roomId: string, uid: string) {
         try {
           await update(ref(db, meConnPath), {
             online: false,
-            ts: serverTimestamp() as any,
-            offlineAt: serverTimestamp() as any,
+            ts: serverTimestamp(),
+            offlineAt: serverTimestamp(),
           });
           presenceLog("detach-mark-offline", {
             roomId,
@@ -460,26 +465,26 @@ export function subscribePresence(
   const db = rtdb!;
   const roomRef = ref(db, ROOM_PATH(roomId));
   let lastSnapshot: { uids: string[]; raw: PresenceRoomMap } | null = null;
-  const handler = (snap: any) => {
+  const handler = (snap: DataSnapshot) => {
     const val = (snap.val() || {}) as PresenceRoomMap;
     const now = Date.now();
     const uids = Object.keys(val).filter((uidKey) => {
       const conns = val[uidKey] || {};
       return Object.values(conns).some((conn) =>
-        isPresenceConnectionActive(conn as any, now)
+        isPresenceConnectionActive(conn, now)
       );
     });
     lastSnapshot = { uids, raw: val };
-    cb(uids, val as any);
+    cb(uids, val);
   };
-  const onErr = (error: unknown) => {
+  const onErr = (error: Error) => {
     presenceWarn("subscribe-error", { roomId, error });
     if (!lastSnapshot) return;
     try {
       cb(lastSnapshot.uids, lastSnapshot.raw);
     } catch {}
   };
-  onValue(roomRef, handler, onErr as any);
+  onValue(roomRef, handler, onErr);
   return () => off(roomRef, "value", handler);
 }
 
@@ -492,7 +497,7 @@ export async function fetchPresenceUids(roomId: string): Promise<string[]> {
     return Object.keys(val).filter((uidKey) => {
       const conns = val[uidKey] || {};
       return Object.values(conns).some((conn) =>
-        isPresenceConnectionActive(conn as any, now)
+        isPresenceConnectionActive(conn, now)
       );
     });
   } catch {
@@ -506,9 +511,9 @@ export async function forceDetachAll(roomId: string, uid: string) {
   try {
     const baseRef = ref(rtdb!, ROOM_PATH(roomId) + "/" + uid);
     const snap = await get(baseRef);
-    const val = snap.val() as Record<string, any> | null;
+    const val = snap.val() as Record<string, unknown> | null;
     if (!val) return;
-    const tasks: Promise<any>[] = [];
+    const tasks: Promise<void>[] = [];
     for (const connId of Object.keys(val)) {
       tasks.push(
         remove(ref(rtdb!, CONN_PATH(roomId, uid, connId))).catch(() => {})

@@ -6,9 +6,11 @@ type MetricsApi = {
   distribution?: (name: string, value: number, options?: { tags?: Record<string, string> }) => void;
 };
 
+type CaptureMessage = (message: string, context?: { level?: string; extra?: Record<string, unknown> }) => void;
+
 type SentryGlobal = {
   metrics?: MetricsApi;
-  captureMessage?: (...args: any[]) => void;
+  captureMessage?: CaptureMessage;
 };
 
 function getMetricsApi(): MetricsApi | null {
@@ -60,10 +62,11 @@ export function recordMetricDistribution(
     }
 
     const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
-    globalScope.Sentry?.captureMessage?.(`metrics:${name}`, {
+    const capture = globalScope.Sentry?.captureMessage;
+    capture?.(`metrics:${name}`, {
       level: "info",
       extra: { value, tags: sanitizedTags },
-    } as any);
+    });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console

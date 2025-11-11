@@ -12,7 +12,6 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 
 const pulseSweep = keyframes`
@@ -30,7 +29,7 @@ export type PartyMember = {
   ready: boolean;
   orderIndex: number;
   uid?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export type PartyStatusTone =
@@ -245,14 +244,15 @@ export const PartyMemberCard = memo(function PartyMemberCard({
     const previousClue = previousClueRef.current;
     previousClueRef.current = trimmedClue;
 
-    if (prefersReducedMotion || !node) return;
-    if (!previousClue && trimmedClue) {
-      const timeline = runClueFlash(node);
-      return () => {
-        timeline.kill();
-        resetCardVisualState(node);
-      };
+    if (prefersReducedMotion || !node || previousClue || !trimmedClue) {
+      return undefined;
     }
+
+    const timeline = runClueFlash(node);
+    return () => {
+      timeline.kill();
+      resetCardVisualState(node);
+    };
   }, [prefersReducedMotion, trimmedClue]);
 
   useEffect(() => {
@@ -260,14 +260,15 @@ export const PartyMemberCard = memo(function PartyMemberCard({
     const wasSubmitted = previousSubmittedRef.current;
     previousSubmittedRef.current = isSubmitted;
 
-    if (prefersReducedMotion || !node) return;
-    if (!wasSubmitted && isSubmitted) {
-      const timeline = runSubmitFlash(node);
-      return () => {
-        timeline.kill();
-        resetCardVisualState(node);
-      };
+    if (prefersReducedMotion || !node || !isSubmitted || wasSubmitted) {
+      return undefined;
     }
+
+    const timeline = runSubmitFlash(node);
+    return () => {
+      timeline.kill();
+      resetCardVisualState(node);
+    };
   }, [prefersReducedMotion, isSubmitted]);
 
   const handleDoubleClick = useCallback(() => {

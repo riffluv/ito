@@ -1,4 +1,6 @@
-import type { PlayerDoc } from "@/lib/types";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
+
+type RoomStatus = RoomDoc["status"];
 
 type PresenceArgs = {
   baseIds: readonly string[];
@@ -88,7 +90,7 @@ const normalizeIdArray = (arr: unknown): (string | null)[] =>
  * UIとロジックの一貫性向上のための純粋関数。
  */
 export function computeVisibleProposal(opts: {
-  status: any;
+  status: RoomStatus | undefined;
   orderList?: readonly string[] | null;
   proposal?: readonly (string | null)[] | readonly string[] | null;
   eligibleIds?: readonly string[] | null; // 進行中のみ適用
@@ -115,7 +117,7 @@ export function computeVisibleProposal(opts: {
  * スロット数を決定する純粋関数。進行中はオンライン在室数を優先。
  */
 export function computeSlotCount(opts: {
-  status: any;
+  status: RoomStatus | undefined;
   orderList?: readonly string[] | null;
   dealPlayers?: readonly string[] | null;
   proposal?: readonly (string | null)[] | readonly string[] | null;
@@ -155,6 +157,10 @@ export function computeSlotCount(opts: {
  * 表示系の共通判定: リビール中かどうか。
  * 将来的にローカル/共有ゲートを併合するための小さなセレクタ。
  */
-export function isRevealing(opts: { status: any; localHide?: boolean; uiRevealPending?: boolean }): boolean {
+export function isRevealing(opts: {
+  status: RoomStatus | undefined;
+  localHide?: boolean;
+  uiRevealPending?: boolean;
+}): boolean {
   return opts.status === "reveal" || !!opts.localHide || !!opts.uiRevealPending;
 }

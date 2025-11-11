@@ -28,12 +28,12 @@ export function useCardFlipAnimation({
   const flipTweenRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
+    const el = containerRef.current;
     return () => {
       if (flipTweenRef.current) {
         flipTweenRef.current.kill();
         flipTweenRef.current = null;
       }
-      const el = containerRef.current;
       if (el) {
         gsap.killTweensOf(el);
       }
@@ -53,7 +53,7 @@ export function useCardFlipAnimation({
 
   useLayoutEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) return undefined;
 
     const resetTween = () => {
       if (flipTweenRef.current) {
@@ -67,7 +67,7 @@ export function useCardFlipAnimation({
       el.style.transform = "";
       el.style.transition = "";
       gsapInitialisedRef.current = false;
-      return;
+      return undefined;
     }
 
     el.style.transition = "";

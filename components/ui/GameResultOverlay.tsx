@@ -11,6 +11,12 @@ import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
 // 環境変数で切り替え（デフォルトは Pixi 版）
 const USE_PIXI_RAYS = process.env.NEXT_PUBLIC_USE_PIXI_RAYS !== "0";
 
+type BackgroundFxHandles = {
+  launchFireworks?: () => void;
+  launchMeteors?: () => void;
+  lightSweep?: () => void;
+};
+
 const VICTORY_TITLE = "🏆 勝利！";
 const FAILURE_TITLE = "💀 失敗…";
 const VICTORY_SUBTEXT = "みんなの連携が実を結びました！";
@@ -95,7 +101,6 @@ export function GameResultOverlay({
 }: GameResultOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const particlesRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // Timeline を再利用（GC 負荷削減）
@@ -123,7 +128,7 @@ export function GameResultOverlay({
   // Pixi 放射ラインの初期化（USE_PIXI_RAYS が true の場合のみ）
   useEffect(() => {
     if (!USE_PIXI_RAYS || !pixiRaysLayer || mode !== "overlay" || prefersReduced) {
-      return;
+      return undefined;
     }
 
     let controller: VictoryRaysController | null = null;
@@ -161,7 +166,8 @@ export function GameResultOverlay({
   const triggerBackgroundFx = useCallback(
     (effect: "fireworks" | "meteors" | "lightSweep") => {
       if (prefersReduced || typeof window === "undefined") return;
-      const bg = (window as any)?.bg;
+      const globalWindow = window as Window & { bg?: BackgroundFxHandles };
+      const bg = globalWindow.bg;
       if (!bg) return;
       try {
         if (effect === "fireworks") {
@@ -179,11 +185,15 @@ export function GameResultOverlay({
   );
 
   const resolveRevealTimestamp = useCallback((): number | null => {
-    if (!revealedAt) return null;
+    if (revealedAt === null || typeof revealedAt === "undefined") return null;
     if (typeof revealedAt === "number") return revealedAt;
     if (revealedAt instanceof Date) return revealedAt.getTime();
     if (typeof revealedAt === "object") {
-      const value: any = revealedAt;
+      const value = revealedAt as {
+        toMillis?: () => number;
+        seconds?: number;
+        nanoseconds?: number;
+      };
       if (typeof value.toMillis === "function") {
         try {
           return value.toMillis();
@@ -212,12 +222,12 @@ export function GameResultOverlay({
 
     playbackKeyRef.current = key;
 
-    if (revealedAt == null) {
+    if (revealedAt === null || typeof revealedAt === "undefined") {
       return;
     }
 
     const now = Date.now();
-    const isFreshReveal = timestamp == null || now - timestamp <= 6000;
+    const isFreshReveal = timestamp === null || now - timestamp <= 6000;
     if (!isFreshReveal) {
       return;
     }
@@ -236,11 +246,11 @@ export function GameResultOverlay({
     if (!failed && successMode === "epic") {
       playSuccessEpic();
     }
-  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, resolveRevealTimestamp, soundManager]);
+  }, [failed, mode, playFailure, playSuccessNormal, playSuccessEpic, resolveRevealTimestamp, revealedAt, soundManager]);
 
   useEffect(() => {
     if (mode !== "overlay" || typeof window === "undefined") {
-      return;
+      return undefined;
     }
     const root = document.documentElement;
     const body = document.body;
@@ -257,11 +267,13 @@ export function GameResultOverlay({
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "overlay") return;
+    if (mode !== "overlay") return undefined;
     const overlay = overlayRef.current;
     const text = textRef.current;
     const container = containerRef.current;
-    if (!overlay || !text || !container) return;
+    const flashNode = flashRef.current;
+    const lineNodesSnapshot = !USE_PIXI_RAYS ? [...linesRef.current] : null;
+    if (!overlay || !text || !container) return undefined;
 
     // GPU アクセラレーションを強制（force3D）
     gsap.set([container, overlay, text], { force3D: true });
@@ -276,7 +288,7 @@ export function GameResultOverlay({
       });
       gsap.set(overlay, { opacity: 1, scale: 1, rotationX: 0, rotationY: 0 });
       gsap.set(text, { opacity: 1, y: 0, scale: 1 });
-      return;
+      return undefined;
     }
 
     // Timeline を再利用（クリアして再スタート）
@@ -307,28 +319,33 @@ export function GameResultOverlay({
         opacity: 0,
       });
 
-      gsap.set(flashRef.current, {
-        opacity: 0,
-        backgroundColor: "black",
-      });
+      if (flashNode) {
+        gsap.set(flashNode, {
+          opacity: 0,
+          backgroundColor: "black",
+        });
+      }
 
       // ====================================================
       // Phase 0: 黒フラッシュ（画面が暗くなる）
       // ====================================================
-      tl.fromTo(
-        flashRef.current,
-        { opacity: 0, backgroundColor: "black" },
-        {
-          opacity: 0.7, // 少し暗く
-          duration: 0.17,
-          ease: "power2.in",
-        }
-      )
-      .to(flashRef.current, {
-        opacity: 0.3, // 完全に消さず、暗いまま
-        duration: 0.28,
-        ease: "power2.out"
-      })
+      if (flashNode) {
+        tl.fromTo(
+          flashNode,
+          { opacity: 0, backgroundColor: "black" },
+          {
+            opacity: 0.7, // 少し暗く
+            duration: 0.17,
+            ease: "power2.in",
+          }
+        )
+        .to(flashNode, {
+          opacity: 0.3, // 完全に消さず、暗いまま
+          duration: 0.28,
+          ease: "power2.out"
+        });
+      }
+      tl
       .call(() => triggerBackgroundFx("lightSweep"), undefined, "<");
 
       // ====================================================
@@ -542,21 +559,23 @@ export function GameResultOverlay({
       // ====================================================
       // BOOST Phase 0: ホワイトフラッシュ（衝撃的開幕）
       // ====================================================
-      tl.fromTo(
-        flashRef.current,
-        { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 0.06,
-          ease: "power4.in",
-        }
-      )
-      .to(flashRef.current, {
-        opacity: 0,
-        duration: 0.23,
-        ease: "power2.out"
-      })
-      .call(() => triggerBackgroundFx("lightSweep"), undefined, "<");
+      if (flashNode) {
+        tl.fromTo(
+          flashNode,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.06,
+            ease: "power4.in",
+          }
+        )
+        .to(flashNode, {
+          opacity: 0,
+          duration: 0.23,
+          ease: "power2.out"
+        });
+      }
+      tl.call(() => triggerBackgroundFx("lightSweep"), undefined, "<");
 
       // ====================================================
       // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
@@ -569,7 +588,7 @@ export function GameResultOverlay({
         }, undefined, 0.05);
       } else {
         // SVG 版（フォールバック）
-        linesRef.current.forEach((line) => {
+        (lineNodesSnapshot ?? []).forEach((line) => {
           if (line) {
             gsap.set(line, {
               transformOrigin: "0% 50%",
@@ -580,7 +599,7 @@ export function GameResultOverlay({
 
         // 【第1波】LEFT から爆発（0.05s）
         [0, 1, 7].forEach((index) => {
-          const line = linesRef.current[index];
+          const line = lineNodesSnapshot?.[index];
           if (!line) return;
           tl.fromTo(
             line,
@@ -597,7 +616,7 @@ export function GameResultOverlay({
 
         // 【第2波】RIGHT から爆発（0.15s）
         [3, 4, 5].forEach((index) => {
-          const line = linesRef.current[index];
+          const line = lineNodesSnapshot?.[index];
           if (!line) return;
           tl.fromTo(
             line,
@@ -614,7 +633,7 @@ export function GameResultOverlay({
 
         // 【第3波】CENTER（上下）から爆発（0.25s）
         [2, 6].forEach((index) => {
-          const line = linesRef.current[index];
+          const line = lineNodesSnapshot?.[index];
           if (!line) return;
           tl.fromTo(
             line,
@@ -871,8 +890,8 @@ export function GameResultOverlay({
       if (text) {
         gsap.set(text, { clearProps: "all" });
       }
-      if (flashRef.current) {
-        gsap.set(flashRef.current, { clearProps: "all" });
+      if (flashNode) {
+        gsap.set(flashNode, { clearProps: "all" });
       }
       if (container) {
         // 中央位置は保持しつつ、アニメーションプロパティのみクリア
@@ -885,15 +904,25 @@ export function GameResultOverlay({
         });
       }
       // SVG 版のクリーンアップ
-      if (!USE_PIXI_RAYS) {
-        linesRef.current.forEach((line) => {
+      if (lineNodesSnapshot) {
+        lineNodesSnapshot.forEach((line) => {
           if (line) {
             gsap.set(line, { clearProps: "all" });
           }
         });
       }
     };
-  }, [failed, mode, prefersReduced, triggerBackgroundFx, pixiRaysController]);
+  }, [
+    failed,
+    mode,
+    prefersReduced,
+    triggerBackgroundFx,
+    pixiRaysController,
+    playFailure,
+    playSuccessNormal,
+    soundManager,
+    timeline,
+  ]);
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
   const subtext = failed ? FAILURE_SUBTEXT : VICTORY_SUBTEXT;

@@ -62,14 +62,20 @@ export function GameLayout({
     : undefined;
 
   React.useEffect(() => {
+    if (typeof document === "undefined") {
+      return () => {};
+    }
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = ""; // クリーンアップ
+      document.body.style.overflow = previousOverflow; // クリーンアップ
     };
   }, []);
 
   React.useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof document === "undefined") {
+      return undefined;
+    }
     const root = document.documentElement;
     const previousTouchAction = root.style.touchAction;
     if (pointerProfile.isCoarsePointer) {
@@ -84,7 +90,7 @@ export function GameLayout({
 
   React.useEffect(() => {
     if (!pointerProfile.isCoarsePointer || typeof document === "undefined") {
-      return;
+      return undefined;
     }
     let lastTouchTime = 0;
     const handleTouchEnd = (event: TouchEvent) => {
@@ -102,7 +108,7 @@ export function GameLayout({
 
   React.useEffect(() => {
     if (!pointerProfile.isCoarsePointer || typeof document === "undefined") {
-      return;
+      return undefined;
     }
     let totalTouches = 0;
     let interactiveTouches = 0;

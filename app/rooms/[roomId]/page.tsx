@@ -8,7 +8,6 @@
 // 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
 import CentralCardBoard from "@/components/CentralCardBoard";
-import dynamic from "next/dynamic";
 
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
@@ -19,9 +18,10 @@ import { notify } from "@/components/ui/notify";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
-import type {
-  SeatRequestViewState,
-  SpectatorMachineState,
+import {
+  useSpectatorController,
+  type SeatRequestViewState,
+  type SpectatorMachineState,
 } from "@/lib/spectator/v2/useSpectatorController";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import {
@@ -39,8 +39,7 @@ import {
 } from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
-import { pruneProposalByEligible } from "@/lib/game/service";
-import { clearRevealPending } from "@/lib/game/service";
+import { clearRevealPending, pruneProposalByEligible } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
 import { deriveSpectatorFlags } from "@/lib/room/spectatorRoles";
@@ -65,11 +64,7 @@ import type {
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
 import { verifyPassword } from "@/lib/security/password";
-import {
-  assignNumberIfNeeded,
-  getRoomServiceErrorCode,
-  joinRoomFully,
-} from "@/lib/services/roomService";
+import { assignNumberIfNeeded } from "@/lib/services/roomService";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
@@ -78,9 +73,10 @@ import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
-import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
-import { useSpectatorController } from "@/lib/spectator/v2/useSpectatorController";
-import type { SpectatorHostRequest } from "@/lib/spectator/v2/useSpectatorHostQueue";
+import {
+  useSpectatorHostQueue,
+  type SpectatorHostRequest,
+} from "@/lib/spectator/v2/useSpectatorHostQueue";
 import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
@@ -94,8 +90,8 @@ import {
   getCachedRoomPasswordHash,
   storeRoomPasswordHash,
 } from "@/lib/utils/roomPassword";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, Spinner, Text, Dialog, VStack, HStack } from "@chakra-ui/react";
+import { UI_TOKENS } from "@/theme/layout";
+import { Box, Spinner, Text, VStack, HStack } from "@chakra-ui/react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -124,6 +120,7 @@ const ROOM_CORE_ASSETS = [
 ] as const;
 
 const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
+const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
 
 const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
   "auth-required": "認証情報が無効です。再度ログインしてください。",
@@ -148,18 +145,23 @@ const formatSpectatorHostError = (code: string): string => {
   );
 };
 
+type TimestampLike = { toMillis: () => number };
+
+const hasToMillis = (value: unknown): value is TimestampLike =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { toMillis?: unknown }).toMillis === "function";
+
 const resolveRevealedMs = (value: unknown): number | null => {
   if (!value) return null;
-  if (typeof value === "object" && value !== null) {
-    if (value instanceof Date) {
-      return value.getTime();
-    }
-    if (typeof (value as any).toMillis === "function") {
-      try {
-        return (value as any).toMillis();
-      } catch {
-        return null;
-      }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (hasToMillis(value)) {
+    try {
+      return value.toMillis();
+    } catch {
+      return null;
     }
   }
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -196,6 +198,23 @@ type ShowtimeIntentState = {
   meta?: ShowtimeIntentMetadata | null;
 };
 
+type ConnectionInfo = {
+  effectiveType?: string;
+  downlink?: number;
+  saveData?: boolean;
+  addEventListener?: (type: string, listener: () => void) => void;
+  removeEventListener?: (type: string, listener: () => void) => void;
+};
+
+type NavigatorWithConnection = Navigator & { connection?: ConnectionInfo | null };
+
+type ShowtimePlaybackContext = Record<string, unknown> & {
+  round?: number | null;
+  status?: string | null;
+  success?: boolean | null;
+  revealedMs?: number | null;
+};
+
 type RoomPageContentInnerProps = RoomStateSnapshot & {
   roomId: string;
   router: ReturnType<typeof useRouter>;
@@ -204,7 +223,6 @@ type RoomPageContentInnerProps = RoomStateSnapshot & {
   uid: string | null;
   safeUpdateFeatureEnabled: boolean;
   idleApplyMs: number;
-  passwordVerified: boolean;
   setPasswordVerified: Dispatch<SetStateAction<boolean>>;
   passwordDialogOpen: boolean;
   setPasswordDialogOpen: Dispatch<SetStateAction<boolean>>;
@@ -216,7 +234,7 @@ type RoomPageContentInnerProps = RoomStateSnapshot & {
 
 function RoomPageContent({ roomId }: RoomPageContentProps) {
   const auth = useAuth();
-  const { user, displayName, setDisplayName, loading: authLoading } = auth;
+  const { user, displayName, loading: authLoading } = auth;
   const router = useRouter();
   const transition = useTransition();
   const uid = user?.uid || null;
@@ -247,9 +265,9 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     if (typeof navigator === "undefined") {
       setAllowCoreAssetPreload(true);
-      return;
+      return () => {};
     }
-    const connection: any = (navigator as any).connection ?? null;
+    const connection = (navigator as NavigatorWithConnection).connection ?? null;
     const slowTypes = new Set(["slow-2g", "2g", "3g"]);
 
     const evaluate = () => {
@@ -276,19 +294,22 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     };
 
     evaluate();
+    let unsubscribe: (() => void) | null = null;
     if (connection && typeof connection.addEventListener === "function") {
       connection.addEventListener("change", evaluate);
-      return () => {
-        connection.removeEventListener("change", evaluate);
+      unsubscribe = () => {
+        connection.removeEventListener?.("change", evaluate);
       };
     }
-    return;
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
   useEffect(() => {
     setMetric("assets", "corePreloadEligible", allowCoreAssetPreload ? 1 : 0);
   }, [allowCoreAssetPreload]);
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof document === "undefined") return () => {};
     let disposed = false;
     const rafIds: number[] = [];
     let gsapModule: typeof import("gsap") | null = null;
@@ -473,7 +494,10 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     (soundSettings.categoryVolume?.ambient ?? 0) > 0.001;
 
   useEffect(() => {
-    if (!soundManager) return;
+    if (!soundManager) {
+      bgmPlayingRef.current = false;
+      return undefined;
+    }
     if (shouldPlayBgm) {
       bgmPlayingRef.current = true;
       void soundManager.play("bgm1").catch(() => {
@@ -492,7 +516,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   }, [soundManager, shouldPlayBgm]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     let cancelled = false;
     const win = window as Window &
       typeof globalThis & {
@@ -587,7 +611,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
   useEffect(() => {
     void resyncWaitingServiceWorker("room:mount");
     if (typeof document === "undefined") {
-      return;
+      return undefined;
     }
     const handleVisibilityResync = () => {
       if (document.visibilityState === "visible") {
@@ -598,6 +622,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityResync, true);
     };
+    return undefined;
   }, []);
   const [passwordVerified, setPasswordVerified] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -610,29 +635,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
     passwordVerified ? (displayName ?? null) : null
   );
-  const {
-    room: roomData,
-    players,
-    onlineUids,
-    presenceReady,
-    onlinePlayers,
-    loading,
-    isHost,
-    isMember,
-    detachNow,
-    reattachPresence,
-    leavingRef,
-    joinStatus,
-    sendRoomEvent,
-    spectatorStatus: fsmSpectatorStatus,
-    spectatorReason: fsmSpectatorReason,
-    spectatorRequestStatus: fsmSpectatorRequestStatus,
-    spectatorRequestSource: fsmSpectatorRequestSource,
-    spectatorRequestCreatedAt: fsmSpectatorRequestCreatedAt,
-    spectatorRequestFailure: fsmSpectatorRequestFailure,
-    spectatorError: fsmSpectatorError,
-    spectatorNode: fsmSpectatorNode,
-  } = roomState;
+  const { room: roomData, loading } = roomState;
   const room = roomData;
 
 
@@ -767,7 +770,6 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
       uid={uid}
       safeUpdateFeatureEnabled={safeUpdateFeatureEnabled}
       idleApplyMs={idleApplyMs}
-      passwordVerified={passwordVerified}
       setPasswordVerified={setPasswordVerified}
       passwordDialogOpen={passwordDialogOpen}
       setPasswordDialogOpen={setPasswordDialogOpen}
@@ -790,7 +792,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     uid,
     safeUpdateFeatureEnabled,
     idleApplyMs,
-    passwordVerified,
     setPasswordVerified,
     passwordDialogOpen,
     setPasswordDialogOpen,
@@ -824,6 +825,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     throw new Error("RoomPageContentInner requires room data");
   }
   const room = roomData;
+  const roomRequiresPassword = room?.requiresPassword ?? false;
+  const roomPasswordHash = room?.passwordHash ?? null;
+  const roomPasswordSalt = room?.passwordSalt ?? null;
   const { user, displayName, setDisplayName, loading: authLoading } = auth;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -929,7 +933,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const recordShowtimePlayback = useCallback(
     (
       type: ShowtimeEventType,
-      context: Record<string, unknown>,
+      context: ShowtimePlaybackContext,
       meta: { origin: "intent" | "subscription" | "fallback"; intentId?: string | null; eventId?: string | null }
     ) => {
       lastShowtimePlayRef.current = { type, ts: Date.now() };
@@ -939,14 +943,14 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         origin: meta.origin,
         intentId: meta.intentId ?? null,
         eventId: meta.eventId ?? null,
-        round: typeof (context as any).round === "number" ? (context as any).round : null,
-        status: typeof (context as any).status === "string" ? (context as any).status : null,
+        round: typeof context.round === "number" ? context.round : null,
+        status: typeof context.status === "string" ? context.status : null,
         success:
-          typeof (context as any).success === "boolean"
-            ? (context as any).success
-            : ((context as any).success ?? null),
+          typeof context.success === "boolean"
+            ? context.success
+            : context.success ?? null,
       });
-      void showtime.play(type, context as Record<string, unknown>);
+      void showtime.play(type, context);
     },
     [roomId]
   );
@@ -954,7 +958,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const publishIntentPlayback = useCallback(
     async (
       type: ShowtimeEventType,
-      context: { round?: number | null; status?: string | null; success?: boolean | null; revealedMs?: number | null },
+      context: ShowtimePlaybackContext,
       intentSnapshot: ShowtimeIntentState
     ) => {
       const intentKey = intentSnapshot.intentId ? `intent:${intentSnapshot.intentId}` : null;
@@ -991,7 +995,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   useEffect(() => {
     if (!roomId) {
-      return;
+      return () => {};
     }
     showtimeProcessedRef.current.clear();
     lastShowtimePlayRef.current = null;
@@ -1073,7 +1077,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
   const [recallPending, setRecallPending] = useState(false);
   const dealRecoveryTimerRef = useRef<number | null>(null);
-  const isGameFinished = room?.status === "finished";
 
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
@@ -1081,9 +1084,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const spectatorHostPanelEnabled = SPECTATOR_HOST_PANEL_ENABLED;
   const canRecallSpectators =
     spectatorHostPanelEnabled && isHost && roomStatus === "waiting";
-  const spectatorHostQueue = spectatorHostPanelEnabled && isHost
-    ? useSpectatorHostQueue(roomId)
-    : { requests: [], loading: false, error: null, hasPending: false };
+  const spectatorHostQueue = useSpectatorHostQueue(roomId, {
+    enabled: spectatorHostPanelEnabled && isHost,
+  });
   const {
     requests: spectatorHostRequests,
     loading: spectatorHostLoading,
@@ -1099,13 +1102,13 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
   useEffect(() => {
     if (!isHost) return;
-    const pending = (room as any)?.ui?.revealPending === true;
+    const pending = room?.ui?.revealPending === true;
     const status = room?.status;
     if (!pending) return;
     if (status === 'reveal' || status === 'finished') {
       void clearRevealPending(roomId);
     }
-  }, [isHost, (room as any)?.ui?.revealPending, room?.status, roomId]);
+  }, [isHost, room?.ui?.revealPending, room?.status, roomId]);
   const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
   const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
   const joinCounterRef = useRef(0);
@@ -1119,7 +1122,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       setHasWaitingUpdate(!!registration);
     });
   }, []);
-  const [versionMismatchGuarded, setVersionMismatchGuarded] = useState(false);
   const {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
@@ -1177,13 +1179,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     const filtered = list.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
     return filtered.length > 0 ? filtered : null;
   }, [room?.deal]);
-  const dealPlayersSignature = useMemo(
-    () =>
-      Array.isArray(dealPlayers) && dealPlayers.length > 0
-        ? dealPlayers.join(",")
-        : "",
-    [dealPlayers]
-  );
   const requiredSwVersion = useMemo(() => {
     const raw = room?.requiredSwVersion;
     if (typeof raw !== "string") return "";
@@ -1214,26 +1209,24 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, []);
   useEffect(() => {
     if (typeof window === "undefined") {
-      return;
+      return () => {};
     }
+
+    const clearGuardTimer = () => {
+      if (versionGuardTimerRef.current !== null) {
+        window.clearTimeout(versionGuardTimerRef.current);
+        versionGuardTimerRef.current = null;
+      }
+    };
+
     if (!safeUpdateFeatureEnabled || (!versionMismatch && !hasWaitingUpdate)) {
-      setVersionMismatchGuarded(false);
-      if (versionGuardTimerRef.current !== null) {
-        window.clearTimeout(versionGuardTimerRef.current);
-        versionGuardTimerRef.current = null;
-      }
-      return;
+      clearGuardTimer();
+      return () => {};
     }
-    setVersionMismatchGuarded(true);
-    if (versionGuardTimerRef.current !== null) {
-      window.clearTimeout(versionGuardTimerRef.current);
-      versionGuardTimerRef.current = null;
-    }
+
+    clearGuardTimer();
     return () => {
-      if (versionGuardTimerRef.current !== null) {
-        window.clearTimeout(versionGuardTimerRef.current);
-        versionGuardTimerRef.current = null;
-      }
+      clearGuardTimer();
     };
   }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
   const versionMismatchHandledRef = useRef(false);
@@ -1392,13 +1385,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       clearForceApplyTimer();
       releaseForceApplyTimer(holdReason);
     };
-  }, [
-    safeUpdateFeatureEnabled,
-    safeUpdateActive,
-    currentRoomStatus,
-    applyServiceWorkerUpdate,
-    resyncWaitingServiceWorker,
-  ]);
+  }, [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]);
   useEffect(() => {
     if (!safeUpdateFeatureEnabled) return;
     if (!hasWaitingUpdate) return;
@@ -1448,9 +1435,11 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         window.clearTimeout(idleTimerRef.current);
         idleTimerRef.current = null;
       }
-      return;
+      return () => {};
     }
-    if (typeof window === "undefined" || typeof document === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return () => {};
+    }
     const handleInteraction = () => {
       lastInteractionTsRef.current = Date.now();
       resetIdleTimer();
@@ -1482,7 +1471,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     resetIdleTimer();
   }, [safeUpdateFeatureEnabled, idleApplyMs, hasWaitingUpdate, resetIdleTimer]);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
-  const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
   const onlineUidSignature = useMemo(
     () => (Array.isArray(onlineUids) ? onlineUids.join(",") : "_"),
     [onlineUids]
@@ -1494,26 +1482,23 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     for (const uid of onlineUids) {
       presenceLastSeenRef.current.set(uid, nowTs);
     }
-  }, [presenceReady, onlineUidSignature]);
+  }, [presenceReady, onlineUidSignature, onlineUids]);
 
 
   useEffect(() => {
-    const requiresPassword = room?.requiresPassword;
-    const passwordHash = room?.passwordHash;
-
     if (!room) {
       setPasswordDialogOpen(false);
       setPasswordVerified(false);
       return;
     }
-    if (!requiresPassword) {
+    if (!roomRequiresPassword) {
       setPasswordVerified(true);
       setPasswordDialogOpen(false);
       setPasswordDialogError(null);
       return;
     }
     const cached = getCachedRoomPasswordHash(roomId);
-    if (cached && passwordHash && cached === passwordHash) {
+    if (cached && roomPasswordHash && cached === roomPasswordHash) {
       setPasswordVerified(true);
       setPasswordDialogOpen(false);
       setPasswordDialogError(null);
@@ -1522,7 +1507,15 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     setPasswordVerified(false);
     setPasswordDialogOpen(true);
     setPasswordDialogError(null);
-  }, [roomId, room?.requiresPassword, room?.passwordHash]);
+  }, [
+    room,
+    roomId,
+    roomRequiresPassword,
+    roomPasswordHash,
+    setPasswordDialogError,
+    setPasswordDialogOpen,
+    setPasswordVerified,
+  ]);
 
   const handleRoomPasswordSubmit = useCallback(
     async (input: string) => {
@@ -1530,16 +1523,12 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       setPasswordDialogLoading(true);
       setPasswordDialogError(null);
       try {
-        const ok = await verifyPassword(
-          input.trim(),
-          room.passwordSalt ?? null,
-          room.passwordHash ?? null
-        );
+        const ok = await verifyPassword(input.trim(), roomPasswordSalt, roomPasswordHash);
         if (!ok) {
           setPasswordDialogError("\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u9055\u3044\u307e\u3059");
           return;
         }
-        storeRoomPasswordHash(roomId, room.passwordHash ?? "");
+        storeRoomPasswordHash(roomId, roomPasswordHash ?? "");
         setPasswordVerified(true);
         setPasswordDialogOpen(false);
       } catch (error) {
@@ -1549,7 +1538,16 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         setPasswordDialogLoading(false);
       }
     },
-    [room, roomId]
+    [
+      room,
+      roomId,
+      roomPasswordHash,
+      roomPasswordSalt,
+      setPasswordDialogError,
+      setPasswordDialogLoading,
+      setPasswordDialogOpen,
+      setPasswordVerified,
+    ]
   );
 
   const handleRoomPasswordCancel = useCallback(() => {
@@ -1595,7 +1593,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       return false;
     }
     return true;
-  }, [stableHostId, uid, onlineUidSignature, presenceReady]);
+  }, [stableHostId, uid, presenceReady, onlineUids]);
 
   const isSoloMember = useMemo(
     () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
@@ -1637,7 +1635,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     });
 
     return selectHostCandidate(inputs) ?? null;
-  }, [room?.id, players, onlineUidSignature, lastKnownHostId, joinVersion, presenceReady]);
+  }, [room?.id, players, lastKnownHostId, joinVersion, presenceReady, onlineUids]);
 
 
   const [pop, setPop] = useState(false);
@@ -1712,10 +1710,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       seatRequest: seatRequestState,
       seatRequestPending,
       seatRequestAccepted,
-      seatRequestRejected,
       seatAcceptanceActive,
-      seatRequestButtonDisabled,
-      seatRequestSource,
     },
     actions: {
       clearRejoinIntent,
@@ -1751,8 +1746,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     if (seatRequestState.status === "pending") return;
     clearRejoinIntent();
   }, [seatRequestState.status, clearRejoinIntent]);
-  const recallJoinHandledRef = useRef(false);
-  const assignNumberRetrySignatureRef = useRef<string | null>(null);
   const reattachScheduledRef = useRef(false);
   useEffect(() => {
     if (!seatRequestAccepted) {
@@ -1953,7 +1946,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
 
 
-  const joinInProgress = joinStatus === "joining";
   const joinEstablished = joinStatus === "joined";
   const spectatorJoinStatus = useMemo(() => {
     if (room?.status === "waiting") {
@@ -1991,7 +1983,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const loadingForSpectator = loading && !allowSpectatorWhileLoading;
 
-  const { isJoiningOrRetrying, spectatorCandidate } = deriveSpectatorFlags({
+  const { spectatorCandidate } = deriveSpectatorFlags({
     hasUid: uid !== null,
     isHost,
     isMember,
@@ -2029,15 +2021,15 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (fsmSpectatorNode !== "idle") {
         // 観戦リクエスト中や強制退席直後は状態を維持する
         if (seatRequestPending || seatAcceptanceActive || forcedExitReason) {
-          return;
+          return () => {};
         }
         emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
         emitSpectatorEvent({ type: "SPECTATOR_RESET" });
       }
-      return;
+      return () => {};
     }
     if (fsmSpectatorNode !== "idle") {
-      return;
+      return () => {};
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
@@ -2051,6 +2043,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, [
     emitSpectatorEvent,
     fsmSpectatorStatus,
+    fsmSpectatorNode,
     spectatorCandidate,
     spectatorEnterReason,
     seatRequestPending,
@@ -2116,6 +2109,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     versionMismatchBlocksAccess,
     emitSpectatorEvent,
     seatRequestState.status,
+    fsmSpectatorNode,
+    optimisticMe,
+    setOptimisticMe,
   ]);
   useEffect(() => {
     if (!uid) {
@@ -2228,6 +2224,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     seatRequestState.status,
     emitSpectatorEvent,
     cancelSeatRequestSafely,
+    clearPendingSeatRequest,
   ]);
 
   useEffect(() => {
@@ -2286,6 +2283,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
   }, [
     room?.status,
+    fsmSpectatorNode,
     isMember,
     canAccess,
     forcedExitReason,
@@ -2343,13 +2341,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         notify,
       });
     },
-    [
-      handleSeatRecovery,
-      spectatorRecallEnabled,
-      roomStatus,
-      recallOpen,
-      notify,
-    ]
+    [handleSeatRecovery, spectatorRecallEnabled, roomStatus, recallOpen]
   );
   const handleRetryJoin = useCallback(async () => {
     await performSeatRecovery({ silent: false, source: "manual" });
@@ -2360,7 +2352,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     if (seatRequestState.status !== "pending" || !seatRequestState.requestedAt) {
       setSeatRequestTimedOut(false);
       seatRequestTimeoutTriggeredRef.current = false;
-      return;
+      return () => {};
     }
     const timeoutMs = 15000;
     const now = Date.now();
@@ -2370,7 +2362,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         seatRequestTimeoutTriggeredRef.current = true;
         setSeatRequestTimedOut(true);
       }
-      return;
+      return () => {};
     }
     seatRequestTimeoutTriggeredRef.current = false;
     const timer = window.setTimeout(() => {
@@ -2446,6 +2438,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     setForcedExitReason,
     roomId,
     uid,
+    isSpectatorMode,
+    room?.status,
   ]);
 
   useEffect(() => {
@@ -2469,6 +2463,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     room?.status,
     uid,
     displayName,
+    leavingRef,
+    setForcedExitReason,
+    forcedExitRecoveryPendingRef,
   ]);
 
 
@@ -2514,6 +2511,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     uid,
     roomId,
     me?.id,
+    room,
+    me,
   ]);
 
   useEffect(() => {
@@ -2831,7 +2830,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         onlineUids,
         presenceReady,
       }),
-    [baseIds, presenceReady, onlineUidSignature]
+    [baseIds, presenceReady, onlineUids]
   );
 
   const hostId = room?.hostId ?? null;
@@ -2845,6 +2844,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
     return [hostId, ...pool.filter((id) => id !== hostId)];
   }, [hostId, presenceEligibleIds]);
+
+  const eligibleIdsSignature = useMemo(() => eligibleIds.join(","), [eligibleIds]);
 
   const clueTargetIds = useMemo(
     () =>
@@ -2874,7 +2875,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         pruneTimerRef.current = null;
       }
       pruneSigRef.current = "";
-      return;
+      return () => {};
     }
     const proposal: (string | null)[] = Array.isArray(room?.order?.proposal)
       ? (room.order!.proposal as (string | null)[])
@@ -2883,20 +2884,22 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       (pid): pid is string => typeof pid === "string" && !eligibleIds.includes(pid)
     );
     const sig = `${roomId}|${room?.round || 0}|${proposal.join(',')}|${eligibleIds.join(',')}`;
-    if (extra.length === 0 || pruneSigRef.current === sig) return;
+    if (extra.length === 0 || pruneSigRef.current === sig) return () => {};
     pruneSigRef.current = sig;
     if (pruneTimerRef.current) {
       clearTimeout(pruneTimerRef.current);
       pruneTimerRef.current = null;
     }
-    pruneTimerRef.current = setTimeout(() => { pruneProposalByEligible(roomId, eligibleIds).catch(() => {}); }, PRUNE_PROPOSAL_DEBOUNCE_MS);
+    pruneTimerRef.current = setTimeout(() => {
+      pruneProposalByEligible(roomId, eligibleIds).catch(() => {});
+    }, PRUNE_PROPOSAL_DEBOUNCE_MS);
     return () => {
       if (pruneTimerRef.current) {
         clearTimeout(pruneTimerRef.current);
         pruneTimerRef.current = null;
       }
     };
-  }, [room?.status, room?.order?.proposal, room?.round, eligibleIds.join(","), roomId]);
+  }, [room?.status, room?.order?.proposal, room?.round, eligibleIdsSignature, roomId, eligibleIds, room]);
 
   useEffect(() => {
     if (!isHost || !allCluesReady) {
@@ -2941,10 +2944,10 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         )
       : [];
     return dealPlayers.length === 0;
-  }, [room?.status, room?.deal?.players]);
+  }, [room]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return () => {};
 
     if (!isHost || room?.status !== "clue") {
       if (dealRecoveryTimerRef.current !== null) {
@@ -2957,7 +2960,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (dealRecoveryDismissed) {
         setDealRecoveryDismissed(false);
       }
-      return;
+      return () => {};
     }
 
     if (!needsDealRecovery) {
@@ -2971,7 +2974,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (dealRecoveryDismissed) {
         setDealRecoveryDismissed(false);
       }
-      return;
+      return () => {};
     }
 
     if (dealRecoveryDismissed) {
@@ -2982,11 +2985,11 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (dealRecoveryOpen) {
         setDealRecoveryOpen(false);
       }
-      return;
+      return () => {};
     }
 
     if (dealRecoveryTimerRef.current !== null) {
-      return;
+      return () => {};
     }
 
     const timerId = window.setTimeout(() => {
@@ -3016,26 +3019,29 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, []);
 
   // slotCount: 進行中は「オンライン在室数」を優先。presence未確定時は提出数/配札数にフォールバック。
+  const orderList = room?.order?.list;
+  const roomDealPlayers = room?.deal?.players;
+  const orderProposal = room?.order?.proposal;
+
   const slotCount = useMemo(() => computeSlotCount({
     status: room?.status || "waiting",
-    orderList: room?.order?.list || [],
-    dealPlayers: Array.isArray(room?.deal?.players) ? room.deal!.players : [],
-    proposal: Array.isArray(room?.order?.proposal) ? room.order!.proposal : [],
+    orderList: orderList ?? [],
+    dealPlayers: Array.isArray(roomDealPlayers) ? roomDealPlayers : [],
+    proposal: Array.isArray(orderProposal) ? orderProposal : [],
     presenceReady,
     onlineUids,
     playersCount: playersWithOptimistic.length,
     playerIds: playersWithOptimistic.map((p) => p.id),
   }), [
     room?.status,
-    room?.order?.list,
-    room?.deal?.players,
-    room?.order?.proposal,
+    orderList,
+    roomDealPlayers,
+    orderProposal,
     presenceReady,
-    onlineUidSignature,
-    playersWithOptimistic.length,
-    playersSignature,
+    onlineUids,
+    playersWithOptimistic,
   ]);
-  const orderList = room?.order?.list;
+  
 
   const submittedPlayerIds = useMemo(() => {
     const ids = new Set<string>();
@@ -3065,7 +3071,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (candidate && !placedIds.has(candidate.id)) waitingCount += 1;
     }
     return waitingCount === 0;
-  }, [room?.order?.proposal, orderList]);
+  }, [room?.order?.proposal, room?.options?.resolveMode, room?.status, players, eligibleIds]);
 
   const meHasPlacedCard = submittedPlayerIds.includes(meId);
   const playerCount = playersWithOptimistic.length;
@@ -3163,7 +3169,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           slotCount={slotCount}
           topic={room.topic ?? null}
           revealedAt={room.result?.revealedAt ?? null}
-          uiRevealPending={(room as any)?.ui?.revealPending === true}
+          uiRevealPending={room?.ui?.revealPending === true}
           dealPlayers={dealPlayers}
         />
       </Box>
@@ -3231,7 +3237,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     canRecallSpectators,
     spectatorRecallEnabled,
     roomId,
-    notify,
   ]);
 
   const handleSpectatorApprove = useCallback(
@@ -3264,7 +3269,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         throw error;
       }
     },
-    [approveSpectatorRejoin, notify, resolveSpectatorDisplayName, roomId]
+    [approveSpectatorRejoin, resolveSpectatorDisplayName, roomId]
   );
 
   const handleSpectatorReject = useCallback(
@@ -3301,7 +3306,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         throw error;
       }
     },
-    [rejectSpectatorRejoin, notify, resolveSpectatorDisplayName, roomId]
+    [rejectSpectatorRejoin, resolveSpectatorDisplayName, roomId]
   );
 
   const showHand =
@@ -3418,7 +3423,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     if (!applied) {
       void resyncWaitingServiceWorker("room:version-mismatch");
     }
-  }, [applyServiceWorkerUpdate, resyncWaitingServiceWorker, safeUpdateActive]);
+  }, [safeUpdateActive]);
 
   const handleHardReload = useCallback(() => {
     try {

@@ -1,19 +1,41 @@
 "use client"
 import { useCallback, useEffect, useRef } from "react"
-import type { User } from "firebase/auth"
-import { getAuth, onIdTokenChanged } from "firebase/auth"
+import { getAuth, onIdTokenChanged, type User } from "firebase/auth"
 import { forceDetachAll } from "@/lib/firebase/presence"
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms"
 
 const TOKEN_KEY_PREFIX = "leaveToken:"
 const REJOIN_KEY_PREFIX = "pendingRejoin:"
-const RECALL_V2_ENABLED =
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_RECALL_V2 === "1"
 const FORCE_DETACH_ON_LEAVE =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_FORCE_DETACH_ON_LEAVE !== "0"
 
+type UserWithTokenManager = User & {
+  stsTokenManager?: {
+    accessToken?: string | null
+  }
+}
+
+type NavigateEventLike = Event & {
+  navigationType?: string
+}
+
+type WindowWithNavigation = typeof window & {
+  navigation?: {
+    addEventListener?: (
+      type: "navigate",
+      listener: (event: NavigateEventLike) => void
+    ) => void
+    removeEventListener?: (
+      type: "navigate",
+      listener: (event: NavigateEventLike) => void
+    ) => void
+  }
+}
+
+type PageHideEvent = Event & {
+  persisted?: boolean
+}
 function setSessionValue(key: string | null, value: string | null) {
   if (!key || typeof window === "undefined") return
   try {
@@ -55,8 +77,7 @@ export function useLeaveCleanup({
 
   useEffect(() => {
     tokenRef.current = null
-    if (!enabled) return
-    if (!user) return
+    if (!enabled || !user) return undefined
     let cancelled = false
     let unsubscribe: (() => void) | undefined
     let auth: ReturnType<typeof getAuth> | null = null
@@ -100,15 +121,15 @@ export function useLeaveCleanup({
         unsubscribe?.()
       } catch {}
     }
-  }, [enabled, user?.uid, tokenKey])
+  }, [enabled, user, tokenKey])
 
   const readToken = useCallback(() => {
     if (tokenRef.current) return tokenRef.current
     try {
       const auth = getAuth()
-      const current = auth.currentUser as any
+      const current = auth.currentUser as (UserWithTokenManager | null)
       if (current && current.uid === uid) {
-        const accessToken = current?.stsTokenManager?.accessToken
+        const accessToken = current.stsTokenManager?.accessToken
         if (typeof accessToken === "string" && accessToken) {
           tokenRef.current = accessToken
           setSessionValue(tokenKey, accessToken)
@@ -151,8 +172,8 @@ export function useLeaveCleanup({
 
 
   useEffect(() => {
-    if (!uid || !rejoinKey) return
-    if (typeof window === "undefined") return
+    if (!uid || !rejoinKey) return undefined
+    if (typeof window === "undefined") return undefined
     const persistRejoin = () => setSessionValue(rejoinKey, uid)
     const handleVisibility = () => {
       try {
@@ -172,18 +193,19 @@ export function useLeaveCleanup({
   useEffect(() => {
     if (!enabled) {
       reloadIntentRef.current = false
-      return
+      return undefined
     }
-    if (typeof window === "undefined") return
+    if (typeof window === "undefined") return undefined
 
     const markReloadIntent = () => {
       reloadIntentRef.current = true
     }
 
-    const nav: any = (window as any).navigation
+    const browserWindow = window as WindowWithNavigation
+    const nav = browserWindow.navigation
     let detachNavigate: (() => void) | null = null
     if (nav && typeof nav.addEventListener === "function") {
-      const handleNavigate = (event: any) => {
+      const handleNavigate = (event: NavigateEventLike) => {
         try {
           if (event?.navigationType === "reload") {
             markReloadIntent()
@@ -193,7 +215,9 @@ export function useLeaveCleanup({
       nav.addEventListener("navigate", handleNavigate)
       detachNavigate = () => {
         try {
-          nav.removeEventListener("navigate", handleNavigate)
+          if (typeof nav.removeEventListener === "function") {
+            nav.removeEventListener("navigate", handleNavigate)
+          }
         } catch {}
       }
     }
@@ -215,23 +239,21 @@ export function useLeaveCleanup({
     window.addEventListener("keydown", keydownHandler, true)
 
     const restoreReload = (() => {
-      const locationObj: any = window.location
-      const originalReload: ((...args: any[]) => any) | undefined = locationObj?.reload?.bind(locationObj)
+      const locationObj = window.location
+      const originalReload = locationObj.reload?.bind(locationObj)
       if (typeof originalReload !== "function") {
         return () => {}
       }
-      const patchedReload = (...args: any[]) => {
+      const patchedReload = () => {
         markReloadIntent()
-        return originalReload(...args)
+        return originalReload()
       }
       try {
         locationObj.reload = patchedReload
       } catch {}
       return () => {
         try {
-          if (typeof originalReload === "function") {
-            locationObj.reload = originalReload
-          }
+          locationObj.reload = originalReload
         } catch {}
       }
     })()
@@ -279,7 +301,7 @@ export function useLeaveCleanup({
   }, [performCleanup])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) return undefined
     reloadIntentRef.current = false
 
     skipCleanupRef.current = true
@@ -312,12 +334,12 @@ export function useLeaveCleanup({
   }, [enabled])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) return undefined
     const handleBeforeUnload = () => {
       performCleanup()
     }
-    const handlePageHide = (event: Event) => {
-      if ("persisted" in event && (event as any).persisted) return
+    const handlePageHide = (event: PageHideEvent) => {
+      if (event.persisted) return
       performCleanup()
     }
     window.addEventListener("beforeunload", handleBeforeUnload)

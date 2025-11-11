@@ -3,15 +3,18 @@ import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
 import { topicControls } from "@/lib/game/service";
-import { topicTypeLabels } from "@/lib/topics";
+import { topicTypeLabels, isTopicType, type TopicType } from "@/lib/topics";
 import type { RoomDoc } from "@/lib/types";
 import { Menu, Text, VStack } from "@chakra-ui/react";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error ?? "");
+
 export type QuickTopicChangeProps = {
   roomId: string;
-  room: RoomDoc & { id?: string };
+  room: RoomDoc & { id?: string; topic?: string | null; topicBox?: string | null };
   variant?: "button" | "menu";
   size?: "sm" | "md" | "lg";
 };
@@ -20,12 +23,12 @@ export function QuickTopicChange({
   roomId,
   room,
   variant = "menu",
-  size = "sm",
+  size: _size = "sm",
 }: QuickTopicChangeProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const currentTopic = (room as any)?.topic;
-  const currentTopicBox = (room as any)?.topicBox;
+  const currentTopic = room.topic ?? null;
+  const currentTopicBox = isTopicType(room.topicBox) ? room.topicBox : null;
 
   const triggerLabel = useMemo(
     () => (currentTopic ? "お題変更" : "お題を選択"),
@@ -42,23 +45,23 @@ export function QuickTopicChange({
     [currentTopic, currentTopicBox]
   );
 
-  const handleCategorySelect = async (category: string) => {
+  const handleCategorySelect = async (category: TopicType) => {
     if (isLoading) return;
 
     setIsLoading(true);
     try {
-      await topicControls.selectCategory(roomId, category as any);
+      await topicControls.selectCategory(roomId, category);
       notify({
         id: toastIds.topicChangeSuccess(roomId),
         title: `お題変更: ${category}`,
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error) {
       notify({
         id: toastIds.topicError(roomId),
         title: "お題変更に失敗",
-        description: error?.message,
+        description: getErrorMessage(error),
         type: "error",
         duration: 3200,
       });
@@ -79,11 +82,11 @@ export function QuickTopicChange({
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error) {
       notify({
         id: toastIds.topicError(roomId),
         title: "シャッフルに失敗",
-        description: error?.message,
+        description: getErrorMessage(error),
         type: "error",
       });
     } finally {

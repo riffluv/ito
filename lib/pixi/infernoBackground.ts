@@ -2,6 +2,9 @@ import type * as PIXI from "pixi.js";
 import { safeDestroy } from "./safeDestroy";
 import { loadPixi } from "./loadPixi";
 
+const isBlendMode = (value: unknown): value is PIXI.BLEND_MODES =>
+  typeof value === "number";
+
 const nextFrame = () =>
   new Promise<void>((resolve) => {
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
@@ -113,8 +116,8 @@ export async function createInfernoBackground(
   options: InfernoBackgroundOptions
 ): Promise<InfernoBackgroundController> {
   const pixi = await loadPixi();
-  const BLEND_MODES = (pixi as unknown as {
-    BLEND_MODES?: Record<string, number>;
+  const BLEND_MODES = (pixi as typeof PIXI & {
+    BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
   }).BLEND_MODES;
   const app = new pixi.Application();
   await app.init({
@@ -149,8 +152,8 @@ export async function createInfernoBackground(
   const meteorsContainer = new pixi.Container();
 
   sweepOverlay.alpha = 0;
-  if (BLEND_MODES?.ADD !== undefined) {
-    sweepOverlay.blendMode = BLEND_MODES.ADD as any;
+  if (isBlendMode(BLEND_MODES?.ADD)) {
+    sweepOverlay.blendMode = BLEND_MODES.ADD;
   }
 
   stage.addChild(bgGradient);
@@ -256,15 +259,15 @@ export async function createInfernoBackground(
     getParticleCount()
   );
 
-  let pointerTargetX = 0;
+  const pointerTargetX = 0;
   let pointerTargetY = 0;
   let pointerCurrentX = 0;
   let pointerCurrentY = 0;
   let sweepActive = false;
   let sweepStart = 0;
   let sweepFlashes = 0;
-  let sweepFlashIndex = 0;
-  const SWEEP_DURATION = 900;
+  let sweepFlashInterval = 300;
+  let sweepFlashDuration = 200;
 
   // 🔥 赤いフラッシュ（複数回点滅）
   const triggerLightSweep = () => {
@@ -273,7 +276,8 @@ export async function createInfernoBackground(
     sweepOverlay.alpha = 0;
     pointerTargetY = -0.35;
     sweepFlashes = 3; // 🔥 3回点滅
-    sweepFlashIndex = 0;
+    sweepFlashInterval = 300;
+    sweepFlashDuration = 200;
   };
 
   // 🔥 カスタム赤フラッシュ（回数・時間指定可能）
@@ -282,8 +286,11 @@ export async function createInfernoBackground(
     sweepStart = performance.now();
     sweepOverlay.alpha = 0;
     pointerTargetY = -0.35;
-    sweepFlashes = count;
-    sweepFlashIndex = 0;
+    const normalizedCount = Math.max(1, Math.floor(count));
+    const totalDuration = Math.max(100, duration);
+    sweepFlashes = normalizedCount;
+    sweepFlashDuration = Math.max(80, totalDuration / normalizedCount);
+    sweepFlashInterval = sweepFlashDuration + 120;
   };
 
   const fireworks: Firework[] = [];
@@ -530,13 +537,10 @@ export async function createInfernoBackground(
     // 🔥 複数回点滅する赤フラッシュ
     if (sweepActive) {
       const elapsed = time - sweepStart;
-      const flashInterval = 300; // 300ms間隔で点滅
-      const flashDuration = 200; // 各フラッシュ200ms
-
-      const currentFlash = Math.floor(elapsed / flashInterval);
+      const currentFlash = Math.floor(elapsed / sweepFlashInterval);
 
       if (currentFlash < sweepFlashes) {
-        const flashProgress = (elapsed % flashInterval) / flashDuration;
+        const flashProgress = (elapsed % sweepFlashInterval) / sweepFlashDuration;
         if (flashProgress < 1) {
           // サイン波で急激に明るく→暗く
           sweepOverlay.alpha = Math.sin(Math.PI * flashProgress) * 0.6;

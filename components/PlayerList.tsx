@@ -1,8 +1,7 @@
 "use client";
 import type { PlayerDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { UI_TOKENS } from "@/theme/layout";
-import { Avatar, Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { Avatar, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import React, { useMemo } from "react";
 
 // 仕様: 48pxの名簿行（コンパクト）と、クリックで拡張（ヒントや詳細）。
@@ -31,9 +30,7 @@ export const PlayerList = React.memo(function PlayerList({
       typing: by("typing"),
       ready: by("ready"),
     };
-  }, [
-    players.map((p) => `${p.id}:${p.ready ? 1 : 0}:${p.clue1 || ""}`).join(","),
-  ]);
+  }, [players]);
 
   // 連想ワードは常時表示に変更（トグルは廃止）
 

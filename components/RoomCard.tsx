@@ -3,7 +3,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { prefetchRoomExperience } from "@/lib/prefetch/prefetchRoomExperience";
-import { Lock, Play, UserCheck, Users } from "lucide-react";
+import { Play, UserCheck, Users } from "lucide-react";
 import { memo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 

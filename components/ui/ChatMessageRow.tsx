@@ -1,6 +1,6 @@
 "use client";
 import { memo, useMemo } from "react";
-import { Badge, Box, HStack, Text } from "@chakra-ui/react";
+import { Box, HStack, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 
 export interface ChatMessageRowProps {
@@ -20,7 +20,6 @@ function isImageSource(src?: string | null) {
 function ChatMessageRowBase({
   sender,
   text,
-  isMe,
   isHost,
   avatar,
   accentColor,

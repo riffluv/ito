@@ -87,6 +87,8 @@ export type RoomDoc = {
      * false: ゲーム中・次ゲーム準備中など（観戦者の入席を拒否）
      */
     recallOpen?: boolean;
+    /** Reveal 自動再開時のUI側ペンディングフラグ */
+    revealPending?: boolean;
   };
 };
 

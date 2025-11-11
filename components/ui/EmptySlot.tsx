@@ -25,11 +25,16 @@ export function EmptySlot({ index, totalSlots = 5 }: EmptySlotProps) {
 
   // Octopath風の脈打つアニメーション
   useEffect(() => {
-    if (!boxRef.current || !diamondLeftRef.current || !diamondRightRef.current) return;
+    const boxNode = boxRef.current;
+    const diamondLeftNode = diamondLeftRef.current;
+    const diamondRightNode = diamondRightRef.current;
+    if (!boxNode || !diamondLeftNode || !diamondRightNode) {
+      return () => undefined;
+    }
 
     // 枠の脈打ちアニメ（非定型値）
     const tl = gsap.timeline({ repeat: -1 });
-    tl.to(boxRef.current, {
+    tl.to(boxNode, {
       borderColor: "rgba(255, 255, 255, 0.72)",
       duration: 0.87,
       ease: "sine.inOut",
@@ -41,14 +46,14 @@ export function EmptySlot({ index, totalSlots = 5 }: EmptySlotProps) {
     });
 
     // ダイヤモンド装飾の回転アニメ（左右非対称）
-    gsap.to(diamondLeftRef.current, {
+    gsap.to(diamondLeftNode, {
       rotation: 359,
       duration: 4.2,
       repeat: -1,
       ease: "none",
     });
 
-    gsap.to(diamondRightRef.current, {
+    gsap.to(diamondRightNode, {
       rotation: -362,
       duration: 3.8,
       repeat: -1,
@@ -57,7 +62,7 @@ export function EmptySlot({ index, totalSlots = 5 }: EmptySlotProps) {
 
     return () => {
       tl.kill();
-      gsap.killTweensOf([boxRef.current, diamondLeftRef.current, diamondRightRef.current]);
+      gsap.killTweensOf([boxNode, diamondLeftNode, diamondRightNode]);
     };
   }, []);
 

@@ -19,6 +19,26 @@ type TraceBufferRecord = {
   timestamp: number;
 };
 
+type MetricsBuckets = Record<string, Record<string, unknown>>;
+
+type MetricsWindow = typeof window & {
+  __ITO_METRICS__?: MetricsBuckets;
+  __ITO_TRACE_BUFFER__?: TraceBufferRecord[];
+  dumpItoMetrics?: () => void;
+};
+
+type ExtendedPerformanceObserver = typeof PerformanceObserver & {
+  supportedEntryTypes?: readonly string[];
+};
+
+type ExtendedPerformanceObserverInit = PerformanceObserverInit & {
+  durationThreshold?: number;
+};
+
+type InteractionWithId = PerformanceEventTiming & {
+  interactionId?: number;
+};
+
 declare global {
   interface Window {
     dumpItoMetrics?: () => void;
@@ -67,13 +87,18 @@ function pickRecentTraceTag(interaction: PerformanceEventTiming) {
 
 export default function PerformanceMetricsInitializer() {
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.dumpItoMetrics = () => {
-      const metrics = (window as typeof window & { __ITO_METRICS__?: Record<string, any> })
-        .__ITO_METRICS__ ?? {};
-      const traces =
-        (window as typeof window & { __ITO_TRACE_BUFFER__?: TraceBufferRecord[] })
-          .__ITO_TRACE_BUFFER__ ?? [];
+    const cleanup = () => {
+      if (typeof window !== "undefined") {
+        delete window.dumpItoMetrics;
+      }
+    };
+    if (typeof window === "undefined") {
+      return cleanup;
+    }
+    const metricsWindow = window as MetricsWindow;
+    metricsWindow.dumpItoMetrics = () => {
+      const metrics = metricsWindow.__ITO_METRICS__ ?? {};
+      const traces = metricsWindow.__ITO_TRACE_BUFFER__ ?? [];
 
       const perf = metrics.perf ?? {};
       const audio = metrics.audio ?? {};
@@ -81,6 +106,7 @@ export default function PerformanceMetricsInitializer() {
         Object.entries(metrics).filter(([key]) => key.startsWith("client.drop"))
       );
 
+      /* eslint-disable no-console */
       console.group("ITO metrics snapshot");
       console.log("perf:", perf);
       console.log("audio:", audio);
@@ -89,25 +115,28 @@ export default function PerformanceMetricsInitializer() {
       }
       console.log("trace buffer (latest 10):", traces);
       console.groupEnd();
+      /* eslint-enable no-console */
     };
-    return () => {
-      if (typeof window !== "undefined") {
-        delete window.dumpItoMetrics;
-      }
-    };
+    return cleanup;
   }, []);
 
   useEffect(() => {
-    if (!shouldSendClientMetrics()) return;
+    let animationFrame: number | null = null;
+    const cleanup = () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+    };
+    if (!shouldSendClientMetrics()) return cleanup;
     const sampleWindow = resolveNumber(
       process.env.NEXT_PUBLIC_PERF_FPS_WINDOW_MS,
       DEFAULT_FPS_WINDOW
     );
-    if (sampleWindow <= 0) return;
+    if (sampleWindow <= 0) return cleanup;
 
     let frameCount = 0;
     let windowStart = performance.now();
-    let animationFrame = 0;
 
     const tick = (timestamp: number) => {
       frameCount += 1;
@@ -124,36 +153,23 @@ export default function PerformanceMetricsInitializer() {
     };
 
     animationFrame = window.requestAnimationFrame(tick);
-    return () => {
-      if (animationFrame) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-    };
+    return cleanup;
   }, []);
 
   useEffect(() => {
-    if (!shouldSendClientMetrics()) return;
-    const supportsEventTiming =
-      typeof PerformanceObserver !== "undefined" &&
-      (PerformanceObserver as any).supportedEntryTypes?.includes?.("event");
-    if (!supportsEventTiming) return;
-
-    const flushInterval = resolveNumber(
-      process.env.NEXT_PUBLIC_PERF_INP_WINDOW_MS,
-      DEFAULT_INP_WINDOW
-    );
-    if (flushInterval <= 0) return;
-
     let worstInteraction: PerformanceEventTiming | null = null;
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let observer: PerformanceObserver | null = null;
 
     const flush = () => {
-      if (!worstInteraction) return;
-      const interactionId = (worstInteraction as any)?.interactionId;
+      if (!worstInteraction) {
+        return;
+      }
+      const interactionId = (worstInteraction as InteractionWithId)?.interactionId;
       const tags: Record<string, string> = {
         event: worstInteraction.name,
       };
-      if (interactionId != null) {
+      if (interactionId !== undefined && interactionId !== null) {
         tags.interactionId = String(interactionId);
       }
       const traceTags = pickRecentTraceTag(worstInteraction);
@@ -163,6 +179,30 @@ export default function PerformanceMetricsInitializer() {
       recordMetricDistribution("client.inp.rolling", worstInteraction.duration, tags);
       worstInteraction = null;
     };
+
+    const cleanup = () => {
+      observer?.disconnect();
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      flush();
+    };
+
+    if (!shouldSendClientMetrics()) return cleanup;
+    if (typeof PerformanceObserver === "undefined") return cleanup;
+
+    const supportedEntryTypes = (
+      PerformanceObserver as ExtendedPerformanceObserver
+    ).supportedEntryTypes;
+    const supportsEventTiming = supportedEntryTypes?.includes?.("event") ?? false;
+    if (!supportsEventTiming) return cleanup;
+
+    const flushInterval = resolveNumber(
+      process.env.NEXT_PUBLIC_PERF_INP_WINDOW_MS,
+      DEFAULT_INP_WINDOW
+    );
+    if (flushInterval <= 0) return cleanup;
 
     const scheduleFlush = () => {
       if (flushTimer !== null) return;
@@ -175,7 +215,7 @@ export default function PerformanceMetricsInitializer() {
       }, flushInterval);
     };
 
-    const observer = new PerformanceObserver((list) => {
+    observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries() as PerformanceEventTiming[]) {
         if (!entry || entry.duration <= 0) continue;
         if (entry.duration <= 16) continue; // ignore trivial interactions
@@ -187,8 +227,11 @@ export default function PerformanceMetricsInitializer() {
     });
 
     try {
-      const observerOptions: PerformanceObserverInit = { type: "event", buffered: true };
-      (observerOptions as any).durationThreshold = 40;
+      const observerOptions: ExtendedPerformanceObserverInit = {
+        type: "event",
+        buffered: true,
+        durationThreshold: 40,
+      };
       observer.observe(observerOptions);
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
@@ -196,17 +239,10 @@ export default function PerformanceMetricsInitializer() {
         console.warn("PerformanceObserver setup failed", error);
       }
       flush();
-      return () => undefined;
+      return cleanup;
     }
 
-    return () => {
-      observer.disconnect();
-      if (flushTimer) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-      }
-      flush();
-    };
+    return cleanup;
   }, []);
 
   return null;

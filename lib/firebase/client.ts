@@ -76,14 +76,6 @@ export const firebaseEnabled = hasFullConfig || useEmulator;
 
 const resolvedConfig = hasFullConfig ? firebaseConfig : fallbackConfig;
 
-const preferMultiTabPersistence = (() => {
-  const envValue = process.env.NEXT_PUBLIC_FIRESTORE_MULTI_TAB;
-  if (envValue) {
-    return envValue.toLowerCase() !== "false";
-  }
-  return process.env.NODE_ENV !== "production";
-})();
-
 export const app: FirebaseApp | null = ((): FirebaseApp | null => {
   if (!firebaseEnabled) return null;
   const apps = getApps();
@@ -95,8 +87,8 @@ export const db: Firestore | null = ((): Firestore | null => {
   try {
     // SDKのログレベルを環境変数で制御（デフォルト: 本番=error, 開発=warn）
     try {
-      const lv = (process.env.NEXT_PUBLIC_FIRESTORE_LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'error' : 'warn')) as any;
-      setLogLevel(lv);
+      const lv = process.env.NEXT_PUBLIC_FIRESTORE_LOG_LEVEL || (process.env.NODE_ENV === "production" ? "error" : "warn");
+      setLogLevel(lv as Parameters<typeof setLogLevel>[0]);
     } catch {}
     // 高速・安定化: ローカル永続キャッシュ + 自動ロングポーリング検出
     return initializeFirestore(app, {

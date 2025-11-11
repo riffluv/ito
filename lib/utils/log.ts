@@ -6,6 +6,18 @@ const LEVEL_RANK = new Map<Level, number>(
 );
 const DEFAULT_LEVEL: Level = "info";
 
+type ConsoleTransport = Pick<Console, "debug" | "info" | "warn" | "error">;
+const silentConsole: ConsoleTransport = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
+const baseConsole: ConsoleTransport =
+  (typeof globalThis !== "undefined" && globalThis.console) || silentConsole;
+const { debug: consoleDebug, info: consoleInfo, warn: consoleWarn, error: consoleError } =
+  baseConsole;
+
 const isProdBuild = process.env.NODE_ENV === "production";
 const isVercel = process.env.VERCEL === "1";
 
@@ -57,30 +69,30 @@ function emit(
   switch (level) {
     case "debug":
       if (payload === undefined) {
-        console.debug(prefix);
+        consoleDebug(prefix);
       } else {
-        console.debug(prefix, payload);
+        consoleDebug(prefix, payload);
       }
       break;
     case "info":
       if (payload === undefined) {
-        console.info(prefix);
+        consoleInfo(prefix);
       } else {
-        console.info(prefix, payload);
+        consoleInfo(prefix, payload);
       }
       break;
     case "warn":
       if (payload === undefined) {
-        console.warn(prefix);
+        consoleWarn(prefix);
       } else {
-        console.warn(prefix, payload);
+        consoleWarn(prefix, payload);
       }
       break;
     case "error":
       if (payload === undefined) {
-        console.error(prefix);
+        consoleError(prefix);
       } else {
-        console.error(prefix, payload);
+        consoleError(prefix, payload);
       }
       break;
   }

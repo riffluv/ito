@@ -1,6 +1,5 @@
 "use client";
 import { AppButton } from "@/components/ui/AppButton";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Field, Input, Stack, Switch, Text } from "@chakra-ui/react";
 
 type Props = {

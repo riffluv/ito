@@ -187,9 +187,9 @@ export function useHostClaim({
         if (!response.ok || !bodyOk) {
           const error = new Error(
             `claim-host failed: status=${response.status}`
-          );
-          (error as any).status = response.status;
-          (error as any).detail = detail;
+          ) as Error & { status?: number; detail?: unknown };
+          error.status = response.status;
+          error.detail = detail;
           throw error;
         }
         hostClaimAttemptRef.current = 0;

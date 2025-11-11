@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 
 import type { UseSpectatorSessionResult } from "./useSpectatorSession";
 import { logSpectatorRequestEnqueue } from "@/lib/spectator/telemetry";
@@ -21,7 +29,7 @@ type NotifyPayload =
       type?: "info" | "warning" | "success" | "error";
       duration?: number;
       id?: string | number;
-      [key: string]: any;
+      [key: string]: unknown;
     };
 
 export type SpectatorMachineState = {

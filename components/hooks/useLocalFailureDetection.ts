@@ -12,7 +12,7 @@ export function useLocalFailureDetection({
   players,
   resolveMode,
 }: UseLocalFailureDetectionProps) {
-  const map = new Map(players.map((p) => [p.id, p]));
+  const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
   const { localFailedAt, boundaryPreviousIndex } = useMemo((): {
     localFailedAt: number | null;
@@ -27,8 +27,8 @@ export function useLocalFailureDetection({
       return { localFailedAt: null, boundaryPreviousIndex: null };
 
     for (let i = 0; i < (currentPlaced.length || 0) - 1; i++) {
-      const a = map.get(currentPlaced[i]) as any;
-      const b = map.get(currentPlaced[i + 1]) as any;
+      const a = playerMap.get(currentPlaced[i]);
+      const b = playerMap.get(currentPlaced[i + 1]);
 
       if (
         !a ||
@@ -44,7 +44,7 @@ export function useLocalFailureDetection({
       }
     }
     return { localFailedAt: null, boundaryPreviousIndex: null };
-  }, [currentPlaced.join(","), players.map((p) => p.number).join(",")]);
+  }, [currentPlaced, playerMap, resolveMode]);
 
   return { localFailedAt, boundaryPreviousIndex };
 }

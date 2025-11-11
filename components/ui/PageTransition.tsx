@@ -31,12 +31,19 @@ export function PageTransition({
 
   useEffect(() => {
     const overlay = overlayRef.current;
-    if (!isTransitioning || !overlay) return;
+    const clearAll = () => {
+      if (!overlay) return;
+      gsap.set(overlay, { clearProps: "all" });
+    };
+
+    if (!isTransitioning || !overlay) {
+      return clearAll;
+    }
 
     if (shouldReduceMotion) {
       overlay.style.opacity = "0";
       onComplete?.();
-      return;
+      return clearAll;
     }
 
     const baseDuration = Math.max(duration, 0.3);
@@ -45,10 +52,6 @@ export function PageTransition({
         onComplete?.();
       },
     });
-
-    const clearAll = () => {
-      gsap.set(overlay, { clearProps: "all" });
-    };
 
     switch (direction) {
       case "slideRight": {

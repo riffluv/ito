@@ -19,6 +19,37 @@ import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
 type BackgroundOption = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type SceneryVariant = "night" | "inferno";
+type SettingsTab = "game" | "graphics" | "sound";
+type GraphicsTab = "background" | "animation";
+type AnimationModeOption = "3d" | "simple";
+
+const SETTINGS_TABS: ReadonlyArray<{ key: SettingsTab; label: string }> = [
+  { key: "game", label: "Game Settings" },
+  { key: "graphics", label: "Graphics Settings" },
+  { key: "sound", label: "Sound Settings" },
+];
+
+const GRAPHICS_TABS: ReadonlyArray<{ key: GraphicsTab; label: string }> = [
+  { key: "background", label: "背景" },
+  { key: "animation", label: "アニメ" },
+];
+
+const CARD_ANIMATION_OPTIONS: ReadonlyArray<{
+  value: AnimationModeOption;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "3d",
+    title: "3D回転",
+    description: "カードが立体的に回転します（おすすめ）",
+  },
+  {
+    value: "simple",
+    title: "シンプル",
+    description: "回転を省いて軽量表示にします",
+  },
+];
 
 const normalizeBackgroundOption = (
   value: string | null
@@ -91,16 +122,12 @@ export function SettingsModal({
     currentOptions?.defaultTopicType || "通常版"
   );
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"game" | "graphics" | "sound">(
-    "game"
-  );
+  const [activeTab, setActiveTab] = useState<SettingsTab>("game");
 
   // 背景設定のstate（localStorageから読み込み）
   const [backgroundType, setBackgroundType] =
     useLocalState<BackgroundOption>("pixi-dq");
-  const [graphicsTab, setGraphicsTab] = useState<"background" | "animation">(
-    "background"
-  );
+  const [graphicsTab, setGraphicsTab] = useState<GraphicsTab>("background");
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
   const playSettingsOpen = useSoundEffect("settings_open");
@@ -202,30 +229,26 @@ export function SettingsModal({
 
   // OSのreduce-motion変化を監視
   useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return undefined;
+    }
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const listener = () => setOsReduced(mq.matches);
+    let cleanup: (() => void) | undefined;
     try {
       mq.addEventListener("change", listener);
+      cleanup = () => mq.removeEventListener("change", listener);
     } catch {
-      // Safari互換
-      // Safari互換: 古いブラウザでは addListener を使用
       const legacyMq = mq as MediaQueryList & {
-        addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+        addListener?: (cb: (event: MediaQueryListEvent) => void) => void;
+        removeListener?: (cb: (event: MediaQueryListEvent) => void) => void;
       };
       legacyMq.addListener?.(listener);
+      cleanup = () => legacyMq.removeListener?.(listener);
     }
+    listener();
     return () => {
-      try {
-        mq.removeEventListener("change", listener);
-      } catch {
-        const legacyMq = mq as MediaQueryList & {
-          removeListener?: (
-            listener: (event: MediaQueryListEvent) => void
-          ) => void;
-        };
-        legacyMq.removeListener?.(listener);
-      }
+      cleanup?.();
     };
   }, []);
 
@@ -242,7 +265,7 @@ export function SettingsModal({
     } catch {
       // noop
     }
-  }, []);
+  }, [setBackgroundType]);
 
   // 背景設定のリアルタイム更新
   const handleBackgroundChange = (newType: BackgroundOption) => {
@@ -323,10 +346,12 @@ export function SettingsModal({
       } catch {}
       notify({ title: "設定を保存しました", type: "success" });
       closeWithSound();
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const description =
+        error instanceof Error ? error.message : String(error);
       notify({
         title: "設定の保存に失敗しました",
-        description: err?.message,
+        description,
         type: "error",
       });
     } finally {
@@ -367,28 +392,24 @@ export function SettingsModal({
 
   // Pixi背景の描画とDOM同期
   useEffect(() => {
-    if (!isOpen || !pixiContainer) {
-      // モーダルが閉じられたらPixiリソースを破棄
-      if (pixiGraphicsRef.current) {
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-      return;
-    }
-
-    // Graphicsオブジェクトを作成
-    const graphics = new PIXI.Graphics();
-    graphics.zIndex = -10; // 最背面に配置
-    pixiContainer.addChild(graphics);
-    pixiGraphicsRef.current = graphics;
-
-    // クリーンアップ
-    return () => {
+    const destroyGraphics = () => {
       if (pixiGraphicsRef.current) {
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
     };
+
+    if (!isOpen || !pixiContainer) {
+      destroyGraphics();
+      return destroyGraphics;
+    }
+
+    const graphics = new PIXI.Graphics();
+    graphics.zIndex = -10; // 最背面に配置
+    pixiContainer.addChild(graphics);
+    pixiGraphicsRef.current = graphics;
+
+    return destroyGraphics;
   }, [isOpen, pixiContainer]);
 
   // DOM要素とPixiコンテナの位置・サイズ同期
@@ -499,17 +520,13 @@ export function SettingsModal({
 
           <Dialog.Body px={6} pb={4} position="relative" zIndex={20}>
             <HStack gap={3} justify="center" mt={3} mb={3}>
-              {[
-                { key: "game", label: "Game Settings" },
-                { key: "graphics", label: "Graphics Settings" },
-                { key: "sound", label: "Sound Settings" },
-              ].map((t) => {
-                const isActive = activeTab === (t.key as any);
+              {SETTINGS_TABS.map((t) => {
+                const isActive = activeTab === t.key;
                 return (
                   <Box
                     key={t.key}
                     as="button"
-                    onClick={() => setActiveTab(t.key as any)}
+                    onClick={() => setActiveTab(t.key)}
                     px={4}
                     py={2}
                     borderRadius="0"
@@ -764,16 +781,13 @@ export function SettingsModal({
                 {/* グラフィック設定の説明は冗長なので削除 */}
                 {/* サブタブ（背景/アニメ） */}
                 <HStack gap={3} justify="center">
-                  {[
-                    { key: "background", label: "背景" },
-                    { key: "animation", label: "アニメ" },
-                  ].map((t) => {
-                    const isActive = graphicsTab === (t.key as any);
+                  {GRAPHICS_TABS.map((t) => {
+                    const isActive = graphicsTab === t.key;
                     return (
                       <Box
                         key={t.key}
                         as="button"
-                        onClick={() => setGraphicsTab(t.key as any)}
+                        onClick={() => setGraphicsTab(t.key)}
                         px={4}
                         py={2}
                         borderRadius="0"
@@ -1077,25 +1091,14 @@ export function SettingsModal({
                       </Text>
                     )}
                   <Stack gap={2}>
-                    {[
-                      {
-                        value: "3d",
-                        title: "3D回転",
-                        description: "カードが立体的に回転します（おすすめ）",
-                      },
-                      {
-                        value: "simple",
-                        title: "シンプル",
-                        description: "回転を省いて軽量表示にします",
-                      },
-                    ].map((opt) => {
+                    {CARD_ANIMATION_OPTIONS.map((opt) => {
                       const isAvailable = !(opt.value === "3d" && supports3D === false);
                       const isSelected =
                         opt.value === "3d"
                           ? force3DTransforms
                           : !force3DTransforms && animationMode === "simple";
                       const handleClick = () => {
-                        setAnimationMode(opt.value as any);
+                        setAnimationMode(opt.value);
                         setForce3DTransforms(opt.value === "3d");
                       };
                       return (
@@ -1367,7 +1370,7 @@ export function SettingsModal({
                   background: "transparent",
                   color: "white",
                   cursor: "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                   transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                 }}
                 onMouseEnter={(e) => {
@@ -1403,7 +1406,7 @@ export function SettingsModal({
                       saving || !isHost || roomStatus !== "waiting"
                         ? "not-allowed"
                         : "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                     transition: `background-color 103ms cubic-bezier(.2,1,.3,1), color 103ms cubic-bezier(.2,1,.3,1), border-color 103ms cubic-bezier(.2,1,.3,1)`,
                     opacity:
                       saving || !isHost || roomStatus !== "waiting" ? 0.62 : 1,

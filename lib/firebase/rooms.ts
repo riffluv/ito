@@ -4,7 +4,7 @@ import { presenceSupported } from "@/lib/firebase/presence";
 import { logWarn } from "@/lib/utils/log";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
-import type { PlayerDoc, RoomOptions } from "@/lib/types";
+import type { RoomDoc, RoomOptions } from "@/lib/types";
 import {
   collection,
   deleteField,
@@ -18,7 +18,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
-const ROOM_TTL_MS = 60 * 60 * 1000; // 60分で自動削除（未使用時のTTL想定）
+type RoomUpdatePayload = Partial<RoomDoc> & Record<string, unknown>;
+type RoomOrderState = NonNullable<RoomDoc["order"]>;
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db!, "rooms", roomId), { options });
@@ -75,11 +76,15 @@ export async function transferHost(roomId: string, newHostId: string) {
       return { ok: true };
     }
 
-    let detail: any = null;
+    let detail: unknown = null;
     try {
       detail = await response.json();
     } catch {}
-    const code = detail?.error ? String(detail.error) : "transfer_failed";
+    const code =
+      detail &&
+      typeof (detail as { error?: unknown }).error === "string"
+        ? String((detail as { error: unknown }).error)
+        : "transfer_failed";
     return { ok: false, code };
   };
 
@@ -103,19 +108,18 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(roomRef);
       if (!snap.exists()) return;
-      const data = snap.data() as any;
-      const updates: Record<string, any> = {};
+      const data = snap.data() as RoomDoc | undefined;
+      if (!data) return;
+      const updates: RoomUpdatePayload = {};
 
       let dealPlayersChanged = false;
-      if (data?.deal && Array.isArray(data.deal.players)) {
-        const filteredPlayers = (data.deal.players as string[]).filter(
-          (pid) => pid !== userId
-        );
+      if (data.deal && Array.isArray(data.deal.players)) {
+        const filteredPlayers = data.deal.players.filter((pid) => pid !== userId);
         if (filteredPlayers.length !== data.deal.players.length) {
-          const seatHistorySource = (data.deal as Record<string, unknown>).seatHistory;
+          const seatHistorySource = data.deal.seatHistory;
           const baseSeatHistory: Record<string, number> =
             seatHistorySource && typeof seatHistorySource === "object"
-              ? { ...(seatHistorySource as Record<string, number>) }
+              ? { ...seatHistorySource }
               : {};
           const nextSeatHistory: Record<string, number> = { ...baseSeatHistory };
           filteredPlayers.forEach((pid, index) => {
@@ -131,14 +135,12 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
         }
       }
 
-      if (data?.order) {
-        const nextOrder: Record<string, any> = { ...data.order };
+      if (data.order) {
+        const nextOrder: RoomOrderState = { ...(data.order as RoomOrderState) };
         let orderChanged = false;
 
         if (Array.isArray(data.order.list)) {
-          const filteredList = (data.order.list as string[]).filter(
-            (pid) => pid !== userId
-          );
+          const filteredList = data.order.list.filter((pid) => pid !== userId);
           if (filteredList.length !== data.order.list.length) {
             nextOrder.list = filteredList;
             orderChanged = true;
@@ -146,53 +148,46 @@ async function applyClientSideLeaveFallback(roomId: string, userId: string) {
         }
 
         if (Array.isArray(data.order.proposal)) {
-          const filteredProposal = (data.order.proposal as (string | null)[]).filter(
-            (pid) => pid !== userId
-          );
+          const filteredProposal = data.order.proposal.filter((pid) => pid !== userId);
           if (filteredProposal.length !== data.order.proposal.length) {
             nextOrder.proposal = filteredProposal;
             orderChanged = true;
           }
         }
 
-        if (
-          dealPlayersChanged &&
-          updates.deal &&
-          Array.isArray((updates.deal as any).players)
-        ) {
-          nextOrder.total = (updates.deal as any).players.length;
+        if (dealPlayersChanged && Array.isArray(updates.deal?.players)) {
+          nextOrder.total = updates.deal?.players?.length ?? nextOrder.total;
           orderChanged = true;
         }
 
         if (orderChanged) {
           updates.order = nextOrder;
         }
-      } else if (
-        dealPlayersChanged &&
-        updates.deal &&
-        Array.isArray((updates.deal as any).players)
-      ) {
+      } else if (dealPlayersChanged && Array.isArray(updates.deal?.players)) {
         // order が存在しない場合でも total を揃えておく（古いクライアント向け）
         updates.order = {
           list: [],
           proposal: [],
-          total: (updates.deal as any).players.length,
+          total: updates.deal?.players?.length ?? 0,
+          lastNumber: null,
+          failed: false,
+          failedAt: null,
         };
       }
 
       if (data?.hostId === userId) {
         updates.hostId = "";
-        updates.hostName = deleteField();
+        (updates as Record<string, unknown>)["hostName"] = deleteField();
         const dealPlayers = Array.isArray(data?.deal?.players)
           ? (data.deal.players as string[])
           : null;
         const orderList = Array.isArray(data?.order?.list)
           ? (data.order.list as string[])
           : null;
-        const updatesDealPlayers =
-          updates.deal && Array.isArray((updates.deal as any).players)
-            ? ((updates.deal as any).players as string[]).length
-            : null;
+        const updatedPlayers = Array.isArray(updates.deal?.players)
+          ? updates.deal?.players ?? null
+          : null;
+        const updatesDealPlayers = updatedPlayers ? updatedPlayers.length : null;
         const remainingDeal =
           updatesDealPlayers !== null
             ? updatesDealPlayers
@@ -287,7 +282,7 @@ export async function resetRoomToWaiting(roomId: string, opts?: { force?: boolea
   const roomRef = doc(db!, "rooms", roomId);
   const snap = await getDoc(roomRef);
   if (!snap.exists()) return;
-  const room: any = snap.data();
+  const room = snap.data() as RoomDoc | undefined;
   const status = room?.status;
   // 進行中は原則禁止（誤タップや遅延UIからの誤操作防止）
   if (!opts?.force && (status === "clue" || status === "reveal")) {
@@ -342,7 +337,7 @@ export async function resetRoomWithPrune(
   let keptCount: number | null = keepArr.length;
   let prevTotal: number | null = null;
 
-  const deriveStats = (room: any) => {
+  const deriveStats = (room: RoomDoc | undefined) => {
     removedCount = null;
     keptCount = keepArr.length;
     prevTotal = null;
@@ -360,7 +355,7 @@ export async function resetRoomWithPrune(
   try {
     const initialSnap = await getDoc(roomRef);
     if (initialSnap.exists()) {
-      deriveStats(initialSnap.data());
+      deriveStats(initialSnap.data() as RoomDoc | undefined);
     }
   } catch {
     // 読み取り失敗時は fallback 後に再計算される
@@ -449,12 +444,15 @@ export async function resetRoomWithPrune(
       } else if (!response && fallbackReason) {
         // ネットワーク系は fallback へ移行
       } else if (response) {
-        let detail: any = null;
+        let detail: unknown = null;
         try {
           detail = await response.json();
         } catch {}
         const code =
-          typeof detail?.error === "string" ? detail.error : "reset_failed";
+          detail &&
+          typeof (detail as { error?: unknown }).error === "string"
+            ? String((detail as { error: unknown }).error)
+            : "reset_failed";
         throw new Error(code);
       } else {
         markFallback("network");
@@ -467,7 +465,7 @@ export async function resetRoomWithPrune(
       await runTransaction(db!, async (tx) => {
         const snap = await tx.get(roomRef);
         if (!snap.exists()) return;
-        const room: any = snap.data();
+        const room = snap.data() as RoomDoc | undefined;
         deriveStats(room);
         tx.update(roomRef, {
           status: "waiting",
@@ -508,7 +506,6 @@ export async function resetRoomWithPrune(
     const playersRef = collection(db!, "rooms", roomId, "players");
     const snap = await getDocs(playersRef);
     const batch = writeBatch(db!);
-    let updateCount = 0;
     snap.forEach((d) => {
       batch.update(d.ref, {
         number: null,
@@ -516,7 +513,6 @@ export async function resetRoomWithPrune(
         ready: false,
         orderIndex: 0,
       });
-      updateCount++;
     });
     await batch.commit();
   } catch (e) {
@@ -526,7 +522,7 @@ export async function resetRoomWithPrune(
 
   // 任意のチャット告知（軽量）
   // チャット告知は「だれかを除外した」ときのみ（連投で会話を圧迫しないため）
-  if (opts?.notifyChat && removedCount != null && removedCount > 0) {
+  if (opts?.notifyChat && removedCount !== null && removedCount > 0) {
     try {
       const kept = keptCount ?? 0;
       const prev = prevTotal ?? kept + removedCount;
@@ -603,12 +599,15 @@ export async function requestSpectatorRecall(roomId: string): Promise<void> {
   }
 
   if (!response.ok) {
-    let detail: any = null;
+    let detail: unknown = null;
     try {
       detail = await response.json();
     } catch {}
     const code =
-      typeof detail?.error === "string" ? detail.error : "recall_failed";
+      detail &&
+      typeof (detail as { error?: unknown }).error === "string"
+        ? String((detail as { error: unknown }).error)
+        : "recall_failed";
     traceError("spectator.recall", new Error(code), {
       roomId,
       status: response.status,

@@ -6,6 +6,12 @@ import {
 import { PRESENCE_HEARTBEAT_RETRY_DELAYS_MS } from "@/lib/constants/presence";
 import { useEffect, useRef, useState } from "react";
 
+const noop = () => {};
+const isPromiseLike = (value: unknown): value is PromiseLike<void> =>
+  (typeof value === "object" || typeof value === "function") &&
+  value !== null &&
+  typeof (value as PromiseLike<void>).then === "function";
+
 export function usePresence(roomId: string, userId: string | null) {
   const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
@@ -13,8 +19,8 @@ export function usePresence(roomId: string, userId: string | null) {
 
   // Subscribe online list (only when presence supported and user ready)
   useEffect(() => {
-    if (!presenceSupported()) return;
-    if (!roomId) return;
+    if (!presenceSupported()) return noop;
+    if (!roomId) return noop;
     const off = subscribePresence(roomId, (uids) => setOnlineUids(uids));
     return () => off();
   }, [roomId]);
@@ -37,7 +43,7 @@ export function usePresence(roomId: string, userId: string | null) {
 
   // Attach/detach my presence as soon as userId is available
   useEffect(() => {
-    if (!presenceSupported()) return;
+    if (!presenceSupported()) return noop;
     let cancelled = false;
 
     const attachDelays = [0, ...PRESENCE_HEARTBEAT_RETRY_DELAYS_MS];
@@ -91,18 +97,20 @@ export function usePresence(roomId: string, userId: string | null) {
   useEffect(() => {
     return () => {
       try {
-        const r = detachRef.current?.();
-        if (r && typeof (r as any).then === "function")
-          (r as Promise<void>).catch(() => {});
+        const result = detachRef.current?.();
+        if (isPromiseLike(result)) {
+          result.catch(() => {});
+        }
       } catch {}
     };
   }, []);
 
   const detachNow = async () => {
     try {
-      const r = detachRef.current?.();
-      if (r && typeof (r as any).then === "function")
-        await (r as Promise<void>);
+      const result = detachRef.current?.();
+      if (isPromiseLike(result)) {
+        await result;
+      }
     } catch {}
   };
   return { onlineUids, detachNow };

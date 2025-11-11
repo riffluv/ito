@@ -11,9 +11,6 @@ export default function PlayerIndicators({
   onlineCount: number;
 }) {
   const total = players.length;
-  const submitted = players.filter(
-    (p) => !!p?.clue1 && String(p.clue1).trim() !== ""
-  ).length;
 
   return (
     <Box

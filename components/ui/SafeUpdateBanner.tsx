@@ -33,10 +33,6 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     phase === "update_detected" ||
     isUpdateReady;
 
-  if (!shouldShow) {
-    return null;
-  }
-
   const headline = useMemo(() => {
     if (isApplying || phase === "applying") {
       return "更新を適用中";
@@ -106,6 +102,10 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     }
     return "進行中のゲームに影響がないタイミングで自動適用します。";
   }, [autoApplySuppressed, hasError, isApplying, lastError, phase]);
+
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <Box

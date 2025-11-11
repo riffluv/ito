@@ -186,6 +186,14 @@ export function SoundSettingsPlaceholder({
               {muted ? "OFF" : "ON"}
             </Box>
           </HStack>
+          <Text
+            mt={3}
+            fontSize="xs"
+            color={UI_TOKENS.COLORS.textMuted}
+            fontFamily="monospace"
+          >
+            マネージャー状態: {managerStatus}
+          </Text>
         </Box>
 
         <Box

@@ -1,6 +1,6 @@
 import { auth, db } from "@/lib/firebase/client";
 import { traceAction, traceError } from "@/lib/utils/trace";
-import { doc, onSnapshot, Timestamp, type Unsubscribe } from "firebase/firestore";
+import { doc, onSnapshot, Timestamp, type DocumentData, type Unsubscribe } from "firebase/firestore";
 
 import type {
   SpectatorRejoinSnapshot,
@@ -9,7 +9,6 @@ import type {
   SpectatorSessionServices,
 } from "./types";
 
-const INVITE_COLLECTION = "spectatorInvites";
 const SESSION_COLLECTION = "spectatorSessions";
 
 type PostResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -21,14 +20,19 @@ const ensureDb = () => {
   return db;
 };
 
-const toMillis = (value: Timestamp | { toMillis?: () => number } | number | null | undefined) => {
+type TimestampLike = Timestamp | { toMillis?: () => number } | number | null | undefined;
+
+const toMillis = (value: TimestampLike) => {
   if (typeof value === "number") return value;
-  if (value && typeof (value as any).toMillis === "function") {
+  if (value && typeof value === "object" && typeof value.toMillis === "function") {
     try {
-      return Number((value as { toMillis: () => number }).toMillis());
+      return Number(value.toMillis());
     } catch {
       return null;
     }
+  }
+  if (value instanceof Timestamp) {
+    return value.toMillis();
   }
   return null;
 };
@@ -71,14 +75,16 @@ async function callSpectatorApi<TResponse>(
       }
     }
 
-    let detail: any = null;
+    let detail: unknown = null;
     try {
       detail = await response.json();
     } catch {
       detail = null;
     }
     const errorCode =
-      typeof detail?.error === "string" ? detail.error : `http_${response.status}`;
+      typeof (detail as { error?: unknown })?.error === "string"
+        ? String((detail as { error: string }).error)
+        : `http_${response.status}`;
     return { ok: false, error: errorCode } as const;
   };
 
@@ -265,12 +271,21 @@ export const spectatorV2Service: SpectatorSessionServices = {
               handleSnapshot(null);
               return;
             }
-            const data = snap.data() as Record<string, any>;
-            if (roomId && data.roomId && data.roomId !== roomId) {
+            const data = snap.data() as DocumentData | undefined;
+            if (!data) {
               handleSnapshot(null);
               return;
             }
-            const rejoinData = data.rejoinRequest ?? null;
+            const docRoomId =
+              typeof data.roomId === "string" ? data.roomId : null;
+            if (roomId && docRoomId && docRoomId !== roomId) {
+              handleSnapshot(null);
+              return;
+            }
+            const rejoinData = (data.rejoinRequest ?? null) as Record<
+              string,
+              unknown
+            > | null;
             handleSnapshot(mapRejoinSnapshot(rejoinData));
           } catch (error) {
             traceError("spectatorV2.session.observe", error, {
@@ -299,14 +314,14 @@ export const spectatorV2Service: SpectatorSessionServices = {
   rejectRejoin: rejectSpectatorRejoin,
 };
 
-export function mapRejoinSnapshot(snapshot: Record<string, any> | null): SpectatorRejoinSnapshot {
+export function mapRejoinSnapshot(snapshot: Record<string, unknown> | null): SpectatorRejoinSnapshot {
   if (!snapshot) return null;
-  const statusRaw = snapshot.status;
+  const statusRaw = typeof snapshot.status === "string" ? snapshot.status : null;
   const source: SpectatorRejoinSource = snapshot.source === "auto" ? "auto" : "manual";
   const createdAt =
     typeof snapshot.createdAt === "number"
       ? snapshot.createdAt
-      : toMillis(snapshot.createdAt ?? null);
+      : toMillis((snapshot.createdAt as TimestampLike | undefined) ?? null);
   if (statusRaw === "accepted") {
     return {
       status: "accepted",

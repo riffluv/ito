@@ -20,7 +20,7 @@ function toTags(detail: TraceDetail): Record<string, string> | undefined {
   if (!detail) return undefined;
   const tags: Record<string, string> = {};
   for (const [key, value] of Object.entries(detail)) {
-    if (value == null) continue;
+    if (value === null || value === undefined) continue;
     let text: string;
     if (typeof value === "string") {
       text = value;

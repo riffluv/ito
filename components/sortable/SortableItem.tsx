@@ -3,7 +3,7 @@ import { Box } from "@chakra-ui/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { UI_TOKENS } from "@/theme/layout";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export function SortableItem({
   id,
@@ -24,7 +24,7 @@ export function SortableItem({
     isOver,
   } = useSortable({ id, disabled });
   
-  const style: any = {
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? "none" : transition, // ドラッグ中は滑らかな移動のためtransition無効
     cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
@@ -32,7 +32,7 @@ export function SortableItem({
     userSelect: isDragging ? "none" : undefined,
     WebkitUserSelect: isDragging ? "none" : undefined,
     // オリジナル要素はドラッグ中は透明にしてレイアウトだけ保持（DragOverlayと二重に見えないように）
-    ...(isDragging ? { opacity: 0, zIndex: 5 } : null),
+    ...(isDragging ? { opacity: 0, zIndex: 5 } : {}),
   };
   
   return (

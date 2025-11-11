@@ -34,7 +34,9 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
 
   React.useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) {
+      return () => {};
+    }
 
     const ctx = gsap.context(() => {
       if (isVisible) {

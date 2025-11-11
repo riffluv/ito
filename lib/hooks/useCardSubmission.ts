@@ -179,7 +179,7 @@ export function useCardSubmission({
         onFeedback?.({ message: "カードを提出しました", tone: "success" });
         didSucceed = true;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       traceError(actionName, error, { roomId, playerId });
       playDropInvalid();
       const label = removing ? "カードを戻す" : "カードを出す";
@@ -196,7 +196,7 @@ export function useCardSubmission({
         notify({
           id: toastIds.cardActionError(roomId),
           title: `${label}処理に失敗しました`,
-          description: error?.message,
+          description: error instanceof Error ? error.message : String(error ?? "unknown"),
           type: "error",
         });
       }
@@ -237,7 +237,7 @@ export function useCardSubmission({
   }, [isSubmitHintEligible, resetSubmitHint]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     const handler = (event: KeyboardEvent) => {
       if (!isSubmitHintEligible) return;
       if (event.repeat) return;

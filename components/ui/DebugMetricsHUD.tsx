@@ -7,8 +7,6 @@ import { initMetricsExport } from "@/lib/utils/metricsExport";
 
 const ENABLED = process.env.NEXT_PUBLIC_DEBUG_METRICS === "1";
 
-const REFRESH_INTERVAL = 1200;
-
 const formatEntries = (metrics: ItoMetrics) => {
   const entries: Array<{ scope: string; key: string; value: number | string | null | undefined }> = [];
   for (const scope of Object.keys(metrics)) {
@@ -25,7 +23,7 @@ export function DebugMetricsHUD() {
   const [metrics, setMetrics] = useState<ItoMetrics>({});
 
   useEffect(() => {
-    if (!ENABLED) return;
+    if (!ENABLED) return undefined;
     initMetricsExport();
     setMetrics(readMetrics());
     const unsubscribe = subscribeMetrics((snapshot) => setMetrics(snapshot));

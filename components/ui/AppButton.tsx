@@ -1,7 +1,7 @@
 "use client";
 
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import {
   Button as ChakraButton,
   type ButtonProps,

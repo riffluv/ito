@@ -68,7 +68,8 @@ export function useBoardSlots({
         typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
       const cardId = proposalCardId ?? pendingCardId ?? null;
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
-      const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
+      const isOptimistic =
+        cardId !== null && cardId !== undefined && optimisticReturningSet.has(cardId);
       const showCard = !!cardId && ready && !isOptimistic;
       return {
         idx,
@@ -93,7 +94,8 @@ export function useBoardSlots({
         typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
       const cardId = proposalCardId ?? orderCardId ?? pendingCardId ?? null;
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
-      const isOptimistic = cardId != null && optimisticReturningSet.has(cardId);
+      const isOptimistic =
+        cardId !== null && cardId !== undefined && optimisticReturningSet.has(cardId);
       const forceVisible = roomStatus === "reveal" || roomStatus === "finished";
       const showCard = !!cardId && !isOptimistic && isGameActive && (ready || forceVisible);
       return {
@@ -172,14 +174,7 @@ export function useBoardSlots({
       result.push(player);
     });
     return result;
-  }, [
-    Array.isArray(eligibleIds) ? eligibleIds.join(",") : "_",
-    playerMap,
-    pendingLookup,
-    placedLookup,
-    optimisticReturningSet,
-    activeId,
-  ]);
+  }, [eligibleIds, playerMap, pendingLookup, placedLookup, optimisticReturningSet, activeId]);
 
   return {
     dragSlots,

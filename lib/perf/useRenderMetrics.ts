@@ -12,20 +12,21 @@ export interface RenderMetricsOptions {
 }
 
 export function useRenderMetrics(label: string, options?: RenderMetricsOptions) {
-  if (!ENABLE_METRICS || typeof window === "undefined" || typeof performance === "undefined") {
-    return;
+  const isEnabled =
+    ENABLE_METRICS && typeof window !== "undefined" && typeof performance !== "undefined";
+  const threshold = options?.thresholdMs ?? 0;
+  const startRef = useRef<number>(typeof performance !== "undefined" ? performance.now() : 0);
+
+  if (isEnabled) {
+    startRef.current = performance.now();
   }
 
-  const threshold = options?.thresholdMs ?? 0;
-  const startRef = useRef<number>(performance.now());
-  startRef.current = performance.now();
-
   useEffect(() => {
-    if (!ENABLE_METRICS || typeof performance === "undefined") return;
+    if (!isEnabled || typeof performance === "undefined") return;
     const duration = performance.now() - startRef.current;
     if (duration >= threshold) {
       // eslint-disable-next-line no-console
-      console.log("[RenderMetrics] " + label + ": " + duration.toFixed(2) + "ms");
+      console.log(`[RenderMetrics] ${label}: ${duration.toFixed(2)}ms`);
     }
-  });
+  }, [isEnabled, label, threshold]);
 }

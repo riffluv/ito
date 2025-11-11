@@ -3,7 +3,7 @@
  * 全てのカードコンポーネントで共通して使用するスタイル定義
  */
 
-import type { BoxProps } from "@chakra-ui/react";
+import type { SystemStyleObject } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 
 // ✅ レスポンシブカードサイズ定義 (!important除去)
@@ -179,7 +179,7 @@ export const getLetterSpacing = (number: number | null | undefined): string => {
 export const getDragonQuestStyleOverrides = (
   state?: "default" | "success" | "fail" | "ready",
   waitingInCentral?: boolean
-) => {
+): SystemStyleObject => {
   // 基本色設定
   const baseColors = {
     bg: waitingInCentral ? "#1a1d23" : "#0f0f23",
@@ -187,7 +187,7 @@ export const getDragonQuestStyleOverrides = (
   };
 
   // 状態別のスタイルオーバーライド（シンプル版）
-  const stateOverrides: Record<string, any> = {
+  const stateOverrides: Record<"success" | "fail" | "ready" | "default", SystemStyleObject> = {
     success: {
       borderColor: UI_TOKENS.COLORS.dqGold,
       borderWidth: "2px",
@@ -230,7 +230,7 @@ export const getDragonQuestStyleOverrides = (
   return {
     bg: baseColors.bg,
     borderWidth: waitingInCentral ? "2px" : "1px",
-    ...stateOverrides[state || "default"],
+    ...stateOverrides[state ?? "default"],
   };
 };
 

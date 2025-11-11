@@ -4,9 +4,9 @@ import type { RoomOptions } from "@/lib/types";
 import { Field, HStack, Stack, Text } from "@chakra-ui/react";
 
 export function RoomOptionsEditor({
-  value,
-  onChange,
-  disabled,
+  value: _value,
+  onChange: _onChange,
+  disabled: _disabled,
 }: {
   value: RoomOptions;
   onChange: (v: RoomOptions) => void;

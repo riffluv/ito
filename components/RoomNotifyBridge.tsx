@@ -11,7 +11,7 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
   const unsubRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
-    if (!db || !roomId) return;
+    if (!db || !roomId) return () => {};
     seenRef.current = null; // reset on room change
     initLatestRef.current = null;
 
@@ -29,8 +29,9 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
           seenRef.current = new Set<string>();
           let latest: Timestamp | null = null;
           snap.forEach((d) => {
-            seenRef.current!.add(d.id);
-            const c = (d.data() as any)?.createdAt as Timestamp | null | undefined;
+        seenRef.current!.add(d.id);
+            const data = d.data() as { createdAt?: Timestamp | null };
+            const c = data?.createdAt ?? null;
             if (c && (!latest || c.toMillis() > latest.toMillis())) latest = c;
           });
           initLatestRef.current = latest;
@@ -42,7 +43,14 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
           const id = change.doc.id;
           if (seenRef.current!.has(id)) return;
           seenRef.current!.add(id);
-          const data = change.doc.data() as any;
+          const data = change.doc.data() as {
+            kind?: string;
+            createdAt?: Timestamp;
+            type?: string;
+            title?: string;
+            description?: unknown;
+            toastId?: string;
+          };
           if (data?.kind === "notify") {
             const createdAt: Timestamp | undefined = data?.createdAt;
             const initLatest = initLatestRef.current;
@@ -50,18 +58,22 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
             if (initLatest && createdAt && createdAt.toMillis() <= initLatest.toMillis()) {
               return;
             }
-            const type = (data.type as any) || "info";
+            const rawType = typeof data.type === "string" ? data.type : undefined;
+            const type: "info" | "warning" | "success" | "error" =
+              rawType === "info" || rawType === "warning" || rawType === "success" || rawType === "error"
+                ? rawType
+                : "info";
             const title = data.title || "通知";
             const description = typeof data.description === "string" ? data.description : undefined;
             const toastId = (() => {
-              const raw = (title || "").replace(/\s+/g, "");
-              if (!raw) return data.toastId as string | undefined;
+              const raw = title.replace(/\s+/g, "");
+              if (!raw) return data.toastId;
               if (raw.includes("シャッフル")) return toastIds.topicShuffleSuccess(roomId);
               if (raw.includes("お題変更") || raw.includes("お題を変更")) return toastIds.topicChangeSuccess(roomId);
               if (raw.includes("数字") && raw.includes("配")) return toastIds.numberDealSuccess(roomId);
               if (raw.includes("リセット")) return toastIds.gameReset(roomId);
               if (raw.includes("開始")) return toastIds.gameStart(roomId);
-              return data.toastId as string | undefined;
+              return data.toastId;
             })();
             notify({ id: toastId || change.doc.id, title, description, type });
             // 表示したイベントの時刻を保持し、連続追加でも二重表示しない
@@ -75,7 +87,11 @@ export default function RoomNotifyBridge({ roomId }: { roomId: string }) {
 
     const stop = () => {
       if (unsubRef.current) {
-        try { unsubRef.current(); } catch {}
+        try {
+          unsubRef.current();
+        } catch {
+          // noop
+        }
         unsubRef.current = null;
       }
     };

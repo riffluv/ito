@@ -1,7 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import {
   Box,
   Button as ChakraButton,
@@ -9,7 +8,6 @@ import {
   Text,
   type ButtonProps,
 } from "@chakra-ui/react";
-import { keyframes } from "@emotion/react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 export type OctopathDockButtonProps = ButtonProps & {
@@ -20,15 +18,6 @@ export type OctopathDockButtonProps = ButtonProps & {
   compact?: boolean;
   iconBoxSize?: number;
 };
-
-const dockGlint = keyframes`
-  0% { transform: translateX(-40%) rotate(11deg); opacity: 0.24; }
-  7% { transform: translateX(-35%) rotate(11deg); opacity: 0.31; }
-  32% { transform: translateX(22%) rotate(11deg); opacity: 0.48; }
-  58% { transform: translateX(68%) rotate(11deg); opacity: 0.29; }
-  71% { transform: translateX(85%) rotate(11deg); opacity: 0.35; }
-  100% { transform: translateX(120%) rotate(11deg); opacity: 0.19; }
-`;
 
 export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButtonProps>(
   (

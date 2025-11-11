@@ -8,14 +8,30 @@ type MetricsListener = (metrics: ItoMetrics) => void;
 
 const listeners = new Set<MetricsListener>();
 
-function getRoot(): ItoMetrics | null {
+type MetricsWindow = Window & {
+  [METRICS_KEY]?: ItoMetrics;
+};
+
+declare global {
+  interface Window {
+    __ITO_METRICS__?: ItoMetrics;
+  }
+}
+
+function getMetricsHost(): MetricsWindow | null {
   if (typeof window === "undefined") return null;
-  const existing = (window as any)[METRICS_KEY];
+  return window as MetricsWindow;
+}
+
+function getRoot(): ItoMetrics | null {
+  const host = getMetricsHost();
+  if (!host) return null;
+  const existing = host[METRICS_KEY];
   if (existing && typeof existing === "object") {
-    return existing as ItoMetrics;
+    return existing;
   }
   const created: ItoMetrics = {};
-  (window as any)[METRICS_KEY] = created;
+  host[METRICS_KEY] = created;
   return created;
 }
 

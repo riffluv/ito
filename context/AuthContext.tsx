@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth: Auth | null = useMemo(() => {
     if (!firebaseEnabled || !app) return null;
     return getAuth(app);
-  }, [firebaseEnabled]);
+  }, []);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayNameState] = useState<string>(() => {
@@ -54,14 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!firebaseEnabled || !auth) {
+    if (!auth) {
       setLoading(false);
-      return;
     }
-  }, [auth, firebaseEnabled]);
+    return undefined;
+  }, [auth]);
 
   useEffect(() => {
-    if (!firebaseEnabled || !auth) return;
+    if (!auth) return undefined;
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
@@ -79,8 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth]);
 
   useEffect(() => {
-    if (!firebaseEnabled || !auth) return;
-    if (user) return;
+    if (!auth || user) return undefined;
 
     setLoading(true);
 

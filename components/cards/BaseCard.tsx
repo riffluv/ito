@@ -9,7 +9,7 @@ import { CARD_SIZES, CARD_STYLES } from "./card.styles";
 import type { BaseCardProps } from "./card.types";
 
 export const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(
-  ({ variant = "empty", size = "md", children, ...props }, ref) => {
+  ({ variant = "empty", size = "md", children, css: cssProp, ...props }, ref) => {
     const variantStyles = CARD_STYLES[variant];
     const sizeConfig = CARD_SIZES[size];
 
@@ -65,7 +65,7 @@ export const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(
           // フォント描画改善: レイヤー促進
           transform: "translateZ(0)",
           willChange: "auto",
-          ...((props.css || {}) as any),
+          ...(cssProp ?? {}),
         }}
       >
         {children}

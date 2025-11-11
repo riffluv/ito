@@ -234,7 +234,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           quality: effectiveQuality,
         });
       }
-      return;
+      return undefined;
     }
 
     if (isLowPowerDevice || !supports3D) {
@@ -246,7 +246,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       });
       cleanupSimpleBackground();
       setBackgroundType("css");
-      return;
+      return undefined;
     }
 
     let disposed = false;
@@ -355,7 +355,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           quality: effectiveQuality,
         });
       }
-      return;
+      return undefined;
     }
 
     if (isLowPowerDevice || !supports3D) {
@@ -368,11 +368,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       cleanupDragonQuestBackground();
       cleanupLegacyBackground();
       setBackgroundType("css");
-      return;
+      return undefined;
     }
 
     if (!mountRef.current) {
-      return;
+      return undefined;
     }
 
     cleanupSimpleBackground();
@@ -459,7 +459,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           quality: effectiveQuality,
         });
       }
-      return;
+      return undefined;
     }
 
     if (isLowPowerDevice || !supports3D) {
@@ -471,11 +471,11 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       });
       cleanupInfernoBackground();
       setBackgroundType("css");
-      return;
+      return undefined;
     }
 
     if (!mountRef.current) {
-      return;
+      return undefined;
     }
 
     cleanupSimpleBackground();

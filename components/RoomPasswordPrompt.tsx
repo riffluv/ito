@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, Text, VStack, HStack, Button, Box } from "@chakra-ui/react";
+import { Dialog, Text, VStack, HStack, Box } from "@chakra-ui/react";
 import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
 import { UI_TOKENS } from "@/theme/layout";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
@@ -118,7 +118,7 @@ export function RoomPasswordPrompt({
                 fontWeight="normal"
                 textAlign="center"
                 fontFamily="monospace"
-                textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
+                textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
               >
                 ひみつの ばんごうを いれてね
               </Text>
@@ -209,7 +209,7 @@ export function RoomPasswordPrompt({
                   background: "transparent",
                   color: "white",
                   cursor: isLoading ? "not-allowed" : "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                   transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}`,
                   opacity: isLoading ? 0.6 : 1,
                 }}
@@ -224,7 +224,7 @@ export function RoomPasswordPrompt({
                   if (!isLoading) {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                   }
                 }}
               >
@@ -245,7 +245,7 @@ export function RoomPasswordPrompt({
                   background: !canSubmit ? "#666" : "rgba(126, 34, 206, 0.9)",
                   color: "white",
                   cursor: !canSubmit ? "not-allowed" : "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                   transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}`,
                   opacity: !canSubmit ? 0.6 : 1,
                 }}
@@ -260,7 +260,7 @@ export function RoomPasswordPrompt({
                   if (canSubmit) {
                     e.currentTarget.style.background = "rgba(126, 34, 206, 0.9)";
                     e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                   }
                 }}
               >

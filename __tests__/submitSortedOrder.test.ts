@@ -10,7 +10,7 @@ const testDb = getFirestore(testApp);
 // Connect to Firestore emulator for testing
 try {
   connectFirestoreEmulator(testDb, "localhost", 8080);
-} catch (error) {
+} catch {
   // Emulator already connected
 }
 
@@ -68,7 +68,7 @@ describe("submitSortedOrder", () => {
           }
         }
       });
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   });

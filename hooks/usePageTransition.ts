@@ -107,16 +107,10 @@ export function usePageTransition() {
           startLoading(stepsToRun);
 
           // Firebase操作を並列実行（ローディングと同時進行）
-          let firebaseCompleted = false;
           const firebasePromise = firebaseOperation
-            ? firebaseOperation()
-                .then(() => {
-                  firebaseCompleted = true;
-                })
-                .catch((error) => {
-                  console.error("Firebase operation error:", error);
-                  firebaseCompleted = true; // エラーでも進行を続ける
-                })
+            ? firebaseOperation().catch((error) => {
+                console.error("Firebase operation error:", error);
+              })
             : Promise.resolve();
 
           // 総時間を計算
@@ -207,7 +201,6 @@ export function usePageTransition() {
       clearLoadingArtifacts,
       beginTransition,
       cancelTransition,
-      transitionRef,
     ]
   );
 

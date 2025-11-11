@@ -8,13 +8,8 @@ import {
   REVEAL_LINGER,
   REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RoomDoc } from "@/lib/types";
 import {
   clearSortedRevealCache,
   readSortedRevealCache,
@@ -51,14 +46,14 @@ async function preloadRevealPersistenceDeps(): Promise<RevealPersistenceDeps> {
   return revealPersistenceDepsPromise;
 }
 
+type SimpleIdleCallback = (callback: () => void, options?: { timeout?: number }) => number;
+
 const scheduleRevealPersistenceTask = (task: () => void) => {
   if (typeof window === "undefined") {
     task();
     return;
   }
-  const idle = (window as any).requestIdleCallback as
-    | ((callback: () => void, options?: { timeout?: number }) => number)
-    | undefined;
+  const idle = (window as Window & { requestIdleCallback?: SimpleIdleCallback }).requestIdleCallback;
   if (typeof idle === "function") {
     idle(
       () => {
@@ -128,7 +123,7 @@ export function useRevealAnimation({
       return;
     }
     touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
-  }, [orderData?.list, orderData?.numbers, resolveMode, roomId]);
+  }, [orderData, resolveMode, roomId]);
 
   // Start reveal animation: useLayoutEffect so we set the flag before the
   // browser paints. This avoids a render where `roomStatus === 'reveal'` but
@@ -159,7 +154,9 @@ export function useRevealAnimation({
 
   // Handle reveal animation progression
   useEffect(() => {
-    if (!revealAnimating) return;
+    if (!revealAnimating) {
+      return undefined;
+    }
 
     if (revealIndex >= orderListLength && orderListLength > 0) {
       logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
@@ -240,7 +237,7 @@ export function useRevealAnimation({
                   await runTransaction(_db, async (tx) => {
                     const currentSnap = await tx.get(roomRef);
                     if (!currentSnap.exists()) return;
-                    const currentRoom = currentSnap.data() as any;
+                    const currentRoom = currentSnap.data() as RoomDoc;
                     if (currentRoom.result) return; // 既存結果がある場合はスキップ
                     tx.update(roomRef, {
                       result: {
@@ -266,7 +263,7 @@ export function useRevealAnimation({
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [revealAnimating, revealIndex, orderListLength, roomId]);
+  }, [orderData, orderListLength, revealAnimating, revealIndex, roomId, roomStatus]);
 
   // Turn off the local animation flag when the server reports finished.
   useEffect(() => {

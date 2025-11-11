@@ -174,12 +174,6 @@ export async function createSimpleBackground(
   options: SimpleBackgroundOptions
 ): Promise<SimpleBackgroundController> {
   const pixi = await loadPixi();
-  const BLEND_MODES = (pixi as unknown as {
-    BLEND_MODES?: Record<string, number>;
-  }).BLEND_MODES;
-  const WRAP_MODES = (pixi as unknown as {
-    WRAP_MODES?: Record<string, number>;
-  }).WRAP_MODES;
   const app = new pixi.Application();
   const resolution = Math.min(
     options.dprCap ?? DPR_CAP,
@@ -231,9 +225,7 @@ export async function createSimpleBackground(
   );
   diagonalOverlay.anchor.set(0.5);
   diagonalOverlay.alpha = 0.24;
-  if (BLEND_MODES?.SCREEN !== undefined) {
-    diagonalOverlay.blendMode = BLEND_MODES.SCREEN as any;
-  }
+  diagonalOverlay.blendMode = "screen";
   root.addChild(diagonalOverlay);
   parallaxLayers.push({
     display: diagonalOverlay,
@@ -246,9 +238,7 @@ export async function createSimpleBackground(
   const softAurora = new pixi.Sprite(createPointerGlowTexture(pixi, 480));
   softAurora.anchor.set(0.5);
   softAurora.alpha = 0.12;
-  if (BLEND_MODES?.ADD !== undefined) {
-    softAurora.blendMode = BLEND_MODES.ADD as any;
-  }
+  softAurora.blendMode = "add";
   root.addChild(softAurora);
   parallaxLayers.push({
     display: softAurora,
@@ -260,42 +250,32 @@ export async function createSimpleBackground(
 
   const vignette = new pixi.Sprite(createVignetteTexture(pixi));
   vignette.alpha = 0.15;
-  if (BLEND_MODES?.MULTIPLY !== undefined) {
-    vignette.blendMode = BLEND_MODES.MULTIPLY as any;
-  }
+  vignette.blendMode = "multiply";
   vignette.anchor.set(0.5);
   root.addChild(vignette);
 
   const grainTexture = createGrainTexture(pixi);
-  if (WRAP_MODES?.REPEAT !== undefined) {
-    grainTexture.baseTexture.wrapMode = WRAP_MODES.REPEAT as any;
-  }
+  grainTexture.baseTexture.wrapMode = "repeat";
   const grain = new pixi.TilingSprite(
     grainTexture,
     options.width,
     options.height
   );
   grain.alpha = 0.065;
-  if (BLEND_MODES?.SCREEN !== undefined) {
-    grain.blendMode = BLEND_MODES.SCREEN as any;
-  }
+  grain.blendMode = "screen";
   root.addChild(grain);
 
   const lightSweepTexture = createLightSweepTexture(pixi);
   const lightSweep = new pixi.Sprite(lightSweepTexture);
   lightSweep.anchor.set(0.5);
-  if (BLEND_MODES?.SCREEN !== undefined) {
-    lightSweep.blendMode = BLEND_MODES.SCREEN as any;
-  }
+  lightSweep.blendMode = "screen";
   lightSweep.alpha = 0;
   lightSweep.visible = false;
   root.addChild(lightSweep);
 
   const pointerGlow = new pixi.Sprite(createPointerGlowTexture(pixi));
   pointerGlow.anchor.set(0.5);
-  if (BLEND_MODES?.SCREEN !== undefined) {
-    pointerGlow.blendMode = BLEND_MODES.SCREEN as any;
-  }
+  pointerGlow.blendMode = "screen";
   pointerGlow.alpha = 0;
   pointerGlow.visible = false;
   root.addChild(pointerGlow);

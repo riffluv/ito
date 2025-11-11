@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
+import type { TransitionOptions } from "../../hooks/transition/types";
 import { usePageTransition } from "../../hooks/usePageTransition";
 import { DragonQuestLoading } from "./DragonQuestLoading";
 import { PageTransition } from "./PageTransition";
@@ -14,6 +15,8 @@ interface TransitionProviderProps {
 
 export function TransitionProvider({ children }: TransitionProviderProps) {
   const transition = usePageTransition();
+  const direction =
+    (transition.direction as TransitionOptions["direction"] | undefined) ?? "slideLeft";
 
   return (
     <TransitionContext.Provider value={transition}>
@@ -32,7 +35,7 @@ export function TransitionProvider({ children }: TransitionProviderProps) {
       {!transition.isLoading && (
         <PageTransition
           isTransitioning={transition.isTransitioning}
-          direction={transition.direction as any}
+          direction={direction}
           fromPage={transition.fromPage}
           toPage={transition.toPage}
           duration={transition.duration}
@@ -61,7 +64,6 @@ export const TransitionHelpers = {
     displayName: string
   ) => {
     const { joinRoomFully } = await import("@/lib/services/roomService");
-    const { useAuth } = await import("@/context/AuthContext");
 
     await transition.navigateToRoom(roomId, async () => {
       // Firebase ルーム参加処理をここで実行
@@ -74,9 +76,13 @@ export const TransitionHelpers = {
       // 2. ルーム情報取得
       await new Promise(resolve => setTimeout(resolve, 1200));
 
-      // 3. プレイヤー登録
-      // await joinRoomFully({ roomId, uid: "user-id", displayName });
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // 3. プレイヤー登録 (デモ用の簡易実装)
+      await joinRoomFully({
+        roomId,
+        uid: "demo-user",
+        displayName,
+        notifyChat: false,
+      });
 
       // 4. 準備完了
       await new Promise(resolve => setTimeout(resolve, 400));
@@ -86,7 +92,7 @@ export const TransitionHelpers = {
   // 設定変更の遷移
   updateSettings: async (
     transition: ReturnType<typeof usePageTransition>,
-    settingsData: any
+    settingsData: Record<string, unknown>
   ) => {
     await transition.navigateWithTransition(
       "/settings",

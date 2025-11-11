@@ -1,6 +1,11 @@
 import type * as PIXI from "pixi.js";
 import { loadPixi } from "./loadPixi";
 
+const isBlendMode = (value: unknown): value is PIXI.BLEND_MODES =>
+  typeof value === "number";
+const isWrapMode = (value: unknown): value is PIXI.WRAP_MODE =>
+  typeof value === "number" || typeof value === "string";
+
 export interface RichBlackBackgroundOptions {
   width: number;
   height: number;
@@ -120,11 +125,11 @@ export async function createRichBlackBackground(
   options: RichBlackBackgroundOptions
 ): Promise<RichBlackBackgroundController> {
   const pixi = await loadPixi();
-  const BLEND_MODES = (pixi as unknown as {
-    BLEND_MODES?: Record<string, number>;
+  const BLEND_MODES = (pixi as typeof PIXI & {
+    BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
   }).BLEND_MODES;
-  const WRAP_MODES = (pixi as unknown as {
-    WRAP_MODES?: Record<string, number>;
+  const WRAP_MODES = (pixi as typeof PIXI & {
+    WRAP_MODES?: Partial<Record<string, PIXI.WRAP_MODE>>;
   }).WRAP_MODES;
 
   const app = new pixi.Application();
@@ -167,14 +172,14 @@ export async function createRichBlackBackground(
   vignette.width = options.width * 1.45;
   vignette.height = options.height * 1.7;
   vignette.alpha = options.vignetteAlpha ?? 0.58;
-  if (BLEND_MODES?.MULTIPLY !== undefined) {
-    vignette.blendMode = BLEND_MODES.MULTIPLY as any;
+  if (isBlendMode(BLEND_MODES?.MULTIPLY)) {
+    vignette.blendMode = BLEND_MODES.MULTIPLY;
   }
   root.addChild(vignette);
 
   const noiseTexture = createNoiseTexture(pixi);
-  if (WRAP_MODES?.REPEAT !== undefined) {
-    noiseTexture.baseTexture.wrapMode = WRAP_MODES.REPEAT as any;
+  if (isWrapMode(WRAP_MODES?.REPEAT)) {
+    noiseTexture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
   }
   const noise = new pixi.TilingSprite(
     noiseTexture,
@@ -182,8 +187,8 @@ export async function createRichBlackBackground(
     options.height
   );
   noise.alpha = options.noiseAlpha ?? 0.085;
-  if (BLEND_MODES?.OVERLAY !== undefined) {
-    noise.blendMode = BLEND_MODES.OVERLAY as any;
+  if (isBlendMode(BLEND_MODES?.OVERLAY)) {
+    noise.blendMode = BLEND_MODES.OVERLAY;
   }
   root.addChild(noise);
 
@@ -193,8 +198,8 @@ export async function createRichBlackBackground(
   sheen.width = options.width * 1.2;
   sheen.height = Math.max(options.height * 0.45, 260);
   sheen.alpha = 0.12;
-  if (BLEND_MODES?.SCREEN !== undefined) {
-    sheen.blendMode = BLEND_MODES.SCREEN as any;
+  if (isBlendMode(BLEND_MODES?.SCREEN)) {
+    sheen.blendMode = BLEND_MODES.SCREEN;
   }
   root.addChild(sheen);
 

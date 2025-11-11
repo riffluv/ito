@@ -30,9 +30,9 @@ export default async function heartbeatHandler(
       lastSeen: FieldValue.serverTimestamp(),
     });
 
-    res.status(200).json({ success: true });
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Heartbeat update failed:', error);
-    res.status(500).json({ error: 'Failed to update heartbeat' });
+    return res.status(500).json({ error: 'Failed to update heartbeat' });
   }
 }

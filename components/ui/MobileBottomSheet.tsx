@@ -164,9 +164,11 @@ export function MobileBottomSheet({
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return undefined;
+    }
     const viewport = window.visualViewport;
-    if (!viewport) return;
+    if (!viewport) return undefined;
     const handleViewportChange = () => {
       setViewportTick((tick) => tick + 1);
       if (sheetRef.current) {
@@ -183,38 +185,42 @@ export function MobileBottomSheet({
   }, [getSheetOffset, sheetState]);
 
   // GSAPアニメーション - シート位置更新
-  const animateSheet = (targetState: SheetState) => {
-    if (!sheetRef.current) return;
-    const targetOffset = getSheetOffset(targetState);
-    gsap.to(sheetRef.current, {
-      y: targetOffset,
-      duration: 0.4,
-      ease: "back.out(1.2)",
-    });
-  };
+  const animateSheet = useCallback(
+    (targetState: SheetState) => {
+      if (!sheetRef.current) return;
+      const targetOffset = getSheetOffset(targetState);
+      gsap.to(sheetRef.current, {
+        y: targetOffset,
+        duration: 0.4,
+        ease: "back.out(1.2)",
+      });
+    },
+    [getSheetOffset]
+  );
 
   // オーバーレイのフェードイン/アウト
-  const animateOverlay = (show: boolean) => {
+  const animateOverlay = useCallback((show: boolean) => {
     if (!overlayRef.current) return;
 
     if (show) {
       gsap.set(overlayRef.current, { display: "block" });
       gsap.to(overlayRef.current, { opacity: 0.5, duration: 0.3 });
-    } else {
-      gsap.to(overlayRef.current, {
-        opacity: 0,
-        duration: 0.3,
-        onComplete: () => {
-          if (overlayRef.current) {
-            gsap.set(overlayRef.current, { display: "none" });
-          }
-        },
-      });
+      return;
     }
-  };
+
+    gsap.to(overlayRef.current, {
+      opacity: 0,
+      duration: 0.3,
+      onComplete: () => {
+        if (overlayRef.current) {
+          gsap.set(overlayRef.current, { display: "none" });
+        }
+      },
+    });
+  }, []);
 
   // コンテンツフェード
-  const animateContent = () => {
+  const animateContent = useCallback(() => {
     if (!contentRef.current) return;
 
     gsap.fromTo(
@@ -222,7 +228,7 @@ export function MobileBottomSheet({
       { opacity: 0, y: 20 },
       { opacity: 1, y: 0, duration: 0.2 }
     );
-  };
+  }, []);
 
   // ドラッグハンドラー - ネイティブPointerEvent使用
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -325,6 +331,8 @@ export function MobileBottomSheet({
 
   // 状態変更時のアニメーション実行
   useEffect(() => {
+    let contentTimer: number | undefined;
+
     if (prefersReduced) {
       // 最小限の状態にセット
       if (sheetRef.current)
@@ -342,41 +350,59 @@ export function MobileBottomSheet({
       animateSheet(sheetState);
       animateOverlay(sheetState === "full");
       if (sheetState !== "collapsed") {
-        setTimeout(() => animateContent(), 100);
+        contentTimer = window.setTimeout(() => animateContent(), 100);
       }
     }
-  }, [sheetState, prefersReduced, getSheetOffset]);
+
+    return () => {
+      if (contentTimer) {
+        window.clearTimeout(contentTimer);
+      }
+    };
+  }, [
+    sheetState,
+    prefersReduced,
+    getSheetOffset,
+    animateSheet,
+    animateOverlay,
+    animateContent,
+  ]);
 
   // 初期化時のポジション設定
   useEffect(() => {
-    if (sheetRef.current) {
-      gsap.set(sheetRef.current, {
+    const sheetEl = sheetRef.current;
+    const overlayEl = overlayRef.current;
+    const contentEl = contentRef.current;
+
+    if (sheetEl) {
+      gsap.set(sheetEl, {
         y: getSheetOffset("collapsed"),
       });
     }
-    if (overlayRef.current) {
-      gsap.set(overlayRef.current, {
+    if (overlayEl) {
+      gsap.set(overlayEl, {
         opacity: 0,
         display: "none",
       });
     }
+
     return () => {
       try {
-        if (sheetRef.current) {
-          gsap.killTweensOf(sheetRef.current);
-          gsap.set(sheetRef.current, {
+        if (sheetEl) {
+          gsap.killTweensOf(sheetEl);
+          gsap.set(sheetEl, {
             clearProps: "transform,opacity,x,y,scale",
           });
         }
-        if (overlayRef.current) {
-          gsap.killTweensOf(overlayRef.current);
-          gsap.set(overlayRef.current, { clearProps: "opacity,display" });
+        if (overlayEl) {
+          gsap.killTweensOf(overlayEl);
+          gsap.set(overlayEl, { clearProps: "opacity,display" });
         }
-        if (contentRef.current) {
-          gsap.killTweensOf(contentRef.current);
-          gsap.set(contentRef.current, { clearProps: "opacity,y" });
+        if (contentEl) {
+          gsap.killTweensOf(contentEl);
+          gsap.set(contentEl, { clearProps: "opacity,y" });
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     };

@@ -1,8 +1,7 @@
 "use client";
 import React from "react";
 import { UI_TOKENS } from "@/theme/layout";
-import { Dialog, Field, Input, Stack, Box, Text, HStack } from "@chakra-ui/react";
-import { AppButton } from "@/components/ui/AppButton";
+import { Dialog, Field, Input, Box, Text, HStack } from "@chakra-ui/react";
 import { notify } from "@/components/ui/notify";
 import { validateDisplayName } from "@/lib/validation/forms";
 
@@ -202,10 +201,24 @@ export function NameDialog({
                   try {
                     const sanitized = validateDisplayName(value);
                     onSubmit(sanitized);
-                  } catch (err: any) {
+                  } catch (err) {
+                    let description = "入力内容を確認してください";
+                    if (
+                      err &&
+                      typeof err === "object" &&
+                      "errors" in err &&
+                      Array.isArray((err as { errors?: Array<{ message?: string }> }).errors)
+                    ) {
+                      const first = (err as { errors?: Array<{ message?: string }> }).errors?.[0];
+                      if (first?.message) {
+                        description = first.message;
+                      }
+                    } else if (err instanceof Error && err.message) {
+                      description = err.message;
+                    }
                     notify({
                       title: "入力エラー",
-                      description: err?.errors?.[0]?.message || "入力内容を確認してください",
+                      description,
                       type: "error",
                     });
                     return;

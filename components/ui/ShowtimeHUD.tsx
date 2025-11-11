@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { playSound } from "@/lib/audio/playSound";
 import {
@@ -58,42 +58,14 @@ const VARIANT_STYLES: Record<
 };
 
 const DEFAULT_DURATION = 2600;
+type TimerHandle = number;
 
 export function ShowtimeHUD() {
   const [banner, setBanner] = useState<ActiveBanner | null>(null);
-  const hideTimerRef = useRef<number | null>(null);
-  const cleanupTimerRef = useRef<number | null>(null);
+  const hideTimerRef = useRef<TimerHandle | null>(null);
+  const cleanupTimerRef = useRef<TimerHandle | null>(null);
 
-  useEffect(() => {
-    const handleBanner = (event: Event) => {
-      const custom = event as CustomEvent<BannerPayload>;
-      if (!custom?.detail?.text) {
-        return;
-      }
-      showBanner(custom.detail);
-    };
-
-    window.addEventListener(
-      SHOWTIME_BANNER_EVENT,
-      handleBanner as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        SHOWTIME_BANNER_EVENT,
-        handleBanner as EventListener
-      );
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
-      if (cleanupTimerRef.current) {
-        window.clearTimeout(cleanupTimerRef.current);
-        cleanupTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  const triggerFeedback = (variant: BannerVariant) => {
+  const triggerFeedback = useCallback((variant: BannerVariant) => {
     if (typeof window !== "undefined" && "vibrate" in navigator) {
       try {
         if (variant === "danger") {
@@ -118,9 +90,9 @@ export function ShowtimeHUD() {
       default:
         break;
     }
-  };
+  }, []);
 
-  const showBanner = (detail: BannerPayload) => {
+  const showBanner = useCallback((detail: BannerPayload) => {
     const variant: BannerVariant = detail.variant ?? "info";
     const id = Date.now();
     const duration = Math.max(1200, detail.durationMs ?? DEFAULT_DURATION);
@@ -152,7 +124,36 @@ export function ShowtimeHUD() {
     cleanupTimerRef.current = window.setTimeout(() => {
       setBanner((prev) => (prev && prev.id === id ? null : prev));
     }, duration + 360);
-  };
+  }, [triggerFeedback]);
+
+  useEffect(() => {
+    const handleBanner = (event: Event) => {
+      const custom = event as CustomEvent<BannerPayload>;
+      if (!custom?.detail?.text) {
+        return;
+      }
+      showBanner(custom.detail);
+    };
+
+    window.addEventListener(
+      SHOWTIME_BANNER_EVENT,
+      handleBanner as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        SHOWTIME_BANNER_EVENT,
+        handleBanner as EventListener
+      );
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      if (cleanupTimerRef.current) {
+        window.clearTimeout(cleanupTimerRef.current);
+        cleanupTimerRef.current = null;
+      }
+    };
+  }, [showBanner]);
 
   if (!banner) {
     return null;
@@ -238,4 +239,3 @@ export function ShowtimeHUD() {
     </Box>
   );
 }
-

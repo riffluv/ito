@@ -4,16 +4,26 @@
   実行方法:
     GOOGLE_APPLICATION_CREDENTIALS を設定し、ts-node または node で実行
 */
-import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
+import {
+  applicationDefault,
+  getApps,
+  initializeApp,
+  type AppOptions,
+} from "firebase-admin/app";
 import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
+import { logError, logInfo } from "../lib/utils/log";
 
-if (!getApps().length)
-  initializeApp({ credential: applicationDefault() } as any);
+if (!getApps().length) {
+  const appOptions: AppOptions = {
+    credential: applicationDefault(),
+  };
+  initializeApp(appOptions);
+}
 
 async function main() {
   const db = getFirestore();
   const cutoff = Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000)); // 1h
-  console.log("[reset-orphans] scanning rooms...");
+  logInfo("admin.resetOrphans", "scanning rooms…");
   const snap = await db
     .collection("rooms")
     .where("lastActiveAt", "<", cutoff)
@@ -43,10 +53,10 @@ async function main() {
     );
     touched++;
   }
-  console.log(`[reset-orphans] done. touched=${touched}`);
+  logInfo("admin.resetOrphans", "done", { touched });
 }
 
 main().catch((e) => {
-  console.error(e);
+  logError("admin.resetOrphans", "failed", e);
   process.exit(1);
 });

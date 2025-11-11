@@ -4,10 +4,8 @@ import { createWaitingCardViewModel } from "./cardViewModel";
 import type { PlayerDoc } from "@/lib/types";
 import { Box } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { WAITING_LABEL } from "@/lib/ui/constants";
-import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 
 interface WaitingAreaCardProps {
   player: PlayerDoc & { id: string };
@@ -28,7 +26,6 @@ function WaitingAreaCardComponent({
   const hasValidClue = !!(player?.clue1 && player.clue1.trim() !== "");
   const ready = !optimisticReset && hasValidClue;
 
-  const prefersReducedMotion = useReducedMotionPreference();
   const PROMPT_LABEL = "Add your hint.";
 
   const deriveInitialClue = () => {

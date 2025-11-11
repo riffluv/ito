@@ -1,5 +1,5 @@
 "use client";
-import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";

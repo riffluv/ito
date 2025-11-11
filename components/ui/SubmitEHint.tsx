@@ -6,7 +6,6 @@ import { FaArrowUp } from "react-icons/fa";
 import {
   HINT_POSITIONS,
   HINT_COMMON_STYLES,
-  PARTICLE_CONFIG,
   HINT_ANIMATION_CONFIG,
 } from "./hints/constants";
 
@@ -128,7 +127,7 @@ export default function SubmitEHint({ shouldShow }: SubmitEHintProps) {
     if (!shouldShow) {
       cleanupTimeline();
       setIsVisible(false);
-      return;
+      return undefined;
     }
 
     setIsVisible(true);

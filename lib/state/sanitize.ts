@@ -1,68 +1,76 @@
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
-import { getDisplayMode, hasMinimalTag } from "@/lib/game/displayMode";
+import { hasMinimalTag } from "@/lib/game/displayMode";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
-export function sanitizeRoom(input: any): RoomDoc {
+type UnknownRoom = Partial<RoomDoc> & Record<string, unknown>;
+type UnknownPlayer = Partial<PlayerDoc> & Record<string, unknown>;
+
+export function sanitizeRoom(input: unknown): RoomDoc {
+  const roomInput: UnknownRoom = (input ?? {}) as UnknownRoom;
   const status = ((): RoomDoc["status"] => {
-    const s = input?.status;
+    const s = roomInput?.status;
     return s === "waiting" || s === "clue" || s === "reveal" || s === "finished"
       ? s
       : "waiting";
   })();
-  const options = input?.options || { allowContinueAfterFail: true };
-  const validTopic = (t: any) =>
+  const rawOptions = (roomInput?.options ?? {}) as Partial<RoomDoc["options"]>;
+  const allowContinueAfterFail =
+    typeof rawOptions?.allowContinueAfterFail === "boolean"
+      ? rawOptions.allowContinueAfterFail
+      : true;
+  const validTopic = (t: unknown) =>
     t === "通常版" || t === "レインボー版" || t === "クラシック版" || t === "カスタム";
   return {
-    name: String(input?.name || "Untitled"),
-    hostId: String(input?.hostId || ""),
+    name: String(roomInput?.name || "Untitled"),
+    hostId: String(roomInput?.hostId || ""),
     // ルームDocに埋め込んだホスト名を通す（未設定時はundefinedのまま）
     hostName:
-      typeof input?.hostName === "string" && input.hostName.trim()
-        ? String(input.hostName)
+      typeof roomInput?.hostName === "string" && roomInput.hostName.trim()
+        ? String(roomInput.hostName)
         : undefined,
-    creatorId: String(input?.creatorId || ""),
+    creatorId: String(roomInput?.creatorId || ""),
     creatorName:
-      typeof input?.creatorName === "string" && input.creatorName.trim()
-        ? String(input.creatorName)
+      typeof roomInput?.creatorName === "string" && roomInput.creatorName.trim()
+        ? String(roomInput.creatorName)
         : undefined,
-    requiresPassword: !!input?.requiresPassword,
-    passwordHash: typeof input?.passwordHash === "string" ? input.passwordHash : null,
-    passwordSalt: typeof input?.passwordSalt === "string" ? input.passwordSalt : null,
-    passwordVersion: typeof input?.passwordVersion === "number" ? input.passwordVersion : null,
+    requiresPassword: !!roomInput?.requiresPassword,
+    passwordHash: typeof roomInput?.passwordHash === "string" ? roomInput.passwordHash : null,
+    passwordSalt: typeof roomInput?.passwordSalt === "string" ? roomInput.passwordSalt : null,
+    passwordVersion: typeof roomInput?.passwordVersion === "number" ? roomInput.passwordVersion : null,
 
     options: {
-      allowContinueAfterFail: !!options.allowContinueAfterFail,
-      resolveMode: normalizeResolveMode(options.resolveMode),
+      allowContinueAfterFail,
+      resolveMode: normalizeResolveMode(rawOptions?.resolveMode),
       // displayMode は保存されていれば通し、なければ name のサフィックスから派生
       displayMode:
-        options?.displayMode === "minimal" || options?.displayMode === "full"
-          ? options.displayMode
-          : hasMinimalTag(input?.name)
+        rawOptions?.displayMode === "minimal" || rawOptions?.displayMode === "full"
+          ? rawOptions.displayMode
+          : hasMinimalTag(roomInput?.name)
             ? "minimal"
             : undefined,
-      defaultTopicType: validTopic(options?.defaultTopicType)
-        ? options.defaultTopicType
+      defaultTopicType: validTopic(rawOptions?.defaultTopicType)
+        ? rawOptions.defaultTopicType
         : undefined,
     },
     status,
-    createdAt: input?.createdAt,
-    lastActiveAt: input?.lastActiveAt,
-    closedAt: input?.closedAt ?? null,
-    expiresAt: input?.expiresAt ?? null,
-    topic: input?.topic ?? null,
-    topicOptions: Array.isArray(input?.topicOptions)
-      ? input.topicOptions.map((x: any) => String(x))
+    createdAt: roomInput?.createdAt,
+    lastActiveAt: roomInput?.lastActiveAt,
+    closedAt: roomInput?.closedAt ?? null,
+    expiresAt: roomInput?.expiresAt ?? null,
+    topic: roomInput?.topic ?? null,
+    topicOptions: Array.isArray(roomInput?.topicOptions)
+      ? roomInput.topicOptions.map((x) => String(x))
       : null,
-    topicBox: input?.topicBox ?? null,
-    order: input?.order ?? null,
-    result: input?.result ?? null,
-    deal: input?.deal ?? null,
-    round: typeof input?.round === "number" ? input.round : 0,
+    topicBox: roomInput?.topicBox ?? null,
+    order: roomInput?.order ?? null,
+    result: roomInput?.result ?? null,
+    deal: roomInput?.deal ?? null,
+    round: typeof roomInput?.round === "number" ? roomInput.round : 0,
     mvpVotes: (() => {
-      if (!input?.mvpVotes || typeof input.mvpVotes !== "object") {
+      if (!roomInput?.mvpVotes || typeof roomInput.mvpVotes !== "object") {
         return null;
       }
-      const entries = Object.entries(input.mvpVotes).filter(
+      const entries = Object.entries(roomInput.mvpVotes).filter(
         ([voterId, votedId]) => typeof voterId === "string" && typeof votedId === "string" && votedId
       );
       if (entries.length === 0) {
@@ -75,15 +83,15 @@ export function sanitizeRoom(input: any): RoomDoc {
     })(),
     // バージョン同期用フィールド（存在しなくても良い）
     updatePhase: (() => {
-      const p = input?.updatePhase;
+      const p = roomInput?.updatePhase;
       return p === 'required' || p === 'done' ? p : undefined;
     })(),
     requiredSwVersion: (() => {
-      const v = input?.requiredSwVersion;
+      const v = roomInput?.requiredSwVersion;
       return typeof v === 'string' && v ? v : undefined;
     })(),
     ...((): Partial<Pick<RoomDoc, "ui">> => {
-      const raw = input?.ui;
+      const raw = roomInput?.ui;
       if (!raw || typeof raw !== "object") {
         return {};
       }
@@ -100,18 +108,19 @@ export function sanitizeRoom(input: any): RoomDoc {
 
 export function sanitizePlayer(
   id: string,
-  input: any
+  input: unknown
 ): PlayerDoc & { id: string } {
+  const playerInput: UnknownPlayer = (input ?? {}) as UnknownPlayer;
   return {
     id,
-    name: String(input?.name || "匿名"),
-    avatar: String(input?.avatar || ""),
-    number: typeof input?.number === "number" ? input.number : null,
-    clue1: typeof input?.clue1 === "string" ? input.clue1 : "",
-    ready: !!input?.ready,
-    orderIndex: typeof input?.orderIndex === "number" ? input.orderIndex : 0,
-    uid: input?.uid || undefined,
-    lastSeen: input?.lastSeen,
-    joinedAt: input?.joinedAt,
+    name: String(playerInput?.name || "匿名"),
+    avatar: String(playerInput?.avatar || ""),
+    number: typeof playerInput?.number === "number" ? playerInput.number : null,
+    clue1: typeof playerInput?.clue1 === "string" ? playerInput.clue1 : "",
+    ready: !!playerInput?.ready,
+    orderIndex: typeof playerInput?.orderIndex === "number" ? playerInput.orderIndex : 0,
+    uid: playerInput?.uid || undefined,
+    lastSeen: playerInput?.lastSeen,
+    joinedAt: playerInput?.joinedAt,
   };
 }

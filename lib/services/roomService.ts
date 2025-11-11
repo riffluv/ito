@@ -23,6 +23,9 @@ type AvatarCacheEntry = {
   expiresAt: number;
 };
 
+type DealState = NonNullable<RoomDoc["deal"]>;
+type OrderState = NonNullable<RoomDoc["order"]>;
+
 const avatarCache = new Map<string, AvatarCacheEntry>();
 
 function getAvatarCache(roomId: string): AvatarCacheEntry | null {
@@ -82,7 +85,8 @@ const ROOM_ERROR_CODES: RoomServiceErrorCode[] = [
 const isRoomServiceErrorCode = (
   value: unknown
 ): value is RoomServiceErrorCode =>
-  typeof value === "string" && ROOM_ERROR_CODES.includes(value as any);
+  typeof value === "string" &&
+  ROOM_ERROR_CODES.includes(value as RoomServiceErrorCode);
 
 export const getRoomServiceErrorCode = (
   error: unknown
@@ -93,10 +97,12 @@ export const getRoomServiceErrorCode = (
   if (
     typeof error === "object" &&
     error !== null &&
-    "code" in error &&
-    isRoomServiceErrorCode((error as any).code)
+    "code" in error
   ) {
-    return (error as { code: RoomServiceErrorCode }).code;
+    const codeValue = (error as { code?: unknown }).code;
+    if (isRoomServiceErrorCode(codeValue)) {
+      return codeValue;
+    }
   }
   return null;
 };
@@ -142,12 +148,8 @@ export async function ensureMember({
             typeof value === "string" && value.trim().length > 0
         )
       : [];
-    const seatHistoryRaw =
-      room?.deal && typeof (room.deal as any)?.seatHistory === "object"
-        ? ((room.deal as any).seatHistory as Record<string, unknown>)
-        : null;
-    const seatHistoryHas =
-      !!seatHistoryRaw && typeof seatHistoryRaw[uid] === "number";
+    const seatHistoryRaw = room?.deal?.seatHistory;
+    const seatHistoryHas = typeof seatHistoryRaw?.[uid] === "number";
     const orderList: string[] = Array.isArray(room?.order?.list)
       ? (room.order.list as string[]).filter(
           (value): value is string =>
@@ -266,7 +268,9 @@ export async function ensureMember({
   const existing = meSnap.data() as Partial<PlayerDoc> | undefined;
   const normalizedName =
     typeof displayName === "string" ? displayName.trim() : "";
-  const patch: Record<string, any> = { lastSeen: serverTimestamp() };
+  const patch: Partial<PlayerDoc> & {
+    lastSeen: ReturnType<typeof serverTimestamp>;
+  } = { lastSeen: serverTimestamp() };
   if (!existing?.uid) {
     patch.uid = uid;
   }
@@ -319,7 +323,7 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
   await runTransaction(db!, async (tx) => {
     const snap = await tx.get(roomRef);
     if (!snap.exists()) return;
-    const data = snap.data() as RoomDoc & Record<string, any>;
+    const data = snap.data() as RoomDoc;
     const deal = data?.deal || null;
     const playersSource: unknown = deal?.players;
     let players: string[] = Array.isArray(playersSource)
@@ -354,18 +358,24 @@ export async function addLateJoinerToDeal(roomId: string, uid: string) {
       nextSeatHistory[id] = index;
     });
 
-    const patch: Record<string, any> = {
-      deal: {
-        ...(deal || {}),
-        players,
-        seatHistory: nextSeatHistory,
-      },
+    const nextDeal = {
+      ...(deal ?? {}),
+      players,
+      seatHistory: nextSeatHistory,
+    } as DealState;
+
+    const patch: Partial<RoomDoc> = {
+      deal: nextDeal,
     };
 
     if (data?.order) {
-      patch.order = { ...(data.order || {}), total: players.length };
+      const nextOrder = {
+        ...(data.order ?? {}),
+        total: players.length,
+      } as OrderState;
+      patch.order = nextOrder;
     } else if (data?.status === "clue") {
-      patch.order = { total: players.length };
+      patch.order = { total: players.length } as OrderState;
     }
 
     tx.update(roomRef, patch);
@@ -380,33 +390,35 @@ export async function assignNumberIfNeeded(
   const roomRef = doc(db!, "rooms", roomId);
   const [roomData, meSnap] = await Promise.all([
     (async () => {
-      if (roomFromState && (roomFromState as any).deal)
-        return roomFromState as any;
-      const s = await getDoc(roomRef);
-      return s.exists() ? (s.data() as any) : null;
+      if (roomFromState?.deal) {
+        return roomFromState;
+      }
+      const snapshot = await getDoc(roomRef);
+      return snapshot.exists() ? (snapshot.data() as RoomDoc) : null;
     })(),
     getDoc(doc(db!, "rooms", roomId, "players", uid)),
   ]);
   if (!roomData || !meSnap.exists()) return;
-  const room: any = roomData;
-  const me: any = meSnap.data();
+  const room = roomData as RoomDoc | Partial<RoomDoc>;
+  const me = meSnap.data() as PlayerDoc;
   const deal = room?.deal || null;
   if (!deal) return;
+  const activeDeal = deal as DealState;
 
-  const min = deal.min || 1;
-  const max = deal.max || 100;
+  const min = activeDeal.min || 1;
+  const max = activeDeal.max || 100;
 
   if (room.status === "clue") {
-    if (!Array.isArray(deal.players)) return;
-    const idx = (deal.players as string[]).indexOf(uid);
+    if (!Array.isArray(activeDeal.players)) return;
+    const idx = activeDeal.players.indexOf(uid);
     if (idx < 0) return;
     // プレイヤー数とseedのみに依存する決定的な番号
     const { generateDeterministicNumbers } = await import("@/lib/game/random");
     const nums = generateDeterministicNumbers(
-      deal.players.length,
+      activeDeal.players.length,
       min,
       max,
-      deal.seed
+      activeDeal.seed
     );
     const myNum = nums[idx];
     if (me.number !== myNum) {
@@ -441,7 +453,8 @@ export async function joinRoomFully({
   notifyChat?: boolean;
 }): Promise<EnsureMemberResult> {
   const created = await ensureMember({ roomId, uid, displayName });
-  const inProgress = (created as { reason?: string }).reason === "inProgress";
+  const inProgress =
+    "reason" in created && created.reason === "inProgress";
   if (inProgress) {
     logWarn("roomService", "joinRoomFully-blocked-in-progress", {
       roomId,
@@ -463,7 +476,7 @@ export async function joinRoomFully({
         sender: "system",
         text: `${displayName || "匿名"} さんが参加しました`,
         createdAt: serverTimestamp(),
-      } as any);
+      });
     } catch {}
   }
   await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);

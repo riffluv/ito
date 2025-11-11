@@ -7,7 +7,7 @@ export type NotifyEvent = {
   type: "info" | "warning" | "success" | "error";
   title: string;
   description?: string;
-  createdAt?: any;
+  createdAt?: Date | { toDate?: () => Date } | null;
 };
 
 const NOTIFY_DEDUP_MS = 1500;

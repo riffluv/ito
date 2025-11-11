@@ -17,17 +17,6 @@ interface DragonQuestLoadingProps {
   onComplete?: () => void;
 }
 
-const STEP_ICON_FALLBACK: Record<string, string> = {
-  firebase: "🔥",
-  room: "⚔️",
-  player: "👥",
-  ready: "🎮",
-  operation: "⚙️",
-  complete: "✅",
-  save: "💾",
-  apply: "✨",
-};
-
 export function DragonQuestLoading({
   isVisible,
   currentStep = "firebase",
@@ -64,13 +53,13 @@ export function DragonQuestLoading({
     if (!isVisible) {
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
-      return;
+      return () => undefined;
     }
 
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
-    if (!container) return;
+    if (!container) return () => undefined;
 
     // 純粋なGSAP制御に統一
     gsap.set(container, { opacity: 0 });
@@ -91,7 +80,7 @@ export function DragonQuestLoading({
   useEffect(() => {
     const bar = progressBarRef.current;
     const checkmark = checkmarkRef.current;
-    if (!bar) return;
+    if (!bar) return () => undefined;
 
     const clamped = Math.min(Math.max(progress, 0), 100);
 
@@ -141,7 +130,7 @@ export function DragonQuestLoading({
 
   // パルス・シマー・ドットアニメーション - 純粋なGSAP制御
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) return () => undefined;
 
     const box = boxRef.current;
     const bar = progressBarRef.current;
@@ -224,8 +213,8 @@ export function DragonQuestLoading({
 
   // 完了時のマイクロアニメーション + フェードアウト - 純粋なGSAP制御
   useEffect(() => {
-    if (!isVisible || !onComplete) return;
-    if (progress < 100) return;
+    if (!isVisible || !onComplete) return () => undefined;
+    if (progress < 100) return () => undefined;
 
     const timer = window.setTimeout(() => {
       const container = containerRef.current;

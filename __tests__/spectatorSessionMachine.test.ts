@@ -1,7 +1,6 @@
 import { createActor, waitFor } from "xstate";
 
-import { createSpectatorSessionMachine } from "@/lib/spectator/v2/sessionMachine";
-import type { SpectatorSessionState } from "@/lib/spectator/v2/sessionMachine";
+import { createSpectatorSessionMachine, type SpectatorSessionState } from "@/lib/spectator/v2/sessionMachine";
 import type { SpectatorRejoinSnapshot, SpectatorSessionServices } from "@/lib/spectator/v2/types";
 
 jest.setTimeout(15000);

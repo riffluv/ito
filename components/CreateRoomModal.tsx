@@ -24,6 +24,7 @@ import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import PIXI from "@/lib/pixi/instance";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
+import { ZodError } from "zod";
 
 // 共通モーダルスタイル定数（部屋作成 → 完了モーダルのサイズ統一）
 // 「人の手」デザイン：角丸3px、影の多層、非対称パディング
@@ -31,53 +32,6 @@ import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 const MODAL_HEADER_PADDING = "22px 24px 19px"; // 上22 左右24 下19
 const MODAL_BODY_PADDING = "24px 26px"; // 縦24 横26
 const MODAL_FOOTER_PADDING = "18px 24px 22px"; // 上18 左右24 下22
-
-// 手癖イージング（人の手デザイン）
-const HAND_EASING = "cubic-bezier(.2,1,.3,1)";
-const HAND_TRANSITION = `180ms ${HAND_EASING}`;
-
-// 共通ボタンスタイル（物理感のある押し込み）
-const getHandButtonStyle = (variant: "primary" | "secondary" = "secondary") => ({
-  borderRadius: "3px",
-  fontWeight: "bold" as const,
-  fontSize: "17px",
-  letterSpacing: "0.01em",
-  fontFamily: "monospace",
-  border: "3px solid rgba(255,255,255,0.9)",
-  background: variant === "primary" ? "var(--colors-richBlack-600)" : "transparent",
-  color: "white",
-  cursor: "pointer" as const,
-  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
-  transition: `all ${HAND_TRANSITION}`,
-  boxShadow: "2px 3px 0 rgba(0,0,0,0.72)",
-  transform: "translate(.5px,-.5px)",
-});
-
-// 共通ボタンハンドラー（ホバー・押し込み効果）
-const handButtonHandlers = {
-  onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = "translate(0,-1px)";
-    e.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
-    e.currentTarget.style.background = "white";
-    e.currentTarget.style.color = "black";
-    e.currentTarget.style.textShadow = "none";
-  },
-  onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>, variant: "primary" | "secondary" = "secondary") => {
-    e.currentTarget.style.transform = "translate(.5px,-.5px)";
-    e.currentTarget.style.boxShadow = "2px 3px 0 rgba(0,0,0,0.72)";
-    e.currentTarget.style.background = variant === "primary" ? "var(--colors-richBlack-600)" : "transparent";
-    e.currentTarget.style.color = "white";
-    e.currentTarget.style.textShadow = "0 1px 2px rgba(0,0,0,0.6)";
-  },
-  onMouseDown: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = "translate(0,0)";
-    e.currentTarget.style.boxShadow = "1px 2px 0 rgba(0,0,0,0.85)";
-  },
-  onMouseUp: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = "translate(0,-1px)";
-    e.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
-  },
-};
 
 export function CreateRoomModal({
   isOpen,
@@ -88,7 +42,7 @@ export function CreateRoomModal({
   onClose: () => void;
   onCreated?: (roomId: string) => void;
 }) {
-  const { user, displayName } = useAuth() as any;
+  const { user, displayName } = useAuth();
   const router = useRouter();
   const transition = useTransition();
   const [name, setName] = useState("");
@@ -137,8 +91,6 @@ export function CreateRoomModal({
     return `${window.location.origin}/r/${createdRoomId}`;
   }, [createdRoomId]);
 
-  const invitePath = createdRoomId ? `/r/${createdRoomId}` : "";
-
   const handleCreate = async () => {
     if (submitting) return;
 
@@ -157,10 +109,12 @@ export function CreateRoomModal({
     let sanitizedRoomName: string;
     try {
       sanitizedRoomName = validateRoomName(name);
-    } catch (err: any) {
+    } catch (err) {
+      const description =
+        err instanceof ZodError ? err.errors[0]?.message : undefined;
       notify({
         title: "部屋名を確認してください",
-        description: err?.errors?.[0]?.message,
+        description,
         type: "error",
       });
       return;
@@ -169,10 +123,12 @@ export function CreateRoomModal({
     let sanitizedDisplayName: string;
     try {
       sanitizedDisplayName = validateDisplayName(displayName || "");
-    } catch (err: any) {
+    } catch (err) {
+      const description =
+        err instanceof ZodError ? err.errors[0]?.message : undefined;
       notify({
         title: "プレイヤー名を設定してください",
-        description: err?.errors?.[0]?.message,
+        description,
         type: "warning",
       });
       return;
@@ -201,12 +157,12 @@ export function CreateRoomModal({
         displayMode,
         defaultTopicType: "通常版",
       };
-      let passwordEntry: { hash: string; salt: string; version: number } | null = null;
+      let passwordEntry: PasswordEntry | null = null;
       if (enablePassword) {
         passwordEntry = await createPasswordEntry(password.trim());
       }
       const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const baseRoomData: RoomDoc & Record<string, any> = {
+      const baseRoomData: RoomCreatePayload = {
         name: applyDisplayModeToName(sanitizedRoomName, displayMode),
         hostId: user.uid,
         hostName: sanitizedDisplayName || "匿名",
@@ -229,7 +185,7 @@ export function CreateRoomModal({
       };
 
       const createRoomDocument = async (
-        payload: Record<string, any>
+        payload: RoomCreatePayload
       ): Promise<DocumentReference> => {
         const MAX_ATTEMPTS = 8;
         for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
@@ -249,7 +205,7 @@ export function CreateRoomModal({
       } catch (error) {
         if (error instanceof FirebaseError && error.code === "permission-denied") {
           console.warn("[rooms] create-room without creator fields (fallback)", error);
-          const fallbackPayload: Record<string, any> = { ...baseRoomData };
+          const fallbackPayload: RoomCreatePayload = { ...baseRoomData };
           delete fallbackPayload.creatorId;
           delete fallbackPayload.creatorName;
           roomRef = await createRoomDocument(fallbackPayload);
@@ -280,11 +236,11 @@ export function CreateRoomModal({
       setInviteCopied(false);
       setPassword("");
       onCreated?.(roomRef.id);
-    } catch (e: any) {
-      logError("rooms", "create-room", e);
+    } catch (error) {
+      logError("rooms", "create-room", error);
       notify({
         title: "作成に失敗しました",
-        description: e?.message,
+        description: error instanceof Error ? error.message : undefined,
         type: "error",
       });
     } finally {
@@ -311,7 +267,7 @@ export function CreateRoomModal({
       }
       setInviteCopied(true);
       notify({ title: "招待URLをコピーしました", type: "success" });
-    } catch (error) {
+    } catch {
       setInviteCopied(false);
       notify({ title: "コピーできませんでした", type: "error" });
     }
@@ -336,13 +292,11 @@ export function CreateRoomModal({
           ],
         },
         async () => {
-          try {
-            (window as any).requestIdleCallback?.(() => {
-              try {
-                router.prefetch?.(targetUrl);
-              } catch {}
-            });
-          } catch {}
+          scheduleIdleTask(() => {
+            try {
+              router.prefetch?.(targetUrl);
+            } catch {}
+          });
         }
       );
     } catch (error) {
@@ -380,14 +334,19 @@ export function CreateRoomModal({
     transform: isSelected ? "translate(.5px,-.5px)" : "none",
   });
 
-  const handleDisplayModeHover = (e: React.MouseEvent<HTMLButtonElement>, isSelected: boolean, isEnter: boolean) => {
-    if (isSelected) return;
-    if (isEnter) {
-      e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-      e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)";
-    } else {
-      e.currentTarget.style.background = "transparent";
-      e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
+  const handleDisplayModeHover = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    isSelected: boolean,
+    isEnter: boolean
+  ) => {
+    if (!isSelected) {
+      if (isEnter) {
+        e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)";
+      } else {
+        e.currentTarget.style.background = "transparent";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
+      }
     }
   };
 
@@ -399,7 +358,7 @@ export function CreateRoomModal({
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
-      return;
+      return undefined;
     }
 
     // Graphicsオブジェクトを作成
@@ -508,7 +467,7 @@ export function CreateRoomModal({
                 fontWeight="normal"
                 textAlign="center"
                 fontFamily="monospace"
-                textShadow={UI_TOKENS.TEXT_SHADOWS.soft as any}
+                textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
               >
                 {isSuccess ? "なかまを さそって いざ ぼうけんへ" : "あたらしい ぼうけんの はじまり"}
               </Text>
@@ -862,7 +821,7 @@ export function CreateRoomModal({
                     background: "transparent",
                     color: "white",
                     cursor: "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                     transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                   }}
                   onMouseEnter={(e) => {
@@ -873,7 +832,7 @@ export function CreateRoomModal({
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                   }}
                 >
                   もどる
@@ -892,7 +851,7 @@ export function CreateRoomModal({
                       background: "transparent",
                       color: "white",
                       cursor: "pointer",
-                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                       transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     }}
                     onMouseEnter={(e) => {
@@ -903,7 +862,7 @@ export function CreateRoomModal({
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = "transparent";
                       e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                     }}
                   >
                     とじる
@@ -921,7 +880,7 @@ export function CreateRoomModal({
                       background: "var(--colors-richBlack-600)",
                       color: "white",
                       cursor: "pointer",
-                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                       transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     }}
                     onMouseEnter={(e) => {
@@ -932,7 +891,7 @@ export function CreateRoomModal({
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = "var(--colors-richBlack-600)";
                       e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                     }}
                   >
                     へやへ すすむ
@@ -954,7 +913,7 @@ export function CreateRoomModal({
                     background: "transparent",
                     color: "white",
                     cursor: "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                     transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                   }}
                   onMouseEnter={(e) => {
@@ -965,7 +924,7 @@ export function CreateRoomModal({
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                   }}
                 >
                   やめる
@@ -987,7 +946,7 @@ export function CreateRoomModal({
                       : "var(--colors-richBlack-600)",
                     color: "white",
                     cursor: !canSubmit ? "not-allowed" : "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft as any,
+                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
                     transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     opacity: !canSubmit ? 0.6 : 1,
                   }}
@@ -1002,7 +961,7 @@ export function CreateRoomModal({
                     if (canSubmit) {
                       e.currentTarget.style.background = "var(--colors-richBlack-600)";
                       e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft as any;
+                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
                     }
                   }}
                 >
@@ -1029,3 +988,31 @@ export function CreateRoomModal({
 
 
 
+type PasswordEntry = {
+  hash: string;
+  salt: string;
+  version: number;
+};
+
+type RoomCreatePayload = Omit<RoomDoc, "creatorId"> &
+  Partial<Pick<RoomDoc, "creatorId">>;
+
+type RequestIdleCallbackFn = (
+  callback: IdleRequestCallback,
+  options?: IdleRequestOptions
+) => number;
+
+const scheduleIdleTask = (task: () => void) => {
+  if (typeof window === "undefined") return;
+  const idleCallback =
+    (window as Window & typeof globalThis & {
+      requestIdleCallback?: RequestIdleCallbackFn;
+    }).requestIdleCallback;
+  if (typeof idleCallback === "function") {
+    idleCallback(() => {
+      task();
+    });
+    return;
+  }
+  window.setTimeout(task, 0);
+};

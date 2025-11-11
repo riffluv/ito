@@ -2,13 +2,13 @@
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
-import { notify } from "@/components/ui/notify";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
 import { keyframes } from "@emotion/react";
 import { ResolveMode } from "@/lib/game/resolveMode";
 import { topicControls } from "@/lib/game/service";
+import { isTopicType, type TopicType } from "@/lib/topics";
 import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
@@ -16,8 +16,6 @@ import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
 import { useRevealGate } from "@/lib/hooks/useRevealGate";
 import type { PlayerDoc } from "@/lib/types";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
-import { toastIds } from "@/lib/ui/toastIds";
-import { SAFE_AREA_INSET } from "@/lib/ui/layout";
 import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import {
   Box,
@@ -36,8 +34,6 @@ import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
 import { KEYBOARD_KEYS } from "./hints/constants";
-import { gsap } from "gsap";
-import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import Image from "next/image";
 import { UpdateAvailableBadgeControlled } from "@/components/ui/UpdateAvailableBadge";
 import { APP_VERSION } from "@/lib/constants/appVersion";
@@ -63,32 +59,6 @@ const HostPanelIcon = ({ src, alt }: HostPanelIconProps) => (
 // ========================================
 // 🎬 Ambient Animations - 人の手感（不等間隔・微妙なゆらぎ）
 // ========================================
-const shimmerAnimation = keyframes`
-  0% { transform: translate(-100%, -100%); opacity: 0; }
-  12% { transform: translate(-20%, -20%); opacity: 0.35; }
-  28% { transform: translate(40%, 40%); opacity: 0.18; }
-  42% { transform: translate(80%, 80%); opacity: 0.08; }
-  100% { transform: translate(140%, 140%); opacity: 0; }
-`;
-
-const pulseGlow = keyframes`
-  0% {
-    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2);
-  }
-  34% {
-    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(110,210,255,0.88), inset 0 -2px 13px rgba(110,210,255,0.24);
-  }
-  58% {
-    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(120,220,255,0.95), inset 0 -2px 16px rgba(120,220,255,0.35);
-  }
-  82% {
-    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(105,205,255,0.88), inset 0 -2px 13px rgba(105,205,255,0.26);
-  }
-  100% {
-    box-shadow: 4px 4px 0 rgba(0,0,0,.7), 0 0 0 3px rgba(100,200,255,0.85), inset 0 -2px 12px rgba(100,200,255,0.2);
-  }
-`;
-
 // オレンジ系アンビエント（ゲーム開始ボタン用）
 const orangeGlowStart = keyframes`
   0% {
@@ -157,16 +127,11 @@ const subtleTextPulse = keyframes`
   }
 `;
 
-const TYPING_TAGS = new Set(["input", "textarea", "select"]);
-
-const isTypingFocus = (target: EventTarget | null): boolean => {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  const tagName = target.tagName.toLowerCase();
-  if (TYPING_TAGS.has(tagName)) return true;
-  const role = target.getAttribute("role");
-  return role === "textbox";
-};
+const noopCleanup = () => {};
+type RevealAnimatingEvent = CustomEvent<{ roomId?: string; animating?: boolean }>;
+type DefaultTopicTypeChangeEvent = CustomEvent<{ defaultTopicType?: string }>;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 // ========================================
 // 🎨 Design System: Button Styles
@@ -376,7 +341,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     hideHandUI,
     begin: beginReveal,
     end: endReveal,
-  } = useRevealGate(roomStatus as any, roomId);
+  } = useRevealGate(roomStatus, roomId);
 
   // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
   const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
@@ -386,21 +351,25 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     defaultTopicType,
   ]);
   React.useEffect(() => {
-    const handler = (e: any) => {
-      const v = e?.detail?.defaultTopicType;
-      if (typeof v === "string") setDefaultTopicOverride(v);
+    if (typeof window === "undefined") {
+      return noopCleanup;
+    }
+    const handleDefaultTopicChange: EventListener = (event) => {
+      const detail = (event as DefaultTopicTypeChangeEvent).detail;
+      const nextType = detail?.defaultTopicType;
+      if (typeof nextType === "string") {
+        setDefaultTopicOverride(nextType);
+      }
     };
-    if (typeof window !== "undefined") {
-      window.addEventListener("defaultTopicTypeChanged", handler as any);
-      try {
-        const v = window.localStorage.getItem("defaultTopicType");
-        if (v) setDefaultTopicOverride(v);
-      } catch {}
+    window.addEventListener("defaultTopicTypeChanged", handleDefaultTopicChange);
+    try {
+      const stored = window.localStorage.getItem("defaultTopicType");
+      if (stored) setDefaultTopicOverride(stored);
+    } catch {
+      // ignore storage failure
     }
     return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("defaultTopicTypeChanged", handler as any);
-      }
+      window.removeEventListener("defaultTopicTypeChanged", handleDefaultTopicChange);
     };
   }, []);
 
@@ -443,13 +412,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     actualResolveMode,
     isSortMode,
     placed,
-    canSubmit,
-    canSubmitBase,
     canClickProposalButton,
     actionLabel,
     allSubmitted,
     shouldShowSubmitHint,
-    isSubmitHintEligible,
     resetSubmitHint,
     handleSubmit,
   } = useCardSubmission({
@@ -470,7 +436,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     autoStartLocked,
     beginLock: beginAutoStartLock,
     clearLock: clearAutoStartLock,
-    showIndicator: showAutoStartIndicator,
   } = useHostAutoStartLock(roomId, roomStatus);
 
   const {
@@ -479,14 +444,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isResetting,
     isRestarting,
     resetGame,
-    restartGame,
     handleNextGame,
     evalSorted,
     customOpen,
     setCustomOpen,
     customText,
     setCustomText,
-    customStartPending,
     handleSubmitCustom,
     effectiveDefaultTopicType: hostDefaultTopicType,
   } = useHostActionsCore({
@@ -512,21 +475,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const effectiveDefaultTopicType = hostDefaultTopicType;
 
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handler = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{ roomId?: string; animating?: boolean }>
-      ).detail;
+    if (typeof window === "undefined") {
+      return noopCleanup;
+    }
+    const handleRevealAnimating: EventListener = (event) => {
+      const detail = (event as RevealAnimatingEvent).detail;
       if (!detail) return;
       if (detail.roomId && detail.roomId !== roomId) return;
-      setIsRevealAnimating(!!detail.animating);
+      setIsRevealAnimating(Boolean(detail.animating));
     };
-    window.addEventListener("ito:reveal-animating", handler as EventListener);
+    window.addEventListener("ito:reveal-animating", handleRevealAnimating);
     return () => {
-      window.removeEventListener(
-        "ito:reveal-animating",
-        handler as EventListener
-      );
+      window.removeEventListener("ito:reveal-animating", handleRevealAnimating);
     };
   }, [roomId]);
 
@@ -555,10 +515,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, [ready]);
 
   React.useEffect(() => {
-    if (!inlineFeedback) return;
-    if (inlineFeedback.tone === "info") return;
-    const timer = setTimeout(() => setInlineFeedback(null), 2000);
-    return () => clearTimeout(timer);
+    if (!inlineFeedback || inlineFeedback.tone === "info") {
+      return noopCleanup;
+    }
+    const timer = window.setTimeout(() => setInlineFeedback(null), 2000);
+    return () => window.clearTimeout(timer);
   }, [inlineFeedback]);
 
   React.useEffect(() => {
@@ -568,7 +529,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   }, [clueEditable]);
 
   React.useEffect(() => {
-    if (!shouldShowSubmitHint) return;
+    if (!shouldShowSubmitHint) {
+      return noopCleanup;
+    }
     const timer = window.setTimeout(() => {
       resetSubmitHint();
     }, 2500);
@@ -606,15 +569,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const playLedgerOpen = useSoundEffect("ledger_open");
   const playCardDeal = useSoundEffect("card_deal");
   const playTopicShuffle = useSoundEffect("topic_shuffle");
-  // 動的レイアウト: ホストは左寄せ、ゲストは中央寄せ
-  const hasHostButtons =
-    isHost &&
-    (roomStatus === "waiting" ||
-      (isSortMode && roomStatus === "clue") ||
-      (roomStatus === "reveal" && !!allowContinueAfterFail) ||
-      roomStatus === "finished");
-
-  const quickStartDisabled = autoStartLocked || quickStartPending;
   const showQuickStartProgress =
     (quickStartPending || autoStartLocked) &&
     (roomStatus === "waiting" || roomStatus === "clue");
@@ -636,8 +590,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   });
 
   React.useEffect(() => {
-    if (!showQuickStartProgress) return;
-    if (!coldNoticeEligible) return;
+    if (!showQuickStartProgress || !coldNoticeEligible) {
+      return noopCleanup;
+    }
     setShowColdStartNotice(true);
     setColdNoticeEligible(false);
     try {
@@ -651,7 +606,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     return () => window.clearTimeout(timer);
   }, [showQuickStartProgress, coldNoticeEligible, coldNoticeStorageKey]);
 
-  const LOADING_BG = "rgba(42,48,58,0.95)";
   const preparing = !!(
     autoStartLocked ||
     quickStartPending ||
@@ -659,15 +613,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isResetting
   );
   const isGameFinished = roomStatus === "finished";
-  const canShowStart =
-    !!isHost &&
-    roomStatus === "waiting" &&
-    !autoStartLocked &&
-    !quickStartPending &&
-    !isRestarting;
-  // 短時間の待機では何も出さず、一定時間を超えた場合のみプレースホルダを出す
-  const showWaitingPlaceholder =
-    !!isHost && roomStatus === "waiting" && !!showAutoStartIndicator;
 
   return (
     <>
@@ -965,14 +910,24 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 }
                 onClick={async () => {
                   if (topicActionLoading) return;
-                  let mode = effectiveDefaultTopicType;
+                  let mode: string | null = effectiveDefaultTopicType;
                   try {
                     if (db) {
                       const snap = await getDoc(doc(db, "rooms", roomId));
-                      const latest = (snap.data() as any)?.options?.defaultTopicType as string | undefined;
-                      if (latest) mode = latest;
+                      const data = snap.data();
+                      if (isRecord(data)) {
+                        const rawOptions = data.options;
+                        if (isRecord(rawOptions)) {
+                          const latest = rawOptions.defaultTopicType;
+                          if (typeof latest === "string") {
+                            mode = latest;
+                          }
+                        }
+                      }
                     }
-                  } catch {}
+                  } catch {
+                    // ignore snapshot failure
+                  }
 
                   if (mode === "カスタム") {
                     setCustomText(currentTopic || "");
@@ -984,7 +939,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   setTopicActionLoading(true);
                   try {
                     playTopicShuffle();
-                    await topicControls.shuffleTopic(roomId, mode as any);
+                    const topicMode: TopicType = isTopicType(mode)
+                      ? mode
+                      : "通常版";
+                    await topicControls.shuffleTopic(roomId, topicMode);
                   } finally {
                     setTopicActionLoading(false);
                   }
@@ -1273,10 +1231,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   <Input
                     placeholder="れい：この夏さいだいのなぞ"
                     value={customText}
-                    onChange={(e: any) => setCustomText(e.target.value)}
-                    onKeyDown={(e: any) => {
-                      if (e.key === KEYBOARD_KEYS.ENTER) {
-                        e.preventDefault();
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setCustomText(event.target.value)}
+                    onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+                      if (event.key === KEYBOARD_KEYS.ENTER) {
+                        event.preventDefault();
                         if (customText.trim()) handleSubmitCustom(customText);
                       }
                     }}

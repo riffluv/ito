@@ -232,10 +232,10 @@ export function MvpLedger({
   }, [isClosing, onClose, playLedgerClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
     const overlay = overlayRef.current;
     const board = boardRef.current;
-    if (!overlay || !board) return;
+    if (!overlay || !board) return undefined;
 
     const rows = rowRefs.current.filter(Boolean);
 
@@ -243,7 +243,7 @@ export function MvpLedger({
       gsap.set(overlay, { opacity: 1 });
       gsap.set(board, { opacity: 1, x: 0, y: 0, scale: 1, rotation: 0 });
       rows.forEach((row) => gsap.set(row, { opacity: 1, y: 0 }));
-      return;
+      return undefined;
     }
 
     const ctx = gsap.context(() => {
@@ -286,7 +286,7 @@ export function MvpLedger({
 
   // Escキー対応
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -314,7 +314,7 @@ export function MvpLedger({
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
-      return;
+      return undefined;
     }
 
     // Graphicsオブジェクトを作成（背景パネル）
@@ -374,8 +374,6 @@ export function MvpLedger({
     },
   });
 
-  const headerFont = useBreakpointValue({ base: "18px", md: "21px" });
-  const bodyFont = useBreakpointValue({ base: "15px", md: "16px" });
   const wrapperMarginTop = useBreakpointValue({ base: "12vh", md: "10vh" });
   const columnTemplate = {
     base: "50px 64px minmax(0, 1.65fr) minmax(0, 2.5fr) 88px 108px",

@@ -22,11 +22,10 @@ function usePerfStats(enabled: boolean): PerfStats {
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined" || typeof performance === "undefined") {
-      return;
+      return () => undefined;
     }
 
     let rafId = 0;
-    let timerId: number | undefined;
     let lastTime = performance.now();
     const fpsSamples: number[] = [];
     const frameSamples: number[] = [];
@@ -44,7 +43,7 @@ function usePerfStats(enabled: boolean): PerfStats {
 
     rafId = window.requestAnimationFrame(tick);
 
-    timerId = window.setInterval(() => {
+    const timerId = window.setInterval(() => {
       if (fpsSamples.length === 0) return;
       const avgFps = fpsSamples.reduce((sum, value) => sum + value, 0) / fpsSamples.length;
       const avgFrame = frameSamples.reduce((sum, value) => sum + value, 0) / frameSamples.length;
@@ -58,7 +57,7 @@ function usePerfStats(enabled: boolean): PerfStats {
 
     return () => {
       window.cancelAnimationFrame(rafId);
-      if (timerId) window.clearInterval(timerId);
+      window.clearInterval(timerId);
     };
   }, [enabled]);
 
@@ -70,19 +69,27 @@ export default function PerfStatsOverlay() {
   const hasHydrated = useRef(false);
 
   useEffect(() => {
-    if (!ACTIVATION_ENV || typeof window === "undefined") return;
+    if (!ACTIVATION_ENV || typeof window === "undefined") {
+      return () => undefined;
+    }
     const stored = window.localStorage.getItem(STORAGE_KEY);
     setVisible(stored === "1");
     hasHydrated.current = true;
+    return () => undefined;
   }, []);
 
   useEffect(() => {
-    if (!ACTIVATION_ENV || typeof window === "undefined" || !hasHydrated.current) return;
+    if (!ACTIVATION_ENV || typeof window === "undefined" || !hasHydrated.current) {
+      return () => undefined;
+    }
     window.localStorage.setItem(STORAGE_KEY, visible ? "1" : "0");
+    return () => undefined;
   }, [visible]);
 
   useEffect(() => {
-    if (!ACTIVATION_ENV || typeof window === "undefined") return;
+    if (!ACTIVATION_ENV || typeof window === "undefined") {
+      return () => undefined;
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "p") {
         event.preventDefault();

@@ -26,47 +26,15 @@ export function AdvancedHostPanel({
   onlineCount = 0,
 }: AdvancedHostPanelProps) {
   const MIN_PLAYERS_FOR_DEAL = 2;
-  const topicSelected = !!(room as any)?.topic;
+  const totalPlayers = players.length;
+  const topicSelected = typeof room.topic === "string" && room.topic.trim().length > 0;
   const tooFewPlayers = onlineCount < MIN_PLAYERS_FOR_DEAL;
 
   // デフォルトモードは "sort-submit" (一括判定モード)
-  const currentMode = room.options?.resolveMode || "sort-submit";
+  const currentMode = room.options?.resolveMode ?? "sort-submit";
 
   // ゲーム開始後はresolveMode変更を無効化
   const canChangeMode = room.status === "waiting";
-
-  const handleCategorySelect = async (category: string) => {
-    try {
-      await topicControls.selectCategory(roomId, category as any);
-      // 選択後もパネルを開いたままにして、シャッフルや数字配布を可能にする
-    } catch (error: any) {
-      notify({
-        id: toastIds.topicError(roomId),
-        title: "カテゴリ選択に失敗",
-        description: error?.message,
-        type: "error",
-      });
-    }
-  };
-
-  const handleShuffle = async () => {
-    try {
-      await topicControls.shuffleTopic(
-        roomId,
-        ((room as any)?.topicBox as string) || null
-      );
-    } catch (error: any) {
-      logError("advanced-host-panel", "shuffle-topic", error);
-      notify({
-        id: toastIds.topicError(roomId),
-        title: "シャッフルに失敗",
-        description: error?.message,
-        type: "error",
-      });
-    }
-  };
-
-  // Mode change functionality removed - only sort-submit supported
 
   const handleResetRoom = async () => {
     try {
@@ -77,25 +45,18 @@ export function AdvancedHostPanel({
         type: "success",
         duration: 2000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("advanced-host-panel", "reset-topic", error);
+      const description =
+        error instanceof Error
+          ? error.message
+          : error && typeof error === "object" && "message" in error
+            ? String((error as { message?: unknown }).message ?? "")
+            : undefined;
       notify({
         id: toastIds.topicError(roomId),
         title: "ルームリセットに失敗",
-        description: error?.message,
-        type: "error",
-      });
-    }
-  };
-
-  const handleReselect = async () => {
-    try {
-      await topicControls.resetTopic(roomId);
-    } catch (error: any) {
-      notify({
-        id: toastIds.topicError(roomId),
-        title: "お題リセットに失敗",
-        description: error?.message,
+        description: description || undefined,
         type: "error",
       });
     }
@@ -127,6 +88,41 @@ export function AdvancedHostPanel({
               {/* 上級者向け設定のみ */}
               <VStack align="stretch" gap={4}>
                 <VStack align="stretch" gap={2}>
+                  <VStack align="stretch" gap={1}>
+                    <Text fontSize="sm" fontWeight="bold">
+                      現在のお題
+                    </Text>
+                    <Text fontSize="sm" color={topicSelected ? "gray.800" : "orange.600"}>
+                      {topicSelected ? room.topic : "お題が未設定です"}
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      カテゴリ: {room.topicBox ?? "未選択"}
+                    </Text>
+                  </VStack>
+                  <VStack align="stretch" gap={0}>
+                    <Text fontSize="sm" fontWeight="bold">
+                      プレイヤー状況
+                    </Text>
+                    <Text fontSize="sm" color={tooFewPlayers ? "orange.600" : "gray.800"}>
+                      オンライン {onlineCount} / {MIN_PLAYERS_FOR_DEAL} 人以上推奨
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      合計登録: {totalPlayers}人
+                    </Text>
+                  </VStack>
+                  <VStack align="stretch" gap={0}>
+                    <Text fontSize="sm" fontWeight="bold">
+                      判定モード
+                    </Text>
+                    <Text fontSize="sm">
+                      {currentMode === "sort-submit" ? "一括判定モード" : currentMode}
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      {canChangeMode
+                        ? "ゲーム開始前のみモード変更が可能です"
+                        : "進行中はモードを変更できません"}
+                    </Text>
+                  </VStack>
                   <Text fontWeight="bold" fontSize="md">
                     🎮 ゲーム管理
                   </Text>

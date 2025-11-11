@@ -55,12 +55,18 @@ export function useDropHandler({
   const [pending, setPending] = useState<(string | null)[]>([]);
   const [isOver, setIsOver] = useState(false);
   const optimisticMode = DROP_OPTIMISTIC_ENABLED;
-  const proposalSignature = useMemo(
+  const sanitizedProposal = useMemo(
     () =>
       Array.isArray(_proposal)
-        ? _proposal.map((id) => (typeof id === "string" ? id : "_")).join(",")
-        : "none",
+        ? _proposal.filter(
+            (id): id is string => typeof id === "string" && id.length > 0
+          )
+        : [],
     [_proposal]
+  );
+  const proposalSignature = useMemo(
+    () => (sanitizedProposal.length > 0 ? sanitizedProposal.join(",") : "none"),
+    [sanitizedProposal]
   );
 
   const pointerUnlockArmedRef = useRef(false);
@@ -125,16 +131,19 @@ export function useDropHandler({
   }, []);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER !== "1") return;
-    if (typeof window === "undefined") return;
-    if (!soundManager) return;
+    const audioResumeEnabled = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
+    if (!audioResumeEnabled || typeof window === "undefined" || !soundManager) {
+      return undefined;
+    }
 
     if (roomStatus !== "clue") {
       pointerUnlockArmedRef.current = false;
       pointerUnlockDoneRef.current = false;
-      return;
+      return undefined;
     }
-    if (pointerUnlockDoneRef.current || pointerUnlockArmedRef.current) return;
+    if (pointerUnlockDoneRef.current || pointerUnlockArmedRef.current) {
+      return undefined;
+    }
 
     const handlePointer = () => {
       pointerUnlockDoneRef.current = true;
@@ -161,15 +170,8 @@ export function useDropHandler({
   }, [dealReady, soundManager]);
 
   useEffect(() => {
-    if (Array.isArray(_proposal)) {
-      const sanitized = _proposal.filter(
-        (id): id is string => typeof id === "string" && id.length > 0
-      );
-      latestProposalRef.current = sanitized;
-    } else {
-      latestProposalRef.current = [];
-    }
-  }, [proposalSignature]);
+    latestProposalRef.current = sanitizedProposal.slice();
+  }, [sanitizedProposal]);
 
   useEffect(() => {
     if (!optimisticMode) return;
@@ -188,39 +190,45 @@ export function useDropHandler({
         }
       }
       if (!changed) return prev;
-      while (next.length > 0 && next[next.length - 1] == null) {
-        next.pop();
+      while (next.length > 0) {
+        const tail = next[next.length - 1];
+        if (tail === null || typeof tail === "undefined") {
+          next.pop();
+          continue;
+        }
+        break;
       }
       return next;
     });
-  }, [clearOptimisticEntry, optimisticMode, proposalSignature, setPending]);
+  }, [clearOptimisticEntry, optimisticMode, proposalSignature]);
+
+  const resetOptimisticEntries = useCallback(() => {
+    optimisticEntriesRef.current.forEach((entry) => {
+      if (entry.timer) {
+        clearTimeout(entry.timer);
+      }
+    });
+    optimisticEntriesRef.current.clear();
+  }, []);
 
   useEffect(() => {
     return () => {
-      optimisticEntriesRef.current.forEach((entry) => {
-        if (entry.timer) {
-          clearTimeout(entry.timer);
-        }
-      });
-      optimisticEntriesRef.current.clear();
+      resetOptimisticEntries();
     };
-  }, []);
+  }, [resetOptimisticEntries]);
 
   const canDropAtPosition = useMemo(() => {
     return (_targetIndex: number) => canDrop;
   }, [canDrop]);
 
   const currentPlaced = useMemo(() => {
-    const base = orderList || [];
+    const base = Array.isArray(orderList) ? orderList : [];
     const pendingIds = pending.filter(
       (id): id is string => typeof id === "string" && id.length > 0
     );
     const extra = pendingIds.filter((id) => !base.includes(id));
     return [...base, ...extra];
-  }, [
-    orderList?.join(","),
-    pending.map((id) => id ?? "_").join(","),
-  ]);
+  }, [orderList, pending]);
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -327,7 +335,7 @@ export function useDropHandler({
             }
           }
         })
-        .catch((err: any) => {
+        .catch((err: unknown) => {
           if (!stageResolutionMarked) {
             stageResolutionMarked = true;
             session.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
@@ -343,9 +351,15 @@ export function useDropHandler({
           }
           clearOptimisticEntry(pid);
           playInvalidSound();
+          const description =
+            err instanceof Error
+              ? err.message
+              : err && typeof err === "object" && "message" in err
+                ? String((err as { message?: unknown }).message ?? "")
+                : undefined;
           notify({
             title: "配置に失敗しました",
-            description: err?.message,
+            description: description || undefined,
             type: "error",
           });
         });
@@ -490,7 +504,7 @@ const onDropAtPosition = useCallback(
             }
           }
         })
-        .catch((err: any) => {
+        .catch((err: unknown) => {
           if (!stageResolutionMarked) {
             stageResolutionMarked = true;
             session.markStage("client.drop.t2_addProposalResolvedMs", {
@@ -509,9 +523,15 @@ const onDropAtPosition = useCallback(
             setPending(() => snapshot);
           }
           clearOptimisticEntry(pid);
+          const description =
+            err instanceof Error
+              ? err.message
+              : err && typeof err === "object" && "message" in err
+                ? String((err as { message?: unknown }).message ?? "")
+                : undefined;
           notify({
             title: "配置に失敗しました",
-            description: err?.message,
+            description: description || undefined,
             type: "error",
           });
           playInvalidSound();
@@ -565,11 +585,11 @@ function useDropSounds(roomId: string) {
         }
         traceAction("audio.prewarm.drop", { roomId: targetRoom });
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (prewarmRoomRef.current === targetRoom) {
           dropSoundReady.current = false;
         }
-        traceError("audio.prewarm.drop.failed", error as any, { roomId: targetRoom });
+        traceError("audio.prewarm.drop.failed", error, { roomId: targetRoom });
       });
   }, [soundManager, roomId]);
 
@@ -618,14 +638,18 @@ function useDropEligibility({
   playInvalidSound,
   dealReady,
 }: DropEligibilityOptions) {
+  const hasClueText = useMemo(() => {
+    if (typeof me?.clue1 !== "string") return false;
+    return me.clue1.trim().length > 0;
+  }, [me?.clue1]);
+
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
     if (!dealReady) return false;
-    const ready = !!(me && typeof me.clue1 === "string" && me.clue1.trim());
-    if (!ready) return false;
+    if (!hasClueText) return false;
     return true;
-  }, [roomStatus, hasNumber, dealReady, me?.clue1]);
+  }, [roomStatus, hasNumber, dealReady, hasClueText]);
 
   const ensureCanDrop = useCallback(
     (pid: string): DropValidationResult => {

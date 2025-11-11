@@ -8,6 +8,12 @@ import {
   composeWaitingResetPayload,
 } from "@/lib/server/roomActions";
 import { systemMessagePlayerJoined } from "@/lib/server/systemMessages";
+import type {
+  PresenceConn,
+  PresenceRoomMap,
+  PresenceUserMap,
+} from "@/lib/firebase/presence";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
@@ -19,7 +25,11 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-const rtdb = admin.database ? admin.database() : (null as any);
+const rtdb: admin.database.Database | null = admin.database
+  ? admin.database()
+  : null;
+
+type FirestoreUpdateMap = Record<string, unknown>;
 
 // 緊急停止フラグ（READ 増加時の一時対策）
 // 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
@@ -34,9 +44,9 @@ const DEBUG_LOGGING_ENABLED =
   process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
   process.env.NODE_ENV !== "production";
 
-const logDebug: (...args: Parameters<typeof console.debug>) => void =
-  DEBUG_LOGGING_ENABLED ? (...args) => console.debug(...args) : () => {};
-function toMillis(value: any): number {
+const logDebug: (...args: Parameters<typeof functions.logger.debug>) => void =
+  DEBUG_LOGGING_ENABLED ? (...args) => functions.logger.debug(...args) : () => {};
+function toMillis(value: unknown): number {
   if (!value) return 0;
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -44,9 +54,13 @@ function toMillis(value: any): number {
   if (value instanceof Date) {
     return value.getTime();
   }
-  if (typeof value?.toMillis === "function") {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { toMillis?: () => number }).toMillis === "function"
+  ) {
     try {
-      return value.toMillis();
+      return (value as { toMillis: () => number }).toMillis();
     } catch {
       return 0;
     }
@@ -68,15 +82,19 @@ async function recalcRoomCounts(roomId: string) {
   let lastSeen: admin.firestore.Timestamp | null = null;
   snapshot.forEach((doc) => {
     count += 1;
-    const data = doc.data() as any;
-    if (data.lastSeen && data.lastSeen.toDate) {
-      const ts = data.lastSeen as admin.firestore.Timestamp;
+    const data = doc.data() as PlayerDoc;
+    const lastSeenValue = data?.lastSeen;
+    if (
+      lastSeenValue &&
+      typeof (lastSeenValue as admin.firestore.Timestamp).toMillis === "function"
+    ) {
+      const ts = lastSeenValue as admin.firestore.Timestamp;
       if (!lastSeen || ts.toMillis() > lastSeen.toMillis()) lastSeen = ts;
     }
   });
 
   const roomRef = db.collection("rooms").doc(roomId);
-  const updates: any = { playersCount: count };
+  const updates: FirestoreUpdateMap = { playersCount: count };
   if (lastSeen) updates.playersLastActive = lastSeen;
 
   // Use transaction for safety (ensure we don't stomp other concurrent updates)
@@ -113,11 +131,15 @@ export const onPlayerUpdate = regionFunctions.firestore
     }
   });
 
-function isPresenceConnActive(conn: any, now: number): boolean {
+function isPresenceConnActive(
+  conn: PresenceConn | Record<string, unknown> | null | undefined,
+  now: number
+): boolean {
   if (!conn) return false;
-  if (conn.online === false) return false;
-  if (conn.online === true && typeof conn.ts !== "number") return true;
-  const ts = typeof conn.ts === "number" ? conn.ts : 0;
+  const record = conn as PresenceConn;
+  if (record.online === false) return false;
+  if (record.online === true && typeof record.ts !== "number") return true;
+  const ts = typeof record.ts === "number" ? record.ts : 0;
   if (!ts) return false;
   if (ts - now > MAX_CLOCK_SKEW_MS) return false;
   return now - ts <= PRESENCE_STALE_THRESHOLD_MS;
@@ -158,7 +180,7 @@ export const onPresenceWrite = regionFunctions.database
       const dbi = admin.database();
       const userRef = dbi.ref(`presence/${roomId}/${uid}`);
       const snap = await userRef.get();
-      const val = snap.val() as Record<string, any> | null;
+      const val = snap.val() as PresenceUserMap | null;
       const stillActive = val
         ? Object.values(val).some((conn) => isPresenceConnActive(conn, now))
         : false;
@@ -174,7 +196,7 @@ export const onPresenceWrite = regionFunctions.database
 
       const recheckSnap = await userRef.get();
       const nowAfterDelay = Date.now();
-      const recheckVal = recheckSnap.val() as Record<string, any> | null;
+      const recheckVal = recheckSnap.val() as PresenceUserMap | null;
       const activeAfterDelay = recheckVal
         ? Object.values(recheckVal).some((conn) =>
             isPresenceConnActive(conn, nowAfterDelay)
@@ -212,7 +234,7 @@ export const onPresenceWrite = regionFunctions.database
           return null;
         }
 
-        const playerData = playerDoc.data() as Record<string, any> | undefined;
+        const playerData = playerDoc.data() as PlayerDoc | undefined;
         const lastSeenMs = toMillis(playerData?.lastSeen);
         if (lastSeenMs && nowAfterDelay - lastSeenMs <= rejoinWindowMs) {
           const remaining = rejoinWindowMs - (nowAfterDelay - lastSeenMs) + 500;
@@ -231,9 +253,7 @@ export const onPresenceWrite = regionFunctions.database
           if (!postDelaySnap.exists) {
             return null;
           }
-          const postData = postDelaySnap.data() as
-            | Record<string, any>
-            | undefined;
+          const postData = postDelaySnap.data() as PlayerDoc | undefined;
           const postLastSeenMs = toMillis(postData?.lastSeen);
           if (
             postLastSeenMs &&
@@ -270,7 +290,7 @@ export const onPresenceWrite = regionFunctions.database
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
 export const cleanupExpiredRooms = regionFunctions.pubsub
   .schedule("every 10 minutes")
-  .onRun(async (context) => {
+  .onRun(async (_context) => {
     if (EMERGENCY_STOP) return null;
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
@@ -358,7 +378,7 @@ export const cleanupGhostRooms = regionFunctions.pubsub
     for (const roomDoc of roomsSnap.docs) {
       try {
         const roomId = roomDoc.id;
-        const room = roomDoc.data() as any;
+        const room = roomDoc.data() as RoomDoc | undefined;
 
         // Quick age gate: only consider sufficiently old rooms
         const lastActive = room?.lastActiveAt;
@@ -371,27 +391,30 @@ export const cleanupGhostRooms = regionFunctions.pubsub
         const isInProgress =
           room?.status &&
           room.status !== "waiting" &&
-          room.status !== "completed";
+          room.status !== "finished";
 
         // Presence count from RTDB
         let presenceCount = 0;
         try {
           const presSnap = await rtdb.ref(`presence/${roomId}`).get();
           if (presSnap.exists()) {
-            const val = presSnap.val() as Record<string, any>;
+            const val = presSnap.val() as PresenceRoomMap | null;
             const nowLocal = Date.now();
-            for (const uid of Object.keys(val)) {
-              const conns = val[uid] || {};
-              const online = Object.values(conns).some((c: any) => {
-                if (c?.online === false) return false;
-                if (c?.online === true && typeof c?.ts !== "number")
-                  return true;
-                const ts = typeof c?.ts === "number" ? c.ts : 0;
-                if (!ts) return false;
-                if (ts - nowLocal > stalePresenceMs) return false;
-                return nowLocal - ts <= stalePresenceMs;
-              });
-              if (online) presenceCount++;
+            if (val) {
+              for (const uid of Object.keys(val)) {
+                const conns = val[uid] ?? {};
+                const online = Object.values(conns).some((conn) => {
+                  if (conn?.online === false) return false;
+                  if (conn?.online === true && typeof conn?.ts !== "number") {
+                    return true;
+                  }
+                  const ts = typeof conn?.ts === "number" ? conn.ts : 0;
+                  if (!ts) return false;
+                  if (ts - nowLocal > stalePresenceMs) return false;
+                  return nowLocal - ts <= stalePresenceMs;
+                });
+                if (online) presenceCount++;
+              }
             }
           }
         } catch {}
@@ -404,7 +427,8 @@ export const cleanupGhostRooms = regionFunctions.pubsub
         const nowTs = Date.now();
         let recentPlayers = 0;
         for (const d of playersSnap.docs) {
-          const ls = (d.data() as any)?.lastSeen;
+          const playerData = d.data() as PlayerDoc;
+          const ls = playerData?.lastSeen;
           const ms = toMillis(ls);
           if (ms && nowTs - ms <= STALE_LASTSEEN_MS) recentPlayers++;
         }
@@ -477,14 +501,14 @@ export const presenceCleanup = regionFunctions.pubsub
       visitedRooms += 1;
       const roomId = roomSnap.key;
       if (!roomId) return undefined;
-      const roomVal = roomSnap.val() as Record<string, any>;
+      const roomVal = roomSnap.val() as PresenceRoomMap | null;
       Object.entries(roomVal || {}).forEach(([uid, conns]) => {
         if (removed >= maxRemovals) return;
         if (!conns || typeof conns !== "object") return;
-        Object.entries(conns as Record<string, any>).forEach(
-          ([connId, payload]: [string, any]) => {
+        Object.entries(conns as PresenceUserMap).forEach(
+          ([connId, payload]) => {
             if (removed >= maxRemovals) return;
-            if (isPresenceConnActive(payload, now)) return;
+            if (isPresenceConnActive(payload as PresenceConn, now)) return;
             removed += 1;
             removals.push(
               rtdb
@@ -550,10 +574,12 @@ export const pruneIdleRooms = regionFunctions.pubsub
 
     for (const roomDoc of roomQuery.docs) {
       const roomId = roomDoc.id;
-      const roomData = roomDoc.data() as any;
+      const roomData =
+        (roomDoc.data() as (RoomDoc & { playersCount?: number }) | undefined) ??
+        null;
 
       const playersCount = Number.isFinite(roomData?.playersCount)
-        ? Math.max(0, Number(roomData.playersCount))
+        ? Math.max(0, Number(roomData?.playersCount ?? 0))
         : 0;
       if (!playersCount) {
         continue;
@@ -565,9 +591,9 @@ export const pruneIdleRooms = regionFunctions.pubsub
         try {
           const presSnap = await rt.ref(`presence/${roomId}`).get();
           if (presSnap.exists()) {
-            const val = presSnap.val() as Record<string, any>;
+            const val = presSnap.val() as PresenceRoomMap | null;
             const nowLocal = Date.now();
-            presenceActive = Object.values(val || {}).some((connMap: any) => {
+            presenceActive = Object.values(val || {}).some((connMap) => {
               return Object.values(connMap || {}).some((conn) =>
                 isPresenceConnActive(conn, nowLocal)
               );
@@ -623,7 +649,7 @@ export const pruneIdleRooms = regionFunctions.pubsub
 
       playersSnap.forEach((playerDoc) => {
         if (hasRecent) return;
-        const data = playerDoc.data() as any;
+        const data = playerDoc.data() as PlayerDoc;
         const lastSeenMs = toMillis(data?.lastSeen);
         if (lastSeenMs && now - lastSeenMs < idleThresholdMs) {
           hasRecent = true;
@@ -669,8 +695,8 @@ export const purgeChatOnRoundStart = regionFunctions.firestore
   .document("rooms/{roomId}")
   .onUpdate(async (change, ctx) => {
     if (EMERGENCY_STOP) return null;
-    const before = change.before.data() as any;
-    const after = change.after.data() as any;
+    const before = change.before.data() as RoomDoc | undefined;
+    const after = change.after.data() as RoomDoc | undefined;
     if (!before || !after) return null;
     const beforeRound = typeof before.round === "number" ? before.round : 0;
     const afterRound = typeof after.round === "number" ? after.round : 0;
@@ -728,8 +754,8 @@ export const onPlayerDeleted = regionFunctions.firestore
       } else {
         // ホストが消えた場合のフォールバック: 先頭の参加者をホストに
         const roomSnap = await roomRef.get();
-        const room = roomSnap.data() || {};
-        const hostId = room.hostId as string | undefined;
+        const room = roomSnap.data() as RoomDoc | undefined;
+        const hostId = typeof room?.hostId === "string" ? room.hostId : undefined;
         if (!hostId) {
           const next = await roomRef.collection("players").limit(1).get();
           const nextId = next.empty ? null : next.docs[0].id;
@@ -792,7 +818,7 @@ export const onPlayerCreated = regionFunctions.firestore
       await recalcRoomCounts(ctx.params.roomId as string);
 
       try {
-        const data = _snap.data() as any;
+        const data = _snap.data() as PlayerDoc;
         const rawName = typeof data?.name === "string" ? data.name : null;
         const rawUid = typeof data?.uid === "string" ? data.uid : null;
 

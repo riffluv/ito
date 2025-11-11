@@ -12,7 +12,6 @@ export function TopicDisplay({
   inline?: boolean;
 }) {
   const hasTopic = !!room.topic;
-  const topicBox = (room as any).topicBox as string | null | undefined;
 
   // 表示専用: 固定高さで完全にCLS防止
   const content = (

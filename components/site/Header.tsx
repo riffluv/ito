@@ -1,12 +1,8 @@
 "use client";
-import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Container, Flex, HStack, Heading, Image } from "@chakra-ui/react";
-import { usePathname, useRouter } from "next/navigation";
 
 export default function Header() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const isHome = pathname === "/";
   return (
     <Box
       as="header"

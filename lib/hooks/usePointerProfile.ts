@@ -31,7 +31,7 @@ export function usePointerProfile(): PointerProfile {
 
   useEffect(() => {
     if (typeof window === "undefined") {
-      return;
+      return undefined;
     }
 
     const coarse = window.matchMedia(COARSE_QUERY);

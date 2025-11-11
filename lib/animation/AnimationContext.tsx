@@ -17,6 +17,11 @@ export type AnimationSettings = {
 const FORCE_3D_STORAGE_KEY = "force-3d-transforms";
 const FORCE_3D_EVENT = "force3DTransformsChanged";
 
+type LegacyMediaQueryList = MediaQueryList & {
+  addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+  removeListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+};
+
 const AnimationContext = createContext<AnimationSettings | null>(null);
 
 export function AnimationProvider({ children }: { children: React.ReactNode }) {
@@ -62,7 +67,7 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     const handleForce3DChange = () => {
       try {
         setForce3DTransformsState(window.localStorage.getItem(FORCE_3D_STORAGE_KEY) === "true");
@@ -84,27 +89,24 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
   // 設定変更イベントを購読（SettingsModalから発火）
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     const handler = () => {
       try {
         setForceAnimations(window.localStorage.getItem("force-animations") === "true");
       } catch {}
     };
-    if (typeof window !== "undefined") {
-      window.addEventListener("forceAnimationsChanged", handler);
-    }
+    window.addEventListener("forceAnimationsChanged", handler);
     return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("forceAnimationsChanged", handler);
-      }
+      window.removeEventListener("forceAnimationsChanged", handler);
     };
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     let params: URLSearchParams;
     try {
       params = new URLSearchParams(window.location.search || "");
     } catch {
-      return;
+      return undefined;
     }
     let mutated = false;
 
@@ -132,13 +134,14 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
       mutated = true;
     }
 
-    if (!mutated) return;
+    if (!mutated) return undefined;
     const query = params.toString();
     const hash = window.location.hash || "";
     const nextUrl = window.location.pathname + (query ? "?" + query : "") + hash;
     try {
       window.history.replaceState(null, "", nextUrl);
     } catch {}
+    return undefined;
   }, [setForce3DTransforms]);
 
   const [systemPrefersReduced, setSystemPrefersReduced] = useState<boolean>(() => {
@@ -151,13 +154,14 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     let media: MediaQueryList;
     try {
       media = window.matchMedia("(prefers-reduced-motion: reduce)");
     } catch {
-      return;
+      return undefined;
     }
+    const legacyMedia = media as LegacyMediaQueryList;
 
     const handleChange = (event: MediaQueryListEvent) => {
       setSystemPrefersReduced(event.matches);
@@ -166,15 +170,15 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
     setSystemPrefersReduced(media.matches);
     if (typeof media.addEventListener === "function") {
       media.addEventListener("change", handleChange);
-    } else if (typeof (media as any).addListener === "function") {
-      (media as any).addListener(handleChange);
+    } else if (typeof legacyMedia.addListener === "function") {
+      legacyMedia.addListener(handleChange);
     }
 
     return () => {
       if (typeof media.removeEventListener === "function") {
         media.removeEventListener("change", handleChange);
-      } else if (typeof (media as any).removeListener === "function") {
-        (media as any).removeListener(handleChange);
+      } else if (typeof legacyMedia.removeListener === "function") {
+        legacyMedia.removeListener(handleChange);
       }
     };
   }, []);
@@ -200,7 +204,7 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const css = (window as any).CSS;
+      const css = window.CSS;
       const cssOK = !!(css && css.supports && css.supports("transform-style", "preserve-3d"));
       const perspectiveOK = !!(css && css.supports && css.supports("perspective", "1px"));
       // 実測チェック: 実DOMに追加して 3D transform の行列が有効かを見る
@@ -263,24 +267,24 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
 export function useAnimationSettings(): AnimationSettings {
   const ctx = useContext(AnimationContext);
+  const { animationMode, effectiveMode, setAnimationMode, gpuCapability } = useGPUPerformance();
   if (ctx) return ctx;
   // フォールバック: プロバイダが無い場合でも既存挙動で動作
-  const { animationMode, effectiveMode, setAnimationMode } = useGPUPerformance();
   const reducedMotion =
     typeof window !== "undefined" &&
-    window.matchMedia &&
+    typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   return {
     animationMode,
     effectiveMode,
     reducedMotion,
     forceAnimations: true,
-    gpuCapability: undefined,
+    gpuCapability,
     setAnimationMode,
     supports3D: true,
     force3DTransforms: false,
-    setForce3DTransforms: () => {},
-  } as AnimationSettings;
+    setForce3DTransforms: (_value: boolean) => {},
+  };
 }
 
 

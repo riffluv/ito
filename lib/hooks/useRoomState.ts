@@ -67,6 +67,38 @@ const BASE_JOIN_RETRY_DELAY_MS = 500;
 const MAX_JOIN_RETRY_DELAY_MS = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRY_MAX_DELAY_MS ?? 5000);
 const JOIN_RETRY_BACKOFF_FACTOR = 2;
 
+const extractPhaseFromSnapshot = (
+  snapshot: RoomMachineSnapshot | null
+): RoomDoc["status"] | null => {
+  if (!snapshot) return null;
+  const value = snapshot.value;
+  if (typeof value === "string") return value as RoomDoc["status"];
+  if (value && typeof value === "object") {
+    const phase = (value as { phase?: unknown }).phase;
+    if (typeof phase === "string") {
+      return phase as RoomDoc["status"];
+    }
+  }
+  return null;
+};
+
+const extractSpectatorNode = (
+  snapshot: RoomMachineSnapshot | null
+): SpectatorStatus => {
+  if (!snapshot) return "idle";
+  const value = snapshot.value;
+  if (value && typeof value === "object" && value !== null) {
+    const node = (value as { spectator?: unknown }).spectator;
+    if (typeof node === "string") {
+      return node as SpectatorStatus;
+    }
+  }
+  if (typeof value === "string") {
+    return value as SpectatorStatus;
+  }
+  return snapshot.context.spectatorStatus;
+};
+
 export function useRoomState(
   roomId: string,
   uid: string | null,
@@ -77,7 +109,6 @@ export function useRoomState(
   const joinInFlightRef = useRef<Promise<unknown> | null>(null);
   const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const joinAttemptRef = useRef(0);
-  const membershipRetryAtRef = useRef(0);
   const membershipLogSignatureRef = useRef<string | null>(null);
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
@@ -94,6 +125,7 @@ export function useRoomState(
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
     null
   );
+  const currentRoomDocId = room?.id ?? null;
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED && typeof startTransition === "function";
@@ -152,19 +184,32 @@ export function useRoomState(
                 handleSnapshot({ exists: false });
                 return;
               }
-              const data = snap.data() as Record<string, any>;
+              const data = snap.data() as {
+                status?: string;
+                source?: string;
+                createdAt?: { toMillis?: () => number } | number | null;
+                reason?: string;
+                failureReason?: string;
+              };
               const statusRaw = typeof data?.status === "string" ? data.status : "pending";
               const status: "pending" | "accepted" | "rejected" =
                 statusRaw === "accepted" || statusRaw === "rejected" ? statusRaw : "pending";
               const sourceRaw = typeof data?.source === "string" ? data.source : "manual";
               const source: Exclude<SpectatorRequestSource, null> =
                 sourceRaw === "auto" ? "auto" : "manual";
-              const createdAt =
-                typeof data?.createdAt?.toMillis === "function"
-                  ? Number(data.createdAt.toMillis())
-              : typeof data?.createdAt === "number"
-              ? data.createdAt
-              : null;
+              const createdAtSource = data?.createdAt;
+              let createdAt: number | null = null;
+              if (
+                createdAtSource &&
+                typeof createdAtSource === "object" &&
+                typeof (createdAtSource as { toMillis?: () => number }).toMillis === "function"
+              ) {
+                createdAt = Number(
+                  (createdAtSource as { toMillis: () => number }).toMillis()
+                );
+              } else if (typeof createdAtSource === "number") {
+                createdAt = createdAtSource;
+              }
               const failure =
                 typeof data?.reason === "string"
                   ? data.reason
@@ -194,8 +239,23 @@ export function useRoomState(
         return () => {};
       }
     },
-    [db, firebaseEnabled, setSpectatorRejoinDocExists]
+    [setSpectatorRejoinDocExists]
   );
+  const spectatorRejoinSubscription = firebaseEnabled ? subscribeSpectatorRejoin : undefined;
+
+  const normalizedDisplayName = useMemo(() => {
+    if (typeof displayName === "string") {
+      const trimmed = displayName.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    return null;
+  }, [displayName]);
+
+  const playerIds = useMemo(() => players.map((p) => p.id), [players]);
+  const playerIdsSignature = useMemo(() => playerIds.join(","), [playerIds]);
+  const uidStable = uid ?? "";
 
   useEffect(() => {
     if (!roomId || typeof window === "undefined") {
@@ -207,7 +267,7 @@ export function useRoomState(
       prefetchedAppliedRef.current = false;
       return;
     }
-    if (room?.id === roomId) {
+    if (currentRoomDocId === roomId) {
       return;
     }
     prefetchedAppliedRef.current = true;
@@ -217,7 +277,7 @@ export function useRoomState(
       setRoom({ id: roomId, ...(cached as RoomDoc) });
       setLoading(false);
     }, startedAt);
-  }, [roomId, room?.id, enqueueCommit]);
+  }, [roomId, currentRoomDocId, enqueueCommit]);
 
   // reset leaving flag & join state when room/user changes
   useEffect(() => {
@@ -233,7 +293,7 @@ export function useRoomState(
       clearTimeout(joinRetryTimerRef.current);
       joinRetryTimerRef.current = null;
     }
-  }, [roomId, uid || ""]);
+  }, [roomId, uidStable]);
 
   useEffect(() => () => {
     if (joinRetryTimerRef.current) {
@@ -252,7 +312,7 @@ export function useRoomState(
         presenceReady: false,
         viewerUid: uid ?? null,
         deps: {
-          subscribeSpectatorRejoin: firebaseEnabled ? subscribeSpectatorRejoin : undefined,
+          subscribeSpectatorRejoin: spectatorRejoinSubscription,
         },
       })
     );
@@ -280,12 +340,12 @@ export function useRoomState(
         machineRef.current = null;
       }
     };
-  }, [roomId, uid, firebaseEnabled, subscribeSpectatorRejoin]);
+  }, [roomId, uid, spectatorRejoinSubscription]);
 
   // subscribe room
   useEffect(() => {
     if (!firebaseEnabled) {
-      return;
+      return () => {};
     }
     if (!roomId) {
       const startedAt = typeof performance !== "undefined" ? performance.now() : null;
@@ -294,7 +354,7 @@ export function useRoomState(
         setLoading(false);
         prefetchedAppliedRef.current = false;
       }, startedAt);
-      return;
+      return () => {};
     }
 
     const unsubRef = { current: null as null | (() => void) };
@@ -395,7 +455,7 @@ export function useRoomState(
             setMetric("perf", "warmup.watch", 1);
             traceAction("warmup.watch");
           } catch (e) {
-            traceError("warmup.watch", e as any);
+            traceError("warmup.watch", e);
           }
         });
       } catch {
@@ -435,9 +495,9 @@ export function useRoomState(
       uid,
       isMember,
       joinStatus,
-      players: players.map((p) => p.id),
+      players: playerIds,
     });
-  }, [roomId, uid, isMember, players, joinStatus]);
+  }, [roomId, uid, isMember, playerIds, joinStatus]);
 
   useEffect(() => {
     if (!isMember) {
@@ -506,7 +566,7 @@ export function useRoomState(
     if (!firebaseEnabled) return;
     if (!uid || !room) return;
     if (leavingRef.current) return;
-    if (!displayName || !String(displayName).trim()) return;
+    if (!normalizedDisplayName) return;
 
     // Spectator V3:
     // - 原則: 観戦→復帰は rejoinRequests 経由（page.tsx 側で実装）
@@ -530,7 +590,7 @@ export function useRoomState(
     const activeRejoinIntent =
       pendingRejoin && (rejoinDocState === null || rejoinDocState === true);
 
-    let autoJoinSuppressed = readAutoJoinSuppressFlag(autoJoinSuppressKey);
+    const autoJoinSuppressed = readAutoJoinSuppressFlag(autoJoinSuppressKey);
 
     const clearPending = () => {
       if (!pendingRejoin || !uid) return;
@@ -551,9 +611,7 @@ export function useRoomState(
 
     if (room.status === "waiting") {
       if (recallV2Enabled && !isMember) {
-        const status = (room as any)?.status as string | undefined;
-        const allowDirectJoin =
-          status === "waiting" && !activeRejoinIntent;
+      const allowDirectJoin = !activeRejoinIntent;
         if (!allowDirectJoin) {
           joinAttemptRef.current = 0;
           clearRetryTimer();
@@ -585,18 +643,14 @@ export function useRoomState(
 
       clearRetryTimer();
       const attemptBeforeCall = joinAttemptRef.current;
-      const normalizedDisplayName =
-        typeof displayName === "string" && displayName.trim().length > 0
-          ? displayName.trim()
-          : null;
-      logDebug("room-state", "joinRoomFully-attempt", {
+    logDebug("room-state", "joinRoomFully-attempt", {
         roomId,
         uid,
         status: room.status,
         pendingRejoin,
         attempt: attemptBeforeCall + 1,
         normalizedDisplayNameProvided: normalizedDisplayName !== null,
-        players: players.map((p) => p.id),
+        players: playerIds,
       });
       const joinTask = joinRoomFully({
         roomId,
@@ -665,10 +719,6 @@ export function useRoomState(
     } else if (isMember) {
       joinAttemptRef.current = 0;
       clearRetryTimer();
-      const normalizedDisplayName =
-        typeof displayName === "string" && displayName.trim().length > 0
-          ? displayName.trim()
-          : null;
       ensureMember({ roomId, uid, displayName: normalizedDisplayName }).catch(
         () => void 0
       );
@@ -680,15 +730,18 @@ export function useRoomState(
     }
   }, [
     roomId,
-    uid || "",
-    room?.status,
-    displayName || "",
+    uid,
+    room,
+    normalizedDisplayName,
     rejoinSessionKey,
     isMember,
     joinAttemptToken,
     recallV2Enabled,
     spectatorRejoinDocExists,
     autoJoinSuppressKey,
+    playerIdsSignature,
+    playerIds,
+    loading,
   ]);
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
@@ -703,47 +756,8 @@ export function useRoomState(
 
   const isHost = useMemo(
     () => !!(room && uid && room.hostId === uid),
-    [room?.hostId, uid]
+    [room, uid]
   );
-
-  useEffect(() => {
-    if (!firebaseEnabled) return;
-    if (!uid || !room) return;
-    if (!isHost && room.status !== "waiting") return;
-    if (loading) return;
-    if (leavingRef.current) return;
-
-    if (isMember) {
-      membershipRetryAtRef.current = 0;
-      return;
-    }
-
-    if (joinInFlightRef.current) {
-      return;
-    }
-
-    const now = Date.now();
-    if (
-      membershipRetryAtRef.current &&
-      now - membershipRetryAtRef.current < 1500
-    ) {
-      return;
-    }
-
-    membershipRetryAtRef.current = now;
-    joinCompletedRef.current = false;
-    setJoinAttemptToken((value) => value + 1);
-    setJoinStatus("joining");
-  }, [
-    firebaseEnabled,
-    loading,
-    isMember,
-    room?.status,
-    uid,
-    room,
-    isHost,
-    roomId,
-  ]);
   useEffect(() => {
     if (!firebaseEnabled) return;
     if (!roomId || !uid) return;
@@ -760,7 +774,7 @@ export function useRoomState(
         logDebug("room-state", "waiting-membership-resolved", {
           roomId,
           uid,
-          players: players.map((p) => p.id),
+          players: playerIds,
         });
       }
       membershipLogSignatureRef.current = null;
@@ -768,7 +782,7 @@ export function useRoomState(
     }
     const signature = [
       uid,
-      players.map((p) => p.id).join(","),
+      playerIdsSignature,
       joinStatus,
       joinAttemptRef.current,
       joinCompletedRef.current ? "1" : "0",
@@ -781,48 +795,33 @@ export function useRoomState(
     logDebug("room-state", "waiting-membership-missing", {
       roomId,
       uid,
-      players: players.map((p) => p.id),
+      players: playerIds,
       joinStatus,
     joinAttempt: joinAttemptRef.current,
     joinCompleted: joinCompletedRef.current,
     joinInFlight: !!joinInFlightRef.current,
   });
   }, [
-    firebaseEnabled,
     room,
     roomId,
     uid,
     isMember,
-    players,
+    playerIdsSignature,
+    playerIds,
     joinStatus,
   ]);
 
   const effectivePhase = useMemo<RoomDoc["status"]>(() => {
-    const snapshot = machineSnapshot;
-    if (!snapshot) {
-      return room?.status ?? "waiting";
+    const phaseState = extractPhaseFromSnapshot(machineSnapshot);
+    if (phaseState) {
+      return phaseState;
     }
-    const rawValue = snapshot.value as any;
-    let phaseState: RoomDoc["status"] | null = null;
-    if (typeof rawValue === "string") {
-      phaseState = rawValue as RoomDoc["status"];
-    } else if (rawValue && typeof rawValue === "object" && typeof rawValue.phase === "string") {
-      phaseState = rawValue.phase as RoomDoc["status"];
-    }
-    return phaseState ?? room?.status ?? "waiting";
+    return room?.status ?? "waiting";
   }, [machineSnapshot, room?.status]);
 
   const effectiveRoom = useMemo<(RoomDoc & { id: string }) | null>(() => {
     if (!room) return null;
-    const snapshot = machineSnapshot;
-    if (!snapshot) return room;
-    const rawValue = snapshot.value as any;
-    let statusFromMachine: RoomDoc["status"] | null = null;
-    if (typeof rawValue === "string") {
-      statusFromMachine = rawValue as RoomDoc["status"];
-    } else if (rawValue && typeof rawValue === "object" && typeof rawValue.phase === "string") {
-      statusFromMachine = rawValue.phase as RoomDoc["status"];
-    }
+    const statusFromMachine = extractPhaseFromSnapshot(machineSnapshot);
     if (!statusFromMachine || statusFromMachine === room.status) {
       return room;
     }
@@ -852,13 +851,7 @@ export function useRoomState(
         spectatorNode: "idle",
       };
     }
-    const rawValue = snapshot.value as any;
-    let spectatorNode: SpectatorStatus = snapshot.context.spectatorStatus;
-    if (typeof rawValue === "object" && rawValue !== null && typeof rawValue.spectator === "string") {
-      spectatorNode = rawValue.spectator as SpectatorStatus;
-    } else if (typeof rawValue === "string") {
-      spectatorNode = rawValue as SpectatorStatus;
-    }
+    const spectatorNode = extractSpectatorNode(snapshot);
     return {
       spectatorStatus: snapshot.context.spectatorStatus,
       spectatorReason: snapshot.context.spectatorReason,

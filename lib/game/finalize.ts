@@ -5,11 +5,10 @@ export type RoomResult = {
   success: boolean;
   failedAt: number | null;
   lastNumber: number | null;
-  revealedAt?: any;
+  revealedAt?: number | string | Date | null;
 } | null;
 
 export function mergeFinalizeResult(current: RoomResult, next: RoomResult): RoomResult {
   if (current && typeof current === "object") return current;
   return next ?? null;
 }
-

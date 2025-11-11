@@ -19,12 +19,20 @@ if (!global.structuredClone) {
         const cloned = obj.buffer.slice(0);
         return new DataView(cloned, obj.byteOffset, obj.byteLength) as unknown as T;
       }
-      const ctor = (obj as any).constructor;
-      try {
-        return new ctor(obj as any);
-      } catch {
-        return obj;
+      const view = obj as ArrayBufferView<ArrayBufferLike>;
+      const ctor = (
+        view as unknown as {
+          constructor?: new (value: ArrayBufferView<ArrayBufferLike>) => ArrayBufferView<ArrayBufferLike>;
+        }
+      ).constructor;
+      if (typeof ctor === "function") {
+        try {
+          return new ctor(view) as T;
+        } catch {
+          return obj;
+        }
       }
+      return obj;
     }
     try {
       return JSON.parse(JSON.stringify(obj));

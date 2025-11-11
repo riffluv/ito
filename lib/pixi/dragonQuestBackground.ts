@@ -112,8 +112,8 @@ export async function createDragonQuestBackground(
   options: DragonQuestBackgroundOptions
 ): Promise<DragonQuestBackgroundController> {
   const pixi = await loadPixi();
-  const BLEND_MODES = (pixi as unknown as {
-    BLEND_MODES?: Record<string, number>;
+  const BLEND_MODES = (pixi as typeof PIXI & {
+    BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
   }).BLEND_MODES;
   const app = new pixi.Application();
   await app.init({
@@ -149,7 +149,7 @@ export async function createDragonQuestBackground(
 
   sweepOverlay.alpha = 0;
   if (BLEND_MODES?.ADD !== undefined) {
-    sweepOverlay.blendMode = BLEND_MODES.ADD as any;
+    sweepOverlay.blendMode = BLEND_MODES.ADD;
   }
 
   stage.addChild(bgGradient);
@@ -247,7 +247,7 @@ export async function createDragonQuestBackground(
     getParticleCount()
   );
 
-  let pointerTargetX = 0;
+  const pointerTargetX = 0;
   let pointerTargetY = 0;
   let pointerCurrentX = 0;
   let pointerCurrentY = 0;

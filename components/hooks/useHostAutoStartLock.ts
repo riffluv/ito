@@ -34,12 +34,22 @@ export function useHostAutoStartLock(
   const minVisibleUntilRef = React.useRef<number>(0);
 
   const clearTimerRefs = () => {
-    try { if (indicatorTimerRef.current!=null) { window.clearTimeout(indicatorTimerRef.current); indicatorTimerRef.current=null; } } catch {}
-    try { if (hideTimerRef.current!=null) { window.clearTimeout(hideTimerRef.current); hideTimerRef.current=null; } } catch {}
+    try {
+      if (indicatorTimerRef.current !== null) {
+        window.clearTimeout(indicatorTimerRef.current);
+        indicatorTimerRef.current = null;
+      }
+    } catch {}
+    try {
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    } catch {}
   };
 
   const stopTimer = React.useCallback(() => {
-    if (typeof window !== "undefined" && timerRef.current != null) {
+    if (typeof window !== "undefined" && timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
@@ -57,7 +67,8 @@ export function useHostAutoStartLock(
           setShowIndicator(true);
           minVisibleUntilRef.current = Date.now() + MIN_VISIBLE;
         } else {
-          const delay = typeof options?.delayMs === "number" ? Math.max(0, options!.delayMs!) : INDICATOR_DELAY;
+          const delay =
+            typeof options?.delayMs === "number" ? Math.max(0, options.delayMs) : INDICATOR_DELAY;
           indicatorTimerRef.current = window.setTimeout(() => {
             setShowIndicator(true);
             minVisibleUntilRef.current = Date.now() + MIN_VISIBLE;
@@ -88,14 +99,14 @@ export function useHostAutoStartLock(
       setAutoStartLocked(false);
       return;
     }
-    if (indicatorTimerRef.current != null) {
+    if (indicatorTimerRef.current !== null) {
       window.clearTimeout(indicatorTimerRef.current);
       indicatorTimerRef.current = null;
     }
     const now = Date.now();
     const remain = Math.max(0, minVisibleUntilRef.current - now);
     if (showIndicator && remain > 0) {
-      if (hideTimerRef.current != null) window.clearTimeout(hideTimerRef.current);
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
       hideTimerRef.current = window.setTimeout(() => {
         setShowIndicator(false);
         setAutoStartLocked(false);
@@ -107,15 +118,22 @@ export function useHostAutoStartLock(
     }
   }, [stopTimer, showIndicator]);
 
-  React.useEffect(() => () => { stopTimer(); try { clearTimerRefs(); } catch {} }, [stopTimer]);
+  React.useEffect(() => {
+    return () => {
+      stopTimer();
+      try {
+        clearTimerRefs();
+      } catch {}
+    };
+  }, [stopTimer]);
 
   React.useEffect(() => {
-    if (!roomId) return;
+    if (!roomId) return () => undefined;
     return subscribeRoundPrepare(roomId, () => beginLock(DEFAULT_DURATION, { broadcast: false }));
   }, [roomId, beginLock]);
 
   React.useEffect(() => {
-    if (typeof window === "undefined" || !roomId) return;
+    if (typeof window === "undefined" || !roomId) return () => undefined;
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ roomId?: string; duration?: number }>).detail;
       if (!detail || detail.roomId !== roomId) return;
