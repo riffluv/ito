@@ -34,6 +34,21 @@ const safeJsonParse = (text: string) => {
   }
 };
 
+const truncateText = (text: string, limit = 4000) => {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit)}…`;
+};
+
+async function readRequestBody(request: Request) {
+  try {
+    if (!request.body) return null;
+    const text = await request.text();
+    return truncateText(text);
+  } catch {
+    return null;
+  }
+}
+
 export default function NetworkDebugInitializer() {
   useEffect(() => {
     if (!ENABLED) return undefined;
@@ -48,41 +63,29 @@ export default function NetworkDebugInitializer() {
     const originalFetch = window.fetch.bind(window);
     scope.__ITO_NETWORK_DEBUG__ = true;
 
-    window.fetch = async (
-      input: RequestInfo | URL,
-      init?: RequestInit
-    ): Promise<Response> => {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-          ? input.toString()
-          : input instanceof Request
-          ? input.url
-          : "";
-      const method =
-        init?.method ??
-        (input instanceof Request ? input.method : undefined) ??
-        "GET";
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(input as RequestInfo, init);
+      const clonedForBody = request.clone();
+      const requestBodyPromise = readRequestBody(clonedForBody);
+      const url = request.url ?? "";
+      const method = request.method ?? init?.method ?? "GET";
       const trace = shouldTrace(url, patterns);
       const startAt =
         typeof performance !== "undefined" ? performance.now() : Date.now();
       const requestId = `net-${Math.random().toString(36).slice(2, 8)}`;
-      const requestBody =
-        typeof init?.body === "string" ? init.body : undefined;
+      const requestBody = await requestBodyPromise;
 
-      if (trace) {
+      if (trace && requestBody) {
         console.groupCollapsed(
           `[net][request][${requestId}] ${method} ${url.slice(0, 160)}`
         );
-        if (requestBody) {
-          console.log("payload", safeJsonParse(requestBody));
-        }
+        console.log("payload", safeJsonParse(requestBody));
         console.groupEnd();
       }
 
       try {
-        const response = await originalFetch(input as RequestInfo, init);
+        const response = await originalFetch(request);
         const elapsed =
           (typeof performance !== "undefined" ? performance.now() : Date.now()) -
           startAt;
@@ -99,6 +102,14 @@ export default function NetworkDebugInitializer() {
               } catch {
                 responseBody = "[unavailable]";
               }
+            }
+          } else if (trace || response.status >= 400) {
+            try {
+              const text = await clone.text();
+              responseBody =
+                text.length > 2000 ? `${text.slice(0, 2000)}…` : text;
+            } catch {
+              responseBody = "[unavailable]";
             }
           }
           console.group(

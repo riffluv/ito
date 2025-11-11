@@ -78,8 +78,11 @@ export type DealNumbersOptions = {
   skipPresence?: boolean;
 };
 
-function proposalQueueKey(roomId: string, playerId: string) {
-  return `proposal:${roomId}:player:${playerId}`;
+function proposalQueueKey(roomId: string, _playerId: string) {
+  // Firestore の roomProposals ドキュメントはルーム単位で共有されるため、
+  // 実際の書き込みは roomId ごとに直列化して競合を防ぐ。
+  // playerId 引数はレガシー互換のため保持し、呼び出し元の文脈ログには残す。
+  return `proposal:${roomId}`;
 }
 
 function isRetryableTransactionError(error: unknown): boolean {
@@ -773,58 +776,119 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
   const roomRef = doc(db!, "rooms", roomId);
   const proposalDocRef = proposalRef(roomId);
   const queueScope = proposalQueueKey(roomId, playerId);
+  const readTimestamp =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? () => performance.now()
+      : () => Date.now();
+  const enqueuedAt = readTimestamp();
+  let proposalToSync: (string | null)[] | null = null;
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
-      let proposalToSync: (string | null)[] | null = null;
-      await runTransaction(db!, async (tx) => {
-        const roomSnap = await tx.get(roomRef);
-        if (!roomSnap.exists()) throw new Error("room not found");
-        const room = roomSnap.data() as RoomDoc;
-        if (room.status !== "clue") return;
-        if (room?.options?.resolveMode !== "sort-submit") return;
-        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-          ? (room.deal.players as string[])
-          : null;
-        if (!roundPlayers || roundPlayers.length === 0) return;
-        if (!roundPlayers.includes(playerId)) return;
-        const maxCount: number = roundPlayers.length;
-        if (maxCount <= 0) return;
-        const proposalSnap = await tx.get(proposalDocRef);
-        const proposalData = proposalSnap.exists()
-          ? (proposalSnap.data() as RoomProposalDoc)
-          : null;
-        const roomSeed =
-          typeof room?.deal?.seed === "string" ? room.deal.seed : null;
-        const docSeed =
-          typeof proposalData?.seed === "string" ? proposalData.seed : null;
-        let current = readProposal(
-          proposalData?.proposal ?? room?.order?.proposal
-        );
-        if (docSeed && roomSeed && docSeed !== roomSeed) {
-          current = [];
+      const dequeuedAt = readTimestamp();
+      const queueWaitMs = Math.max(0, Math.round(dequeuedAt - enqueuedAt));
+      const startedAt = dequeuedAt;
+      let txResult: ProposalWriteResult | "noop" | "error" | null = null;
+      const MAX_ATTEMPTS = 5;
+      try {
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+          proposalToSync = null;
+          try {
+            await runTransaction(db!, async (tx) => {
+              const roomSnap = await tx.get(roomRef);
+              if (!roomSnap.exists()) throw new Error("room not found");
+              const room = roomSnap.data() as RoomDoc;
+              if (room.status !== "clue") {
+                txResult = "noop";
+                return;
+              }
+              if (room?.options?.resolveMode !== "sort-submit") {
+                txResult = "noop";
+                return;
+              }
+              const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+                ? (room.deal.players as string[])
+                : null;
+              if (!roundPlayers || roundPlayers.length === 0) {
+                txResult = "noop";
+                return;
+              }
+              if (!roundPlayers.includes(playerId)) {
+                txResult = "noop";
+                return;
+              }
+              const maxCount: number = roundPlayers.length;
+              if (maxCount <= 0) {
+                txResult = "noop";
+                return;
+              }
+              const proposalSnap = await tx.get(proposalDocRef);
+              const proposalData = proposalSnap.exists()
+                ? (proposalSnap.data() as RoomProposalDoc)
+                : null;
+              const roomSeed =
+                typeof room?.deal?.seed === "string" ? room.deal.seed : null;
+              const docSeed =
+                typeof proposalData?.seed === "string" ? proposalData.seed : null;
+              let current = readProposal(
+                proposalData?.proposal ?? room?.order?.proposal
+              );
+              if (docSeed && roomSeed && docSeed !== roomSeed) {
+                current = [];
+              }
+              const targetIndex = current.findIndex((v) => v === playerId);
+              if (targetIndex < 0) {
+                txResult = "noop";
+                return;
+              }
+              current[targetIndex] = null;
+              const normalized = normalizeProposal(current, maxCount);
+              tx.set(
+                proposalDocRef,
+                {
+                  proposal: normalized,
+                  seed: roomSeed ?? docSeed ?? null,
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              );
+              proposalToSync = normalized;
+            });
+            txResult = proposalToSync ? "ok" : txResult ?? "noop";
+            return;
+          } catch (error) {
+            if (isRetryableTransactionError(error) && attempt < MAX_ATTEMPTS - 1) {
+              const backoffMs = Math.min(400 * (attempt + 1), 1600);
+              traceAction("lag.drop.retry.txError", {
+                roomId,
+                playerId,
+                attempt: String(attempt),
+                backoffMs: String(backoffMs),
+                scope: "remove",
+                code: (error as FirestoreError | undefined)?.code ?? "unknown",
+              });
+              await wait(backoffMs);
+              continue;
+            }
+            txResult = "error";
+            throw error;
+          }
         }
-        const targetIndex = current.findIndex((v) => v === playerId);
-        if (targetIndex < 0) return;
-        current[targetIndex] = null;
-        const normalized = normalizeProposal(current, maxCount);
-        tx.set(
-          proposalDocRef,
-          {
-            proposal: normalized,
-            seed: roomSeed ?? docSeed ?? null,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
-        proposalToSync = normalized;
-      });
-      if (proposalToSync) {
-        await syncRoomProposal(roomId, proposalToSync);
+      } finally {
+        const elapsedMs = Math.max(0, Math.round(readTimestamp() - startedAt));
+        recordProposalWriteMetrics({
+          scope: queueScope,
+          queueWaitMs,
+          elapsedMs,
+          result: txResult ?? "unknown",
+        });
       }
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );
+  if (proposalToSync) {
+    await syncRoomProposal(roomId, proposalToSync);
+  }
 }
 export async function moveCardInProposalToPosition(
   roomId: string,
@@ -834,70 +898,134 @@ export async function moveCardInProposalToPosition(
   const roomRef = doc(db!, "rooms", roomId);
   const proposalDocRef = proposalRef(roomId);
   const queueScope = proposalQueueKey(roomId, playerId);
+  const readTimestamp =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? () => performance.now()
+      : () => Date.now();
+  const enqueuedAt = readTimestamp();
+  let proposalToSync: (string | null)[] | null = null;
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
-      let proposalToSync: (string | null)[] | null = null;
-      await runTransaction(db!, async (tx) => {
-        const roomSnap = await tx.get(roomRef);
-        if (!roomSnap.exists()) throw new Error("room not found");
-        const room = roomSnap.data() as RoomDoc;
-        if (room.status !== "clue") return;
-        if (room?.options?.resolveMode !== "sort-submit") return;
-        const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
-          ? (room.deal.players as string[])
-          : null;
-        if (!roundPlayers || roundPlayers.length === 0) return;
-        if (!roundPlayers.includes(playerId)) return;
-        const maxCount: number = roundPlayers.length;
-        if (maxCount <= 0) return;
-        const proposalSnap = await tx.get(proposalDocRef);
-        const proposalData = proposalSnap.exists()
-          ? (proposalSnap.data() as RoomProposalDoc)
-          : null;
-        const roomSeed =
-          typeof room?.deal?.seed === "string" ? room.deal.seed : null;
-        const docSeed =
-          typeof proposalData?.seed === "string" ? proposalData.seed : null;
-        let current = readProposal(
-          proposalData?.proposal ?? room?.order?.proposal
-        );
-        if (docSeed && roomSeed && docSeed !== roomSeed) {
-          current = [];
+      const dequeuedAt = readTimestamp();
+      const queueWaitMs = Math.max(0, Math.round(dequeuedAt - enqueuedAt));
+      const startedAt = dequeuedAt;
+      let txResult: ProposalWriteResult | "noop" | "error" | null = null;
+      const MAX_ATTEMPTS = 5;
+      try {
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+          proposalToSync = null;
+          try {
+            await runTransaction(db!, async (tx) => {
+              const roomSnap = await tx.get(roomRef);
+              if (!roomSnap.exists()) throw new Error("room not found");
+              const room = roomSnap.data() as RoomDoc;
+              if (room.status !== "clue") {
+                txResult = "noop";
+                return;
+              }
+              if (room?.options?.resolveMode !== "sort-submit") {
+                txResult = "noop";
+                return;
+              }
+              const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
+                ? (room.deal.players as string[])
+                : null;
+              if (!roundPlayers || roundPlayers.length === 0) {
+                txResult = "noop";
+                return;
+              }
+              if (!roundPlayers.includes(playerId)) {
+                txResult = "noop";
+                return;
+              }
+              const maxCount: number = roundPlayers.length;
+              if (maxCount <= 0) {
+                txResult = "noop";
+                return;
+              }
+              const proposalSnap = await tx.get(proposalDocRef);
+              const proposalData = proposalSnap.exists()
+                ? (proposalSnap.data() as RoomProposalDoc)
+                : null;
+              const roomSeed =
+                typeof room?.deal?.seed === "string" ? room.deal.seed : null;
+              const docSeed =
+                typeof proposalData?.seed === "string" ? proposalData.seed : null;
+              let current = readProposal(
+                proposalData?.proposal ?? room?.order?.proposal
+              );
+              if (docSeed && roomSeed && docSeed !== roomSeed) {
+                current = [];
+              }
+              const fromIdx = current.findIndex((v) => v === playerId);
+              if (fromIdx < 0) {
+                txResult = "noop";
+                return;
+              }
+              const clamped = Math.max(
+                0,
+                Math.min(targetIndex, Math.max(0, maxCount - 1))
+              );
+              const targetValue = current[clamped];
+              if (typeof targetValue === "string" && targetValue !== playerId) {
+                current[clamped] = playerId;
+                current[fromIdx] = targetValue;
+              } else {
+                current[fromIdx] = null;
+                if (clamped >= current.length) current.length = clamped + 1;
+                current[clamped] = playerId;
+              }
+              if (maxCount > 0 && current.length > maxCount) {
+                current.length = maxCount;
+              }
+              const normalized = normalizeProposal(current, maxCount);
+              tx.set(
+                proposalDocRef,
+                {
+                  proposal: normalized,
+                  seed: roomSeed ?? docSeed ?? null,
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              );
+              proposalToSync = normalized;
+            });
+            txResult = proposalToSync ? "ok" : txResult ?? "noop";
+            return;
+          } catch (error) {
+            if (isRetryableTransactionError(error) && attempt < MAX_ATTEMPTS - 1) {
+              const backoffMs = Math.min(400 * (attempt + 1), 1600);
+              traceAction("lag.drop.retry.txError", {
+                roomId,
+                playerId,
+                attempt: String(attempt),
+                backoffMs: String(backoffMs),
+                scope: "move",
+                code: (error as FirestoreError | undefined)?.code ?? "unknown",
+              });
+              await wait(backoffMs);
+              continue;
+            }
+            txResult = "error";
+            throw error;
+          }
         }
-        const fromIdx = current.findIndex((v) => v === playerId);
-        if (fromIdx < 0) return;
-        const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
-        const targetValue = current[clamped];
-        if (typeof targetValue === "string" && targetValue !== playerId) {
-          current[clamped] = playerId;
-          current[fromIdx] = targetValue;
-        } else {
-          current[fromIdx] = null;
-          if (clamped >= current.length) current.length = clamped + 1;
-          current[clamped] = playerId;
-        }
-        if (maxCount > 0 && current.length > maxCount) {
-          current.length = maxCount;
-        }
-        const normalized = normalizeProposal(current, maxCount);
-        tx.set(
-          proposalDocRef,
-          {
-            proposal: normalized,
-            seed: roomSeed ?? docSeed ?? null,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
-        proposalToSync = normalized;
-      });
-      if (proposalToSync) {
-        await syncRoomProposal(roomId, proposalToSync);
+      } finally {
+        const elapsedMs = Math.max(0, Math.round(readTimestamp() - startedAt));
+        recordProposalWriteMetrics({
+          scope: queueScope,
+          queueWaitMs,
+          elapsedMs,
+          result: txResult ?? "unknown",
+        });
       }
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );
+  if (proposalToSync) {
+    await syncRoomProposal(roomId, proposalToSync);
+  }
 }
 
 // ドロップ時にクライアントが即時にカードを場に出して判定する（clue フェーズ用）

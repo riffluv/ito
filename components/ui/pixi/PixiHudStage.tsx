@@ -47,6 +47,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
   const [app, setApp] = useState<Application | null>(null);
+  const [restartKey, setRestartKey] = useState(0);
   const safeDestroyContainer = useCallback((container: Container) => {
     if ((container as unknown as { destroyed?: boolean }).destroyed) {
       return;
@@ -61,6 +62,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     }
   }, []);
 
+  const requestRestart = useCallback(() => {
+    setRestartKey((value) => value + 1);
+  }, []);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) {
@@ -71,6 +76,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     let resizeObserver: ResizeObserver | null = null;
     const pixiApp = new Application();
     const layerStore = layersRef.current;
+    let detachCanvasContextHandlers: (() => void) | null = null;
 
     const init = async () => {
       try {
@@ -120,6 +126,32 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         pointerEvents: "none",
       });
 
+      const canvas = pixiApp.canvas;
+      const handleContextLost = (event: Event) => {
+        event.preventDefault?.();
+        traceAction("pixi.hud.contextLost");
+        if (!disposed) {
+          requestRestart();
+        }
+      };
+      const handleContextRestored = () => {
+        traceAction("pixi.hud.contextRestored");
+      };
+      canvas.addEventListener("webglcontextlost", handleContextLost as EventListener, false);
+      canvas.addEventListener(
+        "webglcontextrestored",
+        handleContextRestored as EventListener,
+        false
+      );
+      detachCanvasContextHandlers = () => {
+        canvas.removeEventListener("webglcontextlost", handleContextLost as EventListener, false);
+        canvas.removeEventListener(
+          "webglcontextrestored",
+          handleContextRestored as EventListener,
+          false
+        );
+      };
+
       resizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) return;
@@ -162,6 +194,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         resizeObserver.disconnect();
         resizeObserver = null;
       }
+      if (detachCanvasContextHandlers) {
+        detachCanvasContextHandlers();
+        detachCanvasContextHandlers = null;
+      }
       layerStore.forEach(({ container }) => {
         safeDestroyContainer(container);
       });
@@ -177,7 +213,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         appRef.current = null;
       }
     };
-  }, [safeDestroyContainer]);
+  }, [requestRestart, restartKey, safeDestroyContainer]);
 
   const registerLayer = useCallback((name: string, options?: LayerOptions) => {
     const currentApp = appRef.current;

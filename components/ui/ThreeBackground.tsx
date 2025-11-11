@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type * as PIXITypes from "pixi.js";
 import type {
   BackgroundQuality as SimpleBackgroundQuality,
@@ -113,6 +113,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
   const [backgroundType, setBackgroundType] =
     useState<BackgroundType>("pixi-dq");
+  const [restartKey, setRestartKey] = useState(0);
+
+  const handleContextLoss = useCallback((tag: string) => {
+    logPixiBackground("error", `${tag}-context-lost`, { tag });
+    setRestartKey((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     ensureGlobalBackground();
@@ -251,6 +257,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     let disposed = false;
     let detachResize: (() => void) | null = null;
+    let detachContext: (() => void) | null = null;
 
     const init = async () => {
       try {
@@ -276,6 +283,27 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         mountRef.current.appendChild(controller.canvas);
         simpleControllerRef.current = controller;
         logPixiBackground("info", "simple-init-success");
+
+        const canvas = controller.canvas;
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-simple");
+          }
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "simple-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
+            "webglcontextrestored",
+            onContextRestored as EventListener,
+            false
+          );
+        };
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -330,6 +358,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       if (detachResize) {
         detachResize();
       }
+      if (detachContext) {
+        detachContext();
+      }
       if (simpleControllerRef.current) {
         try {
           simpleControllerRef.current.destroy();
@@ -351,6 +382,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    handleContextLoss,
+    restartKey,
   ]);
 
   useEffect(() => {
@@ -405,6 +438,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     let disposed = false;
     let detachResize: (() => void) | null = null;
+    let detachContext: (() => void) | null = null;
 
     const init = async () => {
       try {
@@ -427,6 +461,27 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         mountRef.current.appendChild(controller.canvas);
         dragonQuestControllerRef.current = controller;
         logPixiBackground("info", "dragon-quest-init-success");
+
+        const canvas = controller.canvas;
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-dq");
+          }
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "dragon-quest-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
+            "webglcontextrestored",
+            onContextRestored as EventListener,
+            false
+          );
+        };
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -482,6 +537,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       if (detachResize) {
         detachResize();
       }
+      if (detachContext) {
+        detachContext();
+      }
       cleanupDragonQuestBackground();
       updateGlobalBackground({
         renderer: "dom",
@@ -496,6 +554,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    handleContextLoss,
+    restartKey,
   ]);
 
   useEffect(() => {
@@ -532,6 +592,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
 
     let disposed = false;
     let detachResize: (() => void) | null = null;
+    let detachContext: (() => void) | null = null;
 
     const init = async () => {
       try {
@@ -554,6 +615,27 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         mountRef.current.appendChild(controller.canvas);
         infernoControllerRef.current = controller;
         logPixiBackground("info", "inferno-init-success");
+
+        const canvas = controller.canvas;
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-inferno");
+          }
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "inferno-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener("webglcontextrestored", onContextRestored as EventListener, false);
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
+            "webglcontextrestored",
+            onContextRestored as EventListener,
+            false
+          );
+        };
 
         let resizeFrame: number | null = null;
         let lastWidth = window.innerWidth;
@@ -615,6 +697,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       if (detachResize) {
         detachResize();
       }
+      if (detachContext) {
+        detachContext();
+      }
       cleanupInfernoBackground();
       updateGlobalBackground({
         renderer: "dom",
@@ -629,6 +714,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
+    handleContextLoss,
+    restartKey,
   ]);
 
   return (
