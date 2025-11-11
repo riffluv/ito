@@ -1,6 +1,7 @@
 "use client";
 import PerfStatsOverlay from "@/components/dev/PerfStatsOverlay";
 import PerformanceMetricsInitializer from "@/components/perf/PerformanceMetricsInitializer";
+import NetworkDebugInitializer from "@/components/dev/NetworkDebugInitializer";
 
 import React from "react";
 
@@ -11,6 +12,7 @@ export function ClientFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PerformanceMetricsInitializer />
+      <NetworkDebugInitializer />
       
       <main id="main" role="main">{children}</main>
       <PerfStatsOverlay />
