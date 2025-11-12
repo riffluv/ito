@@ -308,8 +308,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           },
         });
 
-        if (!mountRef.current) {
+        if (disposed || !mountRef.current) {
           controller.destroy();
+          holdController.release();
           return;
         }
 
@@ -317,6 +318,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         if (!canvas) {
           controller.destroy();
           setBackgroundType("css");
+          holdController.release();
           return;
         }
 
@@ -345,6 +347,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             false
           );
         };
+
+        if (disposed) {
+          controller.destroy();
+          holdController.release();
+          return;
+        }
 
         simpleControllerRef.current = controller;
         logPixiBackground("info", "simple-init-success");
@@ -504,8 +512,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
           });
 
-        if (!mountRef.current) {
+        if (disposed || !mountRef.current) {
           controller.destroy();
+          holdController.release();
           return;
         }
 
@@ -513,6 +522,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         if (!canvas) {
           controller.destroy();
           setBackgroundType("css");
+          holdController.release();
           return;
         }
         mountRef.current.innerHTML = "";
@@ -540,6 +550,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             false
           );
         };
+
+        if (disposed) {
+          controller.destroy();
+          holdController.release();
+          return;
+        }
 
         dragonQuestControllerRef.current = controller;
         logPixiBackground("info", "dragon-quest-init-success");
@@ -675,8 +691,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
           });
 
-        if (!mountRef.current) {
+        if (disposed || !mountRef.current) {
           controller.destroy();
+          holdController.release();
           return;
         }
 
@@ -684,6 +701,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         if (!canvas) {
           controller.destroy();
           setBackgroundType("css");
+          holdController.release();
           return;
         }
         mountRef.current.innerHTML = "";
@@ -711,6 +729,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
             false
           );
         };
+
+        if (disposed) {
+          controller.destroy();
+          holdController.release();
+          return;
+        }
 
         infernoControllerRef.current = controller;
         logPixiBackground("info", "inferno-init-success");
