@@ -1,5 +1,5 @@
 "use client";
-import { Box, Text, chakra } from "@chakra-ui/react";
+import { Box, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
