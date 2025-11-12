@@ -3163,7 +3163,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           proposal={room.order?.proposal || []}
           resolveMode={room.options?.resolveMode}
           displayMode={getDisplayMode(room)}
-          isHost={isHost}
           orderNumbers={room.order?.numbers ?? {}}
           orderSnapshots={room.order?.snapshots ?? null}
           slotCount={slotCount}
