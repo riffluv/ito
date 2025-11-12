@@ -67,6 +67,14 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 2. 開発サーバーを再起動（Ctrl+C → `npm run dev`）
 3. ブラウザのキャッシュをクリア（F12 → Application → Clear storage）
 
+### Pixi 背景 / HUD 分離アーキテクチャ（2025-xx刷新）
+
+- 背景は常に `ThreeBackground` が管理する専用 `<canvas>`（OffscreenCanvas サーフェス相当）に描画し、DOM の最背面に固定配置します。`PixiHudStage` は HUD レイヤー専用になり `mix-blend-mode: normal` で DOM を覆わないため、カードやボタンの色が濁りません。
+- 古い `NEXT_PUBLIC_PIXI_BACKGROUND_SHARED` フラグは無効化済みで、共有レンダラーへのフォールバックは存在しません。`.env*` から消し忘れていても挙動には影響しません。
+- 背景の初期化シーケンスは `createBackgroundHoldController` を通じて `PixiHudStage.holdBackground()` と同期しており、背景が描画可能になるまでプレースホルダーのグラデだけが表示されます。`window.bg.getRenderer()` は `pixi` / `dom` のどちらで描画しているかを示す唯一の真実です。
+- `webglcontextlost`・`resize`・`visibilitychange` を `ThreeBackground` が直接監視し、必要なときだけ背景を再起動します。HUD の Pixi Application は巻き込まれないので、暗転調査のためにステージ全体を再起動する必要はありません。手動デバッグ時は DevTools から `document.dispatchEvent(new Event("visibilitychange"))` で再描画を誘発できます。
+- 追加の Pixi 背景エフェクトを実装する場合も **`PixiHudStage` の `app` や `Container` を直接触らず**、`ThreeBackground` 経由で専用 canvas / controller を生成してください。HUD レイヤーと混在させたい場合は `usePixiHudLayer` を使って別 canvas 上で描画すること。
+
 ---
 
 ## 4. 状態管理まわりのポイント
