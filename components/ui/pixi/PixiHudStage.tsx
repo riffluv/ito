@@ -33,7 +33,9 @@ interface PixiHudContextValue {
   app: Application | null;
   registerLayer: (name: string, options?: LayerOptions) => Container | null;
   unregisterLayer: (name: string) => void;
-  backgroundLayer: Container | null;
+  hudRoot: Container | null;
+  markBackgroundReady: () => void;
+  holdBackground: () => (() => void) | undefined;
 }
 
 const PixiHudContext = createContext<PixiHudContextValue | undefined>(undefined);
@@ -47,11 +49,12 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
-  const backgroundRootRef = useRef<Container | null>(null);
   const hudRootRef = useRef<Container | null>(null);
   const [app, setApp] = useState<Application | null>(null);
-  const [backgroundLayer, setBackgroundLayer] = useState<Container | null>(null);
+  const [hudRoot, setHudRoot] = useState<Container | null>(null);
   const [restartKey, setRestartKey] = useState(0);
+  const [backgroundReady, setBackgroundReady] = useState(true);
+  const [backgroundHoldCount, setBackgroundHoldCount] = useState(0);
   const safeDestroyContainer = useCallback((container: Container) => {
     if ((container as unknown as { destroyed?: boolean }).destroyed) {
       return;
@@ -69,6 +72,32 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const requestRestart = useCallback(() => {
     setRestartKey((value) => value + 1);
   }, []);
+  const holdBackground = useCallback(() => {
+    setBackgroundHoldCount((count) => count + 1);
+    return () => {
+      setBackgroundHoldCount((count) => Math.max(0, count - 1));
+    };
+  }, []);
+  const markBackgroundReady = useCallback(() => {
+    setBackgroundHoldCount(0);
+    setBackgroundReady(true);
+  }, []);
+
+  const isFirstRestartRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRestartRef.current) {
+      isFirstRestartRef.current = false;
+      return undefined;
+    }
+    const release = holdBackground();
+    return () => {
+      release?.();
+    };
+  }, [restartKey, holdBackground]);
+
+  useEffect(() => {
+    setBackgroundReady(backgroundHoldCount === 0);
+  }, [backgroundHoldCount]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -109,19 +138,13 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       pixiApp.stage.sortableChildren = false;
       pixiApp.renderer.events.cursorStyles.default = "default";
 
-      const backgroundRoot = new Container();
-      backgroundRoot.sortableChildren = true;
-      backgroundRoot.zIndex = -1000;
-      backgroundRoot.label = "pixi-background-root";
-      pixiApp.stage.addChild(backgroundRoot);
-      backgroundRootRef.current = backgroundRoot;
-      setBackgroundLayer(backgroundRoot);
-
       const hudRoot = new Container();
       hudRoot.sortableChildren = true;
       hudRoot.label = "pixi-hud-root";
+      hudRoot.eventMode = "none";
       hudRootRef.current = hudRoot;
       pixiApp.stage.addChild(hudRoot);
+      setHudRoot(hudRoot);
 
       // バッチレンダリング最適化
       const batchController =
@@ -142,6 +165,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         width: "100%",
         height: "100%",
         pointerEvents: "none",
+        mixBlendMode: "normal",
       });
 
       const canvas = pixiApp.canvas;
@@ -221,11 +245,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       });
       layerStore.clear();
       setApp(null);
-      setBackgroundLayer(null);
-      if (backgroundRootRef.current) {
-        safeDestroyContainer(backgroundRootRef.current);
-        backgroundRootRef.current = null;
-      }
+      setHudRoot(null);
       if (hudRootRef.current) {
         safeDestroyContainer(hudRootRef.current);
         hudRootRef.current = null;
@@ -295,7 +315,11 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     record.refCount -= 1;
     if (record.refCount > 0) return;
 
-    currentApp.stage.removeChild(record.container);
+    if (record.container.parent) {
+      record.container.parent.removeChild(record.container);
+    } else {
+      currentApp.stage.removeChild(record.container);
+    }
     safeDestroyContainer(record.container);
     store.delete(name);
 
@@ -307,16 +331,17 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       app,
       registerLayer,
       unregisterLayer,
-      backgroundLayer,
+      hudRoot,
+      markBackgroundReady,
+      holdBackground,
     }),
-    [app, registerLayer, unregisterLayer, backgroundLayer]
+    [app, registerLayer, unregisterLayer, hudRoot, markBackgroundReady, holdBackground]
   );
 
   return (
     <PixiHudContext.Provider value={contextValue}>
       {children}
       <div
-        ref={hostRef}
         style={{
           position: "fixed",
           inset: 0,
@@ -325,7 +350,32 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
           zIndex,
           pointerEvents: "none",
         }}
-      />
+      >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            background:
+              "radial-gradient(circle at 25% 25%, rgba(34,44,84,0.45), transparent 60%), linear-gradient(180deg, #05060a 0%, #080a12 60%, #05060a 100%)",
+            transition: "opacity 280ms ease",
+            opacity: backgroundReady ? 0 : 1,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          ref={hostRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        />
+      </div>
     </PixiHudContext.Provider>
   );
 }

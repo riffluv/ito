@@ -11,6 +11,7 @@ import type { InfernoBackgroundController } from "@/lib/pixi/infernoBackground";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import { usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
+import { createBackgroundHoldController } from "@/lib/pixi/backgroundHold";
 
 type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
@@ -108,13 +109,14 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const legacyAppRef = useRef<PIXITypes.Application | null>(null);
   const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
     useAnimationSettings();
-  const enableSharedRenderer =
-    process.env.NEXT_PUBLIC_PIXI_BACKGROUND_SHARED === "1";
-  const pixiHud = enableSharedRenderer ? usePixiHudContext() : undefined;
-  const sharedApp = enableSharedRenderer ? pixiHud?.app ?? null : null;
-  const sharedBackgroundLayer = enableSharedRenderer
-    ? pixiHud?.backgroundLayer ?? null
-    : null;
+  const pixiHud = usePixiHudContext();
+  const markSharedBackgroundReady = pixiHud?.markBackgroundReady;
+  const acquireBackgroundHold = pixiHud?.holdBackground;
+  const notifyBackgroundReady = useCallback(() => {
+    if (markSharedBackgroundReady) {
+      markSharedBackgroundReady();
+    }
+  }, [markSharedBackgroundReady]);
 
   const isLowPowerDevice =
     reducedMotion || gpuCapability === "low";
@@ -131,6 +133,21 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   useEffect(() => {
     ensureGlobalBackground();
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return undefined;
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && backgroundType !== "css") {
+        setRestartKey((value) => value + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [backgroundType]);
 
   useEffect(() => {
     try {
@@ -173,6 +190,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     }
     return "low";
   }, [backgroundType]);
+
+  useEffect(() => {
+    if (backgroundType === "css") {
+      notifyBackgroundReady();
+    }
+  }, [backgroundType, notifyBackgroundReady]);
 
   const cleanupSimpleBackground = () => {
     if (simpleControllerRef.current) {
@@ -247,6 +270,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           renderer: "dom",
           quality: effectiveQuality,
         });
+        notifyBackgroundReady();
       }
       return undefined;
     }
@@ -266,17 +290,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     let disposed = false;
     let detachResize: (() => void) | null = null;
     let detachContext: (() => void) | null = null;
+    const holdController = createBackgroundHoldController(acquireBackgroundHold);
 
     const init = async () => {
       try {
         const module = await import("@/lib/pixi/simpleBackground");
         if (disposed) return;
-        const usingSharedRenderer = Boolean(
-          enableSharedRenderer && sharedApp && sharedBackgroundLayer
-        );
-        if (usingSharedRenderer && mountRef.current) {
-          mountRef.current.innerHTML = "";
-        }
 
         const controller = await module.createSimpleBackground({
           width: window.innerWidth,
@@ -287,51 +306,45 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onMetrics: (metrics) => {
             logPixiBackground("info", "simple-metrics", metrics);
           },
-          app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
-          container: usingSharedRenderer
-            ? sharedBackgroundLayer ?? undefined
-            : undefined,
         });
 
-        if (!usingSharedRenderer) {
-          if (!mountRef.current) {
-            controller.destroy();
-            return;
-          }
+        if (!mountRef.current) {
+          controller.destroy();
+          return;
+        }
 
-          const canvas = controller.canvas;
-          if (!canvas) {
-            controller.destroy();
-            setBackgroundType("css");
-            return;
-          }
+        const canvas = controller.canvas;
+        if (!canvas) {
+          controller.destroy();
+          setBackgroundType("css");
+          return;
+        }
 
-          mountRef.current.innerHTML = "";
-          mountRef.current.appendChild(canvas);
-          const onContextLost = (event: Event) => {
-            event.preventDefault?.();
-            if (!disposed) {
-              handleContextLoss("pixi-simple");
-            }
-          };
-          const onContextRestored = () => {
-            logPixiBackground("info", "simple-context-restored");
-          };
-          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.addEventListener(
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(canvas);
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-simple");
+          }
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "simple-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener(
+          "webglcontextrestored",
+          onContextRestored as EventListener,
+          false
+        );
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-          detachContext = () => {
-            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-            canvas.removeEventListener(
-              "webglcontextrestored",
-              onContextRestored as EventListener,
-              false
-            );
-          };
-        }
+        };
 
         simpleControllerRef.current = controller;
         logPixiBackground("info", "simple-init-success");
@@ -373,12 +386,15 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onLightSweep: () => controller.lightSweep(),
           onPointerGlow: (active) => controller.updatePointerGlow(active),
         });
+        notifyBackgroundReady();
+        holdController.release();
       } catch (error) {
         logPixiBackground("error", "simple-init-failed", error);
         if (!disposed) {
           cleanupSimpleBackground();
           setBackgroundType("css");
         }
+        holdController.release();
       }
     };
 
@@ -400,6 +416,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         }
         simpleControllerRef.current = null;
       }
+      holdController.release();
       updateGlobalBackground({
         renderer: "dom",
         quality: effectiveQuality,
@@ -413,10 +430,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
-    sharedApp,
-    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
+    notifyBackgroundReady,
+    acquireBackgroundHold,
   ]);
 
   useEffect(() => {
@@ -444,6 +461,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           renderer: "dom",
           quality: effectiveQuality,
         });
+        notifyBackgroundReady();
       }
       return undefined;
     }
@@ -461,10 +479,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
-    if (
-      !mountRef.current &&
-      !(enableSharedRenderer && sharedApp && sharedBackgroundLayer)
-    ) {
+    if (!mountRef.current) {
       return undefined;
     }
 
@@ -475,66 +490,56 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     let disposed = false;
     let detachResize: (() => void) | null = null;
     let detachContext: (() => void) | null = null;
+    const holdController = createBackgroundHoldController(acquireBackgroundHold);
 
     const init = async () => {
       try {
         const module = await import("@/lib/pixi/dragonQuestBackground");
         if (disposed) return;
-        const usingSharedRenderer = Boolean(
-          enableSharedRenderer && sharedApp && sharedBackgroundLayer
-        );
-        if (usingSharedRenderer && mountRef.current) {
-          mountRef.current.innerHTML = "";
-        }
         const controller =
           await module.createDragonQuestBackground({
             width: window.innerWidth,
             height: window.innerHeight,
             antialias: !isLowPowerDevice,
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
-            app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
-            container: usingSharedRenderer
-              ? sharedBackgroundLayer ?? undefined
-              : undefined,
           });
 
-        if (!usingSharedRenderer) {
-          if (!mountRef.current) {
-            controller.destroy();
-            return;
+        if (!mountRef.current) {
+          controller.destroy();
+          return;
+        }
+
+        const canvas = controller.canvas;
+        if (!canvas) {
+          controller.destroy();
+          setBackgroundType("css");
+          return;
+        }
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(canvas);
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-dq");
           }
-          const canvas = controller.canvas;
-          if (!canvas) {
-            controller.destroy();
-            setBackgroundType("css");
-            return;
-          }
-          mountRef.current.innerHTML = "";
-          mountRef.current.appendChild(canvas);
-          const onContextLost = (event: Event) => {
-            event.preventDefault?.();
-            if (!disposed) {
-              handleContextLoss("pixi-dq");
-            }
-          };
-          const onContextRestored = () => {
-            logPixiBackground("info", "dragon-quest-context-restored");
-          };
-          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.addEventListener(
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "dragon-quest-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener(
+          "webglcontextrestored",
+          onContextRestored as EventListener,
+          false
+        );
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-          detachContext = () => {
-            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-            canvas.removeEventListener(
-              "webglcontextrestored",
-              onContextRestored as EventListener,
-              false
-            );
-          };
-        }
+        };
 
         dragonQuestControllerRef.current = controller;
         logPixiBackground("info", "dragon-quest-init-success");
@@ -577,12 +582,15 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onLaunchFireworks: () => controller.launchFireworks(),
           onLaunchMeteors: () => controller.launchMeteors(),
         });
+        notifyBackgroundReady();
+        holdController.release();
       } catch (error) {
         logPixiBackground("error", "dragon-quest-init-failed", error);
         if (!disposed) {
           cleanupDragonQuestBackground();
           setBackgroundType("css");
         }
+        holdController.release();
       }
     };
 
@@ -597,6 +605,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         detachContext();
       }
       cleanupDragonQuestBackground();
+      holdController.release();
       updateGlobalBackground({
         renderer: "dom",
         quality: effectiveQuality,
@@ -610,10 +619,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
-    sharedApp,
-    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
+    notifyBackgroundReady,
+    acquireBackgroundHold,
   ]);
 
   useEffect(() => {
@@ -624,6 +633,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           renderer: "dom",
           quality: effectiveQuality,
         });
+        notifyBackgroundReady();
       }
       return undefined;
     }
@@ -640,10 +650,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
-    if (
-      !mountRef.current &&
-      !(enableSharedRenderer && sharedApp && sharedBackgroundLayer)
-    ) {
+    if (!mountRef.current) {
       return undefined;
     }
 
@@ -654,66 +661,56 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     let disposed = false;
     let detachResize: (() => void) | null = null;
     let detachContext: (() => void) | null = null;
+    const holdController = createBackgroundHoldController(acquireBackgroundHold);
 
     const init = async () => {
       try {
         const module = await import("@/lib/pixi/infernoBackground");
         if (disposed) return;
-        const usingSharedRenderer = Boolean(
-          enableSharedRenderer && sharedApp && sharedBackgroundLayer
-        );
-        if (usingSharedRenderer && mountRef.current) {
-          mountRef.current.innerHTML = "";
-        }
         const controller =
           await module.createInfernoBackground({
             width: window.innerWidth,
             height: window.innerHeight,
             antialias: !isLowPowerDevice,
             resolution: Math.min(1.3, window.devicePixelRatio || 1),
-            app: usingSharedRenderer ? sharedApp ?? undefined : undefined,
-            container: usingSharedRenderer
-              ? sharedBackgroundLayer ?? undefined
-              : undefined,
           });
 
-        if (!usingSharedRenderer) {
-          if (!mountRef.current) {
-            controller.destroy();
-            return;
+        if (!mountRef.current) {
+          controller.destroy();
+          return;
+        }
+
+        const canvas = controller.canvas;
+        if (!canvas) {
+          controller.destroy();
+          setBackgroundType("css");
+          return;
+        }
+        mountRef.current.innerHTML = "";
+        mountRef.current.appendChild(canvas);
+        const onContextLost = (event: Event) => {
+          event.preventDefault?.();
+          if (!disposed) {
+            handleContextLoss("pixi-inferno");
           }
-          const canvas = controller.canvas;
-          if (!canvas) {
-            controller.destroy();
-            setBackgroundType("css");
-            return;
-          }
-          mountRef.current.innerHTML = "";
-          mountRef.current.appendChild(canvas);
-          const onContextLost = (event: Event) => {
-            event.preventDefault?.();
-            if (!disposed) {
-              handleContextLoss("pixi-inferno");
-            }
-          };
-          const onContextRestored = () => {
-            logPixiBackground("info", "inferno-context-restored");
-          };
-          canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
-          canvas.addEventListener(
+        };
+        const onContextRestored = () => {
+          logPixiBackground("info", "inferno-context-restored");
+        };
+        canvas.addEventListener("webglcontextlost", onContextLost as EventListener, false);
+        canvas.addEventListener(
+          "webglcontextrestored",
+          onContextRestored as EventListener,
+          false
+        );
+        detachContext = () => {
+          canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
+          canvas.removeEventListener(
             "webglcontextrestored",
             onContextRestored as EventListener,
             false
           );
-          detachContext = () => {
-            canvas.removeEventListener("webglcontextlost", onContextLost as EventListener, false);
-            canvas.removeEventListener(
-              "webglcontextrestored",
-              onContextRestored as EventListener,
-              false
-            );
-          };
-        }
+        };
 
         infernoControllerRef.current = controller;
         logPixiBackground("info", "inferno-init-success");
@@ -756,6 +753,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           onLaunchFireworks: () => controller.launchFireworks(),
           onLaunchMeteors: () => controller.launchMeteors(),
         });
+        notifyBackgroundReady();
+        holdController.release();
 
         // 🔥 煉獄専用のメソッドをグローバルに登録
         if (window.bg) {
@@ -768,6 +767,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
           cleanupInfernoBackground();
           setBackgroundType("css");
         }
+        holdController.release();
       }
     };
 
@@ -782,6 +782,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         detachContext();
       }
       cleanupInfernoBackground();
+      holdController.release();
       updateGlobalBackground({
         renderer: "dom",
         quality: effectiveQuality,
@@ -795,10 +796,10 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     isLowPowerDevice,
     reducedMotion,
     supports3D,
-    sharedApp,
-    sharedBackgroundLayer,
     handleContextLoss,
     restartKey,
+    notifyBackgroundReady,
+    acquireBackgroundHold,
   ]);
 
   return (
@@ -817,13 +818,6 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         contain: "strict",
         pointerEvents: "none",
         background: "var(--chakra-colors-bg-canvas)",
-        display:
-          enableSharedRenderer &&
-          sharedApp &&
-          sharedBackgroundLayer &&
-          backgroundType !== "css"
-            ? "none"
-            : undefined,
       }}
     />
   );
