@@ -11,6 +11,7 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
+  closestCenter,
   pointerWithin,
   rectIntersection,
   useSensor,
@@ -21,7 +22,7 @@ import {
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
 import Tooltip from "@/components/ui/Tooltip";
@@ -141,6 +142,8 @@ const createInitialMagnetState = (): MagnetResult => ({
   shouldSnap: false,
 });
 
+const MAGNET_IDLE_MARGIN_PX = 48;
+
 const shallowArrayEqual = (
   a: readonly (string | null)[],
   b: readonly (string | null)[]
@@ -187,7 +190,12 @@ const boardCollisionDetection: CollisionDetection = (args) => {
     }
   }
 
-  return rectIntersection(args);
+  const intersections = rectIntersection(args);
+  if (intersections.length) {
+    return intersections;
+  }
+
+  return closestCenter(args);
 };
 
 function BoardFrameBase({
@@ -344,7 +352,7 @@ function InteractiveBoardBase({
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
       sensors={sensors}
-      modifiers={[restrictToFirstScrollableAncestor]}
+      modifiers={[restrictToWindowEdges]}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => {
@@ -860,9 +868,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, []);
 
   const boardContainerRef = useRef<HTMLDivElement | null>(null);
+  const boardBoundsRef = useRef<DOMRect | null>(null);
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
   const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
   const dragMoveRafRef = useRef<number | null>(null);
+
+  const updateBoardBounds = useCallback(() => {
+    if (!boardContainerRef.current) return;
+    boardBoundsRef.current = boardContainerRef.current.getBoundingClientRect();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -872,6 +886,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    updateBoardBounds();
+    if (!boardContainerRef.current || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      updateBoardBounds();
+    });
+    observer.observe(boardContainerRef.current);
+    return () => {
+      observer.disconnect();
+    };
+  }, [updateBoardBounds]);
 
   const resetMagnet = useCallback(
     (options?: { immediate?: boolean }) => {
@@ -931,6 +960,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [enqueueMagnetUpdate, getProjectedMagnetTarget, prefersReducedMotion]
   );
 
+  const releaseMagnet = useCallback(() => {
+    scheduleMagnetTarget(null);
+    const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+    if (
+      projectedState.dx !== 0 ||
+      projectedState.dy !== 0 ||
+      projectedState.strength > 0 ||
+      projectedState.shouldSnap
+    ) {
+      enqueueMagnetUpdate({ state: createInitialMagnetState() });
+    }
+  }, [enqueueMagnetUpdate, scheduleMagnetTarget]);
+
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
@@ -965,35 +1007,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return { duration: 220, easing: UI_TOKENS.EASING.standard };
   }, [magnetState.shouldSnap, prefersReducedMotion]);
 
-  const mouseSensorOptions = useMemo(() => (
-    pointerProfile.isCoarsePointer
-      ? {
-          activationConstraint: {
-            distance: 6,
-          },
-        }
-      : {
-          activationConstraint: {
-            distance: 2,
-          },
-        }
-  ), [pointerProfile.isCoarsePointer]);
+  const mouseSensorOptions = useMemo(
+    () => ({
+      activationConstraint: {
+        distance: pointerProfile.isCoarsePointer ? 12 : 8,
+      },
+    }),
+    [pointerProfile.isCoarsePointer]
+  );
 
-  const touchSensorOptions = useMemo(() => (
-    pointerProfile.isTouchOnly
-      ? {
-          activationConstraint: {
-            delay: 45,
-            tolerance: 26,
+  const touchSensorOptions = useMemo(
+    () =>
+      pointerProfile.isTouchOnly
+        ? {
+            activationConstraint: {
+              delay: 250,
+              tolerance: 28,
+            },
+          }
+        : {
+            activationConstraint: {
+              delay: 160,
+              tolerance: 10,
+            },
           },
-        }
-      : {
-          activationConstraint: {
-            delay: 160,
-            tolerance: 8,
-          },
-        }
-  ), [pointerProfile.isTouchOnly]);
+    [pointerProfile.isTouchOnly]
+  );
 
   const sensors = useSensors(
     useSensor(MouseSensor, mouseSensorOptions),
@@ -1390,17 +1429,20 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         };
       }
 
+      const dragPoint = lastDragPositionRef.current;
+      const boardBounds = boardBoundsRef.current;
+      if (
+        boardBounds &&
+        dragPoint &&
+        (dragPoint.y < boardBounds.top - MAGNET_IDLE_MARGIN_PX ||
+          dragPoint.y > boardBounds.bottom + MAGNET_IDLE_MARGIN_PX)
+      ) {
+        releaseMagnet();
+        return;
+      }
+
       if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
-        scheduleMagnetTarget(null);
-        const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
-        if (
-          projectedState.dx !== 0 ||
-          projectedState.dy !== 0 ||
-          projectedState.strength > 0 ||
-          projectedState.shouldSnap
-        ) {
-          enqueueMagnetUpdate({ state: createInitialMagnetState() });
-        }
+        releaseMagnet();
         return;
       }
 
@@ -1418,7 +1460,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       enqueueMagnetUpdate({ state: magnetResult });
     },
-    [enqueueMagnetUpdate, resolveMode, roomStatus, scheduleMagnetTarget]
+    [enqueueMagnetUpdate, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
   );
 
   const flushPendingDragMove = useCallback(() => {
