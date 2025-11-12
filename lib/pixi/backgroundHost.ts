@@ -52,6 +52,8 @@ class PixiBackgroundHost {
   private sceneRoot: Container | null = null;
   private current: SceneInstance | null = null;
   private canvasVisible = true;
+  private initPromise: Promise<Application | null> | null = null;
+  private disposeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private handleResize = () => {
     if (!this.app) return;
@@ -78,32 +80,63 @@ class PixiBackgroundHost {
     // 現状では controller 側で再構築が不要だが、必要に応じて追加する。
   };
 
-  private async ensureApp() {
-    if (this.app) return;
-    const app = new Application();
-    await app.init({
-      backgroundAlpha: 0,
-      antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-      width: window.innerWidth || 1920,
-      height: window.innerHeight || 1080,
-      preference: "webgl",
-      hello: false,
-    });
-    app.stage.sortableChildren = true;
-    this.sceneRoot = new Container();
-    this.sceneRoot.sortableChildren = true;
-    app.stage.addChild(this.sceneRoot);
-    app.canvas.style.position = "absolute";
-    app.canvas.style.inset = "0";
-    app.canvas.style.width = "100%";
-    app.canvas.style.height = "100%";
-    app.canvas.style.pointerEvents = "none";
-    app.canvas.addEventListener("webglcontextlost", this.handleContextLost as EventListener);
-    app.canvas.addEventListener("webglcontextrestored", this.handleContextRestored as EventListener);
-    window.addEventListener("resize", this.handleResize, { passive: true });
-    document.addEventListener("visibilitychange", this.handleVisibility);
-    this.app = app;
+  private async ensureApp(): Promise<Application | null> {
+    if (this.app) {
+      this.cancelDispose();
+      return this.app;
+    }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    const initTask = (async () => {
+      const app = new Application();
+      try {
+        await app.init({
+          backgroundAlpha: 0,
+          antialias: true,
+          resolution: Math.min(window.devicePixelRatio || 1, 2),
+          width: window.innerWidth || 1920,
+          height: window.innerHeight || 1080,
+          preference: "webgl",
+          hello: false,
+        });
+      } catch (error) {
+        app.destroy(true);
+        throw error;
+      }
+
+      if (this.app) {
+        // 別の ensureApp が先に成功した場合は新規インスタンスを破棄する。
+        app.destroy(true);
+        return this.app;
+      }
+
+      app.stage.sortableChildren = true;
+      this.sceneRoot = new Container();
+      this.sceneRoot.sortableChildren = true;
+      app.stage.addChild(this.sceneRoot);
+      app.canvas.style.position = "absolute";
+      app.canvas.style.inset = "0";
+      app.canvas.style.width = "100%";
+      app.canvas.style.height = "100%";
+      app.canvas.style.pointerEvents = "none";
+      app.canvas.addEventListener("webglcontextlost", this.handleContextLost as EventListener);
+      app.canvas.addEventListener("webglcontextrestored", this.handleContextRestored as EventListener);
+      window.addEventListener("resize", this.handleResize, { passive: true });
+      document.addEventListener("visibilitychange", this.handleVisibility);
+      this.cancelDispose();
+      this.app = app;
+      return app;
+    })();
+
+    this.initPromise = initTask;
+
+    try {
+      return await initTask;
+    } finally {
+      this.initPromise = null;
+    }
   }
 
   private updateCanvasVisibility() {
@@ -128,6 +161,7 @@ class PixiBackgroundHost {
     host.appendChild(this.app.canvas);
     this.updateCanvasVisibility();
     this.handleResize();
+    this.cancelDispose();
   }
 
   detachCanvas(host: HTMLElement | null) {
@@ -135,7 +169,49 @@ class PixiBackgroundHost {
     if (this.canvasHolder === host && this.app.canvas.parentElement === host) {
       host.removeChild(this.app.canvas);
       this.canvasHolder = null;
+      this.scheduleDispose();
     }
+  }
+
+  private scheduleDispose() {
+    if (this.disposeTimer) return;
+    const timeout = typeof window !== "undefined" ? window.setTimeout : setTimeout;
+    this.disposeTimer = timeout(() => {
+      this.disposeTimer = null;
+      if (this.canvasHolder) {
+        return;
+      }
+      this.disposeApp();
+    }, 2000);
+  }
+
+  private cancelDispose() {
+    if (!this.disposeTimer) return;
+    const clear = typeof window !== "undefined" ? window.clearTimeout : clearTimeout;
+    clear(this.disposeTimer);
+    this.disposeTimer = null;
+  }
+
+  private disposeApp() {
+    if (!this.app) return;
+    this.destroyCurrentScene();
+    this.canvasVisible = true;
+    const canvas = this.app.canvas;
+    canvas.removeEventListener("webglcontextlost", this.handleContextLost as EventListener);
+    canvas.removeEventListener("webglcontextrestored", this.handleContextRestored as EventListener);
+    window.removeEventListener("resize", this.handleResize);
+    document.removeEventListener("visibilitychange", this.handleVisibility);
+    try {
+      this.app.destroy(true);
+    } catch {
+      // ignore
+    }
+    if (this.canvasHolder && canvas.parentElement === this.canvasHolder) {
+      this.canvasHolder.removeChild(canvas);
+    }
+    this.canvasHolder = null;
+    this.sceneRoot = null;
+    this.app = null;
   }
 
   private destroyCurrentScene() {
@@ -287,7 +363,13 @@ class PixiBackgroundHost {
   resetToDom(quality: BackgroundQuality): SetSceneResult {
     this.destroyCurrentScene();
     this.setCanvasVisible(false);
+    this.scheduleDispose();
     return { renderer: "dom", quality };
+  }
+
+  dispose() {
+    this.cancelDispose();
+    this.disposeApp();
   }
 }
 
