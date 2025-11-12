@@ -863,6 +863,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const boardContainerRef = useRef<HTMLDivElement | null>(null);
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
+  const dragMoveRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dragMoveRafRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(dragMoveRafRef.current);
+        dragMoveRafRef.current = null;
+      }
+    };
+  }, []);
 
   const resetMagnet = useCallback(
     (options?: { immediate?: boolean }) => {
@@ -1367,7 +1378,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [roomStatus, resolveMode, orderListLength, roomId]);
 
 
-  const magnetAwareDragMove = useCallback(
+  const processDragMoveFrame = useCallback(
     (event: DragMoveEvent) => {
       if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
         return;
@@ -1411,6 +1422,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       enqueueMagnetUpdate({ state: magnetResult });
     },
     [enqueueMagnetUpdate, resolveMode, roomStatus, scheduleMagnetTarget]
+  );
+
+  const flushPendingDragMove = useCallback(() => {
+    dragMoveRafRef.current = null;
+    const pending = latestDragMoveEventRef.current;
+    if (!pending) {
+      return;
+    }
+    latestDragMoveEventRef.current = null;
+    processDragMoveFrame(pending);
+  }, [processDragMoveFrame]);
+
+  const magnetAwareDragMove = useCallback(
+    (event: DragMoveEvent) => {
+      if (typeof window === "undefined") {
+        processDragMoveFrame(event);
+        return;
+      }
+
+      latestDragMoveEventRef.current = event;
+      if (dragMoveRafRef.current !== null) {
+        return;
+      }
+      dragMoveRafRef.current = window.requestAnimationFrame(flushPendingDragMove);
+    },
+    [flushPendingDragMove, processDragMoveFrame]
   );
 
   const onDragStart = useCallback(

@@ -165,6 +165,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     pixiBackgroundHost.attachCanvas(el ?? null);
     return () => {
       pixiBackgroundHost.detachCanvas(el ?? null);
+      pixiBackgroundHost.dispose();
     };
   }, []);
 

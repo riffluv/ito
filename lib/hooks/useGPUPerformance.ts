@@ -15,13 +15,14 @@ const STORAGE_KEY = "gpu-animation-mode";
 
 function detectRendererString(): string | null {
   if (typeof window === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
   try {
-    const canvas = document.createElement("canvas");
     const gl2 = canvas.getContext("webgl2") as WebGL2RenderingContext | null;
     const gl1 =
       (canvas.getContext("webgl") as WebGLRenderingContext | null) ??
       (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null);
-    const gl = gl2 ?? gl1;
+    gl = gl2 ?? gl1;
     if (!gl) return null;
 
     const rendererInfo = gl.getExtension?.("WEBGL_debug_renderer_info") as
@@ -45,6 +46,18 @@ function detectRendererString(): string | null {
     return null;
   } catch {
     return null;
+  } finally {
+    try {
+      const loseContext = gl?.getExtension?.("WEBGL_lose_context") as
+        | { loseContext?: () => void }
+        | null
+        | undefined;
+      loseContext?.loseContext?.();
+    } catch {
+      // ignore
+    }
+    canvas.width = 0;
+    canvas.height = 0;
   }
 }
 
