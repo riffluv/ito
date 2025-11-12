@@ -287,6 +287,8 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
+    cleanupSimpleBackground(); // ensure previous controller/app is gone before re-init
+
     let disposed = false;
     let detachResize: (() => void) | null = null;
     let detachContext: (() => void) | null = null;
@@ -491,6 +493,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
+    cleanupDragonQuestBackground();
     cleanupSimpleBackground();
     cleanupInfernoBackground();
     cleanupLegacyBackground();
@@ -670,6 +673,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       return undefined;
     }
 
+    cleanupInfernoBackground();
     cleanupSimpleBackground();
     cleanupDragonQuestBackground();
     cleanupLegacyBackground();
