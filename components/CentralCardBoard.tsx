@@ -67,7 +67,6 @@ interface CentralCardBoardProps {
   resolveMode?: ResolveMode | null;
   orderNumbers?: Record<string, number | null | undefined>;
   orderSnapshots?: Record<string, PlayerSnapshot> | null;
-  isHost?: boolean;
   displayMode?: "full" | "minimal";
   slotCount?: number;
   topic?: string | null;
@@ -599,7 +598,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   failed,
   proposal,
   resolveMode = "sort-submit",
-  isHost: _isHost,
   orderNumbers = {},
   orderSnapshots = null,
   displayMode = "full",
@@ -1377,7 +1375,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return clearPendingTimer;
   }, [roomStatus, resolveMode, orderListLength, roomId]);
 
-
   const processDragMoveFrame = useCallback(
     (event: DragMoveEvent) => {
       if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
@@ -1833,7 +1830,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           />
         )}
       </Box>
-
       {roomStatus === "finished" && (
         <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
       )}

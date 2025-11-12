@@ -259,6 +259,9 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         }
         appRef.current = null;
       }
+      if (host) {
+        host.innerHTML = "";
+      }
     };
   }, [requestRestart, restartKey, safeDestroyContainer]);
 
