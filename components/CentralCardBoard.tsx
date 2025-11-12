@@ -22,7 +22,7 @@ import {
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
 import Tooltip from "@/components/ui/Tooltip";
@@ -352,7 +352,7 @@ function InteractiveBoardBase({
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
       sensors={sensors}
-      modifiers={[restrictToWindowEdges]}
+      modifiers={[restrictToFirstScrollableAncestor]}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => {
@@ -1010,7 +1010,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const mouseSensorOptions = useMemo(
     () => ({
       activationConstraint: {
-        distance: pointerProfile.isCoarsePointer ? 12 : 8,
+        distance: pointerProfile.isCoarsePointer ? 6 : 2,
       },
     }),
     [pointerProfile.isCoarsePointer]
@@ -1021,14 +1021,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       pointerProfile.isTouchOnly
         ? {
             activationConstraint: {
-              delay: 250,
-              tolerance: 28,
+              delay: 45,
+              tolerance: 26,
             },
           }
         : {
             activationConstraint: {
               delay: 160,
-              tolerance: 10,
+              tolerance: 8,
             },
           },
     [pointerProfile.isTouchOnly]

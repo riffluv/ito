@@ -12,6 +12,7 @@ import {
 import { Application, Container } from "@/lib/pixi/instance";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import type { Renderer } from "pixi.js";
 
 type LayerOptions = {
   zIndex?: number;
@@ -22,6 +23,62 @@ type LayerRecord = {
   container: Container;
   refCount: number;
 };
+
+const PIXI_CONTEXT_EVENT = "ito:pixi-context";
+const TEXTURE_UPLOAD_CHUNK = 6;
+
+type PixiContextEventDetail = {
+  source: "hud";
+  status: "lost" | "restored" | "restarting";
+};
+
+const emitPixiContextEvent = (detail: PixiContextEventDetail) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PIXI_CONTEXT_EVENT, { detail }));
+};
+
+const uploadTexturesInChunks = (renderer: Renderer, chunkSize = TEXTURE_UPLOAD_CHUNK) =>
+  new Promise<void>((resolve) => {
+    const managed = Array.isArray((renderer as any)?.texture?.managedTextures)
+      ? ((renderer as any).texture.managedTextures as unknown[])
+      : [];
+    if (!managed.length) {
+      resolve();
+      return;
+    }
+    let index = 0;
+    const total = managed.length;
+
+    const uploadNext = () => {
+      const end = Math.min(index + chunkSize, total);
+      for (; index < end; index += 1) {
+        const textureSource = managed[index];
+        if (!textureSource) continue;
+        try {
+          const textureSystem = renderer.texture as unknown as {
+            bind?: (source: unknown, location?: number) => void;
+          };
+          textureSystem.bind?.(textureSource, 0);
+        } catch (error) {
+          if (process.env.NODE_ENV !== "production") {
+            // eslint-disable-next-line no-console
+            console.warn("[PixiHudStage] texture bind failed during recovery", error);
+          }
+        }
+      }
+      if (index < total) {
+        if (typeof window !== "undefined") {
+          window.requestAnimationFrame(uploadNext);
+        } else {
+          setTimeout(uploadNext, 16);
+        }
+      } else {
+        resolve();
+      }
+    };
+
+    uploadNext();
+  });
 
 type BatchCapableRenderer = {
   batch?: {
@@ -50,6 +107,8 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
   const hudRootRef = useRef<Container | null>(null);
+  const recoveringRef = useRef(false);
+  const recoveryReleaseRef = useRef<(() => void) | null>(null);
   const [app, setApp] = useState<Application | null>(null);
   const [hudRoot, setHudRoot] = useState<Container | null>(null);
   const [restartKey, setRestartKey] = useState(0);
@@ -81,6 +140,62 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const markBackgroundReady = useCallback(() => {
     setBackgroundHoldCount(0);
     setBackgroundReady(true);
+  }, []);
+
+  const pauseHud = useCallback(() => {
+    const currentApp = appRef.current;
+    if (currentApp) {
+      currentApp.ticker.stop();
+    }
+  }, []);
+
+  const resumeHud = useCallback(() => {
+    const currentApp = appRef.current;
+    if (currentApp) {
+      currentApp.ticker.start();
+    }
+  }, []);
+
+  const beginRecovery = useCallback(() => {
+    if (recoveringRef.current) return;
+    recoveringRef.current = true;
+    pauseHud();
+    if (!recoveryReleaseRef.current) {
+      recoveryReleaseRef.current = holdBackground() ?? null;
+    }
+    emitPixiContextEvent({ source: "hud", status: "lost" });
+  }, [holdBackground, pauseHud]);
+
+  const endRecovery = useCallback(() => {
+    if (!recoveringRef.current) return;
+    recoveringRef.current = false;
+    if (recoveryReleaseRef.current) {
+      recoveryReleaseRef.current();
+      recoveryReleaseRef.current = null;
+    }
+    resumeHud();
+    emitPixiContextEvent({ source: "hud", status: "restored" });
+  }, [resumeHud]);
+
+  const attemptRendererRecovery = useCallback(async () => {
+    const currentApp = appRef.current;
+    if (!currentApp) return false;
+    const renderer = currentApp.renderer as Renderer;
+    if (typeof (renderer as unknown as { reset?: () => void }).reset !== "function") {
+      return false;
+    }
+    try {
+      (renderer as unknown as { reset: () => void }).reset();
+    } catch (error) {
+      traceError("pixi.hud.rendererResetFailed", error);
+      return false;
+    }
+    try {
+      await uploadTexturesInChunks(currentApp.renderer as unknown as Renderer);
+    } catch (error) {
+      traceError("pixi.hud.textureUploadFailed", error);
+    }
+    return true;
   }, []);
 
   const isFirstRestartRef = useRef(true);
@@ -172,12 +287,24 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       const handleContextLost = (event: Event) => {
         event.preventDefault?.();
         traceAction("pixi.hud.contextLost");
-        if (!disposed) {
-          requestRestart();
-        }
+        if (disposed) return;
+        beginRecovery();
       };
       const handleContextRestored = () => {
         traceAction("pixi.hud.contextRestored");
+        if (disposed || !recoveringRef.current) {
+          return;
+        }
+        const finalize = async () => {
+          const recovered = await attemptRendererRecovery();
+          if (recovered) {
+            endRecovery();
+          } else {
+            emitPixiContextEvent({ source: "hud", status: "restarting" });
+            requestRestart();
+          }
+        };
+        void finalize();
       };
       canvas.addEventListener("webglcontextlost", handleContextLost as EventListener, false);
       canvas.addEventListener(
@@ -205,6 +332,9 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       resizeObserver.observe(host);
 
       setApp(pixiApp);
+      if (recoveringRef.current) {
+        endRecovery();
+      }
 
       // GPUウォームアップ（フラグON時のみ、初期化直後に空描画）
       if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
@@ -263,7 +393,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         host.innerHTML = "";
       }
     };
-  }, [requestRestart, restartKey, safeDestroyContainer]);
+  }, [attemptRendererRecovery, beginRecovery, endRecovery, requestRestart, restartKey, safeDestroyContainer]);
 
   const registerLayer = useCallback((name: string, options?: LayerOptions) => {
     const currentApp = appRef.current;
