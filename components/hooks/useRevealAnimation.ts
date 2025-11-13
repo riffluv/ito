@@ -3,12 +3,13 @@ import { evaluateSorted } from "@/lib/game/rules";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { logDebug, logWarn } from "@/lib/utils/log";
 import {
-  FLIP_DURATION_MS,
+  FLIP_EVALUATION_DELAY,
+  FINAL_TWO_BONUS_DELAY,
   REVEAL_FIRST_DELAY,
-  REVEAL_LINGER,
   REVEAL_STEP_DELAY,
+  RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RoomDoc } from "@/lib/types";
 import {
   clearSortedRevealCache,
@@ -66,10 +67,6 @@ const scheduleRevealPersistenceTask = (task: () => void) => {
   window.setTimeout(task, 0);
 };
 
-const FINAL_TWO_BONUS_DELAY = 260; // adds extra dwell for the last two reveals (ms)
-// 3D フリップが完全に終わり、数字を認知できるタイミングに合わせて少し余裕を持たせる
-const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 120);
-
 interface RealtimeResult {
   success: boolean;
   failedAt: number | null;
@@ -101,6 +98,7 @@ export function useRevealAnimation({
   const [realtimeResult, setRealtimeResult] = useState<RealtimeResult | null>(
     null
   );
+  const [finalizeScheduled, setFinalizeScheduled] = useState(false);
   const prevStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
@@ -126,10 +124,30 @@ export function useRevealAnimation({
     touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
   }, [orderData, resolveMode, roomId]);
 
-  // Start reveal animation: useLayoutEffect so we set the flag before the
-  // browser paints. This avoids a render where `roomStatus === 'reveal'` but
-  // `revealAnimating` is still false, which caused a brief undesired frame
-  // where cards appeared in the default (dark) state.
+  const hasEvaluatedFinalCard = useMemo(() => {
+    if (resolveMode !== "sort-submit") {
+      return true;
+    }
+    if (orderListLength <= 0) {
+      return false;
+    }
+    // orderData（numbers）が無い場合は revealIndex を使い、
+    // 更新されない realtimeResult に頼らないようにする。
+    if (!orderData) {
+      return revealIndex >= orderListLength;
+    }
+    if (!realtimeResult) {
+      return false;
+    }
+    if (realtimeResult.success === false) {
+      return true;
+    }
+    return realtimeResult.currentIndex >= orderListLength;
+  }, [orderData, orderListLength, realtimeResult, resolveMode, revealIndex]);
+
+  // 画面描画前にリビール開始フラグを立てるため useLayoutEffect を使用。
+  // こうすることで roomStatus が "reveal" でも revealAnimating が false のまま描画される
+  // 一瞬のフレーム（カードが暗い初期状態で見えてしまう）を防げる。
   useLayoutEffect(() => {
     const prev = prevStatusRef.current;
     const becameReveal = prev !== "reveal" && roomStatus === "reveal";
@@ -144,6 +162,8 @@ export function useRevealAnimation({
       setRevealAnimating(true);
       setRevealIndex(0);
       setRealtimeResult(null); // リセット
+      finalizePendingRef.current = false;
+      setFinalizeScheduled(false);
       logDebug("reveal", "start", {
         orderListLength,
         reason: becameReveal ? "status" : "pending-signal",
@@ -153,15 +173,20 @@ export function useRevealAnimation({
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderListLength, revealAnimating, startPending]);
 
-  // Handle reveal animation progression
+  // リビールアニメの進行を管理
   useEffect(() => {
     if (!revealAnimating) {
       return undefined;
     }
 
-    if (revealIndex >= orderListLength && orderListLength > 0) {
+    if (
+      revealIndex >= orderListLength &&
+      orderListLength > 0 &&
+      hasEvaluatedFinalCard
+    ) {
       logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
       finalizePendingRef.current = true;
+      setFinalizeScheduled(true);
       clearSortedRevealCache(roomId);
       const attemptFinalize = () => {
         if (!finalizePendingRef.current) return;
@@ -170,16 +195,14 @@ export function useRevealAnimation({
           finalizeReveal(roomId).catch(() => void 0);
         }
       };
-      const extraFlipPad =
-        FLIP_EVALUATION_DELAY + (orderListLength > 1 ? FINAL_TWO_BONUS_DELAY : 0);
-      const finalizeDelay = REVEAL_LINGER + extraFlipPad;
+      const finalizeDelay = RESULT_RECOGNITION_DELAY;
       const linger = setTimeout(() => {
         attemptFinalize();
       }, finalizeDelay);
       return () => clearTimeout(linger);
     }
 
-    // First card has shorter delay to avoid "frozen" impression
+    // 1枚目だけ間を短くして「固まった」印象を避ける
     const remainingCards = Math.max(orderListLength - revealIndex, 0);
     const isFinalStretch = remainingCards > 0 && remainingCards <= 2;
     const delay =
@@ -263,22 +286,35 @@ export function useRevealAnimation({
         logDebug("reveal", "realtime-eval-error", e);
       }
       };
-      setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // align evaluation with visible flip
+      setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [orderData, orderListLength, revealAnimating, revealIndex, roomId, roomStatus]);
+  }, [
+    hasEvaluatedFinalCard,
+    orderData,
+    orderListLength,
+    revealAnimating,
+    revealIndex,
+    roomId,
+    roomStatus,
+  ]);
 
-  // Turn off the local animation flag when the server reports finished.
+  // サーバーが finished を返したらローカルのアニメフラグを解除
   useEffect(() => {
     if (roomStatus === "finished") {
       setRevealAnimating(false);
       finalizePendingRef.current = false;
+      setFinalizeScheduled(false);
       // リアルタイム結果は保持する（最終表示で使用するため）
-      // setRealtimeResult(null);
-    } else if (roomStatus === "reveal" && finalizePendingRef.current) {
-      finalizePendingRef.current = false;
-      finalizeReveal(roomId).catch(() => void 0);
+      // 必要ならここで setRealtimeResult(null) を呼ぶ
+    } else if (roomStatus === "reveal") {
+      if (finalizePendingRef.current) {
+        finalizePendingRef.current = false;
+        finalizeReveal(roomId).catch(() => void 0);
+      }
+    } else {
+      setFinalizeScheduled(false);
     }
   }, [roomStatus, roomId]);
 
@@ -290,7 +326,7 @@ export function useRevealAnimation({
       });
       window.dispatchEvent(event);
     } catch {
-      /* ignore */
+      /* 無視 */
     }
   }, [revealAnimating, roomId]);
 
@@ -304,5 +340,6 @@ export function useRevealAnimation({
     revealAnimating,
     revealIndex,
     realtimeResult,
+    finalizeScheduled,
   } as const;
 }
