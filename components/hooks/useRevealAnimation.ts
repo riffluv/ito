@@ -170,9 +170,12 @@ export function useRevealAnimation({
           finalizeReveal(roomId).catch(() => void 0);
         }
       };
+      const extraFlipPad =
+        FLIP_EVALUATION_DELAY + (orderListLength > 1 ? FINAL_TWO_BONUS_DELAY : 0);
+      const finalizeDelay = REVEAL_LINGER + extraFlipPad;
       const linger = setTimeout(() => {
         attemptFinalize();
-      }, REVEAL_LINGER);
+      }, finalizeDelay);
       return () => clearTimeout(linger);
     }
 
