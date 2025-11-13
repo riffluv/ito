@@ -2,8 +2,8 @@
 
 ## 1. カード提出の並列化
 ### 現状
-- `enqueueFirestoreWrite` が `proposal:${roomId}` スコープで、同一クライアント内ではルーム単位で逐次実行されている。
-- Firestore 取引はサーバー側リトライで解決するが、UI から見ると同一プレイヤーの連続操作が待ち状態になるケースがある。
+- `enqueueFirestoreWrite` は `proposal:${roomId}:player:${playerId}` スコープでプレイヤー単位に直列化されるようになった（2025-XX 実装）。
+- Firestore 取引はサーバー側リトライで解決するが、**同一プレイヤーによる連打** では依然として待ちが発生するため、さらなる最適化を検討する余地はある。
 - Security Rules は `order.proposal` と `lastActiveAt` 以外の更新を拒否するため、キュー構造を変える場合もサービス層経由での書き込みが必須。
 
 ### 課題

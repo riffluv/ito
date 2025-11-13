@@ -78,11 +78,11 @@ export type DealNumbersOptions = {
   skipPresence?: boolean;
 };
 
-function proposalQueueKey(roomId: string, _playerId: string) {
-  // Firestore の roomProposals ドキュメントはルーム単位で共有されるため、
-  // 実際の書き込みは roomId ごとに直列化して競合を防ぐ。
-  // playerId 引数はレガシー互換のため保持し、呼び出し元の文脈ログには残す。
-  return `proposal:${roomId}`;
+function proposalQueueKey(roomId: string, playerId: string) {
+  // Firestore の roomProposals コレクションはルーム単位で共有されるが、
+  // 体感を優先してプレイヤーごとのキューへ分割し並列性を高める。
+  // playerId は scope 名に含め、メトリクス／トレースからも識別できるようにする。
+  return `proposal:${roomId}:player:${playerId}`;
 }
 
 function isRetryableTransactionError(error: unknown): boolean {
