@@ -67,7 +67,8 @@ const scheduleRevealPersistenceTask = (task: () => void) => {
 };
 
 const FINAL_TWO_BONUS_DELAY = 260; // adds extra dwell for the last two reveals (ms)
-const FLIP_EVALUATION_DELAY = Math.max(Math.round(FLIP_DURATION_MS * 0.8), 220);
+// 3D フリップが完全に終わり、数字を認知できるタイミングに合わせて少し余裕を持たせる
+const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 120);
 
 interface RealtimeResult {
   success: boolean;
