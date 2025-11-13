@@ -17,10 +17,11 @@ import {
   type ActorRefFrom,
   type StateFrom,
 } from "xstate";
-import { bumpMetric } from "@/lib/utils/metrics";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
+type SanitizedPlayer = PlayerDoc & { id: string };
 
 export type SpectatorReason = "mid-game" | "waiting-open" | "waiting-closed" | "version-mismatch" | null;
 export type SpectatorStatus =
@@ -36,7 +37,7 @@ export type RoomMachineContext = {
   roomId: string;
   viewerUid: string | null;
   room: (RoomDoc & { id?: string }) | null;
-  players: PlayerWithId[];
+  players: SanitizedPlayer[];
   onlineUids?: string[];
   presenceReady: boolean;
   spectatorStatus: SpectatorStatus;
@@ -135,10 +136,58 @@ type RoomMachineInput = {
   deps?: Partial<RoomMachineDeps>;
 };
 
-function sanitizePlayers(players: PlayerWithId[]): PlayerWithId[] {
-  return players.map((player) =>
-    "id" in player ? sanitizePlayer(player.id, player) : player
+function sanitizePlayers(
+  players: PlayerWithId[],
+  previous?: SanitizedPlayer[]
+): SanitizedPlayer[] {
+  if (!previous || previous.length === 0) {
+    return players.map((player) => sanitizePlayer(player.id, player));
+  }
+  const prevMap = new Map(previous.map((player) => [player.id, player]));
+  let mutated = previous.length !== players.length;
+  const next = players.map((player) => {
+    const sanitized = sanitizePlayer(player.id, player);
+    const prev = prevMap.get(sanitized.id);
+    if (prev && playerDocsEqual(prev, sanitized)) {
+      return prev;
+    }
+    mutated = true;
+    return sanitized;
+  });
+  return mutated ? next : previous;
+}
+
+function playerDocsEqual(a: SanitizedPlayer, b: SanitizedPlayer): boolean {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    a.avatar === b.avatar &&
+    a.number === b.number &&
+    a.clue1 === b.clue1 &&
+    a.ready === b.ready &&
+    a.orderIndex === b.orderIndex &&
+    (a.uid ?? null) === (b.uid ?? null) &&
+    (a.lastSeen ?? null) === (b.lastSeen ?? null) &&
+    (a.joinedAt ?? null) === (b.joinedAt ?? null)
   );
+}
+
+function recordRoomMetrics(
+  room: (RoomDoc & { id?: string }) | null,
+  players: SanitizedPlayer[],
+  onlineUids?: string[],
+  presenceReady?: boolean
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    setMetric("room", "status", room?.status ?? "unknown");
+    setMetric("room", "players", players.length);
+    setMetric("room", "online", Array.isArray(onlineUids) ? onlineUids.length : 0);
+    setMetric("room", "presenceReady", presenceReady ? 1 : 0);
+  } catch {
+    // metrics are best-effort and should never break the machine
+  }
 }
 
 function computeEligibleIds(context: RoomMachineContext): string[] {
@@ -451,14 +500,18 @@ export function createRoomMachine(input: RoomMachineInput) {
             return context;
           }
           const nextRoom = event.room ? sanitizeRoom(event.room) : null;
+          const nextPlayers = sanitizePlayers(event.players ?? [], context.players);
+          const nextOnline = Array.isArray(event.onlineUids)
+            ? [...event.onlineUids]
+            : undefined;
+          const nextPresenceReady = event.presenceReady ?? context.presenceReady;
+          recordRoomMetrics(nextRoom, nextPlayers, nextOnline, nextPresenceReady);
           return {
             ...context,
             room: nextRoom,
-            players: sanitizePlayers(event.players ?? []),
-            onlineUids: Array.isArray(event.onlineUids)
-              ? [...event.onlineUids]
-              : undefined,
-            presenceReady: event.presenceReady ?? context.presenceReady,
+            players: nextPlayers,
+            onlineUids: nextOnline,
+            presenceReady: nextPresenceReady,
           };
         }),
         spectatorRequestSnapshot: assign(({ context, event }) => {

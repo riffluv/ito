@@ -1126,9 +1126,39 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
     hasError: spectatorUpdateFailed,
+    phase: safeUpdatePhase,
+    lastError: safeUpdateLastError,
+    autoApplySuppressed: safeUpdateAutoApplySuppressed,
+    autoApplyAt: safeUpdateAutoApplyAt,
     retryUpdate: retrySpectatorUpdate,
     applyUpdate: applySpectatorUpdate,
   } = useServiceWorkerUpdate();
+  const [safeUpdateAutoApplyCountdown, setSafeUpdateAutoApplyCountdown] = useState<string | null>(
+    null
+  );
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) {
+      setSafeUpdateAutoApplyCountdown(null);
+      return;
+    }
+    if (typeof window === "undefined" || !safeUpdateAutoApplyAt) {
+      setSafeUpdateAutoApplyCountdown(null);
+      return;
+    }
+    const updateCountdown = () => {
+      const remaining = safeUpdateAutoApplyAt - Date.now();
+      if (remaining <= 0) {
+        setSafeUpdateAutoApplyCountdown("まもなく自動で更新を適用します");
+      } else {
+        setSafeUpdateAutoApplyCountdown(`${Math.ceil(remaining / 1000)}秒後に自動適用予定`);
+      }
+    };
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [safeUpdateFeatureEnabled, safeUpdateAutoApplyAt]);
   const meId = uid || "";
   const meFromPlayers = players.find((p) => p.id === meId);
   const [optimisticMe, setOptimisticMe] = useState<(PlayerDoc & { id: string }) | null>(null);
@@ -1190,6 +1220,18 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, [requiredSwVersion]);
   const safeUpdateActive = safeUpdateFeatureEnabled && versionMismatch;
   const versionMismatchBlocksAccess = versionMismatch && !safeUpdateFeatureEnabled;
+  const phaseMetricRef = useRef<RoomDoc["status"] | null>(null);
+  const shouldBlockUpdateOverlay = versionMismatch;
+  useEffect(() => {
+    const nextStatus = room?.status ?? null;
+    if (!nextStatus) return;
+    if (phaseMetricRef.current === nextStatus) return;
+    phaseMetricRef.current = nextStatus;
+    setMetric("phase", "status", nextStatus);
+    if (typeof performance !== "undefined") {
+      setMetric("phase", "transitionAt", Math.round(performance.now()));
+    }
+  }, [room?.status]);
   useEffect(() => {
     if (requiredSwVersion) {
       setMetric("app", "requiredSwVersion", requiredSwVersion);
@@ -1227,6 +1269,20 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     clearGuardTimer();
     return () => {
       clearGuardTimer();
+    };
+  }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
+  useEffect(() => {
+    if (!safeUpdateFeatureEnabled) return;
+    if (!versionMismatch && !hasWaitingUpdate) return;
+    if (typeof document === "undefined") return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void resyncWaitingServiceWorker("room:visibility-refresh");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
   const versionMismatchHandledRef = useRef(false);
@@ -3387,19 +3443,129 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   );
 
   const globalSafeUpdateActive =
-    safeUpdateFeatureEnabled && (hasWaitingUpdate || safeUpdateActive);
+    safeUpdateFeatureEnabled &&
+    (hasWaitingUpdate || safeUpdateActive || spectatorUpdateApplying || spectatorUpdateFailed);
 
+  const handleManualVersionUpdate = useCallback(() => {
+    const applied = applyServiceWorkerUpdate({
+      reason: "room:version-mismatch",
+      safeMode: safeUpdateActive,
+    });
+    if (!applied) {
+      void resyncWaitingServiceWorker("room:version-mismatch");
+    }
+  }, [safeUpdateActive]);
+  const handleResyncUpdate = useCallback(() => {
+    void resyncWaitingServiceWorker("room:safe-banner");
+  }, []);
+
+  const safeUpdateBannerEnabled = globalSafeUpdateActive && !shouldBlockUpdateOverlay;
+  const safeUpdateErrorLabel = spectatorUpdateFailed ? safeUpdateLastError ?? "unknown" : null;
+  const safeUpdateStatusLabel = (() => {
+    if (versionMismatch) {
+      return "最新バージョンへの更新が必要です";
+    }
+    if (spectatorUpdateApplying || safeUpdatePhase === "applying") {
+      return "更新を適用しています";
+    }
+    if (spectatorUpdateFailed || safeUpdatePhase === "failed") {
+      return "更新に失敗しました";
+    }
+    if (safeUpdateAutoApplySuppressed || safeUpdatePhase === "suppressed") {
+      return "プレイ進行中のため更新待機中";
+    }
+    if (
+      hasWaitingUpdate ||
+      safeUpdatePhase === "auto_pending" ||
+      safeUpdatePhase === "waiting_user" ||
+      safeUpdatePhase === "update_detected"
+    ) {
+      return "背景で更新を準備しています";
+    }
+    return "更新を確認しています";
+  })();
+  const safeUpdateDetailLabel = (() => {
+    if (safeUpdateErrorLabel) {
+      return `原因: ${safeUpdateErrorLabel}`;
+    }
+    if (safeUpdateAutoApplyCountdown) {
+      return safeUpdateAutoApplyCountdown;
+    }
+    if (safeUpdateAutoApplySuppressed || safeUpdatePhase === "suppressed") {
+      return "安全なタイミングで自動適用します";
+    }
+    if (spectatorUpdateApplying || safeUpdatePhase === "applying") {
+      return "完了すると自動で再読み込みします";
+    }
+    if (hasWaitingUpdate) {
+      return "この間もゲームを続けられます";
+    }
+    return null;
+  })();
+  const safeUpdatePrimaryLabel = spectatorUpdateApplying
+    ? "適用中..."
+    : spectatorUpdateFailed
+      ? "再試行"
+      : "今すぐ更新";
+  const safeUpdatePrimaryAction = spectatorUpdateFailed
+    ? retrySpectatorUpdate
+    : handleManualVersionUpdate;
+  const safeUpdateBannerNode = safeUpdateBannerEnabled ? (
+    <Box
+      position="fixed"
+      top="12px"
+      right="16px"
+      zIndex={1250}
+      padding="12px 16px"
+      background="rgba(8, 12, 20, 0.9)"
+      border="1px solid rgba(255,255,255,0.18)"
+      borderRadius="6px"
+      boxShadow="0 8px 18px rgba(0,0,0,0.45)"
+      minW="240px"
+      maxW="320px"
+    >
+      <VStack align="stretch" gap={2}>
+        <Text fontSize="sm" fontWeight={700} color="rgba(255,255,255,0.95)">
+          {safeUpdateStatusLabel}
+        </Text>
+        {safeUpdateDetailLabel ? (
+          <Text fontSize="xs" color="rgba(255,255,255,0.7)" lineHeight={1.5}>
+            {safeUpdateDetailLabel}
+          </Text>
+        ) : null}
+        <HStack gap={2} flexWrap="wrap">
+          <AppButton
+            palette="brand"
+            size="sm"
+            onClick={safeUpdatePrimaryAction}
+            disabled={spectatorUpdateApplying}
+          >
+            {safeUpdatePrimaryLabel}
+          </AppButton>
+          <AppButton
+            palette="gray"
+            visual="outline"
+            size="sm"
+            onClick={handleResyncUpdate}
+            disabled={spectatorUpdateApplying}
+          >
+            再チェック
+          </AppButton>
+        </HStack>
+      </VStack>
+    </Box>
+  ) : null;
   const joinStatusMessage =
     joinStatus === "retrying"
       ? "再接続を試行しています..."
       : joinStatus === "joining"
-      ? "ルームへ再参加中です..."
-      : null;
+        ? "ルームへ再参加中です..."
+        : null;
 
   const joinStatusBanner = joinStatusMessage ? (
     <Box
       position="fixed"
-      top={globalSafeUpdateActive ? "64px" : "12px"}
+      top={safeUpdateBannerEnabled ? "64px" : "12px"}
       right="16px"
       zIndex={1200}
       padding="10px 14px"
@@ -3414,15 +3580,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       {joinStatusMessage}
     </Box>
   ) : null;
-  const handleManualVersionUpdate = useCallback(() => {
-    const applied = applyServiceWorkerUpdate({
-      reason: "room:version-mismatch",
-      safeMode: safeUpdateActive,
-    });
-    if (!applied) {
-      void resyncWaitingServiceWorker("room:version-mismatch");
-    }
-  }, [safeUpdateActive]);
 
   const handleHardReload = useCallback(() => {
     try {
@@ -3432,8 +3589,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
   }, []);
 
-  const safeUpdateBannerNode = null;
-  const shouldBlockUpdateOverlay = versionMismatch;
   const versionMismatchOverlay = shouldBlockUpdateOverlay ? (
     <Box
       position="fixed"

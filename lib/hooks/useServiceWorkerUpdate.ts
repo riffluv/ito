@@ -6,6 +6,7 @@ import {
   SafeUpdateSnapshot,
   subscribeToSafeUpdateSnapshot,
 } from "@/lib/serviceWorker/updateChannel";
+import { setMetric } from "@/lib/utils/metrics";
 
 export type ServiceWorkerUpdateState = {
   isUpdateReady: boolean;
@@ -51,6 +52,21 @@ export function useServiceWorkerUpdate(): ServiceWorkerUpdateState {
       setSnapshot(next);
     });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setMetric("safeUpdate", "phase", snapshot.phase);
+    setMetric("safeUpdate", "waitingVersion", snapshot.waitingVersion ?? "");
+    setMetric("safeUpdate", "waitingSinceMs", snapshot.waitingSince ?? 0);
+    setMetric("safeUpdate", "autoSuppressed", snapshot.autoApplySuppressed ? 1 : 0);
+    setMetric("safeUpdate", "retryCount", snapshot.retryCount);
+  }, [
+    snapshot.phase,
+    snapshot.waitingVersion,
+    snapshot.waitingSince,
+    snapshot.autoApplySuppressed,
+    snapshot.retryCount,
+  ]);
 
   const applyUpdate = useCallback(() => {
     if (snapshot.phase === "applying") {
