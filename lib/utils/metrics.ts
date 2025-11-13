@@ -75,6 +75,10 @@ export function setMetric(
   const root = getRoot();
   if (!root) return;
   const bucket = (root[scope] = root[scope] || {});
+  const current = bucket[key];
+  if (Object.is(current, value)) {
+    return;
+  }
   bucket[key] = value;
   notifyListeners(root);
 }

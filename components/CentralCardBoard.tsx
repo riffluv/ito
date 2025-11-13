@@ -49,7 +49,15 @@ import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { logError, logWarn } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
-import { REVEAL_FIRST_DELAY, REVEAL_LINGER, REVEAL_STEP_DELAY } from "@/lib/ui/motion";
+import {
+  FINAL_TWO_BONUS_DELAY,
+  FLIP_EVALUATION_DELAY,
+  REVEAL_FIRST_DELAY,
+  REVEAL_LINGER,
+  REVEAL_STEP_DELAY,
+  RESULT_INTRO_DELAY,
+  RESULT_RECOGNITION_DELAY,
+} from "@/lib/ui/motion";
 import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import { isRevealing as selectIsRevealing } from "@/lib/game/selectors";
@@ -1139,7 +1147,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const playCardPlace = useSoundEffect("card_place");
   const playDragPickup = useSoundEffect(undefined);
 
-  const { revealAnimating, revealIndex, realtimeResult } = useRevealAnimation({
+  const { revealAnimating, revealIndex, realtimeResult, finalizeScheduled } = useRevealAnimation({
     roomId,
     roomStatus,
     resolveMode: resolveMode ?? undefined,
@@ -1449,9 +1457,20 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     };
 
-    if (resolveMode === "sort-submit" && roomStatus === "reveal" && orderListLength > 0) {
-      const total =
-        REVEAL_FIRST_DELAY + Math.max(0, orderListLength - 1) * REVEAL_STEP_DELAY + REVEAL_LINGER + 200;
+    if (
+      resolveMode === "sort-submit" &&
+      roomStatus === "reveal" &&
+      orderListLength > 0 &&
+      !finalizeScheduled
+    ) {
+      const revealTraversal =
+        REVEAL_FIRST_DELAY + Math.max(0, orderListLength - 1) * REVEAL_STEP_DELAY;
+      const extraFlipPad =
+        FLIP_EVALUATION_DELAY + (orderListLength > 1 ? FINAL_TWO_BONUS_DELAY : 0);
+      const finalizeDelay =
+        REVEAL_LINGER + extraFlipPad + RESULT_INTRO_DELAY + RESULT_RECOGNITION_DELAY;
+      const SAFETY_BUFFER_MS = 600;
+      const total = revealTraversal + finalizeDelay + SAFETY_BUFFER_MS;
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
         finalizeReveal(roomId).catch(() => void 0);
@@ -1461,7 +1480,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     clearPendingTimer();
     return clearPendingTimer;
-  }, [roomStatus, resolveMode, orderListLength, roomId]);
+  }, [roomStatus, resolveMode, orderListLength, roomId, finalizeScheduled]);
 
   const processDragMoveFrame = useCallback(
     (event: DragMoveEvent) => {
@@ -1553,7 +1572,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         try {
           navigator.vibrate(6);
         } catch {
-          // ignore haptic failures
+          // 触覚フィードバックの失敗は無視
         }
       }
     },
