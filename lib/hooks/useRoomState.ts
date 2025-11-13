@@ -1,5 +1,6 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
@@ -135,6 +136,12 @@ export function useRoomState(
     retryAt: number;
   }>({ state: "unknown", retryAt: 0 });
   const roomAccessCheckRef = useRef<Promise<boolean> | null>(null);
+
+  useEffect(() => {
+    if (roomAccessError === "permission-denied") {
+      ensureAuthSession("room-access-denied").catch(() => void 0);
+    }
+  }, [roomAccessError]);
 
   const enqueueCommit = useCallback(
     (task: () => void, startedAt: number | null, metricKey?: string) => {
@@ -419,6 +426,7 @@ export function useRoomState(
               retryAt: Date.now() + 5000,
             };
             setRoomAccessError("permission-denied");
+            ensureAuthSession("room-access-check").catch(() => void 0);
             return false;
           }
           roomAccessStateRef.current = {
@@ -499,6 +507,7 @@ export function useRoomState(
                 retryAt: Date.now() + 5000,
               };
               setRoomAccessError("permission-denied");
+              ensureAuthSession("room-snapshot-subscriber").catch(() => void 0);
               stop();
               scheduleRetry(5000);
               return;
