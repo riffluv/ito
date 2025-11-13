@@ -617,6 +617,7 @@ export async function leaveRoomServer(
         delete updates["order.failed"];
         delete updates["order.failedAt"];
         delete updates["order.decidedAt"];
+        delete updates["order.snapshots"];
         Object.assign(
           updates,
           composeWaitingResetPayload({ recallOpen: true })
