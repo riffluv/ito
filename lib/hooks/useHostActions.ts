@@ -26,7 +26,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase/functions";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -100,6 +100,31 @@ export function useHostActions({
   const [customOpen, setCustomOpen] = useState(false);
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
+  const actionLatencyRef = useRef<Record<string, number>>({});
+
+  const markActionStart = useCallback((action: string) => {
+    if (typeof performance !== "undefined") {
+      actionLatencyRef.current[action] = performance.now();
+    }
+    setMetric("hostAction", `${action}.pending`, 1);
+  }, []);
+
+  const finalizeAction = useCallback((action: string, status: "success" | "error") => {
+    const start = actionLatencyRef.current[action];
+    if (typeof start === "number" && typeof performance !== "undefined") {
+      setMetric("hostAction", `${action}.latencyMs`, Math.round(performance.now() - start));
+    }
+    delete actionLatencyRef.current[action];
+    setMetric("hostAction", `${action}.pending`, 0);
+    setMetric("hostAction", `${action}.result`, status === "success" ? 1 : -1);
+  }, []);
+
+  const abortAction = useCallback((action: string) => {
+    if (actionLatencyRef.current[action]) {
+      delete actionLatencyRef.current[action];
+    }
+    setMetric("hostAction", `${action}.pending`, 0);
+  }, []);
 
   const playOrderConfirm = useSoundEffect("order_confirm");
   const playResetGame = useSoundEffect("reset_game");
@@ -165,7 +190,15 @@ export function useHostActions({
       if (!ensurePresenceReady()) {
         return false;
       }
+      markActionStart("quickStart");
       setQuickStartPending(true);
+      notify({
+        id: toastIds.genericInfo(roomId, "quickstart-pending"),
+        title: "ゲーム開始の準備中…",
+        description: "カードとお題を揃えています",
+        type: "info",
+        duration: 1800,
+      });
 
       if (options?.markShowtimeStart ?? true) {
         showtimeIntents?.markStartIntent?.({
@@ -217,6 +250,7 @@ export function useHostActions({
         setCustomText("");
         setCustomOpen(true);
         setQuickStartPending(false);
+        abortAction("quickStart");
         return false;
       }
 
@@ -304,6 +338,7 @@ export function useHostActions({
         }
       } finally {
         setQuickStartPending(false);
+        finalizeAction("quickStart", success ? "success" : "error");
       }
 
       return success;
@@ -331,6 +366,7 @@ export function useHostActions({
       const includeOnline = options?.includeOnline ?? true;
       const recallSpectators =
         options?.recallSpectators ?? true;
+      markActionStart("reset");
       setIsResetting(true);
       if (shouldPlaySound) {
         playResetGame();
@@ -430,6 +466,7 @@ export function useHostActions({
         try {
           postRoundReset(roomId);
         } catch {}
+        finalizeAction("reset", "success");
       } catch (error: unknown) {
         traceError("ui.room.reset", error, { roomId });
         const msg =
@@ -446,6 +483,7 @@ export function useHostActions({
           type: "error",
         });
         onFeedback?.(null);
+        finalizeAction("reset", "error");
       } finally {
         setIsResetting(false);
       }

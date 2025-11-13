@@ -48,6 +48,7 @@ import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { logError, logWarn } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
 import { REVEAL_FIRST_DELAY, REVEAL_LINGER, REVEAL_STEP_DELAY } from "@/lib/ui/motion";
 import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
@@ -283,7 +284,7 @@ function InteractiveBoardBase({
   meId: string;
   displayMode?: "full" | "minimal";
   roomStatus: RoomDoc["status"];
-  boardRef: React.RefObject<HTMLDivElement>;
+  boardRef: React.Ref<HTMLDivElement>;
   isRevealing: boolean;
 }) {
   const sortableItems = useMemo(
@@ -868,10 +869,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, []);
 
   const boardContainerRef = useRef<HTMLDivElement | null>(null);
+  const [boardElement, setBoardElement] = useState<HTMLDivElement | null>(null);
   const boardBoundsRef = useRef<DOMRect | null>(null);
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
   const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
   const dragMoveRafRef = useRef<number | null>(null);
+  const dragActivationStartRef = useRef<number | null>(null);
+  const [dragBoostEnabled, setDragBoostEnabled] = useState(false);
 
   const updateBoardBounds = useCallback(() => {
     if (!boardContainerRef.current) return;
@@ -888,19 +892,61 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !boardElement) return;
     updateBoardBounds();
-    if (!boardContainerRef.current || typeof ResizeObserver === "undefined") {
+    if (typeof ResizeObserver === "undefined") {
       return;
     }
     const observer = new ResizeObserver(() => {
       updateBoardBounds();
     });
-    observer.observe(boardContainerRef.current);
+    observer.observe(boardElement);
     return () => {
       observer.disconnect();
     };
-  }, [updateBoardBounds]);
+  }, [boardElement, updateBoardBounds]);
+
+  const handleBoardRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      boardContainerRef.current = node;
+      setBoardElement(node);
+      if (node) {
+        updateBoardBounds();
+      }
+    },
+    [updateBoardBounds]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !boardElement) return;
+    const handlePointerDown = () => {
+      if (typeof performance !== "undefined") {
+        dragActivationStartRef.current = performance.now();
+      }
+    };
+    const clearPointerClock = () => {
+      dragActivationStartRef.current = null;
+    };
+    boardElement.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    window.addEventListener("pointerup", clearPointerClock);
+    window.addEventListener("pointercancel", clearPointerClock);
+    return () => {
+      boardElement.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", clearPointerClock);
+      window.removeEventListener("pointercancel", clearPointerClock);
+    };
+  }, [boardElement]);
+
+  useEffect(() => {
+    if (roomStatus !== "clue" && dragBoostEnabled) {
+      setDragBoostEnabled(false);
+      dragActivationStartRef.current = null;
+    }
+  }, [roomStatus, dragBoostEnabled]);
+
+  useEffect(() => {
+    setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
+  }, [dragBoostEnabled]);
 
   const resetMagnet = useCallback(
     (options?: { immediate?: boolean }) => {
@@ -1010,29 +1056,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const mouseSensorOptions = useMemo(
     () => ({
       activationConstraint: {
-        distance: pointerProfile.isCoarsePointer ? 6 : 2,
+        distance: dragBoostEnabled ? 1 : pointerProfile.isCoarsePointer ? 6 : 2,
       },
     }),
-    [pointerProfile.isCoarsePointer]
+    [pointerProfile.isCoarsePointer, dragBoostEnabled]
   );
 
-  const touchSensorOptions = useMemo(
-    () =>
-      pointerProfile.isTouchOnly
-        ? {
-            activationConstraint: {
-              delay: 45,
-              tolerance: 26,
-            },
-          }
-        : {
-            activationConstraint: {
-              delay: 160,
-              tolerance: 8,
-            },
-          },
-    [pointerProfile.isTouchOnly]
-  );
+  const touchSensorOptions = useMemo(() => {
+    const base = pointerProfile.isTouchOnly
+      ? {
+          delay: 45,
+          tolerance: 26,
+        }
+      : {
+          delay: 160,
+          tolerance: 8,
+        };
+    if (!dragBoostEnabled) {
+      return { activationConstraint: base };
+    }
+    return {
+      activationConstraint: {
+        delay: Math.max(12, Math.round(base.delay * 0.35)),
+        tolerance: base.tolerance + 6,
+      },
+    };
+  }, [pointerProfile.isTouchOnly, dragBoostEnabled]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, mouseSensorOptions),
@@ -1493,6 +1542,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     (event: DragStartEvent) => {
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
+      setDragBoostEnabled((prev) => (prev ? prev : true));
+      if (dragActivationStartRef.current !== null && typeof performance !== "undefined") {
+        const latency = Math.max(0, performance.now() - dragActivationStartRef.current);
+        setMetric("drag", "activationLatencyMs", Math.round(latency));
+      }
+      dragActivationStartRef.current = null;
       playDragPickup();
       if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
         try {
@@ -1742,6 +1797,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   const onDragCancel = useCallback(() => {
+    dragActivationStartRef.current = null;
     clearActive();
   }, [clearActive]);
 
@@ -1852,7 +1908,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             meId={meId}
             displayMode={displayMode}
             roomStatus={roomStatus}
-            boardRef={boardContainerRef}
+            boardRef={handleBoardRef}
             isRevealing={isRevealing}
           />
         ) : (

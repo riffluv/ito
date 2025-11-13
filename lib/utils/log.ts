@@ -13,10 +13,9 @@ const silentConsole: ConsoleTransport = {
   warn: () => {},
   error: () => {},
 };
-const baseConsole: ConsoleTransport =
-  (typeof globalThis !== "undefined" && globalThis.console) || silentConsole;
-const { debug: consoleDebug, info: consoleInfo, warn: consoleWarn, error: consoleError } =
-  baseConsole;
+function getConsole(): ConsoleTransport {
+  return (typeof globalThis !== "undefined" && globalThis.console) || silentConsole;
+}
 
 const isProdBuild = process.env.NODE_ENV === "production";
 const isVercel = process.env.VERCEL === "1";
@@ -65,34 +64,35 @@ function emit(
 
   const payload = data === undefined ? undefined : data;
   const prefix = `[${scope}] ${msg}`;
+  const target = getConsole();
 
   switch (level) {
     case "debug":
       if (payload === undefined) {
-        consoleDebug(prefix);
+        target.debug(prefix);
       } else {
-        consoleDebug(prefix, payload);
+        target.debug(prefix, payload);
       }
       break;
     case "info":
       if (payload === undefined) {
-        consoleInfo(prefix);
+        target.info(prefix);
       } else {
-        consoleInfo(prefix, payload);
+        target.info(prefix, payload);
       }
       break;
     case "warn":
       if (payload === undefined) {
-        consoleWarn(prefix);
+        target.warn(prefix);
       } else {
-        consoleWarn(prefix, payload);
+        target.warn(prefix, payload);
       }
       break;
     case "error":
       if (payload === undefined) {
-        consoleError(prefix);
+        target.error(prefix);
       } else {
-        consoleError(prefix, payload);
+        target.error(prefix, payload);
       }
       break;
   }
