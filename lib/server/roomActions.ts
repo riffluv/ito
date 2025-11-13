@@ -46,6 +46,8 @@ type WaitingResetOptions = {
   expiresAt?: Timestamp | FieldValue | null;
 };
 
+const MAX_RETAINED_ORDER_SNAPSHOTS = 32;
+
 export function composeWaitingResetPayload(
   options?: WaitingResetOptions
 ): RoomUpdateMap {
@@ -536,11 +538,33 @@ export async function leaveRoomServer(
         remainingCount,
       });
 
-      if (
+      let snapshotWorkingMap: Record<string, PlayerSnapshot> | null =
+        room?.order?.snapshots && typeof room.order.snapshots === "object"
+          ? { ...(room.order.snapshots as Record<string, PlayerSnapshot>) }
+          : null;
+
+      const snapshotReferenceIds = new Set<string>();
+      const registerSnapshotId = (value: unknown) => {
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (trimmed) {
+            snapshotReferenceIds.add(trimmed);
+          }
+        }
+      };
+      if (Array.isArray(room?.order?.list)) {
+        room.order.list.forEach(registerSnapshotId);
+      }
+      if (Array.isArray(room?.order?.proposal)) {
+        room.order.proposal.forEach(registerSnapshotId);
+      }
+
+      const shouldCaptureSnapshot =
         (room?.status === "reveal" || room?.status === "finished") &&
         remainingCount > 0 &&
-        removedPlayerData
-      ) {
+        removedPlayerData;
+
+      if (shouldCaptureSnapshot) {
         const snapshotPayload: PlayerSnapshot = {
           name:
             typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
@@ -557,7 +581,30 @@ export async function leaveRoomServer(
               ? removedPlayerData.number
               : null,
         };
-        updates[`order.snapshots.${userId}`] = snapshotPayload;
+        snapshotWorkingMap = snapshotWorkingMap ?? {};
+        snapshotWorkingMap[userId] = snapshotPayload;
+        registerSnapshotId(userId);
+      }
+
+      if (snapshotWorkingMap) {
+        const orderedEntries: [string, PlayerSnapshot][] = [];
+        for (const [id, snapshot] of Object.entries(snapshotWorkingMap)) {
+          if (!snapshotReferenceIds.has(id)) {
+            continue;
+          }
+          orderedEntries.push([id, snapshot]);
+        }
+        if (orderedEntries.length > MAX_RETAINED_ORDER_SNAPSHOTS) {
+          orderedEntries.splice(
+            0,
+            orderedEntries.length - MAX_RETAINED_ORDER_SNAPSHOTS
+          );
+        }
+        if (orderedEntries.length > 0) {
+          updates["order.snapshots"] = Object.fromEntries(orderedEntries);
+        } else if (room?.order?.snapshots) {
+          updates["order.snapshots"] = FieldValue.delete();
+        }
       }
 
       if (remainingCount === 0) {

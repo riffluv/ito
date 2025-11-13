@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase/client";
+import { ensureAuthSession } from "@/lib/firebase/authSession";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import { logWarn } from "@/lib/utils/log";
@@ -14,6 +15,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  type FirestoreError,
   where,
 } from "firebase/firestore";
 
@@ -256,7 +258,18 @@ export async function ensureMember({
       lastSeen: serverTimestamp(),
       joinedAt: serverTimestamp(),
     };
-    await setDoc(meRef, p);
+    try {
+      await setDoc(meRef, p);
+    } catch (error) {
+      logWarn("roomService", "ensureMember-create-player-failed", {
+        roomId,
+        uid,
+        status,
+        error,
+      });
+      await recoverFromPermissionDenied(error, "ensure-member-create");
+      throw error;
+    }
     logWarn("roomService", "ensureMember-created-player", {
       roomId,
       uid,
@@ -293,6 +306,7 @@ export async function ensureMember({
       uid,
       error,
     });
+    await recoverFromPermissionDenied(error, "ensure-member-update");
   }
   if (existing?.avatar) {
     registerAvatarUsage(roomId, String(existing.avatar));
@@ -488,4 +502,13 @@ export async function joinRoomFully({
     notifyChat,
   });
   return created;
+}
+
+async function recoverFromPermissionDenied(error: unknown, reason: string) {
+  const code =
+    (error as FirestoreError)?.code ??
+    ((error as { code?: string })?.code ?? null);
+  if (code === "permission-denied") {
+    await ensureAuthSession(reason);
+  }
 }
