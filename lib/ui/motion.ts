@@ -5,7 +5,7 @@ export const REVEAL_LINGER = 520; // リビール完了前に一拍置く待ち
 export const RESULT_VISIBLE_MS = 4200; // 結果画面を表示し続ける時間
 export const FLIP_DURATION_MS = 320; // 3D フリップ自体の所要時間
 export const RESULT_INTRO_DELAY = 420; // 最後のカードが落ち着いてから結果演出へ進むための待ち
-export const RESULT_RECOGNITION_DELAY = 180; // 最後のフリップ後に数値を認知するための余白
+export const RESULT_RECOGNITION_DELAY = 210; // 最後のフリップ後に数値を認知するための余白
 export const FINAL_TWO_BONUS_DELAY = 260; // 最後の2枚だけ滞留を加算する時間
 export const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 120); // 視覚上のフリップ完了と評価処理を同期
 
