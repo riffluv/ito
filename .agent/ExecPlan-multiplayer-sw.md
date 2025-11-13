@@ -16,7 +16,7 @@ Reference: `.agent/PLANS.md`.
 - [x] (2025-11-13 12:45Z) Milestone 4 work: enhanced safe-update UX (countdown banner, visibility resync guard, join-banner stacking) plus `useServiceWorkerUpdate` metrics export and `DebugMetricsHUD` integration.
 - [x] (2025-11-13 13:10Z) Tooling fix: installed WSL-native `nvm` + Node 20.19.5, rerouted npm/jest/tsc through it to avoid UNC/EISDIR failures; `npm run typecheck` and `npm run test -- --runInBand` now succeed locally.
 - [x] (2025-11-13 12:13Z) Milestone 3 deliverable: drag sensorブースト＋初回ポインタ計測、ホスト主要ボタンの即時フィードバック＆レイテンシ計測、フェーズ遷移メトリクスを実装し、体感レスポンス改善を確認。
-- [ ] Milestone 5（ラグ要因の棚卸し＆テレメトリ補完）が残タスク。
+- [x] (2025-11-13 12:50Z) Milestone 5完了: Drag/Host/SW/PixPresence系のシグナルを HUD へ流す計測網を整備し、`docs/LAG_PLAYBOOK.md` に調査フローをまとめた。
 
 ## Surprises & Discoveries
 
