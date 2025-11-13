@@ -131,13 +131,10 @@ export function useRevealAnimation({
     if (orderListLength <= 0) {
       return false;
     }
-    // orderData（numbers）が無い場合は revealIndex を使い、
-    // 更新されない realtimeResult に頼らないようにする。
-    if (!orderData) {
-      return revealIndex >= orderListLength;
-    }
-    if (!realtimeResult) {
-      return false;
+    const reachedEndByRevealIndex = revealIndex >= orderListLength;
+    // orderData（numbers）が無い、または realtimeResult が更新されない場合のフォールバック。
+    if (!orderData || !realtimeResult) {
+      return reachedEndByRevealIndex;
     }
     if (realtimeResult.success === false) {
       return true;
