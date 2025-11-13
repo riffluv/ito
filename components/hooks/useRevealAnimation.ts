@@ -3,6 +3,7 @@ import { evaluateSorted } from "@/lib/game/rules";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { logDebug, logWarn } from "@/lib/utils/log";
 import {
+  FLIP_DURATION_MS,
   FLIP_EVALUATION_DELAY,
   FINAL_TWO_BONUS_DELAY,
   REVEAL_FIRST_DELAY,
@@ -102,6 +103,7 @@ export function useRevealAnimation({
   const prevStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
+  const lastFlipEndRef = useRef<number>(0);
 
   useEffect(() => {
     if (resolveMode === "sort-submit" && orderListLength > 0) {
@@ -161,6 +163,7 @@ export function useRevealAnimation({
       setRealtimeResult(null); // リセット
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
+      lastFlipEndRef.current = 0;
       logDebug("reveal", "start", {
         orderListLength,
         reason: becameReveal ? "status" : "pending-signal",
@@ -192,7 +195,9 @@ export function useRevealAnimation({
           finalizeReveal(roomId).catch(() => void 0);
         }
       };
-      const finalizeDelay = RESULT_RECOGNITION_DELAY;
+      const now = Date.now();
+      const flipRemainingMs = Math.max(lastFlipEndRef.current - now, 0);
+      const finalizeDelay = flipRemainingMs + RESULT_RECOGNITION_DELAY;
       const linger = setTimeout(() => {
         attemptFinalize();
       }, finalizeDelay);
@@ -208,6 +213,8 @@ export function useRevealAnimation({
         : REVEAL_STEP_DELAY + (isFinalStretch ? FINAL_TWO_BONUS_DELAY : 0);
     
     const timer = setTimeout(async () => {
+      const flipStartedAt = Date.now();
+      lastFlipEndRef.current = flipStartedAt + FLIP_DURATION_MS;
 
       // 次にめくる枚数（この時点ではまだ state 更新前）
       const nextIndex = Math.min(revealIndex + 1, orderListLength);
