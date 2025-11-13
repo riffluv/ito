@@ -67,6 +67,21 @@ const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
 const BASE_JOIN_RETRY_DELAY_MS = 500;
 const MAX_JOIN_RETRY_DELAY_MS = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRY_MAX_DELAY_MS ?? 5000);
 const JOIN_RETRY_BACKOFF_FACTOR = 2;
+const DEFAULT_ENSURE_MEMBER_INTERVAL_MS = 60_000;
+const parsedEnsureMemberInterval = Number(
+  process.env.NEXT_PUBLIC_ENSURE_MEMBER_MIN_INTERVAL_MS ?? DEFAULT_ENSURE_MEMBER_INTERVAL_MS
+);
+const ENSURE_MEMBER_MIN_INTERVAL_MS =
+  Number.isFinite(parsedEnsureMemberInterval) && parsedEnsureMemberInterval > 0
+    ? parsedEnsureMemberInterval
+    : DEFAULT_ENSURE_MEMBER_INTERVAL_MS;
+
+type EnsureMemberHeartbeat = {
+  roomId: string;
+  uid: string;
+  displayName: string | null | undefined;
+  timestamp: number;
+};
 
 const extractPhaseFromSnapshot = (
   snapshot: RoomMachineSnapshot | null
@@ -111,6 +126,7 @@ export function useRoomState(
   const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const joinAttemptRef = useRef(0);
   const membershipLogSignatureRef = useRef<string | null>(null);
+  const ensureMemberHeartbeatRef = useRef<EnsureMemberHeartbeat | null>(null);
   const [joinAttemptToken, setJoinAttemptToken] = useState(0);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -804,9 +820,6 @@ export function useRoomState(
     } else if (isMember) {
       joinAttemptRef.current = 0;
       clearRetryTimer();
-      ensureMember({ roomId, uid, displayName: normalizedDisplayName }).catch(
-        () => void 0
-      );
       setJoinStatus("joined");
     } else {
       joinAttemptRef.current = 0;
@@ -828,6 +841,52 @@ export function useRoomState(
     playerIds,
     loading,
   ]);
+
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    if (!roomId || !uid) {
+      ensureMemberHeartbeatRef.current = null;
+      return;
+    }
+    if (!isMember) {
+      ensureMemberHeartbeatRef.current = null;
+      return;
+    }
+    if (!normalizedDisplayName) {
+      ensureMemberHeartbeatRef.current = null;
+      return;
+    }
+    const displayNameForEnsure = normalizedDisplayName ?? null;
+    const now = Date.now();
+    const previous = ensureMemberHeartbeatRef.current;
+    const identityChanged =
+      !previous || previous.roomId !== roomId || previous.uid !== uid;
+    const nameChanged = previous?.displayName !== displayNameForEnsure;
+    const intervalElapsed =
+      !previous || now - previous.timestamp >= ENSURE_MEMBER_MIN_INTERVAL_MS;
+    if (!identityChanged && !nameChanged && !intervalElapsed) {
+      return;
+    }
+    const heartbeat: EnsureMemberHeartbeat = {
+      roomId,
+      uid,
+      displayName: displayNameForEnsure,
+      timestamp: now,
+    };
+    ensureMemberHeartbeatRef.current = heartbeat;
+    ensureMember({ roomId, uid, displayName: normalizedDisplayName }).catch(() => {
+      if (ensureMemberHeartbeatRef.current === heartbeat) {
+        ensureMemberHeartbeatRef.current = null;
+      }
+    });
+  }, [
+    firebaseEnabled,
+    roomId,
+    uid,
+    isMember,
+    normalizedDisplayName,
+  ]);
+
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
     if (isMember) {
