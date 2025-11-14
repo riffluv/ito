@@ -58,7 +58,7 @@ export type RoomDoc = {
     failed?: boolean;
     failedAt?: number | null;
     total?: number | null;
-    proposal?: string[] | null;
+    proposal?: (string | null)[] | null;
     numbers?: Record<string, number | null | undefined> | null;
     snapshots?: Record<string, PlayerSnapshot> | null;
   } | null;
@@ -89,6 +89,8 @@ export type RoomDoc = {
     recallOpen?: boolean;
     /** Reveal 自動再開時のUI側ペンディングフラグ */
     revealPending?: boolean;
+    /** ラウンド準備中（カード配布中など）を共有するフラグ */
+    roundPreparing?: boolean;
   };
 };
 

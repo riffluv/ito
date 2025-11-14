@@ -23,7 +23,7 @@ interface UseDropHandlerProps {
   me: (PlayerDoc & { id: string }) | undefined;
   roomStatus?: string;
   orderList?: string[];
-  proposal?: string[];
+  proposal?: (string | null)[];
   hasNumber: boolean;
   mePlaced: boolean;
   dealReady: boolean;

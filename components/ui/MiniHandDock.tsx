@@ -247,7 +247,7 @@ interface MiniHandDockProps {
   roomId: string;
   me: (PlayerDoc & { id: string }) | undefined;
   resolveMode?: ResolveMode | null;
-  proposal?: string[];
+  proposal?: (string | null)[];
   eligibleIds?: string[];
   cluesReady?: boolean;
   isHost?: boolean;
@@ -269,6 +269,7 @@ interface MiniHandDockProps {
   hostClaimStatus?: HostClaimStatus;
   presenceReady?: boolean;
   phaseMessage?: string | null;
+  roundPreparing?: boolean;
   showtimeIntentHandlers?: ShowtimeIntentHandlers;
   updateOptimisticProposalOverride?: (
     playerId: string,
@@ -300,6 +301,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     hostClaimStatus,
     presenceReady = true,
     phaseMessage,
+    roundPreparing = false,
     showtimeIntentHandlers,
     updateOptimisticProposalOverride,
   } = props;
@@ -576,7 +578,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const playCardDeal = useSoundEffect("card_deal");
   const playTopicShuffle = useSoundEffect("topic_shuffle");
   const showQuickStartProgress =
-    (quickStartPending || autoStartLocked) &&
+    (quickStartPending || autoStartLocked || roundPreparing) &&
     (roomStatus === "waiting" || roomStatus === "clue");
 
   // デプロイ直後の“初回だけ遅いことがある”告知（バージョンごとに1回）

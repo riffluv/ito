@@ -17,7 +17,7 @@ export interface ComputeCardStateParams {
   idx?: number; // index within ordered/reveal context
   orderList?: string[]; // confirmed order
   pending: (string | null)[]; // local optimistic placements
-  proposal?: string[]; // sort-submit local proposal
+  proposal?: (string | null)[]; // sort-submit local proposal
   resolveMode?: ResolveMode;
   roomStatus?: RoomStatus;
   revealIndex: number; // how many cards have been revealed (exclusive upper bound)

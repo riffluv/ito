@@ -43,9 +43,16 @@ export function createPlayerMap(
  */
 export function createPlacedIds(
   orderList?: string[],
-  proposal?: string[]
+  proposal?: (string | null)[]
 ): Set<string> {
-  return new Set<string>([...(orderList || []), ...(proposal || [])]);
+  const result = new Set<string>();
+  (orderList || []).forEach((id) => {
+    if (typeof id === "string" && id.length > 0) result.add(id);
+  });
+  (proposal || []).forEach((id) => {
+    if (typeof id === "string" && id.length > 0) result.add(id);
+  });
+  return result;
 }
 
 /**
@@ -73,11 +80,15 @@ export function createWaitingPlayers(
  */
 export function calculateVisualCardCount(
   orderList?: string[],
-  pending?: string[]
+  pending?: (string | null)[]
 ): number {
   const uniqueSet = new Set<string>();
-  (orderList || []).forEach((id) => uniqueSet.add(id));
-  (pending || []).forEach((id) => uniqueSet.add(id));
+  (orderList || []).forEach((id) => {
+    if (typeof id === "string" && id.length > 0) uniqueSet.add(id);
+  });
+  (pending || []).forEach((id) => {
+    if (typeof id === "string" && id.length > 0) uniqueSet.add(id);
+  });
   return uniqueSet.size;
 }
 
@@ -89,14 +100,18 @@ export function calculateVisualCardCount(
  */
 export function createSequentialOrder(
   orderList?: string[],
-  pending?: string[]
+  pending?: (string | null)[]
 ): string[] {
   const sequence: string[] = [];
   (orderList || []).forEach((id) => {
-    if (!sequence.includes(id)) sequence.push(id);
+    if (typeof id === "string" && id.length > 0 && !sequence.includes(id)) {
+      sequence.push(id);
+    }
   });
   (pending || []).forEach((id) => {
-    if (!sequence.includes(id)) sequence.push(id);
+    if (typeof id === "string" && id.length > 0 && !sequence.includes(id)) {
+      sequence.push(id);
+    }
   });
   return sequence;
 }
