@@ -1,0 +1,275 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { Box } from "@chakra-ui/react";
+import {
+  DndContext,
+  DragOverlay,
+  type CollisionDetection,
+  type DndContextProps,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+  type DropAnimation,
+} from "@dnd-kit/core";
+import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { SortableContext } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { EmptyCard } from "@/components/cards";
+import { SortableItem } from "@/components/sortable/SortableItem";
+import WaitingArea from "@/components/ui/WaitingArea";
+import type { DragSlotDescriptor } from "@/components/hooks/useBoardSlots";
+import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import type { MagnetResult } from "@/lib/ui/dragMagnet";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
+
+import { BoardFrame } from "./BoardFrame";
+import { GHOST_CARD_STYLE, RETURN_DROP_ZONE_ID } from "./constants";
+import type { MagnetSnapshot } from "./types";
+
+interface InteractiveBoardProps {
+  slots: DragSlotDescriptor[];
+  magnetSnapshot: MagnetSnapshot;
+  magnetState: MagnetResult;
+  prefersReducedMotion: boolean;
+  activeId: string | null;
+  isOver: boolean;
+  canDrop: boolean;
+  sensors: DndContextProps["sensors"];
+  collisionDetection: CollisionDetection;
+  onDragStart: (event: DragStartEvent) => void;
+  onDragMove: (event: DragMoveEvent) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+  onDragCancel: () => void;
+  dropAnimation: DropAnimation;
+  renderCard: (id: string, idx?: number) => React.ReactNode;
+  activeProposal: (string | null)[];
+  waitingPlayers: (PlayerDoc & { id: string })[];
+  meId: string;
+  displayMode?: "full" | "minimal";
+  roomStatus: RoomDoc["status"];
+  boardRef: React.Ref<HTMLDivElement>;
+  isRevealing: boolean;
+}
+
+function InteractiveBoardBase({
+  slots,
+  magnetSnapshot,
+  magnetState,
+  prefersReducedMotion,
+  activeId,
+  isOver,
+  canDrop,
+  sensors,
+  collisionDetection,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onDragCancel,
+  dropAnimation,
+  renderCard,
+  activeProposal,
+  waitingPlayers,
+  meId,
+  displayMode,
+  roomStatus,
+  boardRef,
+  isRevealing,
+}: InteractiveBoardProps) {
+  const sortableItems = useMemo(
+    () => activeProposal.filter((id): id is string => typeof id === "string" && id.length > 0),
+    [activeProposal]
+  );
+  const [dragTilt, setDragTilt] = useState(0);
+  const [dragLift, setDragLift] = useState(0);
+
+  useEffect(() => {
+    if (!activeId) {
+      setDragTilt(0);
+      setDragLift(0);
+      return;
+    }
+    const tiltRange = prefersReducedMotion ? 1.4 : 2.8;
+    const randomTilt = Math.random() * tiltRange * 2 - tiltRange;
+    setDragTilt(Number(randomTilt.toFixed(2)));
+    setDragLift(prefersReducedMotion ? 2 : 8);
+  }, [activeId, prefersReducedMotion]);
+
+  const overlayShellStyle = useMemo<React.CSSProperties>(() => {
+    const baseShadowStrength = prefersReducedMotion ? 0.18 : 0.26;
+    const strength = magnetState.strength;
+    const blur = 14 + strength * 18;
+    const yOffset = 8 + strength * 10;
+    const opacity = baseShadowStrength + strength * 0.22;
+    return {
+      ...GHOST_CARD_STYLE,
+      cursor: "grabbing",
+      filter: `drop-shadow(0 ${yOffset.toFixed(2)}px ${blur.toFixed(2)}px rgba(0, 0, 0, ${opacity.toFixed(
+        3
+      )}))`,
+    };
+  }, [magnetState.strength, prefersReducedMotion]);
+
+  const overlayInnerStyle = useMemo<React.CSSProperties>(() => {
+    if (!activeId) {
+      return {
+        transform: "translate3d(0px, 0px, 0) scale(1)",
+      };
+    }
+    const strength = magnetState.strength;
+    const baseScale = prefersReducedMotion ? 1.02 : 1.05;
+    const magnetScaleBoost = strength * (prefersReducedMotion ? 0.015 : 0.045);
+    const translateX = magnetState.dx;
+    const translateY = magnetState.dy - dragLift * (strength > 0 ? 1 : 0.6);
+    const tiltInfluence = strength * (prefersReducedMotion ? 0.6 : 1.4);
+    const rotate = dragTilt + tiltInfluence;
+    const liftFilterStrength = Math.max(0, strength - 0.08);
+    const transitionDuration = prefersReducedMotion ? 80 : 150;
+    return {
+      transform: `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(
+        2
+      )}px, 0) scale(${(baseScale + magnetScaleBoost).toFixed(4)}) rotate(${rotate.toFixed(2)}deg)`,
+      transition: `transform ${transitionDuration}ms cubic-bezier(0.2, 0.75, 0.4, 1), filter ${
+        transitionDuration + 40
+      }ms cubic-bezier(0.2, 0.7, 0.4, 1)`,
+      filter:
+        liftFilterStrength > 0
+          ? `drop-shadow(0 ${4 + liftFilterStrength * 10}px ${12 + liftFilterStrength * 18}px rgba(0, 0, 0, ${
+              0.18 + liftFilterStrength * 0.28
+            }))`
+          : undefined,
+      willChange: "transform",
+    };
+  }, [activeId, dragLift, dragTilt, magnetState.dx, magnetState.dy, magnetState.strength, prefersReducedMotion]);
+
+  return (
+    <DndContext
+      collisionDetection={collisionDetection}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+      sensors={sensors}
+      modifiers={[restrictToFirstScrollableAncestor]}
+      accessibility={{
+        announcements: {
+          onDragStart: ({ active }) => {
+            const id = String(active.id);
+            return `${id}のカードをドラッグ開始`;
+          },
+          onDragOver: ({ active, over }) => {
+            if (over) {
+              const overIndex = activeProposal.indexOf(over.id as string);
+              return `${String(active.id)}を${overIndex + 1}番スロットに移動中`;
+            }
+            return `${String(active.id)}を移動中`;
+          },
+          onDragEnd: ({ active, over }) => {
+            if (over) {
+              const overIndex = activeProposal.indexOf(over.id as string);
+              return `${String(active.id)}を${overIndex + 1}番スロットに配置`;
+            }
+            return `${String(active.id)}の移動をキャンセル`;
+          },
+          onDragCancel: ({ active }) => `${String(active.id)}のドラッグをキャンセル`,
+        },
+      }}
+    >
+      <BoardFrame isActive={isOver && canDrop} containerRef={boardRef}>
+        <SortableContext items={sortableItems}>
+          {slots.map((slot) => {
+            if (slot.showCard && slot.cardId) {
+              if (slot.proposalCardId && slot.proposalCardId === slot.cardId) {
+                return (
+                  <SortableItem id={slot.cardId} key={slot.cardId}>
+                    {renderCard(slot.cardId, slot.idx)}
+                  </SortableItem>
+                );
+              }
+              return (
+                <React.Fragment key={`ghost-${slot.idx}-${slot.cardId}`}>
+                  {renderCard(slot.cardId, slot.idx)}
+                </React.Fragment>
+              );
+            }
+
+            const isTarget = magnetSnapshot.targetId === slot.droppableId;
+            return (
+              <EmptyCard
+                key={`slot-${slot.idx}`}
+                slotNumber={slot.idx + 1}
+                totalSlots={slot.totalSlots}
+                alignSelf="flex-start"
+                id={slot.droppableId}
+                isDroppable
+                isDragActive={!!activeId}
+                isMagnetTarget={isTarget}
+                magnetStrength={isTarget ? magnetSnapshot.strength : 0}
+                prefersReducedMotion={prefersReducedMotion}
+              />
+            );
+          })}
+        </SortableContext>
+      </BoardFrame>
+
+      <DragOverlay dropAnimation={dropAnimation} modifiers={[restrictToWindowEdges]}>
+        {activeId
+          ? (() => {
+              const idx = activeProposal.indexOf(activeId);
+              if (idx >= 0) {
+                return (
+                  <div
+                    style={overlayShellStyle}
+                    data-floating-card="true"
+                    data-magnet-strength={magnetState.strength.toFixed(2)}
+                  >
+                    <div style={overlayInnerStyle}>{renderCard(activeId, idx)}</div>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  style={overlayShellStyle}
+                  data-floating-card="true"
+                  data-magnet-strength={magnetState.strength.toFixed(2)}
+                >
+                  <div style={overlayInnerStyle}>{renderCard(activeId)}</div>
+                </div>
+              );
+            })()
+          : null}
+      </DragOverlay>
+
+      {(roomStatus === "clue" || roomStatus === "waiting") && !isRevealing && waitingPlayers.length > 0 && (
+        <Box
+          width="100%"
+          maxWidth="var(--board-max-width)"
+          marginInline="auto"
+          mt={{ base: 4, md: 5 }}
+          css={{
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+              marginTop: "1.25rem !important",
+            },
+            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
+              marginTop: "1rem !important",
+            },
+          }}
+        >
+          <WaitingArea
+            players={waitingPlayers}
+            isDraggingEnabled
+            meId={meId}
+            displayMode={displayMode}
+            returnDropZoneId={RETURN_DROP_ZONE_ID}
+            hideClues={roomStatus !== "clue"}
+            gameStarted={roomStatus === "clue"}
+          />
+        </Box>
+      )}
+    </DndContext>
+  );
+}
+
+export const InteractiveBoard = React.memo(InteractiveBoardBase);
+InteractiveBoard.displayName = "CentralInteractiveBoard";
