@@ -188,6 +188,21 @@ export async function clearRevealPending(roomId: string) {
   }
 }
 
+export async function setRoundPreparing(roomId: string, active: boolean) {
+  if (!db) return;
+  const roomRef = doc(db, "rooms", roomId);
+  try {
+    traceAction(active ? "ui.roundPreparing.begin" : "ui.roundPreparing.clear", { roomId });
+    await updateDoc(roomRef, {
+      "ui.roundPreparing": active,
+      lastActiveAt: serverTimestamp(),
+    });
+  } catch (error) {
+    traceError("ui.roundPreparing", error, { roomId, active });
+    // 非致命扱い: ローカルUIのみでフォローできるため握りつぶす
+  }
+}
+
 // clue中のみ、proposalから在室外IDを除去（冪等）。UI側の表示フィルタと合わせて二重で安全策。
 export async function pruneProposalByEligible(
   roomId: string,

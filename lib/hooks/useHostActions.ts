@@ -6,6 +6,7 @@ import {
   submitSortedOrder,
   topicControls,
   beginRevealPending,
+  setRoundPreparing,
 } from "@/lib/game/service";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import {
@@ -67,7 +68,7 @@ type UseHostActionsOptions = {
   defaultTopicType?: string | null;
   roundIds?: string[] | null;
   onlineUids?: string[] | null | undefined;
-  proposal?: string[] | null;
+  proposal?: (string | null)[] | null;
   currentTopic?: string | null;
   onFeedback?: (payload: HostActionFeedback) => void;
   presenceReady?: boolean;
@@ -151,6 +152,17 @@ export function useHostActions({
     return false;
   }, [presenceReady, roomId]);
 
+  const syncRoundPreparing = useCallback(
+    async (value: boolean) => {
+      try {
+        await setRoundPreparing(roomId, value);
+      } catch (error) {
+        traceError("ui.roundPreparing.sync", error, { roomId, value });
+      }
+    },
+    [roomId]
+  );
+
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
@@ -190,6 +202,7 @@ export function useHostActions({
       if (!ensurePresenceReady()) {
         return false;
       }
+      let markedRoundPreparing = false;
       markActionStart("quickStart");
       setQuickStartPending(true);
       notify({
@@ -254,6 +267,8 @@ export function useHostActions({
         return false;
       }
 
+      await syncRoundPreparing(true);
+      markedRoundPreparing = true;
       const shouldBroadcast = options?.broadcast ?? true;
       const shouldPlaySound = options?.playSound ?? true;
       const traceDetail: Record<string, unknown> = {
@@ -339,6 +354,9 @@ export function useHostActions({
       } finally {
         setQuickStartPending(false);
         finalizeAction("quickStart", success ? "success" : "error");
+        if (markedRoundPreparing) {
+          await syncRoundPreparing(false);
+        }
       }
 
       return success;
@@ -356,6 +374,7 @@ export function useHostActions({
       presenceReady,
       onlineUids,
       showtimeIntents,
+      syncRoundPreparing,
     ]
   );
 
@@ -530,6 +549,9 @@ export function useHostActions({
     if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
 
+    let markedRoundPreparing = false;
+    await syncRoundPreparing(true);
+    markedRoundPreparing = true;
     traceAction("ui.host.nextGame", { roomId });
     beginAutoStartLock(5000, { broadcast: true });
     setIsRestarting(true);
@@ -545,6 +567,9 @@ export function useHostActions({
       console.error("❌ nextGameButton: 失敗", error);
     } finally {
       setIsRestarting(false);
+      if (markedRoundPreparing) {
+        await syncRoundPreparing(false);
+      }
     }
   }, [
     isHost,
@@ -557,6 +582,7 @@ export function useHostActions({
     restartGame,
     clearAutoStartLock,
     roomId,
+    syncRoundPreparing,
   ]);
 
   const REVEAL_DELAY_MS = 500;

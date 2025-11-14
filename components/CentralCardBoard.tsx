@@ -73,7 +73,7 @@ interface CentralCardBoardProps {
   roomStatus: RoomDoc["status"];
   cluesReady?: boolean;
   failed: boolean;
-  proposal?: string[];
+  proposal?: (string | null)[];
   resolveMode?: ResolveMode | null;
   orderNumbers?: Record<string, number | null | undefined>;
   orderSnapshots?: Record<string, PlayerSnapshot> | null;
@@ -722,10 +722,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
   const orderListLength = Array.isArray(orderList) ? orderList.length : 0;
 
-  const placedIds = useMemo(
-    () => new Set<string>([...(orderList || []), ...(proposal || [])]),
-    [orderList, proposal]
-  );
+  const placedIds = useMemo(() => {
+    const ids = new Set<string>();
+    (orderList || []).forEach((id) => {
+      if (typeof id === "string" && id.length > 0) ids.add(id);
+    });
+    (proposal || []).forEach((id) => {
+      if (typeof id === "string" && id.length > 0) ids.add(id);
+    });
+    return ids;
+  }, [orderList, proposal]);
 
   // 在室プレイヤーのみを許可（presence + players）
   const eligibleIdsKey = useMemo(

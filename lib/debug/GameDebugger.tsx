@@ -9,7 +9,7 @@ interface DebugSnapshot {
   roomStatus: string;
   playersCount: number;
   orderList: string[];
-  proposal?: string[];
+  proposal?: (string | null)[];
   failed?: boolean;
   resolveMode?: string;
   action?: string;
@@ -44,7 +44,11 @@ export function GameDebugger({ room, players, onlineCount, lastAction }: GameDeb
       action: lastAction,
     };
 
-    const snapshotKey = `${snapshot.roomStatus}-${snapshot.orderList.join(",")}-${snapshot.proposal?.join(",") || ""}-${snapshot.failed}`;
+    const proposalKey =
+      snapshot.proposal
+        ?.map((id) => (typeof id === "string" ? id : "null"))
+        .join(",") || "";
+    const snapshotKey = `${snapshot.roomStatus}-${snapshot.orderList.join(",")}-${proposalKey}-${snapshot.failed}`;
 
     // Only add if state actually changed
     if (snapshotKey !== lastSnapshotRef.current) {

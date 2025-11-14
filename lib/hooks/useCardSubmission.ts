@@ -34,7 +34,7 @@ type UseCardSubmissionOptions = {
   roomStatus?: string;
   resolveMode?: ResolveMode | null;
   player: (PlayerDoc & { id: string }) | null | undefined;
-  proposal?: string[] | null;
+  proposal?: (string | null)[] | null;
   eligibleIds?: string[];
   cluesReady?: boolean;
   clueEditable: boolean;

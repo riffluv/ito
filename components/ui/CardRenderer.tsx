@@ -11,7 +11,7 @@ interface CardRendererProps {
   idx?: number;
   orderList?: string[];
   pending: (string | null)[];
-  proposal?: string[];
+  proposal?: (string | null)[];
   resolveMode?: ResolveMode | null;
   roomStatus?: string;
   revealIndex: number;

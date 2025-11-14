@@ -85,10 +85,11 @@ service cloud.firestore {
 
     function isValidUiMap(ui) {
       return ui is map
-        && ui.keys().hasOnly(['recallOpen', 'revealPending', 'revealBeginAt'])
+        && ui.keys().hasOnly(['recallOpen', 'revealPending', 'revealBeginAt', 'roundPreparing'])
         && (!('recallOpen' in ui) || ui.recallOpen is bool)
         && (!('revealPending' in ui) || ui.revealPending is bool)
-        && (!('revealBeginAt' in ui) || isTimestampValue(ui.revealBeginAt));
+        && (!('revealBeginAt' in ui) || isTimestampValue(ui.revealBeginAt))
+        && (!('roundPreparing' in ui) || ui.roundPreparing is bool);
     }
 
     function isValidMvpVotesMap(votes) {

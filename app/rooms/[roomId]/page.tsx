@@ -3078,16 +3078,19 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
+  const roundPreparing = room?.ui?.roundPreparing === true;
   const [optimisticProposalOverrides, setOptimisticProposalOverrides] = useState<
     Record<string, "placed" | "removed">
   >({});
-  const sanitizedServerProposal = useMemo(() => {
+  const sanitizedServerProposal = useMemo<(string | null)[]>(() => {
     if (!Array.isArray(orderProposal)) {
       return [];
     }
-    return (orderProposal as (string | null | undefined)[])
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .filter((id) => id.length > 0);
+    return (orderProposal as (string | null | undefined)[]).map((value) => {
+      if (typeof value !== "string") return null;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    });
   }, [orderProposal]);
   const updateOptimisticProposalOverride = useCallback(
     (playerId: string, state: "placed" | "removed" | null) => {
@@ -3107,9 +3110,19 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     },
     []
   );
+  const sanitizedServerProposalSet = useMemo(() => {
+    const set = new Set<string>();
+    sanitizedServerProposal.forEach((value) => {
+      if (typeof value === "string" && value.length > 0) {
+        set.add(value);
+      }
+    });
+    return set;
+  }, [sanitizedServerProposal]);
+
   useEffect(() => {
     if (!Object.keys(optimisticProposalOverrides).length) return;
-    const hasServerUpdate = new Set(sanitizedServerProposal);
+    const hasServerUpdate = sanitizedServerProposalSet;
     let changed = false;
     const next: Record<string, "placed" | "removed"> = {};
     Object.entries(optimisticProposalOverrides).forEach(([playerId, state]) => {
@@ -3123,24 +3136,44 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     if (changed) {
       setOptimisticProposalOverrides(next);
     }
-  }, [sanitizedServerProposal, optimisticProposalOverrides]);
+  }, [sanitizedServerProposalSet, optimisticProposalOverrides]);
   useEffect(() => {
     if (room?.status === "clue") return;
     setOptimisticProposalOverrides((prev) => (Object.keys(prev).length ? {} : prev));
   }, [room?.status]);
-  const proposalForUi = useMemo(() => {
-    if (!Object.keys(optimisticProposalOverrides).length) {
+  const proposalForUi = useMemo<(string | null)[]>(() => {
+    const overrides = optimisticProposalOverrides;
+    if (!Object.keys(overrides).length) {
       return sanitizedServerProposal;
     }
-    const filtered = sanitizedServerProposal.filter(
-      (id) => optimisticProposalOverrides[id] !== "removed"
+    const next = sanitizedServerProposal.slice();
+    const presentSet = new Set(
+      next.filter((value): value is string => typeof value === "string" && value.length > 0)
     );
-    Object.entries(optimisticProposalOverrides).forEach(([playerId, state]) => {
-      if (state === "placed" && !filtered.includes(playerId)) {
-        filtered.push(playerId);
+
+    Object.entries(overrides).forEach(([playerId, state]) => {
+      if (state !== "removed") return;
+      for (let i = 0; i < next.length; i += 1) {
+        if (next[i] === playerId) {
+          next[i] = null;
+        }
       }
+      presentSet.delete(playerId);
     });
-    return filtered;
+
+    Object.entries(overrides).forEach(([playerId, state]) => {
+      if (state !== "placed") return;
+      if (presentSet.has(playerId)) return;
+      const emptyIndex = next.findIndex((slot) => slot === null);
+      if (emptyIndex >= 0) {
+        next[emptyIndex] = playerId;
+      } else {
+        next.push(playerId);
+      }
+      presentSet.add(playerId);
+    });
+
+    return next;
   }, [sanitizedServerProposal, optimisticProposalOverrides]);
 
   const slotCount = useMemo(() => computeSlotCount({
@@ -3440,6 +3473,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   let phaseMessage: string | null = null;
   if (showRejoinOverlay) {
     phaseMessage = "ルームへ再参加中です...";
+  } else if (roundPreparing) {
+    phaseMessage = "カードを配布しています…";
   } else if (prioritizedTransitionMessage) {
     phaseMessage = prioritizedTransitionMessage;
   } else if (baseOverlayMessage) {
@@ -3472,6 +3507,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       pop={pop}
       hostClaimStatus={hostClaimStatus}
       phaseMessage={phaseMessage}
+      roundPreparing={roundPreparing}
       showtimeIntentHandlers={showtimeIntentHandlers}
       updateOptimisticProposalOverride={updateOptimisticProposalOverride}
     />
