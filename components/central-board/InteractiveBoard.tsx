@@ -11,6 +11,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
   type DropAnimation,
+  type Modifier,
 } from "@dnd-kit/core";
 import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { SortableContext } from "@dnd-kit/sortable";
@@ -27,6 +28,45 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { BoardFrame } from "./BoardFrame";
 import { GHOST_CARD_STYLE, RETURN_DROP_ZONE_ID } from "./constants";
 import type { MagnetSnapshot } from "./types";
+
+/**
+ * 磁力吸着を DragOverlay の transform に直接適用する modifier
+ * これにより overlayInnerStyle との競合を完全に排除
+ */
+function createMagnetModifier(
+  magnetState: MagnetResult,
+  dragLift: number,
+  prefersReducedMotion: boolean
+): Modifier {
+  return ({ transform }) => {
+    // 磁力が働き始めた時点で dragLift を完全に抑制
+    const magnetActiveThreshold = prefersReducedMotion ? 0.08 : 0.05;
+    const shouldSuppressLift = magnetState.shouldSnap || magnetState.strength > magnetActiveThreshold;
+
+    let liftAfterMagnet = 0;
+    if (!shouldSuppressLift) {
+      const liftBaseline = dragLift * 0.65;
+      const liftNeutralizeStart = prefersReducedMotion ? 0.02 : 0.01;
+      const liftNeutralizeEnd = magnetActiveThreshold;
+      const liftNeutralizeRange = Math.max(0.001, liftNeutralizeEnd - liftNeutralizeStart);
+      const strength = magnetState.strength;
+      const liftNeutralizer =
+        strength <= liftNeutralizeStart
+          ? 0
+          : Math.min(1, (strength - liftNeutralizeStart) / liftNeutralizeRange);
+      liftAfterMagnet = liftBaseline * (1 - liftNeutralizer);
+    }
+
+    // DragOverlay の transform に磁力補正を加算
+    return {
+      ...transform,
+      x: transform.x + magnetState.dx,
+      y: transform.y + magnetState.dy - liftAfterMagnet,
+      scaleX: 1,
+      scaleY: 1,
+    };
+  };
+}
 
 interface InteractiveBoardProps {
   slots: DragSlotDescriptor[];
@@ -111,25 +151,28 @@ function InteractiveBoardBase({
     };
   }, [magnetState.strength, prefersReducedMotion]);
 
+  const magnetModifier = useMemo(
+    () => createMagnetModifier(magnetState, dragLift, prefersReducedMotion),
+    [magnetState, dragLift, prefersReducedMotion]
+  );
+
   const overlayInnerStyle = useMemo<React.CSSProperties>(() => {
     if (!activeId) {
       return {
-        transform: "translate3d(0px, 0px, 0) scale(1)",
+        transform: "scale(1)",
       };
     }
     const strength = magnetState.strength;
     const baseScale = prefersReducedMotion ? 1.02 : 1.05;
     const magnetScaleBoost = strength * (prefersReducedMotion ? 0.015 : 0.045);
-    const translateX = magnetState.dx;
-    const translateY = magnetState.dy - dragLift * (strength > 0 ? 1 : 0.6);
     const tiltInfluence = strength * (prefersReducedMotion ? 0.6 : 1.4);
     const rotate = dragTilt + tiltInfluence;
     const liftFilterStrength = Math.max(0, strength - 0.08);
     const transitionDuration = prefersReducedMotion ? 80 : 150;
+
+    // translate は magnetModifier で処理されるため、ここでは scale と rotate のみ
     return {
-      transform: `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(
-        2
-      )}px, 0) scale(${(baseScale + magnetScaleBoost).toFixed(4)}) rotate(${rotate.toFixed(2)}deg)`,
+      transform: `scale(${(baseScale + magnetScaleBoost).toFixed(4)}) rotate(${rotate.toFixed(2)}deg)`,
       transition: `transform ${transitionDuration}ms cubic-bezier(0.2, 0.75, 0.4, 1), filter ${
         transitionDuration + 40
       }ms cubic-bezier(0.2, 0.7, 0.4, 1)`,
@@ -141,7 +184,7 @@ function InteractiveBoardBase({
           : undefined,
       willChange: "transform",
     };
-  }, [activeId, dragLift, dragTilt, magnetState.dx, magnetState.dy, magnetState.strength, prefersReducedMotion]);
+  }, [activeId, dragTilt, magnetState.strength, prefersReducedMotion]);
 
   return (
     <DndContext
@@ -213,7 +256,7 @@ function InteractiveBoardBase({
         </SortableContext>
       </BoardFrame>
 
-      <DragOverlay dropAnimation={dropAnimation} modifiers={[restrictToWindowEdges]}>
+      <DragOverlay dropAnimation={dropAnimation} modifiers={[magnetModifier, restrictToWindowEdges]}>
         {activeId
           ? (() => {
               const idx = activeProposal.indexOf(activeId);

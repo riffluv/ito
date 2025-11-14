@@ -4,14 +4,23 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Box, Flex, Spinner, Text, VisuallyHidden } from "@chakra-ui/react";
 import {
   DragEndEvent,
+  DragMoveEvent,
   DragStartEvent,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   pointerWithin,
   rectIntersection,
+  useSensor,
+  useSensors,
   type CollisionDetection,
   type Collision,
+  type DropAnimation,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
@@ -38,6 +47,7 @@ import {
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
+import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
@@ -46,10 +56,10 @@ import {
   StaticBoard,
   RETURN_DROP_ZONE_ID,
   createInitialMagnetState,
+  MAGNET_IDLE_MARGIN_PX,
   usePlayerPresenceState,
   useRevealStatus,
   useResultFlipState,
-  useDragMagnetController,
 } from "@/components/central-board";
 import type { MagnetSnapshot } from "@/components/central-board";
 
@@ -72,6 +82,7 @@ interface CentralCardBoardProps {
   revealedAt?: unknown;
   uiRevealPending?: boolean;
   dealPlayers?: string[] | null;
+  onOptimisticProposalChange?: (playerId: string, state: "placed" | "removed" | null) => void;
 }
 
 const shallowArrayEqual = (
@@ -87,10 +98,15 @@ const shallowArrayEqual = (
 };
 
 const boardCollisionDetection: CollisionDetection = (args) => {
-  const within = pointerWithin(args);
-  if (within.length) return within;
+  const directHits = pointerWithin(args);
+  if (directHits.length) return directHits;
 
-  const { collisionRect, droppableRects } = args;
+  const intersections = rectIntersection(args);
+  if (intersections.length) {
+    return intersections;
+  }
+
+  const { collisionRect, droppableRects, pointerCoordinates } = args;
   if (!collisionRect) return [];
 
   const dragCenter = {
@@ -98,34 +114,41 @@ const boardCollisionDetection: CollisionDetection = (args) => {
     y: collisionRect.top + collisionRect.height / 2,
   };
 
-  const distances: { id: UniqueIdentifier; value: number }[] = [];
+  const candidates: { id: UniqueIdentifier; value: number }[] = [];
   droppableRects.forEach((rect, id) => {
     const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     const dx = dragCenter.x - dropCenter.x;
     const dy = dragCenter.y - dropCenter.y;
-    distances.push({ id, value: Math.hypot(dx, dy) });
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    const axisAllowanceX = Math.max(rect.width * 0.45, 36);
+    const axisAllowanceY = Math.max(rect.height * 0.4, 42);
+    if (absDx > axisAllowanceX || absDy > axisAllowanceY) {
+      return;
+    }
+
+    const radialAllowance = Math.max(Math.min(rect.width, rect.height) * 0.55, 52);
+    const distance = Math.hypot(dx, dy);
+    if (distance > radialAllowance) {
+      return;
+    }
+
+    candidates.push({ id, value: distance });
   });
 
-  distances.sort((a, b) => a.value - b.value);
-
-  const best = distances[0];
-  if (best) {
-    const rect = droppableRects.get(best.id);
-    if (rect) {
-      const dynamicThreshold = Math.max(60, Math.min(140, rect.width * 0.6));
-      if (best.value <= dynamicThreshold) {
-        const collision: Collision = { id: best.id, data: { value: best.value } };
-        return [collision];
-      }
-    }
+  if (candidates.length) {
+    candidates.sort((a, b) => a.value - b.value);
+    const best = candidates[0];
+    const collision: Collision = { id: best.id, data: { value: best.value } };
+    return [collision];
   }
 
-  const intersections = rectIntersection(args);
-  if (intersections.length) {
-    return intersections;
+  if (!pointerCoordinates) {
+    return closestCenter(args);
   }
 
-  return closestCenter(args);
+  return [];
 };
 
 
@@ -148,6 +171,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   revealedAt,
   uiRevealPending = false,
   dealPlayers = null,
+  onOptimisticProposalChange,
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(roomId, roomStatus, uiRevealPending ?? false);
 
@@ -185,28 +209,439 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
   const prefersReducedMotion = useReducedMotionPreference();
 
+  const [magnetState, setMagnetState] = useState<MagnetResult>(() => createInitialMagnetState());
+  const magnetStateRef = useRef(magnetState);
+  useEffect(() => {
+    magnetStateRef.current = magnetState;
+  }, [magnetState]);
+  const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
+  const magnetTargetRef = useRef<string | null>(null);
+  const magnetHighlightTimeoutRef = useRef<number | null>(null);
+  const pendingMagnetStateRef = useRef<MagnetResult | null>(null);
+  const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
+  const magnetFlushFrameRef = useRef<number | null>(null);
+  const magnetResetTimeoutRef = useRef<number | null>(null);
+
   const pointerProfile = usePointerProfile();
-  const {
-    magnetState,
-    magnetTargetId,
-    handleBoardRef,
-    magnetAwareDragMove,
-    resetMagnet,
-    enqueueMagnetUpdate,
-    dropAnimation,
-    sensors,
-    dragBoostEnabled,
-    setDragBoostEnabled,
-    dragActivationStartRef,
-    boardContainerRef,
-    lastDragPositionRef,
-    computeMagnetSnap,
-  } = useDragMagnetController({
-    prefersReducedMotion,
-    pointerProfile,
-    roomStatus,
-    resolveMode,
-  });
+
+  const magnetConfig = useMemo(
+    () => {
+      const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
+      const snapRadius = prefersReducedMotion ? 96 : isTouchLike ? 168 : 132;
+      const snapThreshold = isTouchLike ? (prefersReducedMotion ? 34 : 30) : 24;
+      const pullExponent = prefersReducedMotion ? 1.5 : isTouchLike ? 2.35 : 1.85;
+      const settleProgress = prefersReducedMotion ? 0.9 : 0.8;
+      const overshootStart = prefersReducedMotion ? 0.95 : 0.88;
+      const overshootRatio = prefersReducedMotion ? 0.04 : isTouchLike ? 0.07 : 0.1;
+      const maxOvershootPx = prefersReducedMotion ? 6 : 12;
+      return {
+        snapRadius,
+        snapThreshold,
+        pullExponent,
+        settleProgress,
+        overshootStart,
+        overshootRatio,
+        maxOvershootPx,
+        isTouch: isTouchLike,
+      };
+    },
+    [
+      prefersReducedMotion,
+      pointerProfile.isCoarsePointer,
+      pointerProfile.isTouchOnly,
+    ]
+  );
+  const magnetConfigRef = useRef(magnetConfig);
+  useEffect(() => {
+    magnetConfigRef.current = magnetConfig;
+  }, [magnetConfig]);
+
+  const flushMagnetUpdates = useCallback(() => {
+    const nextState = pendingMagnetStateRef.current;
+    const nextTarget = pendingMagnetTargetIdRef.current;
+    pendingMagnetStateRef.current = null;
+    pendingMagnetTargetIdRef.current = undefined;
+    if (nextState) {
+      magnetStateRef.current = nextState;
+      setMagnetState(nextState);
+    }
+    if (nextTarget !== undefined) {
+      magnetTargetRef.current = nextTarget;
+      setMagnetTargetId(nextTarget);
+    }
+  }, []);
+
+  const scheduleMagnetFlush = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const immediate = options?.immediate ?? false;
+      if (immediate || typeof window === "undefined") {
+        if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
+          window.cancelAnimationFrame(magnetFlushFrameRef.current);
+        }
+        magnetFlushFrameRef.current = null;
+        flushMagnetUpdates();
+        return;
+      }
+      if (magnetFlushFrameRef.current !== null) return;
+      magnetFlushFrameRef.current = window.requestAnimationFrame(() => {
+        magnetFlushFrameRef.current = null;
+        flushMagnetUpdates();
+      });
+    },
+    [flushMagnetUpdates]
+  );
+
+  const enqueueMagnetUpdate = useCallback(
+    (update: { state?: MagnetResult; target?: string | null; immediate?: boolean }) => {
+      let didQueue = false;
+      if (update.state) {
+        pendingMagnetStateRef.current = update.state;
+        didQueue = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(update, "target")) {
+        pendingMagnetTargetIdRef.current = update.target;
+        didQueue = true;
+      }
+      if (!didQueue) return;
+      scheduleMagnetFlush({ immediate: update.immediate });
+    },
+    [scheduleMagnetFlush]
+  );
+
+  const getProjectedMagnetTarget = useCallback(() => {
+    return pendingMagnetTargetIdRef.current !== undefined
+      ? pendingMagnetTargetIdRef.current
+      : magnetTargetRef.current;
+  }, []);
+
+  const boardContainerRef = useRef<HTMLDivElement | null>(null);
+  const [boardElement, setBoardElement] = useState<HTMLDivElement | null>(null);
+  const boardBoundsRef = useRef<DOMRect | null>(null);
+  const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
+  const dragMoveRafRef = useRef<number | null>(null);
+  const dragActivationStartRef = useRef<number | null>(null);
+  const [dragBoostEnabled, setDragBoostEnabled] = useState(false);
+
+  const updateBoardBounds = useCallback(() => {
+    if (!boardContainerRef.current) return;
+    boardBoundsRef.current = boardContainerRef.current.getBoundingClientRect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (dragMoveRafRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(dragMoveRafRef.current);
+        dragMoveRafRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !boardElement) return;
+    updateBoardBounds();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      updateBoardBounds();
+    });
+    observer.observe(boardElement);
+    return () => {
+      observer.disconnect();
+    };
+  }, [boardElement, updateBoardBounds]);
+
+  const handleBoardRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      boardContainerRef.current = node;
+      setBoardElement(node);
+      if (node) {
+        updateBoardBounds();
+      }
+    },
+    [updateBoardBounds]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !boardElement) return;
+    const handlePointerDown = () => {
+      if (typeof performance !== "undefined") {
+        dragActivationStartRef.current = performance.now();
+      }
+    };
+    const clearPointerClock = () => {
+      dragActivationStartRef.current = null;
+    };
+    boardElement.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    window.addEventListener("pointerup", clearPointerClock);
+    window.addEventListener("pointercancel", clearPointerClock);
+    return () => {
+      boardElement.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", clearPointerClock);
+      window.removeEventListener("pointercancel", clearPointerClock);
+    };
+  }, [boardElement]);
+
+  useEffect(() => {
+    if (roomStatus !== "clue" && dragBoostEnabled) {
+      setDragBoostEnabled(false);
+      dragActivationStartRef.current = null;
+    }
+  }, [roomStatus, dragBoostEnabled]);
+
+  const resetMagnet = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const immediate = options?.immediate ?? false;
+      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const projectedTarget = getProjectedMagnetTarget();
+      const needsStateReset =
+        projectedState.dx !== 0 ||
+        projectedState.dy !== 0 ||
+        projectedState.strength !== 0 ||
+        projectedState.shouldSnap;
+      const needsTargetReset = projectedTarget !== null;
+
+      if (!needsStateReset && !needsTargetReset) {
+        return;
+      }
+
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+
+      enqueueMagnetUpdate({
+        state: needsStateReset ? createInitialMagnetState() : undefined,
+        target: needsTargetReset ? null : undefined,
+        immediate,
+      });
+    },
+    [enqueueMagnetUpdate, getProjectedMagnetTarget]
+  );
+
+  const queueMagnetReset = useCallback(
+    (delayMs: number) => {
+      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
+        window.clearTimeout(magnetResetTimeoutRef.current);
+        magnetResetTimeoutRef.current = null;
+      }
+      if (delayMs <= 0 || typeof window === "undefined") {
+        resetMagnet({ immediate: true });
+        return;
+      }
+      magnetResetTimeoutRef.current = window.setTimeout(() => {
+        magnetResetTimeoutRef.current = null;
+        resetMagnet({ immediate: true });
+      }, delayMs);
+    },
+    [resetMagnet]
+  );
+
+  const scheduleMagnetTarget = useCallback(
+    (nextId: string | null) => {
+      const projected = getProjectedMagnetTarget();
+      if (projected === nextId) return;
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+
+      if (typeof window === "undefined") {
+        enqueueMagnetUpdate({ target: nextId, immediate: true });
+        return;
+      }
+
+      const wasIdle = projected === null;
+      const delay = nextId === null || wasIdle ? 0 : prefersReducedMotion ? 36 : 90;
+      if (delay <= 0) {
+        enqueueMagnetUpdate({ target: nextId });
+        return;
+      }
+
+      magnetHighlightTimeoutRef.current = window.setTimeout(() => {
+        magnetHighlightTimeoutRef.current = null;
+        enqueueMagnetUpdate({ target: nextId });
+      }, delay);
+    },
+    [enqueueMagnetUpdate, getProjectedMagnetTarget, prefersReducedMotion]
+  );
+
+  const releaseMagnet = useCallback(() => {
+    scheduleMagnetTarget(null);
+    const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+    if (
+      projectedState.dx !== 0 ||
+      projectedState.dy !== 0 ||
+      projectedState.strength > 0 ||
+      projectedState.shouldSnap
+    ) {
+      enqueueMagnetUpdate({ state: createInitialMagnetState() });
+    }
+  }, [enqueueMagnetUpdate, scheduleMagnetTarget]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(magnetHighlightTimeoutRef.current);
+        magnetHighlightTimeoutRef.current = null;
+      }
+      if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(magnetFlushFrameRef.current);
+        magnetFlushFrameRef.current = null;
+      }
+      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
+        window.clearTimeout(magnetResetTimeoutRef.current);
+        magnetResetTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const dropAnimation = useMemo<DropAnimation>(() => {
+    if (prefersReducedMotion) {
+      return { duration: 110, easing: "linear" };
+    }
+    if (magnetState.shouldSnap) {
+      return {
+        duration: 180,
+        easing: "linear",
+        keyframes: ({ transform }) => {
+          const target = CSS.Transform.toString(transform.final);
+          return [
+            { transform: `${target} scale(0.98)` },
+            { transform: `${target} scale(1.06)` },
+            { transform: `${target} scale(1.0)` },
+          ];
+        },
+      };
+    }
+    return { duration: 220, easing: UI_TOKENS.EASING.standard };
+  }, [magnetState.shouldSnap, prefersReducedMotion]);
+
+  const mouseSensorOptions = useMemo(
+    () => ({
+      activationConstraint: {
+        distance: dragBoostEnabled ? 1 : pointerProfile.isCoarsePointer ? 6 : 2,
+      },
+    }),
+    [pointerProfile.isCoarsePointer, dragBoostEnabled]
+  );
+
+  const touchSensorOptions = useMemo(() => {
+    const base = pointerProfile.isTouchOnly
+      ? {
+          delay: 45,
+          tolerance: 26,
+        }
+      : {
+          delay: 160,
+          tolerance: 8,
+        };
+    if (!dragBoostEnabled) {
+      return { activationConstraint: base };
+    }
+    return {
+      activationConstraint: {
+        delay: Math.max(12, Math.round(base.delay * 0.35)),
+        tolerance: base.tolerance + 6,
+      },
+    };
+  }, [pointerProfile.isTouchOnly, dragBoostEnabled]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, mouseSensorOptions),
+    useSensor(TouchSensor, touchSensorOptions),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const processDragMoveFrame = useCallback(
+    (event: DragMoveEvent) => {
+      if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
+        return;
+      }
+
+      const { over, active } = event;
+      const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
+      if (activeRect) {
+        lastDragPositionRef.current = {
+          x: activeRect.left + activeRect.width / 2,
+          y: activeRect.top + activeRect.height / 2,
+        };
+      }
+
+      const dragPoint = lastDragPositionRef.current;
+      const boardBounds = boardBoundsRef.current;
+      if (
+        boardBounds &&
+        dragPoint &&
+        (dragPoint.y < boardBounds.top - MAGNET_IDLE_MARGIN_PX ||
+          dragPoint.y > boardBounds.bottom + MAGNET_IDLE_MARGIN_PX)
+      ) {
+        releaseMagnet();
+        return;
+      }
+
+      if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
+        releaseMagnet();
+        return;
+      }
+
+      scheduleMagnetTarget(String(over.id));
+
+      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const magnetResult = computeMagnetTransform(over.rect, activeRect, {
+        ...magnetConfigRef.current,
+        projectedOffset: {
+          dx: projectedState.dx,
+          dy: projectedState.dy,
+        },
+      });
+
+      const previous = projectedState;
+      const deltaX = Math.abs(previous.dx - magnetResult.dx);
+      const deltaY = Math.abs(previous.dy - magnetResult.dy);
+      const deltaStrength = Math.abs(previous.strength - magnetResult.strength);
+      if (
+        deltaX < 0.5 &&
+        deltaY < 0.5 &&
+        deltaStrength < 0.05 &&
+        previous.shouldSnap === magnetResult.shouldSnap
+      ) {
+        return;
+      }
+
+      enqueueMagnetUpdate({ state: magnetResult });
+    },
+    [enqueueMagnetUpdate, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
+  );
+
+  const flushPendingDragMove = useCallback(() => {
+    dragMoveRafRef.current = null;
+    const pending = latestDragMoveEventRef.current;
+    if (!pending) {
+      return;
+    }
+    latestDragMoveEventRef.current = null;
+    processDragMoveFrame(pending);
+  }, [processDragMoveFrame]);
+
+  const magnetAwareDragMove = useCallback(
+    (event: DragMoveEvent) => {
+      if (typeof window === "undefined") {
+        processDragMoveFrame(event);
+        return;
+      }
+
+      latestDragMoveEventRef.current = event;
+      if (dragMoveRafRef.current !== null) {
+        return;
+      }
+      dragMoveRafRef.current = window.requestAnimationFrame(flushPendingDragMove);
+    },
+    [flushPendingDragMove, processDragMoveFrame]
+  );
 
   useEffect(() => {
     setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
@@ -571,13 +1006,26 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [resetMagnet, playDragPickup]
   );
 
-  const clearActive = useCallback(() => {
-    unstable_batchedUpdates(() => {
-      setIsOver(false);
-      setActiveId(null);
-    });
-    resetMagnet({ immediate: true });
-  }, [resetMagnet, setIsOver]);
+  const clearActive = useCallback(
+    (options?: { delayMagnetReset?: boolean }) => {
+      unstable_batchedUpdates(() => {
+        setIsOver(false);
+        setActiveId(null);
+      });
+      const shouldDelay = options?.delayMagnetReset ?? false;
+      if (!shouldDelay) {
+        queueMagnetReset(0);
+        return;
+      }
+      const baseDelay = prefersReducedMotion
+        ? 130
+        : magnetStateRef.current.shouldSnap
+          ? 220
+          : 260;
+      queueMagnetReset(baseDelay);
+    },
+    [prefersReducedMotion, queueMagnetReset, setIsOver]
+  );
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -611,18 +1059,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           lastPosition.y >= boardRect.bottom + 6 &&
           lastPosition.x >= boardRect.left - 16 &&
           lastPosition.x <= boardRect.right + 16;
-
-        if (isReturnTarget || fallbackReturn) {
-          if (!alreadyInProposal) {
-            playDropInvalid();
-            return;
-          }
-          if (activePlayerId !== meId) {
-            playDropInvalid();
-            notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
-            return;
-          }
+        const initiateReturn = () => {
+          onOptimisticProposalChange?.(activePlayerId, "removed");
           returnCardToWaiting(activePlayerId).catch((error) => {
+            onOptimisticProposalChange?.(activePlayerId, null);
             logError("central-card-board", "return-card-to-waiting", error);
             playDropInvalid();
             const message =
@@ -637,6 +1077,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               type: "error",
             });
           });
+        };
+
+        if (isReturnTarget || fallbackReturn) {
+          if (!alreadyInProposal) {
+            playDropInvalid();
+            return;
+          }
+          if (activePlayerId !== meId) {
+            playDropInvalid();
+            notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
+            return;
+          }
+          initiateReturn();
           return;
         }
 
@@ -660,26 +1113,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
             return;
           }
-          returnCardToWaiting(activePlayerId).catch((error) => {
-            logError("central-card-board", "return-card-to-waiting", error);
-            playDropInvalid();
-            const message =
-              error instanceof Error
-                ? error.message
-                : error !== null && error !== undefined
-                  ? String(error)
-                  : "";
-            notify({
-              title: "カードを戻せませんでした",
-              description: message || undefined,
-              type: "error",
-            });
-          });
+          initiateReturn();
           return;
         }
 
         if (isSlotTarget && overRect) {
-          magnetResult = computeMagnetSnap(overRect, activeRect);
+          magnetResult = computeMagnetTransform(overRect, activeRect, {
+            ...magnetConfigRef.current,
+            projectedOffset: {
+              dx: magnetStateRef.current.dx,
+              dy: magnetStateRef.current.dy,
+            },
+          });
           let slotIndex = parseInt(overId.split("-")[1], 10);
           if (!Number.isNaN(slotIndex)) {
             const maxSlots = Math.max(0, slotCountDragging - 1);
@@ -710,6 +1155,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 optimisticMode: DROP_OPTIMISTIC_ENABLED,
                 index: slotIndex,
               });
+              onOptimisticProposalChange?.(activePlayerId, "placed");
               updatePendingState((prev) => {
                 previousPending = prev.slice();
                 const next = [...prev];
@@ -742,6 +1188,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result });
                 if (result === "noop") {
                   dropSession?.complete("noop");
+                  onOptimisticProposalChange?.(activePlayerId, null);
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
                     updatePendingState(() => snapshot);
@@ -762,6 +1209,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
                 dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
+                onOptimisticProposalChange?.(activePlayerId, null);
                 if (previousPending !== undefined) {
                   const snapshot = previousPending.slice();
                   updatePendingState(() => snapshot);
@@ -788,7 +1236,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }
       } finally {
         enqueueMagnetUpdate({ state: magnetResult, immediate: true });
-        clearActive();
+        clearActive({ delayMagnetReset: true });
       }
     },
     [

@@ -3323,6 +3323,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           revealedAt={room.result?.revealedAt ?? null}
           uiRevealPending={room?.ui?.revealPending === true}
           dealPlayers={dealPlayers}
+          onOptimisticProposalChange={updateOptimisticProposalOverride}
         />
       </Box>
     </Box>
