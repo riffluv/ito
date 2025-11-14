@@ -1,6 +1,6 @@
 // リビール演出のテンポ調整を集約（すべての値は ms 単位）。
 export const REVEAL_FIRST_DELAY = 220; // 「3,2,1」直後の短いタメ
-export const REVEAL_STEP_DELAY = 780; // 1枚ごとの間合い（表面の滞留＋短い間）
+export const REVEAL_STEP_DELAY = 520; // 1枚ごとの間合い（表面の滞留＋短い間）
 export const REVEAL_LINGER = 520; // リビール完了前に一拍置く待ち
 export const RESULT_VISIBLE_MS = 4200; // 結果画面を表示し続ける時間
 export const FLIP_DURATION_MS = 320; // 3D フリップ自体の所要時間
@@ -11,7 +11,7 @@ export const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 120); // 視�
 
 // シーケンシャルモード用（sort-submit のリビール間隔に準拠）。
 export const SEQ_FIRST_CLUE_MS = 260;
-export const SEQ_FLIP_INTERVAL_MS = 780;
+export const SEQ_FLIP_INTERVAL_MS = REVEAL_STEP_DELAY;
 
 // 共有で使うイージング曲線。
 export const CARD_FLIP_EASING = "cubic-bezier(0.23, 1, 0.32, 1)";
