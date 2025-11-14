@@ -270,6 +270,10 @@ interface MiniHandDockProps {
   presenceReady?: boolean;
   phaseMessage?: string | null;
   showtimeIntentHandlers?: ShowtimeIntentHandlers;
+  updateOptimisticProposalOverride?: (
+    playerId: string,
+    state: "placed" | "removed" | null
+  ) => void;
 }
 
 export default function MiniHandDock(props: MiniHandDockProps) {
@@ -297,6 +301,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     presenceReady = true,
     phaseMessage,
     showtimeIntentHandlers,
+    updateOptimisticProposalOverride,
   } = props;
 
   const serviceWorkerUpdateState = useServiceWorkerUpdate();
@@ -430,6 +435,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     inputRef,
     onFeedback: setInlineFeedback,
     isRevealAnimating,
+    updateOptimisticProposal: updateOptimisticProposalOverride,
   });
 
   const {
