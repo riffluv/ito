@@ -95,11 +95,30 @@ export function sanitizeRoom(input: unknown): RoomDoc {
       if (!raw || typeof raw !== "object") {
         return {};
       }
+      const typed = raw as Record<string, unknown> & NonNullable<RoomDoc["ui"]>;
       const next: NonNullable<RoomDoc["ui"]> = {};
-      if (raw.recallOpen === true) {
+      if (typed.recallOpen === true) {
         next.recallOpen = true;
-      } else if (raw.recallOpen === false) {
+      } else if (typed.recallOpen === false) {
         next.recallOpen = false;
+      }
+      if (typed.revealPending === true) {
+        next.revealPending = true;
+      } else if (typed.revealPending === false) {
+        next.revealPending = false;
+      }
+      if (typed.roundPreparing === true) {
+        next.roundPreparing = true;
+      } else if (typed.roundPreparing === false) {
+        next.roundPreparing = false;
+      }
+      if ("revealBeginAt" in typed) {
+        const value = typed.revealBeginAt;
+        if (value && typeof value === "object") {
+          next.revealBeginAt = value;
+        } else if (value === null) {
+          next.revealBeginAt = null;
+        }
       }
       return Object.keys(next).length > 0 ? { ui: next } : {};
     })(),
