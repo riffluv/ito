@@ -3078,6 +3078,70 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
+  const [optimisticProposalOverrides, setOptimisticProposalOverrides] = useState<
+    Record<string, "placed" | "removed">
+  >({});
+  const sanitizedServerProposal = useMemo(() => {
+    if (!Array.isArray(orderProposal)) {
+      return [];
+    }
+    return (orderProposal as (string | null | undefined)[])
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((id) => id.length > 0);
+  }, [orderProposal]);
+  const updateOptimisticProposalOverride = useCallback(
+    (playerId: string, state: "placed" | "removed" | null) => {
+      if (!playerId) return;
+      setOptimisticProposalOverrides((prev) => {
+        const current = prev[playerId] ?? null;
+        if (current === state || (state === null && !(playerId in prev))) {
+          return prev;
+        }
+        if (state === null) {
+          const next = { ...prev };
+          delete next[playerId];
+          return next;
+        }
+        return { ...prev, [playerId]: state };
+      });
+    },
+    []
+  );
+  useEffect(() => {
+    if (!Object.keys(optimisticProposalOverrides).length) return;
+    const hasServerUpdate = new Set(sanitizedServerProposal);
+    let changed = false;
+    const next: Record<string, "placed" | "removed"> = {};
+    Object.entries(optimisticProposalOverrides).forEach(([playerId, state]) => {
+      const presentOnServer = hasServerUpdate.has(playerId);
+      if ((state === "placed" && presentOnServer) || (state === "removed" && !presentOnServer)) {
+        changed = true;
+        return;
+      }
+      next[playerId] = state;
+    });
+    if (changed) {
+      setOptimisticProposalOverrides(next);
+    }
+  }, [sanitizedServerProposal, optimisticProposalOverrides]);
+  useEffect(() => {
+    if (room?.status === "clue") return;
+    setOptimisticProposalOverrides((prev) => (Object.keys(prev).length ? {} : prev));
+  }, [room?.status]);
+  const proposalForUi = useMemo(() => {
+    if (!Object.keys(optimisticProposalOverrides).length) {
+      return sanitizedServerProposal;
+    }
+    const filtered = sanitizedServerProposal.filter(
+      (id) => optimisticProposalOverrides[id] !== "removed"
+    );
+    Object.entries(optimisticProposalOverrides).forEach(([playerId, state]) => {
+      if (state === "placed" && !filtered.includes(playerId)) {
+        filtered.push(playerId);
+      }
+    });
+    return filtered;
+  }, [sanitizedServerProposal, optimisticProposalOverrides]);
 
   const slotCount = useMemo(() => computeSlotCount({
     status: room?.status || "waiting",
@@ -3216,7 +3280,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           roomStatus={room.status}
           cluesReady={allCluesReady}
           failed={!!room.order?.failed}
-          proposal={room.order?.proposal || []}
+          proposal={proposalForUi}
           resolveMode={room.options?.resolveMode}
           displayMode={getDisplayMode(room)}
           orderNumbers={room.order?.numbers ?? {}}
@@ -3389,7 +3453,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       roomId={roomId}
       me={me}
       resolveMode={room.options?.resolveMode}
-      proposal={room.order?.proposal || []}
+      proposal={proposalForUi}
       eligibleIds={eligibleIds}
       cluesReady={allCluesReady}
       isHost={isHost}
@@ -3409,6 +3473,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       hostClaimStatus={hostClaimStatus}
       phaseMessage={phaseMessage}
       showtimeIntentHandlers={showtimeIntentHandlers}
+      updateOptimisticProposalOverride={updateOptimisticProposalOverride}
     />
   ) : undefined;
 

@@ -41,6 +41,7 @@ type UseCardSubmissionOptions = {
   inputRef: RefObject<HTMLElement>;
   onFeedback?: (payload: { message: string; tone: "info" | "success" } | null) => void;
   isRevealAnimating?: boolean;
+  updateOptimisticProposal?: (playerId: string, state: "placed" | "removed" | null) => void;
 };
 
 export function useCardSubmission({
@@ -55,6 +56,7 @@ export function useCardSubmission({
   inputRef,
   onFeedback,
   isRevealAnimating,
+  updateOptimisticProposal,
 }: UseCardSubmissionOptions) {
   const actualResolveMode = normalizeResolveMode(resolveMode);
   const isSortMode = isSortSubmit(actualResolveMode);
@@ -99,14 +101,27 @@ export function useCardSubmission({
   );
 
   const canSubmit = clueEditable && canSubmitBase;
+  const [actionInFlight, setActionInFlight] = useState(false);
+  useEffect(() => {
+    setActionInFlight(false);
+  }, [playerId]);
   const canClickProposalButton = useMemo(() => {
+    if (actionInFlight) return false;
     if (!playerId) return false;
     if (!clueEditable) return false;
     if (isSortMode) {
       return placed || canSubmitBase;
     }
     return canSubmit;
-  }, [playerId, clueEditable, isSortMode, placed, canSubmitBase, canSubmit]);
+  }, [
+    actionInFlight,
+    playerId,
+    clueEditable,
+    isSortMode,
+    placed,
+    canSubmitBase,
+    canSubmit,
+  ]);
 
   const actionLabel = isSortMode && placed ? "戻す" : "出す";
 
@@ -119,8 +134,16 @@ export function useCardSubmission({
     submitHintShownRef.current = false;
     setShouldShowSubmitHint(false);
   }, []);
+  const applyOptimisticProposal = useCallback(
+    (state: "placed" | "removed" | null) => {
+      if (!playerId || !updateOptimisticProposal) return;
+      updateOptimisticProposal(playerId, state);
+    },
+    [playerId, updateOptimisticProposal]
+  );
 
   const handleSubmit = useCallback(async () => {
+    if (actionInFlight) return;
     if (!playerId || !clueEditable) return;
 
     const removing = isSortMode && placed;
@@ -130,7 +153,9 @@ export function useCardSubmission({
       if (!canSubmit || !cluesReady) return;
     }
 
+    setActionInFlight(true);
     let didSucceed = false;
+    let optimisticState: "placed" | "removed" | null = null;
     const actionName = isSortMode
       ? removing
         ? "ui.card.remove"
@@ -139,6 +164,8 @@ export function useCardSubmission({
     try {
       if (isSortMode) {
         if (removing) {
+          optimisticState = "removed";
+          applyOptimisticProposal("removed");
           traceAction(actionName, { roomId, playerId });
           const removalPromise = removeCardFromProposal(roomId, playerId);
           playCardPlace();
@@ -154,11 +181,14 @@ export function useCardSubmission({
           });
           didSucceed = true;
         } else {
+          optimisticState = "placed";
+          applyOptimisticProposal("placed");
           traceAction(actionName, { roomId, playerId });
           const submitPromise = addCardToProposal(roomId, playerId);
           playCardPlace();
           const result = await submitPromise;
           if (result === "noop") {
+            applyOptimisticProposal(null);
             onFeedback?.({
               message: "カードは既に提出済みです",
               tone: "info",
@@ -172,6 +202,8 @@ export function useCardSubmission({
           didSucceed = true;
         }
       } else {
+        optimisticState = "placed";
+        applyOptimisticProposal("placed");
         traceAction(actionName, { roomId, playerId });
         const commitPromise = commitPlayFromClue(roomId, playerId);
         playCardPlace();
@@ -182,6 +214,9 @@ export function useCardSubmission({
     } catch (error: unknown) {
       traceError(actionName, error, { roomId, playerId });
       playDropInvalid();
+      if (optimisticState) {
+        applyOptimisticProposal(null);
+      }
       const label = removing ? "カードを戻す" : "カードを出す";
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError(label);
@@ -200,12 +235,15 @@ export function useCardSubmission({
           type: "error",
         });
       }
+    } finally {
+      setActionInFlight(false);
     }
 
     if (didSucceed) {
       resetSubmitHint();
     }
   }, [
+    actionInFlight,
     playerId,
     clueEditable,
     isSortMode,
@@ -217,6 +255,7 @@ export function useCardSubmission({
     playDropInvalid,
     onFeedback,
     resetSubmitHint,
+    applyOptimisticProposal,
   ]);
 
   const isSubmitHintEligible =
