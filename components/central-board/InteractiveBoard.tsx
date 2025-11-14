@@ -57,11 +57,27 @@ function createMagnetModifier(
       liftAfterMagnet = liftBaseline * (1 - liftNeutralizer);
     }
 
+    // 磁力の強さを距離に応じて調整（吸着後も引き離せるように）
+    // ドキュメント推奨: スナップ距離24px以内で強い吸着、それ以外は軽い引き寄せ
+    const snapDistance = prefersReducedMotion ? 20 : 24;
+    const isVeryClose = Number.isFinite(magnetState.distance) && magnetState.distance < snapDistance;
+
+    // 距離が近い場合のみ完全吸着、それ以外は段階的に弱める
+    let magnetStrength = 0.3; // デフォルト: 軽い引き寄せ
+    if (isVeryClose) {
+      magnetStrength = 1.0; // 完全吸着
+    } else if (magnetState.shouldSnap) {
+      magnetStrength = 0.5; // 中程度の磁力（引き離しやすい）
+    }
+
     // DragOverlay の transform に磁力補正を加算
+    const magnetDx = magnetState.dx * magnetStrength;
+    const magnetDy = magnetState.dy * magnetStrength;
+
     return {
       ...transform,
-      x: transform.x + magnetState.dx,
-      y: transform.y + magnetState.dy - liftAfterMagnet,
+      x: transform.x + magnetDx,
+      y: transform.y + magnetDy - liftAfterMagnet,
       scaleX: 1,
       scaleY: 1,
     };
