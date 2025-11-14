@@ -51,8 +51,21 @@ export function useDragMagnetController({
     const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
     const snapRadius = prefersReducedMotion ? 96 : isTouchLike ? 168 : 132;
     const snapThreshold = isTouchLike ? (prefersReducedMotion ? 34 : 30) : 24;
-    const maxOffset = prefersReducedMotion ? 18 : 34;
-    return { snapRadius, snapThreshold, maxOffset, isTouch: isTouchLike };
+    const pullExponent = prefersReducedMotion ? 1.5 : isTouchLike ? 2.35 : 1.85;
+    const settleProgress = prefersReducedMotion ? 0.9 : 0.8;
+    const overshootStart = prefersReducedMotion ? 0.95 : 0.88;
+    const overshootRatio = prefersReducedMotion ? 0.04 : isTouchLike ? 0.07 : 0.1;
+    const maxOvershootPx = prefersReducedMotion ? 6 : 12;
+    return {
+      snapRadius,
+      snapThreshold,
+      pullExponent,
+      settleProgress,
+      overshootStart,
+      overshootRatio,
+      maxOvershootPx,
+      isTouch: isTouchLike,
+    };
   }, [prefersReducedMotion, pointerProfile.isCoarsePointer, pointerProfile.isTouchOnly]);
   const magnetConfigRef = useRef(magnetConfig);
   useEffect(() => {
@@ -370,9 +383,16 @@ export function useDragMagnetController({
 
       scheduleMagnetTarget(String(over.id));
 
-      const magnetResult = computeMagnetTransform(over.rect, activeRect, magnetConfigRef.current);
+      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const magnetResult = computeMagnetTransform(over.rect, activeRect, {
+        ...magnetConfigRef.current,
+        projectedOffset: {
+          dx: projectedState.dx,
+          dy: projectedState.dy,
+        },
+      });
 
-      const previous = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const previous = projectedState;
       const deltaX = Math.abs(previous.dx - magnetResult.dx);
       const deltaY = Math.abs(previous.dy - magnetResult.dy);
       const deltaStrength = Math.abs(previous.strength - magnetResult.strength);
@@ -421,7 +441,13 @@ export function useDragMagnetController({
       overRect: Parameters<typeof computeMagnetTransform>[0],
       activeRect: Parameters<typeof computeMagnetTransform>[1]
     ) => {
-      return computeMagnetTransform(overRect, activeRect, magnetConfigRef.current);
+      return computeMagnetTransform(overRect, activeRect, {
+        ...magnetConfigRef.current,
+        projectedOffset: {
+          dx: magnetStateRef.current.dx,
+          dy: magnetStateRef.current.dy,
+        },
+      });
     },
     []
   );

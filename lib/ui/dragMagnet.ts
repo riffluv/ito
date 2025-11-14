@@ -14,6 +14,26 @@ export interface MagnetConfig {
    */
   maxOffset?: number;
   /**
+   * 吸着力の立ち上がりカーブ。数値が大きいほど終盤で一気に引き寄せる。
+   */
+  pullExponent?: number;
+  /**
+   * どの程度近づいたらスロット中心へ完全に寄せるか（0〜1）。
+   */
+  settleProgress?: number;
+  /**
+   * オーバーシュートを開始する強さ（0〜1）。
+   */
+  overshootStart?: number;
+  /**
+   * オーバーシュートの割合（残距離に対する割合）。
+   */
+  overshootRatio?: number;
+  /**
+   * オーバーシュートの最大距離（px）。
+   */
+  maxOvershootPx?: number;
+  /**
    * 補正の緩和カーブ。0.0〜1.0 を入力し 0.0〜1.0 を返す関数。
    * デフォルト: easeOutBack風のオーバーシュート付き
    */
@@ -22,6 +42,14 @@ export interface MagnetConfig {
    * デバイス種別（タッチ時は閾値を拡大）
    */
   isTouch?: boolean;
+  /**
+   * 既に適用済みのオフセット（DragOverlay側での補正量）を推定する値。
+   * shouldSnap や pullRatio の判定を視覚上の位置に合わせる用途。
+   */
+  projectedOffset?: {
+    dx: number;
+    dy: number;
+  };
 }
 
 export interface MagnetResult {
@@ -51,6 +79,10 @@ const easeOutBack = (t: number, overshoot: number = 1.70158): number => {
 
 const defaultEase = (t: number) => easeOutBack(t, 1.7);
 
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
+
+const easeOutWithExponent = (t: number, exponent: number) => 1 - Math.pow(1 - t, exponent);
+
 /**
  * ドラッグ中の要素と候補スロットの距離から吸着補正量を計算する。
  *
@@ -66,7 +98,6 @@ export function computeMagnetTransform(
 ): MagnetResult {
   const isTouch = config.isTouch ?? false;
   const radius = Math.max(config.snapRadius ?? 120, 1);
-  const maxOffset = config.maxOffset ?? 36;
   const ease = config.ease ?? defaultEase;
   // 資料推奨値: PC 24px, タッチ 30px
   const threshold = config.snapThreshold ?? (isTouch ? 30 : 24);
@@ -85,6 +116,10 @@ export function computeMagnetTransform(
   const overCenterY = overRect.top + overRect.height / 2;
   const activeCenterX = activeRect.left + activeRect.width / 2;
   const activeCenterY = activeRect.top + activeRect.height / 2;
+  const projectedOffsetX = config.projectedOffset?.dx ?? 0;
+  const projectedOffsetY = config.projectedOffset?.dy ?? 0;
+  const visualCenterX = activeCenterX + projectedOffsetX;
+  const visualCenterY = activeCenterY + projectedOffsetY;
 
   const diffX = overCenterX - activeCenterX;
   const diffY = overCenterY - activeCenterY;
@@ -100,16 +135,69 @@ export function computeMagnetTransform(
     };
   }
 
-  const normalized = Math.min(Math.max(1 - distance / radius, 0), 1);
+  const normalized = clamp01(1 - distance / radius);
   const strength = ease(normalized);
-  const clampedStrength = Math.min(Math.max(strength, 0), 1);
+  const clampedStrength = clamp01(strength);
+  const safeDistance = Math.max(distance, 1);
+
+  const overRight = overRect.left + overRect.width;
+  const overBottom = overRect.top + overRect.height;
+  const visualInsideSlotBounds =
+    visualCenterX >= overRect.left &&
+    visualCenterX <= overRight &&
+    visualCenterY >= overRect.top &&
+    visualCenterY <= overBottom;
+  const visualDiffX = overCenterX - visualCenterX;
+  const visualDiffY = overCenterY - visualCenterY;
+  const visualDistance = Math.hypot(visualDiffX, visualDiffY);
+  // 視覚的スナップ閾値を引き上げ、より早期に完全吸着を開始
+  const visualSnapThreshold = threshold * 0.82;
+
+  const pullExponent = config.pullExponent ?? (isTouch ? 2.2 : 1.8);
+  const basePullRatio = easeOutWithExponent(normalized, pullExponent);
+  const settleProgress = clamp01(config.settleProgress ?? (isTouch ? 0.88 : 0.8));
+  let pullRatio = normalized >= settleProgress ? 1 : clamp01(basePullRatio);
+  if (visualInsideSlotBounds || visualDistance <= visualSnapThreshold) {
+    pullRatio = 1;
+  }
+
+  const overshootStart = clamp01(config.overshootStart ?? (isTouch ? 0.94 : 0.9));
+  const overshootRatio = config.overshootRatio ?? (isTouch ? 0.06 : 0.1);
+  const overshootRange = Math.max(1 - overshootStart, 0.0001);
+  let overshootProgress = 0;
+  if (normalized > overshootStart) {
+    overshootProgress = (normalized - overshootStart) / overshootRange;
+  }
+  let overshootMultiplier = clamp01(overshootProgress) * Math.max(overshootRatio, 0);
+  if (visualInsideSlotBounds || visualDistance <= visualSnapThreshold) {
+    overshootMultiplier = 0;
+  }
+  const slotSpan = Math.max(overRect?.height ?? 0, overRect?.width ?? 0);
+  const maxOvershootPx = Math.max(
+    0,
+    config.maxOvershootPx ?? (slotSpan > 0 ? Math.min(slotSpan * 0.18, 14) : 10)
+  );
+
+  const desiredOffset = Math.min(
+    distance * (pullRatio + overshootMultiplier),
+    distance + maxOvershootPx
+  );
+
+  const maxOffset = config.maxOffset;
+  const clampedOffset =
+    typeof maxOffset === "number" && Number.isFinite(maxOffset)
+      ? Math.min(desiredOffset, Math.max(maxOffset, 0))
+      : desiredOffset;
+  const offsetFactor = clampedOffset / safeDistance;
+
+  const shouldSnap =
+    visualInsideSlotBounds || visualDistance <= threshold || distance <= threshold;
 
   return {
-    dx: diffX * clampedStrength * (maxOffset / Math.max(distance, 1)),
-    dy: diffY * clampedStrength * (maxOffset / Math.max(distance, 1)),
+    dx: diffX * offsetFactor,
+    dy: diffY * offsetFactor,
     strength: clampedStrength,
     distance,
-    shouldSnap: distance <= threshold,
+    shouldSnap,
   };
 }
-
