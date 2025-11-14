@@ -89,6 +89,8 @@ export type RoomDoc = {
     recallOpen?: boolean;
     /** Reveal 自動再開時のUI側ペンディングフラグ */
     revealPending?: boolean;
+    /** Reveal開始のサーバータイムスタンプ（UI側で参照） */
+    revealBeginAt?: Timestamp | FieldValue | null;
     /** ラウンド準備中（カード配布中など）を共有するフラグ */
     roundPreparing?: boolean;
   };
