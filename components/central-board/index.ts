@@ -4,5 +4,6 @@ export { StaticBoard } from "./StaticBoard";
 export { usePlayerPresenceState } from "./usePlayerPresenceState";
 export { useRevealStatus } from "./useRevealStatus";
 export { useResultFlipState } from "./useResultFlipState";
+export { useDragMagnetController } from "./useDragMagnetController";
 export { RETURN_DROP_ZONE_ID, createInitialMagnetState, MAGNET_IDLE_MARGIN_PX } from "./constants";
 export type { MagnetSnapshot } from "./types";
