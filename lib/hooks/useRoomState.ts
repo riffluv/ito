@@ -1,6 +1,7 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
+import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
@@ -152,11 +153,21 @@ export function useRoomState(
     retryAt: number;
   }>({ state: "unknown", retryAt: 0 });
   const roomAccessCheckRef = useRef<Promise<boolean> | null>(null);
+  const prevRoomAccessErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (roomAccessError === "permission-denied") {
+      if (prevRoomAccessErrorRef.current !== "permission-denied") {
+        notifyPermissionRecovery("start", "ルームとの同期");
+      }
       ensureAuthSession("room-access-denied").catch(() => void 0);
+    } else if (
+      prevRoomAccessErrorRef.current === "permission-denied" &&
+      roomAccessError === null
+    ) {
+      notifyPermissionRecovery("success", "ルームとの同期");
     }
+    prevRoomAccessErrorRef.current = roomAccessError;
   }, [roomAccessError]);
 
   const enqueueCommit = useCallback(
