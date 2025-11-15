@@ -8,10 +8,18 @@ export interface GPUPerformanceHook {
   gpuCapability: GPUCapability;
   animationMode: AnimationMode;
   effectiveMode: "3d" | "simple";
+  softwareRenderer: boolean;
   setAnimationMode: (mode: AnimationMode) => void;
 }
 
 const STORAGE_KEY = "gpu-animation-mode";
+
+type RendererInfo = {
+  rendererString: string | null;
+  hasMajorPerformanceCaveat: boolean;
+};
+
+let cachedRendererInfo: RendererInfo | null = null;
 
 function detectRendererString(): string | null {
   if (typeof window === "undefined") return null;
@@ -61,6 +69,60 @@ function detectRendererString(): string | null {
   }
 }
 
+function detectMajorPerformanceCaveat(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl", {
+      failIfMajorPerformanceCaveat: true,
+    }) as (WebGLRenderingContext | WebGL2RenderingContext | null);
+    if (gl) {
+      const loseContext = gl.getExtension?.("WEBGL_lose_context") as
+        | { loseContext?: () => void }
+        | null
+        | undefined;
+      loseContext?.loseContext?.();
+      return false;
+    }
+    const fallback =
+      (canvas.getContext("webgl") as WebGLRenderingContext | null) ??
+      (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null);
+    const loseContext = fallback?.getExtension?.("WEBGL_lose_context") as
+      | { loseContext?: () => void }
+      | null
+      | undefined;
+    loseContext?.loseContext?.();
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function resolveRendererInfo(): RendererInfo {
+  if (cachedRendererInfo) {
+    return cachedRendererInfo;
+  }
+  if (typeof window === "undefined") {
+    return { rendererString: null, hasMajorPerformanceCaveat: false };
+  }
+  const rendererString = detectRendererString();
+  const hasMajorPerformanceCaveat = detectMajorPerformanceCaveat();
+  cachedRendererInfo = { rendererString, hasMajorPerformanceCaveat };
+  return cachedRendererInfo;
+}
+
+function isSoftwareRenderer(rendererRaw: string | null): boolean {
+  if (!rendererRaw) return true;
+  const s = rendererRaw.toLowerCase();
+  const patterns = [/swiftshader/, /llvmpipe/, /softpipe/, /software/];
+  return patterns.some((pattern) => pattern.test(s));
+}
+
+function shouldForceSoftwareRenderer(info: RendererInfo): boolean {
+  if (info.hasMajorPerformanceCaveat) return true;
+  return isSoftwareRenderer(info.rendererString);
+}
+
 function classifyCapability(rendererRaw: string | null): GPUCapability {
   if (!rendererRaw) return "low"; // 安全側: 低スペ扱い
   const s = rendererRaw.toLowerCase();
@@ -76,7 +138,16 @@ function classifyCapability(rendererRaw: string | null): GPUCapability {
 }
 
 export function useGPUPerformance(): GPUPerformanceHook {
-  const [gpuCapability, setGpuCapability] = useState<GPUCapability>("high");
+  const initialInfo =
+    typeof window !== "undefined" ? resolveRendererInfo() : { rendererString: null, hasMajorPerformanceCaveat: false };
+  const [softwareRenderer, setSoftwareRenderer] = useState<boolean>(() =>
+    shouldForceSoftwareRenderer(initialInfo)
+  );
+  const [gpuCapability, setGpuCapability] = useState<GPUCapability>(() =>
+    shouldForceSoftwareRenderer(initialInfo)
+      ? "low"
+      : classifyCapability(initialInfo.rendererString)
+  );
   const [animationMode, setAnimationModeState] = useState<AnimationMode>(() => {
     if (typeof window === "undefined") return "auto";
     try {
@@ -94,11 +165,14 @@ export function useGPUPerformance(): GPUPerformanceHook {
       return "auto";
     }
   });
-
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const renderer = detectRendererString();
-    setGpuCapability(classifyCapability(renderer));
+    const info = resolveRendererInfo();
+    const shouldForceSoftware = shouldForceSoftwareRenderer(info);
+    setSoftwareRenderer(shouldForceSoftware);
+    setGpuCapability(
+      shouldForceSoftware ? "low" : classifyCapability(info.rendererString)
+    );
   }, []);
 
   const setAnimationMode = (mode: AnimationMode) => {
@@ -115,6 +189,6 @@ export function useGPUPerformance(): GPUPerformanceHook {
     return gpuCapability === "high" ? "3d" : "simple";
   }, [animationMode, gpuCapability]);
 
-  return { gpuCapability, animationMode, effectiveMode, setAnimationMode };
+  return { gpuCapability, animationMode, effectiveMode, softwareRenderer, setAnimationMode };
 }
 

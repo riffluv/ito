@@ -1,15 +1,8 @@
 import type * as PIXI from "pixi.js";
 import { safeDestroy } from "./safeDestroy";
 import { loadPixi } from "./loadPixi";
-
-const nextFrame = () =>
-  new Promise<void>((resolve) => {
-    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-      window.requestAnimationFrame(() => resolve());
-    } else {
-      setTimeout(resolve, 16);
-    }
-  });
+import { waitForNextFrame } from "@/lib/utils/nextFrame";
+import type { PixiBackgroundProfile } from "@/lib/pixi/backgroundTypes";
 
 export interface DragonQuestBackgroundOptions {
   width: number;
@@ -18,6 +11,7 @@ export interface DragonQuestBackgroundOptions {
   resolution?: number;
   app?: PIXI.Application;
   container?: PIXI.Container;
+  profile?: PixiBackgroundProfile;
 }
 
 export interface DragonQuestBackgroundController {
@@ -114,6 +108,8 @@ export async function createDragonQuestBackground(
   options: DragonQuestBackgroundOptions
 ): Promise<DragonQuestBackgroundController> {
   const pixi = await loadPixi();
+  const profile = options.profile ?? "default";
+  const isSoftwareProfile = profile === "software";
   const BLEND_MODES = (pixi as typeof PIXI & {
     BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
   }).BLEND_MODES;
@@ -129,7 +125,7 @@ export async function createDragonQuestBackground(
       autoDensity: false,
     });
 
-    await nextFrame();
+    await waitForNextFrame();
 
     if (!app.canvas) {
       throw new Error("Pixi canvas unavailable");
@@ -241,9 +237,10 @@ export async function createDragonQuestBackground(
 
   rebuildBackground(options.width, options.height);
 
-  await nextFrame();
+  await waitForNextFrame();
 
-  for (let i = 0; i < 15; i += 1) {
+  const accentCount = isSoftwareProfile ? 10 : 15;
+  for (let i = 0; i < accentCount; i += 1) {
     const accent = new pixi.Graphics();
     const x = Math.random() * options.width;
     const y = options.height * (0.88 + Math.random() * 0.08);
@@ -256,15 +253,18 @@ export async function createDragonQuestBackground(
     foreground.addChild(accent);
   }
 
-  await nextFrame();
+  await waitForNextFrame();
 
   // デバイス性能に応じてパーティクル数を調整
   const getParticleCount = (): number => {
-    if (typeof navigator === "undefined") return 60;
+    if (typeof navigator === "undefined") {
+      return isSoftwareProfile ? 28 : 60;
+    }
     const cores = navigator.hardwareConcurrency || 4;
-    if (cores <= 4) return 30; // ローエンド
-    if (cores <= 8) return 45; // ミドルレンジ
-    return 60; // ハイエンド
+    let base = 60;
+    if (cores <= 4) base = 30; // ローエンド
+    else if (cores <= 8) base = 45; // ミドルレンジ
+    return isSoftwareProfile ? Math.max(24, Math.min(base, 36)) : base;
   };
 
   const particles = createParticles(
@@ -279,6 +279,7 @@ export async function createDragonQuestBackground(
   let pointerTargetY = 0;
   let pointerCurrentX = 0;
   let pointerCurrentY = 0;
+  const pointerLerpFactor = isSoftwareProfile ? 0.04 : 0.06;
   let sweepActive = false;
   let sweepStart = 0;
   const SWEEP_DURATION = 900;
@@ -295,6 +296,7 @@ export async function createDragonQuestBackground(
 
   // Object Pooling: Graphics オブジェクトの再利用
   const graphicsPool: PIXI.Graphics[] = [];
+  const graphicsPoolLimit = isSoftwareProfile ? 120 : 200;
   const getGraphicsFromPool = (): PIXI.Graphics => {
     return graphicsPool.pop() || new pixi.Graphics();
   };
@@ -302,7 +304,7 @@ export async function createDragonQuestBackground(
     graphics.clear();
     graphics.alpha = 1;
     graphics.visible = true;
-    if (graphicsPool.length < 200) { // プールサイズ上限
+    if (graphicsPool.length < graphicsPoolLimit) { // プールサイズ上限
       graphicsPool.push(graphics);
     } else {
       safeDestroy(graphics, "dragonQuest.graphicsPool");
@@ -331,10 +333,12 @@ export async function createDragonQuestBackground(
 
   const explodeFirework = (fw: Firework) => {
     fw.exploded = true;
-    const particleCount = 60 + Math.floor(Math.random() * 40);
+    const particleCount = isSoftwareProfile
+      ? 28 + Math.floor(Math.random() * 12)
+      : 60 + Math.floor(Math.random() * 40);
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 3 + Math.random() * 4;
+      const speed = isSoftwareProfile ? 2 + Math.random() * 3 : 3 + Math.random() * 4;
       const particle = getGraphicsFromPool();
       particle.circle(0, 0, 2 + Math.random() * 2);
       particle.fill({ color: fw.color, alpha: 0.9 });
@@ -395,7 +399,9 @@ export async function createDragonQuestBackground(
     const height = app.screen.height;
 
     // 右上から左下へ3〜5個の隕石を発射
-    const meteorCount = 3 + Math.floor(Math.random() * 3);
+    const meteorCount = isSoftwareProfile
+      ? 2 + Math.floor(Math.random() * 2)
+      : 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < meteorCount; i++) {
       setTimeout(() => {
         const startX = width * (0.7 + Math.random() * 0.3); // 右上
@@ -404,7 +410,7 @@ export async function createDragonQuestBackground(
         const targetY = height + 100 + Math.random() * 100;
         const size = 8 + Math.random() * 8; // でかい隕石！
         launchMeteor(startX, startY, targetX, targetY, size);
-      }, i * 150 + Math.random() * 100);
+      }, i * (isSoftwareProfile ? 200 : 150) + Math.random() * 120);
     }
   };
 
@@ -412,8 +418,9 @@ export async function createDragonQuestBackground(
     const width = app.screen.width;
     const height = app.screen.height;
 
-    // 左の山から3発
-    for (let i = 0; i < 3; i++) {
+    // 左の山から複数発
+    const leftBursts = isSoftwareProfile ? 2 : 3;
+    for (let i = 0; i < leftBursts; i++) {
       setTimeout(() => {
         const x = width * 0.15 + Math.random() * width * 0.1;
         const y = height * 0.75;
@@ -422,8 +429,9 @@ export async function createDragonQuestBackground(
       }, i * 120);
     }
 
-    // 右の山から3発
-    for (let i = 0; i < 3; i++) {
+    // 右の山から複数発
+    const rightBursts = isSoftwareProfile ? 2 : 3;
+    for (let i = 0; i < rightBursts; i++) {
       setTimeout(() => {
         const x = width * 0.75 + Math.random() * width * 0.1;
         const y = height * 0.75;
@@ -432,8 +440,9 @@ export async function createDragonQuestBackground(
       }, i * 120 + 60);
     }
 
-    // 中央から2発（でっかい！）
-    for (let i = 0; i < 2; i++) {
+    // 中央から大きめの発射
+    const centerBursts = isSoftwareProfile ? 1 : 2;
+    for (let i = 0; i < centerBursts; i++) {
       setTimeout(() => {
         const x = width * 0.45 + Math.random() * width * 0.1;
         const y = height * 0.8;
@@ -448,7 +457,7 @@ export async function createDragonQuestBackground(
   let running = true;
   let frameId: number | null = null;
   let lastRender = performance.now();
-  const minInterval = 1000 / 60;
+  const minInterval = isSoftwareProfile ? 1000 / 45 : 1000 / 60;
 
   // Visibility API: 非アクティブ時は完全停止
   const handleVisibilityChange = () => {
@@ -495,8 +504,8 @@ export async function createDragonQuestBackground(
         Math.sin(time * 0.001 * particle.life) * 0.3 + 0.4;
     });
 
-    pointerCurrentX += (pointerTargetX - pointerCurrentX) * 0.06;
-    pointerCurrentY += (pointerTargetY - pointerCurrentY) * 0.06;
+    pointerCurrentX += (pointerTargetX - pointerCurrentX) * pointerLerpFactor;
+    pointerCurrentY += (pointerTargetY - pointerCurrentY) * pointerLerpFactor;
     const width = app.screen.width;
     const height = app.screen.height;
     mountains.x = pointerCurrentX * width * 0.05;

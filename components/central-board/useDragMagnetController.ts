@@ -159,10 +159,12 @@ export function useDragMagnetController({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !boardElement) return;
+    if (typeof window === "undefined" || !boardElement) {
+      return () => {};
+    }
     updateBoardBounds();
     if (typeof ResizeObserver === "undefined") {
-      return;
+      return () => {};
     }
     const observer = new ResizeObserver(() => {
       updateBoardBounds();
@@ -185,7 +187,9 @@ export function useDragMagnetController({
   );
 
   useEffect(() => {
-    if (typeof window === "undefined" || !boardElement) return;
+    if (typeof window === "undefined" || !boardElement) {
+      return () => {};
+    }
     const handlePointerDown = () => {
       if (typeof performance !== "undefined") {
         dragActivationStartRef.current = performance.now();

@@ -37,10 +37,18 @@ const emitPixiContextEvent = (detail: PixiContextEventDetail) => {
   window.dispatchEvent(new CustomEvent(PIXI_CONTEXT_EVENT, { detail }));
 };
 
+type ManagedTextureRenderer = Renderer & {
+  texture?: {
+    managedTextures?: unknown[];
+    bind?: (source: unknown, location?: number) => void;
+  };
+};
+
 const uploadTexturesInChunks = (renderer: Renderer, chunkSize = TEXTURE_UPLOAD_CHUNK) =>
   new Promise<void>((resolve) => {
-    const managed = Array.isArray((renderer as any)?.texture?.managedTextures)
-      ? ((renderer as any).texture.managedTextures as unknown[])
+    const textureSystem = (renderer as ManagedTextureRenderer).texture;
+    const managed = Array.isArray(textureSystem?.managedTextures)
+      ? textureSystem.managedTextures ?? []
       : [];
     if (!managed.length) {
       resolve();
@@ -55,10 +63,7 @@ const uploadTexturesInChunks = (renderer: Renderer, chunkSize = TEXTURE_UPLOAD_C
         const textureSource = managed[index];
         if (!textureSource) continue;
         try {
-          const textureSystem = renderer.texture as unknown as {
-            bind?: (source: unknown, location?: number) => void;
-          };
-          textureSystem.bind?.(textureSource, 0);
+          textureSystem?.bind?.(textureSource, 0);
         } catch (error) {
           if (process.env.NODE_ENV !== "production") {
             // eslint-disable-next-line no-console

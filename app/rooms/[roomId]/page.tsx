@@ -1137,13 +1137,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     null
   );
   useEffect(() => {
-    if (!safeUpdateFeatureEnabled) {
+    if (!safeUpdateFeatureEnabled || typeof window === "undefined" || !safeUpdateAutoApplyAt) {
       setSafeUpdateAutoApplyCountdown(null);
-      return;
-    }
-    if (typeof window === "undefined" || !safeUpdateAutoApplyAt) {
-      setSafeUpdateAutoApplyCountdown(null);
-      return;
+      return () => {};
     }
     const updateCountdown = () => {
       const remaining = safeUpdateAutoApplyAt - Date.now();
@@ -1272,9 +1268,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     };
   }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
   useEffect(() => {
-    if (!safeUpdateFeatureEnabled) return;
-    if (!versionMismatch && !hasWaitingUpdate) return;
-    if (typeof document === "undefined") return;
+    if (!safeUpdateFeatureEnabled || (!versionMismatch && !hasWaitingUpdate) || typeof document === "undefined") {
+      return () => {};
+    }
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
         void resyncWaitingServiceWorker("room:visibility-refresh");

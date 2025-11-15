@@ -62,11 +62,6 @@ describe("boardCollisionDetection", () => {
     });
 
     test("ポインター座標がない場合、近距離判定はスキップされる", () => {
-      const droppableRects = new Map<string, ClientRect>([
-        ["slot-0", createMockRect(100, 200, 80, 120)],
-        ["slot-1", createMockRect(200, 200, 80, 120)],
-      ]);
-
       // ポインター座標がない場合、overlay 中心にフォールバックせず空配列を返すべき
       const pointerCoordinates = null;
 
@@ -108,9 +103,6 @@ describe("boardCollisionDetection", () => {
         ["slot-0", createMockRect(100, 200, 80, 120)],
         ["slot-1", createMockRect(200, 200, 80, 120)],
       ]);
-
-      // DragOverlay の中心は slot-0 に近い
-      const overlayCenter = { x: 140, y: 260 };
 
       // しかしポインターは slot-1 に近い
       const pointerCoordinates = { x: 240, y: 260 };
@@ -158,10 +150,6 @@ describe("boardCollisionDetection", () => {
     });
 
     test("ポインターがすべてのスロットから遠い場合、近距離判定は候補なしとなる", () => {
-      const droppableRects = new Map<string, ClientRect>([
-        ["slot-0", createMockRect(100, 200, 80, 120)],
-      ]);
-
       // ポインターが遠く離れている
       const pointerCoordinates = { x: 1000, y: 1000 };
 
