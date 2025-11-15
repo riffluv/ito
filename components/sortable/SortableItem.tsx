@@ -26,7 +26,7 @@ export function SortableItem({
   
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : transition, // ドラッグ中は滑らかな移動のためtransition無効
+    transition: isDragging ? "transform 0s, opacity 0.12s ease-out" : transition,
     cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
     touchAction: "none", // prevent scroll while dragging per dnd-kit docs
     userSelect: isDragging ? "none" : undefined,

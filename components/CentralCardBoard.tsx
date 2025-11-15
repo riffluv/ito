@@ -11,15 +11,15 @@ import {
   TouchSensor,
   closestCenter,
   pointerWithin,
-  rectIntersection,
   useSensor,
   useSensors,
   type CollisionDetection,
   type Collision,
   type DropAnimation,
+  type DropAnimationKeyframeResolver,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
 import { CardRenderer } from "@/components/ui/CardRenderer";
@@ -47,7 +47,7 @@ import {
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
-import { computeMagnetTransform, type MagnetResult } from "@/lib/ui/dragMagnet";
+import { computeMagnetTransform, type MagnetResult, type RectLike } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
@@ -97,58 +97,53 @@ const shallowArrayEqual = (
   return true;
 };
 
+const snapshotRect = (rect: RectLike): RectLike => ({
+  left: rect.left,
+  top: rect.top,
+  width: rect.width,
+  height: rect.height,
+});
+
 const boardCollisionDetection: CollisionDetection = (args) => {
-  const directHits = pointerWithin(args);
-  if (directHits.length) return directHits;
-
-  const intersections = rectIntersection(args);
-  if (intersections.length) {
-    return intersections;
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length) {
+    return pointerHits;
   }
 
-  const { collisionRect, droppableRects, pointerCoordinates } = args;
-  if (!collisionRect) return [];
+  const { droppableRects, pointerCoordinates } = args;
+  if (pointerCoordinates) {
+    const candidates: { id: UniqueIdentifier; value: number }[] = [];
+    droppableRects.forEach((rect, id) => {
+      const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const dx = pointerCoordinates.x - dropCenter.x;
+      const dy = pointerCoordinates.y - dropCenter.y;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
 
-  const dragCenter = {
-    x: collisionRect.left + collisionRect.width / 2,
-    y: collisionRect.top + collisionRect.height / 2,
-  };
+      const axisAllowanceX = Math.max(rect.width * 0.45, 36);
+      const axisAllowanceY = Math.max(rect.height * 0.4, 42);
+      if (absDx > axisAllowanceX || absDy > axisAllowanceY) {
+        return;
+      }
 
-  const candidates: { id: UniqueIdentifier; value: number }[] = [];
-  droppableRects.forEach((rect, id) => {
-    const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    const dx = dragCenter.x - dropCenter.x;
-    const dy = dragCenter.y - dropCenter.y;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
+      const radialAllowance = Math.max(Math.min(rect.width, rect.height) * 0.55, 52);
+      const distance = Math.hypot(dx, dy);
+      if (distance > radialAllowance) {
+        return;
+      }
 
-    const axisAllowanceX = Math.max(rect.width * 0.45, 36);
-    const axisAllowanceY = Math.max(rect.height * 0.4, 42);
-    if (absDx > axisAllowanceX || absDy > axisAllowanceY) {
-      return;
+      candidates.push({ id, value: distance });
+    });
+
+    if (candidates.length) {
+      candidates.sort((a, b) => a.value - b.value);
+      const best = candidates[0];
+      const collision: Collision = { id: best.id, data: { value: best.value } };
+      return [collision];
     }
-
-    const radialAllowance = Math.max(Math.min(rect.width, rect.height) * 0.55, 52);
-    const distance = Math.hypot(dx, dy);
-    if (distance > radialAllowance) {
-      return;
-    }
-
-    candidates.push({ id, value: distance });
-  });
-
-  if (candidates.length) {
-    candidates.sort((a, b) => a.value - b.value);
-    const best = candidates[0];
-    const collision: Collision = { id: best.id, data: { value: best.value } };
-    return [collision];
   }
 
-  if (!pointerCoordinates) {
-    return closestCenter(args);
-  }
-
-  return [];
+  return closestCenter(args);
 };
 
 
@@ -221,6 +216,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
   const magnetFlushFrameRef = useRef<number | null>(null);
   const magnetResetTimeoutRef = useRef<number | null>(null);
+  const [cursorSnapOffset, setCursorSnapOffset] = useState<{ x: number; y: number } | null>(null);
 
   const pointerProfile = usePointerProfile();
 
@@ -255,6 +251,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   useEffect(() => {
     magnetConfigRef.current = magnetConfig;
   }, [magnetConfig]);
+
+  const dropAnimationTargetRef = useRef<RectLike | null>(null);
+  const dropAnimationMetaRef = useRef<{ magnetSnap: boolean }>({ magnetSnap: false });
+  const updateDropAnimationTarget = useCallback(
+    (rect: RectLike | null, options?: { magnetSnap?: boolean }) => {
+      if (rect) {
+        dropAnimationTargetRef.current = snapshotRect(rect);
+        dropAnimationMetaRef.current = { magnetSnap: Boolean(options?.magnetSnap) };
+        return;
+      }
+      dropAnimationTargetRef.current = null;
+      dropAnimationMetaRef.current = { magnetSnap: false };
+    },
+    []
+  );
 
   const flushMagnetUpdates = useCallback(() => {
     const nextState = pendingMagnetStateRef.current;
@@ -497,26 +508,62 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     };
   }, []);
 
+  const resolveDropAnimationKeyframes = useCallback<DropAnimationKeyframeResolver>(
+    ({ dragOverlay, transform }) => {
+      const overlayRect = dragOverlay?.rect ?? null;
+      const target = dropAnimationTargetRef.current;
+      const magnetSnap = dropAnimationMetaRef.current.magnetSnap;
+      const defaultFrames = [
+        { transform: CSS.Transform.toString(transform.initial) },
+        { transform: CSS.Transform.toString(transform.final) },
+      ];
+      if (!target || !overlayRect) {
+        return defaultFrames;
+      }
+
+      const deltaX = target.left - overlayRect.left;
+      const deltaY = target.top - overlayRect.top;
+      const finalTransform = {
+        ...transform.initial,
+        x: transform.initial.x + deltaX,
+        y: transform.initial.y + deltaY,
+        scaleX: 1,
+        scaleY: 1,
+      };
+
+      if (prefersReducedMotion || !magnetSnap) {
+        return [
+          { transform: CSS.Transform.toString(transform.initial) },
+          { transform: CSS.Transform.toString(finalTransform) },
+        ];
+      }
+
+      return [
+        { transform: CSS.Transform.toString(transform.initial) },
+        { transform: CSS.Transform.toString({ ...finalTransform, scaleX: 1.06, scaleY: 1.06 }) },
+        { transform: CSS.Transform.toString(finalTransform) },
+      ];
+    },
+    [prefersReducedMotion]
+  );
+
   const dropAnimation = useMemo<DropAnimation>(() => {
     if (prefersReducedMotion) {
-      return { duration: 110, easing: "linear" };
+      return { duration: 110, easing: "linear", keyframes: resolveDropAnimationKeyframes };
     }
     if (magnetState.shouldSnap) {
       return {
         duration: 180,
         easing: "linear",
-        keyframes: ({ transform }) => {
-          const target = CSS.Transform.toString(transform.final);
-          return [
-            { transform: `${target} scale(0.98)` },
-            { transform: `${target} scale(1.06)` },
-            { transform: `${target} scale(1.0)` },
-          ];
-        },
+        keyframes: resolveDropAnimationKeyframes,
       };
     }
-    return { duration: 220, easing: UI_TOKENS.EASING.standard };
-  }, [magnetState.shouldSnap, prefersReducedMotion]);
+    return {
+      duration: 220,
+      easing: UI_TOKENS.EASING.standard,
+      keyframes: resolveDropAnimationKeyframes,
+    };
+  }, [magnetState.shouldSnap, prefersReducedMotion, resolveDropAnimationKeyframes]);
 
   const mouseSensorOptions = useMemo(
     () => ({
@@ -986,6 +1033,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
+      updateDropAnimationTarget(null);
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
       setDragBoostEnabled((prev) => (prev ? prev : true));
@@ -1002,8 +1050,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           // 触覚フィードバックの失敗は無視
         }
       }
+
+      const coordinates = event.activatorEvent ? getEventCoordinates(event.activatorEvent) : null;
+      const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial ?? null;
+      if (coordinates && activeRect) {
+        const centerX = activeRect.left + activeRect.width / 2;
+        const centerY = activeRect.top + activeRect.height / 2;
+        setCursorSnapOffset({
+          x: coordinates.x - centerX,
+          y: coordinates.y - centerY,
+        });
+      } else {
+        setCursorSnapOffset(null);
+      }
     },
-    [resetMagnet, playDragPickup]
+    [resetMagnet, playDragPickup, setCursorSnapOffset, updateDropAnimationTarget]
   );
 
   const clearActive = useCallback(
@@ -1011,6 +1072,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       unstable_batchedUpdates(() => {
         setIsOver(false);
         setActiveId(null);
+        setCursorSnapOffset(null);
       });
       const shouldDelay = options?.delayMagnetReset ?? false;
       if (!shouldDelay) {
@@ -1024,7 +1086,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           : 260;
       queueMagnetReset(baseDelay);
     },
-    [prefersReducedMotion, queueMagnetReset, setIsOver]
+    [prefersReducedMotion, queueMagnetReset, setIsOver, setCursorSnapOffset]
   );
 
   const onDragEnd = useCallback(
@@ -1039,6 +1101,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
       const overRect = over?.rect ?? null;
       let magnetResult = createInitialMagnetState();
+      updateDropAnimationTarget(null);
 
       try {
         if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
@@ -1118,6 +1181,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }
 
         if (isSlotTarget && overRect) {
+          updateDropAnimationTarget(overRect as RectLike, {
+            magnetSnap: magnetStateRef.current.shouldSnap,
+          });
           magnetResult = computeMagnetTransform(overRect, activeRect, {
             ...magnetConfigRef.current,
             projectedOffset: {
@@ -1252,13 +1318,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       roomId,
       slotCountDragging,
       clearActive,
+      updateDropAnimationTarget,
     ]
   );
 
   const onDragCancel = useCallback(() => {
     dragActivationStartRef.current = null;
+    updateDropAnimationTarget(null);
     clearActive();
-  }, [clearActive]);
+  }, [clearActive, updateDropAnimationTarget]);
 
   const activeBoard = resolveMode === "sort-submit" && roomStatus === "clue";
 
@@ -1369,6 +1437,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             roomStatus={roomStatus}
             boardRef={handleBoardRef}
             isRevealing={isRevealing}
+            cursorSnapOffset={cursorSnapOffset}
           />
         ) : (
           <StaticBoard
