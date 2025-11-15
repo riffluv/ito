@@ -1,5 +1,6 @@
 "use client";
 import AuthClientWrapper from "@/components/AuthClientWrapper";
+import AuthSessionHeartbeat from "@/components/AuthSessionHeartbeat";
 import { DragonQuestNotifyContainer } from "@/components/ui/DragonQuestNotify";
 import SafeUpdateBanner from "@/components/ui/SafeUpdateBanner";
 import { TransitionProvider } from "@/components/ui/TransitionProvider";
@@ -34,7 +35,10 @@ export default function ClientProviders({
               <Box bg="canvasBg" color="fgDefault" h="100dvh">
                 <DarkModeOnlyBridge />
                 <SafeUpdateBanner />
-                <AuthClientWrapper>{children}</AuthClientWrapper>
+                <AuthClientWrapper>
+                  <AuthSessionHeartbeat />
+                  {children}
+                </AuthClientWrapper>
                 <DragonQuestNotifyContainer />
               </Box>
             </PixiHudStage>

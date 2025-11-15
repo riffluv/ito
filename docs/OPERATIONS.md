@@ -163,5 +163,23 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 ---
 
-最終更新日: 2025-11-06  
+## 13. Firestore セッションガード / Permission-Denied 対策
+
+2025-11-15 以降、以下の仕組みで Firestore の権限切れを自動復旧します。運用時はこの節を参照してください。
+
+1. **AuthSessionHeartbeat**（`components/AuthSessionHeartbeat.tsx`）が 18 分ごと + タブ復帰時に `ensureAuthSession` を実行し、ID トークンを事前更新します。
+2. **Permission Guard**（`lib/firebase/permissionGuard.ts`）を `lib/game/service.ts` などのサービス関数に適用し、`permission-denied` を検知したら
+   - 「接続を再確認しています…」トーストを表示
+   - `ensureAuthSession()` で匿名セッションを再確立
+   - 同じ処理を 1 回だけ自動リトライします。
+   - それでも失敗した場合は「ページを再読み込みしてください」と赤色トーストで案内されます。
+3. **ルーム購読（`lib/hooks/useRoomState.ts`）** も同じトースト ID を使って状況を通知します。トーストが出続ける場合は `traceError("firestore.permissionDenied", …)` をフィルターし、Auth / ルール / App Check の設定を確認してください。
+
+### 13.1 運用時のチェックリスト
+- 「接続を再確認しています…」トーストが出たときは 5 秒程度様子を見る。自動で「接続を再開しました」に切り替われば問題なし。
+- 連続で `firestore.permissionDenied` が出る場合は Firebase Auth で匿名ログインが禁止されていないか確認し、必要に応じて `firebase auth:signOut` や再デプロイでトークンを更新する。
+- QA では「タブを 1 時間以上放置 → ゲーム開始/カード提出」を試し、自動再認証が走るかを確認する。
+- 監視用メトリクス: `traceError` の `firestore.permissionDenied.*` / `window.__ITO_METRICS__.background.lastInitMs`（リセット後の描画確認）。
+
+最終更新日: 2025-11-15  
 編集者: Codex（GPT-5 ベース）

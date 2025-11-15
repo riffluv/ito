@@ -13,6 +13,7 @@ import {
 } from "@/lib/firebase/rooms";
 import { topicControls } from "@/lib/game/topicControls";
 import { db } from "@/lib/firebase/client";
+import { withPermissionRetry } from "@/lib/firebase/permissionGuard";
 import { bumpMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
@@ -39,7 +40,10 @@ export type ResetRoomOptions = Parameters<
 export async function startGame(roomId: string) {
   traceAction("host.start", { roomId });
   try {
-    return await startGameInternal(roomId);
+    return await withPermissionRetry(
+      () => startGameInternal(roomId),
+      { context: "host.start", toastContext: "ゲーム開始" }
+    );
   } catch (error) {
     traceError("host.start", error, { roomId });
     throw error;
@@ -52,7 +56,10 @@ export async function dealNumbers(
 ) {
   traceAction("numbers.deal", { roomId });
   try {
-    return await dealNumbersInternal(roomId, 0, options);
+    return await withPermissionRetry(
+      () => dealNumbersInternal(roomId, 0, options),
+      { context: "numbers.deal", toastContext: "カード配布" }
+    );
   } catch (error) {
     traceError("numbers.deal", error, { roomId });
     throw error;
@@ -62,7 +69,10 @@ export async function dealNumbers(
 export async function addCardToProposal(roomId: string, playerId: string) {
   traceAction("card.add", { roomId, playerId });
   try {
-    return await addCardToProposalInternal(roomId, playerId);
+    return await withPermissionRetry(
+      () => addCardToProposalInternal(roomId, playerId),
+      { context: "card.add", toastContext: "カードを置く操作" }
+    );
   } catch (error) {
     traceError("card.add", error, { roomId, playerId });
     throw error;
@@ -75,7 +85,10 @@ export async function removeCardFromProposal(
 ) {
   traceAction("card.remove", { roomId, playerId });
   try {
-    return await removeCardFromProposalInternal(roomId, playerId);
+    return await withPermissionRetry(
+      () => removeCardFromProposalInternal(roomId, playerId),
+      { context: "card.remove", toastContext: "カードを戻す操作" }
+    );
   } catch (error) {
     traceError("card.remove", error, { roomId, playerId });
     throw error;
@@ -85,7 +98,10 @@ export async function removeCardFromProposal(
 export async function commitPlayFromClue(roomId: string, playerId: string) {
   traceAction("clue.commit", { roomId, playerId });
   try {
-    return await commitPlayFromClueInternal(roomId, playerId);
+    return await withPermissionRetry(
+      () => commitPlayFromClueInternal(roomId, playerId),
+      { context: "clue.commit", toastContext: "ヒント提出" }
+    );
   } catch (error) {
     traceError("clue.commit", error, { roomId, playerId });
     throw error;
@@ -95,7 +111,10 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 export async function submitSortedOrder(roomId: string, list: string[]) {
   traceAction("order.submit", { roomId, size: list.length });
   try {
-    return await submitSortedOrderInternal(roomId, list);
+    return await withPermissionRetry(
+      () => submitSortedOrderInternal(roomId, list),
+      { context: "order.submit", toastContext: "並び順の提出" }
+    );
   } catch (error) {
     traceError("order.submit", error, { roomId, size: list.length });
     throw error;
@@ -116,7 +135,10 @@ export async function resetRoomWithPrune(
         : "custom",
   });
   try {
-    return await resetRoomWithPruneInternal(roomId, keepIds, opts);
+    return await withPermissionRetry(
+      () => resetRoomWithPruneInternal(roomId, keepIds, opts),
+      { context: "room.reset", toastContext: "ゲームのリセット" }
+    );
   } catch (error) {
     traceError("room.reset", error, {
       roomId,
@@ -133,7 +155,10 @@ export async function resetRoomWithPrune(
 export async function finalizeReveal(roomId: string) {
   traceAction("reveal.finalize", { roomId });
   try {
-    return await finalizeRevealInternal(roomId);
+    return await withPermissionRetry(
+      () => finalizeRevealInternal(roomId),
+      { context: "reveal.finalize", toastContext: "結果確定" }
+    );
   } catch (error) {
     traceError("reveal.finalize", error, { roomId });
     throw error;
@@ -165,7 +190,10 @@ export async function beginRevealPending(roomId: string) {
       },
       lastActiveAt: serverTimestamp(),
     };
-    await setDoc(roomRef, payload, { merge: true });
+    await withPermissionRetry(
+      () => setDoc(roomRef, payload, { merge: true }),
+      { context: "ui.revealPending.begin", suppressToast: true }
+    );
   } catch (error) {
     traceError("ui.revealPending.begin", error, { roomId });
     throw error;
@@ -181,7 +209,10 @@ export async function clearRevealPending(roomId: string) {
       "ui.revealPending": false,
       lastActiveAt: serverTimestamp(),
     } satisfies Record<string, unknown>;
-    await updateDoc(roomRef, payload);
+    await withPermissionRetry(
+      () => updateDoc(roomRef, payload),
+      { context: "ui.revealPending.clear", suppressToast: true }
+    );
   } catch (error) {
     traceError("ui.revealPending.clear", error, { roomId });
     // 非致命: 失敗してもUIは自動解除されるため握りつぶす
@@ -193,10 +224,14 @@ export async function setRoundPreparing(roomId: string, active: boolean) {
   const roomRef = doc(db, "rooms", roomId);
   try {
     traceAction(active ? "ui.roundPreparing.begin" : "ui.roundPreparing.clear", { roomId });
-    await updateDoc(roomRef, {
-      "ui.roundPreparing": active,
-      lastActiveAt: serverTimestamp(),
-    });
+    await withPermissionRetry(
+      () =>
+        updateDoc(roomRef, {
+          "ui.roundPreparing": active,
+          lastActiveAt: serverTimestamp(),
+        }),
+      { context: "ui.roundPreparing", suppressToast: true }
+    );
   } catch (error) {
     traceError("ui.roundPreparing", error, { roomId, active });
     // 非致命扱い: ローカルUIのみでフォローできるため握りつぶす
@@ -212,30 +247,34 @@ export async function pruneProposalByEligible(
   const roomRef = doc(db, "rooms", roomId);
   const eligible = new Set(eligibleIds);
   try {
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(roomRef);
-      if (!snap.exists()) return;
-      const room = snap.data() as RoomDoc | undefined;
-      if (!room || room.status !== "clue") return;
-      const proposalSource = room.order?.proposal;
-      const proposal: (string | null)[] = Array.isArray(proposalSource)
-        ? [...proposalSource]
-        : [];
-      if (proposal.length === 0) return;
-      const filtered = proposal.filter(
-        (id): id is string => typeof id === "string" && eligible.has(id)
-      );
-      if (filtered.length === proposal.length) return;
-      traceAction("order.proposal.prune", {
-        roomId,
-        before: proposal.length,
-        after: filtered.length,
-      });
-      tx.update(roomRef, {
-        "order.proposal": filtered,
-        lastActiveAt: serverTimestamp(),
-      });
-    });
+    await withPermissionRetry(
+      () =>
+        runTransaction(db!, async (tx) => {
+          const snap = await tx.get(roomRef);
+          if (!snap.exists()) return;
+          const room = snap.data() as RoomDoc | undefined;
+          if (!room || room.status !== "clue") return;
+          const proposalSource = room.order?.proposal;
+          const proposal: (string | null)[] = Array.isArray(proposalSource)
+            ? [...proposalSource]
+            : [];
+          if (proposal.length === 0) return;
+          const filtered = proposal.filter(
+            (id): id is string => typeof id === "string" && eligible.has(id)
+          );
+          if (filtered.length === proposal.length) return;
+          traceAction("order.proposal.prune", {
+            roomId,
+            before: proposal.length,
+            after: filtered.length,
+          });
+          tx.update(roomRef, {
+            "order.proposal": filtered,
+            lastActiveAt: serverTimestamp(),
+          });
+        }),
+      { context: "order.proposal.prune", suppressToast: true }
+    );
   } catch (error) {
     traceError("order.proposal.prune", error, { roomId });
   }
@@ -245,7 +284,7 @@ export { topicControls };
 
 export async function cancelSeatRequest(roomId: string, uid: string) {
   traceAction("spectator.cancelSeatRequest", { roomId, uid });
-  try {
+  const run = async () => {
     if (!db) {
       throw new Error("firebase-unavailable");
     }
@@ -278,6 +317,12 @@ export async function cancelSeatRequest(roomId: string, uid: string) {
     if (cancelled) {
       bumpMetric("recall", "cancelled");
     }
+  };
+  try {
+    await withPermissionRetry(run, {
+      context: "spectator.cancelSeatRequest",
+      toastContext: "観戦リクエスト",
+    });
   } catch (error) {
     traceError("spectator.cancelSeatRequest", error, { roomId, uid });
     throw error;
