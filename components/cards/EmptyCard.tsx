@@ -54,19 +54,22 @@ export function EmptyCard({
 
     // ドロップ完了検知: isOver が true→false に変化した瞬間
     if (wasOver && !isOver) {
-      if (!isDragActive && magnetStrength >= 0.85) {
-        playDropSuccess({ volumeMultiplier: 0.7, playbackRate: 1.1 });
-        try {
-          if (
-            typeof navigator !== "undefined" &&
-            typeof navigator.vibrate === "function"
-          ) {
-            navigator.vibrate(8);
-          }
-        } catch {
-          // ignore vibration errors
-        }
-      }
+      // 音・触覚フィードバックは CentralCardBoard で一元管理するため、ここでは再生しない
+      // （２重音の問題を防ぐため）
+      // if (!isDragActive && magnetStrength >= 0.85) {
+      //   console.log('🎵 EmptyCard playDropSuccess');
+      //   playDropSuccess({ volumeMultiplier: 0.7, playbackRate: 1.1 });
+      //   try {
+      //     if (
+      //       typeof navigator !== "undefined" &&
+      //       typeof navigator.vibrate === "function"
+      //     ) {
+      //       navigator.vibrate(8);
+      //     }
+      //   } catch {
+      //     // ignore vibration errors
+      //   }
+      // }
       if (cardRef.current && !prefersReducedMotion) {
         gsap.timeline()
           .to(cardRef.current, {
