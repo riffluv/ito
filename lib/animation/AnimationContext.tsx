@@ -8,6 +8,7 @@ export type AnimationSettings = {
   reducedMotion: boolean;
   forceAnimations: boolean;
   gpuCapability?: "high" | "low";
+  softwareRenderer?: boolean;
   setAnimationMode: (m: "auto" | "3d" | "simple") => void;
   supports3D?: boolean; // CSS 3D/環境での3Dサポート
   force3DTransforms: boolean;
@@ -25,7 +26,7 @@ type LegacyMediaQueryList = MediaQueryList & {
 const AnimationContext = createContext<AnimationSettings | null>(null);
 
 export function AnimationProvider({ children }: { children: React.ReactNode }) {
-  const { animationMode, effectiveMode, setAnimationMode, gpuCapability } = useGPUPerformance();
+  const { animationMode, effectiveMode, setAnimationMode, gpuCapability, softwareRenderer } = useGPUPerformance();
   // ユーザー強制フラグ（ローカル設定）。trueなら reduced-motion を無視してアニメON。
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -258,7 +259,18 @@ export function AnimationProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AnimationContext.Provider
-      value={{ animationMode, effectiveMode: appliedMode, reducedMotion, forceAnimations, gpuCapability, setAnimationMode, supports3D, force3DTransforms, setForce3DTransforms }}
+      value={{
+        animationMode,
+        effectiveMode: appliedMode,
+        reducedMotion,
+        forceAnimations,
+        gpuCapability,
+        softwareRenderer,
+        setAnimationMode,
+        supports3D,
+        force3DTransforms,
+        setForce3DTransforms,
+      }}
     >
       {children}
     </AnimationContext.Provider>
@@ -280,6 +292,7 @@ export function useAnimationSettings(): AnimationSettings {
     reducedMotion,
     forceAnimations: true,
     gpuCapability,
+    softwareRenderer: false,
     setAnimationMode,
     supports3D: true,
     force3DTransforms: false,

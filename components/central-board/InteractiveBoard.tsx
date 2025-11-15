@@ -11,12 +11,10 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
   type DropAnimation,
-  type DropAnimationKeyframeResolver,
   type Modifier,
 } from "@dnd-kit/core";
 import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { SortableContext } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 import { EmptyCard } from "@/components/cards";
 import { SortableItem } from "@/components/sortable/SortableItem";

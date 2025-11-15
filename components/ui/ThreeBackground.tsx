@@ -9,10 +9,12 @@ import React, {
 } from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
 import {
   pixiBackgroundHost,
   type SetSceneResult,
 } from "@/lib/pixi/backgroundHost";
+import { type PixiBackgroundProfile } from "@/lib/pixi/backgroundTypes";
 
 type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
@@ -105,18 +107,32 @@ export interface ThreeBackgroundProps {
 
 export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const { reducedMotion, effectiveMode, supports3D, gpuCapability } =
+  const { reducedMotion, supports3D, gpuCapability, softwareRenderer } =
     useAnimationSettings();
-  const isLowPowerDevice = reducedMotion || gpuCapability === "low";
+  const performanceProfile: PixiBackgroundProfile =
+    softwareRenderer || gpuCapability === "low" ? "software" : "default";
+  const shouldForceCssFallback = reducedMotion || !supports3D;
 
   const [backgroundType, setBackgroundType] =
     useState<BackgroundType>("pixi-dq");
   const [sceneNonce, setSceneNonce] = useState(0);
   const [backgroundReady, setBackgroundReady] = useState(false);
 
+  const recordBackgroundMetric = useCallback((key: string, value: number | string) => {
+    try {
+      setMetric("background", key, value);
+    } catch {
+      // ignore metrics failures in dev
+    }
+  }, []);
+
   useEffect(() => {
     ensureGlobalBackground();
   }, []);
+
+  useEffect(() => {
+    pixiBackgroundHost.setPerformanceProfile(performanceProfile);
+  }, [performanceProfile]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -222,33 +238,42 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     const currentType = backgroundType;
     setBackgroundReady(false);
 
-    if (currentType === "css") {
+    if (currentType === "css" || shouldForceCssFallback) {
+      if (currentType !== "css") {
+        setBackgroundType("css");
+      }
       pixiBackgroundHost.setCanvasVisible(false);
       applySceneResult({ renderer: "dom", quality: effectiveQuality });
       setBackgroundReady(true);
       return;
     }
 
-    if (!supports3D || isLowPowerDevice) {
-      logPixiBackground("warn", "pixi-disabled-low-power", {
-        type: currentType,
-        reducedMotion,
-        gpuCapability,
-        effectiveMode,
-      });
-      setBackgroundType("css");
-      return;
-    }
-
     try {
       const pixiKey = currentType as Exclude<BackgroundType, "css">;
+      const initStart = performance.now();
       pixiBackgroundHost.setCanvasVisible(true);
       const result = await pixiBackgroundHost.setScene({
         key: pixiKey,
         quality: effectiveQuality,
+        profile: performanceProfile,
         onMetrics: (metrics) => logPixiBackground("info", "simple-metrics", metrics),
       });
       applySceneResult(result);
+      const initDuration = performance.now() - initStart;
+      recordBackgroundMetric("lastInitMs", Number(initDuration.toFixed(2)));
+      recordBackgroundMetric("lastProfile", performanceProfile);
+      recordBackgroundMetric("lastScene", pixiKey);
+      recordBackgroundMetric("lastRenderer", result.renderer);
+      recordBackgroundMetric("lastQuality", result.quality);
+      logPixiBackground("info", "scene-ready", {
+        key: pixiKey,
+        profile: performanceProfile,
+        renderer: result.renderer,
+        quality: result.quality,
+        durationMs: initDuration,
+        gpuCapability,
+        softwareRenderer,
+      });
       setBackgroundReady(true);
     } catch (error) {
       logPixiBackground("error", "scene-init-failed", error);
@@ -257,12 +282,12 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   }, [
     applySceneResult,
     backgroundType,
-    effectiveMode,
     effectiveQuality,
     gpuCapability,
-    isLowPowerDevice,
-    reducedMotion,
-    supports3D,
+    performanceProfile,
+    recordBackgroundMetric,
+    shouldForceCssFallback,
+    softwareRenderer,
   ]);
 
   useEffect(() => {

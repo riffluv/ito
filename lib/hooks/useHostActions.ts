@@ -375,6 +375,9 @@ export function useHostActions({
       onlineUids,
       showtimeIntents,
       syncRoundPreparing,
+      abortAction,
+      markActionStart,
+      finalizeAction,
     ]
   );
 
@@ -513,6 +516,8 @@ export function useHostActions({
       playResetGame,
       roundIds,
       onlineUids,
+      markActionStart,
+      finalizeAction,
     ]
   );
 

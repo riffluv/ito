@@ -879,13 +879,7 @@ export function useRoomState(
         ensureMemberHeartbeatRef.current = null;
       }
     });
-  }, [
-    firebaseEnabled,
-    roomId,
-    uid,
-    isMember,
-    normalizedDisplayName,
-  ]);
+  }, [roomId, uid, isMember, normalizedDisplayName]);
 
   useEffect(() => {
     if (!rejoinSessionKey || typeof window === "undefined") return;
