@@ -134,6 +134,9 @@ export function useDragMagnetController({
   const [boardElement, setBoardElement] = useState<HTMLDivElement | null>(null);
   const boardBoundsRef = useRef<DOMRect | null>(null);
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const lastDragDimensionsRef = useRef<{ width: number; height: number } | null>(null);
+  const lastDragTimestampRef = useRef<number | null>(null);
+  const hoverSlotRef = useRef<{ id: string; enteredAt: number } | null>(null);
   const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
   const dragMoveRafRef = useRef<number | null>(null);
   const dragActivationStartRef = useRef<number | null>(null);
@@ -150,6 +153,8 @@ export function useDragMagnetController({
         window.cancelAnimationFrame(dragMoveRafRef.current);
         dragMoveRafRef.current = null;
       }
+      lastDragTimestampRef.current = null;
+      hoverSlotRef.current = null;
     };
   }, []);
 
@@ -356,11 +361,16 @@ export function useDragMagnetController({
       }
 
       const { over, active } = event;
+      const previousPoint = lastDragPositionRef.current;
       const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
       if (activeRect) {
         lastDragPositionRef.current = {
           x: activeRect.left + activeRect.width / 2,
           y: activeRect.top + activeRect.height / 2,
+        };
+        lastDragDimensionsRef.current = {
+          width: activeRect.width,
+          height: activeRect.height,
         };
       }
 
@@ -373,18 +383,68 @@ export function useDragMagnetController({
           dragPoint.y > boardBounds.bottom + MAGNET_IDLE_MARGIN_PX)
       ) {
         releaseMagnet();
+        hoverSlotRef.current = null;
         return;
       }
 
+      const now =
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      const lastTimestamp = lastDragTimestampRef.current;
+      const shouldThrottleMagnet = magnetTargetRef.current === null;
+      if (
+        shouldThrottleMagnet &&
+        previousPoint &&
+        dragPoint &&
+        lastTimestamp !== null
+      ) {
+        const deltaTime = Math.max(1, now - lastTimestamp);
+        const deltaX = Math.abs(dragPoint.x - previousPoint.x);
+        const deltaY = Math.abs(dragPoint.y - previousPoint.y);
+        const distanceMoved = Math.hypot(deltaX, deltaY);
+        const velocityX = deltaX / deltaTime;
+        const FAST_DISTANCE = pointerProfile.isCoarsePointer ? 18 : 26;
+        const FAST_THRESHOLD = prefersReducedMotion ? 1.0 : pointerProfile.isCoarsePointer ? 1.2 : 1.6;
+        if (distanceMoved > FAST_DISTANCE && velocityX > FAST_THRESHOLD) {
+          lastDragTimestampRef.current = now;
+          return;
+        }
+      }
+      lastDragTimestampRef.current = now;
+
       if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
         releaseMagnet();
+        hoverSlotRef.current = null;
+        return;
+      }
+
+      const overId = String(over.id);
+      if (!hoverSlotRef.current || hoverSlotRef.current.id !== overId) {
+        hoverSlotRef.current = { id: overId, enteredAt: now };
+      }
+      const dwellThreshold = prefersReducedMotion
+        ? 70
+        : pointerProfile.isCoarsePointer
+          ? 110
+          : 55;
+      const dwellElapsed = now - hoverSlotRef.current.enteredAt;
+      if (magnetTargetRef.current !== overId && dwellElapsed < dwellThreshold) {
         return;
       }
 
       scheduleMagnetTarget(String(over.id));
 
       const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
-      const magnetResult = computeMagnetTransform(over.rect, activeRect, {
+      const activeSnapshotRect = dragPoint
+        ? {
+            left: dragPoint.x - ((lastDragDimensionsRef.current?.width ?? activeRect?.width ?? 0) / 2),
+            top: dragPoint.y - ((lastDragDimensionsRef.current?.height ?? activeRect?.height ?? 0) / 2),
+            width: lastDragDimensionsRef.current?.width ?? activeRect?.width ?? 0,
+            height: lastDragDimensionsRef.current?.height ?? activeRect?.height ?? 0,
+          }
+        : activeRect;
+      const magnetResult = computeMagnetTransform(over.rect, activeSnapshotRect, {
         ...magnetConfigRef.current,
         projectedOffset: {
           dx: projectedState.dx,
@@ -407,7 +467,7 @@ export function useDragMagnetController({
 
       enqueueMagnetUpdate({ state: magnetResult });
     },
-    [enqueueMagnetUpdate, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
+    [enqueueMagnetUpdate, pointerProfile.isCoarsePointer, prefersReducedMotion, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
   );
 
   const flushPendingDragMove = useCallback(() => {

@@ -11,6 +11,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
   type DropAnimation,
+  type DropAnimationKeyframeResolver,
   type Modifier,
 } from "@dnd-kit/core";
 import { restrictToFirstScrollableAncestor, restrictToWindowEdges } from "@dnd-kit/modifiers";
@@ -28,6 +29,11 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { BoardFrame } from "./BoardFrame";
 import { GHOST_CARD_STYLE, RETURN_DROP_ZONE_ID } from "./constants";
 import type { MagnetSnapshot } from "./types";
+
+type CursorSnapOffset = {
+  x: number;
+  y: number;
+};
 
 /**
  * 磁力吸着を DragOverlay の transform に直接適用する modifier
@@ -84,6 +90,20 @@ function createMagnetModifier(
   };
 }
 
+function createCursorSnapModifier(cursorOffset: CursorSnapOffset | null): Modifier {
+  if (!cursorOffset) {
+    return ({ transform }) => transform;
+  }
+
+  return ({ transform }) => {
+    return {
+      ...transform,
+      x: transform.x + cursorOffset.x,
+      y: transform.y + cursorOffset.y,
+    };
+  };
+}
+
 interface InteractiveBoardProps {
   slots: DragSlotDescriptor[];
   magnetSnapshot: MagnetSnapshot;
@@ -107,6 +127,7 @@ interface InteractiveBoardProps {
   roomStatus: RoomDoc["status"];
   boardRef: React.Ref<HTMLDivElement>;
   isRevealing: boolean;
+  cursorSnapOffset: CursorSnapOffset | null;
 }
 
 function InteractiveBoardBase({
@@ -132,6 +153,7 @@ function InteractiveBoardBase({
   roomStatus,
   boardRef,
   isRevealing,
+  cursorSnapOffset,
 }: InteractiveBoardProps) {
   const sortableItems = useMemo(
     () => activeProposal.filter((id): id is string => typeof id === "string" && id.length > 0),
@@ -170,6 +192,16 @@ function InteractiveBoardBase({
   const magnetModifier = useMemo(
     () => createMagnetModifier(magnetState, dragLift, prefersReducedMotion),
     [magnetState, dragLift, prefersReducedMotion]
+  );
+
+  const cursorSnapModifier = useMemo(
+    () => createCursorSnapModifier(cursorSnapOffset),
+    [cursorSnapOffset]
+  );
+
+  const overlayModifiers = useMemo(
+    () => [cursorSnapModifier, magnetModifier, restrictToWindowEdges],
+    [cursorSnapModifier, magnetModifier]
   );
 
   const overlayInnerStyle = useMemo<React.CSSProperties>(() => {
@@ -272,7 +304,7 @@ function InteractiveBoardBase({
         </SortableContext>
       </BoardFrame>
 
-      <DragOverlay dropAnimation={dropAnimation} modifiers={[magnetModifier, restrictToWindowEdges]}>
+      <DragOverlay dropAnimation={dropAnimation} modifiers={overlayModifiers}>
         {activeId
           ? (() => {
               const idx = activeProposal.indexOf(activeId);
