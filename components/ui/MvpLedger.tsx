@@ -475,7 +475,6 @@ export function MvpLedger({
             <Flex
               align="center"
               gap={{ base: "10px", md: "14px" }}
-              flexWrap="wrap"
               justify="flex-end"
             >
               <BattleRecordStatsBadge summary={statsSummary} />
@@ -1018,62 +1017,88 @@ function buildLedgerStatsSummary(stats?: RoomStats | null): LedgerStatsSummary {
 function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
   return (
     <Box
-      px={{ base: "14px", md: "19px" }}
-      py={{ base: "11px", md: "13px" }}
-      minW={{ base: "220px", md: "270px" }}
+      px={{ base: "11px", md: "14px" }}
+      py={{ base: "6px", md: "7px" }}
+      minW={{ base: "auto", md: "auto" }}
       bg="rgba(8,6,14,0.88)"
-      border="3px solid rgba(255,215,0,0.82)"
+      border="2px solid rgba(255,215,0,0.82)"
       borderRadius="0"
-      boxShadow="0 0 18px rgba(255,215,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.45)"
+      boxShadow="0 0 14px rgba(255,215,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.45)"
       color="white"
       fontFamily="monospace"
       position="relative"
       _before={{
         content: '""',
         position: "absolute",
-        inset: "3px",
+        inset: "2px",
         border: "1px solid rgba(255,215,0,0.35)",
         pointerEvents: "none",
       }}
     >
       {summary.hasRecord ? (
-        <>
-          <Flex
-            direction={{ base: "column", sm: "row" }}
-            align={{ base: "flex-start", sm: "center" }}
-            gap={{ base: "8px", sm: "14px" }}
-          >
-            <StatsColumn
-              label="CURRENT"
-              value={summary.currentStreak}
-              caption={summary.currentStreak > 0 ? "連勝中" : "次勝利で連勝"}
-            />
-            <Box
-              display={{ base: "none", sm: "block" }}
-              w="2px"
-              h="44px"
-              bg="rgba(255,215,0,0.72)"
-              boxShadow="0 0 8px rgba(255,215,0,0.45), inset 0 0 2px rgba(255,255,255,0.3)"
-            />
-            <StatsColumn label="BEST" value={summary.bestStreak} caption="最高記録" />
-          </Flex>
-          <Text
-            fontSize={{ base: "11px", md: "12px" }}
-            letterSpacing="0.06em"
-            mt={{ base: "9px", md: "11px" }}
-            pt={{ base: "7px", md: "9px" }}
-            borderTop="1px solid rgba(255,215,0,0.35)"
-            color="rgba(255,255,255,0.92)"
-            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
-          >
-            通算 {summary.gameCount}戦 {summary.successCount}勝 {summary.failureCount}敗 · 勝率 {summary.winRate}%
-          </Text>
-        </>
+        <Flex
+          align="center"
+          gap={{ base: "9px", md: "12px" }}
+        >
+          <StatsColumn
+            label="CURRENT"
+            value={summary.currentStreak}
+            caption={summary.currentStreak > 0 ? "連勝中" : "次勝利で連勝"}
+          />
+          <Box
+            w="2px"
+            h={{ base: "36px", md: "40px" }}
+            bg="rgba(255,215,0,0.72)"
+            boxShadow="0 0 8px rgba(255,215,0,0.45), inset 0 0 2px rgba(255,255,255,0.3)"
+          />
+          <StatsColumn label="BEST" value={summary.bestStreak} caption="最高記録" />
+          <Box
+            w="2px"
+            h={{ base: "36px", md: "40px" }}
+            bg="rgba(255,215,0,0.72)"
+            boxShadow="0 0 8px rgba(255,215,0,0.45), inset 0 0 2px rgba(255,255,255,0.3)"
+          />
+          <Box minW={0}>
+            <Text
+              fontSize="8px"
+              letterSpacing="0.28em"
+              color="rgba(255,215,0,0.88)"
+              textTransform="uppercase"
+              textShadow="1px 1px 0 rgba(0,0,0,0.8), 0 0 6px rgba(255,215,0,0.4)"
+              fontWeight={700}
+              mb="1px"
+            >
+              通算
+            </Text>
+            <Text
+              fontSize={{ base: "18px", md: "20px" }}
+              fontWeight={900}
+              letterSpacing="0.02em"
+              color="#FFD700"
+              textShadow="1px 1px 0 rgba(0,0,0,0.9), 0 0 12px rgba(255,215,0,0.65)"
+              lineHeight="1"
+            >
+              {summary.gameCount}
+              <Text as="span" fontSize="11px" ml="4px" color="rgba(255,255,255,0.85)" textShadow="1px 1px 0 rgba(0,0,0,0.8)">
+                戦
+              </Text>
+            </Text>
+            <Text
+              fontSize="9px"
+              letterSpacing="0.02em"
+              color="rgba(255,255,255,0.78)"
+              textShadow="1px 1px 0 rgba(0,0,0,0.7)"
+              mt="1px"
+            >
+              {summary.successCount}勝 {summary.failureCount}敗 · {summary.winRate}%
+            </Text>
+          </Box>
+        </Flex>
       ) : (
-        <Box>
+        <Flex align="center" gap="8px">
           <Text
-            fontSize={{ base: "11px", md: "12px" }}
-            letterSpacing="0.12em"
+            fontSize="9px"
+            letterSpacing="0.1em"
             textTransform="uppercase"
             color="rgba(255,215,0,0.75)"
             textShadow="1px 1px 0 rgba(0,0,0,0.8)"
@@ -1082,19 +1107,14 @@ function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
             RECORD STANDBY
           </Text>
           <Text
-            fontSize={{ base: "13px", md: "14px" }}
-            fontWeight={700}
-            mt="6px"
+            fontSize="10px"
             letterSpacing="0.02em"
-            color="rgba(255,255,255,0.95)"
-            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
+            color="rgba(255,255,255,0.82)"
+            textShadow="1px 1px 0 rgba(0,0,0,0.7)"
           >
-            まだ戦績はありません
+            戦績はまだありません
           </Text>
-          <Text fontSize="11px" mt="5px" letterSpacing="0.02em" color="rgba(255,255,255,0.78)" textShadow="1px 1px 0 rgba(0,0,0,0.6)">
-            このセッションの冒険成果はここに表示されます。
-          </Text>
-        </Box>
+        </Flex>
       )}
     </Box>
   );
@@ -1112,31 +1132,32 @@ function StatsColumn({
   unit?: string;
 }) {
   return (
-    <Box flex="1" minW={0}>
+    <Box minW={0}>
       <Text
-        fontSize="10px"
-        letterSpacing="0.32em"
+        fontSize="8px"
+        letterSpacing="0.28em"
         color="rgba(255,215,0,0.88)"
         textTransform="uppercase"
-        textShadow="1px 1px 0 rgba(0,0,0,0.8), 0 0 8px rgba(255,215,0,0.4)"
+        textShadow="1px 1px 0 rgba(0,0,0,0.8), 0 0 6px rgba(255,215,0,0.4)"
         fontWeight={700}
+        mb="1px"
       >
         {label}
       </Text>
       <Text
-        fontSize={{ base: "26px", md: "28px" }}
+        fontSize={{ base: "18px", md: "20px" }}
         fontWeight={900}
-        letterSpacing="0.03em"
+        letterSpacing="0.02em"
         color="#FFD700"
-        textShadow="2px 2px 0 rgba(0,0,0,0.9), 0 0 16px rgba(255,215,0,0.65)"
-        mt="3px"
+        textShadow="1px 1px 0 rgba(0,0,0,0.9), 0 0 12px rgba(255,215,0,0.65)"
+        lineHeight="1"
       >
         {value}
-        <Text as="span" fontSize="14px" ml="7px" color="rgba(255,255,255,0.85)" textShadow="1px 1px 0 rgba(0,0,0,0.8)">
+        <Text as="span" fontSize="11px" ml="4px" color="rgba(255,255,255,0.85)" textShadow="1px 1px 0 rgba(0,0,0,0.8)">
           {unit}
         </Text>
       </Text>
-      <Text fontSize="11px" letterSpacing="0.04em" color="rgba(255,255,255,0.82)" textShadow="1px 1px 0 rgba(0,0,0,0.7)" mt="2px">
+      <Text fontSize="9px" letterSpacing="0.02em" color="rgba(255,255,255,0.78)" textShadow="1px 1px 0 rgba(0,0,0,0.7)" mt="1px">
         {caption}
       </Text>
     </Box>
