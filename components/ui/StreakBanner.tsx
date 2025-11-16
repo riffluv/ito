@@ -30,7 +30,7 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
     switch (streakLevel) {
       case "legend":
         return {
-          label: "LEGEND STREAK!!",
+          label: "LEGENDARY STREAK!!",
           numberColor: "#E0E7FF", // プラチナホワイト
           labelColor: "#C7D2FE",
           borderColor: "rgba(224,231,255,0.92)",
@@ -44,7 +44,7 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
         };
       case "great":
         return {
-          label: "GREAT STREAK!!",
+          label: "EPIC STREAK!!",
           numberColor: "#FDE68A", // ゴールドより明るい
           labelColor: "#FCD34D",
           borderColor: "rgba(253,230,138,0.88)",
@@ -97,96 +97,101 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
     gsap.set(banner, { force3D: true });
     gsap.set(number, { force3D: true });
 
-    if (prefersReduced) {
-      gsap.set(banner, { opacity: 1, x: 0, y: 0, rotation: 0, scale: 1 });
-      gsap.set(number, { scale: 1 });
-      setTimeout(() => {
-        onComplete?.();
-      }, 2000);
-      return undefined;
-    }
-
     const tl = gsap.timeline({
       onComplete: () => {
         onComplete?.();
       },
     });
 
-    // 初期状態
-    gsap.set(banner, {
-      x: 320,
-      y: -15,
-      opacity: 0,
-      scale: 0.65,
-      rotation: 10,
-    });
-
-    // アニメーション
-    tl
-      // 横からスライドイン + 回転で登場
-      .to(banner, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        scale: config.scale,
-        rotation: 0,
-        duration: 0.58,
-        ease: "back.out(1.9)",
-      })
-      // 数字だけパルス（1回目）
-      .to(number, {
-        scale: 1.18,
-        duration: 0.19,
-        ease: "power2.out",
-      })
-      .to(number, {
-        scale: 1,
-        duration: 0.16,
-        ease: "power2.in",
+    if (prefersReduced) {
+      // 低モーションでも上方向フェードアウトを行う（移動は最小限）
+      gsap.set(banner, { opacity: 1, x: 0, y: 0, rotation: 0, scale: 1 });
+      gsap.set(number, { scale: 1 });
+      tl
+        .to({}, { duration: 1.6 }) // 短いホールド
+        .to(banner, {
+          y: -55,
+          opacity: 0,
+          duration: 0.42,
+          ease: "power2.in",
+        });
+    } else {
+      // 初期状態
+      gsap.set(banner, {
+        x: 320,
+        y: -15,
+        opacity: 0,
+        scale: 0.65,
+        rotation: 10,
       });
 
-    // 特別演出: 5連勝以上なら追加パルス
-    if (streakLevel === "great" || streakLevel === "legend") {
+      // アニメーション
       tl
+        // 横からスライドイン + 回転で登場
+        .to(banner, {
+          x: 0,
+          y: 0,
+          opacity: 1,
+          scale: config.scale,
+          rotation: 0,
+          duration: 0.58,
+          ease: "back.out(1.9)",
+        })
+        // 数字だけパルス（1回目）
         .to(number, {
-          scale: 1.12,
-          duration: 0.15,
+          scale: 1.18,
+          duration: 0.19,
           ease: "power2.out",
-        }, "+=0.1")
+        })
         .to(number, {
           scale: 1,
-          duration: 0.13,
+          duration: 0.16,
+          ease: "power2.in",
+        });
+
+      // 特別演出: 5連勝以上なら追加パルス
+      if (streakLevel === "great" || streakLevel === "legend") {
+        tl
+          .to(number, {
+            scale: 1.12,
+            duration: 0.15,
+            ease: "power2.out",
+          }, "+=0.1")
+          .to(number, {
+            scale: 1,
+            duration: 0.13,
+            ease: "power2.in",
+          });
+      }
+
+      // 10連勝はさらに激しく
+      if (streakLevel === "legend") {
+        tl
+          .to(banner, {
+            rotation: -1.5,
+            duration: 0.25,
+            ease: "sine.inOut",
+          }, "-=0.2")
+          .to(banner, {
+            rotation: 0,
+            duration: 0.25,
+            ease: "sine.inOut",
+          });
+      }
+
+      // 表示維持
+      tl.to({}, { duration: streakLevel === "legend" ? 1.5 : 1.3 });
+
+      // フェードアウト（上にスライド）
+      tl
+        .to(banner, {
+          y: -55,
+          opacity: 0,
+          scale: config.scale * 0.92,
+          duration: 0.42,
           ease: "power2.in",
         });
     }
-
-    // 10連勝はさらに激しく
-    if (streakLevel === "legend") {
-      tl
-        .to(banner, {
-          rotation: -1.5,
-          duration: 0.25,
-          ease: "sine.inOut",
-        }, "-=0.2")
-        .to(banner, {
-          rotation: 0,
-          duration: 0.25,
-          ease: "sine.inOut",
-        });
-    }
-
-    // 表示維持
-    tl.to({}, { duration: streakLevel === "legend" ? 1.5 : 1.3 });
-
-    // フェードアウト（上にスライド）
-    tl
-      .to(banner, {
-        y: -55,
-        opacity: 0,
-        scale: config.scale * 0.92,
-        duration: 0.42,
-        ease: "power2.in",
-      });
 
     return () => {
       tl.kill();
