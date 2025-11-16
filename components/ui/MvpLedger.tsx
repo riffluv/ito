@@ -1018,15 +1018,23 @@ function buildLedgerStatsSummary(stats?: RoomStats | null): LedgerStatsSummary {
 function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
   return (
     <Box
-      px={{ base: "12px", md: "16px" }}
-      py={{ base: "9px", md: "11px" }}
-      minW={{ base: "210px", md: "250px" }}
-      bg="linear-gradient(135deg, rgba(18,14,24,0.92) 0%, rgba(38,28,48,0.92) 45%, rgba(58,40,66,0.94) 100%)"
-      border="1px solid rgba(255,224,186,0.4)"
-      borderRadius="8px"
-      boxShadow="0 6px 20px rgba(4,0,14,0.6), inset 0 0 16px rgba(255,210,150,0.18)"
+      px={{ base: "14px", md: "19px" }}
+      py={{ base: "11px", md: "13px" }}
+      minW={{ base: "220px", md: "270px" }}
+      bg="rgba(8,6,14,0.88)"
+      border="3px solid rgba(255,215,0,0.82)"
+      borderRadius="0"
+      boxShadow="0 0 18px rgba(255,215,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.45)"
       color="white"
       fontFamily="monospace"
+      position="relative"
+      _before={{
+        content: '""',
+        position: "absolute",
+        inset: "3px",
+        border: "1px solid rgba(255,215,0,0.35)",
+        pointerEvents: "none",
+      }}
     >
       {summary.hasRecord ? (
         <>
@@ -1042,19 +1050,21 @@ function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
             />
             <Box
               display={{ base: "none", sm: "block" }}
-              w="1px"
-              h="42px"
-              bg="rgba(255,255,255,0.25)"
-              boxShadow="0 0 6px rgba(255,255,255,0.3)"
+              w="2px"
+              h="44px"
+              bg="rgba(255,215,0,0.72)"
+              boxShadow="0 0 8px rgba(255,215,0,0.45), inset 0 0 2px rgba(255,255,255,0.3)"
             />
-            <StatsColumn label="BEST" value={summary.bestStreak} caption="至高記録" />
+            <StatsColumn label="BEST" value={summary.bestStreak} caption="最高記録" />
           </Flex>
           <Text
             fontSize={{ base: "11px", md: "12px" }}
             letterSpacing="0.06em"
-            mt={{ base: "6px", md: "7px" }}
-            color="rgba(255,255,255,0.88)"
-            textShadow="0 1px 0 rgba(0,0,0,0.5)"
+            mt={{ base: "9px", md: "11px" }}
+            pt={{ base: "7px", md: "9px" }}
+            borderTop="1px solid rgba(255,215,0,0.35)"
+            color="rgba(255,255,255,0.92)"
+            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
           >
             通算 {summary.gameCount}戦 {summary.successCount}勝 {summary.failureCount}敗 · 勝率 {summary.winRate}%
           </Text>
@@ -1063,24 +1073,25 @@ function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
         <Box>
           <Text
             fontSize={{ base: "11px", md: "12px" }}
-            letterSpacing="0.08em"
+            letterSpacing="0.12em"
             textTransform="uppercase"
-            color="rgba(255,255,255,0.7)"
-            textShadow="0 1px 0 rgba(0,0,0,0.5)"
+            color="rgba(255,215,0,0.75)"
+            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
+            fontWeight={700}
           >
             RECORD STANDBY
           </Text>
           <Text
             fontSize={{ base: "13px", md: "14px" }}
-            fontWeight={600}
-            mt="4px"
-            letterSpacing="0.04em"
-            color="rgba(255,255,255,0.92)"
-            textShadow="0 1px 0 rgba(0,0,0,0.6)"
+            fontWeight={700}
+            mt="6px"
+            letterSpacing="0.02em"
+            color="rgba(255,255,255,0.95)"
+            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
           >
             まだ戦績はありません
           </Text>
-          <Text fontSize="11px" mt="3px" letterSpacing="0.03em" color="rgba(255,255,255,0.7)">
+          <Text fontSize="11px" mt="5px" letterSpacing="0.02em" color="rgba(255,255,255,0.78)" textShadow="1px 1px 0 rgba(0,0,0,0.6)">
             このセッションの冒険成果はここに表示されます。
           </Text>
         </Box>
@@ -1104,25 +1115,28 @@ function StatsColumn({
     <Box flex="1" minW={0}>
       <Text
         fontSize="10px"
-        letterSpacing="0.28em"
-        color="rgba(255,255,255,0.65)"
+        letterSpacing="0.32em"
+        color="rgba(255,215,0,0.88)"
         textTransform="uppercase"
-        textShadow="0 1px 0 rgba(0,0,0,0.4)"
+        textShadow="1px 1px 0 rgba(0,0,0,0.8), 0 0 8px rgba(255,215,0,0.4)"
+        fontWeight={700}
       >
         {label}
       </Text>
       <Text
-        fontSize={{ base: "22px", md: "24px" }}
-        fontWeight={700}
-        letterSpacing="0.08em"
-        textShadow="0 0 10px rgba(255,214,159,0.45)"
+        fontSize={{ base: "26px", md: "28px" }}
+        fontWeight={900}
+        letterSpacing="0.03em"
+        color="#FFD700"
+        textShadow="2px 2px 0 rgba(0,0,0,0.9), 0 0 16px rgba(255,215,0,0.65)"
+        mt="3px"
       >
         {value}
-        <Text as="span" fontSize="13px" ml="6px" color="rgba(255,255,255,0.78)">
+        <Text as="span" fontSize="14px" ml="7px" color="rgba(255,255,255,0.85)" textShadow="1px 1px 0 rgba(0,0,0,0.8)">
           {unit}
         </Text>
       </Text>
-      <Text fontSize="11px" letterSpacing="0.06em" color="rgba(255,255,255,0.78)">
+      <Text fontSize="11px" letterSpacing="0.04em" color="rgba(255,255,255,0.82)" textShadow="1px 1px 0 rgba(0,0,0,0.7)" mt="2px">
         {caption}
       </Text>
     </Box>
