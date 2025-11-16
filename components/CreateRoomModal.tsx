@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
+import { createInitialRoomStats } from "@/lib/game/roomStats";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
 import { AVATAR_LIST } from "@/lib/utils";
 import { createPasswordEntry } from "@/lib/security/password";
@@ -178,6 +179,7 @@ export function CreateRoomModal({
         topicOptions: null,
         topicBox: null,
         result: null,
+        stats: createInitialRoomStats(),
         requiresPassword: enablePassword,
         passwordHash: passwordEntry?.hash ?? null,
         passwordSalt: passwordEntry?.salt ?? null,

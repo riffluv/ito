@@ -1,5 +1,6 @@
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
 import { hasMinimalTag } from "@/lib/game/displayMode";
+import { normalizeRoomStats } from "@/lib/game/roomStats";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 type UnknownRoom = Partial<RoomDoc> & Record<string, unknown>;
@@ -64,6 +65,7 @@ export function sanitizeRoom(input: unknown): RoomDoc {
     topicBox: roomInput?.topicBox ?? null,
     order: roomInput?.order ?? null,
     result: roomInput?.result ?? null,
+    stats: normalizeRoomStats(roomInput?.stats),
     deal: roomInput?.deal ?? null,
     round: typeof roomInput?.round === "number" ? roomInput.round : 0,
     mvpVotes: (() => {

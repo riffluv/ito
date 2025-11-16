@@ -56,6 +56,7 @@ export type RoomViewProps = {
     roomId: string;
     myId: string;
     mvpVotes: Record<string, string> | null;
+    stats: RoomDoc["stats"] | null;
   };
   me: (PlayerDoc & { id: string }) | null;
   isSpectatorMode: boolean;

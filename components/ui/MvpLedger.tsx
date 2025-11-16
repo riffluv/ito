@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
-import type { PlayerDoc } from "@/lib/types";
+import type { PlayerDoc, RoomStats } from "@/lib/types";
 import {
   Box,
   Button,
@@ -38,6 +38,7 @@ interface MvpLedgerProps {
   roomId: string;
   myId: string;
   mvpVotes?: Record<string, string> | null;
+  stats: RoomStats | null;
 }
 
 export function MvpLedger({
@@ -50,6 +51,7 @@ export function MvpLedger({
   roomId,
   myId,
   mvpVotes = null,
+  stats,
 }: MvpLedgerProps) {
   const prefersReduced = useReducedMotionPreference();
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -148,6 +150,7 @@ export function MvpLedger({
         )
       : 0;
   const voteProgressPercent = Math.round(voteProgress * 100);
+  const statsSummary = useMemo(() => buildLedgerStatsSummary(stats), [stats]);
 
   const handleVote = useCallback(
     async (votedPlayerId: string) => {
@@ -469,24 +472,32 @@ export function MvpLedger({
                 </Text>
               </Box>
             </Flex>
-            <CloseButton
-              aria-label="閉じる"
-              variant="ghost"
-              size="lg"
-              color="white"
-              minW="40px"
-              minH="40px"
-              transition="180ms cubic-bezier(.2,1,.3,1)"
-              _hover={{
-                bg: "rgba(255,255,255,0.15)",
-                transform: "translateY(-1px)",
-              }}
-              _active={{
-                bg: "rgba(255,255,255,0.25)",
-                transform: "translateY(1px)",
-              }}
-              onClick={handleCloseClick}
-            />
+            <Flex
+              align="center"
+              gap={{ base: "10px", md: "14px" }}
+              flexWrap="wrap"
+              justify="flex-end"
+            >
+              <BattleRecordStatsBadge summary={statsSummary} />
+              <CloseButton
+                aria-label="閉じる"
+                variant="ghost"
+                size="lg"
+                color="white"
+                minW="40px"
+                minH="40px"
+                transition="180ms cubic-bezier(.2,1,.3,1)"
+                _hover={{
+                  bg: "rgba(255,255,255,0.15)",
+                  transform: "translateY(-1px)",
+                }}
+                _active={{
+                  bg: "rgba(255,255,255,0.25)",
+                  transform: "translateY(1px)",
+                }}
+                onClick={handleCloseClick}
+              />
+            </Flex>
           </Flex>
 
           {/* 表部分 - CSS Grid使用 */}
@@ -948,5 +959,172 @@ export function MvpLedger({
         </Flex>
       </Flex>
     </Portal>
+  );
+}
+
+type LedgerStatsSummary = {
+  gameCount: number;
+  successCount: number;
+  failureCount: number;
+  currentStreak: number;
+  bestStreak: number;
+  winRate: number;
+  hasRecord: boolean;
+};
+
+function clampStat(value: number | undefined | null): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+function buildLedgerStatsSummary(stats?: RoomStats | null): LedgerStatsSummary {
+  if (!stats) {
+    return {
+      gameCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      winRate: 0,
+      hasRecord: false,
+    };
+  }
+
+  const gameCount = clampStat(stats.gameCount);
+  const successCount = Math.min(clampStat(stats.successCount), gameCount);
+  const inferredFailure = Math.max(gameCount - successCount, 0);
+  const explicitFailure = clampStat(stats.failureCount);
+  const failureCount = Math.min(
+    explicitFailure > 0 ? explicitFailure : inferredFailure,
+    gameCount
+  );
+  const currentStreak = clampStat(stats.currentStreak);
+  const bestStreak = Math.max(currentStreak, clampStat(stats.bestStreak));
+  const winRate = gameCount > 0 ? Math.round((successCount / gameCount) * 100) : 0;
+  const hasRecord =
+    gameCount > 0 || successCount > 0 || failureCount > 0 || currentStreak > 0 || bestStreak > 0;
+
+  return {
+    gameCount,
+    successCount,
+    failureCount,
+    currentStreak,
+    bestStreak,
+    winRate,
+    hasRecord,
+  };
+}
+
+function BattleRecordStatsBadge({ summary }: { summary: LedgerStatsSummary }) {
+  return (
+    <Box
+      px={{ base: "12px", md: "16px" }}
+      py={{ base: "9px", md: "11px" }}
+      minW={{ base: "210px", md: "250px" }}
+      bg="linear-gradient(135deg, rgba(18,14,24,0.92) 0%, rgba(38,28,48,0.92) 45%, rgba(58,40,66,0.94) 100%)"
+      border="1px solid rgba(255,224,186,0.4)"
+      borderRadius="8px"
+      boxShadow="0 6px 20px rgba(4,0,14,0.6), inset 0 0 16px rgba(255,210,150,0.18)"
+      color="white"
+      fontFamily="monospace"
+    >
+      {summary.hasRecord ? (
+        <>
+          <Flex
+            direction={{ base: "column", sm: "row" }}
+            align={{ base: "flex-start", sm: "center" }}
+            gap={{ base: "8px", sm: "14px" }}
+          >
+            <StatsColumn
+              label="CURRENT"
+              value={summary.currentStreak}
+              caption={summary.currentStreak > 0 ? "連勝中" : "次勝利で連勝"}
+            />
+            <Box
+              display={{ base: "none", sm: "block" }}
+              w="1px"
+              h="42px"
+              bg="rgba(255,255,255,0.25)"
+              boxShadow="0 0 6px rgba(255,255,255,0.3)"
+            />
+            <StatsColumn label="BEST" value={summary.bestStreak} caption="至高記録" />
+          </Flex>
+          <Text
+            fontSize={{ base: "11px", md: "12px" }}
+            letterSpacing="0.06em"
+            mt={{ base: "6px", md: "7px" }}
+            color="rgba(255,255,255,0.88)"
+            textShadow="0 1px 0 rgba(0,0,0,0.5)"
+          >
+            通算 {summary.gameCount}戦 {summary.successCount}勝 {summary.failureCount}敗 · 勝率 {summary.winRate}%
+          </Text>
+        </>
+      ) : (
+        <Box>
+          <Text
+            fontSize={{ base: "11px", md: "12px" }}
+            letterSpacing="0.08em"
+            textTransform="uppercase"
+            color="rgba(255,255,255,0.7)"
+            textShadow="0 1px 0 rgba(0,0,0,0.5)"
+          >
+            RECORD STANDBY
+          </Text>
+          <Text
+            fontSize={{ base: "13px", md: "14px" }}
+            fontWeight={600}
+            mt="4px"
+            letterSpacing="0.04em"
+            color="rgba(255,255,255,0.92)"
+            textShadow="0 1px 0 rgba(0,0,0,0.6)"
+          >
+            まだ戦績はありません
+          </Text>
+          <Text fontSize="11px" mt="3px" letterSpacing="0.03em" color="rgba(255,255,255,0.7)">
+            このセッションの冒険成果はここに表示されます。
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function StatsColumn({
+  label,
+  value,
+  caption,
+  unit = "連勝",
+}: {
+  label: string;
+  value: number;
+  caption: string;
+  unit?: string;
+}) {
+  return (
+    <Box flex="1" minW={0}>
+      <Text
+        fontSize="10px"
+        letterSpacing="0.28em"
+        color="rgba(255,255,255,0.65)"
+        textTransform="uppercase"
+        textShadow="0 1px 0 rgba(0,0,0,0.4)"
+      >
+        {label}
+      </Text>
+      <Text
+        fontSize={{ base: "22px", md: "24px" }}
+        fontWeight={700}
+        letterSpacing="0.08em"
+        textShadow="0 0 10px rgba(255,214,159,0.45)"
+      >
+        {value}
+        <Text as="span" fontSize="13px" ml="6px" color="rgba(255,255,255,0.78)">
+          {unit}
+        </Text>
+      </Text>
+      <Text fontSize="11px" letterSpacing="0.06em" color="rgba(255,255,255,0.78)">
+        {caption}
+      </Text>
+    </Box>
   );
 }

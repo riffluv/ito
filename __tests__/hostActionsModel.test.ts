@@ -15,6 +15,13 @@ function room(partial: Partial<RoomDoc>): RoomDoc {
     topicBox: null,
     order: null,
     result: null,
+    stats: {
+      gameCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+    },
     deal: null,
     round: 0,
     ...partial,

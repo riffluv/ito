@@ -177,6 +177,7 @@ export function RoomView({
           roomId={ledger.roomId}
           myId={ledger.myId}
           mvpVotes={ledger.mvpVotes}
+          stats={ledger.stats}
         />
       </Suspense>
 
