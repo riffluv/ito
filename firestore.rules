@@ -92,6 +92,16 @@ service cloud.firestore {
         && (!('roundPreparing' in ui) || ui.roundPreparing is bool);
     }
 
+    function isValidRoomStats(stats) {
+      return stats is map
+        && stats.keys().hasOnly(['gameCount', 'successCount', 'failureCount', 'currentStreak', 'bestStreak'])
+        && (stats.gameCount is number && stats.gameCount >= 0 && stats.gameCount <= 10000)
+        && (stats.successCount is number && stats.successCount >= 0 && stats.successCount <= stats.gameCount)
+        && (stats.failureCount is number && stats.failureCount >= 0 && stats.failureCount <= stats.gameCount)
+        && (stats.currentStreak is number && stats.currentStreak >= 0 && stats.currentStreak <= stats.gameCount)
+        && (stats.bestStreak is number && stats.bestStreak >= 0 && stats.bestStreak <= stats.gameCount);
+    }
+
     function isValidMvpVotesMap(votes) {
       return votes is map && votes.size() <= 16;
     }
@@ -111,7 +121,7 @@ service cloud.firestore {
           'name', 'hostId', 'hostName', 'creatorId', 'creatorName', 'options', 'status',
           'createdAt', 'lastActiveAt', 'closedAt', 'expiresAt',
           'topic', 'topicOptions', 'topicBox',
-          'order', 'result', 'deal', 'round', 'mvpVotes',
+          'order', 'result', 'stats', 'deal', 'round', 'mvpVotes',
           'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion',
           'ui'
         ])
@@ -143,6 +153,7 @@ service cloud.firestore {
         && (!('round' in data) || (data.round is number && data.round >= 0 && data.round <= 50))
         && (!('order' in data) || data.order == null || isValidOrderMap(data.order))
         && (!('result' in data) || data.result == null || isValidResultMap(data.result))
+        && (!('stats' in data) || data.stats == null || isValidRoomStats(data.stats))
         && (!('deal' in data) || data.deal == null || isValidDealMap(data.deal))
         && (!('mvpVotes' in data) || data.mvpVotes == null || isValidMvpVotesMap(data.mvpVotes))
         && (!('ui' in data) || data.ui == null || isValidUiMap(data.ui))

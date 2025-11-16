@@ -98,6 +98,13 @@ const baseRoom: RoomViewProps["room"] = {
     numbers: null,
   },
   result: null,
+  stats: {
+    gameCount: 8,
+    successCount: 6,
+    failureCount: 2,
+    currentStreak: 3,
+    bestStreak: 4,
+  },
   deal: null,
   round: 1,
   mvpVotes: null,
@@ -194,6 +201,7 @@ const baseArgs: Partial<RoomViewProps> = {
     roomId: baseRoom.id,
     myId: mockPlayers[0].id,
     mvpVotes: null,
+    stats: baseRoom.stats,
   },
   showNotifyBridge: false,
 };

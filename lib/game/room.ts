@@ -11,6 +11,7 @@ import {
   shouldFinishAfterPlay,
   type OrderState,
 } from "@/lib/game/rules";
+import { applyOutcomeToRoomStats } from "@/lib/game/roomStats";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
 import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
@@ -347,9 +348,14 @@ export async function finishRoom(roomId: string, success: boolean) {
     type: "FINISH",
   });
   if (!next) throw new Error("invalid transition: FINISH");
+  const stats = applyOutcomeToRoomStats(
+    curr?.stats,
+    success ? "success" : "failure"
+  );
   await updateDoc(ref, {
     status: next,
     result: { success, revealedAt: serverTimestamp() },
+    stats,
   });
 }
 
@@ -1093,11 +1099,16 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
 
     if (shouldFinish) {
       const success = !next.failed;
+      const stats = applyOutcomeToRoomStats(
+        room?.stats,
+        success ? "success" : "failure"
+      );
       // All games finish through reveal state for consistency
       tx.update(roomRef, {
         status: "reveal",
         order: next,
         result: { success, revealedAt: serverTimestamp() },
+        stats,
         lastActiveAt: serverTimestamp(),
       });
       return;
@@ -1199,6 +1210,10 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
 
     // サーバー側でも判定を行い、結果を保存
     const judgmentResult = evaluateSorted(list, numbers);
+    const stats = applyOutcomeToRoomStats(
+      room?.stats,
+      judgmentResult.success ? "success" : "failure"
+    );
 
     const order: RoomOrderState = {
       list,
@@ -1215,6 +1230,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       status: "reveal",
       order,
       result: { success: judgmentResult.success, revealedAt: serverTimestamp() },
+      stats,
       lastActiveAt: serverTimestamp(),
     });
   });

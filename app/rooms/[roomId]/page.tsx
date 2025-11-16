@@ -3803,6 +3803,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         roomId,
         myId: meId,
         mvpVotes: room.mvpVotes ?? null,
+        stats: room.stats ?? null,
       }}
       me={me}
       isSpectatorMode={isSpectatorMode}

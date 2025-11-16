@@ -26,6 +26,7 @@ import type {
   PresenceUserMap,
 } from "@/lib/firebase/presence";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
+import { applyOutcomeToRoomStats } from "@/lib/game/roomStats";
 
 type RoomUpdateMap = Record<string, unknown>;
 
@@ -159,6 +160,10 @@ function applyCluePhaseAdjustments({
       success: revealSuccess,
       revealedAt: serverNow,
     };
+    updates.stats = applyOutcomeToRoomStats(
+      room?.stats,
+      revealSuccess ? "success" : "failure"
+    );
     updates["order.decidedAt"] = serverNow;
     if (!("order.total" in updates) && typeof nextTotal === "number") {
       updates["order.total"] = nextTotal;

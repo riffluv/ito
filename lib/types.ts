@@ -27,6 +27,14 @@ export type PlayerSnapshot = {
   number: number | null;
 };
 
+export type RoomStats = {
+  gameCount: number;
+  successCount: number;
+  failureCount: number;
+  currentStreak: number;
+  bestStreak: number;
+};
+
 export type RoomDoc = {
   name: string;
   hostId: string;
@@ -66,6 +74,7 @@ export type RoomDoc = {
     success: boolean;
     revealedAt: Timestamp | FieldValue;
   } | null;
+  stats: RoomStats;
   deal?: {
     seed: string;
     min: number;
