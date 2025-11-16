@@ -53,6 +53,11 @@ import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import {
+  STREAK_BANNER_DELAY_MS,
+  STREAK_BANNER_AUTOHIDE_MS,
+  STREAK_BANNER_AUTOHIDE_REDUCED_MS,
+} from "@/lib/constants/uiTimings";
+import {
   InteractiveBoard,
   StaticBoard,
   RETURN_DROP_ZONE_ID,
@@ -217,20 +222,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [magnetState]);
 
   // Streak Banner のタイミング制御
-  const streakTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const streakTimerRef = useRef<number | null>(null);
+  const streakAutoHideRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (roomStatus === "finished" && !failed && currentStreak >= 2) {
       // GameResultOverlay のアニメーション完了を待つ
       // 勝利アニメーションは約2.5秒、0.3秒の間を置いて表示（タイミング短縮）
-      streakTimerRef.current = setTimeout(() => {
+      streakTimerRef.current = window.setTimeout(() => {
         setShowStreakBanner(true);
-      }, 2500);
+      }, STREAK_BANNER_DELAY_MS);
 
       return () => {
         if (streakTimerRef.current) {
           clearTimeout(streakTimerRef.current);
           streakTimerRef.current = null;
+        }
+        if (streakAutoHideRef.current) {
+          clearTimeout(streakAutoHideRef.current);
+          streakAutoHideRef.current = null;
         }
       };
     } else if (roomStatus !== "finished") {
@@ -240,6 +250,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     return undefined;
   }, [roomStatus, failed, currentStreak]);
+
+  // バナーが表示されたまま残るのを防ぐフォールバック
+  useEffect(() => {
+    if (!showStreakBanner) return undefined;
+    const duration = prefersReducedMotion ? STREAK_BANNER_AUTOHIDE_REDUCED_MS : STREAK_BANNER_AUTOHIDE_MS; // アニメーション完了を十分にカバーするバッファ
+    streakAutoHideRef.current = window.setTimeout(() => {
+      setShowStreakBanner(false);
+    }, duration);
+    return () => {
+      if (streakAutoHideRef.current) {
+        clearTimeout(streakAutoHideRef.current);
+        streakAutoHideRef.current = null;
+      }
+    };
+  }, [showStreakBanner, prefersReducedMotion]);
 
   const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
   const magnetTargetRef = useRef<string | null>(null);
