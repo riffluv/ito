@@ -24,6 +24,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
+import { StreakBanner } from "@/components/ui/StreakBanner";
 import { useDropHandler, DROP_OPTIMISTIC_ENABLED, createDropMetricsSession } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
@@ -82,6 +83,7 @@ interface CentralCardBoardProps {
   revealedAt?: unknown;
   uiRevealPending?: boolean;
   dealPlayers?: string[] | null;
+  currentStreak?: number;
   onOptimisticProposalChange?: (playerId: string, state: "placed" | "removed" | null) => void;
 }
 
@@ -166,9 +168,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   revealedAt,
   uiRevealPending = false,
   dealPlayers = null,
+  currentStreak = 0,
   onOptimisticProposalChange,
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(roomId, roomStatus, uiRevealPending ?? false);
+
+  // Streak Banner の表示管理
+  const [showStreakBanner, setShowStreakBanner] = useState(false);
 
   const {
     playerMap,
@@ -209,6 +215,32 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   useEffect(() => {
     magnetStateRef.current = magnetState;
   }, [magnetState]);
+
+  // Streak Banner のタイミング制御
+  const streakTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (roomStatus === "finished" && !failed && currentStreak >= 2) {
+      // GameResultOverlay のアニメーション完了を待つ
+      // 勝利アニメーションは約2.5秒、0.3秒の間を置いて表示（タイミング短縮）
+      streakTimerRef.current = setTimeout(() => {
+        setShowStreakBanner(true);
+      }, 2500);
+
+      return () => {
+        if (streakTimerRef.current) {
+          clearTimeout(streakTimerRef.current);
+          streakTimerRef.current = null;
+        }
+      };
+    } else if (roomStatus !== "finished") {
+      // 次のゲームが始まったらバナーを閉じる
+      setShowStreakBanner(false);
+    }
+
+    return undefined;
+  }, [roomStatus, failed, currentStreak]);
+
   const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
   const magnetTargetRef = useRef<string | null>(null);
   const magnetHighlightTimeoutRef = useRef<number | null>(null);
@@ -1464,6 +1496,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       {roomStatus === "finished" && (
         <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
       )}
+      <StreakBanner
+        streak={currentStreak}
+        isVisible={showStreakBanner}
+        onComplete={() => setShowStreakBanner(false)}
+      />
     </Box>
   );
 };
