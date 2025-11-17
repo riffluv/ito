@@ -460,7 +460,6 @@ export async function addCardToProposalAtPosition(
         ? () => performance.now()
         : () => Date.now();
     const enqueuedAt = readTimestamp();
-    let proposalToSync: (string | null)[] | null = null;
 
     const result = await enqueueFirestoreWrite<ProposalWriteResult>(
       queueScope,
@@ -571,7 +570,8 @@ export async function addCardToProposalAtPosition(
               const limit = Math.max(next.length, maxCount);
               for (let i = 0; i < limit; i += 1) {
                 if (i >= next.length) next.length = i + 1;
-                if (next[i] === null) {
+                // CRITICAL FIX: Check for both null and undefined (== instead of ===)
+                if (next[i] == null) {
                   next[i] = playerId;
                   placed = true;
                   break;
@@ -634,6 +634,13 @@ export async function addCardToProposalAtPosition(
               { merge: true }
             );
 
+            // CRITICAL FIX: Update rooms.order.proposal atomically within transaction
+            // This ensures UI sees the update immediately without relying on separate syncRoomProposal
+            tx.update(roomRef, {
+              "order.proposal": normalized,
+              lastActiveAt: serverTimestamp(),
+            });
+
             return {
               status: "ok" as ProposalWriteResult,
               proposal: normalized,
@@ -671,13 +678,7 @@ export async function addCardToProposalAtPosition(
             });
           }
 
-          if (
-            transactionResult.status === "ok" &&
-            transactionResult.proposal
-          ) {
-            proposalToSync = transactionResult.proposal;
-          }
-
+          // No longer need to sync separately - rooms.order.proposal is updated atomically in transaction
           return transactionResult.status;
         } catch (error) {
           txResult = "error";
@@ -700,10 +701,7 @@ export async function addCardToProposalAtPosition(
       { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
     );
 
-    if (proposalToSync) {
-      await syncRoomProposal(roomId, proposalToSync);
-    }
-
+    // No longer need to sync separately - rooms.order.proposal is updated atomically in transaction
     return result;
   };
 
@@ -787,7 +785,6 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
       ? () => performance.now()
       : () => Date.now();
   const enqueuedAt = readTimestamp();
-  let proposalToSync: (string | null)[] | null = null;
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
@@ -798,7 +795,6 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
       const MAX_ATTEMPTS = 5;
       try {
         for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-          proposalToSync = null;
           try {
             await runTransaction(db!, async (tx) => {
               const roomSnap = await tx.get(roomRef);
@@ -858,9 +854,15 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
                 },
                 { merge: true }
               );
-              proposalToSync = normalized;
+
+              // CRITICAL FIX: Update rooms.order.proposal atomically within transaction
+              tx.update(roomRef, {
+                "order.proposal": normalized,
+                lastActiveAt: serverTimestamp(),
+              });
+
+              txResult = "ok";
             });
-            txResult = proposalToSync ? "ok" : txResult ?? "noop";
             return;
           } catch (error) {
             if (isRetryableTransactionError(error) && attempt < MAX_ATTEMPTS - 1) {
@@ -892,9 +894,7 @@ export async function removeCardFromProposal(roomId: string, playerId: string) {
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );
-  if (proposalToSync) {
-    await syncRoomProposal(roomId, proposalToSync);
-  }
+  // No longer need to sync separately - rooms.order.proposal is updated atomically in transaction
 }
 export async function moveCardInProposalToPosition(
   roomId: string,
@@ -909,7 +909,6 @@ export async function moveCardInProposalToPosition(
       ? () => performance.now()
       : () => Date.now();
   const enqueuedAt = readTimestamp();
-  let proposalToSync: (string | null)[] | null = null;
   await enqueueFirestoreWrite(
     queueScope,
     async () => {
@@ -920,7 +919,6 @@ export async function moveCardInProposalToPosition(
       const MAX_ATTEMPTS = 5;
       try {
         for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-          proposalToSync = null;
           try {
             await runTransaction(db!, async (tx) => {
               const roomSnap = await tx.get(roomRef);
@@ -995,9 +993,15 @@ export async function moveCardInProposalToPosition(
                 },
                 { merge: true }
               );
-              proposalToSync = normalized;
+
+              // CRITICAL FIX: Update rooms.order.proposal atomically within transaction
+              tx.update(roomRef, {
+                "order.proposal": normalized,
+                lastActiveAt: serverTimestamp(),
+              });
+
+              txResult = "ok";
             });
-            txResult = proposalToSync ? "ok" : txResult ?? "noop";
             return;
           } catch (error) {
             if (isRetryableTransactionError(error) && attempt < MAX_ATTEMPTS - 1) {
@@ -1029,9 +1033,7 @@ export async function moveCardInProposalToPosition(
     },
     { minIntervalMs: PROPOSAL_QUEUE_MIN_INTERVAL_MS }
   );
-  if (proposalToSync) {
-    await syncRoomProposal(roomId, proposalToSync);
-  }
+  // No longer need to sync separately - rooms.order.proposal is updated atomically in transaction
 }
 
 // ドロップ時にクライアントが即時にカードを場に出して判定する（clue フェーズ用）
