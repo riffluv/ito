@@ -33,6 +33,7 @@ import {
 } from "@/lib/constants/presence";
 import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { forceDetachAll } from "@/lib/firebase/presence";
+import { ensureAuthSession } from "@/lib/firebase/authSession";
 import {
   leaveRoom as leaveRoomAction,
   requestSpectatorRecall,
@@ -635,7 +636,7 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
     uid,
     passwordVerified ? (displayName ?? null) : null
   );
-  const { room: roomData, loading } = roomState;
+  const { room: roomData, loading, roomAccessError } = roomState;
   const room = roomData;
 
 
@@ -666,6 +667,91 @@ function RoomPageContent({ roomId }: RoomPageContentProps) {
         px={4}
       >
         <Spinner />
+      </Box>
+    );
+  }
+
+  if (roomAccessError === "permission-denied") {
+    const handleRetry = async () => {
+      try {
+        await ensureAuthSession("room-access-denied-retry");
+      } catch {
+        // ignore
+      }
+      router.refresh();
+    };
+
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition("/", {
+          direction: "fade",
+          duration: 1,
+          showLoading: true,
+        });
+      } else {
+        router.push("/");
+      }
+    };
+
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        bg="rgba(8,9,15,1)"
+      >
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg="rgba(8,9,15,0.9)"
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "520px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text
+              fontSize={{ base: "xl", md: "2xl" }}
+              fontWeight="800"
+              fontFamily="monospace"
+              letterSpacing="0.1em"
+              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+              mb={3}
+            >
+              ▼ ACCESS DENIED ▼
+            </Text>
+            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="700" lineHeight={1.6}>
+              認証情報が無効か、部屋へのアクセス権がありません
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              いったん再ログインしてから部屋に入り直すか、ホストに参加権限を確認してください。
+            </Text>
+          </Box>
+          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+            <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
+              再読み込み
+            </AppButton>
+            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+              ロビーへ戻る
+            </AppButton>
+          </HStack>
+        </Box>
       </Box>
     );
   }

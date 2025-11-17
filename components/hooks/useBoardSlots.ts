@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 interface SlotDescriptorBase {
@@ -59,6 +59,7 @@ export function useBoardSlots({
     () => new Set(optimisticReturningIds),
     [optimisticReturningIds]
   );
+  const waitingPlayersCacheRef = useRef<(PlayerDoc & { id: string })[]>([]);
 
   const dragSlots = useMemo<DragSlotDescriptor[]>(() => {
     return Array.from({ length: Math.max(0, slotCountDragging) }).map((_, idx) => {
@@ -176,9 +177,31 @@ export function useBoardSlots({
     return result;
   }, [eligibleIds, playerMap, pendingLookup, placedLookup, optimisticReturningSet, activeId]);
 
+  const stableWaitingPlayers = useMemo(() => {
+    const prev = waitingPlayersCacheRef.current;
+    const isSame =
+      prev.length === waitingPlayers.length &&
+      prev.every((player, index) => {
+        const next = waitingPlayers[index];
+        if (!next) return false;
+        return (
+          player.id === next.id &&
+          player.clue1 === next.clue1 &&
+          player.ready === next.ready &&
+          player.number === next.number
+        );
+      });
+
+    if (isSame) {
+      return prev;
+    }
+    waitingPlayersCacheRef.current = waitingPlayers;
+    return waitingPlayers;
+  }, [waitingPlayers]);
+
   return {
     dragSlots,
     staticSlots,
-    waitingPlayers,
+    waitingPlayers: stableWaitingPlayers,
   };
 }

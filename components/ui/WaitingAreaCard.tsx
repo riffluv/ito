@@ -4,7 +4,7 @@ import { createWaitingCardViewModel } from "./cardViewModel";
 import type { PlayerDoc } from "@/lib/types";
 import { Box } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useMemo, type CSSProperties } from "react";
 import { WAITING_LABEL } from "@/lib/ui/constants";
 
 interface WaitingAreaCardProps {
@@ -28,61 +28,12 @@ function WaitingAreaCardComponent({
 
   const PROMPT_LABEL = "Add your hint.";
 
-  const deriveInitialClue = () => {
+  const displayClue = useMemo(() => {
     if (ready) {
       return player?.clue1?.trim() || "";
     }
-    return WAITING_LABEL;
-  };
-
-  const [displayClue, setDisplayClue] = useState<string>(deriveInitialClue);
-  const promptShownRef = useRef(false);
-  const waitingTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    promptShownRef.current = false;
-    if (waitingTimerRef.current !== null) {
-      window.clearTimeout(waitingTimerRef.current);
-      waitingTimerRef.current = null;
-    }
-  }, [player.id]);
-
-  useEffect(() => {
-    if (waitingTimerRef.current !== null) {
-      window.clearTimeout(waitingTimerRef.current);
-      waitingTimerRef.current = null;
-    }
-
-    if (ready) {
-      const clueText = player?.clue1?.trim() || "";
-      setDisplayClue(clueText);
-      promptShownRef.current = false;
-      return;
-    }
-
-    if (!gameStarted) {
-      const showImmediate = !promptShownRef.current;
-      promptShownRef.current = false;
-      if (showImmediate) {
-        setDisplayClue(WAITING_LABEL);
-      } else {
-        waitingTimerRef.current = window.setTimeout(() => {
-          setDisplayClue(WAITING_LABEL);
-          waitingTimerRef.current = null;
-        }, 220);
-      }
-      return;
-    }
-
-    if (promptShownRef.current) {
-      setDisplayClue(PROMPT_LABEL);
-      return;
-    }
-
-    promptShownRef.current = true;
-
-    setDisplayClue(PROMPT_LABEL);
-  }, [gameStarted, ready, player.clue1]);
+    return gameStarted ? PROMPT_LABEL : WAITING_LABEL;
+  }, [gameStarted, player?.clue1, ready]);
 
   const cardViewModel = useMemo(() => {
     const base = createWaitingCardViewModel({ player, ready });

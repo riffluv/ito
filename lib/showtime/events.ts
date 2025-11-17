@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase/client";
+import { traceError } from "@/lib/utils/trace";
 import {
   addDoc,
   collection,
@@ -7,6 +8,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  type FirestoreError,
   type Unsubscribe,
 } from "firebase/firestore";
 import type { ShowtimeEventDoc } from "./types";
@@ -65,21 +67,27 @@ export function subscribeShowtimeEvents(
     orderBy("createdAt", "asc"),
     limitToLast(RECENT_EVENT_LIMIT)
   );
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    if (!initialized) {
-      snapshot.forEach((doc) => {
-        seen.add(doc.id);
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      if (!initialized) {
+        snapshot.forEach((doc) => {
+          seen.add(doc.id);
+        });
+        initialized = true;
+        return;
+      }
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== "added") return;
+        if (seen.has(change.doc.id)) return;
+        seen.add(change.doc.id);
+        handler({ id: change.doc.id, ...(change.doc.data() as ShowtimeEventDoc) });
       });
-      initialized = true;
-      return;
+    },
+    (error: FirestoreError) => {
+      traceError("showtime.subscribe", error, { roomId });
     }
-    snapshot.docChanges().forEach((change) => {
-      if (change.type !== "added") return;
-      if (seen.has(change.doc.id)) return;
-      seen.add(change.doc.id);
-      handler({ id: change.doc.id, ...(change.doc.data() as ShowtimeEventDoc) });
-    });
-  });
+  );
   return () => {
     try {
       unsubscribe();
