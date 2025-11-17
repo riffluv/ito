@@ -203,73 +203,84 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
   return (
     <Portal>
       <Box
-        ref={bannerRef}
         position="fixed"
         top={{ base: "22%", md: "24%" }}
-        left="50%"
-        transform="translateX(-50%)"
+        left={0}
+        right={0}
+        display="flex"
+        justifyContent="center"
+        px={{ base: "12px", md: 0 }}
         zIndex={10001}
         pointerEvents="none"
       >
-        <Box
-          position="relative"
-          px={{ base: "19px", md: "26px" }}
-          py={{ base: "13px", md: "17px" }}
-          bg="rgba(8,6,14,0.96)"
-          border={`3px solid ${config.borderColor}`}
-          borderRadius="0"
-          boxShadow={`0 0 ${streakLevel === "legend" ? "32px" : streakLevel === "great" ? "26px" : "22px"} ${config.glowColor}, inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.55)`}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "3px",
-            border: `2px solid ${config.borderColor}`,
-            opacity: 0.5,
-            pointerEvents: "none",
-          }}
-          // 10連勝は背景にも特別感
-          _after={streakLevel === "legend" ? {
-            content: '""',
-            position: "absolute",
-            inset: "-6px",
-            border: "1px solid rgba(224,231,255,0.35)",
-            pointerEvents: "none",
-          } : undefined}
-        >
-          <Flex align="baseline" gap={{ base: "11px", md: "15px" }} justify="center">
-            {/* 数字 */}
-            <Box ref={numberRef}>
+        <Box ref={bannerRef} pointerEvents="none" transformOrigin="center" width="fit-content">
+          <Box
+            position="relative"
+            px={{ base: "19px", md: "26px" }}
+            py={{ base: "13px", md: "17px" }}
+            bg="rgba(8,6,14,0.96)"
+            border={`3px solid ${config.borderColor}`}
+            borderRadius="0"
+            boxShadow={`0 0 ${streakLevel === "legend" ? "32px" : streakLevel === "great" ? "26px" : "22px"} ${config.glowColor}, inset 0 2px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.55)`}
+            maxW="min(92vw, 640px)"
+            _before={{
+              content: '""',
+              position: "absolute",
+              inset: "3px",
+              border: `2px solid ${config.borderColor}`,
+              opacity: 0.5,
+              pointerEvents: "none",
+            }}
+            // 10連勝は背景にも特別感
+            _after={streakLevel === "legend" ? {
+              content: '""',
+              position: "absolute",
+              inset: "-6px",
+              border: "1px solid rgba(224,231,255,0.35)",
+              pointerEvents: "none",
+            } : undefined}
+          >
+            <Flex
+              align={{ base: "center", md: "baseline" }}
+              gap={{ base: "11px", md: "15px" }}
+              justify="center"
+              flexWrap={{ base: "wrap", md: "nowrap" }}
+            >
+              {/* 数字 */}
+              <Box ref={numberRef}>
+                <Text
+                  fontSize={config.fontSize}
+                  fontWeight={900}
+                  color={config.numberColor}
+                  textShadow={`
+                    3px 3px 0 rgba(0,0,0,0.92),
+                    0 0 ${streakLevel === "legend" ? "28px" : streakLevel === "great" ? "22px" : "18px"} ${config.glowColor},
+                    ${streakLevel === "legend" ? "0 0 48px " + config.shadowColor : ""}
+                  `}
+                  lineHeight="1"
+                  fontFamily="monospace"
+                  letterSpacing="-0.02em"
+                >
+                  {streak}
+                </Text>
+              </Box>
+
+              {/* ラベル */}
               <Text
-                fontSize={config.fontSize}
-                fontWeight={900}
-                color={config.numberColor}
-                textShadow={`
-                  3px 3px 0 rgba(0,0,0,0.92),
-                  0 0 ${streakLevel === "legend" ? "28px" : streakLevel === "great" ? "22px" : "18px"} ${config.glowColor},
-                  ${streakLevel === "legend" ? "0 0 48px " + config.shadowColor : ""}
-                `}
+                fontSize={config.labelSize}
+                fontWeight={700}
+                letterSpacing="0.18em"
+                color={config.labelColor}
+                textShadow={`2px 2px 0 rgba(0,0,0,0.85), 0 0 12px ${config.shadowColor}`}
                 lineHeight="1"
                 fontFamily="monospace"
-                letterSpacing="-0.02em"
+                pt={{ base: "7px", md: "9px" }}
+                textAlign={{ base: "center", md: "left" }}
               >
-                {streak}
+                {config.label}
               </Text>
-            </Box>
-
-            {/* ラベル */}
-            <Text
-              fontSize={config.labelSize}
-              fontWeight={700}
-              letterSpacing="0.18em"
-              color={config.labelColor}
-              textShadow={`2px 2px 0 rgba(0,0,0,0.85), 0 0 12px ${config.shadowColor}`}
-              lineHeight="1"
-              fontFamily="monospace"
-              pt={{ base: "7px", md: "9px" }}
-            >
-              {config.label}
-            </Text>
-          </Flex>
+            </Flex>
+          </Box>
         </Box>
       </Box>
     </Portal>
