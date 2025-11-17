@@ -165,12 +165,6 @@ export function EmptyCard({
           boxShadow: "inset 0 0 8px rgba(255, 255, 255, 0.1)",
         },
 
-        // ドラッグ中の状態：ドロップ可能を控えめに表示
-        ...(isDragActive && isDroppable && !isOver && {
-          borderColor: "rgba(255, 255, 255, 0.4)",
-          boxShadow: "inset 0 0 6px rgba(255, 255, 255, 0.05)",
-        }),
-
         // マグネット候補の視覚強調（段階的な吸着感）
         ...(isMagnetTarget && !isOver && {
           borderColor: `rgba(255, 255, 255, ${0.45 + Math.min(0.45, magnetStrength * 0.55)})`,
