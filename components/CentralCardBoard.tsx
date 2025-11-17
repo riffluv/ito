@@ -148,8 +148,13 @@ const boardCollisionDetection: CollisionDetection = (args) => {
       const collision: Collision = { id: best.id, data: { value: best.value } };
       return [collision];
     }
+
+    // マウス/タッチ位置が存在し、近接候補も無い場合は「未ヒット」とみなす
+    // （1人部屋で唯一のスロットが常に選ばれる暴走を防止）
+    return [];
   }
 
+  // キーボード操作など pointerCoordinates が無い場合のみフォールバック
   return closestCenter(args);
 };
 
