@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useTransitionState } from "./transition/useTransitionState";
 import type { TransitionLoadingStep, TransitionOptions } from "./transition/types";
+import { notify } from "@/components/ui/notify";
+import { traceError } from "@/lib/utils/trace";
 
 export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
   { id: "firebase", message: "せつぞく中です...", duration: 890, icon: "🔥" },
@@ -180,11 +182,13 @@ export function usePageTransition() {
           pushTimeoutRef.current = null;
         }, delay);
       } catch (error) {
-        console.error("遷移エラー:", error);
+        traceError("navigation.error", error, { from: pathname, to: href });
+        notify({
+          title: "ページ遷移に失敗しました",
+          description: "ネットワークを確認して、もう一度お試しください。",
+          type: "error",
+        });
         cancelTransition();
-
-        // エラー時の回復アニメーション
-        // TODO: エラー表示機能を追加
       }
     },
     [

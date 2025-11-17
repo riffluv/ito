@@ -225,6 +225,7 @@ const bindControllerChangeListener = () => {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     clearReloadFallbackTimer();
     handlePendingReload("controllerchange");
+    void resyncWaitingServiceWorker("controllerchange");
   });
 };
 
