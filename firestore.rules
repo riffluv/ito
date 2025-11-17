@@ -388,7 +388,10 @@ service cloud.firestore {
     }
     // order の差分: proposal のみ（互換で total 同時更新も可）
     function orderChangeKeysAreSafe() {
-      return request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal'])
+      // CRITICAL FIX: Allow proposal updates even when order is null or partial
+      return !('order' in resource.data)
+        || resource.data.order == null
+        || request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal'])
         || request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal','total']);
     }
   }
