@@ -6,26 +6,11 @@ import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 import StorageSchemaGuard from "./StorageSchemaGuard";
 import "./globals.css";
 import Providers from "./providers";
-import { SOUND_LIBRARY } from "@/lib/audio/registry";
-import { resolvePreferredVariantUrl } from "@/lib/audio/paths.server";
+import { buildAudioPreloadHrefs } from "@/lib/audio/preload";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
-const AUDIO_PRELOAD_HREFS = (() => {
-  const seen = new Set<string>();
-  const hrefs: string[] = [];
-  SOUND_LIBRARY.forEach((definition) => {
-    if (!definition.preload?.link) return;
-    definition.variants.forEach((variant) => {
-      const href = resolvePreferredVariantUrl(variant.src);
-      if (href && !seen.has(href)) {
-        seen.add(href);
-        hrefs.push(href);
-      }
-    });
-  });
-  return hrefs;
-})();
+const AUDIO_PRELOAD_HREFS = buildAudioPreloadHrefs();
 
 const guessAudioType = (href: string) => {
   if (href.endsWith(".ogg")) return "audio/ogg";
