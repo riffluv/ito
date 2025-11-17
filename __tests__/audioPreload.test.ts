@@ -1,5 +1,4 @@
 import { buildAudioPreloadHrefs } from "@/lib/audio/preload";
-import { SOUND_LIBRARY } from "@/lib/audio/registry";
 
 jest.mock("@/lib/audio/registry", () => {
   const base = [
