@@ -67,7 +67,11 @@ const isPromiseLike = <T = unknown>(value: unknown): value is Promise<T> => {
 
 declare global {
   interface Window {
-    __missingSince?: Record<string, number>;
+    /**
+     * ルームIDごとの「offline検知時刻」キャッシュ
+     * window.__missingSince[roomId][uid] = timestamp
+     */
+    __missingSince?: Record<string, Record<string, number>>;
   }
 }
 
@@ -511,6 +515,18 @@ export function useParticipants(
     };
   }, []);
 
+  // ルーム変更/アンマウント時に presence グレースキャッシュを掃除
+  useEffect(() => {
+    return () => {
+      if (typeof window === "undefined" || !roomId) return;
+      try {
+        if (window.__missingSince) {
+          delete window.__missingSince[roomId];
+        }
+      } catch {}
+    };
+  }, [roomId]);
+
   useEffect(() => {
     if (!presenceReady || !Array.isArray(onlineUids)) {
       setStableOnlineUids(undefined);
@@ -523,11 +539,11 @@ export function useParticipants(
     const prev = new Set(stableOnlineUidsRef.current ?? onlineUids);
     const missingSinceRef = new Map<string, number>();
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && roomId) {
       try {
-        const store = window.__missingSince;
-        if (store) {
-          for (const [k, v] of Object.entries(store)) {
+        const roomStore = window.__missingSince?.[roomId];
+        if (roomStore) {
+          for (const [k, v] of Object.entries(roomStore)) {
             missingSinceRef.set(k, v);
           }
         }
@@ -551,16 +567,19 @@ export function useParticipants(
     const nextStable = Array.from(result);
     setStableOnlineUids(nextStable);
     stableOnlineUidsRef.current = nextStable;
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && roomId) {
       try {
         const store: Record<string, number> = {};
         missingSinceRef.forEach((value, key) => {
           store[key] = value;
         });
-        window.__missingSince = store;
+        if (!window.__missingSince) {
+          window.__missingSince = {};
+        }
+        window.__missingSince[roomId] = store;
       } catch {}
     }
-  }, [presenceReady, onlineUids]);
+  }, [presenceReady, onlineUids, roomId]);
 
   const effectiveOnlineUids = useMemo(() => {
     if (presenceReady) return onlineUids;

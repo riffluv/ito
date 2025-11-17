@@ -19,6 +19,7 @@ import {
 } from "xstate";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { handleGameError } from "@/lib/utils/errorHandling";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 type SanitizedPlayer = PlayerDoc & { id: string };
@@ -225,6 +226,13 @@ export function createRoomMachine(input: RoomMachineInput) {
     ? [...input.onlineUids]
     : undefined;
   const deps: RoomMachineDeps = { ...defaultDeps, ...input.deps };
+
+  const reportActionError = (action: string, error: unknown) => {
+    traceError(`room.${action}`, error, { roomId: input.roomId });
+    if (typeof window !== "undefined") {
+      handleGameError(error, `ルーム操作: ${action}`, true);
+    }
+  };
 
   return createMachine(
     {
@@ -607,24 +615,34 @@ export function createRoomMachine(input: RoomMachineInput) {
           };
         }),
         callStartGame: ({ context }) => {
-          void deps.startGame(context.roomId).catch(() => {});
+          void deps.startGame(context.roomId).catch((error) => {
+            reportActionError("startGame", error);
+          });
         },
         callDealNumbers: ({ context }) => {
-          void deps.dealNumbers(context.roomId).catch(() => {});
+          void deps.dealNumbers(context.roomId).catch((error) => {
+            reportActionError("dealNumbers", error);
+          });
         },
         callSubmitOrder: ({ context, event }) => {
           if (event.type !== "SUBMIT_ORDER") return;
           const list = sanitizeOrderList(event.list);
-          void deps.submitSortedOrder(context.roomId, list).catch(() => {});
+          void deps.submitSortedOrder(context.roomId, list).catch((error) => {
+            reportActionError("submitSortedOrder", error);
+          });
         },
         callFinalizeReveal: ({ context }) => {
-          void deps.finalizeReveal(context.roomId).catch(() => {});
+          void deps.finalizeReveal(context.roomId).catch((error) => {
+            reportActionError("finalizeReveal", error);
+          });
         },
         callReset: ({ context, event }) => {
           if (event.type !== "RESET") return;
           void deps
             .resetRoomWithPrune(context.roomId, event.keepIds, event.options)
-            .catch(() => {});
+            .catch((error) => {
+              reportActionError("resetRoomWithPrune", error);
+            });
         },
         spectatorEnter: assign(({ context, event }) => {
           if (event.type !== "SPECTATOR_ENTER") return context;

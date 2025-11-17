@@ -105,20 +105,6 @@ function proposalRef(roomId: string) {
   return doc(db!, ROOM_PROPOSAL_COLLECTION, roomId);
 }
 
-async function syncRoomProposal(
-  roomId: string,
-  proposal: (string | null)[]
-) {
-  try {
-    await updateDoc(doc(db!, "rooms", roomId), {
-      "order.proposal": proposal,
-      lastActiveAt: serverTimestamp(),
-    });
-  } catch (error) {
-    traceError("proposal.syncRoom", error, { roomId });
-  }
-}
-
 function readProposal(source: unknown): (string | null)[] {
   if (!Array.isArray(source)) return [];
   return (source as (string | null | undefined)[]).map((value) =>
@@ -570,8 +556,7 @@ export async function addCardToProposalAtPosition(
               const limit = Math.max(next.length, maxCount);
               for (let i = 0; i < limit; i += 1) {
                 if (i >= next.length) next.length = i + 1;
-                // CRITICAL FIX: Check for both null and undefined (== instead of ===)
-                if (next[i] == null) {
+                if (next[i] === null || next[i] === undefined) {
                   next[i] = playerId;
                   placed = true;
                   break;
