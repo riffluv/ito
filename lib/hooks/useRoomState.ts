@@ -63,6 +63,7 @@ export type RoomState = {
   spectatorRequestCreatedAt: number | null;
   spectatorRequestFailure: string | null;
   spectatorNode: SpectatorStatus;
+  roomAccessError: string | null;
 };
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);

@@ -20,13 +20,13 @@ import { EmptyCard } from "@/components/cards";
 import { SortableItem } from "@/components/sortable/SortableItem";
 import WaitingArea from "@/components/ui/WaitingArea";
 import type { DragSlotDescriptor } from "@/components/hooks/useBoardSlots";
+import { useMagnetSnapshot, type MagnetController } from "@/components/hooks/useMagnetController";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import type { MagnetResult } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 
 import { BoardFrame } from "./BoardFrame";
 import { GHOST_CARD_STYLE, RETURN_DROP_ZONE_ID } from "./constants";
-import type { MagnetSnapshot } from "./types";
 
 type CursorSnapOffset = {
   x: number;
@@ -104,8 +104,7 @@ function createCursorSnapModifier(cursorOffset: CursorSnapOffset | null): Modifi
 
 interface InteractiveBoardProps {
   slots: DragSlotDescriptor[];
-  magnetSnapshot: MagnetSnapshot;
-  magnetState: MagnetResult;
+  magnetController: MagnetController;
   prefersReducedMotion: boolean;
   activeId: string | null;
   isOver: boolean;
@@ -130,8 +129,7 @@ interface InteractiveBoardProps {
 
 function InteractiveBoardBase({
   slots,
-  magnetSnapshot,
-  magnetState,
+  magnetController,
   prefersReducedMotion,
   activeId,
   isOver,
@@ -153,6 +151,8 @@ function InteractiveBoardBase({
   isRevealing,
   cursorSnapOffset,
 }: InteractiveBoardProps) {
+  const magnetSnapshot = useMagnetSnapshot(magnetController);
+  const magnetState = magnetController.getProjectedMagnetState();
   const sortableItems = useMemo(
     () => activeProposal.filter((id): id is string => typeof id === "string" && id.length > 0),
     [activeProposal]

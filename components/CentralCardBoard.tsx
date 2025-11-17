@@ -22,9 +22,8 @@ import {
 import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { unstable_batchedUpdates } from "react-dom";
+import dynamic from "next/dynamic";
 import { CardRenderer } from "@/components/ui/CardRenderer";
-import { GameResultOverlay } from "@/components/ui/GameResultOverlay";
-import { StreakBanner } from "@/components/ui/StreakBanner";
 import { useDropHandler, DROP_OPTIMISTIC_ENABLED, createDropMetricsSession } from "@/components/hooks/useDropHandler";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
@@ -48,7 +47,7 @@ import {
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
-import { computeMagnetTransform, type MagnetResult, type RectLike } from "@/lib/ui/dragMagnet";
+import { computeMagnetTransform, type RectLike } from "@/lib/ui/dragMagnet";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
@@ -66,8 +65,18 @@ import {
   usePlayerPresenceState,
   useRevealStatus,
   useResultFlipState,
-  type MagnetSnapshot,
 } from "@/components/central-board";
+import { useMagnetController } from "@/components/hooks/useMagnetController";
+
+const GameResultOverlay = dynamic(() =>
+  import("@/components/ui/GameResultOverlay").then((mod) => mod.GameResultOverlay),
+  { loading: () => null, ssr: false }
+);
+
+const StreakBanner = dynamic(() =>
+  import("@/components/ui/StreakBanner").then((mod) => mod.StreakBanner),
+  { loading: () => null }
+);
 
 interface CentralCardBoardProps {
   roomId: string;
@@ -220,11 +229,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
   const prefersReducedMotion = useReducedMotionPreference();
 
-  const [magnetState, setMagnetState] = useState<MagnetResult>(() => createInitialMagnetState());
-  const magnetStateRef = useRef(magnetState);
-  useEffect(() => {
-    magnetStateRef.current = magnetState;
-  }, [magnetState]);
+  const pointerProfile = usePointerProfile();
 
   // Streak Banner のタイミング制御
   const streakTimerRef = useRef<number | null>(null);
@@ -271,16 +276,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     };
   }, [showStreakBanner, prefersReducedMotion]);
 
-  const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
-  const magnetTargetRef = useRef<string | null>(null);
-  const magnetHighlightTimeoutRef = useRef<number | null>(null);
-  const pendingMagnetStateRef = useRef<MagnetResult | null>(null);
-  const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
-  const magnetFlushFrameRef = useRef<number | null>(null);
   const magnetResetTimeoutRef = useRef<number | null>(null);
   const [cursorSnapOffset, setCursorSnapOffset] = useState<{ x: number; y: number } | null>(null);
-
-  const pointerProfile = usePointerProfile();
 
   const magnetConfig = useMemo(
     () => {
@@ -309,10 +306,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       pointerProfile.isTouchOnly,
     ]
   );
-  const magnetConfigRef = useRef(magnetConfig);
-  useEffect(() => {
-    magnetConfigRef.current = magnetConfig;
-  }, [magnetConfig]);
+  const magnetController = useMagnetController(magnetConfig, { prefersReducedMotion });
+  const {
+    enqueueMagnetUpdate,
+    resetMagnet,
+    scheduleMagnetTarget,
+    getProjectedMagnetState,
+    magnetConfigRef,
+  } = magnetController;
 
   const dropAnimationTargetRef = useRef<RectLike | null>(null);
   const dropAnimationMetaRef = useRef<{ magnetSnap: boolean }>({ magnetSnap: false });
@@ -328,64 +329,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     []
   );
-
-  const flushMagnetUpdates = useCallback(() => {
-    const nextState = pendingMagnetStateRef.current;
-    const nextTarget = pendingMagnetTargetIdRef.current;
-    pendingMagnetStateRef.current = null;
-    pendingMagnetTargetIdRef.current = undefined;
-    if (nextState) {
-      magnetStateRef.current = nextState;
-      setMagnetState(nextState);
-    }
-    if (nextTarget !== undefined) {
-      magnetTargetRef.current = nextTarget;
-      setMagnetTargetId(nextTarget);
-    }
-  }, []);
-
-  const scheduleMagnetFlush = useCallback(
-    (options?: { immediate?: boolean }) => {
-      const immediate = options?.immediate ?? false;
-      if (immediate || typeof window === "undefined") {
-        if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
-          window.cancelAnimationFrame(magnetFlushFrameRef.current);
-        }
-        magnetFlushFrameRef.current = null;
-        flushMagnetUpdates();
-        return;
-      }
-      if (magnetFlushFrameRef.current !== null) return;
-      magnetFlushFrameRef.current = window.requestAnimationFrame(() => {
-        magnetFlushFrameRef.current = null;
-        flushMagnetUpdates();
-      });
-    },
-    [flushMagnetUpdates]
-  );
-
-  const enqueueMagnetUpdate = useCallback(
-    (update: { state?: MagnetResult; target?: string | null; immediate?: boolean }) => {
-      let didQueue = false;
-      if (update.state) {
-        pendingMagnetStateRef.current = update.state;
-        didQueue = true;
-      }
-      if (Object.prototype.hasOwnProperty.call(update, "target")) {
-        pendingMagnetTargetIdRef.current = update.target;
-        didQueue = true;
-      }
-      if (!didQueue) return;
-      scheduleMagnetFlush({ immediate: update.immediate });
-    },
-    [scheduleMagnetFlush]
-  );
-
-  const getProjectedMagnetTarget = useCallback(() => {
-    return pendingMagnetTargetIdRef.current !== undefined
-      ? pendingMagnetTargetIdRef.current
-      : magnetTargetRef.current;
-  }, []);
 
   const boardContainerRef = useRef<HTMLDivElement | null>(null);
   const [boardElement, setBoardElement] = useState<HTMLDivElement | null>(null);
@@ -467,36 +410,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [roomStatus, dragBoostEnabled]);
 
-  const resetMagnet = useCallback(
-    (options?: { immediate?: boolean }) => {
-      const immediate = options?.immediate ?? false;
-      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
-      const projectedTarget = getProjectedMagnetTarget();
-      const needsStateReset =
-        projectedState.dx !== 0 ||
-        projectedState.dy !== 0 ||
-        projectedState.strength !== 0 ||
-        projectedState.shouldSnap;
-      const needsTargetReset = projectedTarget !== null;
-
-      if (!needsStateReset && !needsTargetReset) {
-        return;
-      }
-
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
-        window.clearTimeout(magnetHighlightTimeoutRef.current);
-        magnetHighlightTimeoutRef.current = null;
-      }
-
-      enqueueMagnetUpdate({
-        state: needsStateReset ? createInitialMagnetState() : undefined,
-        target: needsTargetReset ? null : undefined,
-        immediate,
-      });
-    },
-    [enqueueMagnetUpdate, getProjectedMagnetTarget]
-  );
-
   const queueMagnetReset = useCallback(
     (delayMs: number) => {
       if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
@@ -515,38 +428,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     [resetMagnet]
   );
 
-  const scheduleMagnetTarget = useCallback(
-    (nextId: string | null) => {
-      const projected = getProjectedMagnetTarget();
-      if (projected === nextId) return;
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
-        window.clearTimeout(magnetHighlightTimeoutRef.current);
-        magnetHighlightTimeoutRef.current = null;
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
+        window.clearTimeout(magnetResetTimeoutRef.current);
+        magnetResetTimeoutRef.current = null;
       }
-
-      if (typeof window === "undefined") {
-        enqueueMagnetUpdate({ target: nextId, immediate: true });
-        return;
-      }
-
-      const wasIdle = projected === null;
-      const delay = nextId === null || wasIdle ? 0 : prefersReducedMotion ? 36 : 90;
-      if (delay <= 0) {
-        enqueueMagnetUpdate({ target: nextId });
-        return;
-      }
-
-      magnetHighlightTimeoutRef.current = window.setTimeout(() => {
-        magnetHighlightTimeoutRef.current = null;
-        enqueueMagnetUpdate({ target: nextId });
-      }, delay);
-    },
-    [enqueueMagnetUpdate, getProjectedMagnetTarget, prefersReducedMotion]
-  );
+    };
+  }, []);
 
   const releaseMagnet = useCallback(() => {
     scheduleMagnetTarget(null);
-    const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+    const projectedState = getProjectedMagnetState();
     if (
       projectedState.dx !== 0 ||
       projectedState.dy !== 0 ||
@@ -555,24 +448,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     ) {
       enqueueMagnetUpdate({ state: createInitialMagnetState() });
     }
-  }, [enqueueMagnetUpdate, scheduleMagnetTarget]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && magnetHighlightTimeoutRef.current !== null) {
-        window.clearTimeout(magnetHighlightTimeoutRef.current);
-        magnetHighlightTimeoutRef.current = null;
-      }
-      if (typeof window !== "undefined" && magnetFlushFrameRef.current !== null) {
-        window.cancelAnimationFrame(magnetFlushFrameRef.current);
-        magnetFlushFrameRef.current = null;
-      }
-      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
-        window.clearTimeout(magnetResetTimeoutRef.current);
-        magnetResetTimeoutRef.current = null;
-      }
-    };
-  }, []);
+  }, [enqueueMagnetUpdate, getProjectedMagnetState, scheduleMagnetTarget]);
 
   const resolveDropAnimationKeyframes = useCallback<DropAnimationKeyframeResolver>(
     ({ dragOverlay, transform }) => {
@@ -617,19 +493,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (prefersReducedMotion) {
       return { duration: 110, easing: "linear", keyframes: resolveDropAnimationKeyframes };
     }
-    if (magnetState.shouldSnap) {
-      return {
-        duration: 180,
-        easing: "linear",
-        keyframes: resolveDropAnimationKeyframes,
-      };
-    }
     return {
       duration: 220,
       easing: UI_TOKENS.EASING.standard,
       keyframes: resolveDropAnimationKeyframes,
     };
-  }, [magnetState.shouldSnap, prefersReducedMotion, resolveDropAnimationKeyframes]);
+  }, [prefersReducedMotion, resolveDropAnimationKeyframes]);
 
   const mouseSensorOptions = useMemo(
     () => ({
@@ -703,7 +572,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       scheduleMagnetTarget(String(over.id));
 
-      const projectedState = pendingMagnetStateRef.current ?? magnetStateRef.current;
+      const projectedState = getProjectedMagnetState();
       const magnetResult = computeMagnetTransform(over.rect, activeRect, {
         ...magnetConfigRef.current,
         projectedOffset: {
@@ -727,7 +596,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       enqueueMagnetUpdate({ state: magnetResult });
     },
-    [enqueueMagnetUpdate, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
+    [enqueueMagnetUpdate, getProjectedMagnetState, magnetConfigRef, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
   );
 
   const flushPendingDragMove = useCallback(() => {
@@ -1045,11 +914,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     activeId,
   });
 
-  const magnetSnapshot = useMemo<MagnetSnapshot>(
-    () => ({ targetId: magnetTargetId, strength: magnetState.strength }),
-    [magnetTargetId, magnetState.strength]
-  );
-
   const handleSlotEnter = useCallback(
     (_index: number) => {
       if (!isOver) {
@@ -1145,14 +1009,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         queueMagnetReset(0);
         return;
       }
+      const currentMagnetState = getProjectedMagnetState();
       const baseDelay = prefersReducedMotion
         ? 130
-        : magnetStateRef.current.shouldSnap
+        : currentMagnetState.shouldSnap
           ? 220
           : 260;
       queueMagnetReset(baseDelay);
     },
-    [prefersReducedMotion, queueMagnetReset, setIsOver, setCursorSnapOffset]
+    [getProjectedMagnetState, prefersReducedMotion, queueMagnetReset, setIsOver, setCursorSnapOffset]
   );
 
   const onDragEnd = useCallback(
@@ -1247,14 +1112,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }
 
         if (isSlotTarget && overRect) {
+          const currentMagnetState = getProjectedMagnetState();
           updateDropAnimationTarget(overRect as RectLike, {
-            magnetSnap: magnetStateRef.current.shouldSnap,
+            magnetSnap: currentMagnetState.shouldSnap,
           });
           magnetResult = computeMagnetTransform(overRect, activeRect, {
             ...magnetConfigRef.current,
             projectedOffset: {
-              dx: magnetStateRef.current.dx,
-              dy: magnetStateRef.current.dy,
+              dx: currentMagnetState.dx,
+              dy: currentMagnetState.dy,
             },
           });
           let slotIndex = parseInt(overId.split("-")[1], 10);
@@ -1373,6 +1239,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [
       enqueueMagnetUpdate,
+      getProjectedMagnetState,
       resolveMode,
       roomStatus,
       playDropInvalid,
@@ -1386,6 +1253,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       clearActive,
       updateDropAnimationTarget,
       onOptimisticProposalChange,
+      magnetConfigRef,
     ]
   );
 
@@ -1483,8 +1351,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         {activeBoard ? (
           <InteractiveBoard
             slots={dragSlots}
-            magnetSnapshot={magnetSnapshot}
-            magnetState={magnetState}
+            magnetController={magnetController}
             prefersReducedMotion={prefersReducedMotion}
             activeId={activeId}
             isOver={isOver}

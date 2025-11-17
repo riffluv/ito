@@ -261,6 +261,16 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /showtime/{eventId} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAuthenticated()
+          && (isHost(roomId) || isAdmin());
+
+        allow update: if false;
+        allow delete: if false;
+      }
+
       // 通知イベント（右上トースト用）
       match /events/{eventId} {
         allow read: if isAuthenticated();

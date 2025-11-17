@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  type MutableRefObject,
+} from "react";
 import type { MagnetConfig, MagnetResult } from "@/lib/ui/dragMagnet";
 
 export const createInitialMagnetState = (): MagnetResult => ({
@@ -16,6 +22,7 @@ type MagnetControllerOptions = {
 export type MagnetSnapshot = {
   targetId: string | null;
   strength: number;
+  shouldSnap: boolean;
 };
 
 type EnqueueUpdateArgs = {
@@ -29,38 +36,33 @@ type ResetOptions = {
 };
 
 export type MagnetController = {
-  magnetState: MagnetResult;
-  magnetSnapshot: MagnetSnapshot;
-  magnetTargetId: string | null;
-  magnetConfigRef: React.MutableRefObject<MagnetConfig>;
+  magnetConfigRef: MutableRefObject<MagnetConfig>;
   enqueueMagnetUpdate: (update: EnqueueUpdateArgs) => void;
   resetMagnet: (options?: ResetOptions) => void;
   scheduleMagnetTarget: (nextId: string | null) => void;
   getProjectedMagnetTarget: () => string | null;
   getProjectedMagnetState: () => MagnetResult;
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => MagnetSnapshot;
 };
 
 export function useMagnetController(
   magnetConfig: MagnetConfig,
   { prefersReducedMotion }: MagnetControllerOptions
 ): MagnetController {
-  const [magnetState, setMagnetState] = useState<MagnetResult>(() =>
-    createInitialMagnetState()
-  );
-  const magnetStateRef = useRef(magnetState);
-  useEffect(() => {
-    magnetStateRef.current = magnetState;
-  }, [magnetState]);
-
-  const [magnetTargetId, setMagnetTargetId] = useState<string | null>(null);
+  const magnetStateRef = useRef<MagnetResult>(createInitialMagnetState());
   const magnetTargetRef = useRef<string | null>(null);
-
   const pendingMagnetStateRef = useRef<MagnetResult | null>(null);
-  const pendingMagnetTargetIdRef = useRef<string | null | undefined>(undefined);
-
+  const pendingMagnetTargetRef = useRef<string | null | undefined>(undefined);
   const magnetFlushFrameRef = useRef<number | null>(null);
   const magnetHighlightTimeoutRef = useRef<number | null>(null);
   const magnetConfigRef = useRef<MagnetConfig>(magnetConfig);
+  const listenersRef = useRef<Set<() => void>>(new Set());
+  const magnetSnapshotRef = useRef<MagnetSnapshot>({
+    targetId: null,
+    strength: 0,
+    shouldSnap: false,
+  });
 
   useEffect(() => {
     magnetConfigRef.current = magnetConfig;
@@ -79,20 +81,28 @@ export function useMagnetController(
     };
   }, []);
 
+  const notifySubscribers = useCallback(() => {
+    listenersRef.current.forEach((listener) => listener());
+  }, []);
+
   const flushMagnetUpdates = useCallback(() => {
     const nextState = pendingMagnetStateRef.current;
-    const nextTarget = pendingMagnetTargetIdRef.current;
+    const nextTarget = pendingMagnetTargetRef.current;
     pendingMagnetStateRef.current = null;
-    pendingMagnetTargetIdRef.current = undefined;
+    pendingMagnetTargetRef.current = undefined;
+    let shouldNotify = false;
     if (nextState) {
       magnetStateRef.current = nextState;
-      setMagnetState(nextState);
+      shouldNotify = true;
     }
     if (nextTarget !== undefined) {
       magnetTargetRef.current = nextTarget;
-      setMagnetTargetId(nextTarget);
+      shouldNotify = true;
     }
-  }, []);
+    if (shouldNotify) {
+      notifySubscribers();
+    }
+  }, [notifySubscribers]);
 
   const scheduleMagnetFlush = useCallback(
     (options?: { immediate?: boolean }) => {
@@ -100,10 +110,10 @@ export function useMagnetController(
       if (immediate || typeof window === "undefined") {
         if (
           typeof window !== "undefined" &&
-        magnetFlushFrameRef.current !== null
-      ) {
-        window.cancelAnimationFrame(magnetFlushFrameRef.current);
-      }
+          magnetFlushFrameRef.current !== null
+        ) {
+          window.cancelAnimationFrame(magnetFlushFrameRef.current);
+        }
         magnetFlushFrameRef.current = null;
         flushMagnetUpdates();
         return;
@@ -125,7 +135,7 @@ export function useMagnetController(
         didQueue = true;
       }
       if (Object.prototype.hasOwnProperty.call(update, "target")) {
-        pendingMagnetTargetIdRef.current = update.target ?? null;
+        pendingMagnetTargetRef.current = update.target ?? null;
         didQueue = true;
       }
       if (!didQueue) return;
@@ -135,8 +145,8 @@ export function useMagnetController(
   );
 
   const getProjectedMagnetTarget = useCallback(() => {
-    return pendingMagnetTargetIdRef.current !== undefined
-      ? pendingMagnetTargetIdRef.current
+    return pendingMagnetTargetRef.current !== undefined
+      ? pendingMagnetTargetRef.current
       : magnetTargetRef.current;
   }, []);
 
@@ -209,20 +219,47 @@ export function useMagnetController(
     [enqueueMagnetUpdate, getProjectedMagnetTarget, prefersReducedMotion]
   );
 
-  const magnetSnapshot = useMemo<MagnetSnapshot>(
-    () => ({ targetId: magnetTargetId, strength: magnetState.strength }),
-    [magnetTargetId, magnetState.strength]
-  );
+  const subscribe = useCallback((listener: () => void) => {
+    listenersRef.current.add(listener);
+    return () => {
+      listenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const getSnapshot = useCallback((): MagnetSnapshot => {
+    const state = magnetStateRef.current;
+    const targetId = magnetTargetRef.current;
+    const current = magnetSnapshotRef.current;
+    if (
+      current.targetId !== targetId ||
+      current.strength !== state.strength ||
+      current.shouldSnap !== state.shouldSnap
+    ) {
+      magnetSnapshotRef.current = {
+        targetId,
+        strength: state.strength,
+        shouldSnap: state.shouldSnap,
+      };
+    }
+    return magnetSnapshotRef.current;
+  }, []);
 
   return {
-    magnetState,
-    magnetSnapshot,
-    magnetTargetId,
     magnetConfigRef,
     enqueueMagnetUpdate,
     resetMagnet,
     scheduleMagnetTarget,
     getProjectedMagnetTarget,
     getProjectedMagnetState,
+    subscribe,
+    getSnapshot,
   };
+}
+
+export function useMagnetSnapshot(controller: MagnetController): MagnetSnapshot {
+  return useSyncExternalStore(
+    controller.subscribe,
+    controller.getSnapshot,
+    controller.getSnapshot
+  );
 }

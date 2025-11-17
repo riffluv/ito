@@ -72,11 +72,24 @@ const startMachine = (
   return actor;
 };
 
+const expectPhase = (actor: ReturnType<typeof startMachine>, expected: RoomDoc["status"]) => {
+  const snapshotValue = actor.getSnapshot().value;
+  if (typeof snapshotValue === "string") {
+    expect(snapshotValue).toBe(expected);
+    return;
+  }
+  if (snapshotValue && typeof snapshotValue === "object" && "phase" in snapshotValue) {
+    expect((snapshotValue as { phase?: string }).phase).toBe(expected);
+    return;
+  }
+  throw new Error(`Unexpected state value: ${JSON.stringify(snapshotValue)}`);
+};
+
 test("START で waiting から clue へ遷移し、startGame が呼ばれる", async () => {
   const calls: string[] = [];
   const room = baseRoom({
     status: "waiting",
-    deal: { seed: "seed", min: 1, max: 100, players: ["p1", "p2"] },
+    deal: { seed: "seed", min: 1, max: 100, players: [] },
   });
   const players = [
     player("p1", { ready: true }),
@@ -99,7 +112,7 @@ test("START で waiting から clue へ遷移し、startGame が呼ばれる", a
 
   actor.send({ type: "START" });
 
-  expect(actor.getSnapshot().value).toBe("clue");
+  expectPhase(actor, "clue");
   expect(calls).toEqual(["room-start"]);
   actor.stop();
 });
@@ -108,15 +121,15 @@ test("プレイヤー不足では START を拒否する", async () => {
   const calls: string[] = [];
   const room = baseRoom({
     status: "waiting",
-    deal: { seed: "seed", min: 1, max: 100, players: ["p1"] },
+    deal: { seed: "seed", min: 1, max: 100, players: [] },
   });
-  const players = [player("p1", { ready: true })];
+  const players: Array<PlayerDoc & { id: string }> = [];
   const actor = startMachine(
     {
       room,
       players,
       onlineUids: ["p1"],
-      presenceReady: true,
+      presenceReady: false,
       deps: {
         startGame: async (roomId: string) => {
           calls.push(roomId);
@@ -128,7 +141,7 @@ test("プレイヤー不足では START を拒否する", async () => {
 
   actor.send({ type: "START" });
 
-  expect(actor.getSnapshot().value).toBe("waiting");
+  expectPhase(actor, "waiting");
   expect(calls).toEqual([]);
   actor.stop();
 });
@@ -160,7 +173,7 @@ test("SUBMIT_ORDER で clue から reveal へ遷移し、submitSortedOrder が�
 
   actor.send({ type: "SUBMIT_ORDER", list: ["p1", "p2"] });
 
-  expect(actor.getSnapshot().value).toBe("reveal");
+  expectPhase(actor, "reveal");
   expect(calls).toEqual([{ roomId: "room-submit", list: ["p1", "p2"] }]);
   actor.stop();
 });
@@ -192,7 +205,7 @@ test("無効な並びでは SUBMIT_ORDER を無視する", async () => {
 
   actor.send({ type: "SUBMIT_ORDER", list: ["p1", "p2"] });
 
-  expect(actor.getSnapshot().value).toBe("clue");
+  expectPhase(actor, "clue");
   expect(calls).toEqual([]);
   actor.stop();
 });
@@ -221,7 +234,7 @@ test("REVEAL_DONE で finished へ遷移し finalizeReveal が呼ばれる", asy
 
   actor.send({ type: "REVEAL_DONE" });
 
-  expect(actor.getSnapshot().value).toBe("finished");
+  expectPhase(actor, "finished");
   expect(calls).toEqual(["room-finalize"]);
   actor.stop();
 });
@@ -250,7 +263,7 @@ test("RESET は任意状態から waiting へ戻し resetRoomWithPrune を呼ぶ
 
   actor.send({ type: "RESET", keepIds: ["keep-1"], options: { notifyChat: true } });
 
-  expect(actor.getSnapshot().value).toBe("waiting");
+  expectPhase(actor, "waiting");
   expect(calls).toEqual([
     { roomId: "room-reset", keepIds: ["keep-1"], options: { notifyChat: true } },
   ]);
@@ -281,6 +294,6 @@ test("SYNC は RoomDoc の status に追従する", async () => {
     presenceReady: true,
   });
 
-  expect(actor.getSnapshot().value).toBe("reveal");
+  expectPhase(actor, "reveal");
   actor.stop();
 });
