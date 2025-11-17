@@ -1,5 +1,6 @@
 "use client";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { notify } from "@/components/ui/notify";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
@@ -143,6 +144,7 @@ export function useRoomState(
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
     null
   );
+  const joinLimitNotifiedRef = useRef(false);
   const currentRoomDocId = room?.id ?? null;
   const recallV2Enabled = process.env.NEXT_PUBLIC_RECALL_V2 === "1";
   const prefetchedAppliedRef = useRef(false);
@@ -780,6 +782,7 @@ export function useRoomState(
           });
           joinCompletedRef.current = true;
           joinAttemptRef.current = 0;
+          joinLimitNotifiedRef.current = false;
           clearRetryTimer();
           setJoinStatus("joined");
           clearPending();
@@ -794,22 +797,34 @@ export function useRoomState(
               Math.pow(JOIN_RETRY_BACKOFF_FACTOR, Math.max(cappedAttempt - 1, 0)),
             MAX_JOIN_RETRY_DELAY_MS
           );
-          const shouldRetry = pendingRejoin || nextAttempt <= MAX_JOIN_RETRIES;
-          if (shouldRetry) {
-            logDebug("room-state", "joinRoomFully-retry", {
-              attempt: nextAttempt,
-              delay,
-              pendingRejoin,
-              status: room.status,
+          const reachedLimit = !pendingRejoin && nextAttempt > MAX_JOIN_RETRIES;
+
+          if (reachedLimit && !joinLimitNotifiedRef.current) {
+            joinLimitNotifiedRef.current = true;
+            notify({
+              title: "接続を再試行しています",
+              description: "参加処理が続けて失敗しています。ネットワークを確認しつつ、このまま再試行します。",
+              type: "warning",
             });
-            clearRetryTimer();
-            joinRetryTimerRef.current = setTimeout(() => {
-              joinRetryTimerRef.current = null;
-              setJoinAttemptToken((value) => value + 1);
-            }, delay);
-            setJoinStatus("retrying");
-          } else {
-            logError("room-state", "joinRoomFully-max-retries", {
+          }
+
+          logDebug("room-state", "joinRoomFully-retry", {
+            attempt: nextAttempt,
+            delay,
+            pendingRejoin,
+            status: room.status,
+            reachedLimit,
+          });
+
+          clearRetryTimer();
+          joinRetryTimerRef.current = setTimeout(() => {
+            joinRetryTimerRef.current = null;
+            setJoinAttemptToken((value) => value + 1);
+          }, delay);
+          setJoinStatus("retrying");
+
+          if (reachedLimit) {
+            logError("room-state", "joinRoomFully-max-retries-keep-retrying", {
               error,
               roomId,
               uid,
@@ -817,8 +832,6 @@ export function useRoomState(
               pendingRejoin,
               attempt: nextAttempt,
             });
-            setJoinStatus("retrying");
-            clearPending();
           }
         })
         .finally(() => {
