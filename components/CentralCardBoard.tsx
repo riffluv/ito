@@ -35,6 +35,7 @@ import {
 import { finalizeReveal, removeCardFromProposal } from "@/lib/game/room";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
+import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import { notify } from "@/components/ui/notify";
 import { logError, logWarn } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
@@ -99,6 +100,7 @@ interface CentralCardBoardProps {
   dealPlayers?: string[] | null;
   currentStreak?: number;
   onOptimisticProposalChange?: (playerId: string, state: "placed" | "removed" | null) => void;
+  sendRoomEvent?: (event: RoomMachineClientEvent) => void;
 }
 
 const shallowArrayEqual = (
@@ -206,6 +208,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   dealPlayers = null,
   currentStreak = 0,
   onOptimisticProposalChange,
+  sendRoomEvent,
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(roomId, roomStatus, uiRevealPending ?? false);
 
@@ -993,7 +996,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       const total = revealTraversal + finalizeDelay + SAFETY_BUFFER_MS;
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
-        finalizeReveal(roomId).catch(() => void 0);
+        if (sendRoomEvent) {
+          try {
+            sendRoomEvent({ type: "REVEAL_DONE" });
+          } catch {
+            finalizeReveal(roomId).catch(() => void 0);
+          }
+        } else {
+          finalizeReveal(roomId).catch(() => void 0);
+        }
       }, total);
       return clearPendingTimer;
     }

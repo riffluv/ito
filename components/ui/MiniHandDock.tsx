@@ -4,7 +4,6 @@ import { AppButton } from "@/components/ui/AppButton";
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import { db } from "@/lib/firebase/client";
 import { keyframes } from "@emotion/react";
 import { ResolveMode } from "@/lib/game/resolveMode";
 import { topicControls } from "@/lib/game/service";
@@ -28,7 +27,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
@@ -918,24 +917,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 }
                 onClick={async () => {
                   if (topicActionLoading) return;
-                  let mode: string | null = effectiveDefaultTopicType;
-                  try {
-                    if (db) {
-                      const snap = await getDoc(doc(db, "rooms", roomId));
-                      const data = snap.data();
-                      if (isRecord(data)) {
-                        const rawOptions = data.options;
-                        if (isRecord(rawOptions)) {
-                          const latest = rawOptions.defaultTopicType;
-                          if (typeof latest === "string") {
-                            mode = latest;
-                          }
-                        }
-                      }
-                    }
-                  } catch {
-                    // ignore snapshot failure
-                  }
+                  const mode: string | null = effectiveDefaultTopicType;
 
                   if (mode === "カスタム") {
                     setCustomText(currentTopic || "");
