@@ -166,6 +166,20 @@ export function useHostActions({
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
+      if (!isHost) {
+        traceAction("ui.host.quickStart.blocked", {
+          roomId,
+          reason: "not-host",
+        });
+        notify({
+          id: toastIds.genericInfo(roomId, "host-claim-wait"),
+          title: "ホスト権限を確認しています",
+          description: "権限の譲渡が完了するまで数秒お待ちください",
+          type: "info",
+          duration: 2600,
+        });
+        return false;
+      }
       const basePlayerCount =
         typeof playerCount === "number" && Number.isFinite(playerCount)
           ? Math.max(0, playerCount)
@@ -220,8 +234,11 @@ export function useHostActions({
         });
       }
 
+      const auth = getAuth();
+      const authUid = auth?.currentUser?.uid ?? null;
       let effectiveType = effectiveDefaultTopicType;
       let latestTopic: string | null | undefined = currentTopic ?? null;
+      let latestHostId: string | null = null;
 
       muteNotifications(
         [
@@ -241,6 +258,8 @@ export function useHostActions({
           if (fetchedType) {
             effectiveType = fetchedType;
           }
+          latestHostId =
+            typeof data?.hostId === "string" ? data.hostId : null;
           const topicFromSnapshot = data?.topic;
           if (typeof topicFromSnapshot === "string") {
             latestTopic = topicFromSnapshot;
@@ -253,6 +272,28 @@ export function useHostActions({
         }
       } catch {
         // snapshot fetch failure can be ignored
+      }
+
+      if (
+        latestHostId &&
+        authUid &&
+        latestHostId !== authUid
+      ) {
+        traceAction("ui.host.quickStart.blocked", {
+          roomId,
+          reason: "host-mismatch",
+          hostId: latestHostId,
+        });
+        setQuickStartPending(false);
+        abortAction("quickStart");
+        notify({
+          id: toastIds.genericInfo(roomId, "host-mismatch"),
+          title: "ホスト権限の確定を待っています",
+          description: "権限が移動した直後は数秒後にもう一度お試しください",
+          type: "warning",
+          duration: 2600,
+        });
+        return false;
       }
 
       if (
@@ -339,7 +380,16 @@ export function useHostActions({
       } catch (error: unknown) {
         clearAutoStartLock();
         traceError("ui.host.quickStart", error, traceDetail ?? { roomId });
-        if (isFirebaseQuotaExceeded(error)) {
+        const firebaseCode = (error as { code?: string } | undefined)?.code;
+        if (firebaseCode === "permission-denied") {
+          notify({
+            id: toastIds.genericInfo(roomId, "host-permission"),
+            title: "ホスト権限の反映待ちです",
+            description: "ホスト交代後は2〜3秒待ってからもう一度開始してください",
+            type: "warning",
+            duration: 2600,
+          });
+        } else if (isFirebaseQuotaExceeded(error)) {
           handleFirebaseQuotaError("ゲーム開始");
         } else {
           const message =
@@ -377,6 +427,7 @@ export function useHostActions({
       syncRoundPreparing,
       abortAction,
       markActionStart,
+      isHost,
       finalizeAction,
     ]
   );
