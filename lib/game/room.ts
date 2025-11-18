@@ -15,6 +15,13 @@ import { applyOutcomeToRoomStats } from "@/lib/game/roomStats";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
 import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
+import {
+  normalizeProposal,
+  selectDealTargetPlayers,
+  deriveSeatHistory,
+  buildDealPayload,
+  diffProposal,
+} from "@/lib/game/domain";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   collection,
@@ -110,41 +117,6 @@ function readProposal(source: unknown): (string | null)[] {
   return (source as (string | null | undefined)[]).map((value) =>
     typeof value === "string" && value.length > 0 ? value : null
   );
-}
-
-function normalizeProposal(
-  values: (string | null | undefined)[],
-  maxCount: number
-): (string | null)[] {
-  if (maxCount <= 0) return [];
-  const limited: (string | null)[] = values.slice(0, maxCount).map((value) =>
-    typeof value === "string" && value.length > 0 ? value : null
-  );
-  while (limited.length > 0 && limited[limited.length - 1] === null) {
-    limited.pop();
-  }
-  return limited;
-}
-
-export function selectDealTargetPlayers(
-  candidates: DealCandidate[],
-  presenceUids: string[] | null | undefined,
-  now: number
-): DealCandidate[] {
-  const activeByRecency = candidates.filter((p) =>
-    isActive(p.lastSeen ?? null, now, ACTIVE_WINDOW_MS)
-  );
-  const fallbackPool =
-    activeByRecency.length > 0 ? activeByRecency : candidates;
-  if (Array.isArray(presenceUids) && presenceUids.length > 0) {
-    const presenceSet = new Set(presenceUids);
-    const online = fallbackPool.filter((p) => presenceSet.has(p.id));
-    if (online.length > 0) {
-      const others = fallbackPool.filter((p) => !presenceSet.has(p.id));
-      return [...online, ...others];
-    }
-  }
-  return fallbackPool;
 }
 
 export async function startGame(roomId: string) {
@@ -269,36 +241,18 @@ export async function dealNumbers(
   }
 
   const playerIds = ordered.map((p) => p.id);
-  const seatHistory = Object.fromEntries(
-    playerIds.map((id, index) => [id, index])
-  );
   const generatedNumbers = generateDeterministicNumbers(
     playerIds.length,
     min,
     max,
     seed
   );
-  const numberMap = playerIds.reduce<Record<string, number | null>>(
-    (acc, id, index) => {
-      acc[id] =
-        typeof generatedNumbers[index] === "number"
-          ? generatedNumbers[index]
-          : null;
-      return acc;
-    },
-    {}
-  );
+  const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
 
   await updateDoc(doc(db!, "rooms", roomId), {
-    deal: {
-      seed,
-      min,
-      max,
-      players: playerIds,
-      seatHistory,
-    },
+    deal: dealPayload,
     "order.total": ordered.length,
-    "order.numbers": numberMap,
+    "order.numbers": dealPayload.numbers,
     lastActiveAt: serverTimestamp(),
   });
   try {
@@ -581,25 +535,13 @@ export async function addCardToProposalAtPosition(
 
             const normalized = normalizeProposal(next, maxCount);
             const afterPrepare = readTimestamp();
-
-            let changedSlots = 0;
-            const comparisonLength = Math.max(current.length, normalized.length);
-            for (let idx = 0; idx < comparisonLength; idx += 1) {
-              const before = idx < current.length ? current[idx] : null;
-              const after = idx < normalized.length ? normalized[idx] : null;
-              if (before !== after) {
-                changedSlots += 1;
-              }
-            }
+            const { changedSlots, nullCount } = diffProposal(current, normalized);
 
             detailMetrics = {
               roundPlayerCount: maxCount,
               previousLength: current.length,
               normalizedLength: normalized.length,
-              nullCount: normalized.reduce(
-                (acc, value) => (value === null ? acc + 1 : acc),
-                0
-              ),
+              nullCount,
               changedSlots,
               finalIndex: normalized.indexOf(playerId),
               targetIndex,

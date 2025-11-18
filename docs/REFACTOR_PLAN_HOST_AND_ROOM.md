@@ -84,6 +84,8 @@
 
 ### 3-3. 実装指示 (チェックリスト)
 
+- 2025-11-18 Codex: フェーズ1・2完了、フェーズ3の直書きFirestore整理まで対応。(DONE)
+
 - 2025-11-18 Codex: フェーズ1の実装タスクを完了。(DONE)
 
 1. **新モジュールの作成** (DONE)
@@ -133,6 +135,8 @@
    - `npx playwright test tests/roomMachine.spec.ts`
    - 可能であれば、ホスト操作まわりの E2E (`tests/host-transfer.spec.ts` 相当) も実行。
 
+   - 2025-11-18 実行状況: `npm run typecheck` 通過。`tests/roomMachine.spec.ts` は直前セッションでパス済み（再実行は未）。
+
 ---
 
 ## 4. フェーズ2: `useRoomState` の責務分割 (HIGH)
@@ -154,7 +158,7 @@
 
 ### 4-3. 実装指示
 
-1. **`useRoomSnapshot` の追加**
+1. **`useRoomSnapshot` の追加** (DONE)
    - 新規ファイル案: `lib/hooks/useRoomSnapshot.ts`
    - 責務:
      - `room` ドキュメント購読＋バックオフ
@@ -172,7 +176,7 @@
      };
      ```
 
-2. **`useRoomMachineController` の追加**
+2. **`useRoomMachineController` の追加** (DONE)
    - 新規ファイル案: `lib/hooks/useRoomMachineController.ts`
    - 責務:
      - `createRoomMachine` / `createActor` を呼び、machine の actor を管理。
@@ -191,10 +195,11 @@
      };
      ```
 
-3. **`useRoomState` の薄いラッパ化**
+3. **`useRoomState` の薄いラッパ化** (DONE)
    - 既存の `useRoomState` を:
      - 内部で `useRoomSnapshot` と `useRoomMachineController` を呼ぶだけの Hook にする。
    - 既存の戻り値フィールドは極力そのまま維持する（`RoomPageContent` が壊れないように）。
+   - 2025-11-18 Codex 進捗メモ: `useRoomSnapshot` を新設し、Firestore購読＋joinロジックを分離。`useRoomMachineController` と組み合わせて `useRoomState` をラッパ化済み。
 
 4. **`app/rooms/[roomId]/page.tsx` の修正**
    - import 先は `useRoomState` のままでよいが、必要なら `useRoomSnapshot` / `useRoomMachineController` を別途読み込む構成にしてもよい。
@@ -266,6 +271,12 @@
 - 既存の `dealNumbers` / `addCardToProposal` / `addLateJoinerToDeal` / `continueAfterFail` などは:
   - **「Firestore から読み → domain 関数を適用 → 書き戻す」だけ**の関数に寄せる。
 - 必要に応じて Jest テストを追加（`domain` はユニットテスト向き）。
+
+2025-11-18 Codex メモ: `lib/game/domain.ts` を作成し、`selectDealTargetPlayers` と `normalizeProposal` を移設済み。残りの domain 関数（配札・proposal 正規化の周辺）は今後追加予定。
+
+2025-11-19 Codex 追記: SettingsModal の Firestore 直書きをサービス化 (`updateRoomOptions` in `roomService`)。MiniHandDock の defaultTopicType 直読を除去。Playwright `tests/roomMachine.spec.ts` 再実行で 7/7 パス。
+
+2025-11-19 Codex 追記: フェーズ4で `lib/game/domain.ts` に `deriveSeatHistory` と `buildDealPayload`、`buildSeatHistory`、`normalizeProposalCompact`、`diffProposal` を追加。配札や proposal 差分計測を domain 層へ移送し、`room.ts` は I/O ラッパ化を継続。Playwright `tests/roomMachine.spec.ts` を再度 7/7 パス確認。
 
 ---
 

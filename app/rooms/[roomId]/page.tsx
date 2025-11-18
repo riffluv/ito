@@ -65,7 +65,7 @@ import type {
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
 import { verifyPassword } from "@/lib/security/password";
-import { assignNumberIfNeeded } from "@/lib/services/roomService";
+import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/services/roomService";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
@@ -93,7 +93,7 @@ import {
 } from "@/lib/utils/roomPassword";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text, VStack, HStack } from "@chakra-ui/react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import {
   useCallback,
@@ -2761,8 +2761,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     const r = room?.round || 0;
     if (r !== seenRound) {
       setSeenRound(r);
-      const meRef = doc(db!, "rooms", roomId, "players", uid);
-      updateDoc(meRef, { ready: false }).catch(() => void 0);
+      resetPlayerReadyOnRoundChange(roomId, uid, r).catch(() => void 0);
     }
   }, [room?.round, uid, roomId, seenRound]);
 
@@ -3407,6 +3406,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           dealPlayers={dealPlayers}
           currentStreak={room.stats?.currentStreak ?? 0}
           onOptimisticProposalChange={updateOptimisticProposalOverride}
+          sendRoomEvent={sendRoomEvent}
         />
       </Box>
     </Box>

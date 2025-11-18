@@ -314,6 +314,39 @@ export async function ensureMember({
   return { joined: false } as const;
 }
 
+// Reset player's ready flag when round changes (UI layer should call this instead of direct updateDoc)
+export async function resetPlayerReadyOnRoundChange(
+  roomId: string,
+  uid: string,
+  nextRound: number
+): Promise<void> {
+  if (!db) return;
+  try {
+    traceAction("player.ready.reset", { roomId, uid, nextRound });
+    const meRef = doc(db, "rooms", roomId, "players", uid);
+    await updateDoc(meRef, { ready: false });
+  } catch (error) {
+    traceAction("player.ready.reset.error", { roomId, uid, nextRound });
+    throw error;
+  }
+}
+
+export async function updateRoomOptions(
+  roomId: string,
+  options: {
+    resolveMode?: string;
+    defaultTopicType?: string;
+  }
+): Promise<void> {
+  if (!db) return;
+  await updateDoc(doc(db, "rooms", roomId), {
+    ...(options.resolveMode ? { "options.resolveMode": options.resolveMode } : {}),
+    ...(options.defaultTopicType
+      ? { "options.defaultTopicType": options.defaultTopicType }
+      : {}),
+  });
+}
+
 export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
   const dupQ = query(
     collection(db!, "rooms", roomId, "players"),

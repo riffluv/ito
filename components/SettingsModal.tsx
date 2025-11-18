@@ -6,10 +6,11 @@ import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
+import { updateRoomOptions } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useEffect, useState as useLocalState, useState, useRef, useCallback } from "react";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
@@ -328,9 +329,9 @@ export function SettingsModal({
 
     setSaving(true);
     try {
-      await updateDoc(doc(db!, "rooms", roomId), {
-        "options.resolveMode": resolveMode,
-        "options.defaultTopicType": defaultTopicType,
+      await updateRoomOptions(roomId, {
+        resolveMode,
+        defaultTopicType,
       });
       try {
         if (typeof window !== "undefined") {
