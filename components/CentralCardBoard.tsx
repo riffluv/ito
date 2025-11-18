@@ -113,6 +113,23 @@ const shallowArrayEqual = (
   return true;
 };
 
+const prunePendingSlotsInPlace = (slots: (string | null | undefined)[]): (string | null)[] => {
+  for (let idx = 0; idx < slots.length; idx += 1) {
+    if (typeof slots[idx] === "undefined") {
+      slots[idx] = null;
+    }
+  }
+  while (slots.length > 0) {
+    const tail = slots[slots.length - 1];
+    if (tail === null || typeof tail === "undefined") {
+      slots.pop();
+      continue;
+    }
+    break;
+  }
+  return slots as (string | null)[];
+};
+
 const snapshotRect = (rect: RectLike): RectLike => ({
   left: rect.left,
   top: rect.top,
@@ -760,24 +777,48 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [orderList, orderListKey]);
 
   useEffect(() => {
-    if (!orderList || orderList.length === 0) return;
-    updatePendingState((cur) =>
-      cur.filter((id) => {
-        if (typeof id !== "string") return false;
-        return !orderListSet.has(id);
-      })
-    );
+    if (!orderList || orderList.length === 0 || orderListSet.size === 0) return;
+    updatePendingState((cur) => {
+      if (cur.length === 0) return cur;
+      let changed = false;
+      const next = cur.slice();
+      for (let idx = 0; idx < next.length; idx += 1) {
+        const value = next[idx];
+        if (typeof value !== "string" || value.length === 0) continue;
+        if (!orderListSet.has(value)) continue;
+        next[idx] = null;
+        changed = true;
+      }
+      if (!changed) return cur;
+      return prunePendingSlotsInPlace(next);
+    });
   }, [orderList, orderListKey, orderListSet, updatePendingState]);
 
   useEffect(() => {
     if (!proposal || proposal.length === 0) return;
-    const present = new Set((proposal as (string | null)[]).filter(Boolean) as string[]);
-    updatePendingState((cur) =>
-      cur.filter((id) => {
-        if (typeof id !== "string") return false;
-        return !present.has(id);
-      })
-    );
+    const proposalIndexMap = new Map<string, number>();
+    (proposal as (string | null)[]).forEach((value, idx) => {
+      if (typeof value === "string" && value.length > 0) {
+        proposalIndexMap.set(value, idx);
+      }
+    });
+    if (proposalIndexMap.size === 0) return;
+    updatePendingState((cur) => {
+      if (cur.length === 0) return cur;
+      let changed = false;
+      const next = cur.slice();
+      for (let idx = 0; idx < next.length; idx += 1) {
+        const pendingId = next[idx];
+        if (typeof pendingId !== "string" || pendingId.length === 0) continue;
+        const remoteIdx = proposalIndexMap.get(pendingId);
+        if (typeof remoteIdx !== "number") continue;
+        if (remoteIdx !== idx) continue;
+        next[idx] = null;
+        changed = true;
+      }
+      if (!changed) return cur;
+      return prunePendingSlotsInPlace(next);
+    });
   }, [proposal, proposalKey, updatePendingState]);
 
   useEffect(() => {

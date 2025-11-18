@@ -175,19 +175,28 @@ export function useDropHandler({
 
   useEffect(() => {
     if (!optimisticMode) return;
-    if (latestProposalRef.current.length === 0) return;
+    const latest = latestProposalRef.current;
+    if (!Array.isArray(latest) || latest.length === 0) return;
+    const proposalIndexMap = new Map<string, number>();
+    latest.forEach((value, idx) => {
+      if (typeof value === "string" && value.length > 0) {
+        proposalIndexMap.set(value, idx);
+      }
+    });
+    if (proposalIndexMap.size === 0) return;
     setPending((prev) => {
       if (prev.length === 0) return prev;
-      const proposalSet = new Set(latestProposalRef.current);
       let changed = false;
       const next = prev.slice();
       for (let idx = 0; idx < next.length; idx += 1) {
         const value = next[idx];
-        if (typeof value === "string" && proposalSet.has(value)) {
-          next[idx] = null;
-          changed = true;
-          clearOptimisticEntry(value);
-        }
+        if (typeof value !== "string" || value.length === 0) continue;
+        const remoteIndex = proposalIndexMap.get(value);
+        if (typeof remoteIndex !== "number") continue;
+        if (remoteIndex !== idx) continue;
+        next[idx] = null;
+        changed = true;
+        clearOptimisticEntry(value);
       }
       if (!changed) return prev;
       while (next.length > 0) {

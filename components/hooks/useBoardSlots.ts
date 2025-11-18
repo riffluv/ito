@@ -21,6 +21,17 @@ export interface StaticSlotDescriptor extends SlotDescriptorBase {
 }
 
 const EMPTY_PLAYER_ID_SET: ReadonlySet<string> = new Set<string>();
+const EMPTY_PENDING_INDEX_MAP: ReadonlyMap<string, number> = new Map<string, number>();
+
+const shouldMaskCardInSlot = (
+  cardId: string | null,
+  idx: number,
+  pendingIndexById: ReadonlyMap<string, number>
+) => {
+  if (!cardId || pendingIndexById.size === 0) return false;
+  const pendingIdx = pendingIndexById.get(cardId);
+  return typeof pendingIdx === "number" && pendingIdx !== idx;
+};
 
 type UseBoardSlotsParams = {
   slotCountDragging: number;
@@ -61,13 +72,32 @@ export function useBoardSlots({
   );
   const waitingPlayersCacheRef = useRef<(PlayerDoc & { id: string })[]>([]);
 
+  const pendingIndexById = useMemo<ReadonlyMap<string, number>>(() => {
+    if (!Array.isArray(pending) || pending.length === 0) {
+      return EMPTY_PENDING_INDEX_MAP;
+    }
+    const map = new Map<string, number>();
+    pending.forEach((value, idx) => {
+      if (typeof value === "string" && value.length > 0) {
+        map.set(value, idx);
+      }
+    });
+    if (map.size === 0) {
+      return EMPTY_PENDING_INDEX_MAP;
+    }
+    return map;
+  }, [pending]);
+
   const dragSlots = useMemo<DragSlotDescriptor[]>(() => {
     return Array.from({ length: Math.max(0, slotCountDragging) }).map((_, idx) => {
       const proposalCardId = activeProposal[idx] ?? null;
       const pendingRaw = pending?.[idx] ?? null;
       const pendingCardId =
         typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
-      const cardId = proposalCardId ?? pendingCardId ?? null;
+      let cardId: string | null = pendingCardId;
+      if (!cardId && proposalCardId && !shouldMaskCardInSlot(proposalCardId, idx, pendingIndexById)) {
+        cardId = proposalCardId;
+      }
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
       const isOptimistic =
         cardId !== null && cardId !== undefined && optimisticReturningSet.has(cardId);
@@ -84,7 +114,14 @@ export function useBoardSlots({
         pendingCardId,
       };
     });
-  }, [slotCountDragging, activeProposal, pending, playerReadyMap, optimisticReturningSet]);
+  }, [
+    slotCountDragging,
+    activeProposal,
+    pending,
+    playerReadyMap,
+    optimisticReturningSet,
+    pendingIndexById,
+  ]);
 
   const staticSlots = useMemo<StaticSlotDescriptor[]>(() => {
     return Array.from({ length: Math.max(0, slotCountStatic) }).map((_, idx) => {
@@ -93,7 +130,13 @@ export function useBoardSlots({
       const pendingRaw = pending?.[idx] ?? null;
       const pendingCardId =
         typeof pendingRaw === "string" && pendingRaw.length > 0 ? pendingRaw : null;
-      const cardId = proposalCardId ?? orderCardId ?? pendingCardId ?? null;
+      let cardId: string | null = pendingCardId;
+      if (!cardId && proposalCardId && !shouldMaskCardInSlot(proposalCardId, idx, pendingIndexById)) {
+        cardId = proposalCardId;
+      }
+      if (!cardId && orderCardId && !shouldMaskCardInSlot(orderCardId, idx, pendingIndexById)) {
+        cardId = orderCardId;
+      }
       const ready = cardId ? playerReadyMap.get(cardId) ?? false : false;
       const isOptimistic =
         cardId !== null && cardId !== undefined && optimisticReturningSet.has(cardId);
@@ -120,20 +163,15 @@ export function useBoardSlots({
     isGameActive,
     roomStatus,
     canDropAtPosition,
+    pendingIndexById,
   ]);
 
   const pendingLookup = useMemo<ReadonlySet<string>>(() => {
-    if (!pending || pending.length === 0) {
+    if (pendingIndexById === EMPTY_PENDING_INDEX_MAP || pendingIndexById.size === 0) {
       return EMPTY_PLAYER_ID_SET;
     }
-    const filtered = pending.filter(
-      (id): id is string => typeof id === "string" && id.length > 0
-    );
-    if (filtered.length === 0) {
-      return EMPTY_PLAYER_ID_SET;
-    }
-    return new Set(filtered);
-  }, [pending]);
+    return new Set(pendingIndexById.keys());
+  }, [pendingIndexById]);
 
   const placedLookup = useMemo<ReadonlySet<string>>(() => {
     if (!Array.isArray(activeProposal) || activeProposal.length === 0) {
