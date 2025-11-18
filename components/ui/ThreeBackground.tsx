@@ -107,11 +107,10 @@ export interface ThreeBackgroundProps {
 
 export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const { reducedMotion, supports3D, gpuCapability, softwareRenderer } =
-    useAnimationSettings();
+  const { supports3D, gpuCapability, softwareRenderer } = useAnimationSettings();
   const performanceProfile: PixiBackgroundProfile =
     softwareRenderer || gpuCapability === "low" ? "software" : "default";
-  const shouldForceCssFallback = reducedMotion || !supports3D;
+  const shouldForceCssFallback = !supports3D;
 
   const [backgroundType, setBackgroundType] =
     useState<BackgroundType>("pixi-dq");
@@ -183,6 +182,22 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     return () => {
       pixiBackgroundHost.detachCanvas(el ?? null);
       pixiBackgroundHost.dispose();
+    };
+  }, []);
+
+  // WebGL コンテキストロスト時にシーンを再適用
+  useEffect(() => {
+    const handleLost = () => setSceneNonce((value) => value + 1);
+    const handleRestored = () => setSceneNonce((value) => value + 1);
+    if (typeof window !== "undefined") {
+      window.addEventListener("pixiBackgroundContextLost", handleLost);
+      window.addEventListener("pixiBackgroundContextRestored", handleRestored);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("pixiBackgroundContextLost", handleLost);
+        window.removeEventListener("pixiBackgroundContextRestored", handleRestored);
+      }
     };
   }, []);
 
