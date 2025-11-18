@@ -5,22 +5,20 @@ import { enqueueFirestoreWrite } from "@/lib/firebase/writeQueue";
 import { recordProposalWriteMetrics } from "@/lib/metrics/proposalMetrics";
 import { requireDb } from "@/lib/firebase/require";
 import { normalizeResolveMode } from "@/lib/game/resolveMode";
-import {
-  applyPlay,
-  evaluateSorted,
-  shouldFinishAfterPlay,
-  type OrderState,
-} from "@/lib/game/rules";
+import { type OrderState } from "@/lib/game/rules";
 import { applyOutcomeToRoomStats } from "@/lib/game/roomStats";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { nextStatusForEvent } from "@/lib/state/guards";
-import { ACTIVE_WINDOW_MS, isActive, toMillis } from "@/lib/time";
+import { toMillis } from "@/lib/time";
 import {
   normalizeProposal,
   selectDealTargetPlayers,
-  deriveSeatHistory,
   buildDealPayload,
-  diffProposal,
+  prepareProposalInsert,
+  validateSubmitList,
+  buildDeterministicNumberMap,
+  buildRevealOutcomePayload,
+  buildPlayOutcomePayload,
 } from "@/lib/game/domain";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
@@ -499,43 +497,20 @@ export async function addCardToProposalAtPosition(
               current = [];
             }
 
-            if (current.includes(playerId)) {
+            const insertResult = prepareProposalInsert(
+              current,
+              playerId,
+              maxCount,
+              targetIndex
+            );
+            const afterPrepare = readTimestamp();
+
+            if (insertResult.status === "noop") {
               return { status: "noop" as ProposalWriteResult };
             }
 
-            const next = [...current];
-
-            if (targetIndex === -1) {
-              let placed = false;
-              const limit = Math.max(next.length, maxCount);
-              for (let i = 0; i < limit; i += 1) {
-                if (i >= next.length) next.length = i + 1;
-                if (next[i] === null || next[i] === undefined) {
-                  next[i] = playerId;
-                  placed = true;
-                  break;
-                }
-              }
-              if (!placed) next.push(playerId);
-            } else {
-              const clamped = Math.max(0, Math.min(targetIndex, Math.max(0, maxCount - 1)));
-              if (clamped < next.length) {
-                if (typeof next[clamped] === "string" && next[clamped]) {
-                  return { status: "noop" as ProposalWriteResult };
-                }
-              } else {
-                next.length = clamped + 1;
-              }
-              next[clamped] = playerId;
-            }
-
-            if (maxCount > 0 && next.length > maxCount) {
-              next.length = maxCount;
-            }
-
-            const normalized = normalizeProposal(next, maxCount);
-            const afterPrepare = readTimestamp();
-            const { changedSlots, nullCount } = diffProposal(current, normalized);
+            const normalized = insertResult.normalized;
+            const { changedSlots, nullCount } = insertResult;
 
             detailMetrics = {
               roundPlayerCount: maxCount,
@@ -1012,39 +987,31 @@ export async function commitPlayFromClue(roomId: string, playerId: string) {
     if (currentOrder.list.includes(playerId)) return; // 二重出し防止
     if (roundPlayers && !roundPlayers.includes(playerId)) return; // ラウンド対象外
 
-    const { next } = applyPlay({
-      order: currentOrder,
+    const playResult = buildPlayOutcomePayload({
+      currentOrder,
       playerId,
       myNum,
-    });
-
-    const shouldFinish = shouldFinishAfterPlay({
-      nextListLength: next.list.length,
-      total: roundTotal ?? next.total ?? room?.order?.total ?? null,
+      total: roundTotal ?? currentOrder.total,
       presenceCount: null,
-      nextFailed: !!next.failed,
       allowContinue,
+      previousStats: room?.stats,
+      decidedAt: decidedAtMs,
     });
 
-    if (shouldFinish) {
-      const success = !next.failed;
-      const stats = applyOutcomeToRoomStats(
-        room?.stats,
-        success ? "success" : "failure"
-      );
+    if (playResult.shouldFinish && playResult.payload) {
       // All games finish through reveal state for consistency
       tx.update(roomRef, {
         status: "reveal",
-        order: next,
-        result: { success, revealedAt: serverTimestamp() },
-        stats,
+        order: playResult.payload.order,
+        result: { success: playResult.payload.success, revealedAt: serverTimestamp() },
+        stats: playResult.payload.stats,
         lastActiveAt: serverTimestamp(),
       });
       return;
     }
 
     // clue フェーズのまま order を更新して、全員に反映させる
-    tx.update(roomRef, { order: next, lastActiveAt: serverTimestamp() });
+    tx.update(roomRef, { order: playResult.next, lastActiveAt: serverTimestamp() });
   });
 }
 
@@ -1061,19 +1028,14 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
     if (mode !== "sort-submit")
       throw new Error("このルームでは一括判定は無効です");
     if (status !== "clue") throw new Error("現在は提出できません");
-    // 提出リストの妥当性チェック（重複/人数）
-    const uniqueOk = new Set(list).size === list.length;
-    if (!uniqueOk) throw new Error("提出リストに重複があります");
+    // 提出リストの妥当性チェック（重複/人数/対象外）
     const roundPlayers: string[] | null = Array.isArray(room?.deal?.players)
       ? (room.deal.players as string[])
       : null;
     const expected = roundPlayers ? roundPlayers.length : list.length;
-    if (expected >= 2 && list.length !== expected) {
-      throw new Error(`提出数が有効人数(${expected})と一致しません`);
-    }
-    if (roundPlayers) {
-      const allMember = list.every((pid) => roundPlayers.includes(pid));
-      if (!allMember) throw new Error("提出リストに対象外のプレイヤーが含まれています");
+    const validation = validateSubmitList(list, roundPlayers, expected);
+    if (!validation.ok) {
+      throw new Error(validation.error);
     }
 
     // プレイヤーの数字を取得して保存（リアルタイム判定で使用）
@@ -1089,16 +1051,12 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
         typeof room?.deal?.min === "number" ? room.deal.min : 1;
       const max =
         typeof room?.deal?.max === "number" ? room.deal.max : 100;
-      const generated = generateDeterministicNumbers(
-        roundPlayers.length,
+      const deterministicMap = buildDeterministicNumberMap(
+        roundPlayers,
+        String(room.deal.seed),
         min,
-        max,
-        String(room.deal.seed)
+        max
       );
-      const deterministicMap: Record<string, number | null> = {};
-      roundPlayers.forEach((pid, index) => {
-        deterministicMap[pid] = generated[index] ?? null;
-      });
       numbersResolved = list.every((pid) => pid in deterministicMap);
       if (numbersResolved) {
         numbers = list.reduce<Record<string, number | null | undefined>>(
@@ -1137,29 +1095,25 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
       numbers = fetched;
     }
 
-    // サーバー側でも判定を行い、結果を保存
-    const judgmentResult = evaluateSorted(list, numbers);
-    const stats = applyOutcomeToRoomStats(
-      room?.stats,
-      judgmentResult.success ? "success" : "failure"
-    );
+    // サーバー側でも判定を行い、結果を保存（純粋関数で組み立て）
+    const revealPayload = buildRevealOutcomePayload({
+      list,
+      numbers,
+      expectedTotal: expected,
+      previousStats: room?.stats,
+    });
 
     const order: RoomOrderState = {
-      list,
-      numbers, // プレイヤー数字を保存
+      ...revealPayload.order,
       decidedAt: serverTimestamp(),
-      total: expected,
-      failed: !judgmentResult.success,
-      failedAt: judgmentResult.failedAt,
-      lastNumber: judgmentResult.last ?? null,
     };
 
     // アニメーションを挟むため status は一旦 "reveal" にする
     tx.update(roomRef, {
       status: "reveal",
       order,
-      result: { success: judgmentResult.success, revealedAt: serverTimestamp() },
-      stats,
+      result: { success: revealPayload.success, revealedAt: serverTimestamp() },
+      stats: revealPayload.stats,
       lastActiveAt: serverTimestamp(),
     });
   });
@@ -1177,3 +1131,6 @@ export async function finalizeReveal(roomId: string) {
     tx.update(roomRef, { status: "finished" });
   });
 }
+
+// Legacy exports for tests/utilities that consumed room.ts directly
+export { selectDealTargetPlayers } from "@/lib/game/domain";

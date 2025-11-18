@@ -23,7 +23,7 @@ import {
   type SeatRequestViewState,
   type SpectatorMachineState,
 } from "@/lib/spectator/v2/useSpectatorController";
-import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { firebaseEnabled } from "@/lib/firebase/client";
 import {
   resetPlayerState,
   setPlayerName,
@@ -93,7 +93,6 @@ import {
 } from "@/lib/utils/roomPassword";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text, VStack, HStack } from "@chakra-ui/react";
-import { doc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import {
   useCallback,

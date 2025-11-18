@@ -153,7 +153,7 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 
 - `.env` 系で管理している据え置き関連フラグ（`NEXT_PUBLIC_PERF_INTERACTION_TAGS` / `NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER` / `NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER` / `NEXT_PUBLIC_UI_DROP_OPTIMISTIC`）は、検証が完了したら本番環境でも `1` にして常時有効化する想定。
 - 本番で有効化後は、`dumpItoMetrics()` などでメトリクスをモニタリングし、数値に問題がなければ旧挙動用の分岐・フォールバックコードを順次削除・リファクタリングしておくことが推奨。
-以上。作業前にこのドキュメントをざっと確認し、タスクに取りかかってください。必要があれば自由に追記・修正して構いません。*** End Patch
+以上。作業前にこのドキュメントをざっと確認し、タスクに取りかかってください。必要があれば自由に追記・修正して構いません。
 
 ---
 
@@ -170,3 +170,15 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 - Presence は RTDB を唯一のソースとし、人数・入席可否の判定は `presenceReady` 待ちを徹底。
 - UI は“処理中”の体感を優先してよいが、状態の確定はサーバー応答に従う。
   - 実装例: リセット押下直後に `notify("待機状態に戻しています…")` を表示し、応答後に success/rollback。
+
+---
+
+## 11. Coding guardrails（後続エージェント向け）
+
+- 層を崩さない：ドメイン計算は `lib/game/domain.ts`、I/O は `room.ts`/services、UI は hooks/components。新ロジックはまず純粋関数を domain に足してから呼び出す。
+- 直接書き込み禁止：Firestore/RTDBへの書き込みは既存サービスや host controller 経由。UI からの直書きは追加しない。
+- Presence/ロビー：RTDB を唯一のソース。presence 系計算は `lib/presence/stableOnline.ts`（stableOnlineUids）と `lib/lobby/verificationHealth.ts` を再利用。
+- テスト必須：新しいドメイン関数には Jest を1本追加。仕様変更時は最低 `npx playwright test tests/roomMachine.spec.ts` など該当E2Eを1本走らせる。
+- 公開APIを増やしすぎない：似た責務の関数は既存ビルダー/validatorへ統合し、入口を整理する。
+- トレース/メトリクス維持：重要な分岐・失敗では既存の `traceAction` / `traceError` を使う。削除・無効化する場合は理由を残す。
+- ドキュメント更新：ドメインや状態機械に手を入れたら `docs/REFACTOR_PLAN_HOST_AND_ROOM.md` に差分メモを追記。

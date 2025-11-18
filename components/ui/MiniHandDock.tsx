@@ -27,7 +27,6 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { doc } from "firebase/firestore";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
@@ -129,9 +128,6 @@ const subtleTextPulse = keyframes`
 const noopCleanup = () => {};
 type RevealAnimatingEvent = CustomEvent<{ roomId?: string; animating?: boolean }>;
 type DefaultTopicTypeChangeEvent = CustomEvent<{ defaultTopicType?: string }>;
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
 // ========================================
 // 🎨 Design System: Button Styles
 // ========================================

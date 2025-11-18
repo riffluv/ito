@@ -8,6 +8,10 @@ import {
   subscribePresence,
 } from "@/lib/firebase/presence";
 import {
+  deriveStableOnlineUids,
+  type MissingSinceStore,
+} from "@/lib/presence/stableOnline";
+import {
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_HEARTBEAT_RETRY_DELAYS_MS,
 } from "@/lib/constants/presence";
@@ -74,6 +78,37 @@ declare global {
     __missingSince?: Record<string, Record<string, number>>;
   }
 }
+
+const readMissingSinceStore = (
+  roomId?: string | null
+): MissingSinceStore => {
+  if (typeof window === "undefined" || !roomId) return {};
+  try {
+    const roomStore = window.__missingSince?.[roomId];
+    if (roomStore && typeof roomStore === "object") {
+      return Object.entries(roomStore).reduce<MissingSinceStore>(
+        (acc, [uid, ts]) => {
+          if (typeof ts === "number" && Number.isFinite(ts)) {
+            acc[uid] = ts;
+          }
+          return acc;
+        },
+        {}
+      );
+    }
+  } catch {}
+  return {};
+};
+
+const writeMissingSinceStore = (roomId: string, store: MissingSinceStore) => {
+  if (typeof window === "undefined" || !roomId) return;
+  try {
+    if (!window.__missingSince) {
+      window.__missingSince = {};
+    }
+    window.__missingSince[roomId] = { ...store };
+  } catch {}
+};
 
 export function useParticipants(
   roomId: string,
@@ -533,51 +568,19 @@ export function useParticipants(
       stableOnlineUidsRef.current = undefined;
       return;
     }
-    const GRACE_MS = PRESENCE_DISAPPEAR_GRACE_MS;
-    const now = Date.now();
-    const next = new Set<string>(onlineUids);
-    const prev = new Set(stableOnlineUidsRef.current ?? onlineUids);
-    const missingSinceRef = new Map<string, number>();
 
-    if (typeof window !== "undefined" && roomId) {
-      try {
-        const roomStore = window.__missingSince?.[roomId];
-        if (roomStore) {
-          for (const [k, v] of Object.entries(roomStore)) {
-            missingSinceRef.set(k, v);
-          }
-        }
-      } catch {}
-    }
-
-    const result = new Set<string>();
-    next.forEach((id) => result.add(id));
-    prev.forEach((id) => {
-      if (next.has(id)) {
-        missingSinceRef.delete(id);
-        return;
-      }
-      const first = missingSinceRef.get(id) ?? now;
-      missingSinceRef.set(id, first);
-      if (now - first < GRACE_MS) {
-        result.add(id);
-      }
+    const { stable, missingSince } = deriveStableOnlineUids({
+      onlineUids,
+      previousStable: stableOnlineUidsRef.current ?? onlineUids,
+      missingSince: readMissingSinceStore(roomId),
+      now: Date.now(),
+      graceMs: PRESENCE_DISAPPEAR_GRACE_MS,
     });
 
-    const nextStable = Array.from(result);
-    setStableOnlineUids(nextStable);
-    stableOnlineUidsRef.current = nextStable;
-    if (typeof window !== "undefined" && roomId) {
-      try {
-        const store: Record<string, number> = {};
-        missingSinceRef.forEach((value, key) => {
-          store[key] = value;
-        });
-        if (!window.__missingSince) {
-          window.__missingSince = {};
-        }
-        window.__missingSince[roomId] = store;
-      } catch {}
+    setStableOnlineUids(stable);
+    stableOnlineUidsRef.current = stable;
+    if (roomId) {
+      writeMissingSinceStore(roomId, missingSince);
     }
   }, [presenceReady, onlineUids, roomId]);
 

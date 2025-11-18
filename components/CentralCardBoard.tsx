@@ -1011,7 +1011,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     clearPendingTimer();
     return clearPendingTimer;
-  }, [roomStatus, resolveMode, orderListLength, roomId, finalizeScheduled]);
+  }, [roomStatus, resolveMode, orderListLength, roomId, finalizeScheduled, sendRoomEvent]);
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {

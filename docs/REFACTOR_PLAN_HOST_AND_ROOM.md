@@ -278,6 +278,21 @@
 
 2025-11-19 Codex 追記: フェーズ4で `lib/game/domain.ts` に `deriveSeatHistory` と `buildDealPayload`、`buildSeatHistory`、`normalizeProposalCompact`、`diffProposal` を追加。配札や proposal 差分計測を domain 層へ移送し、`room.ts` は I/O ラッパ化を継続。Playwright `tests/roomMachine.spec.ts` を再度 7/7 パス確認。
 
+2025-11-20 Codex 追記: フェーズ6着手。提案配列への挿入ロジックを純粋関数 `prepareProposalInsert` として `lib/game/domain.ts` に分離し、`addCardToProposalAtPosition` で利用。挿入用ユニットテスト追加 (`__tests__/proposalInsert.test.ts`)。Typecheck パス。
+
+2025-11-20 Codex 追加: 並び替え一括提出のバリデーションと決定的番号マップ生成を純粋関数化。
+- `validateSubmitList`, `buildDeterministicNumberMap` を `lib/game/domain.ts` に追加し、`submitSortedOrder` で使用。
+- ユニットテスト `__tests__/submitListValidation.test.ts` 追加。
+- `npm run typecheck` / 該当 Jest 両方パス。
+
+2025-11-20 Codex さらに追加: reveal 用の結果構築を純粋関数 `buildRevealOutcomePayload` として `lib/game/domain.ts` に集約。`submitSortedOrder` はこの関数を呼ぶだけにして、Tx 内は I/O 更新に専念。ユニットテスト `__tests__/revealOutcomePayload.test.ts` を追加。typecheck / 追加 Jest パス。
+
+2025-11-20 Codex 追加: clue→reveal の一枚プレイ判定も純関数 `buildPlayOutcomePayload` へ集約。`commitPlayFromClue` はドメイン関数の返り値を Firestore 書き込みするだけに簡素化。`revealOutcomePayload.test.ts` にプレイ完了/継続ケースを追加。typecheck/関連 Jest パス。
+
+2025-11-20 Codex 追加: stats 関連を domain 経由で共通化。`applyOutcomeToRoomStats` などを `lib/game/domain.ts` から再エクスポートし、server 側 (`lib/server/roomActions.ts`) も同一入口を使用。typecheck/Jest 確認済み。
+
+2025-11-20 Codex 追加: decidedAt を含む play outcome パスを純関数に揃え、`commitPlayFromClue` 側から決定時刻の取り回しを domain レイヤーに委譲。関連 Jest / typecheck パス。
+
 ---
 
 ## 7. フェーズ5: プレゼンス / ロビーの純粋関数化 (LOW)
@@ -289,6 +304,8 @@
   - `stableOnlineUids` 計算 (`__missingSince` を使ったグレース期間)
 - 新規ファイル案: `lib/presence/model.ts` に関数として切り出す。
 - Hook 側ではそれらを呼び出すだけにし、ロジックを Jest でテスト可能にする。
+
+2025-11-20 Codex 追記: `deriveStableOnlineUids` を `lib/presence/stableOnline.ts` に分離し、`useParticipants` から使用。ロビー検証ヘルスを `lib/lobby/verificationHealth.ts` に抽出し `useLobbyCounts` に適用。純粋関数のJestテスト (`__tests__/stableOnlineUids.test.ts`, `__tests__/verificationHealth.test.ts`) を追加し `npm run typecheck` 通過。
 
 ---
 

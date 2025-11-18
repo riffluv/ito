@@ -25,7 +25,6 @@ import {
   loadPrefetchedRoom,
   storePrefetchedRoom,
 } from "@/lib/prefetch/prefetchRoomExperience";
-import { clearSpectatorFlags } from "@/lib/spectator/sessionFlags";
 
 export type RoomSnapshotState = {
   room: (RoomDoc & { id: string }) | null;
@@ -108,14 +107,12 @@ export function useRoomSnapshot(
     stableOnlineUids,
     presenceReady,
     presenceDegraded,
-    participants,
     detach,
     reattachNow,
     loading: partLoading,
   } = useParticipants(roomId, uid || null);
 
   const onlineUids = effectiveOnlineUids;
-  const presenceOperational = presenceReady || presenceDegraded;
 
   const normalizedDisplayName = useMemo(() => {
     if (typeof displayName === "string") {
@@ -467,9 +464,9 @@ export function useRoomSnapshot(
 
   // ensureMember heartbeat via background interval
   useEffect(() => {
-    if (!firebaseEnabled) return;
-    if (!uid || !room) return;
-    if (leavingRef.current) return;
+    if (!firebaseEnabled || !uid || !room || leavingRef.current) {
+      return undefined;
+    }
 
     const interval = setInterval(() => {
       const now = Date.now();

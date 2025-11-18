@@ -5,8 +5,8 @@ import {
   resetRoomWithPrune,
   setRoundPreparing,
   submitSortedOrder,
+  topicControls,
 } from "@/lib/game/service";
-import { topicControls } from "@/lib/game/service";
 import { postRoundReset } from "@/lib/utils/broadcast";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
