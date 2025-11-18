@@ -84,7 +84,9 @@
 
 ### 3-3. 実装指示 (チェックリスト)
 
-1. **新モジュールの作成**
+- 2025-11-18 Codex: フェーズ1の実装タスクを完了。(DONE)
+
+1. **新モジュールの作成** (DONE)
    - ファイル案: `lib/host/HostActionsController.ts`（名前は多少変えてもよいが目的が分かるものに）
    - ここに以下のメソッドを定義する:
      - `quickStartWithTopic`  
@@ -103,7 +105,7 @@
        - カスタムお題＋即クイックスタートのパス（`handleSubmitCustom` 相当）を1箇所に。
    - これらのメソッドは **UI に依存しない**（`notify` / `AppButton` 等は触らない）。
 
-2. **`lib/hooks/useHostActions.ts` の整理**
+2. **`lib/hooks/useHostActions.ts` の整理** (DONE)
    - 目的: `"ゲーム内 MiniHandDock のホスト操作"` 専用 Hook にする。
    - 既存のロジックから以下を削る/移管する:
      - Cloud Functions 呼び出し / Firestore `getDoc` / `resetRoomWithPrune` 等の **IO 部分** → 新しい `HostActionsController` 経由に。
@@ -114,14 +116,14 @@
    - パブリック API（戻り値）は現状と互換にしておく:
      - `quickStart`, `resetGame`, `restartGame`, `handleNextGame`, `evalSorted`, カスタムトピック関連など。
 
-3. **`components/hooks/useHostActions.ts` の整理**
+3. **`components/hooks/useHostActions.ts` の整理** (DONE)
    - 目的: HostControlDock（画面上部のホスト操作 UI）が同じ controller を使うようにする。
    - ここでは:
      - `buildHostActionModel`（純粋モデル）はそのまま利用。
      - 実際の「開始」「中断（リセット）」「並びを確定」ボタンの onClick で、新しい `HostActionsController` を呼び出す。
    - すでに `executeQuickStart` を使っているが、これも controller に置き換える。
 
-4. **MiniHandDock / HostControlDock の呼び出し統一**
+4. **MiniHandDock / HostControlDock の呼び出し統一** (DONE)
    - `components/ui/MiniHandDock.tsx` と `components/ui/HostControlDock.tsx` で、
      - `useHostActionsCore` / `useHostActions` のインポート先が **統一された API** を使うように修正。
    - `MiniHandDock` 内で行っている `topicControls.shuffleTopic` などは、必要に応じて controller に統合してもよいが、v1 では「クイックスタート/リセット/次ゲーム/並び確定」を優先する。
@@ -299,4 +301,3 @@
   - 着手前に **どのフェーズ・どのタスクをやるか** を簡単に追記する（例: 「2025-11-20 AgentX: フェーズ1–3-3 を実装」）。
   - 完了したら `(DONE)` やチェックボックスを更新し、必要なら「注意点」「既知の制約」を箇条書きで残す。
 - 大きな方針変更があった場合は、ドキュメント最上部に「v2」「v3」などと明示してから書き換える。
-
