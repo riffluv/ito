@@ -3,9 +3,9 @@
 import React from "react";
 import { subscribeRoundPrepare, postRoundPrepare } from "@/lib/utils/broadcast";
 
-const DEFAULT_DURATION = 4500;
-const INDICATOR_DELAY = 250;
-const MIN_VISIBLE = 450;
+const DEFAULT_DURATION = 2600;
+const INDICATOR_DELAY = 120;
+const MIN_VISIBLE = 360;
 
 type LockOptions = {
   broadcast?: boolean;
