@@ -117,6 +117,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
     useState<BackgroundType>("pixi-dq");
   const [sceneNonce, setSceneNonce] = useState(0);
   const [backgroundReady, setBackgroundReady] = useState(false);
+  const retryRef = useRef(0);
 
   const recordBackgroundMetric = useCallback((key: string, value: number | string) => {
     try {
@@ -244,6 +245,7 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
       }
       pixiBackgroundHost.setCanvasVisible(false);
       applySceneResult({ renderer: "dom", quality: effectiveQuality });
+      retryRef.current = 0;
       setBackgroundReady(true);
       return;
     }
@@ -274,10 +276,17 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
         gpuCapability,
         softwareRenderer,
       });
+      retryRef.current = 0;
       setBackgroundReady(true);
     } catch (error) {
       logPixiBackground("error", "scene-init-failed", error);
-      setBackgroundType("css");
+      setBackgroundReady(false);
+      if (retryRef.current < 1) {
+        retryRef.current += 1;
+        setTimeout(() => setSceneNonce((value) => value + 1), 1200);
+      } else {
+        setBackgroundType("css");
+      }
     }
   }, [
     applySceneResult,
