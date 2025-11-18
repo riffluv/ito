@@ -1,19 +1,13 @@
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import { db } from "@/lib/firebase/client";
 import {
-  resetRoomWithPrune,
-  submitSortedOrder,
-  topicControls,
-  beginRevealPending,
-  setRoundPreparing,
-} from "@/lib/game/service";
-import { postRoundReset } from "@/lib/utils/broadcast";
+  createHostActionsController,
+  type HostActionsController,
+} from "@/lib/host/HostActionsController";
 import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
-import { logInfo } from "@/lib/utils/log";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -22,11 +16,7 @@ import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
-import type { RoomDoc } from "@/lib/types";
-import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase/functions";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 declare global {
@@ -102,6 +92,10 @@ export function useHostActions({
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
   const actionLatencyRef = useRef<Record<string, number>>({});
+  const hostActions = useMemo<HostActionsController>(
+    () => createHostActionsController(),
+    []
+  );
 
   const markActionStart = useCallback((action: string) => {
     if (typeof performance !== "undefined") {
@@ -154,13 +148,9 @@ export function useHostActions({
 
   const syncRoundPreparing = useCallback(
     async (value: boolean) => {
-      try {
-        await setRoundPreparing(roomId, value);
-      } catch (error) {
-        traceError("ui.roundPreparing.sync", error, { roomId, value });
-      }
+      await hostActions.setRoundPreparingFlag(roomId, value);
     },
-    [roomId]
+    [hostActions, roomId]
   );
 
   const quickStart = useCallback(
@@ -213,10 +203,10 @@ export function useHostActions({
           duration: 2600,
         });
       }
-      if (!ensurePresenceReady()) {
+      if (!shouldSkipPresenceCheck && !ensurePresenceReady()) {
         return false;
       }
-      let markedRoundPreparing = false;
+
       markActionStart("quickStart");
       setQuickStartPending(true);
       notify({
@@ -234,131 +224,16 @@ export function useHostActions({
         });
       }
 
-      const auth = getAuth();
-      const authUid = auth?.currentUser?.uid ?? null;
-      let effectiveType = effectiveDefaultTopicType;
-      let latestTopic: string | null | undefined = currentTopic ?? null;
-      let latestHostId: string | null = null;
-
-      muteNotifications(
-        [
-          toastIds.topicChangeSuccess(roomId),
-          toastIds.topicShuffleSuccess(roomId),
-          toastIds.numberDealSuccess(roomId),
-          toastIds.gameReset(roomId),
-        ],
-        2800
-      );
-
-      try {
-        if (db) {
-          const snap = await getDoc(doc(db, "rooms", roomId));
-          const data = snap.data() as RoomDoc | undefined;
-          const fetchedType = data?.options?.defaultTopicType;
-          if (fetchedType) {
-            effectiveType = fetchedType;
-          }
-          latestHostId =
-            typeof data?.hostId === "string" ? data.hostId : null;
-          const topicFromSnapshot = data?.topic;
-          if (typeof topicFromSnapshot === "string") {
-            latestTopic = topicFromSnapshot;
-          } else if (
-            topicFromSnapshot === null ||
-            typeof topicFromSnapshot === "undefined"
-          ) {
-            latestTopic = null;
-          }
-        }
-      } catch {
-        // snapshot fetch failure can be ignored
-      }
-
-      if (
-        latestHostId &&
-        authUid &&
-        latestHostId !== authUid
-      ) {
-        traceAction("ui.host.quickStart.blocked", {
-          roomId,
-          reason: "host-mismatch",
-          hostId: latestHostId,
-        });
-        setQuickStartPending(false);
-        abortAction("quickStart");
-        notify({
-          id: toastIds.genericInfo(roomId, "host-mismatch"),
-          title: "ホスト権限の確定を待っています",
-          description: "権限が移動した直後は数秒後にもう一度お試しください",
-          type: "warning",
-          duration: 2600,
-        });
-        return false;
-      }
-
-      if (
-        effectiveType === "カスタム" &&
-        !(typeof latestTopic === "string" && latestTopic.trim().length > 0)
-      ) {
-        setCustomStartPending(true);
-        setCustomText("");
-        setCustomOpen(true);
-        setQuickStartPending(false);
-        abortAction("quickStart");
-        return false;
-      }
-
-      await syncRoundPreparing(true);
-      markedRoundPreparing = true;
-      const shouldBroadcast = options?.broadcast ?? true;
-      const shouldPlaySound = options?.playSound ?? true;
-      const traceDetail: Record<string, unknown> = {
-        roomId,
-        type: effectiveType,
-        broadcast: shouldBroadcast ? "1" : "0",
-        playSound: shouldPlaySound ? "1" : "0",
-      };
-      traceAction("ui.host.quickStart", traceDetail);
-      beginAutoStartLock(2600, { broadcast: shouldBroadcast, delayMs: 80 });
+      beginAutoStartLock(2600, {
+        broadcast: options?.broadcast ?? true,
+        delayMs: 80,
+      });
 
       let success = false;
       try {
-        if (shouldPlaySound) {
+        if (options?.playSound ?? true) {
           playOrderConfirm();
         }
-        const callable = functions
-          ? httpsCallable<
-              { roomId: string; options?: Record<string, unknown> },
-              { assignedCount?: number; topicType?: string; topic?: string | null; durationMs?: number }
-            >(functions, "quickStart")
-          : null;
-        if (!callable) {
-          throw new Error("firebase-functions-unavailable");
-        }
-        const response = await callable({
-          roomId,
-          options: {
-            defaultTopicType: effectiveType,
-            skipPresence: shouldSkipPresenceCheck,
-          },
-        });
-        const payload = response?.data ?? {};
-        traceAction("ui.host.quickStart.result", {
-          roomId,
-          assigned: String(payload.assignedCount ?? -1),
-          topicType: payload.topicType ?? effectiveType,
-          topic: payload.topic ?? "",
-        });
-
-        try {
-          if (typeof window !== "undefined") {
-            delete window.__ITO_LAST_RESET;
-          }
-        } catch {}
-
-        try {
-          postRoundReset(roomId);
-        } catch {}
 
         muteNotifications(
           [
@@ -370,27 +245,96 @@ export function useHostActions({
           2800
         );
 
+        const result = await hostActions.quickStartWithTopic({
+          roomId,
+          roomStatus,
+          defaultTopicType: effectiveDefaultTopicType,
+          presenceInfo: {
+            presenceReady,
+            onlineUids,
+            playerCount: basePlayerCount,
+          },
+          currentTopic,
+        });
+
+        if (!result.ok) {
+          if (result.reason === "presence-not-ready") {
+            ensurePresenceReady();
+          } else if (result.reason === "host-mismatch") {
+            notify({
+              id: toastIds.genericInfo(roomId, "host-mismatch"),
+              title: "ホスト権限の確定を待っています",
+              description: "権限が移動した直後は数秒後にもう一度お試しください",
+              type: "warning",
+              duration: 2600,
+            });
+          } else if (result.reason === "needs-custom-topic") {
+            setCustomStartPending(true);
+            setCustomText("");
+            setCustomOpen(true);
+          } else if (result.reason === "functions-unavailable") {
+            throw new Error("firebase-functions-unavailable");
+          }
+          abortAction("quickStart");
+          return false;
+        }
+
         notify({
           id: toastIds.gameStart(roomId),
-          title: "ゲームを開始しました",
+          title: "お題とカードを配布しました！",
+          description:
+            result.durationMs && result.durationMs > 2000
+              ? "時間がかかっています。通信状態をご確認ください"
+              : undefined,
           type: "success",
           duration: 2000,
         });
-        clearAutoStartLock();
+
         success = true;
-      } catch (error: unknown) {
+        return true;
+      } catch (error) {
         clearAutoStartLock();
-        traceError("ui.host.quickStart", error, traceDetail ?? { roomId });
-        const firebaseCode = (error as { code?: string } | undefined)?.code;
-        if (firebaseCode === "permission-denied") {
-          notify({
-            id: toastIds.genericInfo(roomId, "host-permission"),
-            title: "ホスト権限の反映待ちです",
-            description: "ホスト交代後は2〜3秒待ってからもう一度開始してください",
-            type: "warning",
-            duration: 2600,
+        const auth = getAuth();
+        const originalUid = auth?.currentUser?.uid;
+        const shouldAbort =
+          typeof options?.intentMeta === "object" &&
+          options?.intentMeta !== null &&
+          "shouldAbort" in options.intentMeta &&
+          typeof (options.intentMeta as { shouldAbort?: unknown }).shouldAbort ===
+            "function"
+            ? (options.intentMeta as {
+                shouldAbort?: (err: unknown) => boolean;
+              }).shouldAbort?.(error) ?? false
+            : false;
+        if (shouldAbort) {
+          traceAction("ui.host.quickStart.abort", {
+            roomId,
+            reason: "intent-abort",
           });
-        } else if (isFirebaseQuotaExceeded(error)) {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-abort"),
+            title: "ホスト権限が更新されました",
+            description: "再接続後に再試行してください",
+            type: "warning",
+          });
+          abortAction("quickStart");
+          return false;
+        }
+        if (originalUid && originalUid !== auth?.currentUser?.uid) {
+          traceAction("ui.host.quickStart.abort", {
+            roomId,
+            reason: "auth-changed",
+          });
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-auth-change"),
+            title: "サインイン状態を再確認してください",
+            description: "ブラウザの再読み込み後に再試行してください",
+            type: "warning",
+          });
+          abortAction("quickStart");
+          return false;
+        }
+        if (isFirebaseQuotaExceeded(error)) {
           handleFirebaseQuotaError("ゲーム開始");
         } else {
           const message =
@@ -402,15 +346,11 @@ export function useHostActions({
             type: "error",
           });
         }
+        return false;
       } finally {
         setQuickStartPending(false);
         finalizeAction("quickStart", success ? "success" : "error");
-        if (markedRoundPreparing) {
-          await syncRoundPreparing(false);
-        }
       }
-
-      return success;
     },
     [
       quickStartPending,
@@ -425,11 +365,12 @@ export function useHostActions({
       presenceReady,
       onlineUids,
       showtimeIntents,
-      syncRoundPreparing,
       abortAction,
       markActionStart,
       isHost,
       finalizeAction,
+      ensurePresenceReady,
+      hostActions,
     ]
   );
 
@@ -451,78 +392,20 @@ export function useHostActions({
         onFeedback?.(null);
       }
       try {
-        const keepSet = new Set<string>();
-        if (Array.isArray(roundIds)) {
-          roundIds.forEach((id) => {
-            if (typeof id === "string" && id.trim()) keepSet.add(id);
-          });
-        }
-        if (includeOnline && Array.isArray(onlineUids)) {
-          onlineUids.forEach((id) => {
-            if (typeof id === "string" && id.trim()) keepSet.add(id);
-          });
-        }
-        const keep = Array.from(keepSet);
-
-        const shouldPrune = (() => {
-          try {
-            const raw = (process.env.NEXT_PUBLIC_RESET_PRUNE || "")
-              .toString()
-              .toLowerCase();
-            if (!raw) return true;
-            return !(raw === "0" || raw === "false");
-          } catch {
-            return true;
-          }
-        })();
-
-        traceAction("ui.room.reset", {
-          roomId,
-          keep: String(keep.length),
-          prune: shouldPrune ? "1" : "0",
-          recall: recallSpectators ? "1" : "0",
+        notify({
+          id: toastIds.gameReset(roomId),
+          title: "待機状態に戻しています…",
+          type: "info",
+          duration: 2000,
         });
 
-        if (shouldPrune && Array.isArray(roundIds) && roundIds.length > 0) {
-          const keepLookup = new Set(keep);
-          const targets = roundIds.filter((id) => !keepLookup.has(id));
-          if (targets.length > 0) {
-            try {
-              const auth = getAuth();
-              const user = auth.currentUser;
-              const token = await user?.getIdToken();
-              if (token && user?.uid) {
-                logInfo("rooms", "reset prune request", {
-                  roomId,
-                  targetsCount: targets.length,
-                });
-                await fetch(`/api/rooms/${roomId}/prune`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    token,
-                    callerUid: user.uid,
-                    targets,
-                  }),
-                }).catch(() => {});
-              }
-            } catch {
-              // prune failures are non-fatal
-            }
-        }
-      }
-
-      notify({
-        id: toastIds.gameReset(roomId),
-        title: "待機状態に戻しています…",
-        type: "info",
-        duration: 2000,
-      });
-
-      await resetRoomWithPrune(roomId, keep, {
-        notifyChat: true,
-        recallSpectators,
-      });
+        await hostActions.resetRoomToWaitingWithPrune({
+          roomId,
+          roundIds,
+          onlineUids,
+          includeOnline,
+          recallSpectators,
+        });
         if (showFeedback) {
           onFeedback?.({
             message: "待機状態に戻しました！",
@@ -537,9 +420,6 @@ export function useHostActions({
           type: "success",
           duration: 2000,
         });
-        try {
-          postRoundReset(roomId);
-        } catch {}
         finalizeAction("reset", "success");
       } catch (error: unknown) {
         traceError("ui.room.reset", error, { roomId });
@@ -570,6 +450,7 @@ export function useHostActions({
       onlineUids,
       markActionStart,
       finalizeAction,
+      hostActions,
     ]
   );
 
@@ -661,23 +542,17 @@ export function useHostActions({
       typeof performance !== "undefined" ? performance.now() : null;
     try {
       traceAction("ui.order.submit", { roomId, count: list.length });
-      await submitSortedOrder(roomId, list);
+      await hostActions.evaluateSortedOrder({
+        roomId,
+        list,
+        revealDelayMs: REVEAL_DELAY_MS,
+      });
       if (startedAt !== null) {
         setMetric(
           "order",
           "submitSortedOrderSuccessMs",
           Math.round(performance.now() - startedAt)
         );
-      }
-      if (REVEAL_DELAY_MS > 0) {
-        await new Promise((resolve) => setTimeout(resolve, REVEAL_DELAY_MS));
-      }
-      try {
-        await beginRevealPending(roomId);
-      } catch (revealError) {
-        traceError("ui.order.submit.revealPending", revealError, {
-          roomId,
-        });
       }
     } catch (error: unknown) {
       if (startedAt !== null) {
@@ -700,7 +575,7 @@ export function useHostActions({
       });
       throw error;
     }
-  }, [proposal, playOrderConfirm, roomId, showtimeIntents]);
+  }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions]);
 
   const handleSubmitCustom = useCallback(
     async (value: string) => {
@@ -710,73 +585,81 @@ export function useHostActions({
         roomId,
         isHost: isHost ? "1" : "0",
       });
+      const shouldAutoStart =
+        isHost &&
+        (roomStatus === "waiting" || customStartPending) &&
+        actualResolveMode === "sort-submit";
+
       try {
-        await topicControls.setCustomTopic(roomId, trimmed);
+        const result = await hostActions.submitCustomTopicAndStartIfNeeded({
+          roomId,
+          roomStatus,
+          defaultTopicType: "カスタム",
+          customTopic: trimmed,
+          currentTopic: trimmed,
+          presenceInfo: {
+            presenceReady,
+            onlineUids,
+            playerCount,
+          },
+          shouldAutoStart,
+        });
+        setCustomOpen(false);
+
+        if (!shouldAutoStart) {
+          notify({
+            id: toastIds.topicChangeSuccess(roomId),
+            title: "お題を更新しました",
+            description: "ホストが開始するとゲームがスタートします",
+            type: "success",
+            duration: 1800,
+          });
+          return;
+        }
+
+        if (result && "ok" in result && result.ok === false) {
+          if (result.reason === "presence-not-ready") {
+            ensurePresenceReady();
+          } else if (result.reason === "host-mismatch") {
+            notify({
+              id: toastIds.genericInfo(roomId, "host-mismatch"),
+              title: "ホスト権限の確定を待っています",
+              description: "権限が移動した直後は数秒後にもう一度お試しください",
+              type: "warning",
+              duration: 2600,
+            });
+          }
+          return;
+        }
+
+        if ((result as { started?: boolean })?.started === false) {
+          notify({
+            id: toastIds.topicChangeSuccess(roomId),
+            title: "お題を更新しました",
+            description: "ホストが開始するとゲームがスタートします",
+            type: "success",
+            duration: 1800,
+          });
+          return;
+        }
+
+        showtimeIntents?.markStartIntent?.({
+          action: "quickStart:customTopic",
+          source: "useHostActions",
+        });
+        playOrderConfirm();
+        notify({
+          id: toastIds.gameStart(roomId),
+          title: "カスタムお題で開始",
+          type: "success",
+          duration: 2000,
+        });
       } catch (error) {
-        setCustomStartPending(false);
         traceError("ui.topic.customSubmit", error, {
           roomId,
           stage: "setTopic",
         });
         throw error;
-      }
-      setCustomOpen(false);
-
-      if (!isHost) {
-        setCustomStartPending(false);
-        notify({
-          id: toastIds.topicChangeSuccess(roomId),
-          title: "お題を更新しました",
-          description: "ホストが開始するとゲームがスタートします",
-          type: "success",
-          duration: 1800,
-        });
-        return;
-      }
-
-      try {
-        if (
-          (roomStatus === "waiting" || customStartPending) &&
-          actualResolveMode === "sort-submit"
-        ) {
-          if (!ensurePresenceReady()) {
-            return;
-          }
-          showtimeIntents?.markStartIntent?.({
-            action: "quickStart:customTopic",
-            source: "useHostActions",
-          });
-          playOrderConfirm();
-          const callable = functions
-            ? httpsCallable<
-                { roomId: string; options?: Record<string, unknown> },
-                { assignedCount?: number; topicType?: string; topic?: string | null; durationMs?: number }
-              >(functions, "quickStart")
-            : null;
-          if (!callable) {
-            throw new Error("firebase-functions-unavailable");
-          }
-          const result = await callable({
-            roomId,
-            options: {
-              defaultTopicType: "カスタム",
-              customTopic: trimmed,
-            },
-          });
-          traceAction("ui.topic.customSubmit.quickStartResult", {
-            roomId,
-            assigned: String(result?.data?.assignedCount ?? -1),
-          });
-          try {
-            postRoundReset(roomId);
-          } catch {}
-          notify({
-            id: toastIds.gameStart(roomId),
-            title: "カスタムお題で開始",
-            type: "success",
-            duration: 2000,
-          });
-        }
       } finally {
         setCustomStartPending(false);
       }
@@ -790,6 +673,10 @@ export function useHostActions({
     playOrderConfirm,
     ensurePresenceReady,
     showtimeIntents,
+    hostActions,
+    presenceReady,
+    onlineUids,
+    playerCount,
   ]
 );
 

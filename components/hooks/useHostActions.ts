@@ -1,14 +1,16 @@
 "use client";
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { submitSortedOrder, topicControls } from "@/lib/game/service";
 import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
 import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { handleGameError } from "@/lib/utils/errorHandling";
 import { useCallback, useMemo, useState } from "react";
-import { executeQuickStart } from "@/lib/game/quickStart";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import {
+  createHostActionsController,
+  type HostActionsController,
+} from "@/lib/host/HostActionsController";
 
 const normalizeProposalIds = (source: unknown): string[] =>
   Array.isArray(source)
@@ -67,6 +69,10 @@ export function useHostActions({
   autoStartControl?: AutoStartControl;
 }): HostAction[] {
   const [evaluatePending, setEvaluatePending] = useState(false);
+  const hostActions = useMemo<HostActionsController>(
+    () => createHostActionsController(),
+    []
+  );
   // buildHostActionModelをメモ化して不必要な再計算を防ぐ
   const intents = useMemo(
     () => buildHostActionModel(
@@ -105,7 +111,7 @@ export function useHostActions({
         roomId,
         count: finalOrder.length,
       });
-      await submitSortedOrder(roomId, finalOrder);
+      await hostActions.evaluateSortedOrder({ roomId, list: finalOrder });
       notify({
         id: toastIds.genericInfo(roomId, "evaluate-success"),
         title: "並びを確定",
@@ -128,6 +134,7 @@ export function useHostActions({
     onlineCount,
     players.length,
     roomId,
+    hostActions,
   ]);
 
   // quickStartアクションのハンドラーを個別にメモ化
@@ -163,22 +170,65 @@ export function useHostActions({
         ],
         2800
       );
-      await executeQuickStart(roomId, {
+      const result = await hostActions.quickStartWithTopic({
+        roomId,
         roomStatus: room.status,
         defaultTopicType: defaultType,
+        currentTopic:
+          typeof room.topic === "string" ? (room.topic as string) : null,
+        presenceInfo: {
+          presenceReady: true,
+          playerCount: activeCount,
+        },
       });
+
+      if (!result.ok) {
+        if (result.reason === "needs-custom-topic") {
+          notify({
+            id: toastIds.genericInfo(roomId, "custom-topic-missing"),
+            title: "カスタムお題が未入力です",
+            description: "お題を入力してから開始してください",
+            type: "warning",
+            duration: 2200,
+          });
+        } else if (result.reason === "host-mismatch") {
+          notify({
+            id: toastIds.genericInfo(roomId, "host-mismatch"),
+            title: "ホスト権限を確認しています",
+            description: "権限が確定するまで数秒お待ちください",
+            type: "warning",
+            duration: 2200,
+          });
+        }
+      }
     } catch (error) {
       traceError("ui.host.quickStart", error, { roomId });
       autoStartControl?.clear?.();
       handleGameError(error, "クイック開始");
     }
-  }, [autoStartControl, onlineCount, players.length, room.options?.defaultTopicType, room.status, roomId]);
+  }, [
+    autoStartControl,
+    onlineCount,
+    players.length,
+    room.options?.defaultTopicType,
+    room.status,
+    room.topic,
+    roomId,
+    hostActions,
+  ]);
 
   // resetアクションのハンドラーを個別にメモ化
   const handleReset = useCallback(async () => {
     try {
       traceAction("ui.room.reset", { roomId });
-      await topicControls.resetTopic(roomId);
+      const playerIds = players.map((p) => p.id).filter(Boolean);
+      await hostActions.resetRoomToWaitingWithPrune({
+        roomId,
+        roundIds: playerIds,
+        onlineUids: playerIds,
+        includeOnline: true,
+        recallSpectators: true,
+      });
       notify({
         id: toastIds.gameReset(roomId),
         title: "ゲームをリセットしました",
@@ -189,7 +239,7 @@ export function useHostActions({
       traceError("ui.room.reset", error, { roomId });
       handleGameError(error, "ゲームリセット");
     }
-  }, [roomId]);
+  }, [roomId, players, hostActions]);
 
   // actionsをメモ化してパフォーマンスを向上
   const actions: HostAction[] = useMemo(() => intents.map((i: HostIntent): HostAction => {
