@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePixiHudLayer } from "./PixiHudStage";
 import { createSpaceGuide, createSubmitEGuide, type GuideButton } from "@/lib/pixi/GuideButton";
 
@@ -360,6 +360,7 @@ interface PixiGuideButtonsAutoProps {
   me?: { ready?: boolean; clue1?: string } | null;
   disabled?: boolean;
   hasPlacedCard?: boolean;
+  roundPreparing?: boolean;
 }
 
 export function PixiGuideButtonsAuto({
@@ -367,9 +368,33 @@ export function PixiGuideButtonsAuto({
   me,
   disabled = false,
   hasPlacedCard = false,
+  roundPreparing = false,
 }: PixiGuideButtonsAutoProps) {
-  const showSpace = !disabled && currentPhase === "clue" && !me?.ready;
+  const [guidesReady, setGuidesReady] = useState<boolean>(() => !roundPreparing);
+
+  useEffect(() => {
+    let timer: number | null = null;
+    if (roundPreparing) {
+      setGuidesReady(false);
+    } else if (typeof window !== "undefined") {
+      timer = window.setTimeout(() => {
+        setGuidesReady(true);
+      }, 120);
+    } else {
+      setGuidesReady(true);
+    }
+    return () => {
+      if (timer !== null && typeof window !== "undefined") {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [roundPreparing]);
+
+  const canShowGuides = !roundPreparing && guidesReady;
+  const showSpace =
+    canShowGuides && !disabled && currentPhase === "clue" && !me?.ready;
   const showE =
+    canShowGuides &&
     !disabled &&
     !hasPlacedCard &&
     currentPhase === "clue" &&

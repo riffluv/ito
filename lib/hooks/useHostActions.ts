@@ -61,7 +61,7 @@ type UseHostActionsOptions = {
   autoStartLocked: boolean;
   beginAutoStartLock: (
     duration: number,
-    options?: { broadcast?: boolean }
+    options?: { broadcast?: boolean; delayMs?: number }
   ) => void;
   clearAutoStartLock: () => void;
   actualResolveMode: "sort-submit";
@@ -319,7 +319,7 @@ export function useHostActions({
         playSound: shouldPlaySound ? "1" : "0",
       };
       traceAction("ui.host.quickStart", traceDetail);
-      beginAutoStartLock(4500, { broadcast: shouldBroadcast });
+      beginAutoStartLock(2600, { broadcast: shouldBroadcast, delayMs: 80 });
 
       let success = false;
       try {
@@ -376,6 +376,7 @@ export function useHostActions({
           type: "success",
           duration: 2000,
         });
+        clearAutoStartLock();
         success = true;
       } catch (error: unknown) {
         clearAutoStartLock();
@@ -609,7 +610,7 @@ export function useHostActions({
     await syncRoundPreparing(true);
     markedRoundPreparing = true;
     traceAction("ui.host.nextGame", { roomId });
-    beginAutoStartLock(5000, { broadcast: true });
+    beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
     setIsRestarting(true);
     try {
       playOrderConfirm();

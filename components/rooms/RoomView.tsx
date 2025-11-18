@@ -188,6 +188,7 @@ export function RoomView({
         me={me}
         disabled={isSpectatorMode}
         hasPlacedCard={meHasPlacedCard}
+        roundPreparing={Boolean(room.ui?.roundPreparing)}
       />
     </>
   );

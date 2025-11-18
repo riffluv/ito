@@ -106,7 +106,17 @@ export function useClueInput({
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (shouldFocusClueInput(event, clueEditable)) {
         event.preventDefault();
-        inputRef.current?.focus();
+        const focusTarget = () => {
+          inputRef.current?.focus();
+        };
+        if (
+          typeof window !== "undefined" &&
+          typeof window.requestAnimationFrame === "function"
+        ) {
+          window.requestAnimationFrame(focusTarget);
+        } else {
+          focusTarget();
+        }
       }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);

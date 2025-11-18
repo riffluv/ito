@@ -39,7 +39,10 @@ export type HostAction = {
 
 type AutoStartControl = {
   locked: boolean;
-  begin: (duration?: number, options?: { broadcast?: boolean }) => void;
+  begin: (
+    duration?: number,
+    options?: { broadcast?: boolean; delayMs?: number }
+  ) => void;
   clear: () => void;
 };
 
