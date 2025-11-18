@@ -127,10 +127,9 @@ export function useRoomMachineController({
         machineRef.current = null;
       }
     };
-  }, [roomId, uid, subscribeSpectatorRejoin]);
+  }, [roomId, uid, room, players, onlineUids, presenceReady, subscribeSpectatorRejoin]);
 
   // keep machine context in sync
-  const presenceOperational = presenceReady || presenceDegraded;
   useEffect(() => {
     const actor = machineRef.current;
     if (!actor) return;
@@ -139,9 +138,9 @@ export function useRoomMachineController({
       room,
       players,
       onlineUids: onlineUids ?? undefined,
-      presenceReady: presenceOperational,
+      presenceReady: presenceReady || presenceDegraded,
     });
-  }, [room, players, onlineUids, presenceOperational]);
+  }, [room, players, onlineUids, presenceReady, presenceDegraded]);
 
   const effectivePhase = useMemo<RoomDoc["status"]>(() => {
     const phaseState = extractPhaseFromSnapshot(machineSnapshot);

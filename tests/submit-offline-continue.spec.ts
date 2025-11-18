@@ -101,7 +101,8 @@ test("offline player does not block evaluate flow", () => {
     onlineUids: presenceOnline,
     presenceReady: true,
   });
-  expect(eligibleIds).toEqual(["host", "ally"]);
+  // presenceReady=true ではオンライン→オフラインの順で返る（オフラインも末尾に残す）
+  expect(eligibleIds).toEqual(["host", "ally", "bob"]);
 
   const targetIds = getClueTargetIds({
     dealPlayers: room.deal?.players ?? null,
@@ -116,4 +117,3 @@ test("offline player does not block evaluate flow", () => {
   });
   expect(allSubmitted).toBe(true);
 });
-

@@ -12,6 +12,13 @@ import {
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
+import {
+  getVerificationHealth,
+  shouldSkipVerification,
+  updateHealthOnFailure,
+  updateHealthOnSuccess,
+  type VerificationHealth,
+} from "@/lib/lobby/verificationHealth";
 import { off, onValue, ref, type DataSnapshot } from "firebase/database";
 import {
   Timestamp,
@@ -33,21 +40,7 @@ type VerificationCacheEntry = {
   count: number;
   expiresAt: number;
 };
-
-type VerificationHealth = {
-  backoffMs: number;
-  failures: number;
-  lastVerifiedAt: number;
-  healthScore: number;
-};
-
-const MIN_BACKOFF_MS = 10_000;
-const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const CACHE_TTL_MS = 30_000;
-const HEALTH_DECAY_MS = 5 * 60 * 1000;
-const HEALTH_RECOVERY_STEP = 0.25;
-const HEALTH_PENALTY_STEP = 0.5;
-const DEFAULT_HEALTH = 1;
 const noopCleanup = () => {};
 
 type PresenceConnection = {
@@ -63,71 +56,6 @@ function readAggregateCount(snapshot: { data(): CountSnapshotData | undefined })
   const data = snapshot.data();
   const value = data?.count;
   return typeof value === "number" ? value : Number(value ?? 0) || 0;
-}
-
-function nowMs() {
-  return Date.now();
-}
-
-function getVerificationHealth(
-  store: Map<string, VerificationHealth>,
-  roomId: string
-) {
-  let entry = store.get(roomId);
-  if (!entry) {
-    entry = {
-      backoffMs: MIN_BACKOFF_MS,
-      failures: 0,
-      lastVerifiedAt: 0,
-      healthScore: DEFAULT_HEALTH,
-    };
-    store.set(roomId, entry);
-    return entry;
-  }
-  if (entry.lastVerifiedAt > 0) {
-    const elapsed = nowMs() - entry.lastVerifiedAt;
-    if (elapsed > HEALTH_DECAY_MS && entry.healthScore < DEFAULT_HEALTH) {
-      entry.healthScore = Math.min(
-        DEFAULT_HEALTH,
-        entry.healthScore + HEALTH_RECOVERY_STEP
-      );
-      entry.failures = Math.max(0, entry.failures - 1);
-      entry.backoffMs = Math.max(MIN_BACKOFF_MS, entry.backoffMs / 2);
-      entry.lastVerifiedAt = nowMs();
-    }
-  }
-  return entry;
-}
-
-function updateHealthOnSuccess(entry: VerificationHealth) {
-  entry.healthScore = Math.min(DEFAULT_HEALTH, entry.healthScore + 0.25);
-  entry.failures = 0;
-  entry.backoffMs = Math.max(MIN_BACKOFF_MS, entry.backoffMs / 2);
-  entry.lastVerifiedAt = nowMs();
-}
-
-function updateHealthOnFailure(entry: VerificationHealth) {
-  entry.failures += 1;
-  entry.healthScore = Math.max(0, entry.healthScore - HEALTH_PENALTY_STEP);
-  entry.backoffMs = Math.min(
-    MAX_BACKOFF_MS,
-    Math.max(MIN_BACKOFF_MS, entry.backoffMs * 2)
-  );
-  entry.lastVerifiedAt = nowMs();
-}
-
-function shouldSkipVerification(
-  entry: VerificationHealth,
-  lastCheckAt: number,
-  now: number
-) {
-  if (now - lastCheckAt < entry.backoffMs) {
-    return true;
-  }
-  if (entry.healthScore === 0) {
-    return true;
-  }
-  return false;
 }
 
 function recordLobbyMetric(name: string, durationMs: number, roomId: string) {
@@ -442,7 +370,7 @@ export function useLobbyCounts(
           // もし players=0 なら、presence の一時的な残骸とみなし 0 に矯正しゼロフリーズ開始。
           if (VERIFY_SINGLE && n === 1 && !disableFsFallback) {
             const { cache, health: healthStore } = verificationStateRef.current;
-            const healthEntry = getVerificationHealth(healthStore, id);
+            const healthEntry = getVerificationHealth(healthStore, id, now);
             const cached = cache.get(id);
             if (cached && cached.expiresAt > now) {
               if (cached.count === 0) {
@@ -456,7 +384,7 @@ export function useLobbyCounts(
                 );
                 queueCountUpdate(0);
               }
-              updateHealthOnSuccess(healthEntry);
+              updateHealthOnSuccess(healthEntry, now);
               verificationLastCheckRef.current.single[id] = now;
               singleCheckCooldown[id] = now + healthEntry.backoffMs;
               if (debugFallback) {
@@ -517,7 +445,7 @@ export function useLobbyCounts(
                       expiresAt: now2 + CACHE_TTL_MS,
                     });
                     verificationLastCheckRef.current.single[id] = now2;
-                    updateHealthOnSuccess(healthEntry);
+                    updateHealthOnSuccess(healthEntry, now2);
                     singleCheckCooldown[id] = now2 + healthEntry.backoffMs;
                     if (verified === 0) {
                       const freezeUntil = now2 + ZERO_FREEZE_MS_DEFAULT;
@@ -555,7 +483,7 @@ export function useLobbyCounts(
                   } catch (error) {
                     cache.delete(id);
                     verificationLastCheckRef.current.single[id] = Date.now();
-                    updateHealthOnFailure(healthEntry);
+                    updateHealthOnFailure(healthEntry, now);
                     singleCheckCooldown[id] =
                       verificationLastCheckRef.current.single[id] +
                       healthEntry.backoffMs;
@@ -603,7 +531,7 @@ export function useLobbyCounts(
           // 任意対策: n>0 の場合でも必要に応じて検証（presenceゴースト抑止）。
           if (VERIFY_MULTI && n > 0 && !disableFsFallback) {
             const { cache, health: healthStore } = verificationStateRef.current;
-            const healthEntry = getVerificationHealth(healthStore, id);
+            const healthEntry = getVerificationHealth(healthStore, id, now);
             const cached = cache.get(id);
             if (cached && cached.expiresAt > now) {
               if (cached.count === 0) {
@@ -616,7 +544,7 @@ export function useLobbyCounts(
                   }
                 }
               }
-              updateHealthOnSuccess(healthEntry);
+              updateHealthOnSuccess(healthEntry, now);
               verificationLastCheckRef.current.multi[id] = now;
               multiCheckCooldown[id] = now + healthEntry.backoffMs;
               if (debugFallback) {
@@ -676,7 +604,7 @@ export function useLobbyCounts(
                       expiresAt: now2 + CACHE_TTL_MS,
                     });
                     verificationLastCheckRef.current.multi[id] = now2;
-                    updateHealthOnSuccess(healthEntry);
+                    updateHealthOnSuccess(healthEntry, now2);
                     multiCheckCooldown[id] = now2 + healthEntry.backoffMs;
                     if (verified === 0) {
                       applyCountUpdates(setCounts, { [id]: 0 });
@@ -698,7 +626,10 @@ export function useLobbyCounts(
                   } catch (error) {
                     cache.delete(id);
                     verificationLastCheckRef.current.multi[id] = Date.now();
-                    updateHealthOnFailure(healthEntry);
+                    updateHealthOnFailure(
+                      healthEntry,
+                      verificationLastCheckRef.current.multi[id]
+                    );
                     multiCheckCooldown[id] =
                       verificationLastCheckRef.current.multi[id] +
                       healthEntry.backoffMs;

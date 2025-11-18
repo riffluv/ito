@@ -369,8 +369,8 @@ export function useHostActions({
       markActionStart,
       isHost,
       finalizeAction,
-      ensurePresenceReady,
       hostActions,
+      roomStatus,
     ]
   );
 

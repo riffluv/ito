@@ -26,7 +26,7 @@ import type {
   PresenceUserMap,
 } from "@/lib/firebase/presence";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import { applyOutcomeToRoomStats } from "@/lib/game/roomStats";
+import { applyOutcomeToRoomStats } from "@/lib/game/domain";
 
 type RoomUpdateMap = Record<string, unknown>;
 
