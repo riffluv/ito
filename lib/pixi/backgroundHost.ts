@@ -81,10 +81,17 @@ class PixiBackgroundHost {
 
   private handleContextLost = (event: Event) => {
     event.preventDefault?.();
+    // Drop current scene so上位で再適用できるようにする
+    this.destroyCurrentScene();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pixiBackgroundContextLost"));
+    }
   };
 
   private handleContextRestored = () => {
-    // 現状では controller 側で再構築が不要だが、必要に応じて追加する。
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pixiBackgroundContextRestored"));
+    }
   };
 
   private async ensureApp(): Promise<Application | null> {
