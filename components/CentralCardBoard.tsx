@@ -139,6 +139,29 @@ const snapshotRect = (rect: RectLike): RectLike => ({
   height: rect.height,
 });
 
+const translateRect = (rect: RectLike, delta: { x: number; y: number }): RectLike => ({
+  left: rect.left + delta.x,
+  top: rect.top + delta.y,
+  width: rect.width,
+  height: rect.height,
+});
+
+const getActiveRectWithDelta = (
+  active: DragMoveEvent["active"] | DragEndEvent["active"],
+  delta?: { x: number; y: number }
+): RectLike | null => {
+  const translated = active.rect.current.translated;
+  if (translated) {
+    return translated as RectLike;
+  }
+  const initial = active.rect.current.initial;
+  if (!initial) return null;
+  if (delta && (delta.x !== 0 || delta.y !== 0)) {
+    return translateRect(initial as RectLike, delta);
+  }
+  return initial as RectLike;
+};
+
 const boardCollisionDetection: CollisionDetection = (args) => {
   const pointerHits = pointerWithin(args);
   if (pointerHits.length) {
@@ -302,13 +325,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const magnetConfig = useMemo(
     () => {
       const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
-      const snapRadius = prefersReducedMotion ? 96 : isTouchLike ? 168 : 132;
-      const snapThreshold = isTouchLike ? (prefersReducedMotion ? 34 : 30) : 24;
-      const pullExponent = prefersReducedMotion ? 1.5 : isTouchLike ? 2.35 : 1.85;
-      const settleProgress = prefersReducedMotion ? 0.9 : 0.8;
-      const overshootStart = prefersReducedMotion ? 0.95 : 0.88;
-      const overshootRatio = prefersReducedMotion ? 0.04 : isTouchLike ? 0.07 : 0.1;
-      const maxOvershootPx = prefersReducedMotion ? 6 : 12;
+      // 全スロットで同じ立ち上がり時間になるよう、吸着開始距離を広めに統一
+      const snapRadius = prefersReducedMotion ? 140 : isTouchLike ? 220 : 190;
+      const snapThreshold = prefersReducedMotion ? 28 : isTouchLike ? 32 : 26;
+      // 遠距離からの立ち上がりをなだらかにし、スロット1と同じ“溜め”を作る
+      const pullExponent = prefersReducedMotion ? 1.45 : 1.7;
+      const settleProgress = prefersReducedMotion ? 0.9 : 0.78;
+      const overshootStart = prefersReducedMotion ? 0.94 : 0.9;
+      const overshootRatio = prefersReducedMotion ? 0.04 : 0.08;
+      const maxOvershootPx = prefersReducedMotion ? 7 : 12;
       return {
         snapRadius,
         snapThreshold,
@@ -565,7 +590,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
 
       const { over, active } = event;
-      const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
+      const activeRect = getActiveRectWithDelta(active, event.delta);
       if (activeRect) {
         lastDragPositionRef.current = {
           x: activeRect.left + activeRect.width / 2,
@@ -596,8 +621,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       const magnetResult = computeMagnetTransform(over.rect, activeRect, {
         ...magnetConfigRef.current,
         projectedOffset: {
-          dx: projectedState.dx,
-          dy: projectedState.dy,
+          dx: projectedState.dx + (cursorSnapOffset?.x ?? 0),
+          dy: projectedState.dy + (cursorSnapOffset?.y ?? 0),
         },
       });
 
@@ -616,7 +641,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       enqueueMagnetUpdate({ state: magnetResult });
     },
-    [enqueueMagnetUpdate, getProjectedMagnetState, magnetConfigRef, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget]
+    [enqueueMagnetUpdate, getProjectedMagnetState, magnetConfigRef, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget, cursorSnapOffset]
   );
 
   const flushPendingDragMove = useCallback(() => {
@@ -1034,7 +1059,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
 
       const coordinates = event.activatorEvent ? getEventCoordinates(event.activatorEvent) : null;
-      const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial ?? null;
+      const activeRect = getActiveRectWithDelta(event.active);
       if (coordinates && activeRect) {
         const centerX = activeRect.left + activeRect.width / 2;
         const centerY = activeRect.top + activeRect.height / 2;
@@ -1075,7 +1100,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
+      const activeRect = getActiveRectWithDelta(active, event.delta);
       if (activeRect) {
         lastDragPositionRef.current = {
           x: activeRect.left + activeRect.width / 2,
@@ -1171,8 +1196,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           magnetResult = computeMagnetTransform(overRect, activeRect, {
             ...magnetConfigRef.current,
             projectedOffset: {
-              dx: currentMagnetState.dx,
-              dy: currentMagnetState.dy,
+              dx: currentMagnetState.dx + (cursorSnapOffset?.x ?? 0),
+              dy: currentMagnetState.dy + (cursorSnapOffset?.y ?? 0),
             },
           });
           let slotIndex = parseInt(overId.split("-")[1], 10);
@@ -1190,7 +1215,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
-            let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
+          let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
             let previousPending: (string | null)[] | undefined;
             let insertedPending = false;
             let didPlaySound = false;
@@ -1306,6 +1331,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       updateDropAnimationTarget,
       onOptimisticProposalChange,
       magnetConfigRef,
+      cursorSnapOffset,
     ]
   );
 

@@ -127,23 +127,6 @@ export function useMagnetController(
     [flushMagnetUpdates]
   );
 
-  const enqueueMagnetUpdate = useCallback(
-    (update: EnqueueUpdateArgs) => {
-      let didQueue = false;
-      if (update.state) {
-        pendingMagnetStateRef.current = update.state;
-        didQueue = true;
-      }
-      if (Object.prototype.hasOwnProperty.call(update, "target")) {
-        pendingMagnetTargetRef.current = update.target ?? null;
-        didQueue = true;
-      }
-      if (!didQueue) return;
-      scheduleMagnetFlush({ immediate: update.immediate });
-    },
-    [scheduleMagnetFlush]
-  );
-
   const getProjectedMagnetTarget = useCallback(() => {
     return pendingMagnetTargetRef.current !== undefined
       ? pendingMagnetTargetRef.current
@@ -153,6 +136,39 @@ export function useMagnetController(
   const getProjectedMagnetState = useCallback(() => {
     return pendingMagnetStateRef.current ?? magnetStateRef.current;
   }, []);
+
+  const enqueueMagnetUpdate = useCallback(
+    (update: EnqueueUpdateArgs) => {
+      let didQueue = false;
+      if (update.state) {
+        const prev = getProjectedMagnetState();
+        let next = update.state;
+        // リッチ吸着の“間”を感じさせるため、strengthの立ち上がりを緩和する
+        if (next.strength > prev.strength) {
+          const maxRise = prefersReducedMotion ? 0.12 : 0.18;
+          const cappedStrength = Math.min(next.strength, prev.strength + maxRise);
+          if (cappedStrength !== next.strength) {
+            const ratio = next.strength > 0 ? cappedStrength / next.strength : 1;
+            next = {
+              ...next,
+              strength: cappedStrength,
+              dx: next.dx * ratio,
+              dy: next.dy * ratio,
+            };
+          }
+        }
+        pendingMagnetStateRef.current = next;
+        didQueue = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(update, "target")) {
+        pendingMagnetTargetRef.current = update.target ?? null;
+        didQueue = true;
+      }
+      if (!didQueue) return;
+      scheduleMagnetFlush({ immediate: update.immediate });
+    },
+    [getProjectedMagnetState, prefersReducedMotion, scheduleMagnetFlush]
+  );
 
   const resetMagnet = useCallback(
     (options?: ResetOptions) => {
@@ -205,7 +221,8 @@ export function useMagnetController(
         return;
       }
 
-      const delay = prefersReducedMotion ? 36 : 90;
+      // 早めにハイライトを出し、全スロットで同じ「入り口」を確保
+      const delay = prefersReducedMotion ? 24 : 50;
       if (delay <= 0) {
         enqueueMagnetUpdate({ target: nextId });
         return;

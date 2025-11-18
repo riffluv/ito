@@ -159,6 +159,21 @@ function InteractiveBoardBase({
   );
   const [dragTilt, setDragTilt] = useState(0);
   const [dragLift, setDragLift] = useState(0);
+  const [magnetEnterPulse, setMagnetEnterPulse] = useState(false);
+
+  useEffect(() => {
+    if (!magnetSnapshot.targetId) {
+      setMagnetEnterPulse(false);
+      return;
+    }
+    setMagnetEnterPulse(true);
+    if (typeof window === "undefined") return undefined;
+    const duration = prefersReducedMotion ? 90 : 170;
+    const timer = window.setTimeout(() => setMagnetEnterPulse(false), duration);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [magnetSnapshot.targetId, prefersReducedMotion]);
 
   useEffect(() => {
     if (!activeId) {
@@ -210,15 +225,18 @@ function InteractiveBoardBase({
     }
     const strength = magnetState.strength;
     const baseScale = prefersReducedMotion ? 1.02 : 1.05;
-    const magnetScaleBoost = strength * (prefersReducedMotion ? 0.015 : 0.045);
+    const magnetScaleBoost = strength * (prefersReducedMotion ? 0.016 : 0.05);
+    const enterBoost = magnetEnterPulse ? (prefersReducedMotion ? 0.018 : 0.06) : 0;
     const tiltInfluence = strength * (prefersReducedMotion ? 0.6 : 1.4);
     const rotate = dragTilt + tiltInfluence;
     const liftFilterStrength = Math.max(0, strength - 0.08);
-    const transitionDuration = prefersReducedMotion ? 80 : 150;
+    const transitionDuration = prefersReducedMotion ? 110 : 190;
 
     // translate は magnetModifier で処理されるため、ここでは scale と rotate のみ
     return {
-      transform: `scale(${(baseScale + magnetScaleBoost).toFixed(4)}) rotate(${rotate.toFixed(2)}deg)`,
+      transform: `scale(${(baseScale + magnetScaleBoost + enterBoost).toFixed(4)}) rotate(${rotate.toFixed(
+        2
+      )}deg)`,
       transition: `transform ${transitionDuration}ms cubic-bezier(0.2, 0.75, 0.4, 1), filter ${
         transitionDuration + 40
       }ms cubic-bezier(0.2, 0.7, 0.4, 1)`,
@@ -230,7 +248,7 @@ function InteractiveBoardBase({
           : undefined,
       willChange: "transform",
     };
-  }, [activeId, dragTilt, magnetState.strength, prefersReducedMotion]);
+  }, [activeId, dragTilt, magnetState.strength, magnetEnterPulse, prefersReducedMotion]);
 
   return (
     <DndContext
