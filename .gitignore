@@ -15,3 +15,4 @@ online-ito-firebase-adminsdk-*.json
 *.Zone.Identifier
 functions/lib/
 tsconfig.tsbuildinfo
+public/workers/pixi-background-worker.js
