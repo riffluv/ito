@@ -69,6 +69,10 @@ import {
   useResultFlipState,
 } from "@/components/central-board";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
+import {
+  buildOptimisticProposalSnapshot,
+  prunePendingSlotsInPlace,
+} from "@/components/central-board/optimisticReorder";
 
 const GameResultOverlay = dynamic(() =>
   import("@/components/ui/GameResultOverlay").then((mod) => mod.GameResultOverlay),
@@ -114,23 +118,6 @@ const shallowArrayEqual = (
     if (a[i] !== b[i]) return false;
   }
   return true;
-};
-
-const prunePendingSlotsInPlace = (slots: (string | null | undefined)[]): (string | null)[] => {
-  for (let idx = 0; idx < slots.length; idx += 1) {
-    if (typeof slots[idx] === "undefined") {
-      slots[idx] = null;
-    }
-  }
-  while (slots.length > 0) {
-    const tail = slots[slots.length - 1];
-    if (tail === null || typeof tail === "undefined") {
-      slots.pop();
-      continue;
-    }
-    break;
-  }
-  return slots as (string | null)[];
 };
 
 const buildProposalSignature = (values: (string | null)[]) => {
@@ -963,18 +950,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const applyOptimisticReorder = useCallback(
     (playerId: string, targetIndex: number) => {
       setOptimisticProposal((prev) => {
-        const source = (prev ?? boardProposal).slice();
-        const maxLength = Math.max(source.length, targetIndex + 1);
-        while (source.length < maxLength) {
-          source.push(null);
-        }
-        for (let idx = 0; idx < source.length; idx += 1) {
-          if (source[idx] === playerId) {
-            source[idx] = null;
-          }
-        }
-        source[targetIndex] = playerId;
-        return prunePendingSlotsInPlace(source);
+        const next = buildOptimisticProposalSnapshot(prev ?? boardProposal, playerId, targetIndex);
+        return next ?? prev ?? null;
       });
     },
     [boardProposal]
