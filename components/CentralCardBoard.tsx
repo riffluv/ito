@@ -38,6 +38,7 @@ import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import { notify } from "@/components/ui/notify";
 import { logError, logWarn } from "@/lib/utils/log";
+import { traceAction } from "@/lib/utils/trace";
 import { setMetric } from "@/lib/utils/metrics";
 import {
   FINAL_TWO_BONUS_DELAY,
@@ -132,6 +133,13 @@ const prunePendingSlotsInPlace = (slots: (string | null | undefined)[]): (string
   return slots as (string | null)[];
 };
 
+const buildProposalSignature = (values: (string | null)[]) => {
+  if (!values || values.length === 0) {
+    return "";
+  }
+  return values.map((value) => (typeof value === "string" && value.length > 0 ? value : "_")).join("|");
+};
+
 const snapshotRect = (rect: RectLike): RectLike => ({
   left: rect.left,
   top: rect.top,
@@ -209,8 +217,9 @@ const boardCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
-
-
+type DropDebugWindow = Window & {
+  dumpBoardState?: () => Record<string, unknown>;
+};
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
@@ -240,6 +249,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const {
     playerMap,
+    missingPlayerIds,
     eligibleIdSet,
     me,
     hasNumber,
@@ -273,6 +283,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const prefersReducedMotion = useReducedMotionPreference();
 
   const pointerProfile = usePointerProfile();
+  const dropDebugEnabled = process.env.NEXT_PUBLIC_UI_DROP_DEBUG === "1";
 
   // Streak Banner のタイミング制御
   const streakTimerRef = useRef<number | null>(null);
@@ -946,7 +957,98 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return [];
   }, [roomStatus, orderList, proposal, orderListKey, proposalKey, eligibleIdSet]);
 
-  const proposalLength = activeProposal.length;
+  const [optimisticProposal, setOptimisticProposal] = useState<(string | null)[] | null>(null);
+  const boardProposal = optimisticProposal ?? activeProposal;
+
+  const applyOptimisticReorder = useCallback(
+    (playerId: string, targetIndex: number) => {
+      setOptimisticProposal((prev) => {
+        const source = (prev ?? boardProposal).slice();
+        const maxLength = Math.max(source.length, targetIndex + 1);
+        while (source.length < maxLength) {
+          source.push(null);
+        }
+        for (let idx = 0; idx < source.length; idx += 1) {
+          if (source[idx] === playerId) {
+            source[idx] = null;
+          }
+        }
+        source[targetIndex] = playerId;
+        return prunePendingSlotsInPlace(source);
+      });
+    },
+    [boardProposal]
+  );
+
+  const proposalLength = boardProposal.length;
+  const placeholderSet = useMemo(() => new Set(missingPlayerIds), [missingPlayerIds]);
+  const placeholderSlots = useMemo(() => {
+    if (!missingPlayerIds.length) {
+      return [];
+    }
+    return boardProposal
+      .map((cardId, idx) =>
+        cardId && placeholderSet.has(cardId) ? { slot: idx, cardId } : null
+      )
+      .filter((entry): entry is { slot: number; cardId: string } => entry !== null);
+  }, [boardProposal, missingPlayerIds.length, placeholderSet]);
+  const placeholderLogRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!placeholderSlots.length) {
+      placeholderLogRef.current = null;
+      return;
+    }
+    const serialized = JSON.stringify(placeholderSlots);
+    if (placeholderLogRef.current === serialized) {
+      return;
+    }
+    placeholderLogRef.current = serialized;
+    placeholderSlots.forEach(({ slot, cardId }) => {
+      traceAction("board.slot.state", {
+        roomId,
+        slot,
+        occupiedBy: cardId,
+        reason: "missing-player-profile",
+      });
+    });
+  }, [placeholderSlots, roomId]);
+
+  useEffect(() => {
+    if (!optimisticProposal) return;
+    const optimisticKey = buildProposalSignature(optimisticProposal);
+    const serverKey = buildProposalSignature(activeProposal);
+    if (optimisticKey === serverKey) {
+      setOptimisticProposal(null);
+    }
+  }, [optimisticProposal, activeProposal]);
+
+  useEffect(() => {
+    if (roomStatus !== "clue" && optimisticProposal) {
+      setOptimisticProposal(null);
+    }
+  }, [roomStatus, optimisticProposal]);
+
+  const proposalSyncRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!proposalKey) {
+      proposalSyncRef.current = null;
+      return;
+    }
+    if (proposalSyncRef.current === proposalKey) {
+      return;
+    }
+    proposalSyncRef.current = proposalKey;
+    const activeCount = activeProposal.reduce(
+      (acc, id) => (typeof id === "string" && id.length > 0 ? acc + 1 : acc),
+      0
+    );
+    traceAction("proposal.sync", {
+      roomId,
+      activeProposalLen: activeCount,
+      orderListLen: orderListLength,
+      source: "firestore",
+    });
+  }, [proposalKey, roomId, activeProposal, orderListLength]);
 
   const slotCountDragging = useMemo(() => {
     if (typeof slotCount === "number" && slotCount > 0) return slotCount;
@@ -969,7 +1071,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const { dragSlots, staticSlots, waitingPlayers } = useBoardSlots({
     slotCountDragging,
     slotCountStatic,
-    activeProposal,
+    activeProposal: boardProposal,
     pending,
     playerReadyMap,
     optimisticReturningIds,
@@ -982,6 +1084,52 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     playerMap,
     activeId,
   });
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const debugWindow = window as DropDebugWindow;
+    if (!dropDebugEnabled) {
+      if (debugWindow.dumpBoardState) {
+        delete debugWindow.dumpBoardState;
+      }
+      return undefined;
+    }
+    const dump = () => ({
+      roomId,
+      timestamp: Date.now(),
+      proposal: activeProposal,
+      renderedProposal: boardProposal,
+      optimisticProposal,
+      pending,
+      placeholders: placeholderSlots,
+      waiting: waitingPlayers.map((player) => ({
+        id: player.id,
+        name: player.name,
+      })),
+      eligibleIds,
+      missingPlayerIds,
+      roomStatus,
+    });
+    debugWindow.dumpBoardState = dump;
+    return () => {
+      if (debugWindow.dumpBoardState === dump) {
+        delete debugWindow.dumpBoardState;
+      }
+    };
+  }, [
+    dropDebugEnabled,
+    roomId,
+    activeProposal,
+    boardProposal,
+    optimisticProposal,
+    pending,
+    placeholderSlots,
+    waitingPlayers,
+    eligibleIds,
+    missingPlayerIds,
+    roomStatus,
+  ]);
 
   const handleSlotEnter = useCallback(
     (_index: number) => {
@@ -1115,7 +1263,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
 
         const activePlayerId = String(active.id);
-        const alreadyInProposal = (activeProposal as (string | null)[]).includes(activePlayerId);
+        const alreadyInProposal = (boardProposal as (string | null)[]).includes(activePlayerId);
         const isSlotTarget = over && typeof over.id === "string" && over.id.startsWith("slot-");
         const isReturnTarget = over && typeof over.id === "string" && over.id === RETURN_DROP_ZONE_ID;
 
@@ -1247,10 +1395,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             if (alreadyInProposal) {
               playOnce();
-              scheduleMoveCardInProposalToPosition(roomId, activePlayerId, slotIndex).catch((error) => {
-                logError("central-card-board", "move-card-in-proposal", error);
-                playDropInvalid();
-              });
+              scheduleMoveCardInProposalToPosition(roomId, activePlayerId, slotIndex)
+                .catch((error) => {
+                  logError("central-card-board", "move-card-in-proposal", error);
+                  playDropInvalid();
+                  setOptimisticProposal(null);
+                });
+              applyOptimisticReorder(activePlayerId, slotIndex);
               return;
             }
 
@@ -1261,44 +1412,56 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             request
               .then((result) => {
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result });
-                if (result === "noop") {
-                  dropSession?.complete("noop");
-                  onOptimisticProposalChange?.(activePlayerId, null);
-                  if (previousPending !== undefined) {
-                    const snapshot = previousPending.slice();
-                    updatePendingState(() => snapshot);
-                  }
-                  notify({
-                    title: "その位置には置けません",
-                    description: "カードが既に置かれているか、提案が更新されています。",
-                    type: "info",
-                  });
-                  playDropInvalid();
-                  dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
-                  return;
-                }
-                playOnce();
-                dropSession?.complete("success");
-              })
+            if (result === "noop") {
+              dropSession?.complete("noop");
+              onOptimisticProposalChange?.(activePlayerId, null);
+              if (previousPending !== undefined) {
+                const snapshot = previousPending.slice();
+                updatePendingState(() => snapshot);
+              }
+              notify({
+                title: "その位置には置けません",
+                description: "カードが既に置かれているか、提案が更新されています。",
+                type: "info",
+              });
+              playDropInvalid();
+              dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
+              traceAction("board.drop.attempt", {
+                roomId,
+                playerId: activePlayerId,
+                targetSlot: slotIndex,
+                reasonIfRejected: "slot-occupied",
+              });
+              return;
+            }
+            playOnce();
+            dropSession?.complete("success");
+          })
               .catch((error) => {
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
                 dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
                 onOptimisticProposalChange?.(activePlayerId, null);
                 if (previousPending !== undefined) {
-                  const snapshot = previousPending.slice();
-                  updatePendingState(() => snapshot);
-                }
-                playDropInvalid();
-                dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
+                const snapshot = previousPending.slice();
+                updatePendingState(() => snapshot);
+              }
+              playDropInvalid();
+              dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
+              traceAction("board.drop.attempt", {
+                roomId,
+                playerId: activePlayerId,
+                targetSlot: slotIndex,
+                reasonIfRejected: "error",
               });
-            return;
-          }
+            });
+          return;
+        }
           return;
         }
 
         if (alreadyInProposal) {
-          const targetIndex = (activeProposal as (string | null)[]).indexOf(overId);
+          const targetIndex = (boardProposal as (string | null)[]).indexOf(overId);
           if (targetIndex < 0) {
             playDropInvalid();
             return;
@@ -1307,7 +1470,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           scheduleMoveCardInProposalToPosition(roomId, activePlayerId, targetIndex).catch((error) => {
             logError("central-card-board", "move-card-in-proposal", error);
             playDropInvalid();
+            setOptimisticProposal(null);
           });
+          applyOptimisticReorder(activePlayerId, targetIndex);
         }
       } finally {
         enqueueMagnetUpdate({ state: magnetResult, immediate: true });
@@ -1322,7 +1487,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       playDropInvalid,
       playCardPlace,
       returnCardToWaiting,
-      activeProposal,
       meId,
       updatePendingState,
       roomId,
@@ -1332,6 +1496,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       onOptimisticProposalChange,
       magnetConfigRef,
       cursorSnapOffset,
+      applyOptimisticReorder,
+      boardProposal,
     ]
   );
 
@@ -1442,7 +1608,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             onDragCancel={onDragCancel}
             dropAnimation={dropAnimation}
             renderCard={renderCard}
-            activeProposal={activeProposal}
+            activeProposal={boardProposal}
             waitingPlayers={waitingPlayers}
             meId={meId}
             displayMode={displayMode}

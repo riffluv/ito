@@ -52,6 +52,18 @@ export function useDropHandler({
     dealReady,
   });
 
+  const logDropRejection = useCallback(
+    (reason: string, extra?: { index?: number }) => {
+      traceAction("board.drop.attempt", {
+        roomId,
+        playerId: meId,
+        reasonIfRejected: reason,
+        targetSlot: typeof extra?.index === "number" ? extra.index : undefined,
+      });
+    },
+    [meId, roomId]
+  );
+
   const [pending, setPending] = useState<(string | null)[]>([]);
   const [isOver, setIsOver] = useState(false);
   const optimisticMode = DROP_OPTIMISTIC_ENABLED;
@@ -251,6 +263,7 @@ export function useDropHandler({
       const validation = ensureCanDrop(pid);
       if (!validation.ok) {
         session.abort(validation.outcome);
+        logDropRejection(validation.reason ?? validation.outcome);
         return;
       }
 
@@ -328,6 +341,7 @@ export function useDropHandler({
               title: "カードは既に提出済みです",
               type: "info",
             });
+            logDropRejection("slot-occupied");
             return;
           }
           session.complete("success");
@@ -371,6 +385,7 @@ export function useDropHandler({
             description: description || undefined,
             type: "error",
           });
+          logDropRejection("error");
         });
     },
     [
@@ -382,6 +397,7 @@ export function useDropHandler({
       playSuccessSound,
       roomId,
       scheduleOptimisticRollback,
+      logDropRejection,
     ]
   );
 
@@ -397,6 +413,7 @@ const onDropAtPosition = useCallback(
       const validation = ensureCanDrop(pid);
       if (!validation.ok) {
         session.abort(validation.outcome);
+        logDropRejection(validation.reason ?? validation.outcome, { index: targetIndex });
         return;
       }
 
@@ -492,6 +509,7 @@ const onDropAtPosition = useCallback(
               type: "info",
             });
             playInvalidSound();
+            logDropRejection("slot-occupied", { index: targetIndex });
             return;
           }
 
@@ -543,6 +561,7 @@ const onDropAtPosition = useCallback(
             description: description || undefined,
             type: "error",
           });
+          logDropRejection("error", { index: targetIndex });
           playInvalidSound();
         });
     },
@@ -555,6 +574,7 @@ const onDropAtPosition = useCallback(
       playSuccessSound,
       roomId,
       scheduleOptimisticRollback,
+      logDropRejection,
     ]
   );
 
@@ -636,6 +656,7 @@ type DropValidationResult =
   | {
       ok: false;
       outcome: DropOutcome;
+      reason?: string;
     };
 
 function useDropEligibility({
@@ -676,7 +697,7 @@ function useDropEligibility({
           type: "info",
           duration: 1800,
         });
-        return { ok: false, outcome: "error" };
+        return { ok: false, outcome: "error", reason: "deal-pending" };
       }
 
       if (!canDrop) {
@@ -687,7 +708,7 @@ function useDropEligibility({
         });
         playInvalidSound();
         notify({ title: "今はここに置けません", type: "info" });
-        return { ok: false, outcome: "error" };
+        return { ok: false, outcome: "error", reason: "phase" };
       }
 
       if (pid !== meId) {
@@ -698,7 +719,7 @@ function useDropEligibility({
         });
         playInvalidSound();
         notify({ title: "自分のカードをドラッグしてください", type: "info" });
-        return { ok: false, outcome: "error" };
+        return { ok: false, outcome: "error", reason: "foreign-card" };
       }
 
       if (!me || typeof me.number !== "number") {
@@ -709,7 +730,7 @@ function useDropEligibility({
         });
         playInvalidSound();
         notify({ title: "数字が割り当てられていません", type: "warning" });
-        return { ok: false, outcome: "error" };
+        return { ok: false, outcome: "error", reason: "no-number" };
       }
 
       return { ok: true };

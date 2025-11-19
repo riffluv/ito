@@ -4,6 +4,120 @@ import { useMemo, useRef } from "react";
 
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 
+type PlayerWithId = PlayerDoc & { id: string };
+
+const PLACEHOLDER_AVATAR = "/avatars/knight1.webp";
+const PLACEHOLDER_CLUE = "（切断中…）";
+
+const createPlaceholderPlayer = (id: string): PlayerWithId => ({
+  id,
+  name: "離脱したプレイヤー",
+  avatar: PLACEHOLDER_AVATAR,
+  clue1: PLACEHOLDER_CLUE,
+  number: null,
+  ready: true,
+  orderIndex: 0,
+});
+
+export type PlayerPresenceSnapshotInput = {
+  players: PlayerWithId[];
+  orderList: (string | null)[];
+  proposal?: (string | null)[];
+  orderSnapshots?: Record<string, PlayerSnapshot> | null;
+  lastKnown: Map<string, PlayerWithId>;
+};
+
+export type PlayerPresenceSnapshotResult = {
+  playerMap: Map<string, PlayerWithId>;
+  placeholderIds: string[];
+};
+
+export function buildPlayerPresenceSnapshot({
+  players,
+  orderList,
+  proposal,
+  orderSnapshots,
+  lastKnown,
+}: PlayerPresenceSnapshotInput): PlayerPresenceSnapshotResult {
+  const workingMap = new Map<string, PlayerWithId>();
+  players.forEach((player) => {
+    if (!player || !player.id) return;
+    workingMap.set(player.id, player);
+  });
+
+  if (orderSnapshots && typeof orderSnapshots === "object") {
+    Object.entries(orderSnapshots).forEach(([id, snapshot]) => {
+      if (!id || workingMap.has(id) || !snapshot) return;
+      workingMap.set(id, {
+        id,
+        name:
+          typeof snapshot.name === "string" && snapshot.name.trim()
+            ? snapshot.name
+            : "離脱したプレイヤー",
+        avatar:
+          typeof snapshot.avatar === "string" && snapshot.avatar.trim()
+            ? snapshot.avatar
+            : PLACEHOLDER_AVATAR,
+        clue1: typeof snapshot.clue1 === "string" ? snapshot.clue1 : PLACEHOLDER_CLUE,
+        number:
+          typeof snapshot.number === "number" && Number.isFinite(snapshot.number)
+            ? snapshot.number
+            : null,
+        ready: true,
+        orderIndex: 0,
+      });
+    });
+  }
+
+  const relevantIds = new Set<string>();
+  const register = (value: string | null | undefined) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) {
+        relevantIds.add(trimmed);
+      }
+    }
+  };
+
+  if (Array.isArray(orderList)) {
+    orderList.forEach(register);
+  }
+  if (Array.isArray(proposal)) {
+    proposal.forEach(register);
+  }
+  if (orderSnapshots && typeof orderSnapshots === "object") {
+    Object.keys(orderSnapshots).forEach(register);
+  }
+
+  const placeholderIds: string[] = [];
+  workingMap.forEach((player, id) => {
+    lastKnown.set(id, {
+      id,
+      name: player?.name ?? "",
+      avatar: player?.avatar ?? "",
+      clue1: typeof player?.clue1 === "string" ? player.clue1 : "",
+      number: typeof player?.number === "number" ? player.number : null,
+      ready: true,
+      orderIndex: typeof player?.orderIndex === "number" ? player.orderIndex : 0,
+    });
+  });
+
+  relevantIds.forEach((id) => {
+    if (workingMap.has(id)) return;
+    const fallback = lastKnown.get(id);
+    if (fallback) {
+      workingMap.set(id, fallback);
+      return;
+    }
+    const placeholder = createPlaceholderPlayer(id);
+    workingMap.set(id, placeholder);
+    lastKnown.set(id, placeholder);
+    placeholderIds.push(id);
+  });
+
+  return { playerMap: workingMap, placeholderIds };
+}
+
 interface PlayerPresenceOptions {
   players: (PlayerDoc & { id: string })[];
   orderList: (string | null)[];
@@ -25,70 +139,19 @@ export function usePlayerPresenceState({
   roomStatus,
   dealPlayers,
 }: PlayerPresenceOptions) {
-  const lastKnownCardRef = useRef(new Map<string, PlayerDoc & { id: string }>());
+  const lastKnownCardRef = useRef(new Map<string, PlayerWithId>());
 
-  const playerMap = useMemo(() => {
-    const map = new Map<string, PlayerDoc & { id: string }>();
-    players.forEach((player) => {
-      if (player && player.id) {
-        map.set(player.id, player);
-      }
-    });
-    if (orderSnapshots && typeof orderSnapshots === "object") {
-      Object.entries(orderSnapshots).forEach(([id, snapshot]) => {
-        if (!snapshot || map.has(id)) return;
-        map.set(id, {
-          id,
-          name: typeof snapshot.name === "string" && snapshot.name.trim() ? snapshot.name : "離脱プレイヤー",
-          avatar:
-            typeof snapshot.avatar === "string" && snapshot.avatar.trim()
-              ? snapshot.avatar
-              : "/avatars/knight1.webp",
-          clue1: typeof snapshot.clue1 === "string" ? snapshot.clue1 : "",
-          number: typeof snapshot.number === "number" ? snapshot.number : null,
-          ready: true,
-          orderIndex: 0,
-        });
-      });
-    }
-    const relevantIds = new Set<string>();
-    if (Array.isArray(orderList)) {
-      orderList.forEach((value) => {
-        if (typeof value === "string" && value.trim()) relevantIds.add(value);
-      });
-    }
-    if (Array.isArray(proposal)) {
-      proposal.forEach((value) => {
-        if (typeof value === "string" && value.trim()) relevantIds.add(value);
-      });
-    }
-    if (orderSnapshots && typeof orderSnapshots === "object") {
-      Object.keys(orderSnapshots).forEach((id) => {
-        if (typeof id === "string" && id.trim()) relevantIds.add(id);
-      });
-    }
-    const lastKnown = lastKnownCardRef.current;
-    map.forEach((player, id) => {
-      lastKnown.set(id, {
-        id,
-        name: player?.name ?? "",
-        avatar: player?.avatar ?? "",
-        clue1: typeof player?.clue1 === "string" ? player.clue1 : "",
-        number: typeof player?.number === "number" ? player.number : null,
-        ready: true,
-        orderIndex: typeof player?.orderIndex === "number" ? player.orderIndex : 0,
-      });
-    });
-    relevantIds.forEach((id) => {
-      if (!map.has(id)) {
-        const fallback = lastKnown.get(id);
-        if (fallback) {
-          map.set(id, fallback);
-        }
-      }
-    });
-    return map;
-  }, [players, orderList, proposal, orderSnapshots]);
+  const { playerMap, placeholderIds } = useMemo(
+    () =>
+      buildPlayerPresenceSnapshot({
+        players,
+        orderList,
+        proposal,
+        orderSnapshots,
+        lastKnown: lastKnownCardRef.current,
+      }),
+    [players, orderList, proposal, orderSnapshots]
+  );
 
   const eligibleIdsKey = useMemo(
     () => (Array.isArray(eligibleIds) ? eligibleIds.join(",") : ""),
@@ -150,6 +213,7 @@ export function usePlayerPresenceState({
 
   return {
     playerMap,
+    missingPlayerIds: placeholderIds,
     eligibleIdSet,
     me,
     hasNumber,
