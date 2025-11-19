@@ -164,7 +164,7 @@ function InteractiveBoardBase({
   useEffect(() => {
     if (!magnetSnapshot.targetId) {
       setMagnetEnterPulse(false);
-      return;
+      return undefined;
     }
     setMagnetEnterPulse(true);
     if (typeof window === "undefined") return undefined;
@@ -179,12 +179,13 @@ function InteractiveBoardBase({
     if (!activeId) {
       setDragTilt(0);
       setDragLift(0);
-      return;
+      return undefined;
     }
     const tiltRange = prefersReducedMotion ? 1.4 : 2.8;
     const randomTilt = Math.random() * tiltRange * 2 - tiltRange;
     setDragTilt(Number(randomTilt.toFixed(2)));
     setDragLift(prefersReducedMotion ? 2 : 8);
+    return undefined;
   }, [activeId, prefersReducedMotion]);
 
   const overlayShellStyle = useMemo<React.CSSProperties>(() => {

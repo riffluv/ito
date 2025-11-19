@@ -17,6 +17,7 @@ import {
   createInfernoBackground,
   type InfernoBackgroundController,
 } from "@/lib/pixi/infernoBackground";
+import { logInfo, logError } from "@/lib/utils/log";
 
 type PixiSceneKey = "pixi-simple" | "pixi-dq" | "pixi-inferno";
 
@@ -44,12 +45,360 @@ export type SetSceneResult = {
   effects?: SceneEffects;
 };
 
+type NextDataWithAssetPrefix = {
+  assetPrefix?: string;
+};
+
+const PIXI_WORKER_PUBLIC_PATH = "/workers/pixi-background-worker.js";
+const PIXI_WORKER_CACHE_BUST = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
+const resolveWorkerAssetPrefix = () => {
+  if (typeof window === "undefined") return "";
+  const nextData = (globalThis as typeof globalThis & {
+    __NEXT_DATA__?: NextDataWithAssetPrefix;
+  }).__NEXT_DATA__;
+  const fromNext = nextData?.assetPrefix ?? "";
+  const fallback = process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "";
+  return (fromNext || fallback || "").replace(/\/$/, "");
+};
+
+const buildWorkerAssetUrl = (): string | null => {
+  if (typeof window === "undefined") return null;
+  const prefix = resolveWorkerAssetPrefix();
+  const isAbsolute = /^https?:\/\//i.test(prefix);
+  const base = isAbsolute ? prefix : `${window.location.origin}${prefix}`;
+  const cacheBust = PIXI_WORKER_CACHE_BUST ? `?v=${PIXI_WORKER_CACHE_BUST}` : "";
+  return `${base}${PIXI_WORKER_PUBLIC_PATH}${cacheBust}`;
+};
+
 type SceneOptions = {
   key: PixiSceneKey;
   quality: BackgroundQuality;
   onMetrics?: (metrics: SimpleBackgroundMetrics) => void;
   profile?: PixiBackgroundProfile;
 };
+
+class WorkerBackgroundHost implements BackgroundHostLike {
+  private worker: Worker | null = null;
+  private canvasHolder: HTMLElement | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private currentScene: PixiSceneKey | null = null;
+  private currentQuality: BackgroundQuality = "low";
+  private requestedProfile: PixiBackgroundProfile = DEFAULT_BACKGROUND_PROFILE;
+  private initRequestId = 0;
+  private sceneRequestId = 0;
+  private pending = new Map<number, (result: SetSceneResult) => void>();
+  private fatal = false;
+  private canvasVisible = true;
+  private resizeListener: (() => void) | null = null;
+  private readyPromise: Promise<void> | null = null;
+  private resolveReady: (() => void) | null = null;
+  private rejectReady: ((reason?: unknown) => void) | null = null;
+  private workerUrlCache: string | null = null;
+
+  constructor(private onFatal?: (reason: string) => void) {}
+
+  isSupported(): boolean {
+    return shouldPreferWorkerBackground();
+  }
+
+  private createCanvasIfNeeded() {
+    if (this.canvas) return;
+    if (typeof document === "undefined") return;
+    this.canvas = document.createElement("canvas");
+    this.canvas.style.position = "absolute";
+    this.canvas.style.inset = "0";
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
+    this.canvas.style.pointerEvents = "none";
+    this.canvas.style.opacity = this.canvasVisible ? "1" : "0";
+  }
+
+  private getWorkerUrl(): string {
+    if (!this.workerUrlCache) {
+      const resolved = buildWorkerAssetUrl();
+      if (!resolved) {
+        throw new Error("Pixi background worker asset is unavailable");
+      }
+      this.workerUrlCache = resolved;
+    }
+    return this.workerUrlCache;
+  }
+
+  private startWorker(width: number, height: number) {
+    if (!this.canvas) throw new Error("Canvas is not attached");
+    const workerUrl = this.getWorkerUrl();
+    this.worker = new Worker(workerUrl, { type: "module" });
+    this.worker.onmessage = this.handleWorkerMessage;
+    this.readyPromise = new Promise<void>((resolve, reject) => {
+      this.resolveReady = resolve;
+      this.rejectReady = reject;
+    });
+
+    let offscreen: OffscreenCanvas | null = null;
+    try {
+      offscreen = this.canvas.transferControlToOffscreen();
+    } catch (error) {
+      this.worker.terminate();
+      this.worker = null;
+      throw error;
+    }
+    this.initRequestId += 1;
+    this.worker.postMessage(
+      {
+        type: "init",
+        width,
+        height,
+        canvas: offscreen,
+        profile: this.requestedProfile,
+        requestId: this.initRequestId,
+      },
+      [offscreen]
+    );
+  }
+
+  private handleWorkerMessage = (event: MessageEvent) => {
+    const data = event.data ?? {};
+    if (data.type === "debug") {
+      logInfo("pixi-background-host", `worker:${data.message}`, data.detail);
+      return;
+    }
+    if (data.type === "ready") {
+      this.resolveReady?.();
+      this.resolveReady = null;
+      this.rejectReady = null;
+      return;
+    }
+    if (data.type === "scene-ready") {
+      const resolver = this.pending.get(data.requestId);
+      if (resolver) {
+        this.pending.delete(data.requestId);
+        resolver({
+          renderer: "pixi",
+          quality: data.quality as BackgroundQuality,
+          effects: this.createEffectProxy(),
+        });
+      }
+      return;
+    }
+    if (data.type === "error") {
+      logError("pixi-background-host", "worker-error", data.message ?? data);
+      const resolver = this.pending.get(data.requestId);
+      this.pending.delete(data.requestId);
+      if (resolver) {
+        resolver({ renderer: "dom", quality: this.currentQuality });
+      }
+      return;
+    }
+    if (data.type === "fallback") {
+      this.triggerFatal(data.reason ?? "worker-fallback");
+      return;
+    }
+    if (data.type === "context-lost") {
+      if (data.count >= 3) {
+        this.triggerFatal("context-lost-loop");
+      }
+      return;
+    }
+  };
+
+  private createEffectProxy(): SceneEffects {
+    return {
+      lightSweep: () => this.worker?.postMessage({ type: "effect", effect: "lightSweep" }),
+      launchFireworks: () =>
+        this.worker?.postMessage({ type: "effect", effect: "fireworks" }),
+      launchMeteors: () => this.worker?.postMessage({ type: "effect", effect: "meteors" }),
+      launchVolcanoEruption: () =>
+        this.worker?.postMessage({ type: "effect", effect: "infernoVolcano" }),
+      flashRed: () => this.worker?.postMessage({ type: "effect", effect: "flashRed" }),
+    };
+  }
+
+  private triggerFatal(reason: string) {
+    this.fatal = true;
+    this.pending.forEach((resolve) =>
+      resolve({ renderer: "dom", quality: this.currentQuality })
+    );
+    this.pending.clear();
+    this.rejectReady?.(reason);
+    this.readyPromise = null;
+    this.resolveReady = null;
+    this.rejectReady = null;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("pixiBackgroundContextLost", { detail: { reason } })
+      );
+    }
+    this.dispose();
+    this.onFatal?.(reason);
+  }
+
+  private ensureWorker() {
+    if (this.fatal) {
+      throw new Error("Worker background disabled due to previous failure");
+    }
+    if (this.worker) return;
+    const width = window.innerWidth || 1920;
+    const height = window.innerHeight || 1080;
+    this.startWorker(width, height);
+  }
+
+  setCanvasVisible(visible: boolean) {
+    this.canvasVisible = visible;
+    if (this.canvas) {
+      this.canvas.style.opacity = visible ? "1" : "0";
+    }
+  }
+
+  async attachCanvas(host: HTMLElement | null) {
+    if (!host) return;
+    this.canvasHolder = host;
+    this.createCanvasIfNeeded();
+    if (!this.canvas) return;
+    if (this.canvas.parentElement !== host) {
+      host.appendChild(this.canvas);
+    }
+    this.ensureWorker();
+    const width = window.innerWidth || 1920;
+    const height = window.innerHeight || 1080;
+    this.worker?.postMessage({ type: "resize", width, height });
+    if (typeof window !== "undefined" && !this.resizeListener) {
+      this.resizeListener = () => {
+        const w = window.innerWidth || 1920;
+        const h = window.innerHeight || 1080;
+        this.worker?.postMessage({ type: "resize", width: w, height: h });
+      };
+      window.addEventListener("resize", this.resizeListener, { passive: true });
+    }
+  }
+
+  detachCanvas(host: HTMLElement | null) {
+    if (!host || !this.canvas) return;
+    if (this.canvas.parentElement === host) {
+      host.removeChild(this.canvas);
+    }
+    this.canvasHolder = null;
+  }
+
+  dispose() {
+    this.pending.clear();
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+    if (this.canvas && this.canvas.parentElement) {
+      this.canvas.parentElement.removeChild(this.canvas);
+    }
+    this.canvas = null;
+    this.currentScene = null;
+    this.readyPromise = null;
+    this.resolveReady = null;
+    this.rejectReady = null;
+    if (typeof window !== "undefined" && this.resizeListener) {
+      window.removeEventListener("resize", this.resizeListener);
+    }
+    this.resizeListener = null;
+  }
+
+  setPerformanceProfile(profile: PixiBackgroundProfile) {
+    this.requestedProfile = profile;
+    if (this.worker) {
+      this.worker.postMessage({ type: "setProfile", profile });
+    }
+  }
+
+  async setScene(options: SceneOptions): Promise<SetSceneResult> {
+    if (!this.isSupported()) {
+      return { renderer: "dom", quality: options.quality };
+    }
+    this.currentScene = options.key;
+    this.currentQuality = options.quality;
+    this.ensureWorker();
+    if (!this.worker) {
+      return { renderer: "dom", quality: options.quality };
+    }
+    if (this.readyPromise) {
+      await this.readyPromise;
+    }
+    this.sceneRequestId += 1;
+    const requestId = this.sceneRequestId;
+    const promise = new Promise<SetSceneResult>((resolve) => {
+      this.pending.set(requestId, resolve);
+    });
+    this.worker.postMessage({
+      type: "setScene",
+      sceneKey: options.key,
+      quality: options.quality,
+      requestId,
+    });
+    return promise;
+  }
+}
+
+type BackgroundHostLike = {
+  attachCanvas(host: HTMLElement | null): Promise<void> | void;
+  detachCanvas(host: HTMLElement | null): void;
+  dispose(): void;
+  setCanvasVisible(visible: boolean): void;
+  setPerformanceProfile(profile: PixiBackgroundProfile): void;
+  setScene(options: SceneOptions): Promise<SetSceneResult>;
+};
+
+const WORKER_FLAG =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_PIXI_BG_WORKER === "1";
+
+const isOffscreenSupported = () => {
+  if (typeof window === "undefined") return false;
+  if (typeof OffscreenCanvas === "undefined") return false;
+  if (typeof Worker === "undefined") return false;
+  const proto = (window.HTMLCanvasElement || {}).prototype as
+    | HTMLCanvasElement
+    | undefined;
+  return Boolean(proto && "transferControlToOffscreen" in proto);
+};
+
+const hasCrossOriginIsolation = () => {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.crossOriginIsolated);
+};
+
+const isSafariBelow17 = () => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
+  if (!isSafari) return false;
+  const versionMatch = ua.match(/Version\/(\d+)/);
+  if (!versionMatch) return false;
+  const major = Number(versionMatch[1]);
+  return Number.isFinite(major) && major < 17;
+};
+
+type WorkerSupportDiagnostics = {
+  flag: boolean;
+  offscreen: boolean;
+  crossOrigin: boolean;
+  safariBlocked: boolean;
+  supported: boolean;
+};
+
+const computeWorkerSupport = (): WorkerSupportDiagnostics => {
+  const diag: WorkerSupportDiagnostics = {
+    flag: WORKER_FLAG,
+    offscreen: isOffscreenSupported(),
+    crossOrigin: hasCrossOriginIsolation(),
+    safariBlocked: isSafariBelow17(),
+    supported: false,
+  };
+  diag.supported = diag.flag && diag.offscreen && diag.crossOrigin && !diag.safariBlocked;
+  if (typeof window !== "undefined") {
+    (window as typeof window & { __pixiWorkerDiag?: WorkerSupportDiagnostics }).__pixiWorkerDiag =
+      diag;
+  }
+  return diag;
+};
+
+const shouldPreferWorkerBackground = () => computeWorkerSupport().supported;
 
 class PixiBackgroundHost {
   private app: Application | null = null;
@@ -431,4 +780,109 @@ class PixiBackgroundHost {
   }
 }
 
-export const pixiBackgroundHost = new PixiBackgroundHost();
+class HybridPixiBackgroundHost implements BackgroundHostLike {
+  private mainHost = new PixiBackgroundHost();
+  private workerHost = new WorkerBackgroundHost((reason) =>
+    this.switchToMain(`worker-fatal:${reason}`)
+  );
+  private mode: "worker" | "main" = this.workerHost.isSupported()
+    ? "worker"
+    : "main";
+  private mountEl: HTMLElement | null = null;
+  private lastVisible = true;
+  private profile: PixiBackgroundProfile = DEFAULT_BACKGROUND_PROFILE;
+
+  constructor() {
+    this.exposeMode();
+  }
+
+  private exposeMode() {
+    if (typeof window !== "undefined") {
+      (window as typeof window & { __pixiBackgroundMode?: string }).__pixiBackgroundMode =
+        this.mode;
+    }
+  }
+
+  private activeHost(): BackgroundHostLike {
+    return this.mode === "worker" ? this.workerHost : this.mainHost;
+  }
+
+  private switchToMain(reason?: string) {
+    if (this.mode === "main") return;
+    this.workerHost.dispose();
+    this.mode = "main";
+    this.exposeMode();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("pixiBackgroundContextLost", {
+          detail: { reason: reason ?? "worker-fallback" },
+        })
+      );
+    }
+    if (this.mountEl) {
+      this.mainHost.attachCanvas(this.mountEl);
+      this.mainHost.setPerformanceProfile(this.profile);
+      this.mainHost.setCanvasVisible(this.lastVisible);
+    }
+  }
+
+  setCanvasVisible(visible: boolean) {
+    this.lastVisible = visible;
+    this.activeHost().setCanvasVisible(visible);
+  }
+
+  async attachCanvas(host: HTMLElement | null) {
+    this.mountEl = host;
+    if (this.mode === "worker") {
+      try {
+        await this.workerHost.attachCanvas(host);
+        if (host) this.mainHost.detachCanvas(host);
+        return;
+      } catch {
+        this.switchToMain("attach-error");
+      }
+    }
+    await this.mainHost.attachCanvas(host);
+  }
+
+  detachCanvas(host: HTMLElement | null) {
+    this.activeHost().detachCanvas(host);
+    if (this.mountEl === host) {
+      this.mountEl = null;
+    }
+  }
+
+  dispose() {
+    this.workerHost.dispose();
+    this.mainHost.dispose();
+  }
+
+  setPerformanceProfile(profile: PixiBackgroundProfile) {
+    this.profile = profile;
+    this.workerHost.setPerformanceProfile(profile);
+    this.mainHost.setPerformanceProfile(profile);
+  }
+
+  async setScene(options: SceneOptions): Promise<SetSceneResult> {
+    if (this.mode === "worker") {
+      try {
+        const result = await this.workerHost.setScene(options);
+        if (typeof window !== "undefined") {
+          (window as typeof window & { __pixiLastSceneResult?: SetSceneResult }).__pixiLastSceneResult =
+            result;
+        }
+        return result;
+      } catch {
+        this.switchToMain("scene-error");
+      }
+    }
+    const result = await this.mainHost.setScene(options);
+    if (typeof window !== "undefined") {
+      (window as typeof window & { __pixiLastSceneResult?: SetSceneResult }).__pixiLastSceneResult =
+        result;
+    }
+    return result;
+  }
+}
+
+export const pixiBackgroundHost = new HybridPixiBackgroundHost();

@@ -1,5 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { withSentryConfig } from "@sentry/nextjs";
+import { build as esbuildBuild } from "esbuild";
 
 const commitSha =
   process.env.VERCEL_GIT_COMMIT_SHA ||
@@ -20,12 +23,70 @@ if (
 }
 
 /** @type {import('next').NextConfig} */
+const SECURITY_HEADERS = [
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Embedder-Policy",
+    value: "credentialless",
+  },
+];
+
+const pixiWorkerEntry = path.join(process.cwd(), "lib/pixi/background.worker.ts");
+const pixiWorkerOutput = path.join(process.cwd(), "public/workers/pixi-background-worker.js");
+let pixiWorkerBuildPromise = null;
+let pixiWorkerBuildMode = null;
+
+const ensurePixiWorkerBundle = (dev) => {
+  if (pixiWorkerBuildPromise && pixiWorkerBuildMode === dev) {
+    return pixiWorkerBuildPromise;
+  }
+  pixiWorkerBuildMode = dev;
+  fs.mkdirSync(path.dirname(pixiWorkerOutput), { recursive: true });
+  pixiWorkerBuildPromise = esbuildBuild({
+    entryPoints: [pixiWorkerEntry],
+    outfile: pixiWorkerOutput,
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    target: dev ? "es2022" : "es2019",
+    sourcemap: dev ? "inline" : false,
+    minify: !dev,
+    loader: { ".ts": "ts" },
+    banner: { js: "/* pixi background worker bundle */" },
+  }).finally(() => {
+    pixiWorkerBuildPromise = null;
+  });
+  return pixiWorkerBuildPromise;
+};
+
+class PixiWorkerBuildPlugin {
+  constructor(dev) {
+    this.dev = dev;
+  }
+
+  apply(compiler) {
+    compiler.hooks.beforeCompile.tapPromise("PixiWorkerBuildPlugin", () => ensurePixiWorkerBundle(this.dev));
+    compiler.hooks.afterCompile.tap("PixiWorkerBuildPlugin", (compilation) => {
+      if (compilation?.fileDependencies?.add) {
+        compilation.fileDependencies.add(pixiWorkerEntry);
+      }
+    });
+  }
+}
+
 const nextConfig = {
   // 開発環境でのカード描画・アニメーション問題を回避するため無効化
   // Strict Modeの2重レンダリングがPixi.js/GSAPアニメーションと競合
   reactStrictMode: false,
   async headers() {
     return [
+      {
+        source: "/:path*",
+        headers: SECURITY_HEADERS,
+      },
       {
         source: "/sfx/:path*",
         headers: [
@@ -41,6 +102,32 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=604800, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/_next/static/media/:path*.worker.ts",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "text/javascript",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+        ],
+      },
+      {
+        source: "/_next/static/:path*.ts",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "text/javascript",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
         ],
       },
@@ -116,6 +203,7 @@ const nextConfig = {
           },
         },
       };
+      config.plugins.push(new PixiWorkerBuildPlugin(dev));
     } else {
       // サーバー側ビルドで chunk が .next/server/chunks 配下に出力されると
       // webpack-runtime が `require("./859.js")` で読み込みに失敗するため、
@@ -131,6 +219,11 @@ const nextConfig = {
           ""
         );
       }
+    }
+
+    if (isServer) {
+      config.plugins = config.plugins || [];
+      config.plugins.push(new PixiWorkerBuildPlugin(dev));
     }
     return config;
   },
