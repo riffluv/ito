@@ -22,6 +22,7 @@ import {
 } from "@/lib/utils/errorHandling";
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 import {
   collection,
   onSnapshot,
@@ -614,6 +615,24 @@ export function useParticipants(
     setMetric("participants", "presenceReady", presenceReady ? 1 : 0);
   }, [presenceReady]);
 
+  const prevOnlineUidsRef = useRef<string[]>([]);
+  useEffect(() => {
+    if (!presenceReady || !roomId) return;
+    if (!Array.isArray(onlineUids)) return;
+    const prev = prevOnlineUidsRef.current;
+    const joined = onlineUids.filter((onlineUid) => !prev.includes(onlineUid));
+    const left = prev.filter((previousUid) => !onlineUids.includes(previousUid));
+    if (joined.length || left.length) {
+      traceAction("presence.change", {
+        roomId,
+        joined,
+        left,
+        onlineCount: onlineUids.length,
+      });
+    }
+    prevOnlineUidsRef.current = [...onlineUids];
+  }, [presenceReady, roomId, onlineUids]);
+
   const detach = async () => {
     const current = detachRef.current;
     detachRef.current = null;
@@ -650,4 +669,3 @@ export function useParticipants(
     error,
   };
 }
-

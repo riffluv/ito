@@ -54,6 +54,12 @@
   - `sw.*`: Service Worker のループガード発動回数など。  
   - `participants.*`: Presence 状態の監視。  
 - **Trace ログ**: 重要ユーザー操作は `traceAction` / `traceError` で記録。DevTools Console で `[trace:*]` をフィルターすると確認しやすい。  
+- **Drop デバッグ**: `NEXT_PUBLIC_UI_DROP_DEBUG=1` を `.env.local` へ追加して再起動すると、以下が有効になる。
+  1. `window.dumpBoardState()` … Console で実行すると現在の `proposal/pending/placeholder` 情報を JSON で取得できる。
+  2. `traceAction("board.drop.attempt")` … ドロップ拒否時に `reasonIfRejected` と `targetSlot` を送出。
+  3. `traceAction("board.slot.state")` … Ghost カードやプレースホルダが生成されたスロットをロギング。  
+  収集手順: (a) DevTools を開き `window.dumpBoardState()` の出力をコピー、(b) Console の `[trace:board.*]` を保存、(c) `downloaded-logs` へ貼り付けて共有。
+
 - **Sentry**: `lib/telemetry/` 経由で送信。Sentry DSN を設定した環境のみ有効。  
 
 ---
