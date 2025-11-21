@@ -114,17 +114,82 @@ type EnsureMemberResult =
   | { joined: false }
   | { joined: false; reason: "inProgress" };
 
+type EnsureMemberArgs = {
+  roomId: string;
+  uid: string;
+  displayName: string | null | undefined;
+};
+
+/**
+ * displayName が未解決の場合でも、過去に保存した値を優先して使用する
+ * （匿名で一度生成されるのを防ぎ、avatar の再割り当てを抑止する）。
+ */
+const resolvePreferredDisplayName = (
+  displayName: string | null | undefined
+): { value: string; source: "prop" | "localStorage" | "fallback" } => {
+  const trimmed =
+    typeof displayName === "string" ? displayName.trim() : "";
+  if (trimmed.length > 0) return { value: trimmed, source: "prop" };
+
+  if (typeof window !== "undefined") {
+    try {
+      const cached = window.localStorage.getItem("displayName") ?? "";
+      const cachedTrimmed = cached.trim();
+      if (cachedTrimmed.length > 0) {
+        return { value: cachedTrimmed, source: "localStorage" };
+      }
+    } catch {
+      /* ignore localStorage access failures */
+    }
+  }
+
+  return { value: "匿名", source: "fallback" };
+};
+
+const AVATAR_STORAGE_KEY = "__stickyAvatars__"; // JSON { [roomId]: { [uid]: avatarPath } }
+
+const readStoredAvatar = (roomId: string, uid: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AVATAR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, Record<string, string>>;
+    const roomMap = parsed?.[roomId];
+    if (roomMap && typeof roomMap[uid] === "string") {
+      return roomMap[uid];
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
+const writeStoredAvatar = (roomId: string, uid: string, avatar: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(AVATAR_STORAGE_KEY);
+    const parsed =
+      (raw ? (JSON.parse(raw) as Record<string, Record<string, string>>) : {}) ??
+      {};
+    const roomMap = parsed[roomId] ?? {};
+    roomMap[uid] = avatar;
+    parsed[roomId] = roomMap;
+    window.localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    /* ignore */
+  }
+};
+
 export async function ensureMember({
   roomId,
   uid,
   displayName,
-}: {
-  roomId: string;
-  uid: string;
-  displayName: string | null | undefined;
-}): Promise<EnsureMemberResult> {
+}: EnsureMemberArgs): Promise<EnsureMemberResult> {
   // まず重複チェック＆クリーンアップを実行（ベストプラクティス）
   await cleanupDuplicatePlayerDocs(roomId, uid);
+
+  const { value: resolvedDisplayName, source: displayNameSource } =
+    resolvePreferredDisplayName(displayName);
 
   const meRef = doc(db!, "rooms", roomId, "players", uid);
   const meSnap = await getDoc(meRef);
@@ -239,7 +304,11 @@ export async function ensureMember({
     const availableAvatars = AVATAR_LIST.filter(
       (avatar) => !usedAvatars.has(avatar)
     );
-    let selectedAvatar = getAvatarByOrder(0); // フォールバック
+    const stickyAvatar = readStoredAvatar(roomId, uid);
+    let selectedAvatar =
+      stickyAvatar && !usedAvatars.has(stickyAvatar)
+        ? stickyAvatar
+        : getAvatarByOrder(0); // フォールバック
 
     if (availableAvatars.length > 0) {
       // 利用可能なアバターからランダム選択
@@ -248,7 +317,7 @@ export async function ensureMember({
     }
 
     const p: PlayerDoc = {
-      name: displayName || "匿名",
+      name: resolvedDisplayName,
       avatar: selectedAvatar,
       number: null,
       clue1: "",
@@ -274,13 +343,15 @@ export async function ensureMember({
       roomId,
       uid,
       status,
+      displayNameSource,
     });
     registerAvatarUsage(roomId, selectedAvatar);
+    writeStoredAvatar(roomId, uid, selectedAvatar);
     return { joined: true } as const;
   }
   const existing = meSnap.data() as Partial<PlayerDoc> | undefined;
   const normalizedName =
-    typeof displayName === "string" ? displayName.trim() : "";
+    typeof displayName === "string" ? displayName.trim() : resolvedDisplayName;
   const patch: Partial<PlayerDoc> & {
     lastSeen: ReturnType<typeof serverTimestamp>;
   } = { lastSeen: serverTimestamp() };
@@ -499,7 +570,13 @@ export async function joinRoomFully({
   displayName: string | null | undefined;
   notifyChat?: boolean;
 }): Promise<EnsureMemberResult> {
-  const created = await ensureMember({ roomId, uid, displayName });
+  const { value: resolvedDisplayName } =
+    resolvePreferredDisplayName(displayName);
+  const created = await ensureMember({
+    roomId,
+    uid,
+    displayName: resolvedDisplayName,
+  });
   const inProgress =
     "reason" in created && created.reason === "inProgress";
   if (inProgress) {
@@ -521,7 +598,7 @@ export async function joinRoomFully({
       );
       await addDoc(collection(db!, "rooms", roomId, "chat"), {
         sender: "system",
-        text: `${displayName || "匿名"} さんが参加しました`,
+        text: `${resolvedDisplayName} さんが参加しました`,
         createdAt: serverTimestamp(),
       });
     } catch {}
