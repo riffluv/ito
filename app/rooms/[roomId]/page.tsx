@@ -43,7 +43,7 @@ import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlot
 import { clearRevealPending, pruneProposalByEligible } from "@/lib/game/service";
 import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
 import { useRoomState } from "@/lib/hooks/useRoomState";
-import { deriveSpectatorFlags } from "@/lib/room/spectatorRoles";
+import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import type {
   RoomMachineClientEvent,
   SpectatorReason as MachineSpectatorReason,
@@ -1797,15 +1797,6 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const seatRequestTimeoutTriggeredRef = useRef(false);
   const spectatorTimeoutPrevRef = useRef(false);
   const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
-  const spectatorEnterReason = useMemo<Exclude<MachineSpectatorReason, null>>(() => {
-    if (versionMismatchBlocksAccess || forcedExitReason === "version-mismatch") {
-      return "version-mismatch";
-    }
-    if (roomStatus === "waiting") {
-      return recallOpen ? "waiting-open" : "waiting-closed";
-    }
-    return "mid-game";
-  }, [versionMismatchBlocksAccess, forcedExitReason, roomStatus, recallOpen]);
 
   const spectatorMachineState = useMemo<SpectatorMachineState>(
     () => ({
@@ -2115,33 +2106,24 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   }, [room?.deal?.players, room?.order?.list, room?.order?.proposal]);
 
   const hasServerAssignedSeat = !!(uid && serverAssignedSeatIds.has(uid));
-  const allowSpectatorWhileLoading =
-    loading &&
-    !isHost &&
-    !hasServerAssignedSeat &&
-    room?.status !== "waiting";
-
-  const loadingForSpectator = loading && !allowSpectatorWhileLoading;
-
-  const mustSpectateMidGame = useMemo(
-    () =>
-      room?.status !== "waiting" &&
-      !isHost &&
-      !isMember &&
-      !hasOptimisticSeat &&
-      !hasServerAssignedSeat,
-    [room?.status, isHost, isMember, hasOptimisticSeat, hasServerAssignedSeat]
-  );
-
-  const { spectatorCandidate } = deriveSpectatorFlags({
-    hasUid: uid !== null,
+  const {
+    spectatorEnterReason,
+    spectatorCandidate,
+    mustSpectateMidGame,
+  } = useSpectatorGate({
+    roomStatus: room?.status ?? null,
     isHost,
     isMember,
     hasOptimisticSeat,
     seatAcceptanceActive,
     seatRequestPending,
     joinStatus: spectatorJoinStatus,
-    loading: loadingForSpectator,
+    loading,
+    forcedExitReason,
+    recallOpen,
+    versionMismatchBlocksAccess,
+    hasServerAssignedSeat,
+    spectatorNode: fsmSpectatorNode,
   });
 
   useEffect(() => {
@@ -2171,6 +2153,24 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     if (fsmSpectatorNode !== "idle") return;
     emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: "mid-game" });
   }, [mustSpectateMidGame, fsmSpectatorNode, emitSpectatorEvent]);
+
+  useEffect(() => {
+    traceAction("spectator.gate", {
+      roomId,
+      status: room?.status ?? null,
+      spectatorCandidate,
+      mustSpectateMidGame,
+      recallOpen,
+      joinStatus: spectatorJoinStatus,
+    });
+  }, [
+    roomId,
+    room?.status,
+    spectatorCandidate,
+    mustSpectateMidGame,
+    recallOpen,
+    spectatorJoinStatus,
+  ]);
 
   useEffect(() => {
     if (!spectatorCandidate) {
@@ -2519,10 +2519,21 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     const pendingSource = hasPendingSeatRequest()
       ? consumePendingSeatRequest() ?? "manual"
       : null;
-    void performSeatRecovery({
-      silent: true,
-      source: pendingSource ?? "auto",
-    });
+    const source = pendingSource ?? "auto";
+    bumpMetric("spectator", "autoRecallAttempt");
+    void (async () => {
+      try {
+        const ok = await performSeatRecovery({
+          silent: true,
+          source,
+        });
+        traceAction("spectator.autoRecall", { roomId, source, ok });
+        bumpMetric("spectator", ok ? "autoRecallSuccess" : "autoRecallFailure");
+      } catch (error) {
+        traceError("spectator.autoRecall.failed", error, { roomId, source });
+        bumpMetric("spectator", "autoRecallFailure");
+      }
+    })();
   }, [
     spectatorRecallEnabled,
     isSpectatorMode,
@@ -2531,6 +2542,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     hasPendingSeatRequest,
     consumePendingSeatRequest,
     performSeatRecovery,
+    roomId,
   ]);
 
 
