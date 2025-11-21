@@ -2507,33 +2507,73 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     await performSeatRecovery({ silent: false, source: "manual" });
   }, [performSeatRecovery]);
 
-  const autoRecallAttemptedRef = useRef(false);
-  useEffect(() => {
-    if (!spectatorRecallEnabled || !isSpectatorMode) {
-      autoRecallAttemptedRef.current = false;
-      return;
+  const autoRecallAttemptsRef = useRef(0);
+  const autoRecallTimerRef = useRef<number | null>(null);
+  const resetAutoRecall = useCallback(() => {
+    autoRecallAttemptsRef.current = 0;
+    if (autoRecallTimerRef.current !== null) {
+      window.clearTimeout(autoRecallTimerRef.current);
+      autoRecallTimerRef.current = null;
     }
+  }, []);
+
+  const attemptAutoRecall = useCallback(
+    async (source: Exclude<SpectatorRequestSource, null> = "auto") => {
+      if (!spectatorRecallEnabled || !isSpectatorMode) return;
+      if (seatRequestPending || seatAcceptanceActive) return;
+      if (autoRecallAttemptsRef.current >= 3) return;
+
+      autoRecallAttemptsRef.current += 1;
+      bumpMetric("spectator", "autoRecallAttempt");
+      try {
+        const ok = await performSeatRecovery({ silent: true, source });
+        traceAction("spectator.autoRecall", {
+          roomId,
+          source,
+          ok,
+          attempt: autoRecallAttemptsRef.current,
+        });
+        bumpMetric("spectator", ok ? "autoRecallSuccess" : "autoRecallFailure");
+        if (!ok && autoRecallAttemptsRef.current < 3) {
+          autoRecallTimerRef.current = window.setTimeout(
+            () => void attemptAutoRecall(source),
+            3000
+          );
+        }
+      } catch (error) {
+        traceError("spectator.autoRecall.failed", error, {
+          roomId,
+          source,
+          attempt: autoRecallAttemptsRef.current,
+        });
+        bumpMetric("spectator", "autoRecallFailure");
+        if (autoRecallAttemptsRef.current < 3) {
+          autoRecallTimerRef.current = window.setTimeout(
+            () => void attemptAutoRecall(source),
+            3000
+          );
+        }
+      }
+    },
+    [
+      spectatorRecallEnabled,
+      isSpectatorMode,
+      seatRequestPending,
+      seatAcceptanceActive,
+      performSeatRecovery,
+      roomId,
+    ]
+  );
+
+  useEffect(() => {
+    resetAutoRecall();
+    if (!spectatorRecallEnabled || !isSpectatorMode) return;
     if (seatRequestPending || seatAcceptanceActive) return;
-    if (autoRecallAttemptedRef.current) return;
-    autoRecallAttemptedRef.current = true;
     const pendingSource = hasPendingSeatRequest()
       ? consumePendingSeatRequest() ?? "manual"
       : null;
-    const source = pendingSource ?? "auto";
-    bumpMetric("spectator", "autoRecallAttempt");
-    void (async () => {
-      try {
-        const ok = await performSeatRecovery({
-          silent: true,
-          source,
-        });
-        traceAction("spectator.autoRecall", { roomId, source, ok });
-        bumpMetric("spectator", ok ? "autoRecallSuccess" : "autoRecallFailure");
-      } catch (error) {
-        traceError("spectator.autoRecall.failed", error, { roomId, source });
-        bumpMetric("spectator", "autoRecallFailure");
-      }
-    })();
+    void attemptAutoRecall((pendingSource as Exclude<SpectatorRequestSource, null> | null) ?? "auto");
+    return () => resetAutoRecall();
   }, [
     spectatorRecallEnabled,
     isSpectatorMode,
@@ -2541,8 +2581,26 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     seatAcceptanceActive,
     hasPendingSeatRequest,
     consumePendingSeatRequest,
-    performSeatRecovery,
-    roomId,
+    attemptAutoRecall,
+    resetAutoRecall,
+  ]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      resetAutoRecall();
+      const pendingSource = hasPendingSeatRequest()
+        ? consumePendingSeatRequest() ?? "manual"
+        : null;
+      void attemptAutoRecall((pendingSource as Exclude<SpectatorRequestSource, null> | null) ?? "auto");
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [
+    attemptAutoRecall,
+    resetAutoRecall,
+    hasPendingSeatRequest,
+    consumePendingSeatRequest,
   ]);
 
 
