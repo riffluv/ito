@@ -7,7 +7,6 @@ import StorageSchemaGuard from "./StorageSchemaGuard";
 import "./globals.css";
 import Providers from "./providers";
 import { buildAudioPreloadHrefs } from "@/lib/audio/preload";
-import SafeUpdateToast from "@/components/ui/SafeUpdateToast";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -61,7 +60,6 @@ export default function RootLayout({
         <Providers>
           <StorageSchemaGuard />
           <ServiceWorkerRegistration />
-          <SafeUpdateToast />
           <ClientFrame>{children}</ClientFrame>
         </Providers>
       </body>
