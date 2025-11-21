@@ -1858,6 +1858,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     },
     utils: {
       hasRejoinIntent,
+      hasPendingSeatRequest,
+      consumePendingSeatRequest,
     },
   } = spectatorController;
   useEffect(() => {
@@ -2083,7 +2085,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
 
 
-  const joinEstablished = joinStatus === "joined";
+  const joinEstablished =
+    joinStatus === "joined" && (isMember || room?.status === "waiting");
   const spectatorJoinStatus = useMemo(() => {
     if (room?.status === "waiting") {
       return joinStatus;
@@ -2120,6 +2123,16 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const loadingForSpectator = loading && !allowSpectatorWhileLoading;
 
+  const mustSpectateMidGame = useMemo(
+    () =>
+      room?.status !== "waiting" &&
+      !isHost &&
+      !isMember &&
+      !hasOptimisticSeat &&
+      !hasServerAssignedSeat,
+    [room?.status, isHost, isMember, hasOptimisticSeat, hasServerAssignedSeat]
+  );
+
   const { spectatorCandidate } = deriveSpectatorFlags({
     hasUid: uid !== null,
     isHost,
@@ -2154,6 +2167,12 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   ]);
 
   useEffect(() => {
+    if (!mustSpectateMidGame) return;
+    if (fsmSpectatorNode !== "idle") return;
+    emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: "mid-game" });
+  }, [mustSpectateMidGame, fsmSpectatorNode, emitSpectatorEvent]);
+
+  useEffect(() => {
     if (!spectatorCandidate) {
       if (fsmSpectatorNode !== "idle") {
         // 観戦リクエスト中や強制退席直後は状態を維持する
@@ -2166,6 +2185,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       return () => {};
     }
     if (fsmSpectatorNode !== "idle") {
+      return () => {};
+    }
+    if (mustSpectateMidGame) {
       return () => {};
     }
     let cancelled = false;
@@ -2186,6 +2208,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     seatRequestPending,
     seatAcceptanceActive,
     forcedExitReason,
+    mustSpectateMidGame,
   ]);
 
   useEffect(() => {
@@ -2483,6 +2506,32 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const handleRetryJoin = useCallback(async () => {
     await performSeatRecovery({ silent: false, source: "manual" });
   }, [performSeatRecovery]);
+
+  const autoRecallAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!spectatorRecallEnabled || !isSpectatorMode) {
+      autoRecallAttemptedRef.current = false;
+      return;
+    }
+    if (seatRequestPending || seatAcceptanceActive) return;
+    if (autoRecallAttemptedRef.current) return;
+    autoRecallAttemptedRef.current = true;
+    const pendingSource = hasPendingSeatRequest()
+      ? consumePendingSeatRequest() ?? "manual"
+      : null;
+    void performSeatRecovery({
+      silent: true,
+      source: pendingSource ?? "auto",
+    });
+  }, [
+    spectatorRecallEnabled,
+    isSpectatorMode,
+    seatRequestPending,
+    seatAcceptanceActive,
+    hasPendingSeatRequest,
+    consumePendingSeatRequest,
+    performSeatRecovery,
+  ]);
 
 
   useEffect(() => {

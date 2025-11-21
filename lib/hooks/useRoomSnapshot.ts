@@ -122,6 +122,8 @@ export function useRoomSnapshot(
     return null;
   }, [displayName]);
 
+  const isMember = useMemo(() => players.some((p) => p.id === uid), [players, uid]);
+
   const enqueueCommit = useCallback(
     (task: () => void, startedAt: number | null, metricKey?: string) => {
       task();
@@ -458,9 +460,10 @@ export function useRoomSnapshot(
         clearTimeout(joinRetryTimerRef.current);
         joinRetryTimerRef.current = null;
       }
-      setJoinStatus(room ? "joined" : "idle");
+      const joined = room && isMember;
+      setJoinStatus(joined ? "joined" : "idle");
     }
-  }, [roomId, uid, room, normalizedDisplayName]);
+  }, [roomId, uid, room, normalizedDisplayName, isMember]);
 
   // ensureMember heartbeat via background interval
   useEffect(() => {
@@ -490,7 +493,6 @@ export function useRoomSnapshot(
     () => players.filter((p) => onlineUids?.includes(p.id)),
     [players, onlineUids]
   );
-  const isMember = useMemo(() => players.some((p) => p.id === uid), [players, uid]);
 
   return {
     room,
