@@ -46,7 +46,8 @@ export type QuickStartResult =
         | "presence-not-ready"
         | "host-mismatch"
         | "needs-custom-topic"
-        | "functions-unavailable";
+        | "functions-unavailable"
+        | "auth-error";
       topicType?: string;
       topic?: string | null;
       hostId?: string | null;
@@ -124,6 +125,26 @@ export function createHostActionsController() {
     const { activeCount, onlineCount, playerCount } = safeActiveCounts(
       presenceInfo
     );
+    const auth = getAuth();
+
+    if (auth?.currentUser) {
+      try {
+        // まずキャッシュから取得し、失敗や期限切れだけ強制リフレッシュ
+        const cached = await auth.currentUser.getIdToken(/* forceRefresh */ false);
+        if (!cached) {
+          await auth.currentUser.getIdToken(true);
+        }
+      } catch (error) {
+        traceError("ui.host.quickStart.authRefresh", error, { roomId });
+        return {
+          ok: false,
+          reason: "auth-error",
+          activeCount,
+          onlineCount,
+          playerCount,
+        };
+      }
+    }
     const presenceReady = presenceInfo?.presenceReady ?? false;
     const skipPresence = activeCount <= 2;
     const shouldEnforcePresence = !skipPresence;

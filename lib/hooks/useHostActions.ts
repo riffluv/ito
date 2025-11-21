@@ -170,10 +170,30 @@ export function useHostActions({
         });
         return false;
       }
+      if (roomStatus && roomStatus !== "waiting") {
+        notify({
+          id: toastIds.genericInfo(roomId, "status-mismatch"),
+          title: "ゲームを開始できません",
+          description: "進行中です。リセット後にもう一度試してください。",
+          type: "warning",
+          duration: 2600,
+        });
+        return false;
+      }
       const basePlayerCount =
         typeof playerCount === "number" && Number.isFinite(playerCount)
           ? Math.max(0, playerCount)
           : 0;
+      if (basePlayerCount === 0) {
+        notify({
+          id: toastIds.numberDealWarningPlayers(roomId),
+          title: "プレイヤーが0人です",
+          description: "最低1人が入室してから開始してください。",
+          type: "warning",
+          duration: 2600,
+        });
+        return false;
+      }
       const onlineCount =
         presenceReady && Array.isArray(onlineUids)
           ? onlineUids.filter(
@@ -266,6 +286,14 @@ export function useHostActions({
               title: "ホスト権限の確定を待っています",
               description: "権限が移動した直後は数秒後にもう一度お試しください",
               type: "warning",
+              duration: 2600,
+            });
+          } else if (result.reason === "auth-error") {
+            notify({
+              id: toastIds.genericInfo(roomId, "quickstart-auth"),
+              title: "認証を更新できませんでした",
+              description: "ブラウザを再読み込みして再試行してください。",
+              type: "error",
               duration: 2600,
             });
           } else if (result.reason === "needs-custom-topic") {
