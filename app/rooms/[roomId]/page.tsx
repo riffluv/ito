@@ -2567,13 +2567,14 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   useEffect(() => {
     resetAutoRecall();
-    if (!spectatorRecallEnabled || !isSpectatorMode) return;
-    if (seatRequestPending || seatAcceptanceActive) return;
+    const cleanup = () => resetAutoRecall();
+    if (!spectatorRecallEnabled || !isSpectatorMode) return cleanup;
+    if (seatRequestPending || seatAcceptanceActive) return cleanup;
     const pendingSource = hasPendingSeatRequest()
       ? consumePendingSeatRequest() ?? "manual"
       : null;
     void attemptAutoRecall((pendingSource as Exclude<SpectatorRequestSource, null> | null) ?? "auto");
-    return () => resetAutoRecall();
+    return cleanup;
   }, [
     spectatorRecallEnabled,
     isSpectatorMode,
