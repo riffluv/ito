@@ -15,6 +15,10 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
   const bannerRef = useRef<HTMLDivElement>(null);
   const numberRef = useRef<HTMLDivElement>(null);
   const prefersReduced = useReducedMotionPreference();
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // 前回のisVisibleを記憶（2重起動防止）
   const prevVisibleRef = useRef(false);
@@ -99,7 +103,7 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
 
     const tl = gsap.timeline({
       onComplete: () => {
-        onComplete?.();
+        onCompleteRef.current?.();
       },
     });
 
@@ -196,7 +200,7 @@ export function StreakBanner({ streak, isVisible, onComplete }: StreakBannerProp
     return () => {
       tl.kill();
     };
-  }, [isVisible, streak, config, onComplete, prefersReduced, streakLevel]);
+  }, [isVisible, streak, config, prefersReduced, streakLevel]);
 
   if (!isVisible || streak < 2) return null;
 
