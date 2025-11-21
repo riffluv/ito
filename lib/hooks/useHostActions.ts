@@ -170,7 +170,11 @@ export function useHostActions({
         });
         return false;
       }
-      if (roomStatus && roomStatus !== "waiting") {
+      const isRestartIntent =
+        options?.intentMeta?.action &&
+        typeof options.intentMeta.action === "string" &&
+        options.intentMeta.action.startsWith("quickStart:restart");
+      if (roomStatus && roomStatus !== "waiting" && !isRestartIntent) {
         notify({
           id: toastIds.genericInfo(roomId, "status-mismatch"),
           title: "ゲームを開始できません",
