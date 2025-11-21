@@ -124,6 +124,12 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 - 観戦パネルがプレイヤーに残る場合は `traceAction("spectator.mode")` の値が `isSpectatorMode=false` になっているかチェック。  
 - 連続して再入室が失敗する際は、`spectatorSessions/{sessionId}.rejoinRequest` が `pending` のまま残っていないか、API `/api/spectator/sessions/*` のレスポンスコードを確認する。  
 
+### 9.4 監視と上限の目安
+- ゲート判定のトレース: `traceAction("spectator.gate")` で `spectatorCandidate` / `mustSpectateMidGame` を確認できる。  
+- 自動呼び戻しの結果は `traceAction("spectator.autoRecall")` とメトリクス `spectator.autoRecall{Attempt,Success,Failure}` に記録。  
+- 進行中直入りは強制観戦ルートで処理されるため、観戦UIが出ない場合は gate ログを確認。  
+- 観戦者数の実運用目安: 身内向けは 8 人程度までならプレイヤー体感への影響は軽微。大量観戦（イベント時など）を検証する際は「サマリ購読」「観戦ライトUI」「presence 分離」を検討する。  
+
 ---
 
 ## 10. Quick Start（サーバー主導）運用メモ
