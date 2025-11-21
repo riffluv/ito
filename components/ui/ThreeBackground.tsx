@@ -110,7 +110,9 @@ export function ThreeBackground({ className }: ThreeBackgroundProps) {
   const { supports3D, gpuCapability, softwareRenderer } = useAnimationSettings();
   const performanceProfile: PixiBackgroundProfile =
     softwareRenderer || gpuCapability === "low" ? "software" : "default";
-  const shouldForceCssFallback = !supports3D;
+  // Software renderer (failIfMajorPerformanceCaveat / SwiftShader etc.) tends to fail WebGL init
+  // and show a blank/black screen, so bail out to the CSS background immediately.
+  const shouldForceCssFallback = !supports3D || softwareRenderer;
 
   const [backgroundType, setBackgroundType] =
     useState<BackgroundType>("pixi-dq");
