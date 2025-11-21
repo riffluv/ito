@@ -152,7 +152,8 @@ type SafeUpdateEvent =
 type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
 
 const APPLY_TIMEOUT_MS = 12_000;
-const AUTO_APPLY_DELAY_MS = 60_000;
+// Shorten auto-apply window to reduce time users can stay on an old build.
+const AUTO_APPLY_DELAY_MS = 15_000;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const DEFAULT_TELEMETRY_APP_VERSION = APP_VERSION ?? "unknown";
 let requiredSwVersionHint: string | null = null;
