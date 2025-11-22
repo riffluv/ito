@@ -64,7 +64,8 @@ export function MvpLedger({
   });
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
   const ambientRef = useRef<BattleRecordsAmbient | null>(null);
-  const fallbackPanel = !pixiContainer;
+  const [panelReady, setPanelReady] = useState(false);
+  const fallbackPanel = !panelReady;
 
   const sortedPlayers = useMemo(() => {
     const lookup = new Map(players.map((p) => [p.id, p]));
@@ -285,8 +286,30 @@ export function MvpLedger({
   useEffect(() => {
     if (!isOpen) {
       rowRefs.current = [];
+      setPanelReady(false);
     }
   }, [isOpen]);
+
+  // Pixi コンテナが取れない場合やリセット時は即フォールバックを有効化
+  useEffect(() => {
+    if (!pixiContainer) {
+      setPanelReady(false);
+    }
+  }, [pixiContainer]);
+
+  // WebGL コンテキスト喪失時は一旦フォールバックさせる（再描画で復帰）
+  useEffect(() => {
+    const handlePixiContext = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.status === "lost" || detail?.status === "restarting") {
+        setPanelReady(false);
+      }
+    };
+    window.addEventListener("ito:pixi-context", handlePixiContext as EventListener);
+    return () => {
+      window.removeEventListener("ito:pixi-context", handlePixiContext as EventListener);
+    };
+  }, []);
 
   // Escキー対応
   useEffect(() => {
@@ -318,6 +341,7 @@ export function MvpLedger({
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
+      setPanelReady(false);
       return undefined;
     }
 
@@ -337,6 +361,7 @@ export function MvpLedger({
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
+      setPanelReady(false);
     };
   }, [isOpen, pixiContainer]);
 
@@ -346,34 +371,41 @@ export function MvpLedger({
     onUpdate: (layout) => {
       const graphics = pixiGraphicsRef.current;
       if (!graphics || layout.width <= 0 || layout.height <= 0) {
+        setPanelReady(false);
         return;
       }
-
-      graphics.clear();
-      graphics.position.set(layout.x, layout.y);
-      drawBattleRecordsBoard(PIXI, graphics, {
-        width: layout.width,
-        height: layout.height,
-        dpr: layout.dpr,
-        failed,
-      });
-
-      // アンビエント効果の作成・更新
-      if (!ambientRef.current && pixiContainer) {
-        // 初回作成
-        const ambient = createBattleRecordsAmbient({
+      try {
+        graphics.clear();
+        graphics.position.set(layout.x, layout.y);
+        drawBattleRecordsBoard(PIXI, graphics, {
           width: layout.width,
           height: layout.height,
+          dpr: layout.dpr,
           failed,
         });
-        ambient.position.set(layout.x, layout.y);
-        ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
-        pixiContainer.addChild(ambient);
-        ambientRef.current = ambient;
-      } else if (ambientRef.current) {
-        // リサイズ対応
-        ambientRef.current.resize(layout.width, layout.height);
-        ambientRef.current.position.set(layout.x, layout.y);
+
+        // アンビエント効果の作成・更新
+        if (!ambientRef.current && pixiContainer) {
+          // 初回作成
+          const ambient = createBattleRecordsAmbient({
+            width: layout.width,
+            height: layout.height,
+            failed,
+          });
+          ambient.position.set(layout.x, layout.y);
+          ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
+          pixiContainer.addChild(ambient);
+          ambientRef.current = ambient;
+        } else if (ambientRef.current) {
+          // リサイズ対応
+          ambientRef.current.resize(layout.width, layout.height);
+          ambientRef.current.position.set(layout.x, layout.y);
+        }
+
+        setPanelReady(true);
+      } catch (error) {
+        console.error("[MvpLedger] failed to draw Pixi battle records panel", error);
+        setPanelReady(false);
       }
     },
   });

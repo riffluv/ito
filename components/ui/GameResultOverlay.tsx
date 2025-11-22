@@ -95,6 +95,7 @@ type VictoryRaysHookResult = {
   pixiRaysController: VictoryRaysController | null;
   registerLineRef: (index: number) => (node: SVGRectElement | null) => void;
   linesRef: MutableRefObject<(SVGRectElement | null)[]>;
+  initFailed: boolean;
 };
 
 function useVictoryRaysLayer(options: {
@@ -104,6 +105,7 @@ function useVictoryRaysLayer(options: {
   const { prefersReduced, mode } = options;
   const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
+  const [initFailed, setInitFailed] = useState(false);
   const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
 
   const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
@@ -136,23 +138,30 @@ function useVictoryRaysLayer(options: {
     let mounted = true;
 
     const init = async () => {
-      const modulePromise =
-        victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
-      victoryRaysModuleRef.current = modulePromise;
-      const { createVictoryRays } = await modulePromise;
-      if (!mounted || !pixiRaysLayer) return;
+      try {
+        const modulePromise =
+          victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
+        victoryRaysModuleRef.current = modulePromise;
+        const { createVictoryRays } = await modulePromise;
+        if (!mounted || !pixiRaysLayer) return;
 
-      const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 960;
-      const centerY = typeof window !== "undefined" ? window.innerHeight / 2 : 540;
+        const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 960;
+        const centerY = typeof window !== "undefined" ? window.innerHeight / 2 : 540;
 
-      controller = await createVictoryRays({
-        container: pixiRaysLayer,
-        centerX,
-        centerY,
-      });
+        controller = await createVictoryRays({
+          container: pixiRaysLayer,
+          centerX,
+          centerY,
+        });
 
-      if (mounted) {
-        setPixiRaysController(controller);
+        if (mounted) {
+          setPixiRaysController(controller);
+          setInitFailed(false);
+        }
+      } catch (error) {
+        console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
+        setPixiRaysController(null);
+        setInitFailed(true);
       }
     };
 
@@ -174,6 +183,7 @@ function useVictoryRaysLayer(options: {
     pixiRaysController,
     registerLineRef,
     linesRef,
+    initFailed,
   };
 }
 
@@ -240,12 +250,27 @@ export function GameResultOverlay({
   const prefersReduced = useReducedMotionPreference();
   const {
     usePixiRays: _usePixiRays,
-    useSvgRays,
+    useSvgRays: _legacyUseSvgRays,
     pixiRaysReady,
     pixiRaysController,
     registerLineRef,
     linesRef,
+    initFailed,
   } = useVictoryRaysLayer({ prefersReduced, mode });
+  const preferPixiRays = _usePixiRays;
+  const [webglUsable] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const canvas = document.createElement("canvas");
+    const gl =
+      canvas.getContext("webgl2", { powerPreference: "high-performance" }) ||
+      canvas.getContext("webgl", { powerPreference: "high-performance" }) ||
+      canvas.getContext("experimental-webgl");
+    return !!gl;
+  });
+
+  // Pixi を優先し、WebGL が無い / 初期化失敗時のみ SVG を許可
+  const useSvgRays =
+    (!preferPixiRays || initFailed || !webglUsable) && _legacyUseSvgRays;
   const triggerBackgroundFx = useBackgroundFx(prefersReduced);
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
@@ -654,7 +679,7 @@ export function GameResultOverlay({
         tl.call(() => {
           pixiRaysController?.playExplosion();
         }, undefined, 0.05);
-      } else {
+      } else if (useSvgRays) {
         // SVG 版（フォールバック）
         (lineNodesSnapshot ?? []).forEach((line) => {
           if (line) {
@@ -715,6 +740,8 @@ export function GameResultOverlay({
             0.25
           );
         });
+      } else {
+        // Pixi 初期化待ち中は放射線なしで継続
       }
 
       // ====================================================
