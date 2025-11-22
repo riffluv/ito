@@ -1273,6 +1273,15 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     () => playersWithOptimistic.map((p) => p.id).join(","),
     [playersWithOptimistic]
   );
+  const lastSeenAsMemberRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (isMember) {
+      lastSeenAsMemberRef.current = Date.now();
+    }
+  }, [isMember]);
+  const wasMemberRecently =
+    lastSeenAsMemberRef.current !== null &&
+    Date.now() - lastSeenAsMemberRef.current < 15000; // 15s grace to avoid transient demotion
   const normalizedDisplayName = useMemo(() => {
     if (typeof displayName === "string") {
       const trimmed = displayName.trim();
@@ -2077,7 +2086,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
 
   const joinEstablished =
-    joinStatus === "joined" && (isMember || room?.status === "waiting");
+    (joinStatus === "joined" && (isMember || room?.status === "waiting")) ||
+    wasMemberRecently;
   const spectatorJoinStatus = useMemo(() => {
     if (room?.status === "waiting") {
       return joinStatus;
