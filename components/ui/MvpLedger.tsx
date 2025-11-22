@@ -64,6 +64,7 @@ export function MvpLedger({
   });
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
   const ambientRef = useRef<BattleRecordsAmbient | null>(null);
+  const fallbackPanel = !pixiContainer;
 
   const sortedPlayers = useMemo(() => {
     const lookup = new Map(players.map((p) => [p.id, p]));
@@ -420,9 +421,17 @@ export function MvpLedger({
           maxH={{ base: "92vh", md: "88vh" }}
           w="100%"
           mt={wrapperMarginTop}
-          bg="transparent"
-          border="none"
-          boxShadow="none"
+          bg={
+            fallbackPanel
+              ? "linear-gradient(180deg, rgba(8,9,15,0.94) 0%, rgba(9,11,18,0.9) 100%)"
+              : "transparent"
+          }
+          border={fallbackPanel ? "3px solid rgba(255,255,255,0.92)" : "none"}
+          boxShadow={
+            fallbackPanel
+              ? "0 12px 38px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.4)"
+              : "none"
+          }
           transformOrigin="center"
           color="white"
           fontFamily="monospace"
