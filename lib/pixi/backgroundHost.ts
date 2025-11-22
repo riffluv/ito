@@ -871,7 +871,15 @@ class HybridPixiBackgroundHost implements BackgroundHostLike {
           (window as typeof window & { __pixiLastSceneResult?: SetSceneResult }).__pixiLastSceneResult =
             result;
         }
-        return result;
+
+        // If the worker failed to produce a Pixi renderer (e.g., WebGL unavailable
+        // so Pixi falls back to the unimplemented CanvasRenderer), immediately
+        // retry on the main-thread host so we don't get stuck on CSS fallback.
+        if (result.renderer !== "pixi") {
+          this.switchToMain("worker-renderer-dom");
+        } else {
+          return result;
+        }
       } catch {
         this.switchToMain("scene-error");
       }
