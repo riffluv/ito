@@ -117,6 +117,11 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   const [sceneNonce, setSceneNonce] = useState(0);
   const [backgroundReady, setBackgroundReady] = useState(false);
   const retryRef = useRef(0);
+  const suppressPersistCssRef = useRef(false);
+  const fallbackPreviousTypeRef = useRef<BackgroundType | null>(null);
+  const fallbackRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const recordBackgroundMetric = useCallback((key: string, value: number | string) => {
     try {
@@ -135,11 +140,23 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   }, [performanceProfile]);
 
   useEffect(() => {
+    return () => {
+      if (fallbackRestoreTimerRef.current) {
+        clearTimeout(fallbackRestoreTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
     try {
+      if (backgroundType === "css" && suppressPersistCssRef.current) {
+        return;
+      }
       localStorage.setItem("backgroundType", backgroundType);
+      suppressPersistCssRef.current = false;
     } catch {
       // noop
     }
@@ -149,7 +166,11 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     try {
       const saved = localStorage.getItem("backgroundType");
       if (saved) {
-        setBackgroundType(normalizeBackgroundType(saved));
+        const normalized = normalizeBackgroundType(saved);
+        // Recover from previously persisted forced CSS fallback on devices that
+        // can render Pixi again. We rarely have a user-facing toggle to choose
+        // CSS explicitly, so prefer Pixi here.
+        setBackgroundType(normalized === "css" ? "pixi-dq" : normalized);
       } else {
         localStorage.setItem("backgroundType", "pixi-dq");
         setBackgroundType("pixi-dq");
@@ -299,7 +320,21 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
         retryRef.current += 1;
         setTimeout(() => setSceneNonce((value) => value + 1), 1200);
       } else {
+        if (currentType !== "css" && !fallbackPreviousTypeRef.current) {
+          fallbackPreviousTypeRef.current = currentType;
+        }
+        suppressPersistCssRef.current = true;
         setBackgroundType("css");
+        if (!fallbackRestoreTimerRef.current) {
+          fallbackRestoreTimerRef.current = setTimeout(() => {
+            const prev = fallbackPreviousTypeRef.current;
+            fallbackPreviousTypeRef.current = null;
+            fallbackRestoreTimerRef.current = null;
+            if (prev) {
+              setBackgroundType(prev);
+            }
+          }, 30000);
+        }
       }
     }
   }, [
