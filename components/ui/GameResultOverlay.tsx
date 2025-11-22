@@ -1,7 +1,7 @@
 import { Box, Text, chakra } from "@chakra-ui/react";
 import { UI_TOKENS } from "@/theme/layout";
 import { gsap } from "gsap";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
@@ -88,35 +88,28 @@ function VictoryBurstRaysSVG({ registerRayRef }: VictoryBurstRaysProps) {
   );
 }
 
-interface GameResultOverlayProps {
-  failed?: boolean;
-  mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
-  revealedAt?: unknown;
-}
+type VictoryRaysHookResult = {
+  usePixiRays: boolean;
+  useSvgRays: boolean;
+  pixiRaysReady: boolean;
+  pixiRaysController: VictoryRaysController | null;
+  registerLineRef: (index: number) => (node: SVGRectElement | null) => void;
+  linesRef: MutableRefObject<(SVGRectElement | null)[]>;
+};
 
-export function GameResultOverlay({
-  failed,
-  mode = "overlay",
-  revealedAt,
-}: GameResultOverlayProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const flashRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  // Timeline を再利用（GC 負荷削減）
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
-  const timeline = useMemo(() => gsap.timeline({ paused: true }), []);
-  const prefersReduced = useReducedMotionPreference();
-
-  // Pixi 版放射ライン（デフォルト）
+function useVictoryRaysLayer(options: {
+  prefersReduced: boolean;
+  mode: "overlay" | "inline";
+}): VictoryRaysHookResult {
+  const { prefersReduced, mode } = options;
   const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
-  // Pixi が使えない場合は自動で SVG フォールバックに切り替える
+  const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
+
   const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
   const pixiRaysReady = usePixiRays && !!pixiRaysController;
   const useSvgRays = !pixiRaysReady;
 
-  // SVG 版放射ライン（フォールバック）
   const linesRef = useRef<(SVGRectElement | null)[]>([]);
   const registerLineRef = useCallback(
     (index: number) => (node: SVGRectElement | null) => {
@@ -124,12 +117,16 @@ export function GameResultOverlay({
     },
     []
   );
-  const playSuccessNormal = useSoundEffect("clear_success1");
-  const playSuccessEpic = useSoundEffect("clear_success2");
-  const playFailure = useSoundEffect("clear_failure");
-  const soundManager = useSoundManager();
 
-  // Pixi 放射ラインの初期化（USE_PIXI_RAYS が true の場合のみ）
+  // モジュールを事前ロード（初回の待ち時間を最小化）
+  useEffect(() => {
+    if (!usePixiRays) return;
+    if (!victoryRaysModuleRef.current) {
+      victoryRaysModuleRef.current = import("@/lib/pixi/victoryRays");
+    }
+  }, [usePixiRays]);
+
+  // Pixi 放射ラインの初期化
   useEffect(() => {
     if (!usePixiRays || mode !== "overlay") {
       return undefined;
@@ -139,7 +136,10 @@ export function GameResultOverlay({
     let mounted = true;
 
     const init = async () => {
-      const { createVictoryRays } = await import("@/lib/pixi/victoryRays");
+      const modulePromise =
+        victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
+      victoryRaysModuleRef.current = modulePromise;
+      const { createVictoryRays } = await modulePromise;
       if (!mounted || !pixiRaysLayer) return;
 
       const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 960;
@@ -165,28 +165,92 @@ export function GameResultOverlay({
       }
       setPixiRaysController(null);
     };
-  }, [pixiRaysLayer, mode, prefersReduced, usePixiRays]);
+  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays]);
+
+  return {
+    usePixiRays,
+    useSvgRays,
+    pixiRaysReady,
+    pixiRaysController,
+    registerLineRef,
+    linesRef,
+  };
+}
+
+function useBackgroundFx(prefersReduced: boolean) {
+  const bgFxRafRef = useRef<number | null>(null);
 
   const triggerBackgroundFx = useCallback(
     (effect: "fireworks" | "meteors" | "lightSweep") => {
       if (prefersReduced || typeof window === "undefined") return;
-      const globalWindow = window as Window & { bg?: BackgroundFxHandles };
-      const bg = globalWindow.bg;
-      if (!bg) return;
-      try {
-        if (effect === "fireworks") {
-          bg.launchFireworks?.();
-        } else if (effect === "meteors") {
-          bg.launchMeteors?.();
-        } else {
-          bg.lightSweep?.();
-        }
-      } catch (error) {
-        console.warn(`[GameResultOverlay] bg.${effect} failed`, error);
+      if (bgFxRafRef.current) {
+        cancelAnimationFrame(bgFxRafRef.current);
       }
+      bgFxRafRef.current = requestAnimationFrame(() => {
+        const globalWindow = window as Window & { bg?: BackgroundFxHandles };
+        const bg = globalWindow.bg;
+        if (!bg) return;
+        try {
+          if (effect === "fireworks") {
+            bg.launchFireworks?.();
+          } else if (effect === "meteors") {
+            bg.launchMeteors?.();
+          } else {
+            bg.lightSweep?.();
+          }
+        } catch (error) {
+          console.warn(`[GameResultOverlay] bg.${effect} failed`, error);
+        } finally {
+          bgFxRafRef.current = null;
+        }
+      });
     },
     [prefersReduced]
   );
+
+  useEffect(() => {
+    return () => {
+      if (bgFxRafRef.current) {
+        cancelAnimationFrame(bgFxRafRef.current);
+      }
+    };
+  }, []);
+
+  return triggerBackgroundFx;
+}
+
+interface GameResultOverlayProps {
+  failed?: boolean;
+  mode?: "overlay" | "inline"; // overlay: 中央に被せる, inline: 帯として表示
+  revealedAt?: unknown;
+}
+
+export function GameResultOverlay({
+  failed,
+  mode = "overlay",
+  revealedAt,
+}: GameResultOverlayProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Timeline を再利用（GC 負荷削減）
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const timeline = useMemo(() => gsap.timeline({ paused: true }), []);
+  const prefersReduced = useReducedMotionPreference();
+  const {
+    usePixiRays: _usePixiRays,
+    useSvgRays,
+    pixiRaysReady,
+    pixiRaysController,
+    registerLineRef,
+    linesRef,
+  } = useVictoryRaysLayer({ prefersReduced, mode });
+  const triggerBackgroundFx = useBackgroundFx(prefersReduced);
+  const playSuccessNormal = useSoundEffect("clear_success1");
+  const playSuccessEpic = useSoundEffect("clear_success2");
+  const playFailure = useSoundEffect("clear_failure");
+  const soundManager = useSoundManager();
 
   const resolveRevealTimestamp = useCallback((): number | null => {
     if (revealedAt === null || typeof revealedAt === "undefined") return null;
@@ -928,6 +992,7 @@ export function GameResultOverlay({
     soundManager,
     timeline,
     useSvgRays,
+    linesRef,
   ]);
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
