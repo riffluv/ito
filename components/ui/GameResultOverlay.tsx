@@ -113,7 +113,8 @@ export function GameResultOverlay({
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
   // Pixi が使えない場合は自動で SVG フォールバックに切り替える
   const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
-  const useSvgRays = !usePixiRays;
+  const pixiRaysReady = usePixiRays && !!pixiRaysController;
+  const useSvgRays = !pixiRaysReady;
 
   // SVG 版放射ライン（フォールバック）
   const linesRef = useRef<(SVGRectElement | null)[]>([]);
@@ -584,10 +585,10 @@ export function GameResultOverlay({
       // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
       // LEFT → RIGHT → CENTER！！
       // ====================================================
-      if (usePixiRays && pixiRaysController) {
+      if (pixiRaysReady) {
         // Pixi 版（デフォルト）
         tl.call(() => {
-          pixiRaysController.playExplosion();
+          pixiRaysController?.playExplosion();
         }, undefined, 0.05);
       } else {
         // SVG 版（フォールバック）
@@ -921,11 +922,11 @@ export function GameResultOverlay({
     prefersReduced,
     triggerBackgroundFx,
     pixiRaysController,
+    pixiRaysReady,
     playFailure,
     playSuccessNormal,
     soundManager,
     timeline,
-    usePixiRays,
     useSvgRays,
   ]);
 
