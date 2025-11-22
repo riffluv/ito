@@ -320,7 +320,7 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
         retryRef.current += 1;
         setTimeout(() => setSceneNonce((value) => value + 1), 1200);
       } else {
-        if (currentType !== "css" && !fallbackPreviousTypeRef.current) {
+        if (!fallbackPreviousTypeRef.current) {
           fallbackPreviousTypeRef.current = currentType;
         }
         suppressPersistCssRef.current = true;

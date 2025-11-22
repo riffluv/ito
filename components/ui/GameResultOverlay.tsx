@@ -111,6 +111,9 @@ export function GameResultOverlay({
   // Pixi 版放射ライン（デフォルト）
   const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
+  // Pixi が使えない場合は自動で SVG フォールバックに切り替える
+  const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
+  const useSvgRays = !usePixiRays;
 
   // SVG 版放射ライン（フォールバック）
   const linesRef = useRef<(SVGRectElement | null)[]>([]);
@@ -127,7 +130,7 @@ export function GameResultOverlay({
 
   // Pixi 放射ラインの初期化（USE_PIXI_RAYS が true の場合のみ）
   useEffect(() => {
-    if (!USE_PIXI_RAYS || !pixiRaysLayer || mode !== "overlay" || prefersReduced) {
+    if (!usePixiRays || mode !== "overlay") {
       return undefined;
     }
 
@@ -161,7 +164,7 @@ export function GameResultOverlay({
       }
       setPixiRaysController(null);
     };
-  }, [pixiRaysLayer, mode, prefersReduced]);
+  }, [pixiRaysLayer, mode, prefersReduced, usePixiRays]);
 
   const triggerBackgroundFx = useCallback(
     (effect: "fireworks" | "meteors" | "lightSweep") => {
@@ -272,7 +275,7 @@ export function GameResultOverlay({
     const text = textRef.current;
     const container = containerRef.current;
     const flashNode = flashRef.current;
-    const lineNodesSnapshot = !USE_PIXI_RAYS ? [...linesRef.current] : null;
+    const lineNodesSnapshot = useSvgRays ? [...linesRef.current] : null;
     if (!overlay || !text || !container) return undefined;
 
     // GPU アクセラレーションを強制（force3D）
@@ -581,7 +584,7 @@ export function GameResultOverlay({
       // BOOST Phase 0.5: 放射状ライン爆発（3段階！）
       // LEFT → RIGHT → CENTER！！
       // ====================================================
-      if (USE_PIXI_RAYS && pixiRaysController) {
+      if (usePixiRays && pixiRaysController) {
         // Pixi 版（デフォルト）
         tl.call(() => {
           pixiRaysController.playExplosion();
@@ -922,6 +925,8 @@ export function GameResultOverlay({
     playSuccessNormal,
     soundManager,
     timeline,
+    usePixiRays,
+    useSvgRays,
   ]);
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
@@ -960,7 +965,7 @@ export function GameResultOverlay({
             pointerEvents="none"
             zIndex={9999}
           />
-          {!USE_PIXI_RAYS && <VictoryBurstRaysSVG registerRayRef={registerLineRef} />}
+          {useSvgRays && <VictoryBurstRaysSVG registerRayRef={registerLineRef} />}
         </>
       )}
 
