@@ -231,6 +231,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(roomId, roomStatus, uiRevealPending ?? false);
 
+  // 勝利演出の Pixi モジュールを先読みして、初回から Pixi 版を使えるようにする
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_USE_PIXI_RAYS === "0") return;
+    void import("@/lib/pixi/victoryRays").catch((error) => {
+      console.warn("[CentralCardBoard] prefetch victory rays failed", error);
+    });
+  }, []);
+
   // Streak Banner の表示管理
   const [showStreakBanner, setShowStreakBanner] = useState(false);
 
