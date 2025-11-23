@@ -140,7 +140,11 @@
       "Bash(git log -10 --pretty=format:\"%h|%ad|%s\" --date=short)",
       "Bash(git log --all --format='%aN')",
       "Bash(git log --since=\"2024-01-01\" --pretty=format:\"%ai\")",
-      "Bash(awk '{print $1}')"
+      "Bash(awk '{print $1}')",
+      "Bash(if [ -f .env.local ])",
+      "Bash(then grep -n \"PERF_WARMUP\" .env.local)",
+      "Bash(else echo \".env.localファイルが見つかりません\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

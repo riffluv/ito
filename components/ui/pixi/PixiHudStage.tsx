@@ -341,25 +341,23 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         endRecovery();
       }
 
-      // GPUウォームアップ（フラグON時のみ、初期化直後に空描画）
-      if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
-        try {
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => {
-              try {
-                pixiApp.renderer.render(pixiApp.stage);
-                setMetric("perf", "warmup.pixi", 1);
-                traceAction("warmup.pixi");
-              } catch (e) {
-                console.warn("[PixiHudStage] warmup render failed", e);
-                const err = e instanceof Error ? e : new Error(String(e));
-                traceError("warmup.pixi", err);
-              }
-            })
-          );
-        } catch (e) {
-          console.warn("[PixiHudStage] warmup scheduling failed", e);
-        }
+      // GPUウォームアップ（全環境で必須、特にグラボなし端末で初回描画を保証）
+      try {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            try {
+              pixiApp.renderer.render(pixiApp.stage);
+              setMetric("perf", "warmup.pixi", 1);
+              traceAction("warmup.pixi");
+            } catch (e) {
+              console.warn("[PixiHudStage] warmup render failed", e);
+              const err = e instanceof Error ? e : new Error(String(e));
+              traceError("warmup.pixi", err);
+            }
+          })
+        );
+      } catch (e) {
+        console.warn("[PixiHudStage] warmup scheduling failed", e);
       }
     };
 

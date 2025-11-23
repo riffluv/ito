@@ -17,7 +17,7 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notify } from "@/components/ui/notify";
 import { castMvpVote } from "@/lib/game/mvp";
-import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiHudLayer, usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import PIXI from "@/lib/pixi/instance";
 import { drawBattleRecordsBoard, createBattleRecordsAmbient } from "@/lib/pixi/battleRecordsBackground";
@@ -62,6 +62,7 @@ export function MvpLedger({
   const pixiContainer = usePixiHudLayer("battle-records-board", {
     zIndex: 90,
   });
+  const pixiHudContext = usePixiHudContext();
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
   const ambientRef = useRef<BattleRecordsAmbient | null>(null);
   const [panelReady, setPanelReady] = useState(false);
@@ -400,6 +401,17 @@ export function MvpLedger({
           // リサイズ対応
           ambientRef.current.resize(layout.width, layout.height);
           ambientRef.current.position.set(layout.x, layout.y);
+        }
+
+        // グラボなし端末対策: Graphics描画直後に初回レンダリングをトリガーしてGPUを準備
+        if (pixiHudContext?.app) {
+          requestAnimationFrame(() => {
+            try {
+              pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
+            } catch {
+              // 失敗しても続行（ウォームアップなので）
+            }
+          });
         }
 
         setPanelReady(true);
