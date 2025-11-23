@@ -103,13 +103,14 @@ function useVictoryRaysLayer(options: {
   mode: "overlay" | "inline";
 }): VictoryRaysHookResult {
   const { prefersReduced, mode } = options;
+  const [allowPixi, setAllowPixi] = useState(true);
   const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
   const pixiHudContext = usePixiHudContext();
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
   const [initFailed, setInitFailed] = useState(false);
   const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
 
-  const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
+  const usePixiRays = USE_PIXI_RAYS && allowPixi && !!pixiRaysLayer && !prefersReduced;
   const pixiRaysReady = usePixiRays && !!pixiRaysController;
   const useSvgRays = !pixiRaysReady;
 
@@ -128,6 +129,45 @@ function useVictoryRaysLayer(options: {
       victoryRaysModuleRef.current = import("@/lib/pixi/victoryRays");
     }
   }, [usePixiRays]);
+
+  // 低性能 WebGL を検出したら初回は SVG にフォールバック
+  useEffect(() => {
+    let cancelled = false;
+    const detect = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const gl =
+          (canvas.getContext("webgl", { failIfMajorPerformanceCaveat: true }) ||
+            canvas.getContext("experimental-webgl", { failIfMajorPerformanceCaveat: true })) as
+            | (WebGLRenderingContext & { getExtension?: typeof WebGLRenderingContext.prototype.getExtension })
+            | null;
+        if (!gl) {
+          if (!cancelled) setAllowPixi(false);
+          return;
+        }
+        const dbg = gl.getExtension?.("WEBGL_debug_renderer_info") as
+          | { UNMASKED_RENDERER_WEBGL: number }
+          | null
+          | undefined;
+        const renderer =
+          dbg && gl.getParameter
+            ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+            : gl.getParameter?.((gl as unknown as WebGLRenderingContext).RENDERER ?? 0);
+        const lowPerf = typeof renderer === "string" && /swiftshader|software/i.test(renderer);
+        if (!cancelled && lowPerf) {
+          setAllowPixi(false);
+        }
+      } catch {
+        // 無視
+      }
+    };
+    if (typeof window !== "undefined") {
+      detect();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Pixi 放射ラインの初期化
   useEffect(() => {
