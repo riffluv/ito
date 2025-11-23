@@ -157,6 +157,24 @@ function useVictoryRaysLayer(options: {
         if (mounted) {
           setPixiRaysController(controller);
           setInitFailed(false);
+
+          // グラボなし端末対策: Graphics生成直後に初回レンダリングをトリガーしてGPUを準備
+          if (pixiRaysLayer) {
+            requestAnimationFrame(() => {
+              let current = pixiRaysLayer.parent;
+              while (current) {
+                if ('renderer' in current && current.renderer) {
+                  try {
+                    (current as { renderer: { render: (stage: unknown) => void } }).renderer.render(current);
+                  } catch {
+                    // 失敗しても続行（ウォームアップなので）
+                  }
+                  break;
+                }
+                current = current.parent;
+              }
+            });
+          }
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
