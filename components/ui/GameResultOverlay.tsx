@@ -143,6 +143,13 @@ function useVictoryRaysLayer(options: {
         const modulePromise =
           victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
         victoryRaysModuleRef.current = modulePromise;
+        if (pixiHudContext?.waitForRendererReady) {
+          const ready = await pixiHudContext.waitForRendererReady();
+          if (!ready) {
+            setInitFailed(true);
+            return;
+          }
+        }
         const { createVictoryRays } = await modulePromise;
         if (!mounted || !pixiRaysLayer) return;
 
@@ -158,6 +165,9 @@ function useVictoryRaysLayer(options: {
         if (mounted) {
           setPixiRaysController(controller);
           setInitFailed(false);
+          if (pixiHudContext?.renderOnce) {
+            void pixiHudContext.renderOnce("victoryRays:init");
+          }
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
@@ -175,21 +185,25 @@ function useVictoryRaysLayer(options: {
       }
       setPixiRaysController(null);
     };
-  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays]);
+  }, [mode, pixiHudContext, pixiRaysLayer, prefersReduced, usePixiRays]);
 
   // GPU warmup（VictoryRays作成後に実行）
   useEffect(() => {
-    if (!pixiRaysController || !pixiHudContext?.app) return;
+    if (!pixiRaysController || !pixiHudContext?.renderOnce) return undefined;
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        try {
-          pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
-        } catch {
-          // 失敗しても続行（ウォームアップなので）
-        }
-      });
-    });
+    let cancelled = false;
+    const warmup = async () => {
+      const ok = await pixiHudContext.renderOnce("victoryRays:warmup");
+      if (!ok && process.env.NODE_ENV !== "production" && !cancelled) {
+        // eslint-disable-next-line no-console
+        console.warn("[useVictoryRaysLayer] warmup render skipped");
+      }
+    };
+
+    void warmup();
+    return () => {
+      cancelled = true;
+    };
   }, [pixiRaysController, pixiHudContext]);
 
   return {
