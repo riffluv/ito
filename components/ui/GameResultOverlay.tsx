@@ -158,17 +158,6 @@ function useVictoryRaysLayer(options: {
         if (mounted) {
           setPixiRaysController(controller);
           setInitFailed(false);
-
-          // グラボなし端末対策: Graphics生成直後に初回レンダリングをトリガーしてGPUを準備
-          if (pixiHudContext?.app) {
-            requestAnimationFrame(() => {
-              try {
-                pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
-              } catch {
-                // 失敗しても続行（ウォームアップなので）
-              }
-            });
-          }
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
@@ -186,8 +175,22 @@ function useVictoryRaysLayer(options: {
       }
       setPixiRaysController(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, pixiRaysLayer, prefersReduced, usePixiRays]);
+
+  // GPU warmup（VictoryRays作成後に実行）
+  useEffect(() => {
+    if (!pixiRaysController || !pixiHudContext?.app) return;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
+        } catch {
+          // 失敗しても続行（ウォームアップなので）
+        }
+      });
+    });
+  }, [pixiRaysController, pixiHudContext]);
 
   return {
     usePixiRays,
