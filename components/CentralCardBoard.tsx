@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Flex, Spinner, Text, VisuallyHidden } from "@chakra-ui/react";
+import { Box, VisuallyHidden } from "@chakra-ui/react";
 import {
   DragEndEvent,
   DragMoveEvent,
@@ -251,7 +251,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     mePlaced,
     availableEligibleCount,
     dealReadyForMe,
-    dealGuardActive,
   } = usePlayerPresenceState({
     players,
     orderList,
@@ -1545,38 +1544,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           },
         }}
       >
-        {dealGuardActive ? (
-          <Flex
-            direction="column"
-            align="center"
-            gap="0.35rem"
-            px="1rem"
-            py="0.75rem"
-            borderRadius="md"
-            bg="rgba(6, 22, 42, 0.82)"
-            border="1px solid rgba(255, 255, 255, 0.18)"
-            boxShadow="0 12px 28px rgba(0, 0, 0, 0.45)"
-            backdropFilter="blur(4px)"
-            pointerEvents="none"
-            position="absolute"
-            top={{ base: "1rem", md: "1.5rem" }}
-            left="50%"
-            transform="translateX(-50%)"
-            zIndex={2}
-            maxW="min(92%, 480px)"
-            textAlign="center"
-          >
-            <Flex align="center" gap="0.6rem">
-              <Spinner size="sm" color="whiteAlpha.900" />
-              <Text fontSize="sm" fontWeight={700} color="whiteAlpha.900">
-                配札を待っています…
-              </Text>
-            </Flex>
-            <Text fontSize="xs" color="whiteAlpha.700">
-              数字の配布が完了するとカードを動かせます
-            </Text>
-          </Flex>
-        ) : null}
         {activeBoard ? (
           <InteractiveBoard
             slots={dragSlots}
