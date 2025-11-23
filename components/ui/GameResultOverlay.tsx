@@ -7,6 +7,7 @@ import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
 import { usePixiHudLayer, usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
 import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
+import { ensureSharedVictoryRays, getSharedVictoryRays } from "@/components/ui/pixi/VictoryRaysPrewarm";
 
 // 環境変数で切り替え（デフォルトは Pixi 版）
 const USE_PIXI_RAYS = process.env.NEXT_PUBLIC_USE_PIXI_RAYS !== "0";
@@ -108,6 +109,7 @@ function useVictoryRaysLayer(options: {
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
   const [initFailed, setInitFailed] = useState(false);
   const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
+  const createdLocalRef = useRef(false);
 
   const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
   const pixiRaysReady = usePixiRays && !!pixiRaysController;
@@ -148,20 +150,29 @@ function useVictoryRaysLayer(options: {
         if (pixiHudContext?.waitForRendererReady) {
           await pixiHudContext.waitForRendererReady();
         }
-        const modulePromise =
-          victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
-        victoryRaysModuleRef.current = modulePromise;
-        const { createVictoryRays } = await modulePromise;
         if (!mounted || !pixiRaysLayer) return;
 
+        // 共有インスタンスがあればそれを採用
+        const shared = getSharedVictoryRays();
         const centerX = typeof window !== "undefined" ? window.innerWidth / 2 : 960;
         const centerY = typeof window !== "undefined" ? window.innerHeight / 2 : 540;
 
-        controller = await createVictoryRays({
-          container: pixiRaysLayer,
-          centerX,
-          centerY,
-        });
+        if (shared) {
+          controller = shared;
+          createdLocalRef.current = false;
+        } else {
+          controller =
+            (await ensureSharedVictoryRays(
+              { container: pixiRaysLayer, centerX, centerY },
+              () => {
+                const modulePromise =
+                  victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
+                victoryRaysModuleRef.current = modulePromise;
+                return modulePromise;
+              }
+            )) ?? null;
+          createdLocalRef.current = !!controller;
+        }
 
         if (mounted) {
           setPixiRaysController(controller);
@@ -187,9 +198,10 @@ function useVictoryRaysLayer(options: {
 
     return () => {
       mounted = false;
-      if (controller) {
+      if (controller && createdLocalRef.current) {
         controller.destroy();
       }
+      createdLocalRef.current = false;
       setPixiRaysController(null);
     };
   }, [mode, pixiHudContext, pixiRaysLayer, prefersReduced, usePixiRays]);
