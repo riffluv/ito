@@ -10,6 +10,8 @@ import { Box, ChakraProvider } from "@chakra-ui/react";
 import React, { useEffect } from "react";
 import { AnimationProvider } from "@/lib/animation/AnimationContext";
 import { SoundProvider } from "@/lib/audio/SoundProvider";
+import PixiHudPrewarm from "@/components/ui/pixi/PixiHudPrewarm";
+import VictoryRaysPrewarm from "@/components/ui/pixi/VictoryRaysPrewarm";
 
 function DarkModeOnlyBridge() {
   useEffect(() => {
@@ -33,6 +35,8 @@ export default function ClientProviders({
           <TransitionProvider>
             <PixiHudStage zIndex={105}>
               <Box bg="canvasBg" color="fgDefault" h="100dvh">
+                <PixiHudPrewarm />
+                <VictoryRaysPrewarm />
                 <DarkModeOnlyBridge />
                 <SafeUpdateBanner />
                 <AuthClientWrapper>
