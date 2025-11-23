@@ -159,16 +159,32 @@ function useVictoryRaysLayer(options: {
           setPixiRaysController(controller);
           setInitFailed(false);
 
-          // グラボなし端末対策: Graphics生成直後に初回レンダリングをトリガーしてGPUを準備
-          if (pixiHudContext?.app) {
-            requestAnimationFrame(() => {
-              try {
-                pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
-              } catch {
-                // 失敗しても続行（ウォームアップなので）
+          // グラボなし端末対策: 生成直後にGPUへアップロード＆微小表示で1フレーム描画
+          try {
+            const renderer = pixiHudContext?.app?.renderer as {
+              plugins?: { prepare?: { upload?: (item: unknown, cb: () => void) => void } };
+            };
+            await new Promise<void>((resolve) => {
+              if (renderer?.plugins?.prepare?.upload) {
+                renderer.plugins.prepare.upload(pixiRaysLayer, resolve);
+              } else {
+                resolve();
               }
             });
+          } catch {
+            // prepare失敗は致命的でないので無視
           }
+
+          const prevAlpha = pixiRaysLayer.alpha;
+          const prevVisible = pixiRaysLayer.visible;
+          pixiRaysLayer.alpha = 0.001;
+          pixiRaysLayer.visible = true;
+          requestAnimationFrame(() => {
+            void pixiHudContext?.renderOnce?.("victoryRays:warmup").finally(() => {
+              pixiRaysLayer.alpha = prevAlpha;
+              pixiRaysLayer.visible = prevVisible;
+            });
+          });
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
