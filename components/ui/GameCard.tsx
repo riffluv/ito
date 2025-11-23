@@ -41,6 +41,7 @@ const FLIP_DURATIONS = {
   default: FLIP_DURATION_DEFAULT,
   result: FLIP_DURATION_RESULT,
 } as const;
+const CARD_META_FONT_SIZE = "calc(var(--chakra-fontSizes-2xs) * var(--card-text-scale))";
 
 export function GameCard({
   index,
@@ -237,7 +238,7 @@ export function GameCard({
       tabIndex={0}
     >
       <Box
-        fontSize="2xs"
+        fontSize={CARD_META_FONT_SIZE}
         lineHeight="1.3"
         fontWeight={700}
         color={textColors.meta}
@@ -335,7 +336,7 @@ export function GameCard({
         </Box>
       </Box>
       <Box
-        fontSize="2xs"
+        fontSize={CARD_META_FONT_SIZE}
         lineHeight="1.3"
         fontWeight={700}
         color={textColors.meta}

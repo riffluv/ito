@@ -32,6 +32,8 @@ const getUnifiedTextStyle = (): React.CSSProperties => ({
 
 });
 
+const CARD_META_FONT_SIZE = "calc(var(--chakra-fontSizes-2xs) * var(--card-text-scale))";
+
 
 
 type FrontProps = {
@@ -118,7 +120,7 @@ export function CardFaceFront({
 
     >
 
-      <Box fontSize="2xs" lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center">
+      <Box fontSize={CARD_META_FONT_SIZE} lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center">
 
         <span className={styles.cardMeta}>#{typeof index === "number" ? index + 1 : "?"}</span>
 
@@ -193,7 +195,7 @@ export function CardFaceFront({
 
       </Box>
 
-      <Box fontSize="2xs" lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center" justifyContent="flex-start" textAlign="left">
+      <Box fontSize={CARD_META_FONT_SIZE} lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center" justifyContent="flex-start" textAlign="left">
 
         <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
 
@@ -297,7 +299,7 @@ export function CardFaceBack({
 
     >
 
-      <Box fontSize="2xs" lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center">
+      <Box fontSize={CARD_META_FONT_SIZE} lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center">
 
         <span className={styles.cardMeta}>#{typeof index === "number" ? index + 1 : "?"}</span>
 
@@ -343,7 +345,7 @@ export function CardFaceBack({
 
       </Box>
 
-      <Box fontSize="2xs" lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center" justifyContent="flex-start" textAlign="left">
+      <Box fontSize={CARD_META_FONT_SIZE} lineHeight="1.3" style={getUnifiedTextStyle()} color={metaColor} display="flex" alignItems="center" justifyContent="flex-start" textAlign="left">
 
         <span className={styles.cardMeta}>{name ?? "(不明)"}</span>
 

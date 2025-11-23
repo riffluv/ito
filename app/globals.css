@@ -62,6 +62,7 @@
     --font-family-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
     --font-family-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
     --font-family-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+    --card-text-scale: 1;
 
     /* スペーシング（rem基準） */
     --spacing-2xs: 0.125rem; /* 2px */
@@ -109,6 +110,7 @@
     :root {
       --dpi-scale: 0.92;
       --adaptive-scale: 0.92;
+      --card-text-scale: 0.9;
       --card-gap:     clamp(0.25rem, 1cqi, 0.75rem);
       --card-padding: clamp(0.5rem,  2cqi, 1rem);
       --card-min:     clamp(4rem,    4.5cqi, 5.5rem);
@@ -122,6 +124,7 @@
     :root {
       --dpi-scale: 0.88;
       --adaptive-scale: 0.88;
+      --card-text-scale: 0.86;
       --card-gap:     clamp(0.2rem, 0.9cqi, 0.6rem);
       --card-padding: clamp(0.4rem, 1.8cqi, 0.8rem);
       --card-min:     clamp(3.5rem, 4cqi,    5rem);
