@@ -13,7 +13,7 @@ import { setMetric } from "@/lib/utils/metrics";
 export const DROP_OPTIMISTIC_ENABLED =
   process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
 
-const OPTIMISTIC_ROLLBACK_MS = 1200;
+const OPTIMISTIC_ROLLBACK_MS = 900;
 
 type DropOutcome = "success" | "noop" | "error";
 
@@ -27,6 +27,7 @@ interface UseDropHandlerProps {
   hasNumber: boolean;
   mePlaced: boolean;
   dealReady: boolean;
+  dealGuardActive?: boolean;
 }
 
 export function useDropHandler({
@@ -39,6 +40,7 @@ export function useDropHandler({
   hasNumber,
   mePlaced: _mePlaced,
   dealReady,
+  dealGuardActive = false,
 }: UseDropHandlerProps) {
   const soundManager = useSoundManager();
   const { playSuccessSound, playInvalidSound } = useDropSounds(roomId);
@@ -50,6 +52,7 @@ export function useDropHandler({
     roomId,
     playInvalidSound,
     dealReady,
+    dealGuardActive,
   });
 
   const logDropRejection = useCallback(
@@ -649,6 +652,7 @@ type DropEligibilityOptions = {
   roomId: string;
   playInvalidSound: () => void;
   dealReady: boolean;
+  dealGuardActive: boolean;
 };
 
 type DropValidationResult =
@@ -667,6 +671,7 @@ function useDropEligibility({
   roomId,
   playInvalidSound,
   dealReady,
+  dealGuardActive,
 }: DropEligibilityOptions) {
   const hasClueText = useMemo(() => {
     if (typeof me?.clue1 !== "string") return false;
@@ -677,12 +682,30 @@ function useDropEligibility({
     if (roomStatus !== "clue") return false;
     if (!hasNumber) return false;
     if (!dealReady) return false;
+    if (dealGuardActive) return false;
     if (!hasClueText) return false;
     return true;
-  }, [roomStatus, hasNumber, dealReady, hasClueText]);
+  }, [roomStatus, hasNumber, dealReady, hasClueText, dealGuardActive]);
 
   const ensureCanDrop = useCallback(
     (pid: string): DropValidationResult => {
+      if (dealGuardActive) {
+        traceAction("interaction.drop.blocked", {
+          roomId,
+          playerId: meId,
+          reason: "deal-guard",
+        });
+        playInvalidSound();
+        notify({
+          id: `${roomId}-deal-guard`,
+          title: "配札を待っています",
+          description: "数字配布が終わるまでカードは動かせません。",
+          type: "info",
+          duration: 1800,
+        });
+        return { ok: false, outcome: "error", reason: "deal-guard" };
+      }
+
       if (!dealReady) {
         traceAction("interaction.drop.blocked", {
           roomId,
@@ -735,7 +758,7 @@ function useDropEligibility({
 
       return { ok: true };
     },
-    [canDrop, dealReady, me, meId, playInvalidSound, roomId]
+    [canDrop, dealGuardActive, dealReady, me, meId, playInvalidSound, roomId]
   );
 
   return { canDrop, ensureCanDrop };
