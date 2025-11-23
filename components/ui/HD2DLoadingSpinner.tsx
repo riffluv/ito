@@ -18,17 +18,6 @@ const rotateReverseAnimation = keyframes`
   100% { transform: rotate(0deg); }
 `;
 
-// 脈動（不等間隔・手癖のリズム）
-const pulseAnimation = keyframes`
-  0%, 100% { opacity: 1; transform: scale(1); }
-  7% { opacity: 0.92; transform: scale(1.02); }
-  21% { opacity: 0.82; transform: scale(1.08); }
-  34% { opacity: 0.88; transform: scale(1.05); }
-  51% { opacity: 0.95; transform: scale(0.98); }
-  68% { opacity: 0.85; transform: scale(1.1); }
-  82% { opacity: 0.9; transform: scale(1.03); }
-`;
-
 // キラキラ（不等間隔のタイミング）
 const sparkleAnimation = keyframes`
   0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }

@@ -34,7 +34,6 @@ import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import { KEYBOARD_KEYS } from "./hints/constants";
 import Image from "next/image";
 import { UpdateAvailableBadgeControlled } from "@/components/ui/UpdateAvailableBadge";
-import { APP_VERSION } from "@/lib/constants/appVersion";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 
 type HostPanelIconProps = {
@@ -576,39 +575,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (quickStartPending || autoStartLocked || roundPreparing) &&
     (roomStatus === "waiting" || roomStatus === "clue");
 
-  // デプロイ直後の“初回だけ遅いことがある”告知（バージョンごとに1回）
-  const coldNoticeStorageKey = React.useMemo(
-    () => `ito:coldNotice:${APP_VERSION}`,
-    []
-  );
-  const [showColdStartNotice, setShowColdStartNotice] = React.useState(false);
-  const [coldNoticeEligible, setColdNoticeEligible] = React.useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const seen = window.localStorage.getItem(coldNoticeStorageKey);
-      return seen !== "1";
-    } catch {
-      return true;
-    }
-  });
-
-  React.useEffect(() => {
-    if (!showQuickStartProgress || !coldNoticeEligible) {
-      return noopCleanup;
-    }
-    setShowColdStartNotice(true);
-    setColdNoticeEligible(false);
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(coldNoticeStorageKey, "1");
-      }
-    } catch {
-      // ignore storage failure
-    }
-    const timer = window.setTimeout(() => setShowColdStartNotice(false), 4000);
-    return () => window.clearTimeout(timer);
-  }, [showQuickStartProgress, coldNoticeEligible, coldNoticeStorageKey]);
-
   const preparing = !!(
     autoStartLocked ||
     quickStartPending ||
@@ -643,36 +609,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           left="50%"
           transform="translateX(-50%)"
           zIndex={56}
-          bg="rgba(22,26,36,0.92)"
-          border="1px solid rgba(255,255,255,0.25)"
-          borderRadius="4px"
+          bg="linear-gradient(180deg, rgba(8,9,15,0.94) 0%, rgba(9,11,18,0.9) 100%)"
+          border="3px solid rgba(255,255,255,0.92)"
+          borderRadius="0"
           px={4}
           py={3}
-          boxShadow="3px 3px 0 rgba(0,0,0,0.6)"
+          boxShadow="0 1px 0 rgba(0,0,0,.06), 0 12px 22px -10px rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)"
           pointerEvents="none"
+          css={{
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              inset: "3px",
+              border: "1px solid rgba(255,215,0,0.35)",
+              pointerEvents: "none",
+            },
+          }}
         >
-          <VStack gap="6px" align="center">
-            <HStack gap="10px" align="center">
-              <HD2DLoadingSpinner size="28px" />
-              <Text
-                fontSize="sm"
-                fontWeight="bold"
-                color="rgba(255,255,255,0.92)"
-                letterSpacing="0.04em"
-              >
-                カードを配布しています…
-              </Text>
-            </HStack>
-            {showColdStartNotice ? (
-              <Text
-                fontSize="xs"
-                color="rgba(255,255,255,0.75)"
-                letterSpacing="0.02em"
-              >
-                初回は数秒遅いことがあります
-              </Text>
-            ) : null}
-          </VStack>
+          <HStack gap="10px" align="center">
+            <HD2DLoadingSpinner size="28px" />
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="rgba(255,255,255,0.92)"
+              letterSpacing="0.04em"
+            >
+              カードを配布しています…
+            </Text>
+          </HStack>
         </Box>
       )}
 

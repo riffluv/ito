@@ -335,10 +335,16 @@ export function MvpLedger({
     if (!isOpen || !pixiContainer) {
       // モーダルが閉じられたらPixiリソースを破棄
       if (pixiGraphicsRef.current) {
+        if (pixiGraphicsRef.current.parent) {
+          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
+        }
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
       if (ambientRef.current) {
+        if (ambientRef.current.parent) {
+          ambientRef.current.parent.removeChild(ambientRef.current);
+        }
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
@@ -355,10 +361,16 @@ export function MvpLedger({
     // クリーンアップ
     return () => {
       if (pixiGraphicsRef.current) {
+        if (pixiGraphicsRef.current.parent) {
+          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
+        }
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
       if (ambientRef.current) {
+        if (ambientRef.current.parent) {
+          ambientRef.current.parent.removeChild(ambientRef.current);
+        }
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }

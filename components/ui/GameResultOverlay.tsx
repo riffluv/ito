@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type MutableR
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
-import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
+import { usePixiHudLayer, usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
 import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
 
 // 環境変数で切り替え（デフォルトは Pixi 版）
@@ -104,6 +104,7 @@ function useVictoryRaysLayer(options: {
 }): VictoryRaysHookResult {
   const { prefersReduced, mode } = options;
   const pixiRaysLayer = usePixiHudLayer("victory-rays", { zIndex: 9998 });
+  const pixiHudContext = usePixiHudContext();
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
   const [initFailed, setInitFailed] = useState(false);
   const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
@@ -159,19 +160,12 @@ function useVictoryRaysLayer(options: {
           setInitFailed(false);
 
           // グラボなし端末対策: Graphics生成直後に初回レンダリングをトリガーしてGPUを準備
-          if (pixiRaysLayer) {
+          if (pixiHudContext?.app) {
             requestAnimationFrame(() => {
-              let current = pixiRaysLayer.parent;
-              while (current) {
-                if ('renderer' in current && current.renderer) {
-                  try {
-                    (current as { renderer: { render: (stage: unknown) => void } }).renderer.render(current);
-                  } catch {
-                    // 失敗しても続行（ウォームアップなので）
-                  }
-                  break;
-                }
-                current = current.parent;
+              try {
+                pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
+              } catch {
+                // 失敗しても続行（ウォームアップなので）
               }
             });
           }
@@ -192,7 +186,7 @@ function useVictoryRaysLayer(options: {
       }
       setPixiRaysController(null);
     };
-  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays]);
+  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays, pixiHudContext]);
 
   return {
     usePixiRays,
