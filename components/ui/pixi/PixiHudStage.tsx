@@ -95,6 +95,8 @@ interface PixiHudContextValue {
   app: Application | null;
   registerLayer: (name: string, options?: LayerOptions) => Container | null;
   unregisterLayer: (name: string) => void;
+  waitForRendererReady: () => Promise<boolean>;
+  renderOnce: (reason?: string) => Promise<boolean>;
   hudRoot: Container | null;
   markBackgroundReady: () => void;
   holdBackground: () => (() => void) | undefined;
@@ -146,6 +148,56 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     setBackgroundHoldCount(0);
     setBackgroundReady(true);
   }, []);
+
+  const waitForRendererReady = useCallback(async () => {
+    const renderer = appRef.current?.renderer as Renderer & {
+      context?: { gl?: WebGLRenderingContext & { isContextLost?: () => boolean } };
+    } | null;
+    if (!renderer) return false;
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const gl = renderer.context?.gl;
+      const lost = typeof gl?.isContextLost === "function" ? gl.isContextLost() : false;
+      if (gl && !lost) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 16 * (attempt + 1)));
+    }
+
+    return false;
+  }, []);
+
+  const renderOnce = useCallback(
+    async (reason?: string) => {
+      const currentApp = appRef.current;
+      if (!currentApp) return false;
+
+      const ready = await waitForRendererReady();
+      if (!ready) return false;
+
+      return new Promise<boolean>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            try {
+              currentApp.renderer.render(currentApp.stage);
+              resolve(true);
+            } catch (error) {
+              if (process.env.NODE_ENV !== "production") {
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `[PixiHudStage] renderOnce${reason ? ` (${reason})` : ""} failed`,
+                  error
+                );
+              }
+              traceError("pixi.hud.renderOnceFailed", error);
+              resolve(false);
+            }
+          });
+        });
+      });
+    },
+    [waitForRendererReady]
+  );
 
   const pauseHud = useCallback(() => {
     const currentApp = appRef.current;
@@ -342,23 +394,12 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       }
 
       // GPUウォームアップ（全環境で必須、特にグラボなし端末で初回描画を保証）
-      try {
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            try {
-              pixiApp.renderer.render(pixiApp.stage);
-              setMetric("perf", "warmup.pixi", 1);
-              traceAction("warmup.pixi");
-            } catch (e) {
-              console.warn("[PixiHudStage] warmup render failed", e);
-              const err = e instanceof Error ? e : new Error(String(e));
-              traceError("warmup.pixi", err);
-            }
-          })
-        );
-      } catch (e) {
-        console.warn("[PixiHudStage] warmup scheduling failed", e);
-      }
+      void renderOnce("warmup.pixi").then((ok) => {
+        if (ok) {
+          setMetric("perf", "warmup.pixi", 1);
+          traceAction("warmup.pixi");
+        }
+      });
     };
 
     init();
@@ -396,7 +437,15 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
         host.innerHTML = "";
       }
     };
-  }, [attemptRendererRecovery, beginRecovery, endRecovery, requestRestart, restartKey, safeDestroyContainer]);
+  }, [
+    attemptRendererRecovery,
+    beginRecovery,
+    endRecovery,
+    requestRestart,
+    restartKey,
+    safeDestroyContainer,
+    renderOnce,
+  ]);
 
   const registerLayer = useCallback((name: string, options?: LayerOptions) => {
     const currentApp = appRef.current;
@@ -470,8 +519,19 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       hudRoot,
       markBackgroundReady,
       holdBackground,
+      waitForRendererReady,
+      renderOnce,
     }),
-    [app, registerLayer, unregisterLayer, hudRoot, markBackgroundReady, holdBackground]
+    [
+      app,
+      registerLayer,
+      unregisterLayer,
+      hudRoot,
+      markBackgroundReady,
+      holdBackground,
+      waitForRendererReady,
+      renderOnce,
+    ]
   );
 
   return (

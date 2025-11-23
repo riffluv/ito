@@ -349,6 +349,9 @@ export function MvpLedger({
         ambientRef.current = null;
       }
       setPanelReady(false);
+      if (pixiHudContext?.renderOnce) {
+        void pixiHudContext.renderOnce("mvpLedger:cleanup");
+      }
       return undefined;
     }
 
@@ -376,7 +379,7 @@ export function MvpLedger({
       }
       setPanelReady(false);
     };
-  }, [isOpen, pixiContainer]);
+  }, [isOpen, pixiContainer, pixiHudContext]);
 
   // DOM要素とPixiコンテナの位置・サイズ同期
   usePixiLayerLayout(boardRef, pixiContainer, {
@@ -416,14 +419,8 @@ export function MvpLedger({
         }
 
         // グラボなし端末対策: Graphics描画直後に初回レンダリングをトリガーしてGPUを準備
-        if (pixiHudContext?.app) {
-          requestAnimationFrame(() => {
-            try {
-              pixiHudContext.app?.renderer.render(pixiHudContext.app.stage);
-            } catch {
-              // 失敗しても続行（ウォームアップなので）
-            }
-          });
+        if (pixiHudContext?.renderOnce) {
+          void pixiHudContext.renderOnce("mvpLedger:draw");
         }
 
         setPanelReady(true);
