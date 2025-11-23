@@ -150,13 +150,23 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   }, []);
 
   const waitForRendererReady = useCallback(async () => {
-    const renderer = appRef.current?.renderer as Renderer & {
-      context?: { gl?: WebGLRenderingContext & { isContextLost?: () => boolean } };
-    } | null;
-    if (!renderer) return false;
+    const pickGl = (r: Renderer | null | undefined) => {
+      const candidate = r as unknown as {
+        gl?: WebGLRenderingContext | WebGL2RenderingContext;
+        context?: { gl?: WebGLRenderingContext | WebGL2RenderingContext };
+        renderingContext?: { gl?: WebGLRenderingContext | WebGL2RenderingContext };
+      } | null;
+      return (
+        candidate?.gl ||
+        candidate?.context?.gl ||
+        (candidate as { renderingContext?: { gl?: WebGLRenderingContext } })?.renderingContext?.gl ||
+        null
+      );
+    };
 
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const gl = renderer.context?.gl;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const renderer = appRef.current?.renderer as Renderer | undefined;
+      const gl = pickGl(renderer);
       const lost = typeof gl?.isContextLost === "function" ? gl.isContextLost() : false;
       if (gl && !lost) {
         return true;
