@@ -357,6 +357,9 @@ export function CreateRoomModal({
     if (!isOpen || !pixiContainer) {
       // モーダルが閉じられたらPixiリソースを破棄
       if (pixiGraphicsRef.current) {
+        if (pixiGraphicsRef.current.parent) {
+          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
+        }
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
@@ -372,6 +375,9 @@ export function CreateRoomModal({
     // クリーンアップ
     return () => {
       if (pixiGraphicsRef.current) {
+        if (pixiGraphicsRef.current.parent) {
+          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
+        }
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
