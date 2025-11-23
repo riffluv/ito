@@ -1806,6 +1806,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const seatRequestTimeoutTriggeredRef = useRef(false);
   const spectatorTimeoutPrevRef = useRef(false);
   const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
+  const boardMeId = isSpectatorMode ? "" : meId;
 
   const spectatorMachineState = useMemo<SpectatorMachineState>(
     () => ({
@@ -3546,7 +3547,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           roomId={roomId}
           players={playersWithOptimistic}
           orderList={room.order?.list || []}
-          meId={meId}
+          meId={boardMeId}
           eligibleIds={eligibleIds}
           roomStatus={room.status}
           cluesReady={allCluesReady}
@@ -3704,6 +3705,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const showHand =
     !!me &&
+    !isSpectatorMode &&
     (isMember ||
       seatAcceptanceActive ||
       (uid ? players.some((player) => player.id === uid) : false));
