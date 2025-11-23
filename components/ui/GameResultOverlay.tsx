@@ -146,7 +146,14 @@ function useVictoryRaysLayer(options: {
         if (pixiHudContext?.waitForRendererReady) {
           const ready = await pixiHudContext.waitForRendererReady();
           if (!ready) {
-            setInitFailed(true);
+            // WebGL がまだ起きていない場合は少し待ってリトライ
+            if (mounted) {
+              setTimeout(() => {
+                if (mounted) {
+                  void init();
+                }
+              }, 120);
+            }
             return;
           }
         }
