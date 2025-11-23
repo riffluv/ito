@@ -183,6 +183,9 @@ export function InputModal({
   useEffect(() => {
     const destroyGraphics = () => {
       if (pixiGraphicsRef.current) {
+        if (pixiGraphicsRef.current.parent) {
+          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
+        }
         pixiGraphicsRef.current.destroy({ children: true });
         pixiGraphicsRef.current = null;
       }
