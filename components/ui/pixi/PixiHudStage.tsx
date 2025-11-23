@@ -97,6 +97,7 @@ interface PixiHudContextValue {
   unregisterLayer: (name: string) => void;
   waitForRendererReady: () => Promise<boolean>;
   renderOnce: (reason?: string) => Promise<boolean>;
+  waitForHudReady: () => Promise<Application | null>;
   hudRoot: Container | null;
   markBackgroundReady: () => void;
   holdBackground: () => (() => void) | undefined;
@@ -114,6 +115,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
   const hudRootRef = useRef<Container | null>(null);
+  const readyPromiseRef = useRef<{
+    promise: Promise<Application | null>;
+    resolve: (app: Application | null) => void;
+  } | null>(null);
   const recoveringRef = useRef(false);
   const recoveryReleaseRef = useRef<(() => void) | null>(null);
   const [app, setApp] = useState<Application | null>(null);
@@ -147,6 +152,21 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   const markBackgroundReady = useCallback(() => {
     setBackgroundHoldCount(0);
     setBackgroundReady(true);
+  }, []);
+
+  const waitForHudReady = useCallback(() => {
+    if (!readyPromiseRef.current) {
+      let resolveFn: (app: Application | null) => void = () => {};
+      const promise = new Promise<Application | null>((resolve) => {
+        resolveFn = resolve;
+      });
+      readyPromiseRef.current = { promise, resolve: resolveFn };
+    }
+    // すでに app が存在すれば即解決
+    if (appRef.current) {
+      readyPromiseRef.current.resolve(appRef.current);
+    }
+    return readyPromiseRef.current.promise;
   }, []);
 
   const waitForRendererReady = useCallback(async () => {
@@ -399,6 +419,14 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       resizeObserver.observe(host);
 
       setApp(pixiApp);
+      if (readyPromiseRef.current) {
+        readyPromiseRef.current.resolve(pixiApp);
+      } else {
+        readyPromiseRef.current = {
+          promise: Promise.resolve(pixiApp),
+          resolve: () => {},
+        };
+      }
       if (recoveringRef.current) {
         endRecovery();
       }
@@ -531,6 +559,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       holdBackground,
       waitForRendererReady,
       renderOnce,
+      waitForHudReady,
     }),
     [
       app,
@@ -541,6 +570,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       holdBackground,
       waitForRendererReady,
       renderOnce,
+      waitForHudReady,
     ]
   );
 

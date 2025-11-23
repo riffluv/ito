@@ -111,6 +111,7 @@ function useVictoryRaysLayer(options: {
 
   const usePixiRays = USE_PIXI_RAYS && !!pixiRaysLayer && !prefersReduced;
   const pixiRaysReady = usePixiRays && !!pixiRaysController;
+  // 初回描画を確実に行うため、Pixi がまだ用意できていなければ即座に SVG へフォールバック
   const useSvgRays = !pixiRaysReady;
 
   const linesRef = useRef<(SVGRectElement | null)[]>([]);
@@ -129,7 +130,7 @@ function useVictoryRaysLayer(options: {
     }
   }, [usePixiRays]);
 
-  // Pixi 放射ラインの初期化
+  // Pixi 放射ラインの初期化（失敗時はリトライ）
   useEffect(() => {
     if (!usePixiRays || mode !== "overlay") {
       return undefined;
@@ -137,9 +138,16 @@ function useVictoryRaysLayer(options: {
 
     let controller: VictoryRaysController | null = null;
     let mounted = true;
+    const attemptRef = { current: 0 };
 
     const init = async () => {
       try {
+        if (pixiHudContext?.waitForHudReady) {
+          await pixiHudContext.waitForHudReady();
+        }
+        if (pixiHudContext?.waitForRendererReady) {
+          await pixiHudContext.waitForRendererReady();
+        }
         const modulePromise =
           victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
         victoryRaysModuleRef.current = modulePromise;
@@ -164,6 +172,14 @@ function useVictoryRaysLayer(options: {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
         setPixiRaysController(null);
         setInitFailed(true);
+        attemptRef.current += 1;
+        if (mounted && attemptRef.current <= 3) {
+          setTimeout(() => {
+            if (mounted) {
+              void init();
+            }
+          }, 120 * attemptRef.current); // 少しずつ待機を伸ばす
+        }
       }
     };
 
@@ -323,6 +339,7 @@ export function GameResultOverlay({
   }, [revealedAt]);
 
   const playbackKeyRef = useRef<string | null>(null);
+  const raysExplosionFiredRef = useRef(false);
 
   useEffect(() => {
     const currentSettings = soundManager?.getSettings();
@@ -335,6 +352,8 @@ export function GameResultOverlay({
     }
 
     playbackKeyRef.current = key;
+    // 勝利演出用の放射線はリセット（後から準備できた場合に再発火させる）
+    raysExplosionFiredRef.current = false;
 
     if (revealedAt === null || typeof revealedAt === "undefined") {
       return;
@@ -698,7 +717,10 @@ export function GameResultOverlay({
       if (pixiRaysReady) {
         // Pixi 版（デフォルト）
         tl.call(() => {
-          pixiRaysController?.playExplosion();
+          if (pixiRaysController) {
+            pixiRaysController.playExplosion();
+            raysExplosionFiredRef.current = true;
+          }
         }, undefined, 0.05);
       } else if (useSvgRays) {
         // SVG 版（フォールバック）
@@ -1045,6 +1067,20 @@ export function GameResultOverlay({
 
   const title = failed ? FAILURE_TITLE : VICTORY_TITLE;
   const subtext = failed ? FAILURE_SUBTEXT : VICTORY_SUBTEXT;
+
+  // Pixi 放射線が遅れて準備できた場合でも必ず一度再生する
+  useEffect(() => {
+    if (
+      !failed &&
+      mode === "overlay" &&
+      pixiRaysReady &&
+      pixiRaysController &&
+      !raysExplosionFiredRef.current
+    ) {
+      pixiRaysController.playExplosion();
+      raysExplosionFiredRef.current = true;
+    }
+  }, [failed, mode, pixiRaysReady, pixiRaysController]);
 
   if (mode === "inline") {
     return (
