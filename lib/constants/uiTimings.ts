@@ -17,7 +17,7 @@ export const PRUNE_PROPOSAL_DEBOUNCE_MS = 400;
 
 export const PRESENCE_DISAPPEAR_GRACE_MS = resolveMs(
   ["NEXT_PUBLIC_PRESENCE_DISAPPEAR_GRACE_MS", "PRESENCE_DISAPPEAR_GRACE_MS"],
-  5_000
+  8_000
 );
 
 // Game result / streak banner演出タイミング
