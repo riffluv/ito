@@ -9,9 +9,11 @@ interface CardTextProps {
   waitingInCentral?: boolean;
 }
 
+const applyCardTextScale = (size: string): string => `calc(${size} * var(--card-text-scale))`;
+
 // 🎯 高度な動的フォントサイズ計算（実際の文字幅とカードサイズを考慮）
 const getClueFontSize = (clue: string | undefined): string => {
-  if (!clue) return "1.05rem";
+  if (!clue) return applyCardTextScale("1.05rem");
   
   // 文字の特性を考慮した重み付け文字数計算
   const calculateEffectiveLength = (text: string): number => {
@@ -58,28 +60,28 @@ const getClueFontSize = (clue: string | undefined): string => {
   };
   
   // 段階的調整（可読性が急激に落ちないよう緩やかに縮小）
-  if (effectiveLength <= 4) return "1.05rem";
-  if (effectiveLength <= 7) return "0.95rem";
-  if (effectiveLength <= 11) return "0.86rem";
-  if (effectiveLength <= 16) return "0.78rem";
-  if (effectiveLength <= 22) return "0.7rem";
-  if (effectiveLength <= 28) return "0.66rem";
+  if (effectiveLength <= 4) return applyCardTextScale("1.05rem");
+  if (effectiveLength <= 7) return applyCardTextScale("0.95rem");
+  if (effectiveLength <= 11) return applyCardTextScale("0.86rem");
+  if (effectiveLength <= 16) return applyCardTextScale("0.78rem");
+  if (effectiveLength <= 22) return applyCardTextScale("0.7rem");
+  if (effectiveLength <= 28) return applyCardTextScale("0.66rem");
 
   // 超長文の場合は計算ベースの最適化（ただし極端に小さくしない）
   const optimizedPx = getOptimalFontSize(effectiveLength);
   const optimized = parseFloat(optimizedPx) / 16; // px → rem 換算
   const clamped = Math.max(0.6, Math.min(0.66, optimized));
-  return `${clamped}rem`;
+  return applyCardTextScale(`${clamped}rem`);
 };
 
 const getNumberFontSize = (number: number | null): string => {
-  if (typeof number !== "number") return "1.22rem";
+  if (typeof number !== "number") return applyCardTextScale("1.22rem");
 
   const digits = String(number).length;
-  if (digits <= 1) return "3rem";
-  if (digits === 2) return "2.8rem";
-  if (digits === 3) return "2.5rem"; // 3桁数字を最適サイズに調整（100対応）
-  return "1.8rem"; // 4桁以上も読みやすく調整
+  if (digits <= 1) return applyCardTextScale("3rem");
+  if (digits === 2) return applyCardTextScale("2.8rem");
+  if (digits === 3) return applyCardTextScale("2.5rem"); // 3桁数字を最適サイズに調整（100対応）
+  return applyCardTextScale("1.8rem"); // 4桁以上も読みやすく調整
 };
 
 export function CardText({

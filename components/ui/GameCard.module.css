@@ -5,7 +5,7 @@
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui,
     sans-serif;
-  font-size: 0.75rem; /* 12px base */
+  font-size: calc(0.75rem * var(--card-text-scale)); /* 12px base */
   line-height: 1.3; /* ディセンダー対応 */
   font-weight: 700;
   letter-spacing: 0; /* avoid browser default widen after transform */
