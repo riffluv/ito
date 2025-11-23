@@ -75,6 +75,7 @@ export function useRoomSnapshot(
   displayName?: string | null
 ): RoomSnapshotState {
   const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
+  const [roomLoaded, setRoomLoaded] = useState(false);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
@@ -163,10 +164,14 @@ export function useRoomSnapshot(
     enqueueCommit(() => {
       unstable_batchedUpdates(() => {
         setPlayers(fetchedPlayers);
-        setLoading(partLoading === true);
       });
     }, startedAt, "participantsCommitMs");
   }, [fetchedPlayers, partLoading, enqueueCommit]);
+
+  // loading = participants購読が完了し、かつルームスナップショットが届いたら解除
+  useEffect(() => {
+    setLoading(partLoading === true || roomLoaded === false);
+  }, [partLoading, roomLoaded]);
 
   // Apply prefetched room
   useEffect(() => {
@@ -187,7 +192,7 @@ export function useRoomSnapshot(
     enqueueCommit(() => {
       prefetchedAppliedRef.current = true;
       setRoom({ id: roomId, ...(cached as RoomDoc) });
-      setLoading(false);
+      setRoomLoaded(true);
     }, startedAt);
   }, [roomId, room?.id, enqueueCommit]);
 
@@ -197,7 +202,7 @@ export function useRoomSnapshot(
       const startedAt = typeof performance !== "undefined" ? performance.now() : null;
       enqueueCommit(() => {
         setRoom(null);
-        setLoading(false);
+        setRoomLoaded(true);
         prefetchedAppliedRef.current = false;
       }, startedAt);
       return () => {};
@@ -295,6 +300,7 @@ export function useRoomSnapshot(
               enqueueCommit(() => {
                 prevRoomSnapshot = { id: null, data: null };
                 setRoom(null);
+                setRoomLoaded(true);
                 storePrefetchedRoom(roomId, null);
                 prefetchedAppliedRef.current = false;
               }, receivedAt, "roomSnapshotCommitMs");
@@ -314,6 +320,7 @@ export function useRoomSnapshot(
             enqueueCommit(() => {
               prevRoomSnapshot = { id: snap.id, data: sanitized };
               setRoom({ id: snap.id, ...sanitized });
+              setRoomLoaded(true);
               storePrefetchedRoom(
                 roomId,
                 sanitized as unknown as Record<string, unknown>
