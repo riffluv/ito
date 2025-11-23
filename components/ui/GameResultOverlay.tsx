@@ -143,20 +143,6 @@ function useVictoryRaysLayer(options: {
         const modulePromise =
           victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
         victoryRaysModuleRef.current = modulePromise;
-        if (pixiHudContext?.waitForRendererReady) {
-          const ready = await pixiHudContext.waitForRendererReady();
-          if (!ready) {
-            // WebGL がまだ起きていない場合は少し待ってリトライ
-            if (mounted) {
-              setTimeout(() => {
-                if (mounted) {
-                  void init();
-                }
-              }, 120);
-            }
-            return;
-          }
-        }
         const { createVictoryRays } = await modulePromise;
         if (!mounted || !pixiRaysLayer) return;
 
@@ -172,9 +158,7 @@ function useVictoryRaysLayer(options: {
         if (mounted) {
           setPixiRaysController(controller);
           setInitFailed(false);
-          if (pixiHudContext?.renderOnce) {
-            void pixiHudContext.renderOnce("victoryRays:init");
-          }
+          void pixiHudContext?.renderOnce?.("victoryRays:init");
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
