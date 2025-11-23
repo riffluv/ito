@@ -345,12 +345,16 @@ export function useParticipants(
         presenceHydrationTimerRef.current = null;
       }
       setPresenceReady(false);
+      setPresenceDegraded(!presenceSupported());
       setOnlineUids(undefined);
       unsubscribe?.();
     };
-    if (!roomId || !presenceSupported()) {
+    const presenceAvailable = presenceSupported();
+    if (!roomId || !presenceAvailable) {
       setPresenceReady(false);
+      setPresenceDegraded(!presenceAvailable);
       setOnlineUids(undefined);
+      setLoading(false);
       return cleanup;
     }
     const markReady = (uids: string[]) => {

@@ -12,15 +12,51 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 
 type RoomUpdatePayload = Partial<RoomDoc> & Record<string, unknown>;
 type RoomOrderState = NonNullable<RoomDoc["order"]>;
 type OrderPatch = Pick<RoomOrderState, "list" | "proposal" | "total">;
+
+async function clearPendingSpectatorSessions(roomId: string): Promise<void> {
+  if (!db) return;
+  try {
+    const sessionsRef = collection(db, "spectatorSessions");
+    const pendingSnap = await getDocs(
+      query(
+        sessionsRef,
+        where("roomId", "==", roomId),
+        where("rejoinRequest.status", "==", "pending")
+      )
+    );
+    if (pendingSnap.empty) return;
+    const batch = writeBatch(db);
+    pendingSnap.forEach((docSnap) => {
+      batch.update(docSnap.ref, {
+        status: "watching",
+        rejoinRequest: null,
+        updatedAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+    traceAction("reset.spectatorPending.cleared", {
+      roomId,
+      count: pendingSnap.size,
+      reason: "fallback",
+    });
+  } catch (error) {
+    logWarn("rooms", "reset-room-fallback-pending-cleanup-failed", {
+      roomId,
+      error,
+    });
+  }
+}
 
 export async function setRoomOptions(roomId: string, options: RoomOptions) {
   await updateDoc(doc(db!, "rooms", roomId), { options });
@@ -488,6 +524,7 @@ export async function resetRoomWithPrune(
           "ui.recallOpen": recallSpectators,
         });
       });
+      await clearPendingSpectatorSessions(roomId);
     } catch (error) {
       logWarn("rooms", "reset-room-fallback-failed", { roomId, error });
       throw error;
