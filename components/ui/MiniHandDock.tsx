@@ -23,7 +23,6 @@ import {
   HStack,
   IconButton,
   Input,
-  Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -31,6 +30,7 @@ import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { SeinoButton } from "./SeinoButton";
+import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import { KEYBOARD_KEYS } from "./hints/constants";
 import Image from "next/image";
 import { UpdateAvailableBadgeControlled } from "@/components/ui/UpdateAvailableBadge";
@@ -653,7 +653,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         >
           <VStack gap="6px" align="center">
             <HStack gap="10px" align="center">
-              <Spinner size="sm" color="rgba(255,255,255,0.9)" />
+              <HD2DLoadingSpinner size="28px" />
               <Text
                 fontSize="sm"
                 fontWeight="bold"
