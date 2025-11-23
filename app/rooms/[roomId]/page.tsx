@@ -2519,6 +2519,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
 
   const autoRecallAttemptsRef = useRef(0);
   const autoRecallTimerRef = useRef<number | null>(null);
+  const pendingRecallRecoveryRef = useRef(false);
   const resetAutoRecall = useCallback(() => {
     autoRecallAttemptsRef.current = 0;
     if (autoRecallTimerRef.current !== null) {
@@ -2574,6 +2575,33 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       roomId,
     ]
   );
+
+  // リセット後に pending が残ったままの場合、いったんキャンセルして再送する
+  useEffect(() => {
+    if (seatRequestState.status !== "pending") {
+      pendingRecallRecoveryRef.current = false;
+      return;
+    }
+    if (!spectatorRecallEnabled) return;
+    if (room?.status !== "waiting" || !recallOpen) return;
+    if (pendingRecallRecoveryRef.current) return;
+
+    pendingRecallRecoveryRef.current = true;
+    const source = (seatRequestState.source as Exclude<SpectatorRequestSource, null> | null) ?? "auto";
+
+    void (async () => {
+      await cancelSeatRequestSafely();
+      await performSeatRecovery({ silent: true, source });
+    })();
+  }, [
+    seatRequestState.status,
+    seatRequestState.source,
+    spectatorRecallEnabled,
+    room?.status,
+    recallOpen,
+    cancelSeatRequestSafely,
+    performSeatRecovery,
+  ]);
 
   useEffect(() => {
     resetAutoRecall();

@@ -1,6 +1,7 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { composeWaitingResetPayload } from "@/lib/server/roomActions";
-import { logDebug, logError } from "@/lib/utils/log";
+import { logDebug, logError, logWarn } from "@/lib/utils/log";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -117,6 +118,36 @@ export async function POST(
     logDebug("rooms", "reset-request", { roomId, recallOpen });
 
     await roomRef.update(resetPayload);
+
+    // 観戦再入室リクエストが pending のまま残ると、リセット後に再送できず詰むためクリアする
+    try {
+      const sessionsRef = db.collection("spectatorSessions");
+      const pendingSnap = await sessionsRef
+        .where("roomId", "==", roomId)
+        .where("rejoinRequest.status", "==", "pending")
+        .get();
+
+      if (!pendingSnap.empty) {
+        const batch = db.batch();
+        pendingSnap.forEach((doc) => {
+          batch.update(doc.ref, {
+            status: "watching",
+            rejoinRequest: null,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+        await batch.commit();
+        logDebug("rooms", "reset-cleared-spectator-pending", {
+          roomId,
+          cleared: pendingSnap.size,
+        });
+      }
+    } catch (cleanupError) {
+      logWarn("rooms", "reset-spectator-pending-cleanup-failed", {
+        roomId,
+        error: cleanupError,
+      });
+    }
 
     logDebug("rooms", "reset-success", { roomId, recallOpen });
     return NextResponse.json({ ok: true });
