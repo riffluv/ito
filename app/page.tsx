@@ -89,6 +89,21 @@ type WindowWithIdleCallback = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
+const buildPixiWorkerUrl = () => {
+  if (typeof window === "undefined") return null;
+  const assetPrefix =
+    (globalThis as typeof globalThis & { __NEXT_DATA__?: { assetPrefix?: string } })
+      ?.__NEXT_DATA__?.assetPrefix ?? process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "";
+  const prefix = assetPrefix.replace(/\/$/, "");
+  const base = /^https?:\/\//i.test(prefix)
+    ? prefix
+    : `${window.location.origin}${prefix}`;
+  const cacheBust = process.env.NEXT_PUBLIC_APP_VERSION
+    ? `?v=${process.env.NEXT_PUBLIC_APP_VERSION}`
+    : "";
+  return `${base}/workers/pixi-background-worker.js${cacheBust}`;
+};
+
 const scaleForDpi = (value: string) => `calc(${value} * var(--dpi-scale))`;
 
 export default function MainMenu() {
@@ -139,6 +154,38 @@ export default function MainMenu() {
       window.clearTimeout(timeoutId);
     };
   }, [router]);
+
+  // Pixi背景用の軽量プリウォーム（描画はしない）
+  useEffect(() => {
+    const idleWindow = window as WindowWithIdleCallback;
+    const workerUrl = buildPixiWorkerUrl();
+    const prewarm = () => {
+      // 1) Pixi本体を事前読み込み
+      import("@/lib/pixi/loadPixi")
+        .then((mod) => mod.loadPixi().catch(() => void 0))
+        .catch(() => void 0);
+      // 2) 背景ワーカーJSをブラウザキャッシュへ
+      if (workerUrl) {
+        try {
+          const link = document.createElement("link");
+          link.rel = "prefetch";
+          link.as = "worker";
+          link.href = workerUrl;
+          document.head.appendChild(link);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const idleCallback = idleWindow.requestIdleCallback;
+    if (typeof idleCallback === "function") {
+      const handle = idleCallback(prewarm);
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+    const timeoutId = window.setTimeout(prewarm, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     const handler = window.setTimeout(() => {
