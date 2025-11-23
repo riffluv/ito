@@ -186,7 +186,8 @@ function useVictoryRaysLayer(options: {
       }
       setPixiRaysController(null);
     };
-  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays, pixiHudContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, pixiRaysLayer, prefersReduced, usePixiRays]);
 
   return {
     usePixiRays,
