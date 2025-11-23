@@ -127,7 +127,9 @@ export function useRoomMachineController({
         machineRef.current = null;
       }
     };
-  }, [roomId, uid, room, players, onlineUids, presenceReady, subscribeSpectatorRejoin]);
+    // Deliberately only recreate actor when identity changes; state sync is handled separately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, uid, subscribeSpectatorRejoin]);
 
   // keep machine context in sync
   useEffect(() => {

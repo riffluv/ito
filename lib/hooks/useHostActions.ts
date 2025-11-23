@@ -17,7 +17,7 @@ import type {
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
 import { getAuth } from "firebase/auth";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -62,6 +62,7 @@ type UseHostActionsOptions = {
   currentTopic?: string | null;
   onFeedback?: (payload: HostActionFeedback) => void;
   presenceReady?: boolean;
+  presenceDegraded?: boolean;
   playerCount?: number;
   showtimeIntents?: ShowtimeIntentHandlers;
 };
@@ -82,6 +83,7 @@ export function useHostActions({
   currentTopic,
   onFeedback,
   presenceReady = false,
+  presenceDegraded = false,
   playerCount,
   showtimeIntents,
 }: UseHostActionsOptions) {
@@ -92,6 +94,7 @@ export function useHostActions({
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
   const actionLatencyRef = useRef<Record<string, number>>({});
+  const presenceWarningShownRef = useRef(false);
   const hostActions = useMemo<HostActionsController>(
     () => createHostActionsController(),
     []
@@ -135,6 +138,38 @@ export function useHostActions({
     if (presenceReady) {
       return true;
     }
+    const onlineCount =
+      Array.isArray(onlineUids) && onlineUids.length > 0
+        ? onlineUids.filter(
+            (id): id is string => typeof id === "string" && id.trim().length > 0
+          ).length
+        : null;
+    const fallbackAllowed =
+      presenceDegraded === true ||
+      onlineCount !== null ||
+      (typeof playerCount === "number" && playerCount >= 0);
+
+    if (fallbackAllowed) {
+      if (!presenceWarningShownRef.current) {
+        notify({
+          id: toastIds.genericInfo(roomId, "presence-warn"),
+          title: "接続状況を確認できません",
+          description: "プレイヤー一覧をもとに開始を続行します。",
+          type: "info",
+          duration: 2400,
+        });
+        presenceWarningShownRef.current = true;
+      }
+      traceAction("ui.host.presence.degraded", {
+        roomId,
+        ready: presenceReady ? "1" : "0",
+        degraded: presenceDegraded ? "1" : "0",
+        online: onlineCount ?? -1,
+        players: typeof playerCount === "number" ? playerCount : -1,
+      });
+      return true;
+    }
+
     traceAction("ui.host.presence.wait", { roomId });
     notify({
       id: toastIds.genericInfo(roomId, "presence-wait"),
@@ -144,7 +179,11 @@ export function useHostActions({
       duration: 2000,
     });
     return false;
-  }, [presenceReady, roomId]);
+  }, [presenceReady, presenceDegraded, onlineUids, playerCount, roomId]);
+
+  useEffect(() => {
+    presenceWarningShownRef.current = false;
+  }, [roomId]);
 
   const syncRoundPreparing = useCallback(
     async (value: boolean) => {
