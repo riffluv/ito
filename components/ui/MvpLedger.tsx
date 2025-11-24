@@ -65,6 +65,7 @@ export function MvpLedger({
   const pixiHudContext = usePixiHudContext();
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
   const ambientRef = useRef<BattleRecordsAmbient | null>(null);
+  const gsapRenderCancelRef = useRef<(() => void) | null>(null);
   const [panelReady, setPanelReady] = useState(false);
   const fallbackPanel = !panelReady;
 
@@ -348,6 +349,10 @@ export function MvpLedger({
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
+      if (gsapRenderCancelRef.current) {
+        gsapRenderCancelRef.current();
+        gsapRenderCancelRef.current = null;
+      }
       setPanelReady(false);
       if (pixiHudContext?.renderOnce) {
         void pixiHudContext.renderOnce("mvpLedger:cleanup");
@@ -377,6 +382,10 @@ export function MvpLedger({
         ambientRef.current.destroy({ children: true });
         ambientRef.current = null;
       }
+      if (gsapRenderCancelRef.current) {
+        gsapRenderCancelRef.current();
+        gsapRenderCancelRef.current = null;
+      }
       setPanelReady(false);
     };
   }, [isOpen, pixiContainer, pixiHudContext]);
@@ -405,6 +414,18 @@ export function MvpLedger({
             // 初回アクセス時に ticker が停止しているケースを救済
             if (app.ticker && !app.ticker.started) {
               app.ticker.start();
+            }
+            // 低速端末で auto-render が止まるのを防ぐため、GSAP ticker でも強制レンダリング
+            if (!gsapRenderCancelRef.current) {
+              const renderWithGsap = () => {
+                try {
+                  app.renderer.render(app.stage);
+                } catch {
+                  // ignore
+                }
+              };
+              gsap.ticker.add(renderWithGsap);
+              gsapRenderCancelRef.current = () => gsap.ticker.remove(renderWithGsap);
             }
           }
 

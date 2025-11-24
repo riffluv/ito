@@ -109,6 +109,7 @@ function useVictoryRaysLayer(options: {
   const [pixiRaysController, setPixiRaysController] = useState<VictoryRaysController | null>(null);
   const [initFailed, setInitFailed] = useState(false);
   const victoryRaysModuleRef = useRef<Promise<typeof import("@/lib/pixi/victoryRays")> | null>(null);
+  const gsapRenderCancelRef = useRef<(() => void) | null>(null);
 
   const usePixiRays = USE_PIXI_RAYS && allowPixi && !!pixiRaysLayer && !prefersReduced;
   const pixiRaysReady = usePixiRays && !!pixiRaysController;
@@ -193,6 +194,18 @@ function useVictoryRaysLayer(options: {
           if (app.ticker && !app.ticker.started) {
             app.ticker.start();
           }
+          // 念のため GSAP ticker でもレンダリングを駆動し、低速GPUでの停止を防ぐ
+          if (!gsapRenderCancelRef.current) {
+            const renderWithGsap = () => {
+              try {
+                app.renderer.render(app.stage);
+              } catch {
+                // ignore
+              }
+            };
+            gsap.ticker.add(renderWithGsap);
+            gsapRenderCancelRef.current = () => gsap.ticker.remove(renderWithGsap);
+          }
         }
 
         const modulePromise =
@@ -261,6 +274,10 @@ function useVictoryRaysLayer(options: {
         controller.destroy();
       }
       setPixiRaysController(null);
+      if (gsapRenderCancelRef.current) {
+        gsapRenderCancelRef.current();
+        gsapRenderCancelRef.current = null;
+      }
     };
   }, [mode, pixiRaysLayer, prefersReduced, usePixiRays, pixiHudContext]);
 
