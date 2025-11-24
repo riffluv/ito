@@ -163,6 +163,15 @@ export async function startGame(roomId: string) {
     });
     await batch.commit();
   } catch (commitError) {
+    // 失敗時は waiting に戻して「room is not waiting」状態を防ぐ
+    try {
+      await updateDoc(ref, { status: "waiting" });
+    } catch {
+      // 巻き戻し失敗は黙認
+    }
+    // 本番でも見えるように必ずログ
+    // eslint-disable-next-line no-console
+    console.error("[startGame] resetPlayers failed", commitError);
     traceError("startGame.resetPlayers.failed", commitError, {
       roomId,
       playerCount: undefined,
