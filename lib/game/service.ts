@@ -245,6 +245,7 @@ export async function pruneProposalByEligible(
 ) {
   if (!db) return;
   const roomRef = doc(db, "rooms", roomId);
+  const proposalRef = doc(db, "roomProposals", roomId);
   const eligible = new Set(eligibleIds);
   try {
     await withPermissionRetry(
@@ -272,6 +273,15 @@ export async function pruneProposalByEligible(
             "order.proposal": filtered,
             lastActiveAt: serverTimestamp(),
           });
+          tx.set(
+            proposalRef,
+            {
+              proposal: filtered,
+              seed: typeof room?.deal?.seed === "string" ? room.deal.seed : null,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
         }),
       { context: "order.proposal.prune", suppressToast: true }
     );

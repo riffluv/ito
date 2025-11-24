@@ -524,6 +524,23 @@ export async function addCardToProposalAtPosition(
               current = [];
             }
 
+            // 進行中ラウンドの対象外プレイヤーが proposal に残っている場合は除去（幽霊スロット対策）
+            const roundPlayerSet = new Set(roundPlayers);
+            const hasForeign = current.some(
+              (id) => typeof id === "string" && id.length > 0 && !roundPlayerSet.has(id)
+            );
+            if (hasForeign) {
+              current = current.map((id) =>
+                typeof id === "string" && roundPlayerSet.has(id) ? id : null
+              );
+              traceAction("lag.drop.prune.foreignProposal", {
+                roomId,
+                playerId,
+                attempt: String(attemptIndex),
+                removed: "1",
+              });
+            }
+
             const insertResult = prepareProposalInsert(
               current,
               playerId,
