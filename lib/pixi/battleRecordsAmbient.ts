@@ -30,6 +30,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
   private particles: PIXI.Graphics[] = [];
   private glowLayer: PIXI.Graphics;
   private options: AmbientParticlesOptions;
+  private animationsStarted = false;
 
   // 勝利時のカラー（ゴールド系）
   private static readonly VICTORY_COLORS = [
@@ -56,8 +57,13 @@ export class BattleRecordsAmbient extends PIXI.Container {
 
     // パーティクル生成（24個 - 万能指示書: 微差のある数）
     this.createParticles(24);
+  }
 
-    // アニメーション開始
+  /**
+   * ウォームアップ完了後に明示的に呼び出してアニメーションを開始する
+   * （初回アクセス時にGPU初期化が間に合わない問題の回避策）
+   */
+  public initialize(): void {
     this.startAnimations();
   }
 
@@ -104,6 +110,8 @@ export class BattleRecordsAmbient extends PIXI.Container {
    * アニメーション開始
    */
   private startAnimations(): void {
+    if (this.animationsStarted) return;
+    this.animationsStarted = true;
     const { height, failed } = this.options;
 
     // パーティクルアニメーション
@@ -244,6 +252,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
     // すべてのGSAPアニメーションを停止
     gsap.killTweensOf(this.particles);
     gsap.killTweensOf(this.glowLayer);
+    this.animationsStarted = false;
 
     super.destroy(options);
   }

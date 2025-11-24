@@ -402,6 +402,10 @@ export function MvpLedger({
               setPanelReady(false);
               return;
             }
+            // 初回アクセス時に ticker が停止しているケースを救済
+            if (app.ticker && !app.ticker.started) {
+              app.ticker.start();
+            }
           }
 
           graphics.clear();
@@ -444,6 +448,9 @@ export function MvpLedger({
               });
             });
           }
+
+          // GPUウォームアップ完了後にアニメーションを開始
+          ambientRef.current?.initialize?.();
 
           setPanelReady(true);
         } catch (error) {

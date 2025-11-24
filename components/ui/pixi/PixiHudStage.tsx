@@ -339,6 +339,10 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       // sortableChildren はレイヤー追加時に動的に有効化（デフォルト無効で軽量化）
       pixiApp.stage.sortableChildren = false;
       pixiApp.renderer.events.cursorStyles.default = "default";
+      // 稀に autoStart が抑止される環境（省電力モード等）への対策
+      if (!pixiApp.ticker.started) {
+        pixiApp.ticker.start();
+      }
 
       const hudRoot = new Container();
       hudRoot.sortableChildren = true;

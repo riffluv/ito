@@ -189,6 +189,10 @@ function useVictoryRaysLayer(options: {
             setInitFailed(true);
             return;
           }
+          // 初回アクセス時に ticker が停止しているケースを救済
+          if (app.ticker && !app.ticker.started) {
+            app.ticker.start();
+          }
         }
 
         const modulePromise =
