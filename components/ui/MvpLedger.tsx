@@ -390,44 +390,63 @@ export function MvpLedger({
         setPanelReady(false);
         return;
       }
-      try {
-        graphics.clear();
-        graphics.position.set(layout.x, layout.y);
-        drawBattleRecordsBoard(PIXI, graphics, {
-          width: layout.width,
-          height: layout.height,
-          dpr: layout.dpr,
-          failed,
-        });
 
-        // アンビエント効果の作成・更新
-        if (!ambientRef.current && pixiContainer) {
-          // 初回作成
-          const ambient = createBattleRecordsAmbient({
+      // 非同期処理を独立した関数として実行（完了を待つため）
+      const warmupAndReady = async () => {
+        try {
+          graphics.clear();
+          graphics.position.set(layout.x, layout.y);
+          drawBattleRecordsBoard(PIXI, graphics, {
             width: layout.width,
             height: layout.height,
+            dpr: layout.dpr,
             failed,
           });
-          ambient.position.set(layout.x, layout.y);
-          ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
-          pixiContainer.addChild(ambient);
-          ambientRef.current = ambient;
-        } else if (ambientRef.current) {
-          // リサイズ対応
-          ambientRef.current.resize(layout.width, layout.height);
-          ambientRef.current.position.set(layout.x, layout.y);
-        }
 
-        // グラボなし端末対策: Graphics描画直後に初回レンダリングをトリガーしてGPUを準備
-        if (pixiHudContext?.renderOnce) {
-          void pixiHudContext.renderOnce("mvpLedger:draw");
-        }
+          // アンビエント効果の作成・更新
+          if (!ambientRef.current && pixiContainer) {
+            // 初回作成
+            const ambient = createBattleRecordsAmbient({
+              width: layout.width,
+              height: layout.height,
+              failed,
+            });
+            ambient.position.set(layout.x, layout.y);
+            ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
+            pixiContainer.addChild(ambient);
+            ambientRef.current = ambient;
+          } else if (ambientRef.current) {
+            // リサイズ対応
+            ambientRef.current.resize(layout.width, layout.height);
+            ambientRef.current.position.set(layout.x, layout.y);
+          }
 
-        setPanelReady(true);
-      } catch (error) {
-        console.error("[MvpLedger] failed to draw Pixi battle records panel", error);
+          // グラボなし端末対策: Graphics描画直後に初回レンダリングを確実に実行してGPUを準備
+          if (pixiHudContext?.renderOnce) {
+            await pixiHudContext.renderOnce("mvpLedger:draw");
+
+            // もう1フレーム待って確実にGPU処理を完了させる
+            await new Promise<void>((resolve) => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  resolve();
+                });
+              });
+            });
+          }
+
+          setPanelReady(true);
+        } catch (error) {
+          console.error("[MvpLedger] failed to draw Pixi battle records panel", error);
+          setPanelReady(false);
+        }
+      };
+
+      // 非同期処理を実行（エラーハンドリング付き）
+      warmupAndReady().catch((error) => {
+        console.error("[MvpLedger] warmup failed", error);
         setPanelReady(false);
-      }
+      });
     },
   });
 
