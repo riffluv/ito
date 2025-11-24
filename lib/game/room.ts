@@ -133,15 +133,25 @@ export async function startGame(roomId: string) {
     value: "0",
     reason: "startGame",
   });
-  await updateDoc(ref, {
-    status: "clue",
-    result: null,
-    deal: null,
-    order: null,
-    mvpVotes: {},
-    lastActiveAt: serverTimestamp(),
-    "ui.recallOpen": false,
-  });
+  try {
+    await updateDoc(ref, {
+      status: "clue",
+      result: null,
+      deal: null,
+      order: null,
+      mvpVotes: {},
+      lastActiveAt: serverTimestamp(),
+      "ui.recallOpen": false,
+    });
+  } catch (error) {
+    traceError("startGame.updateDoc.failed", error, {
+      roomId,
+      currentStatus,
+      code: (error as FirestoreError | undefined)?.code ?? "unknown",
+      message: (error as Error | undefined)?.message ?? "unknown",
+    });
+    throw error;
+  }
   // プレイヤーの一時状態も同時に初期化（古い連想が残るのを防止）
   try {
     const { collection, getDocs, writeBatch } = await import("firebase/firestore");
@@ -152,7 +162,15 @@ export async function startGame(roomId: string) {
       batch.update(d.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
     });
     await batch.commit();
-  } catch {}
+  } catch (commitError) {
+    traceError("startGame.resetPlayers.failed", commitError, {
+      roomId,
+      playerCount: undefined,
+      code: (commitError as FirestoreError | undefined)?.code ?? "unknown",
+      message: (commitError as Error | undefined)?.message ?? "unknown",
+    });
+    throw commitError;
+  }
 
   // ゲーム開始通知をブロードキャスト
   try {
