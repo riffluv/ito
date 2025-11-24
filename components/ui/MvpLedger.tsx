@@ -394,6 +394,16 @@ export function MvpLedger({
       // 非同期処理を独立した関数として実行（完了を待つため）
       const warmupAndReady = async () => {
         try {
+          // 【重要】PixiHudStage の初期化完了を確実に待つ（スマホ環境で必須）
+          if (pixiHudContext?.waitForHudReady) {
+            const app = await pixiHudContext.waitForHudReady();
+            if (!app) {
+              console.error("[MvpLedger] PixiHudStage initialization failed");
+              setPanelReady(false);
+              return;
+            }
+          }
+
           graphics.clear();
           graphics.position.set(layout.x, layout.y);
           drawBattleRecordsBoard(PIXI, graphics, {

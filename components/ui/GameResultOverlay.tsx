@@ -180,6 +180,17 @@ function useVictoryRaysLayer(options: {
 
     const init = async () => {
       try {
+        // 【重要】PixiHudStage の初期化完了を確実に待つ（スマホ環境で必須）
+        if (pixiHudContext?.waitForHudReady) {
+          const app = await pixiHudContext.waitForHudReady();
+          if (!app) {
+            console.error("[useVictoryRaysLayer] PixiHudStage initialization failed");
+            setPixiRaysController(null);
+            setInitFailed(true);
+            return;
+          }
+        }
+
         const modulePromise =
           victoryRaysModuleRef.current ?? import("@/lib/pixi/victoryRays");
         victoryRaysModuleRef.current = modulePromise;
