@@ -432,11 +432,20 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       }
 
       // GPUウォームアップ（全環境で必須、特にグラボなし端末で初回描画を保証）
-      void renderOnce("warmup.pixi").then((ok) => {
-        if (ok) {
-          setMetric("perf", "warmup.pixi", 1);
-          traceAction("warmup.pixi");
-        }
+      // void を削除し、await で完了を待つことで確実にGPUを準備する
+      const warmupOk = await renderOnce("warmup.pixi");
+      if (warmupOk) {
+        setMetric("perf", "warmup.pixi", 1);
+        traceAction("warmup.pixi");
+      }
+
+      // さらに確実にするため、もう1フレーム待つ（GPU処理の完全な完了を保証）
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
       });
     };
 

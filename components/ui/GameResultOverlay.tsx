@@ -199,32 +199,37 @@ function useVictoryRaysLayer(options: {
           setPixiRaysController(controller);
           setInitFailed(false);
 
-          // グラボなし端末対策: 生成直後にGPUへアップロード＆微小表示で1フレーム描画
+          // グラボなし端末対策: 生成直後にGPUへ確実にアップロード＆描画
+          // Pixi.js 8 では prepare プラグインが削除されているため、
+          // 代わりに確実に renderOnce を実行して GPU に描画内容をアップロードする
           try {
-            const renderer = pixiHudContext?.app?.renderer as {
-              plugins?: { prepare?: { upload?: (item: unknown, cb: () => void) => void } };
-            };
-            await new Promise<void>((resolve) => {
-              if (renderer?.plugins?.prepare?.upload) {
-                renderer.plugins.prepare.upload(pixiRaysLayer, resolve);
-              } else {
-                resolve();
-              }
-            });
-          } catch {
-            // prepare失敗は致命的でないので無視
-          }
+            const prevAlpha = pixiRaysLayer.alpha;
+            const prevVisible = pixiRaysLayer.visible;
 
-          const prevAlpha = pixiRaysLayer.alpha;
-          const prevVisible = pixiRaysLayer.visible;
-          pixiRaysLayer.alpha = 0.001;
-          pixiRaysLayer.visible = true;
-          requestAnimationFrame(() => {
-            void pixiHudContext?.renderOnce?.("victoryRays:warmup").finally(() => {
-              pixiRaysLayer.alpha = prevAlpha;
-              pixiRaysLayer.visible = prevVisible;
-            });
-          });
+            // 微小表示で描画（GPU にアップロード）
+            pixiRaysLayer.alpha = 0.001;
+            pixiRaysLayer.visible = true;
+
+            // ウォームアップレンダリングを確実に待つ（await で同期）
+            if (pixiHudContext?.renderOnce) {
+              await pixiHudContext.renderOnce("victoryRays:warmup");
+
+              // もう1フレーム待って確実にGPU処理を完了させる
+              await new Promise<void>((resolve) => {
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    resolve();
+                  });
+                });
+              });
+            }
+
+            // 元の状態に戻す
+            pixiRaysLayer.alpha = prevAlpha;
+            pixiRaysLayer.visible = prevVisible;
+          } catch (error) {
+            console.warn("[useVictoryRaysLayer] warmup failed", error);
+          }
         }
       } catch (error) {
         console.warn("[useVictoryRaysLayer] failed to init pixi rays", error);
