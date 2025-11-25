@@ -110,6 +110,8 @@ export function useRevealAnimation({
   );
   const prevStatusRef = useRef(roomStatus);
   const roomStatusRef = useRef(roomStatus);
+  const orderListLengthRef = useRef(orderListLength);
+  const revealIndexRef = useRef(revealIndex);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,6 +207,14 @@ export function useRevealAnimation({
   useEffect(() => {
     roomStatusRef.current = roomStatus;
   }, [roomStatus]);
+
+  useEffect(() => {
+    orderListLengthRef.current = orderListLength;
+  }, [orderListLength]);
+
+  useEffect(() => {
+    revealIndexRef.current = revealIndex;
+  }, [revealIndex]);
 
   // リビールアニメの進行を管理
   useEffect(() => {
@@ -379,12 +389,24 @@ export function useRevealAnimation({
         const now = Date.now();
         const flipEnd = lastFlipEndRef.current;
 
-        // lastFlipEnd が未設定(0)または既に過去の場合のみ補正。
-        // 「今より未来」であれば、それは正しい最終フリップ終了時刻。
+        // まだめくっていない残り枚数を考慮し、確実に遅らせる
+        const remainingCards = Math.max(
+          orderListLengthRef.current - revealIndexRef.current,
+          0
+        );
+
+        // 現在進行中カードの終了時刻（未設定/過去なら「今+フリップ時間」に補正）
         const safeFlipEnd = flipEnd > now ? flipEnd : now + FLIP_DURATION_MS;
 
-        // フリップ終点 + 固定余韻
-        return safeFlipEnd + RESULT_INTRO_DELAY;
+        // これから先に必要な「めくり間隔」の合計を見積もる
+        const futureIntervals =
+          remainingCards <= 0
+            ? 0
+            : remainingCards * REVEAL_STEP_DELAY +
+              Math.min(remainingCards, 2) * FINAL_TWO_BONUS_DELAY;
+
+        // フリップ完了＋今後の間合い＋導入余韻
+        return safeFlipEnd + futureIntervals + RESULT_INTRO_DELAY;
       });
       // リアルタイム結果は保持する（最終表示で使用するため）
     } else if (roomStatus === "reveal") {
