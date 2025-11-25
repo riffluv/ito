@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 type FlipPreset = "reveal" | "result";
 
@@ -84,7 +84,9 @@ export function useCardFlipAnimation({
     resetTween();
 
     const duration = preset === "result" ? durations.result : durations.default;
-    const ease = preset === "result" ? "back.out(1.35)" : "power3.out";
+    // back.out(1.5) でオーバーシュートを入れ「生き生き感」を演出（参考: カード回転.md）
+    // result は少し控えめの 1.35、reveal は 1.5 で弾性終端を強調
+    const ease = preset === "result" ? "back.out(1.35)" : "back.out(1.5)";
 
     flipTweenRef.current = gsap.to(el, {
       duration,
