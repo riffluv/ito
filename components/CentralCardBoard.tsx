@@ -41,6 +41,7 @@ import { logError, logWarn } from "@/lib/utils/log";
 import { traceAction } from "@/lib/utils/trace";
 import { setMetric } from "@/lib/utils/metrics";
 import {
+  FINAL_TWO_BONUS_DELAY,
   FLIP_EVALUATION_DELAY,
   REVEAL_FIRST_DELAY,
   REVEAL_LINGER,
@@ -761,7 +762,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return undefined;
     }
     if (!resultIntroReadyAt) {
-      setResultOverlayAllowed(true);
+      // 時刻がまだ決まっていなければ待機（useRevealAnimation が補完値をセットする）
+      setResultOverlayAllowed(false);
       return undefined;
     }
     const now = Date.now();
@@ -1267,8 +1269,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       const revealTraversal =
         REVEAL_FIRST_DELAY + Math.max(0, orderListLength - 1) * REVEAL_STEP_DELAY;
 
-      const extraFlipPad = FLIP_EVALUATION_DELAY;
-
+      const extraFlipPad =
+        FLIP_EVALUATION_DELAY + (orderListLength > 1 ? FINAL_TWO_BONUS_DELAY : 0);
       const finalizeDelay =
         REVEAL_LINGER + extraFlipPad + RESULT_INTRO_DELAY + RESULT_RECOGNITION_DELAY;
       const SAFETY_BUFFER_MS = 600;

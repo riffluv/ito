@@ -8,7 +8,6 @@ import {
   FINAL_TWO_BONUS_DELAY,
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
-  RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -146,6 +145,9 @@ export function useRevealAnimation({
     return realtimeResult.currentIndex >= orderListLength;
   }, [orderData, orderListLength, realtimeResult, resolveMode, revealIndex]);
 
+  // 最終カードがめくれたあとに必ず入れる“余韻”時間（人数に依存させず一定）
+  // 固定余韻はここでは持たせず、フリップの残り時間＋評価待ちのみで最終演出を解禁する
+
   // 画面描画前にリビール開始フラグを立てるため useLayoutEffect を使用。
   // こうすることで roomStatus が "reveal" でも revealAnimating が false のまま描画される
   // 一瞬のフレーム（カードが暗い初期状態で見えてしまう）を防げる。
@@ -199,10 +201,7 @@ export function useRevealAnimation({
       };
       const now = Date.now();
       const flipRemainingMs = Math.max(lastFlipEndRef.current - now, 0);
-      // フリップが描画しきって数字を認知したうえで、演出導入の余白も足す
-      const finalizeDelay =
-        flipRemainingMs + RESULT_RECOGNITION_DELAY + RESULT_INTRO_DELAY;
-      // クライアント側の演出開始推奨時刻（結果オーバーレイ表示の解禁用）
+      const finalizeDelay = flipRemainingMs + RESULT_RECOGNITION_DELAY;
       setResultIntroReadyAt(now + finalizeDelay);
       const linger = setTimeout(() => {
         attemptFinalize();
@@ -316,8 +315,8 @@ export function useRevealAnimation({
       setRevealAnimating(false);
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
-      // finished が来た時点で resultIntroReadyAt が未設定なら即時に解禁
-      setResultIntroReadyAt((prev) => prev ?? Date.now());
+      // finished が来た時点で resultIntroReadyAt が未設定なら、最終フリップ想定時間ぶんだけ待って解禁
+      setResultIntroReadyAt((prev) => prev ?? Date.now() + FLIP_DURATION_MS);
       // リアルタイム結果は保持する（最終表示で使用するため）
       // 必要ならここで setRealtimeResult(null) を呼ぶ
     } else if (roomStatus === "reveal") {
