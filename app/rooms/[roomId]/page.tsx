@@ -1805,6 +1805,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(fsmSpectatorRequestStatus);
   const seatRequestTimeoutTriggeredRef = useRef(false);
   const spectatorTimeoutPrevRef = useRef(false);
+  const spectatorLeaveTimerRef = useRef<number | null>(null);
+  const spectatorEnterTimerRef = useRef<number | null>(null);
+  const spectatorCandidateRef = useRef<boolean>(false);
   const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
   const boardMeId = isSpectatorMode ? "" : meId;
 
@@ -2137,6 +2140,11 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     spectatorNode: fsmSpectatorNode,
   });
 
+  // 最新の candidate を参照できるように保持
+  useEffect(() => {
+    spectatorCandidateRef.current = spectatorCandidate;
+  }, [spectatorCandidate]);
+
   useEffect(() => {
     traceAction("spectator.candidate", {
       roomId,
@@ -2184,35 +2192,66 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   ]);
 
   useEffect(() => {
-    if (!spectatorCandidate) {
-      if (fsmSpectatorNode !== "idle") {
-        // 観戦リクエスト中や強制退席直後は状態を維持する
-        if (seatRequestPending || seatAcceptanceActive || forcedExitReason) {
-          return () => {};
-        }
-        emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
-        emitSpectatorEvent({ type: "SPECTATOR_RESET" });
+    // クリーンアップ: タイマーが残らないようにする
+    return () => {
+      if (spectatorLeaveTimerRef.current !== null) {
+        window.clearTimeout(spectatorLeaveTimerRef.current);
+        spectatorLeaveTimerRef.current = null;
       }
-      return () => {};
+      if (spectatorEnterTimerRef.current !== null) {
+        window.clearTimeout(spectatorEnterTimerRef.current);
+        spectatorEnterTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // 既に観戦中 → candidate が false に一瞬揺らいでも即 leave/reset しない（デバウンス）
+    if (!spectatorCandidate) {
+      if (spectatorEnterTimerRef.current !== null) {
+        window.clearTimeout(spectatorEnterTimerRef.current);
+        spectatorEnterTimerRef.current = null;
+      }
+      if (fsmSpectatorNode === "idle") {
+        return;
+      }
+      // 観戦申請中 / 受理待ち中は触らない
+      if (seatRequestPending || seatAcceptanceActive || forcedExitReason) {
+        return;
+      }
+      if (spectatorLeaveTimerRef.current !== null) {
+        window.clearTimeout(spectatorLeaveTimerRef.current);
+      }
+      spectatorLeaveTimerRef.current = window.setTimeout(() => {
+        if (!spectatorCandidateRef.current) {
+          emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
+          emitSpectatorEvent({ type: "SPECTATOR_RESET" });
+        }
+      }, 700); // 揺らぎ吸収のため 700ms デバウンス
+      return;
     }
+
+    // candidate が true に戻ったら leave デバウンスを解除
+    if (spectatorLeaveTimerRef.current !== null) {
+      window.clearTimeout(spectatorLeaveTimerRef.current);
+      spectatorLeaveTimerRef.current = null;
+    }
+
+    // 既に観戦状態なら何もしない
     if (fsmSpectatorNode !== "idle") {
-      return () => {};
+      return;
     }
     if (mustSpectateMidGame) {
-      return () => {};
+      return;
     }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
+    if (spectatorEnterTimerRef.current !== null) {
+      window.clearTimeout(spectatorEnterTimerRef.current);
+    }
+    spectatorEnterTimerRef.current = window.setTimeout(() => {
       emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: spectatorEnterReason });
     }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
   }, [
     emitSpectatorEvent,
-    fsmSpectatorStatus,
     fsmSpectatorNode,
     spectatorCandidate,
     spectatorEnterReason,
