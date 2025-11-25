@@ -109,8 +109,10 @@ export function useRevealAnimation({
     null
   );
   const prevStatusRef = useRef(roomStatus);
+  const roomStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
+  const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFlipEndRef = useRef<number>(0);
 
   useEffect(() => {
@@ -160,6 +162,12 @@ export function useRevealAnimation({
     return realtimeResult.currentIndex >= orderListLength;
   }, [orderData, orderListLength, realtimeResult, resolveMode, revealIndex]);
 
+  const finalizeReady =
+    revealAnimating &&
+    orderListLength > 0 &&
+    revealIndex >= orderListLength &&
+    hasEvaluatedFinalCard;
+
   // 最終カードがめくれたあとに必ず入れる“余韻”時間（人数に依存させず一定）
   // フリップ完了から RESULT_INTRO_DELAY 分だけ待ってから演出・結果表示を解禁する。
 
@@ -193,62 +201,14 @@ export function useRevealAnimation({
     prevStatusRef.current = roomStatus;
   }, [roomStatus, resolveMode, orderListLength, revealAnimating, startPending]);
 
+  useEffect(() => {
+    roomStatusRef.current = roomStatus;
+  }, [roomStatus]);
+
   // リビールアニメの進行を管理
   useEffect(() => {
-    if (!revealAnimating) {
+    if (!revealAnimating || finalizeReady) {
       return undefined;
-    }
-
-    if (
-      revealIndex >= orderListLength &&
-      orderListLength > 0 &&
-      hasEvaluatedFinalCard
-    ) {
-      logDebug("reveal", "all-cards-revealed", {
-        revealIndex,
-        orderListLength,
-      });
-      finalizePendingRef.current = true;
-      setFinalizeScheduled(true);
-      clearSortedRevealCache(roomId);
-      const attemptFinalize = () => {
-        if (!finalizePendingRef.current) return;
-        if (roomStatus === "reveal") {
-          finalizePendingRef.current = false;
-          finalizeReveal(roomId).catch(() => void 0);
-        }
-      };
-      const now = Date.now();
-
-      // 最終カードのフリップ完了時刻を計算。
-      // lastFlipEndRef はフリップ開始時に更新されるため、この時点では正しい値が入っているはず。
-      // ただし、評価完了（hasEvaluatedFinalCard）が先に来た場合や、
-      // lastFlipEndRef が未設定（0）または既に過去の場合は、
-      // 「今からフリップが始まる」と仮定して最低限の余韻を確保する。
-      let safeFlipEnd = lastFlipEndRef.current;
-
-      // lastFlipEndRef が 0（未設定）または既に過去の場合のみ補正
-      // 「今より未来」であれば、それは正しい最終フリップ終了時刻
-      if (safeFlipEnd <= now) {
-        // 最低限「今 + フリップ時間」を確保
-        safeFlipEnd = now + FLIP_DURATION_MS;
-        logDebug("reveal", "flip-end-corrected", {
-          originalFlipEnd: lastFlipEndRef.current,
-          correctedFlipEnd: safeFlipEnd,
-          now,
-          reason: "past-or-zero",
-        });
-      }
-
-      // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）だけ待ってから演出を解禁する。
-      const targetIntroAt = safeFlipEnd + RESULT_INTRO_DELAY;
-      const finalizeDelay =
-        Math.max(targetIntroAt - now, 0) + RESULT_RECOGNITION_DELAY;
-      setResultIntroReadyAt(targetIntroAt);
-      const linger = setTimeout(() => {
-        attemptFinalize();
-      }, finalizeDelay);
-      return () => clearTimeout(linger);
     }
 
     // 1枚目だけ間を短くして「固まった」印象を避ける
@@ -336,19 +296,86 @@ export function useRevealAnimation({
           logDebug("reveal", "realtime-eval-error", e);
         }
       };
-      setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
-    }, delay);
+    setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
+  }, delay);
 
     return () => clearTimeout(timer);
   }, [
-    hasEvaluatedFinalCard,
+    finalizeReady,
     orderData,
     orderListLength,
     revealAnimating,
     revealIndex,
     roomId,
-    roomStatus,
   ]);
+
+  useEffect(() => {
+    if (!finalizeReady) {
+      if (finalizeTimerRef.current) {
+        clearTimeout(finalizeTimerRef.current);
+        finalizeTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    logDebug("reveal", "all-cards-revealed", {
+      revealIndex,
+      orderListLength,
+    });
+
+    finalizePendingRef.current = true;
+    setFinalizeScheduled(true);
+    clearSortedRevealCache(roomId);
+
+    const attemptFinalize = () => {
+      if (!finalizePendingRef.current) return;
+      if (roomStatusRef.current === "reveal") {
+        finalizePendingRef.current = false;
+        finalizeReveal(roomId).catch(() => void 0);
+      }
+    };
+
+    const now = Date.now();
+
+    // 最終カードのフリップ完了時刻を計算。
+    // lastFlipEndRef はフリップ開始時に更新されるため、この時点では正しい値が入っているはず。
+    // ただし、評価完了（hasEvaluatedFinalCard）が先に来た場合や、
+    // lastFlipEndRef が未設定（0）または既に過去の場合は、
+    // 「今からフリップが始まる」と仮定して最低限の余韻を確保する。
+    let safeFlipEnd = lastFlipEndRef.current;
+
+    // lastFlipEndRef が 0（未設定）または既に過去の場合のみ補正
+    // 「今より未来」であれば、それは正しい最終フリップ終了時刻
+    if (safeFlipEnd <= now) {
+      // 最低限「今 + フリップ時間」を確保
+      safeFlipEnd = now + FLIP_DURATION_MS;
+      logDebug("reveal", "flip-end-corrected", {
+        originalFlipEnd: lastFlipEndRef.current,
+        correctedFlipEnd: safeFlipEnd,
+        now,
+        reason: "past-or-zero",
+      });
+    }
+
+    // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）だけ待ってから演出を解禁する。
+    const targetIntroAt = safeFlipEnd + RESULT_INTRO_DELAY;
+    const finalizeDelay =
+      Math.max(targetIntroAt - now, 0) + RESULT_RECOGNITION_DELAY;
+
+    setResultIntroReadyAt((prev) => (prev === null ? targetIntroAt : prev));
+
+    finalizeTimerRef.current = setTimeout(() => {
+      finalizeTimerRef.current = null;
+      attemptFinalize();
+    }, finalizeDelay);
+
+    return () => {
+      if (finalizeTimerRef.current) {
+        clearTimeout(finalizeTimerRef.current);
+        finalizeTimerRef.current = null;
+      }
+    };
+  }, [finalizeReady, orderListLength, revealIndex, roomId]);
 
   // サーバーが finished を返したらローカルのアニメフラグを解除
   useEffect(() => {
