@@ -463,20 +463,15 @@ export function GameResultOverlay({
       return;
     }
 
-    if (mode !== "overlay") {
-      if (failed) {
+    if (failed) {
+      // overlay の失敗はアニメーション中（Phase 1.5）で1回だけ鳴らす。ここでは再生しない。
+      if (mode !== "overlay") {
         playFailure();
-      } else if (successMode === "epic") {
-        playSuccessEpic();
-      } else {
-        playSuccessNormal();
       }
       return;
     }
 
-    if (failed) {
-      playFailure();
-    } else if (successMode === "epic") {
+    if (successMode === "epic") {
       playSuccessEpic();
     } else {
       playSuccessNormal();
