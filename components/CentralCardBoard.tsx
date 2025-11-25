@@ -1096,6 +1096,37 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [optimisticProposal, activeProposal]);
 
+  // サーバー側からカードが消えているのに、ローカルの楽観提案にだけ残ってしまうケースを補正する
+  useEffect(() => {
+    if (!optimisticProposal) return;
+    if (!Array.isArray(proposal)) return;
+
+    const serverSet = new Set(
+      proposal.filter((id): id is string => typeof id === "string" && id.length > 0)
+    );
+
+    const sanitized = optimisticProposal.map((id) =>
+      typeof id === "string" && id.length > 0 && serverSet.has(id) ? id : null
+    );
+
+    // 末尾の null を削っておく（署名比較を安定させる）
+    while (
+      sanitized.length > 0 &&
+      (sanitized[sanitized.length - 1] === null ||
+        typeof sanitized[sanitized.length - 1] === "undefined")
+    ) {
+      sanitized.pop();
+    }
+
+    if (sanitized.length === 0) {
+      setOptimisticProposal(null);
+      return;
+    }
+
+    if (shallowArrayEqual(optimisticProposal, sanitized)) return;
+    setOptimisticProposal(sanitized);
+  }, [optimisticProposal, proposal, proposalKey]);
+
   useEffect(() => {
     if (roomStatus !== "clue" && optimisticProposal) {
       setOptimisticProposal(null);
