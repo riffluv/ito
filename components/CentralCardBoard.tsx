@@ -859,7 +859,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [roomStatus, resultIntroReadyAt]);
 
   // optimisticReturningIds のタイムアウトクリア用
-  const returningTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const returningTimeoutsRef = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
 
   useEffect(() => {
     const onCardReturning = (event: Event) => {
@@ -871,7 +873,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       setOptimisticReturningIds((prev) =>
         prev.includes(playerId) ? prev : [...prev, playerId]
       );
-      
+
       // タイムアウトを設定: 2秒後に強制クリア（サーバー応答がない場合の保険）
       const existingTimeout = returningTimeoutsRef.current.get(playerId);
       if (existingTimeout) {
@@ -879,7 +881,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
       const timeout = setTimeout(() => {
         returningTimeoutsRef.current.delete(playerId);
-        setOptimisticReturningIds((prev) => prev.filter((id) => id !== playerId));
+        setOptimisticReturningIds((prev) =>
+          prev.filter((id) => id !== playerId)
+        );
       }, 2000);
       returningTimeoutsRef.current.set(playerId, timeout);
     };
@@ -961,7 +965,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           });
         }
         // optimisticReturningIds からも削除（カードを再表示するため）
-        setOptimisticReturningIds((prev) => prev.filter((id) => id !== playerId));
+        setOptimisticReturningIds((prev) =>
+          prev.filter((id) => id !== playerId)
+        );
         notify({
           title: "カードを戻せませんでした",
           type: "error",
