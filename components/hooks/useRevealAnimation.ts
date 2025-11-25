@@ -16,7 +16,7 @@ import {
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
-import { logDebug, logWarn } from "@/lib/utils/log";
+import { logWarn } from "@/lib/utils/log";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type RevealPersistenceDeps = {
@@ -189,13 +189,14 @@ export function useRevealAnimation({
       setRevealAnimating(true);
       setRevealIndex(0);
       setRealtimeResult(null); // リセット
+      setResultIntroReadyAt(null); // 前回の演出時刻をクリアして新しいラウンドで再計算する
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
+      if (finalizeTimerRef.current) {
+        clearTimeout(finalizeTimerRef.current);
+        finalizeTimerRef.current = null;
+      }
       lastFlipEndRef.current = 0;
-      logDebug("reveal", "start", {
-        orderListLength,
-        reason: becameReveal ? "status" : "pending-signal",
-      });
     }
     startSignalRef.current = startSignal;
     prevStatusRef.current = roomStatus;
@@ -239,8 +240,6 @@ export function useRevealAnimation({
             if (!cached) {
               touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
             }
-            logDebug("reveal", "step", { nextIndex, result });
-
             // 失敗 or 成功をめくり完了後にUIへ反映
             if (!result.success && result.failedAt !== null) {
               setRealtimeResult({
@@ -293,7 +292,7 @@ export function useRevealAnimation({
             }
           }
         } catch (e) {
-          logDebug("reveal", "realtime-eval-error", e);
+          logWarn("reveal", "realtime-eval-error", e);
         }
       };
     setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
@@ -317,11 +316,6 @@ export function useRevealAnimation({
       }
       return undefined;
     }
-
-    logDebug("reveal", "all-cards-revealed", {
-      revealIndex,
-      orderListLength,
-    });
 
     finalizePendingRef.current = true;
     setFinalizeScheduled(true);
@@ -349,12 +343,6 @@ export function useRevealAnimation({
     if (safeFlipEnd <= now) {
       // 最低限「今 + フリップ時間」を確保
       safeFlipEnd = now + FLIP_DURATION_MS;
-      logDebug("reveal", "flip-end-corrected", {
-        originalFlipEnd: lastFlipEndRef.current,
-        correctedFlipEnd: safeFlipEnd,
-        now,
-        reason: "past-or-zero",
-      });
     }
 
     // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）だけ待ってから演出を解禁する。
@@ -394,13 +382,6 @@ export function useRevealAnimation({
         // lastFlipEnd が未設定(0)または既に過去の場合のみ補正。
         // 「今より未来」であれば、それは正しい最終フリップ終了時刻。
         const safeFlipEnd = flipEnd > now ? flipEnd : now + FLIP_DURATION_MS;
-
-        logDebug("reveal", "finished-intro-time", {
-          originalFlipEnd: flipEnd,
-          safeFlipEnd,
-          now,
-          resultIntroReadyAt: safeFlipEnd + RESULT_INTRO_DELAY,
-        });
 
         // フリップ終点 + 固定余韻
         return safeFlipEnd + RESULT_INTRO_DELAY;
