@@ -13,7 +13,9 @@ import { setMetric } from "@/lib/utils/metrics";
 export const DROP_OPTIMISTIC_ENABLED =
   process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
 
-const OPTIMISTIC_ROLLBACK_MS = 900;
+// Align rollbackウィンドウをCentralCardBoard側（~1.7s）と揃え、
+// 遅延時の早すぎる巻き戻りを防ぐ
+const OPTIMISTIC_ROLLBACK_MS = 1700;
 
 type DropOutcome = "success" | "noop" | "error";
 

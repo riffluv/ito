@@ -327,7 +327,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const magnetResetTimeoutRef = useRef<number | null>(null);
   const [cursorSnapOffset, setCursorSnapOffset] = useState<{ x: number; y: number } | null>(null);
-  const dropRollbackTimerRef = useRef<number | null>(null);
+  const dropRollbackTimersRef = useRef<Map<string, number>>(new Map());
+  const dropRollbackSnapshotsRef = useRef<Map<string, (string | null)[]>>(new Map());
+  const latestActiveProposalRef = useRef<(string | null)[]>([]);
+  const pendingRef = useRef<(string | null)[]>([]);
 
   const magnetConfig = useMemo(
     () => {
@@ -481,15 +484,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   useEffect(() => {
+    const timersRef = dropRollbackTimersRef;
+    const snapshotsRef = dropRollbackSnapshotsRef;
     return () => {
       if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
         window.clearTimeout(magnetResetTimeoutRef.current);
         magnetResetTimeoutRef.current = null;
       }
-      if (typeof window !== "undefined" && dropRollbackTimerRef.current !== null) {
-        window.clearTimeout(dropRollbackTimerRef.current);
-        dropRollbackTimerRef.current = null;
+      if (typeof window !== "undefined" && timersRef.current.size > 0) {
+        timersRef.current.forEach((timer) => window.clearTimeout(timer));
+        timersRef.current.clear();
       }
+      snapshotsRef.current.clear();
     };
   }, []);
 
@@ -709,6 +715,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [setPending]
   );
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
 
   const playerReadyMap = useMemo(() => {
     const map = new Map<string, boolean>();
@@ -958,6 +968,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return [];
   }, [roomStatus, orderList, proposal, orderListKey, proposalKey, eligibleIdSet]);
 
+  useEffect(() => {
+    latestActiveProposalRef.current = activeProposal;
+  }, [activeProposal]);
+
   const [optimisticProposal, setOptimisticProposal] = useState<(string | null)[] | null>(null);
   const boardProposal = optimisticProposal ?? activeProposal;
 
@@ -969,6 +983,53 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       });
     },
     [boardProposal]
+  );
+
+  const clearDropRollbackTimer = useCallback((playerId?: string) => {
+    if (!playerId) {
+      if (typeof window !== "undefined") {
+        dropRollbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      }
+      dropRollbackTimersRef.current.clear();
+      dropRollbackSnapshotsRef.current.clear();
+      return;
+    }
+    const timer = dropRollbackTimersRef.current.get(playerId);
+    if (typeof window !== "undefined" && typeof timer === "number") {
+      window.clearTimeout(timer);
+    }
+    dropRollbackTimersRef.current.delete(playerId);
+    dropRollbackSnapshotsRef.current.delete(playerId);
+  }, []);
+
+  const scheduleDropRollback = useCallback(
+    (playerId: string, snapshot: (string | null)[]) => {
+      if (typeof window === "undefined") return;
+      clearDropRollbackTimer(playerId);
+      dropRollbackSnapshotsRef.current.set(playerId, snapshot.slice());
+      const timeoutMs = prefersReducedMotion ? 1400 : 1700;
+      const handle = window.setTimeout(() => {
+        dropRollbackTimersRef.current.delete(playerId);
+        const latestServerProposal = latestActiveProposalRef.current;
+        if (latestServerProposal.includes(playerId)) {
+          dropRollbackSnapshotsRef.current.delete(playerId);
+          return;
+        }
+        const rollback = dropRollbackSnapshotsRef.current.get(playerId);
+        dropRollbackSnapshotsRef.current.delete(playerId);
+        if (!rollback) return;
+        updatePendingState(() => rollback.slice());
+        onOptimisticProposalChange?.(playerId, null);
+        notify({
+          title: "配置を巻き戻しました",
+          description: "サーバー反映が遅延したためローカル状態をリセットしました。",
+          type: "info",
+          duration: 1400,
+        });
+      }, timeoutMs);
+      dropRollbackTimersRef.current.set(playerId, handle);
+    },
+    [clearDropRollbackTimer, prefersReducedMotion, updatePendingState, onOptimisticProposalChange]
   );
 
   const proposalLength = boardProposal.length;
@@ -1255,6 +1316,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
         const activePlayerId = String(active.id);
         const alreadyInProposal = (boardProposal as (string | null)[]).includes(activePlayerId);
+        const isPendingOnly =
+          !alreadyInProposal && pendingRef.current.includes(activePlayerId);
+        const alreadyPlaced = alreadyInProposal || isPendingOnly;
         const isSlotTarget = over && typeof over.id === "string" && over.id.startsWith("slot-");
         const isReturnTarget = over && typeof over.id === "string" && over.id === RETURN_DROP_ZONE_ID;
 
@@ -1263,7 +1327,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         const fallbackReturn =
           !isReturnTarget &&
           !isSlotTarget &&
-          alreadyInProposal &&
+          alreadyPlaced &&
           boardRect &&
           lastPosition &&
           lastPosition.y >= boardRect.bottom + 6 &&
@@ -1290,7 +1354,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         };
 
         if (isReturnTarget || fallbackReturn) {
-          if (!alreadyInProposal) {
+          if (!alreadyPlaced) {
             playDropInvalid();
             return;
           }
@@ -1314,7 +1378,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         const overId = String(over.id);
 
         if (overId === RETURN_DROP_ZONE_ID) {
-          if (!alreadyInProposal) {
+          if (!alreadyPlaced) {
             playDropInvalid();
             return;
           }
@@ -1354,7 +1418,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
-          let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
+            let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
             let previousPending: (string | null)[] | undefined;
             let insertedPending = false;
             let didPlaySound = false;
@@ -1363,12 +1427,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               didPlaySound = true;
               playCardPlace();
               dropSession?.markStage("client.drop.t3_soundPlayedMs", { channel: "success" });
-            };
-            const clearDropRollbackTimer = () => {
-              if (typeof window !== "undefined" && dropRollbackTimerRef.current !== null) {
-                window.clearTimeout(dropRollbackTimerRef.current);
-                dropRollbackTimerRef.current = null;
-              }
             };
 
             if (!alreadyInProposal) {
@@ -1389,15 +1447,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 insertedPending = true;
                 return next;
               });
-              if (insertedPending && typeof window !== "undefined") {
-                dropRollbackTimerRef.current = window.setTimeout(() => {
-                  dropRollbackTimerRef.current = null;
-                  onOptimisticProposalChange?.(activePlayerId, null);
-                  if (previousPending !== undefined) {
-                    const snapshot = previousPending.slice();
-                    updatePendingState(() => snapshot);
-                  }
-                }, prefersReducedMotion ? 900 : 1100);
+              if (insertedPending) {
+                scheduleDropRollback(
+                  activePlayerId,
+                  previousPending ? previousPending.slice() : []
+                );
               }
             }
 
@@ -1419,54 +1473,54 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             }
             request
               .then((result) => {
-                clearDropRollbackTimer();
+                clearDropRollbackTimer(activePlayerId);
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result });
-            if (result === "noop") {
-              dropSession?.complete("noop");
-              onOptimisticProposalChange?.(activePlayerId, null);
-              if (previousPending !== undefined) {
-                const snapshot = previousPending.slice();
-                updatePendingState(() => snapshot);
-              }
-              notify({
-                title: "その位置には置けません",
-                description: "カードが既に置かれているか、提案が更新されています。",
-                type: "info",
-              });
-              playDropInvalid();
-              dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
-              traceAction("board.drop.attempt", {
-                roomId,
-                playerId: activePlayerId,
-                targetSlot: slotIndex,
-                reasonIfRejected: "slot-occupied",
-              });
-              return;
-            }
-            playOnce();
-            dropSession?.complete("success");
-          })
+                if (result === "noop") {
+                  dropSession?.complete("noop");
+                  onOptimisticProposalChange?.(activePlayerId, null);
+                  if (previousPending !== undefined) {
+                    const snapshot = previousPending.slice();
+                    updatePendingState(() => snapshot);
+                  }
+                  notify({
+                    title: "その位置には置けません",
+                    description: "カードが既に置かれているか、提案が更新されています。",
+                    type: "info",
+                  });
+                  playDropInvalid();
+                  dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
+                  traceAction("board.drop.attempt", {
+                    roomId,
+                    playerId: activePlayerId,
+                    targetSlot: slotIndex,
+                    reasonIfRejected: "slot-occupied",
+                  });
+                  return;
+                }
+                playOnce();
+                dropSession?.complete("success");
+              })
               .catch((error) => {
-                clearDropRollbackTimer();
+                clearDropRollbackTimer(activePlayerId);
                 dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
                 dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
                 onOptimisticProposalChange?.(activePlayerId, null);
                 if (previousPending !== undefined) {
-                const snapshot = previousPending.slice();
-                updatePendingState(() => snapshot);
-              }
-              playDropInvalid();
-              dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
-              traceAction("board.drop.attempt", {
-                roomId,
-                playerId: activePlayerId,
-                targetSlot: slotIndex,
-                reasonIfRejected: "error",
+                  const snapshot = previousPending.slice();
+                  updatePendingState(() => snapshot);
+                }
+                playDropInvalid();
+                dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
+                traceAction("board.drop.attempt", {
+                  roomId,
+                  playerId: activePlayerId,
+                  targetSlot: slotIndex,
+                  reasonIfRejected: "error",
+                });
               });
-            });
-          return;
-        }
+            return;
+          }
           return;
         }
 
@@ -1508,7 +1562,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       cursorSnapOffset,
       applyOptimisticReorder,
       boardProposal,
-      prefersReducedMotion,
+      scheduleDropRollback,
+      clearDropRollbackTimer,
     ]
   );
 
