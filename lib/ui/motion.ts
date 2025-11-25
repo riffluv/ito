@@ -5,9 +5,9 @@ export const REVEAL_LINGER = 520; // リビール完了前に一拍置く待ち
 export const RESULT_VISIBLE_MS = 4200; // 結果画面を表示し続ける時間
 // 実アニメは従来どおり 320ms（単体テスト時の体感を維持）
 export const FLIP_DURATION_MS = 320; // 3D フリップ自体の所要時間
-// 食い気味に演出を入れるため、最後のカード完了後の導入待ちを短め(220ms)に
-export const RESULT_INTRO_DELAY = 220;
-// 最終カードを読み終えるための余白。全人数で一律 0ms とし、RESULT_INTRO_DELAY(220ms)のみ待つ。
+// 最終カード完了後の導入待ち。数字を読んでから演出に入るためのバッファを 280ms に設定。
+export const RESULT_INTRO_DELAY = 280;
+// 認知余白は 0ms（導入待ちに集約）
 export const RESULT_RECOGNITION_DELAY = 0;
 export const FINAL_TWO_BONUS_DELAY = 260; // 最後の2枚だけ滞留を加算する時間
 // フリップ完了から評価処理までの余白を+220msに拡張（視覚完了を確実に待つ）

@@ -101,6 +101,7 @@ export function useRevealAnimation({
     null
   );
   const [finalizeScheduled, setFinalizeScheduled] = useState(false);
+  const [resultIntroReadyAt, setResultIntroReadyAt] = useState<number | null>(null);
   const prevStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
@@ -201,6 +202,8 @@ export function useRevealAnimation({
       // フリップが描画しきって数字を認知したうえで、演出導入の余白も足す
       const finalizeDelay =
         flipRemainingMs + RESULT_RECOGNITION_DELAY + RESULT_INTRO_DELAY;
+      // クライアント側の演出開始推奨時刻（結果オーバーレイ表示の解禁用）
+      setResultIntroReadyAt(now + finalizeDelay);
       const linger = setTimeout(() => {
         attemptFinalize();
       }, finalizeDelay);
@@ -313,6 +316,8 @@ export function useRevealAnimation({
       setRevealAnimating(false);
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
+      // finished が来た時点で resultIntroReadyAt が未設定なら即時に解禁
+      setResultIntroReadyAt((prev) => prev ?? Date.now());
       // リアルタイム結果は保持する（最終表示で使用するため）
       // 必要ならここで setRealtimeResult(null) を呼ぶ
     } else if (roomStatus === "reveal") {
@@ -348,5 +353,6 @@ export function useRevealAnimation({
     revealIndex,
     realtimeResult,
     finalizeScheduled,
+    resultIntroReadyAt,
   } as const;
 }
