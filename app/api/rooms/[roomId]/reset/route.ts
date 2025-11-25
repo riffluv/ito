@@ -127,7 +127,13 @@ export async function POST(
         .where("rejoinRequest.status", "==", "pending")
         .get();
 
-      if (!pendingSnap.empty) {
+      const watchingSnap = await sessionsRef
+        .where("roomId", "==", roomId)
+        .where("rejoinRequest", "==", null)
+        .where("status", "==", "watching")
+        .get();
+
+      if (!pendingSnap.empty || !watchingSnap.empty) {
         const batch = db.batch();
         pendingSnap.forEach((doc) => {
           batch.update(doc.ref, {
@@ -136,10 +142,24 @@ export async function POST(
             updatedAt: FieldValue.serverTimestamp(),
           });
         });
+
+        // 観戦UIで固まっている端末も、リセット後に再招集できるよう pending を立てる
+        watchingSnap.forEach((doc) => {
+          batch.update(doc.ref, {
+            rejoinRequest: {
+              status: "pending",
+              source: "auto",
+              createdAt: FieldValue.serverTimestamp(),
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+
         await batch.commit();
         logDebug("rooms", "reset-cleared-spectator-pending", {
           roomId,
-          cleared: pendingSnap.size,
+          clearedPending: pendingSnap.size,
+          revivedWatching: watchingSnap.size,
         });
       }
     } catch (cleanupError) {
