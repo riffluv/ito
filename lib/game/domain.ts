@@ -17,7 +17,7 @@ export type DealCandidate = {
   seatHistoryIndex?: number | null;
 };
 
-const ACTIVE_WINDOW_MS = 20_000;
+const ACTIVE_WINDOW_MS = 30_000;
 
 const isActive = (lastSeen: DealCandidate["lastSeen"], now: number) => {
   if (lastSeen instanceof Date) return now - lastSeen.getTime() <= ACTIVE_WINDOW_MS;
@@ -32,20 +32,16 @@ export function selectDealTargetPlayers(
   presenceUids: string[] | null | undefined,
   now: number
 ): DealCandidate[] {
-  const activeByRecency = candidates.filter((p) =>
-    isActive(p.lastSeen ?? null, now)
-  );
-  const fallbackPool =
-    activeByRecency.length > 0 ? activeByRecency : candidates;
-  if (Array.isArray(presenceUids) && presenceUids.length > 0) {
-    const presenceSet = new Set(presenceUids);
-    const online = fallbackPool.filter((p) => presenceSet.has(p.id));
-    if (online.length > 0) {
-      const others = fallbackPool.filter((p) => !presenceSet.has(p.id));
-      return [...online, ...others];
-    }
+  const activeByRecency = candidates.filter((p) => isActive(p.lastSeen ?? null, now));
+  const presenceSet =
+    Array.isArray(presenceUids) && presenceUids.length > 0 ? new Set(presenceUids) : null;
+
+  if (presenceSet) {
+    const online = candidates.filter((p) => presenceSet.has(p.id));
+    if (online.length > 0) return online; // presenceを真とする
   }
-  return fallbackPool;
+  if (activeByRecency.length > 0) return activeByRecency;
+  return candidates;
 }
 
 export type DealPayload = {
