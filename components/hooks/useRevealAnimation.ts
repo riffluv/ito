@@ -8,6 +8,7 @@ import {
   FINAL_TWO_BONUS_DELAY,
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
+  RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -197,7 +198,9 @@ export function useRevealAnimation({
       };
       const now = Date.now();
       const flipRemainingMs = Math.max(lastFlipEndRef.current - now, 0);
-      const finalizeDelay = flipRemainingMs + RESULT_RECOGNITION_DELAY;
+      // フリップが描画しきって数字を認知したうえで、演出導入の余白も足す
+      const finalizeDelay =
+        flipRemainingMs + RESULT_RECOGNITION_DELAY + RESULT_INTRO_DELAY;
       const linger = setTimeout(() => {
         attemptFinalize();
       }, finalizeDelay);
