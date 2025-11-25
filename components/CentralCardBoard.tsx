@@ -847,13 +847,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       setResultOverlayAllowed(false);
       return undefined;
     }
-    if (!resultIntroReadyAt) {
-      // 時刻がまだ決まっていなければ待機（useRevealAnimation が補完値をセットする）
-      setResultOverlayAllowed(false);
-      return undefined;
-    }
     const now = Date.now();
-    const delay = Math.max(0, resultIntroReadyAt - now);
+    // 最低でも「finished を受け取ってから RESULT_INTRO_DELAY」待つ。
+    // resultIntroReadyAt が未来ならそちらを優先し、過去ならこのクランプで余白を確保する。
+    const target = Math.max(
+      resultIntroReadyAt ?? 0,
+      now + RESULT_INTRO_DELAY
+    );
+    const delay = Math.max(0, target - now);
+    setResultOverlayAllowed(false);
     const timer = window.setTimeout(() => setResultOverlayAllowed(true), delay);
     return () => window.clearTimeout(timer);
   }, [roomStatus, resultIntroReadyAt]);
