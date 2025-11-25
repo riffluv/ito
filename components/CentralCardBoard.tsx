@@ -732,7 +732,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const playCardPlace = useSoundEffect("card_place");
   const playDragPickup = useSoundEffect(undefined);
 
-  const { revealAnimating, revealIndex, realtimeResult, finalizeScheduled } = useRevealAnimation({
+  const {
+    revealAnimating,
+    revealIndex,
+    realtimeResult,
+    finalizeScheduled,
+    resultIntroReadyAt,
+  } = useRevealAnimation({
     roomId,
     roomStatus,
     resolveMode: resolveMode ?? undefined,
@@ -746,6 +752,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         : null,
     startPending: uiRevealPending || localRevealPending,
   });
+
+  // 結果オーバーレイを表示してよい最短タイミングをローカルで管理（roomStatusが早くfinishedになっても待つ）
+  const [resultOverlayAllowed, setResultOverlayAllowed] = useState(false);
+  useEffect(() => {
+    if (roomStatus !== "finished") {
+      setResultOverlayAllowed(false);
+      return undefined;
+    }
+    if (!resultIntroReadyAt) {
+      setResultOverlayAllowed(true);
+      return undefined;
+    }
+    const now = Date.now();
+    const delay = Math.max(0, resultIntroReadyAt - now);
+    const timer = window.setTimeout(() => setResultOverlayAllowed(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [roomStatus, resultIntroReadyAt]);
 
   useEffect(() => {
     const onCardReturning = (event: Event) => {
@@ -1669,7 +1692,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         )}
       </Box>
       {roomStatus === "finished" && (
-        <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
+        resultOverlayAllowed && (
+          <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
+        )
       )}
       <StreakBanner
         streak={currentStreak}
