@@ -375,7 +375,8 @@ export function GameResultOverlay({
 
   // Pixi を優先し、WebGL が無い / 初期化失敗時のみ SVG を許可
   // Pixi を優先し、初期化失敗・非WebGL・Pixi非許可のときだけ SVG を使う（重複発火防止）。
-  const useSvgRays = (initFailed || !webglUsable || !preferPixiRays) && _legacyUseSvgRays;
+  // フォールバックを無効化（常に Pixi のみ使用）。SVG は残すが参照しない。
+  const useSvgRays = false;
   const triggerBackgroundFx = useBackgroundFx(prefersReduced);
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
