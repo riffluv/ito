@@ -891,14 +891,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       "ito:card-returning",
       onCardReturning as EventListener
     );
+    const timeoutsMap = returningTimeoutsRef.current;
     return () => {
       window.removeEventListener(
         "ito:card-returning",
         onCardReturning as EventListener
       );
       // クリーンアップ時に全タイムアウトをクリア
-      returningTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-      returningTimeoutsRef.current.clear();
+      timeoutsMap.forEach((timeout) => clearTimeout(timeout));
+      timeoutsMap.clear();
     };
   }, [roomId]);
 
