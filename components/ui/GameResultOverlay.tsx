@@ -474,8 +474,12 @@ export function GameResultOverlay({
       return;
     }
 
-    if (!failed && successMode === "epic") {
+    if (failed) {
+      playFailure();
+    } else if (successMode === "epic") {
       playSuccessEpic();
+    } else {
+      playSuccessNormal();
     }
   }, [
     failed,
