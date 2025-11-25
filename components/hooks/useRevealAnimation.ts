@@ -8,6 +8,7 @@ import {
   FINAL_TWO_BONUS_DELAY,
   REVEAL_FIRST_DELAY,
   REVEAL_STEP_DELAY,
+  RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
 } from "@/lib/ui/motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -135,9 +136,12 @@ export function useRevealAnimation({
       return false;
     }
     const reachedEndByRevealIndex = revealIndex >= orderListLength;
-    // orderData（numbers）が無い、または realtimeResult が更新されない場合のフォールバック。
-    if (!orderData || !realtimeResult) {
+    // 評価結果がまだ届いていない場合は final 判定を遅らせる（人数が増えても待ち時間が削られないようにする）。
+    if (!orderData) {
       return reachedEndByRevealIndex;
+    }
+    if (!realtimeResult) {
+      return false;
     }
     if (realtimeResult.success === false) {
       return true;
@@ -146,7 +150,7 @@ export function useRevealAnimation({
   }, [orderData, orderListLength, realtimeResult, resolveMode, revealIndex]);
 
   // 最終カードがめくれたあとに必ず入れる“余韻”時間（人数に依存させず一定）
-  // 固定余韻はここでは持たせず、フリップの残り時間＋評価待ちのみで最終演出を解禁する
+  // フリップ完了から RESULT_INTRO_DELAY 分だけ待ってから演出・結果表示を解禁する。
 
   // 画面描画前にリビール開始フラグを立てるため useLayoutEffect を使用。
   // こうすることで roomStatus が "reveal" でも revealAnimating が false のまま描画される
@@ -200,9 +204,14 @@ export function useRevealAnimation({
         }
       };
       const now = Date.now();
-      const flipRemainingMs = Math.max(lastFlipEndRef.current - now, 0);
-      const finalizeDelay = flipRemainingMs + RESULT_RECOGNITION_DELAY;
-      setResultIntroReadyAt(now + finalizeDelay);
+      // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）だけ待ってから演出を解禁する。
+      // evaluation が終わるまでこの effect 自体が走らないため、評価完了時刻と余韻の双方を考慮して最大値を取る。
+      const targetIntroAt = Math.max(
+        lastFlipEndRef.current + RESULT_INTRO_DELAY,
+        now + 80 // 評価完了後にもわずかなマージンを置く
+      );
+      const finalizeDelay = Math.max(targetIntroAt - now, 0) + RESULT_RECOGNITION_DELAY;
+      setResultIntroReadyAt(targetIntroAt);
       const linger = setTimeout(() => {
         attemptFinalize();
       }, finalizeDelay);
@@ -315,8 +324,10 @@ export function useRevealAnimation({
       setRevealAnimating(false);
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
-      // finished が来た時点で resultIntroReadyAt が未設定なら、最終フリップ想定時間ぶんだけ待って解禁
-      setResultIntroReadyAt((prev) => prev ?? Date.now() + FLIP_DURATION_MS);
+      // finished が来た時点で resultIntroReadyAt が未設定なら、フリップ完了＋余韻ぶんだけ待って解禁
+      setResultIntroReadyAt((prev) =>
+        prev ?? Date.now() + FLIP_DURATION_MS + RESULT_INTRO_DELAY
+      );
       // リアルタイム結果は保持する（最終表示で使用するため）
       // 必要ならここで setRealtimeResult(null) を呼ぶ
     } else if (roomStatus === "reveal") {
