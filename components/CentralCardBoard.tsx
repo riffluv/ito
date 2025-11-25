@@ -858,6 +858,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return () => window.clearTimeout(timer);
   }, [roomStatus, resultIntroReadyAt]);
 
+  // optimisticReturningIds のタイムアウトクリア用
+  const returningTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
   useEffect(() => {
     const onCardReturning = (event: Event) => {
       const detail = (
@@ -868,6 +871,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       setOptimisticReturningIds((prev) =>
         prev.includes(playerId) ? prev : [...prev, playerId]
       );
+      
+      // タイムアウトを設定: 2秒後に強制クリア（サーバー応答がない場合の保険）
+      const existingTimeout = returningTimeoutsRef.current.get(playerId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      const timeout = setTimeout(() => {
+        returningTimeoutsRef.current.delete(playerId);
+        setOptimisticReturningIds((prev) => prev.filter((id) => id !== playerId));
+      }, 2000);
+      returningTimeoutsRef.current.set(playerId, timeout);
     };
     window.addEventListener(
       "ito:card-returning",
@@ -878,6 +892,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         "ito:card-returning",
         onCardReturning as EventListener
       );
+      // クリーンアップ時に全タイムアウトをクリア
+      returningTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      returningTimeoutsRef.current.clear();
     };
   }, [roomId]);
 
@@ -915,7 +932,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           detail: { roomId, playerId },
         })
       );
-      updatePendingState((prev) => prev.filter((id) => id !== playerId));
+      // ロールバック用に現在の pending のインデックスを保存
+      let previousIndex = -1;
+      updatePendingState((prev) => {
+        previousIndex = prev.indexOf(playerId);
+        return prev.filter((id) => id !== playerId);
+      });
       try {
         await removeCardFromProposal(roomId, playerId);
         playCardPlace();
@@ -923,6 +945,23 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
         playDropInvalid();
+        // エラー時: pending を元に戻す（ロールバック）
+        if (previousIndex >= 0) {
+          updatePendingState((prev) => {
+            // 既に戻っている場合はスキップ
+            if (prev.includes(playerId)) return prev;
+            const next = prev.slice();
+            // 元のインデックスに戻せるなら戻す、無理なら末尾に追加
+            if (previousIndex < next.length) {
+              next.splice(previousIndex, 0, playerId);
+            } else {
+              next.push(playerId);
+            }
+            return next;
+          });
+        }
+        // optimisticReturningIds からも削除（カードを再表示するため）
+        setOptimisticReturningIds((prev) => prev.filter((id) => id !== playerId));
         notify({
           title: "カードを戻せませんでした",
           type: "error",
@@ -1017,6 +1056,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       try {
         if (document.visibilityState === "hidden") {
           updatePendingState((cur) => (cur.length === 0 ? cur : []));
+          // 画面非表示時は楽観状態をすべてリセット
+          setOptimisticProposal(null);
+          setOptimisticReturningIds([]);
         }
       } catch {}
     };
@@ -1740,6 +1782,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 logError("central-card-board", "move-card-in-proposal", error);
                 playDropInvalid();
                 setOptimisticProposal(null);
+                // エラー時は楽観返却状態もクリア
+                setOptimisticReturningIds((prev) =>
+                  prev.filter((id) => id !== activePlayerId)
+                );
               });
               applyOptimisticReorder(activePlayerId, slotIndex);
               return;
@@ -1762,6 +1808,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 if (result === "noop") {
                   dropSession?.complete("noop");
                   onOptimisticProposalChange?.(activePlayerId, null);
+                  // noop 時は optimisticProposal もクリア
+                  setOptimisticProposal(null);
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
                     updatePendingState(() => snapshot);
@@ -1795,6 +1843,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
                 onOptimisticProposalChange?.(activePlayerId, null);
+                // エラー時も optimisticProposal をクリア
+                setOptimisticProposal(null);
                 if (previousPending !== undefined) {
                   const snapshot = previousPending.slice();
                   updatePendingState(() => snapshot);
@@ -1832,6 +1882,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             logError("central-card-board", "move-card-in-proposal", error);
             playDropInvalid();
             setOptimisticProposal(null);
+            // エラー時は楽観返却状態もクリア
+            setOptimisticReturningIds((prev) =>
+              prev.filter((id) => id !== activePlayerId)
+            );
           });
           applyOptimisticReorder(activePlayerId, targetIndex);
         }
