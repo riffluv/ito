@@ -1,23 +1,23 @@
-import { finalizeReveal } from "@/lib/game/room";
-import { evaluateSorted } from "@/lib/game/rules";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import { logDebug, logWarn } from "@/lib/utils/log";
-import {
-  FLIP_DURATION_MS,
-  FLIP_EVALUATION_DELAY,
-  FINAL_TWO_BONUS_DELAY,
-  REVEAL_FIRST_DELAY,
-  REVEAL_STEP_DELAY,
-  RESULT_INTRO_DELAY,
-  RESULT_RECOGNITION_DELAY,
-} from "@/lib/ui/motion";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { RoomDoc } from "@/lib/types";
 import {
   clearSortedRevealCache,
   readSortedRevealCache,
   touchSortedRevealCache,
 } from "@/lib/game/resultPrefetch";
+import { finalizeReveal } from "@/lib/game/room";
+import { evaluateSorted } from "@/lib/game/rules";
+import type { RoomDoc } from "@/lib/types";
+import {
+  FINAL_TWO_BONUS_DELAY,
+  FLIP_DURATION_MS,
+  FLIP_EVALUATION_DELAY,
+  RESULT_INTRO_DELAY,
+  RESULT_RECOGNITION_DELAY,
+  REVEAL_FIRST_DELAY,
+  REVEAL_STEP_DELAY,
+} from "@/lib/ui/motion";
+import { logDebug, logWarn } from "@/lib/utils/log";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type RevealPersistenceDeps = {
   requireDb: typeof import("@/lib/firebase/require").requireDb;
@@ -49,14 +49,18 @@ async function preloadRevealPersistenceDeps(): Promise<RevealPersistenceDeps> {
   return revealPersistenceDepsPromise;
 }
 
-type SimpleIdleCallback = (callback: () => void, options?: { timeout?: number }) => number;
+type SimpleIdleCallback = (
+  callback: () => void,
+  options?: { timeout?: number }
+) => number;
 
 const scheduleRevealPersistenceTask = (task: () => void) => {
   if (typeof window === "undefined") {
     task();
     return;
   }
-  const idle = (window as Window & { requestIdleCallback?: SimpleIdleCallback }).requestIdleCallback;
+  const idle = (window as Window & { requestIdleCallback?: SimpleIdleCallback })
+    .requestIdleCallback;
   if (typeof idle === "function") {
     idle(
       () => {
@@ -101,7 +105,9 @@ export function useRevealAnimation({
     null
   );
   const [finalizeScheduled, setFinalizeScheduled] = useState(false);
-  const [resultIntroReadyAt, setResultIntroReadyAt] = useState<number | null>(null);
+  const [resultIntroReadyAt, setResultIntroReadyAt] = useState<number | null>(
+    null
+  );
   const prevStatusRef = useRef(roomStatus);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
@@ -136,10 +142,15 @@ export function useRevealAnimation({
       return false;
     }
     const reachedEndByRevealIndex = revealIndex >= orderListLength;
-    // 評価結果がまだ届いていない場合は final 判定を遅らせる（人数が増えても待ち時間が削られないようにする）。
+    // orderData が無い場合は index だけで判断
     if (!orderData) {
       return reachedEndByRevealIndex;
     }
+    // 1人（1枚）の場合は評価不要（常に成功）なので、index だけで判断
+    if (orderListLength === 1) {
+      return reachedEndByRevealIndex;
+    }
+    // 評価結果がまだなら「未評価」とみなし、finalize を遅らせる
     if (!realtimeResult) {
       return false;
     }
@@ -158,7 +169,8 @@ export function useRevealAnimation({
   useLayoutEffect(() => {
     const prev = prevStatusRef.current;
     const becameReveal = prev !== "reveal" && roomStatus === "reveal";
-    const startSignal = (!!startPending || roomStatus === "reveal") && orderListLength > 0;
+    const startSignal =
+      (!!startPending || roomStatus === "reveal") && orderListLength > 0;
     const startRaised = startSignal && !startSignalRef.current;
     const shouldStart =
       resolveMode === "sort-submit" &&
@@ -192,7 +204,10 @@ export function useRevealAnimation({
       orderListLength > 0 &&
       hasEvaluatedFinalCard
     ) {
-      logDebug("reveal", "all-cards-revealed", { revealIndex, orderListLength });
+      logDebug("reveal", "all-cards-revealed", {
+        revealIndex,
+        orderListLength,
+      });
       finalizePendingRef.current = true;
       setFinalizeScheduled(true);
       clearSortedRevealCache(roomId);
@@ -204,13 +219,31 @@ export function useRevealAnimation({
         }
       };
       const now = Date.now();
+
+      // 最終カードのフリップ完了時刻を計算。
+      // lastFlipEndRef はフリップ開始時に更新されるため、この時点では正しい値が入っているはず。
+      // ただし、評価完了（hasEvaluatedFinalCard）が先に来た場合や、
+      // lastFlipEndRef が未設定（0）または既に過去の場合は、
+      // 「今からフリップが始まる」と仮定して最低限の余韻を確保する。
+      let safeFlipEnd = lastFlipEndRef.current;
+
+      // lastFlipEndRef が 0（未設定）または既に過去の場合のみ補正
+      // 「今より未来」であれば、それは正しい最終フリップ終了時刻
+      if (safeFlipEnd <= now) {
+        // 最低限「今 + フリップ時間」を確保
+        safeFlipEnd = now + FLIP_DURATION_MS;
+        logDebug("reveal", "flip-end-corrected", {
+          originalFlipEnd: lastFlipEndRef.current,
+          correctedFlipEnd: safeFlipEnd,
+          now,
+          reason: "past-or-zero",
+        });
+      }
+
       // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）だけ待ってから演出を解禁する。
-      // evaluation が終わるまでこの effect 自体が走らないため、評価完了時刻と余韻の双方を考慮して最大値を取る。
-      const targetIntroAt = Math.max(
-        lastFlipEndRef.current + RESULT_INTRO_DELAY,
-        now + 80 // 評価完了後にもわずかなマージンを置く
-      );
-      const finalizeDelay = Math.max(targetIntroAt - now, 0) + RESULT_RECOGNITION_DELAY;
+      const targetIntroAt = safeFlipEnd + RESULT_INTRO_DELAY;
+      const finalizeDelay =
+        Math.max(targetIntroAt - now, 0) + RESULT_RECOGNITION_DELAY;
       setResultIntroReadyAt(targetIntroAt);
       const linger = setTimeout(() => {
         attemptFinalize();
@@ -225,7 +258,7 @@ export function useRevealAnimation({
       revealIndex === 0
         ? REVEAL_FIRST_DELAY
         : REVEAL_STEP_DELAY + (isFinalStretch ? FINAL_TWO_BONUS_DELAY : 0);
-    
+
     const timer = setTimeout(async () => {
       const flipStartedAt = Date.now();
       lastFlipEndRef.current = flipStartedAt + FLIP_DURATION_MS;
@@ -263,46 +296,45 @@ export function useRevealAnimation({
                 currentIndex: nextIndex,
               });
             }
-          
 
-          // 【テスト用】サーバー保存を一時的に無効化
-          if (!result.success && result.failedAt !== null) {
-            // 失敗検出: サーバー保存を無効化してテスト
-          }
-          // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
-          else if (result.success && nextIndex === orderListLength) {
-            // 完全非同期で実行（めくりリズムに影響させない）
-            scheduleRevealPersistenceTask(() => {
-              void (async () => {
-                try {
-                  const { requireDb, doc, runTransaction, serverTimestamp } =
-                    await preloadRevealPersistenceDeps();
-                  const _db = requireDb();
-                  const roomRef = doc(_db, "rooms", roomId);
-                  await runTransaction(_db, async (tx) => {
-                    const currentSnap = await tx.get(roomRef);
-                    if (!currentSnap.exists()) return;
-                    const currentRoom = currentSnap.data() as RoomDoc;
-                    if (currentRoom.result) return; // 既存結果がある場合はスキップ
-                    tx.update(roomRef, {
-                      result: {
-                        success: true,
-                        failedAt: null,
-                        lastNumber: result.last,
-                        revealedAt: serverTimestamp(),
-                      },
+            // 【テスト用】サーバー保存を一時的に無効化
+            if (!result.success && result.failedAt !== null) {
+              // 失敗検出: サーバー保存を無効化してテスト
+            }
+            // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
+            else if (result.success && nextIndex === orderListLength) {
+              // 完全非同期で実行（めくりリズムに影響させない）
+              scheduleRevealPersistenceTask(() => {
+                void (async () => {
+                  try {
+                    const { requireDb, doc, runTransaction, serverTimestamp } =
+                      await preloadRevealPersistenceDeps();
+                    const _db = requireDb();
+                    const roomRef = doc(_db, "rooms", roomId);
+                    await runTransaction(_db, async (tx) => {
+                      const currentSnap = await tx.get(roomRef);
+                      if (!currentSnap.exists()) return;
+                      const currentRoom = currentSnap.data() as RoomDoc;
+                      if (currentRoom.result) return; // 既存結果がある場合はスキップ
+                      tx.update(roomRef, {
+                        result: {
+                          success: true,
+                          failedAt: null,
+                          lastNumber: result.last,
+                          revealedAt: serverTimestamp(),
+                        },
+                      });
                     });
-                  });
-                } catch (e) {
-                  logWarn("reveal", "result-save-error", e);
-                }
-              })();
-            });
+                  } catch (e) {
+                    logWarn("reveal", "result-save-error", e);
+                  }
+                })();
+              });
+            }
           }
+        } catch (e) {
+          logDebug("reveal", "realtime-eval-error", e);
         }
-      } catch (e) {
-        logDebug("reveal", "realtime-eval-error", e);
-      }
       };
       setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
     }, delay);
@@ -324,12 +356,29 @@ export function useRevealAnimation({
       setRevealAnimating(false);
       finalizePendingRef.current = false;
       setFinalizeScheduled(false);
-      // finished が来た時点で resultIntroReadyAt が未設定なら、フリップ完了＋余韻ぶんだけ待って解禁
-      setResultIntroReadyAt((prev) =>
-        prev ?? Date.now() + FLIP_DURATION_MS + RESULT_INTRO_DELAY
-      );
+
+      // finished がローカルのフリップ進行より先に届くことがある。
+      // 最後のフリップ終点を確実に基準にして、余韻を削られないよう clamp する。
+      setResultIntroReadyAt((prev) => {
+        if (prev) return prev;
+        const now = Date.now();
+        const flipEnd = lastFlipEndRef.current;
+
+        // lastFlipEnd が未設定(0)または既に過去の場合のみ補正。
+        // 「今より未来」であれば、それは正しい最終フリップ終了時刻。
+        const safeFlipEnd = flipEnd > now ? flipEnd : now + FLIP_DURATION_MS;
+
+        logDebug("reveal", "finished-intro-time", {
+          originalFlipEnd: flipEnd,
+          safeFlipEnd,
+          now,
+          resultIntroReadyAt: safeFlipEnd + RESULT_INTRO_DELAY,
+        });
+
+        // フリップ終点 + 固定余韻
+        return safeFlipEnd + RESULT_INTRO_DELAY;
+      });
       // リアルタイム結果は保持する（最終表示で使用するため）
-      // 必要ならここで setRealtimeResult(null) を呼ぶ
     } else if (roomStatus === "reveal") {
       if (finalizePendingRef.current) {
         finalizePendingRef.current = false;

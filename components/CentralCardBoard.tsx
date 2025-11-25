@@ -1,6 +1,59 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  InteractiveBoard,
+  MAGNET_IDLE_MARGIN_PX,
+  RETURN_DROP_ZONE_ID,
+  StaticBoard,
+  createInitialMagnetState,
+  usePlayerPresenceState,
+  useResultFlipState,
+  useRevealStatus,
+} from "@/components/central-board";
+import {
+  buildOptimisticProposalSnapshot,
+  prunePendingSlotsInPlace,
+} from "@/components/central-board/optimisticReorder";
+import { useBoardSlots } from "@/components/hooks/useBoardSlots";
+import {
+  DROP_OPTIMISTIC_ENABLED,
+  createDropMetricsSession,
+  useDropHandler,
+} from "@/components/hooks/useDropHandler";
+import { useMagnetController } from "@/components/hooks/useMagnetController";
+import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
+import { CardRenderer } from "@/components/ui/CardRenderer";
+import { notify } from "@/components/ui/notify";
+import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
+import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import {
+  STREAK_BANNER_AUTOHIDE_MS,
+  STREAK_BANNER_AUTOHIDE_REDUCED_MS,
+  STREAK_BANNER_DELAY_MS,
+} from "@/lib/constants/uiTimings";
+import {
+  scheduleAddCardToProposalAtPosition,
+  scheduleMoveCardInProposalToPosition,
+} from "@/lib/game/proposalScheduler";
+import type { ResolveMode } from "@/lib/game/resolveMode";
+import { finalizeReveal, removeCardFromProposal } from "@/lib/game/room";
+import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
+import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
+import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
+import { computeMagnetTransform, type RectLike } from "@/lib/ui/dragMagnet";
+import {
+  FINAL_TWO_BONUS_DELAY,
+  FLIP_DURATION_MS,
+  FLIP_EVALUATION_DELAY,
+  RESULT_INTRO_DELAY,
+  RESULT_RECOGNITION_DELAY,
+  REVEAL_FIRST_DELAY,
+  REVEAL_STEP_DELAY,
+} from "@/lib/ui/motion";
+import { logError, logWarn } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
+import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
 import {
   DragEndEvent,
@@ -13,74 +66,34 @@ import {
   pointerWithin,
   useSensor,
   useSensors,
-  type CollisionDetection,
   type Collision,
+  type CollisionDetection,
   type DropAnimation,
   type DropAnimationKeyframeResolver,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
-import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { unstable_batchedUpdates } from "react-dom";
+import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import dynamic from "next/dynamic";
-import { CardRenderer } from "@/components/ui/CardRenderer";
-import { useDropHandler, DROP_OPTIMISTIC_ENABLED, createDropMetricsSession } from "@/components/hooks/useDropHandler";
-import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
-import { useBoardSlots } from "@/components/hooks/useBoardSlots";
-import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import {
-  scheduleAddCardToProposalAtPosition,
-  scheduleMoveCardInProposalToPosition,
-} from "@/lib/game/proposalScheduler";
-import { finalizeReveal, removeCardFromProposal } from "@/lib/game/room";
-import type { ResolveMode } from "@/lib/game/resolveMode";
-import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
-import { notify } from "@/components/ui/notify";
-import { logError, logWarn } from "@/lib/utils/log";
-import { traceAction } from "@/lib/utils/trace";
-import { setMetric } from "@/lib/utils/metrics";
-import {
-  FINAL_TWO_BONUS_DELAY,
-  FLIP_DURATION_MS,
-  FLIP_EVALUATION_DELAY,
-  REVEAL_FIRST_DELAY,
-  REVEAL_STEP_DELAY,
-  RESULT_INTRO_DELAY,
-  RESULT_RECOGNITION_DELAY,
-} from "@/lib/ui/motion";
-import { computeMagnetTransform, type RectLike } from "@/lib/ui/dragMagnet";
-import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
-import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
-import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
-import {
-  STREAK_BANNER_DELAY_MS,
-  STREAK_BANNER_AUTOHIDE_MS,
-  STREAK_BANNER_AUTOHIDE_REDUCED_MS,
-} from "@/lib/constants/uiTimings";
-import {
-  InteractiveBoard,
-  StaticBoard,
-  RETURN_DROP_ZONE_ID,
-  createInitialMagnetState,
-  MAGNET_IDLE_MARGIN_PX,
-  usePlayerPresenceState,
-  useRevealStatus,
-  useResultFlipState,
-} from "@/components/central-board";
-import { useMagnetController } from "@/components/hooks/useMagnetController";
-import {
-  buildOptimisticProposalSnapshot,
-  prunePendingSlotsInPlace,
-} from "@/components/central-board/optimisticReorder";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { unstable_batchedUpdates } from "react-dom";
 
-const GameResultOverlay = dynamic(() =>
-  import("@/components/ui/GameResultOverlay").then((mod) => mod.GameResultOverlay),
+const GameResultOverlay = dynamic(
+  () =>
+    import("@/components/ui/GameResultOverlay").then(
+      (mod) => mod.GameResultOverlay
+    ),
   { loading: () => null, ssr: false }
 );
 
-const StreakBanner = dynamic(() =>
-  import("@/components/ui/StreakBanner").then((mod) => mod.StreakBanner),
+const StreakBanner = dynamic(
+  () => import("@/components/ui/StreakBanner").then((mod) => mod.StreakBanner),
   { loading: () => null }
 );
 
@@ -104,7 +117,10 @@ interface CentralCardBoardProps {
   uiRevealPending?: boolean;
   dealPlayers?: string[] | null;
   currentStreak?: number;
-  onOptimisticProposalChange?: (playerId: string, state: "placed" | "removed" | null) => void;
+  onOptimisticProposalChange?: (
+    playerId: string,
+    state: "placed" | "removed" | null
+  ) => void;
   sendRoomEvent?: (event: RoomMachineClientEvent) => void;
 }
 
@@ -124,7 +140,11 @@ const buildProposalSignature = (values: (string | null)[]) => {
   if (!values || values.length === 0) {
     return "";
   }
-  return values.map((value) => (typeof value === "string" && value.length > 0 ? value : "_")).join("|");
+  return values
+    .map((value) =>
+      typeof value === "string" && value.length > 0 ? value : "_"
+    )
+    .join("|");
 };
 
 const snapshotRect = (rect: RectLike): RectLike => ({
@@ -134,7 +154,10 @@ const snapshotRect = (rect: RectLike): RectLike => ({
   height: rect.height,
 });
 
-const translateRect = (rect: RectLike, delta: { x: number; y: number }): RectLike => ({
+const translateRect = (
+  rect: RectLike,
+  delta: { x: number; y: number }
+): RectLike => ({
   left: rect.left + delta.x,
   top: rect.top + delta.y,
   width: rect.width,
@@ -167,7 +190,10 @@ const boardCollisionDetection: CollisionDetection = (args) => {
   if (pointerCoordinates) {
     const candidates: { id: UniqueIdentifier; value: number }[] = [];
     droppableRects.forEach((rect, id) => {
-      const dropCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const dropCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
       const dx = pointerCoordinates.x - dropCenter.x;
       const dy = pointerCoordinates.y - dropCenter.y;
       const absDx = Math.abs(dx);
@@ -179,7 +205,10 @@ const boardCollisionDetection: CollisionDetection = (args) => {
         return;
       }
 
-      const radialAllowance = Math.max(Math.min(rect.width, rect.height) * 0.55, 52);
+      const radialAllowance = Math.max(
+        Math.min(rect.width, rect.height) * 0.55,
+        52
+      );
       const distance = Math.hypot(dx, dy);
       if (distance > radialAllowance) {
         return;
@@ -229,7 +258,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   onOptimisticProposalChange,
   sendRoomEvent,
 }) => {
-  const { isRevealing, localRevealPending } = useRevealStatus(roomId, roomStatus, uiRevealPending ?? false);
+  const { isRevealing, localRevealPending } = useRevealStatus(
+    roomId,
+    roomStatus,
+    uiRevealPending ?? false
+  );
 
   // 勝利演出の Pixi モジュールを先読みして、初回から Pixi 版を使えるようにする
   useEffect(() => {
@@ -274,7 +307,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const orderListLength = Array.isArray(orderList) ? orderList.length : 0;
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [optimisticReturningIds, setOptimisticReturningIds] = useState<string[]>([]);
+  const [optimisticReturningIds, setOptimisticReturningIds] = useState<
+    string[]
+  >([]);
   const prefersReducedMotion = useReducedMotionPreference();
 
   const pointerProfile = usePointerProfile();
@@ -313,7 +348,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   // バナーが表示されたまま残るのを防ぐフォールバック
   useEffect(() => {
     if (!showStreakBanner) return undefined;
-    const duration = prefersReducedMotion ? STREAK_BANNER_AUTOHIDE_REDUCED_MS : STREAK_BANNER_AUTOHIDE_MS; // アニメーション完了を十分にカバーするバッファ
+    const duration = prefersReducedMotion
+      ? STREAK_BANNER_AUTOHIDE_REDUCED_MS
+      : STREAK_BANNER_AUTOHIDE_MS; // アニメーション完了を十分にカバーするバッファ
     streakAutoHideRef.current = window.setTimeout(() => {
       setShowStreakBanner(false);
     }, duration);
@@ -326,42 +363,47 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [showStreakBanner, prefersReducedMotion]);
 
   const magnetResetTimeoutRef = useRef<number | null>(null);
-  const [cursorSnapOffset, setCursorSnapOffset] = useState<{ x: number; y: number } | null>(null);
+  const [cursorSnapOffset, setCursorSnapOffset] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const dropRollbackTimersRef = useRef<Map<string, number>>(new Map());
-  const dropRollbackSnapshotsRef = useRef<Map<string, (string | null)[]>>(new Map());
+  const dropRollbackSnapshotsRef = useRef<Map<string, (string | null)[]>>(
+    new Map()
+  );
   const latestActiveProposalRef = useRef<(string | null)[]>([]);
   const pendingRef = useRef<(string | null)[]>([]);
 
-  const magnetConfig = useMemo(
-    () => {
-      const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
-      // 全スロットで同じ立ち上がり時間になるよう、吸着開始距離を広めに統一
-      const snapRadius = prefersReducedMotion ? 140 : isTouchLike ? 220 : 190;
-      const snapThreshold = prefersReducedMotion ? 28 : isTouchLike ? 32 : 26;
-      // 遠距離からの立ち上がりをなだらかにし、スロット1と同じ“溜め”を作る
-      const pullExponent = prefersReducedMotion ? 1.45 : 1.7;
-      const settleProgress = prefersReducedMotion ? 0.9 : 0.78;
-      const overshootStart = prefersReducedMotion ? 0.94 : 0.9;
-      const overshootRatio = prefersReducedMotion ? 0.04 : 0.08;
-      const maxOvershootPx = prefersReducedMotion ? 7 : 12;
-      return {
-        snapRadius,
-        snapThreshold,
-        pullExponent,
-        settleProgress,
-        overshootStart,
-        overshootRatio,
-        maxOvershootPx,
-        isTouch: isTouchLike,
-      };
-    },
-    [
-      prefersReducedMotion,
-      pointerProfile.isCoarsePointer,
-      pointerProfile.isTouchOnly,
-    ]
-  );
-  const magnetController = useMagnetController(magnetConfig, { prefersReducedMotion });
+  const magnetConfig = useMemo(() => {
+    const isTouchLike =
+      pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
+    // 全スロットで同じ立ち上がり時間になるよう、吸着開始距離を広めに統一
+    const snapRadius = prefersReducedMotion ? 140 : isTouchLike ? 220 : 190;
+    const snapThreshold = prefersReducedMotion ? 28 : isTouchLike ? 32 : 26;
+    // 遠距離からの立ち上がりをなだらかにし、スロット1と同じ“溜め”を作る
+    const pullExponent = prefersReducedMotion ? 1.45 : 1.7;
+    const settleProgress = prefersReducedMotion ? 0.9 : 0.78;
+    const overshootStart = prefersReducedMotion ? 0.94 : 0.9;
+    const overshootRatio = prefersReducedMotion ? 0.04 : 0.08;
+    const maxOvershootPx = prefersReducedMotion ? 7 : 12;
+    return {
+      snapRadius,
+      snapThreshold,
+      pullExponent,
+      settleProgress,
+      overshootStart,
+      overshootRatio,
+      maxOvershootPx,
+      isTouch: isTouchLike,
+    };
+  }, [
+    prefersReducedMotion,
+    pointerProfile.isCoarsePointer,
+    pointerProfile.isTouchOnly,
+  ]);
+  const magnetController = useMagnetController(magnetConfig, {
+    prefersReducedMotion,
+  });
   const {
     enqueueMagnetUpdate,
     resetMagnet,
@@ -371,12 +413,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   } = magnetController;
 
   const dropAnimationTargetRef = useRef<RectLike | null>(null);
-  const dropAnimationMetaRef = useRef<{ magnetSnap: boolean }>({ magnetSnap: false });
+  const dropAnimationMetaRef = useRef<{ magnetSnap: boolean }>({
+    magnetSnap: false,
+  });
   const updateDropAnimationTarget = useCallback(
     (rect: RectLike | null, options?: { magnetSnap?: boolean }) => {
       if (rect) {
         dropAnimationTargetRef.current = snapshotRect(rect);
-        dropAnimationMetaRef.current = { magnetSnap: Boolean(options?.magnetSnap) };
+        dropAnimationMetaRef.current = {
+          magnetSnap: Boolean(options?.magnetSnap),
+        };
         return;
       }
       dropAnimationTargetRef.current = null;
@@ -448,7 +494,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     const clearPointerClock = () => {
       dragActivationStartRef.current = null;
     };
-    boardElement.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    boardElement.addEventListener("pointerdown", handlePointerDown, {
+      passive: true,
+    });
     window.addEventListener("pointerup", clearPointerClock);
     window.addEventListener("pointercancel", clearPointerClock);
     return () => {
@@ -467,7 +515,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const queueMagnetReset = useCallback(
     (delayMs: number) => {
-      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
+      if (
+        typeof window !== "undefined" &&
+        magnetResetTimeoutRef.current !== null
+      ) {
         window.clearTimeout(magnetResetTimeoutRef.current);
         magnetResetTimeoutRef.current = null;
       }
@@ -487,7 +538,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     const timersRef = dropRollbackTimersRef;
     const snapshotsRef = dropRollbackSnapshotsRef;
     return () => {
-      if (typeof window !== "undefined" && magnetResetTimeoutRef.current !== null) {
+      if (
+        typeof window !== "undefined" &&
+        magnetResetTimeoutRef.current !== null
+      ) {
         window.clearTimeout(magnetResetTimeoutRef.current);
         magnetResetTimeoutRef.current = null;
       }
@@ -512,48 +566,59 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [enqueueMagnetUpdate, getProjectedMagnetState, scheduleMagnetTarget]);
 
-  const resolveDropAnimationKeyframes = useCallback<DropAnimationKeyframeResolver>(
-    ({ dragOverlay, transform }) => {
-      const overlayRect = dragOverlay?.rect ?? null;
-      const target = dropAnimationTargetRef.current;
-      const magnetSnap = dropAnimationMetaRef.current.magnetSnap;
-      const defaultFrames = [
-        { transform: CSS.Transform.toString(transform.initial) },
-        { transform: CSS.Transform.toString(transform.final) },
-      ];
-      if (!target || !overlayRect) {
-        return defaultFrames;
-      }
+  const resolveDropAnimationKeyframes =
+    useCallback<DropAnimationKeyframeResolver>(
+      ({ dragOverlay, transform }) => {
+        const overlayRect = dragOverlay?.rect ?? null;
+        const target = dropAnimationTargetRef.current;
+        const magnetSnap = dropAnimationMetaRef.current.magnetSnap;
+        const defaultFrames = [
+          { transform: CSS.Transform.toString(transform.initial) },
+          { transform: CSS.Transform.toString(transform.final) },
+        ];
+        if (!target || !overlayRect) {
+          return defaultFrames;
+        }
 
-      const deltaX = target.left - overlayRect.left;
-      const deltaY = target.top - overlayRect.top;
-      const finalTransform = {
-        ...transform.initial,
-        x: transform.initial.x + deltaX,
-        y: transform.initial.y + deltaY,
-        scaleX: 1,
-        scaleY: 1,
-      };
+        const deltaX = target.left - overlayRect.left;
+        const deltaY = target.top - overlayRect.top;
+        const finalTransform = {
+          ...transform.initial,
+          x: transform.initial.x + deltaX,
+          y: transform.initial.y + deltaY,
+          scaleX: 1,
+          scaleY: 1,
+        };
 
-      if (prefersReducedMotion || !magnetSnap) {
+        if (prefersReducedMotion || !magnetSnap) {
+          return [
+            { transform: CSS.Transform.toString(transform.initial) },
+            { transform: CSS.Transform.toString(finalTransform) },
+          ];
+        }
+
         return [
           { transform: CSS.Transform.toString(transform.initial) },
+          {
+            transform: CSS.Transform.toString({
+              ...finalTransform,
+              scaleX: 1.06,
+              scaleY: 1.06,
+            }),
+          },
           { transform: CSS.Transform.toString(finalTransform) },
         ];
-      }
-
-      return [
-        { transform: CSS.Transform.toString(transform.initial) },
-        { transform: CSS.Transform.toString({ ...finalTransform, scaleX: 1.06, scaleY: 1.06 }) },
-        { transform: CSS.Transform.toString(finalTransform) },
-      ];
-    },
-    [prefersReducedMotion]
-  );
+      },
+      [prefersReducedMotion]
+    );
 
   const dropAnimation = useMemo<DropAnimation>(() => {
     if (prefersReducedMotion) {
-      return { duration: 110, easing: "linear", keyframes: resolveDropAnimationKeyframes };
+      return {
+        duration: 110,
+        easing: "linear",
+        keyframes: resolveDropAnimationKeyframes,
+      };
     }
     return {
       duration: 220,
@@ -627,7 +692,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         return;
       }
 
-      if (!over || typeof over.id !== "string" || !over.id.startsWith("slot-")) {
+      if (
+        !over ||
+        typeof over.id !== "string" ||
+        !over.id.startsWith("slot-")
+      ) {
         releaseMagnet();
         return;
       }
@@ -658,7 +727,16 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       enqueueMagnetUpdate({ state: magnetResult });
     },
-    [enqueueMagnetUpdate, getProjectedMagnetState, magnetConfigRef, releaseMagnet, resolveMode, roomStatus, scheduleMagnetTarget, cursorSnapOffset]
+    [
+      enqueueMagnetUpdate,
+      getProjectedMagnetState,
+      magnetConfigRef,
+      releaseMagnet,
+      resolveMode,
+      roomStatus,
+      scheduleMagnetTarget,
+      cursorSnapOffset,
+    ]
   );
 
   const flushPendingDragMove = useCallback(() => {
@@ -682,7 +760,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       if (dragMoveRafRef.current !== null) {
         return;
       }
-      dragMoveRafRef.current = window.requestAnimationFrame(flushPendingDragMove);
+      dragMoveRafRef.current =
+        window.requestAnimationFrame(flushPendingDragMove);
     },
     [flushPendingDragMove, processDragMoveFrame]
   );
@@ -691,19 +770,26 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
   }, [dragBoostEnabled]);
 
-  const { pending, setPending, isOver, setIsOver, canDrop, onDropAtPosition, canDropAtPosition } =
-    useDropHandler({
-      roomId,
-      meId,
-      me,
-      roomStatus,
-      orderList,
-      proposal,
-      hasNumber,
-      mePlaced,
-      dealReady: dealReadyForMe,
-      dealGuardActive,
-    });
+  const {
+    pending,
+    setPending,
+    isOver,
+    setIsOver,
+    canDrop,
+    onDropAtPosition,
+    canDropAtPosition,
+  } = useDropHandler({
+    roomId,
+    meId,
+    me,
+    roomStatus,
+    orderList,
+    proposal,
+    hasNumber,
+    mePlaced,
+    dealReady: dealReadyForMe,
+    dealGuardActive,
+  });
 
   const updatePendingState = useCallback(
     (updater: (prev: (string | null)[]) => (string | null)[]) => {
@@ -774,14 +860,24 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   useEffect(() => {
     const onCardReturning = (event: Event) => {
-      const detail = (event as CustomEvent<{ roomId?: string; playerId?: string }>).detail;
+      const detail = (
+        event as CustomEvent<{ roomId?: string; playerId?: string }>
+      ).detail;
       if (!detail || detail.roomId !== roomId || !detail.playerId) return;
       const playerId = detail.playerId;
-      setOptimisticReturningIds((prev) => (prev.includes(playerId) ? prev : [...prev, playerId]));
+      setOptimisticReturningIds((prev) =>
+        prev.includes(playerId) ? prev : [...prev, playerId]
+      );
     };
-    window.addEventListener("ito:card-returning", onCardReturning as EventListener);
+    window.addEventListener(
+      "ito:card-returning",
+      onCardReturning as EventListener
+    );
     return () => {
-      window.removeEventListener("ito:card-returning", onCardReturning as EventListener);
+      window.removeEventListener(
+        "ito:card-returning",
+        onCardReturning as EventListener
+      );
     };
   }, [roomId]);
 
@@ -792,9 +888,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return;
     }
     const proposalSet = new Set(
-      (proposal as (string | null)[]).filter((id): id is string => typeof id === "string" && id.length > 0)
+      (proposal as (string | null)[]).filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      )
     );
-    setOptimisticReturningIds((prev) => prev.filter((id) => proposalSet.has(id)));
+    setOptimisticReturningIds((prev) =>
+      prev.filter((id) => proposalSet.has(id))
+    );
   }, [proposal, proposalKey, optimisticReturningIds.length]);
 
   useEffect(() => {
@@ -803,7 +903,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [roomStatus]);
 
-  const { resultFlipMap, handleResultCardFlip } = useResultFlipState(roomStatus, orderList);
+  const { resultFlipMap, handleResultCardFlip } = useResultFlipState(
+    roomStatus,
+    orderList
+  );
 
   const returnCardToWaiting = useCallback(
     async (playerId: string) => {
@@ -820,7 +923,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
         playDropInvalid();
-        notify({ title: "カードを戻せませんでした", type: "error", duration: 1200 });
+        notify({
+          title: "カードを戻せませんでした",
+          type: "error",
+          duration: 1200,
+        });
       }
     },
     [roomId, updatePendingState, playCardPlace, playDropInvalid]
@@ -833,9 +940,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         finishedToastRef.current = true;
         const failedAt = realtimeResult?.failedAt ?? null;
         if (typeof failedAt === "number") {
-          notify({ id: `${roomId}-game-result`, title: "失敗！", type: "error", duration: 2000 });
+          notify({
+            id: `${roomId}-game-result`,
+            title: "失敗！",
+            type: "error",
+            duration: 2000,
+          });
         } else {
-          notify({ id: `${roomId}-game-result`, title: "勝利！", type: "success", duration: 2000 });
+          notify({
+            id: `${roomId}-game-result`,
+            title: "勝利！",
+            type: "success",
+            duration: 2000,
+          });
         }
       }
     } else {
@@ -976,7 +1093,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     // 進行中は在室メンバーのみ反映（スロット位置を保持）
     if (Array.isArray(proposal)) {
       const sanitized = proposal.map((id) =>
-        typeof id === "string" && id.length > 0 && eligibleIdSet.has(id) ? id : null
+        typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+          ? id
+          : null
       );
       if (sanitized.some(Boolean)) return sanitized;
     }
@@ -984,25 +1103,39 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     // リビール直前のフォロー（在室メンバーに限定）
     if (normalizedOrder.some(Boolean)) {
       const filteredOrder = normalizedOrder.filter(
-        (id): id is string => typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
+        (id): id is string =>
+          typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
       );
       if (filteredOrder.length > 0) return filteredOrder;
     }
 
     return [];
-  }, [roomStatus, orderList, proposal, orderListKey, proposalKey, eligibleIdSet]);
+  }, [
+    roomStatus,
+    orderList,
+    proposal,
+    orderListKey,
+    proposalKey,
+    eligibleIdSet,
+  ]);
 
   useEffect(() => {
     latestActiveProposalRef.current = activeProposal;
   }, [activeProposal]);
 
-  const [optimisticProposal, setOptimisticProposal] = useState<(string | null)[] | null>(null);
+  const [optimisticProposal, setOptimisticProposal] = useState<
+    (string | null)[] | null
+  >(null);
   const boardProposal = optimisticProposal ?? activeProposal;
 
   const applyOptimisticReorder = useCallback(
     (playerId: string, targetIndex: number) => {
       setOptimisticProposal((prev) => {
-        const next = buildOptimisticProposalSnapshot(prev ?? boardProposal, playerId, targetIndex);
+        const next = buildOptimisticProposalSnapshot(
+          prev ?? boardProposal,
+          playerId,
+          targetIndex
+        );
         return next ?? prev ?? null;
       });
     },
@@ -1012,7 +1145,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const clearDropRollbackTimer = useCallback((playerId?: string) => {
     if (!playerId) {
       if (typeof window !== "undefined") {
-        dropRollbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+        dropRollbackTimersRef.current.forEach((timer) =>
+          window.clearTimeout(timer)
+        );
       }
       dropRollbackTimersRef.current.clear();
       dropRollbackSnapshotsRef.current.clear();
@@ -1046,18 +1181,27 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         onOptimisticProposalChange?.(playerId, null);
         notify({
           title: "配置を巻き戻しました",
-          description: "サーバー反映が遅延したためローカル状態をリセットしました。",
+          description:
+            "サーバー反映が遅延したためローカル状態をリセットしました。",
           type: "info",
           duration: 1400,
         });
       }, timeoutMs);
       dropRollbackTimersRef.current.set(playerId, handle);
     },
-    [clearDropRollbackTimer, prefersReducedMotion, updatePendingState, onOptimisticProposalChange]
+    [
+      clearDropRollbackTimer,
+      prefersReducedMotion,
+      updatePendingState,
+      onOptimisticProposalChange,
+    ]
   );
 
   const proposalLength = boardProposal.length;
-  const placeholderSet = useMemo(() => new Set(missingPlayerIds), [missingPlayerIds]);
+  const placeholderSet = useMemo(
+    () => new Set(missingPlayerIds),
+    [missingPlayerIds]
+  );
   const placeholderSlots = useMemo(() => {
     if (!missingPlayerIds.length) {
       return [];
@@ -1066,7 +1210,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       .map((cardId, idx) =>
         cardId && placeholderSet.has(cardId) ? { slot: idx, cardId } : null
       )
-      .filter((entry): entry is { slot: number; cardId: string } => entry !== null);
+      .filter(
+        (entry): entry is { slot: number; cardId: string } => entry !== null
+      );
   }, [boardProposal, missingPlayerIds.length, placeholderSet]);
   const placeholderLogRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1104,7 +1250,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (!Array.isArray(proposal)) return;
 
     const serverSet = new Set(
-      proposal.filter((id): id is string => typeof id === "string" && id.length > 0)
+      proposal.filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      )
     );
 
     const sanitized = optimisticProposal.map((id) =>
@@ -1168,10 +1316,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return orderListLength;
     }
     return Math.max(proposalLength, availableEligibleCount);
-  }, [slotCount, roomStatus, orderListLength, proposalLength, availableEligibleCount]);
+  }, [
+    slotCount,
+    roomStatus,
+    orderListLength,
+    proposalLength,
+    availableEligibleCount,
+  ]);
 
   const isGameActive = useMemo(
-    () => roomStatus === "clue" || roomStatus === "reveal" || roomStatus === "finished",
+    () =>
+      roomStatus === "clue" ||
+      roomStatus === "reveal" ||
+      roomStatus === "finished",
     [roomStatus]
   );
 
@@ -1281,8 +1438,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
       const SAFETY_BUFFER_MS = 600;
       const total = revealTraversal + lastFlipWindow + SAFETY_BUFFER_MS;
+
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
+        // もしまだローカルがリビール中なら、最低でもローカルの resultIntroReadyAt が来るまで待つ
         if (sendRoomEvent) {
           try {
             sendRoomEvent({ type: "REVEAL_DONE" });
@@ -1298,7 +1457,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
     clearPendingTimer();
     return clearPendingTimer;
-  }, [roomStatus, resolveMode, orderListLength, roomId, finalizeScheduled, sendRoomEvent]);
+  }, [
+    roomStatus,
+    resolveMode,
+    orderListLength,
+    roomId,
+    finalizeScheduled,
+    sendRoomEvent,
+  ]);
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -1306,13 +1472,22 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
       setDragBoostEnabled((prev) => (prev ? prev : true));
-      if (dragActivationStartRef.current !== null && typeof performance !== "undefined") {
-        const latency = Math.max(0, performance.now() - dragActivationStartRef.current);
+      if (
+        dragActivationStartRef.current !== null &&
+        typeof performance !== "undefined"
+      ) {
+        const latency = Math.max(
+          0,
+          performance.now() - dragActivationStartRef.current
+        );
         setMetric("drag", "activationLatencyMs", Math.round(latency));
       }
       dragActivationStartRef.current = null;
       playDragPickup();
-      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      if (
+        typeof navigator !== "undefined" &&
+        typeof navigator.vibrate === "function"
+      ) {
         try {
           navigator.vibrate(6);
         } catch {
@@ -1320,7 +1495,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }
       }
 
-      const coordinates = event.activatorEvent ? getEventCoordinates(event.activatorEvent) : null;
+      const coordinates = event.activatorEvent
+        ? getEventCoordinates(event.activatorEvent)
+        : null;
       const activeRect = getActiveRectWithDelta(event.active);
       if (coordinates && activeRect) {
         const centerX = activeRect.left + activeRect.width / 2;
@@ -1333,7 +1510,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         setCursorSnapOffset(null);
       }
     },
-    [resetMagnet, playDragPickup, setCursorSnapOffset, updateDropAnimationTarget]
+    [
+      resetMagnet,
+      playDragPickup,
+      setCursorSnapOffset,
+      updateDropAnimationTarget,
+    ]
   );
 
   const clearActive = useCallback(
@@ -1356,7 +1538,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           : 260;
       queueMagnetReset(baseDelay);
     },
-    [getProjectedMagnetState, prefersReducedMotion, queueMagnetReset, setIsOver, setCursorSnapOffset]
+    [
+      getProjectedMagnetState,
+      prefersReducedMotion,
+      queueMagnetReset,
+      setIsOver,
+      setCursorSnapOffset,
+    ]
   );
 
   const onDragEnd = useCallback(
@@ -1377,12 +1565,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
 
         const activePlayerId = String(active.id);
-        const alreadyInProposal = (boardProposal as (string | null)[]).includes(activePlayerId);
+        const alreadyInProposal = (boardProposal as (string | null)[]).includes(
+          activePlayerId
+        );
         const isPendingOnly =
           !alreadyInProposal && pendingRef.current.includes(activePlayerId);
         const alreadyPlaced = alreadyInProposal || isPendingOnly;
-        const isSlotTarget = over && typeof over.id === "string" && over.id.startsWith("slot-");
-        const isReturnTarget = over && typeof over.id === "string" && over.id === RETURN_DROP_ZONE_ID;
+        const isSlotTarget =
+          over && typeof over.id === "string" && over.id.startsWith("slot-");
+        const isReturnTarget =
+          over &&
+          typeof over.id === "string" &&
+          over.id === RETURN_DROP_ZONE_ID;
 
         const boardRect = boardContainerRef.current?.getBoundingClientRect();
         const lastPosition = lastDragPositionRef.current;
@@ -1422,7 +1616,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           }
           if (activePlayerId !== meId) {
             playDropInvalid();
-            notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
+            notify({
+              title: "自分のカードだけ戻せます",
+              type: "info",
+              duration: 1200,
+            });
             return;
           }
           initiateReturn();
@@ -1431,7 +1629,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
         if (!over) {
           playDropInvalid();
-          notify({ title: "この位置には置けません", type: "info", duration: 900 });
+          notify({
+            title: "この位置には置けません",
+            type: "info",
+            duration: 900,
+          });
           return;
         }
 
@@ -1446,7 +1648,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           }
           if (activePlayerId !== meId) {
             playDropInvalid();
-            notify({ title: "自分のカードだけ戻せます", type: "info", duration: 1200 });
+            notify({
+              title: "自分のカードだけ戻せます",
+              type: "info",
+              duration: 1200,
+            });
             return;
           }
           initiateReturn();
@@ -1471,7 +1677,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             const originalSlotIndex = slotIndex;
             slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
 
-            if (process.env.NODE_ENV === "development" && originalSlotIndex !== slotIndex) {
+            if (
+              process.env.NODE_ENV === "development" &&
+              originalSlotIndex !== slotIndex
+            ) {
               logWarn("central-card-board", "slot-index-clamped", {
                 originalSlotIndex,
                 slotIndex,
@@ -1480,7 +1689,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               });
             }
 
-            let dropSession: ReturnType<typeof createDropMetricsSession> | null = null;
+            let dropSession: ReturnType<
+              typeof createDropMetricsSession
+            > | null = null;
             let previousPending: (string | null)[] | undefined;
             let insertedPending = false;
             let didPlaySound = false;
@@ -1488,7 +1699,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               if (didPlaySound) return;
               didPlaySound = true;
               playCardPlace();
-              dropSession?.markStage("client.drop.t3_soundPlayedMs", { channel: "success" });
+              dropSession?.markStage("client.drop.t3_soundPlayedMs", {
+                channel: "success",
+              });
             };
 
             if (!alreadyInProposal) {
@@ -1519,24 +1732,33 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
             if (alreadyInProposal) {
               playOnce();
-              scheduleMoveCardInProposalToPosition(roomId, activePlayerId, slotIndex)
-                .catch((error) => {
-                  logError("central-card-board", "move-card-in-proposal", error);
-                  playDropInvalid();
-                  setOptimisticProposal(null);
-                });
+              scheduleMoveCardInProposalToPosition(
+                roomId,
+                activePlayerId,
+                slotIndex
+              ).catch((error) => {
+                logError("central-card-board", "move-card-in-proposal", error);
+                playDropInvalid();
+                setOptimisticProposal(null);
+              });
               applyOptimisticReorder(activePlayerId, slotIndex);
               return;
             }
 
-            const request = scheduleAddCardToProposalAtPosition(roomId, activePlayerId, slotIndex);
+            const request = scheduleAddCardToProposalAtPosition(
+              roomId,
+              activePlayerId,
+              slotIndex
+            );
             if (insertedPending) {
               playOnce();
             }
             request
               .then((result) => {
                 clearDropRollbackTimer(activePlayerId);
-                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result });
+                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
+                  result,
+                });
                 if (result === "noop") {
                   dropSession?.complete("noop");
                   onOptimisticProposalChange?.(activePlayerId, null);
@@ -1546,11 +1768,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   }
                   notify({
                     title: "その位置には置けません",
-                    description: "カードが既に置かれているか、提案が更新されています。",
+                    description:
+                      "カードが既に置かれているか、提案が更新されています。",
                     type: "info",
                   });
                   playDropInvalid();
-                  dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
+                  dropSession?.markStage("client.drop.t1_notifyShownMs", {
+                    origin: "post",
+                  });
                   traceAction("board.drop.attempt", {
                     roomId,
                     playerId: activePlayerId,
@@ -1564,7 +1789,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               })
               .catch((error) => {
                 clearDropRollbackTimer(activePlayerId);
-                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
+                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
+                  result: "error",
+                });
                 dropSession?.complete("error");
                 logError("central-card-board", "add-card-to-proposal", error);
                 onOptimisticProposalChange?.(activePlayerId, null);
@@ -1573,7 +1800,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   updatePendingState(() => snapshot);
                 }
                 playDropInvalid();
-                dropSession?.markStage("client.drop.t1_notifyShownMs", { origin: "error" });
+                dropSession?.markStage("client.drop.t1_notifyShownMs", {
+                  origin: "error",
+                });
                 traceAction("board.drop.attempt", {
                   roomId,
                   playerId: activePlayerId,
@@ -1587,13 +1816,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         }
 
         if (alreadyInProposal) {
-          const targetIndex = (boardProposal as (string | null)[]).indexOf(overId);
+          const targetIndex = (boardProposal as (string | null)[]).indexOf(
+            overId
+          );
           if (targetIndex < 0) {
             playDropInvalid();
             return;
           }
           playCardPlace();
-          scheduleMoveCardInProposalToPosition(roomId, activePlayerId, targetIndex).catch((error) => {
+          scheduleMoveCardInProposalToPosition(
+            roomId,
+            activePlayerId,
+            targetIndex
+          ).catch((error) => {
             logError("central-card-board", "move-card-in-proposal", error);
             playDropInvalid();
             setOptimisticProposal(null);
@@ -1660,10 +1895,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         {isRevealing
           ? `進行状況: ${revealIndex} / ${(orderList || []).length}`
           : roomStatus === "finished"
-          ? realtimeResult?.failedAt !== null && realtimeResult?.failedAt !== undefined
-            ? `結果: ${realtimeResult.failedAt}番目で失敗`
-            : "結果: 成功"
-          : ""}
+            ? realtimeResult?.failedAt !== null &&
+              realtimeResult?.failedAt !== undefined
+              ? `結果: ${realtimeResult.failedAt}番目で失敗`
+              : "結果: 成功"
+            : ""}
       </VisuallyHidden>
 
       <Box
@@ -1730,10 +1966,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           />
         )}
       </Box>
-      {roomStatus === "finished" && (
-        resultOverlayAllowed && (
-          <GameResultOverlay failed={failed} mode="overlay" revealedAt={revealedAt} />
-        )
+      {roomStatus === "finished" && resultOverlayAllowed && (
+        <GameResultOverlay
+          failed={failed}
+          mode="overlay"
+          revealedAt={revealedAt}
+        />
       )}
       <StreakBanner
         streak={currentStreak}
