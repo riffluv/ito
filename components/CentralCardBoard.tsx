@@ -42,9 +42,9 @@ import { traceAction } from "@/lib/utils/trace";
 import { setMetric } from "@/lib/utils/metrics";
 import {
   FINAL_TWO_BONUS_DELAY,
+  FLIP_DURATION_MS,
   FLIP_EVALUATION_DELAY,
   REVEAL_FIRST_DELAY,
-  REVEAL_LINGER,
   REVEAL_STEP_DELAY,
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
@@ -1266,15 +1266,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       orderListLength > 0 &&
       !finalizeScheduled
     ) {
+      const intervalCount = Math.max(orderListLength - 1, 0);
+      const finalBonusSteps = Math.min(intervalCount, 2); // 最後の2枚だけ余韻を追加
       const revealTraversal =
-        REVEAL_FIRST_DELAY + Math.max(0, orderListLength - 1) * REVEAL_STEP_DELAY;
+        REVEAL_FIRST_DELAY +
+        intervalCount * REVEAL_STEP_DELAY +
+        finalBonusSteps * FINAL_TWO_BONUS_DELAY;
 
-      const extraFlipPad =
-        FLIP_EVALUATION_DELAY + (orderListLength > 1 ? FINAL_TWO_BONUS_DELAY : 0);
-      const finalizeDelay =
-        REVEAL_LINGER + extraFlipPad + RESULT_INTRO_DELAY + RESULT_RECOGNITION_DELAY;
+      // 最終カードのフリップ完了から一定時間（RESULT_INTRO_DELAY）待つ。評価待ちと余韻の長い方を採用。
+      const lastFlipWindow = Math.max(
+        FLIP_EVALUATION_DELAY,
+        FLIP_DURATION_MS + RESULT_INTRO_DELAY + RESULT_RECOGNITION_DELAY
+      );
+
       const SAFETY_BUFFER_MS = 600;
-      const total = revealTraversal + finalizeDelay + SAFETY_BUFFER_MS;
+      const total = revealTraversal + lastFlipWindow + SAFETY_BUFFER_MS;
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
         if (sendRoomEvent) {

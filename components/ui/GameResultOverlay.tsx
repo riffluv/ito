@@ -374,8 +374,8 @@ export function GameResultOverlay({
   });
 
   // Pixi を優先し、WebGL が無い / 初期化失敗時のみ SVG を許可
-  const useSvgRays =
-    (!preferPixiRays || initFailed || !webglUsable) && _legacyUseSvgRays;
+  // Pixi を優先し、初期化失敗・非WebGL・Pixi非許可のときだけ SVG を使う（重複発火防止）。
+  const useSvgRays = (initFailed || !webglUsable || !preferPixiRays) && _legacyUseSvgRays;
   const triggerBackgroundFx = useBackgroundFx(prefersReduced);
   const playSuccessNormal = useSoundEffect("clear_success1");
   const playSuccessEpic = useSoundEffect("clear_success2");
