@@ -401,6 +401,22 @@ export function createSpectatorSessionMachine(options?: SpectatorSessionOptions)
               ],
             }),
         on: {
+          REJOIN_SNAPSHOT: [
+            {
+              guard: "isRejoinSnapshotAccepted",
+              target: "rejoinApproved",
+              actions: "assignRejoinSnapshotAccepted",
+            },
+            {
+              guard: "isRejoinSnapshotRejected",
+              target: "rejoinRejected",
+              actions: "assignRejoinSnapshotRejected",
+            },
+            {
+              target: "rejoinPending",
+              actions: "assignRejoinSnapshotPending",
+            },
+          ],
           REQUEST_REJOIN: {
             target: "rejoinPending",
           },
