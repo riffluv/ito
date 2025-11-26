@@ -862,12 +862,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return undefined;
     }
     const now = Date.now();
-    // 最低でも「finished を受け取ってから RESULT_INTRO_DELAY」待つ。
-    // resultIntroReadyAt が未来ならそちらを優先し、過去ならこのクランプで余白を確保する。
-    const target = Math.max(
-      resultIntroReadyAt ?? 0,
-      now + RESULT_INTRO_DELAY
-    );
+    // 最低でも「最後のフリップ完了 + RESULT_INTRO_DELAY」ぶん待つ。
+    // resultIntroReadyAt が過去でも、ミニマムの余韻（FLIP_DURATION+RESULT_INTRO）を確保する。
+    const minimalIntro = now + FLIP_DURATION_MS + RESULT_INTRO_DELAY; // ≈510ms
+    const target = Math.max(resultIntroReadyAt ?? 0, minimalIntro);
     const delay = Math.max(0, target - now);
     setResultOverlayAllowed(false);
     const timer = window.setTimeout(() => setResultOverlayAllowed(true), delay);
@@ -1432,7 +1430,85 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resetOptimisticState,
   ]);
 
-  const proposalLength = boardProposal.length;
+  const proposalSpan = useMemo(() => {
+    for (let i = boardProposal.length - 1; i >= 0; i -= 1) {
+      const value = boardProposal[i];
+      if (
+        typeof value === "string" &&
+        value.length > 0 &&
+        eligibleIdSet.has(value)
+      ) {
+        return i + 1;
+      }
+    }
+    return 0;
+  }, [boardProposal, eligibleIdSet]);
+
+  const pendingSpan = useMemo(() => {
+    for (let i = pending.length - 1; i >= 0; i -= 1) {
+      const value = pending[i];
+      if (typeof value === "string" && value.length > 0) {
+        return i + 1;
+      }
+    }
+    return 0;
+  }, [pending]);
+
+  const orderListSpan = useMemo(() => {
+    if (!Array.isArray(orderList) || orderList.length === 0) return 0;
+    for (let i = orderList.length - 1; i >= 0; i -= 1) {
+      const value = orderList[i];
+      if (
+        typeof value === "string" &&
+        value.length > 0 &&
+        eligibleIdSet.has(value)
+      ) {
+        return i + 1;
+      }
+    }
+    return 0;
+  }, [orderList, eligibleIdSet]);
+
+  const slotCountBase = useMemo(() => {
+    const explicit = typeof slotCount === "number" && slotCount > 0 ? slotCount : 0;
+    const span = Math.max(proposalSpan, pendingSpan, orderListSpan);
+    return Math.max(explicit, availableEligibleCount, span);
+  }, [slotCount, proposalSpan, pendingSpan, orderListSpan, availableEligibleCount]);
+
+  const paddedBoardProposal = useMemo<(string | null)[]>(() => {
+    if (boardProposal.length >= slotCountBase) return boardProposal;
+    const next = boardProposal.slice();
+    while (next.length < slotCountBase) {
+      next.push(null);
+    }
+    return next;
+  }, [boardProposal, slotCountBase]);
+
+  const slotCountFloorRef = useRef(0);
+
+  const slotCountGuarded = useMemo(
+    () =>
+      Boolean(
+        activeId ||
+          pendingHasContent ||
+          optimisticProposal ||
+          optimisticReturningIds.length > 0 ||
+          isOver
+      ),
+    [activeId, pendingHasContent, optimisticProposal, optimisticReturningIds.length, isOver]
+  );
+
+  const resolvedSlotCount = useMemo(() => {
+    const base = slotCountBase;
+    if (slotCountGuarded) {
+      const floor = Math.max(slotCountFloorRef.current, base);
+      slotCountFloorRef.current = floor;
+      return floor;
+    }
+    slotCountFloorRef.current = base;
+    return base;
+  }, [slotCountBase, slotCountGuarded]);
+
   const placeholderSet = useMemo(
     () => new Set(missingPlayerIds),
     [missingPlayerIds]
@@ -1539,24 +1615,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     });
   }, [proposalKey, roomId, activeProposal, orderListLength]);
 
-  const slotCountDragging = useMemo(() => {
-    if (typeof slotCount === "number" && slotCount > 0) return slotCount;
-    return Math.max(proposalLength, availableEligibleCount);
-  }, [slotCount, proposalLength, availableEligibleCount]);
-
-  const slotCountStatic = useMemo(() => {
-    if (typeof slotCount === "number" && slotCount > 0) return slotCount;
-    if (roomStatus === "reveal" || roomStatus === "finished") {
-      return orderListLength;
-    }
-    return Math.max(proposalLength, availableEligibleCount);
-  }, [
-    slotCount,
-    roomStatus,
-    orderListLength,
-    proposalLength,
-    availableEligibleCount,
-  ]);
+  const slotCountDragging = resolvedSlotCount;
+  const slotCountStatic = resolvedSlotCount;
 
   const isGameActive = useMemo(
     () =>
@@ -1569,7 +1629,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const { dragSlots, staticSlots, waitingPlayers } = useBoardSlots({
     slotCountDragging,
     slotCountStatic,
-    activeProposal: boardProposal,
+    activeProposal: paddedBoardProposal,
     pending,
     playerReadyMap,
     optimisticReturningIds,
@@ -1671,7 +1731,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       );
 
       const SAFETY_BUFFER_MS = 600;
-      const total = revealTraversal + lastFlipWindow + SAFETY_BUFFER_MS;
+      const baseTotal = revealTraversal + lastFlipWindow + SAFETY_BUFFER_MS;
+      const introAligned = resultIntroReadyAt
+        ? resultIntroReadyAt + RESULT_RECOGNITION_DELAY + SAFETY_BUFFER_MS - Date.now()
+        : 0;
+      const total = Math.max(baseTotal, introAligned);
 
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
@@ -1698,6 +1762,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     roomId,
     finalizeScheduled,
     sendRoomEvent,
+    resultIntroReadyAt,
   ]);
 
   const onDragStart = useCallback(

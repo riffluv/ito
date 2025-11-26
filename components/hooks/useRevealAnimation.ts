@@ -6,6 +6,7 @@ import {
 } from "@/lib/game/resultPrefetch";
 import { finalizeReveal } from "@/lib/game/room";
 import { evaluateSorted } from "@/lib/game/rules";
+import type { SoundId } from "@/lib/audio/types";
 import type { RoomDoc } from "@/lib/types";
 import {
   FINAL_TWO_BONUS_DELAY,
@@ -17,7 +18,21 @@ import {
   REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
 import { logWarn } from "@/lib/utils/log";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+type FlipPlan = {
+  index: number;
+  startAt: number;
+  endAt: number;
+  evalAt: number;
+};
 
 type RevealPersistenceDeps = {
   requireDb: typeof import("@/lib/firebase/require").requireDb;
@@ -73,6 +88,20 @@ const scheduleRevealPersistenceTask = (task: () => void) => {
   window.setTimeout(task, 0);
 };
 
+const scheduleIdleRevealTask = (task: () => void, timeout = 1200) => {
+  if (typeof window === "undefined") {
+    task();
+    return;
+  }
+  const idle = (window as Window & { requestIdleCallback?: SimpleIdleCallback })
+    .requestIdleCallback;
+  if (typeof idle === "function") {
+    idle(task, { timeout });
+    return;
+  }
+  window.setTimeout(task, 16);
+};
+
 interface RealtimeResult {
   success: boolean;
   failedAt: number | null;
@@ -116,6 +145,11 @@ export function useRevealAnimation({
   const finalizePendingRef = useRef(false);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFlipEndRef = useRef<number>(0);
+  const flipPlanRef = useRef<FlipPlan[]>([]);
+  const prewarmStateRef = useRef<{
+    ready: boolean;
+    promise: Promise<void> | null;
+  }>({ ready: false, promise: null });
 
   useEffect(() => {
     if (resolveMode === "sort-submit" && orderListLength > 0) {
@@ -137,6 +171,58 @@ export function useRevealAnimation({
     }
     touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
   }, [orderData, resolveMode, roomId]);
+
+  const ensureRevealPrewarm = useCallback(() => {
+    if (prewarmStateRef.current.ready) {
+      return Promise.resolve();
+    }
+    if (prewarmStateRef.current.promise) {
+      return prewarmStateRef.current.promise;
+    }
+    const prewarmSounds: SoundId[] = [
+      "card_flip",
+      "clear_success1",
+      "clear_failure",
+    ];
+    const promise = new Promise<void>((resolve) => {
+      scheduleIdleRevealTask(() => {
+        const tasks: Promise<unknown>[] = [];
+        tasks.push(
+          import("@/components/ui/ThreeBackground")
+            .then(() => {})
+            .catch(() => {})
+        );
+        tasks.push(
+          import("@/lib/pixi/victoryRays")
+            .then(() => {})
+            .catch(() => {})
+        );
+        tasks.push(
+          import("@/lib/audio/global")
+            .then(async ({ getGlobalSoundManager }) => {
+              const manager = getGlobalSoundManager();
+              if (manager) {
+                await manager.prewarm(prewarmSounds);
+              }
+            })
+            .catch(() => {})
+        );
+
+        void Promise.allSettled(tasks).then(() => resolve());
+      }, 900);
+    })
+      .then(() => {
+        prewarmStateRef.current.ready = true;
+      })
+      .catch(() => {
+        // prewarm failure is non-fatal
+      });
+
+    prewarmStateRef.current.promise = promise.finally(() => {
+      prewarmStateRef.current.promise = null;
+    });
+    return prewarmStateRef.current.promise;
+  }, []);
 
   const hasEvaluatedFinalCard = useMemo(() => {
     if (resolveMode !== "sort-submit") {
@@ -169,6 +255,12 @@ export function useRevealAnimation({
     orderListLength > 0 &&
     revealIndex >= orderListLength &&
     hasEvaluatedFinalCard;
+
+  useEffect(() => {
+    if ((startPending || roomStatus === "reveal") && orderListLength > 0) {
+      void ensureRevealPrewarm();
+    }
+  }, [ensureRevealPrewarm, orderListLength, roomStatus, startPending]);
 
   // 最終カードがめくれたあとに必ず入れる“余韻”時間（人数に依存させず一定）
   // フリップ完了から RESULT_INTRO_DELAY 分だけ待ってから演出・結果表示を解禁する。
@@ -216,106 +308,229 @@ export function useRevealAnimation({
     revealIndexRef.current = revealIndex;
   }, [revealIndex]);
 
-  // リビールアニメの進行を管理
+  const scheduledTimersRef = useRef<number[]>([]);
+  const lastActualFlipAtRef = useRef<number>(0);
+
+  const clearScheduledTimers = () => {
+    if (scheduledTimersRef.current.length === 0) return;
+    scheduledTimersRef.current.forEach((id) => clearTimeout(id));
+    scheduledTimersRef.current = [];
+  };
+
+  const runRealtimeEvaluation = useCallback(
+    (nextIndex: number) => {
+      try {
+        if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
+          const currentList = orderData.list.slice(0, nextIndex);
+          const cached = readSortedRevealCache(roomId, nextIndex);
+          const result = cached ?? evaluateSorted(currentList, orderData.numbers);
+          if (!cached) {
+            touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
+          }
+          if (!result.success && result.failedAt !== null) {
+            setRealtimeResult({
+              success: false,
+              failedAt: result.failedAt,
+              currentIndex: nextIndex,
+            });
+          } else {
+            setRealtimeResult({
+              success: result.success,
+              failedAt: result.failedAt,
+              currentIndex: nextIndex,
+            });
+          }
+
+          // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
+          if (result.success && nextIndex === orderListLength) {
+            scheduleRevealPersistenceTask(() => {
+              void (async () => {
+                try {
+                  const { requireDb, doc, runTransaction, serverTimestamp } =
+                    await preloadRevealPersistenceDeps();
+                  const _db = requireDb();
+                  const roomRef = doc(_db, "rooms", roomId);
+                  await runTransaction(_db, async (tx) => {
+                    const currentSnap = await tx.get(roomRef);
+                    if (!currentSnap.exists()) return;
+                    const currentRoom = currentSnap.data() as RoomDoc;
+                    if (currentRoom.result) return; // 既存結果がある場合はスキップ
+                    tx.update(roomRef, {
+                      result: {
+                        success: true,
+                        failedAt: null,
+                        lastNumber: result.last,
+                        revealedAt: serverTimestamp(),
+                      },
+                    });
+                  });
+                } catch (e) {
+                  logWarn("reveal", "result-save-error", e);
+                }
+              })();
+            });
+          }
+        }
+      } catch (e) {
+        logWarn("reveal", "realtime-eval-error", e);
+      }
+    },
+    [orderData, orderListLength, roomId]
+  );
+
+  const REVEAL_DEBUG_LOG_ENABLED =
+    typeof process !== "undefined" &&
+    process.env.NEXT_PUBLIC_DEBUG_REVEAL_SCHEDULE === "1";
+
+  const PREWARM_GRACE_MS = 220; // コールドスタートを避けるための短い待機
+
+  const buildFlipPlan = useCallback(
+    (length: number, startAt: number): FlipPlan[] => {
+      const plan: FlipPlan[] = [];
+      let cursor = startAt + REVEAL_FIRST_DELAY;
+      for (let idx = 0; idx < length; idx += 1) {
+        const nextIndex = idx + 1;
+        const remainingAfterNext = length - nextIndex;
+        const bonus =
+          remainingAfterNext > 0 && remainingAfterNext <= 2
+            ? FINAL_TWO_BONUS_DELAY
+            : 0;
+        plan.push({
+          index: nextIndex,
+          startAt: cursor,
+          endAt: cursor + FLIP_DURATION_MS,
+          evalAt: cursor + FLIP_EVALUATION_DELAY,
+        });
+        cursor += REVEAL_STEP_DELAY + bonus;
+      }
+      return plan;
+    },
+    []
+  );
+
+  const MIN_REVEAL_GAP_MS = 140; // 最低でもこれだけ間合いを確保して圧縮を防ぐ
+
   useEffect(() => {
     if (!revealAnimating || finalizeReady) {
+      clearScheduledTimers();
+      flipPlanRef.current = [];
       return undefined;
     }
 
-    // 1枚目だけ間を短くして「固まった」印象を避ける
-    const remainingCards = Math.max(orderListLength - revealIndex, 0);
-    const isFinalStretch = remainingCards > 0 && remainingCards <= 2;
-    const delay =
-      revealIndex === 0
-        ? REVEAL_FIRST_DELAY
-        : REVEAL_STEP_DELAY + (isFinalStretch ? FINAL_TWO_BONUS_DELAY : 0);
+    let cancelled = false;
+    clearScheduledTimers();
+    flipPlanRef.current = [];
+    lastActualFlipAtRef.current = 0;
 
-    const timer = setTimeout(async () => {
-      const flipStartedAt = Date.now();
-      lastFlipEndRef.current = flipStartedAt + FLIP_DURATION_MS;
+    const scheduleRun = async () => {
+      try {
+        const prewarmPromise = ensureRevealPrewarm();
+        let prewarmCompleted = false;
+        await Promise.race([
+          prewarmPromise
+            .then(() => {
+              prewarmCompleted = true;
+            })
+            .catch((error) => {
+              logWarn("reveal", "prewarm-failed", error);
+            }),
+          new Promise<void>((resolve) => setTimeout(resolve, PREWARM_GRACE_MS)),
+        ]);
 
-      // 次にめくる枚数（この時点ではまだ state 更新前）
-      const nextIndex = Math.min(revealIndex + 1, orderListLength);
-
-      // インデックスを進める（めくり開始）
-      setRevealIndex((i) => (i >= orderListLength ? i : i + 1));
-
-      const handleRealtimeEvaluation = () => {
-        try {
-          if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
-            const currentList = orderData.list.slice(0, nextIndex);
-            const cached = readSortedRevealCache(roomId, nextIndex);
-            const result =
-              cached ?? evaluateSorted(currentList, orderData.numbers);
-            if (!cached) {
-              touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
-            }
-            // 失敗 or 成功をめくり完了後にUIへ反映
-            if (!result.success && result.failedAt !== null) {
-              setRealtimeResult({
-                success: false,
-                failedAt: result.failedAt,
-                currentIndex: nextIndex,
-              });
-            } else {
-              // 成功継続時
-              setRealtimeResult({
-                success: result.success,
-                failedAt: result.failedAt,
-                currentIndex: nextIndex,
-              });
-            }
-
-            // 【テスト用】サーバー保存を一時的に無効化
-            if (!result.success && result.failedAt !== null) {
-              // 失敗検出: サーバー保存を無効化してテスト
-            }
-            // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
-            else if (result.success && nextIndex === orderListLength) {
-              // 完全非同期で実行（めくりリズムに影響させない）
-              scheduleRevealPersistenceTask(() => {
-                void (async () => {
-                  try {
-                    const { requireDb, doc, runTransaction, serverTimestamp } =
-                      await preloadRevealPersistenceDeps();
-                    const _db = requireDb();
-                    const roomRef = doc(_db, "rooms", roomId);
-                    await runTransaction(_db, async (tx) => {
-                      const currentSnap = await tx.get(roomRef);
-                      if (!currentSnap.exists()) return;
-                      const currentRoom = currentSnap.data() as RoomDoc;
-                      if (currentRoom.result) return; // 既存結果がある場合はスキップ
-                      tx.update(roomRef, {
-                        result: {
-                          success: true,
-                          failedAt: null,
-                          lastNumber: result.last,
-                          revealedAt: serverTimestamp(),
-                        },
-                      });
-                    });
-                  } catch (e) {
-                    logWarn("reveal", "result-save-error", e);
-                  }
-                })();
-              });
-            }
-          }
-        } catch (e) {
-          logWarn("reveal", "realtime-eval-error", e);
+        if (!prewarmCompleted) {
+          await prewarmPromise.catch(() => void 0);
         }
-      };
-    setTimeout(handleRealtimeEvaluation, FLIP_EVALUATION_DELAY); // 視覚上のフリップ完了と評価処理を同期
-  }, delay);
 
-    return () => clearTimeout(timer);
+        if (cancelled) return;
+
+        const base = Date.now();
+        const plan = buildFlipPlan(orderListLengthRef.current, base);
+        flipPlanRef.current = plan;
+
+        if (plan.length > 0) {
+          const last = plan[plan.length - 1];
+          lastFlipEndRef.current = last.endAt;
+          setResultIntroReadyAt(last.endAt + RESULT_INTRO_DELAY);
+        }
+
+        const scheduleFlip = (item: FlipPlan) => {
+          if (cancelled) return;
+          const now = Date.now();
+          const sinceLast =
+            lastActualFlipAtRef.current > 0
+              ? now - lastActualFlipAtRef.current
+              : Number.POSITIVE_INFINITY;
+          const timeUntilStart = item.startAt - now;
+          const guardDelay =
+            sinceLast < MIN_REVEAL_GAP_MS
+              ? MIN_REVEAL_GAP_MS - sinceLast
+              : 0;
+          const delay = Math.max(timeUntilStart, guardDelay, 0);
+
+          const timer = window.setTimeout(() => {
+            if (cancelled) return;
+
+            const actualStart = Date.now();
+            const safeEnd = Math.max(
+              item.endAt,
+              actualStart + FLIP_DURATION_MS
+            );
+            lastActualFlipAtRef.current = actualStart;
+            lastFlipEndRef.current = safeEnd;
+
+            setRevealIndex((i) => (i >= item.index ? i : item.index));
+
+            if (REVEAL_DEBUG_LOG_ENABLED) {
+              logWarn("reveal", "schedule-drift", {
+                index: item.index,
+                plannedStart: item.startAt,
+                actualStart,
+                driftStartMs: actualStart - item.startAt,
+                plannedEnd: item.endAt,
+                actualEnd: safeEnd,
+                driftEndMs: safeEnd - item.endAt,
+                gapFromPrevMs:
+                  sinceLast === Number.POSITIVE_INFINITY ? null : sinceLast,
+              });
+            }
+
+            const evalDelay = Math.max(item.evalAt - Date.now(), 0);
+            const evalTimer = window.setTimeout(() => {
+              runRealtimeEvaluation(item.index);
+            }, evalDelay);
+            scheduledTimersRef.current.push(evalTimer);
+
+            const next = flipPlanRef.current[item.index];
+            if (next) {
+              scheduleFlip(next);
+            }
+          }, delay);
+
+          scheduledTimersRef.current.push(timer);
+        };
+
+        if (plan.length > 0) {
+          scheduleFlip(plan[0]);
+        }
+      } catch (error) {
+        logWarn("reveal", "schedule-run-failed", error);
+      }
+    };
+
+    void scheduleRun();
+
+    return () => {
+      cancelled = true;
+      clearScheduledTimers();
+    };
   }, [
     finalizeReady,
-    orderData,
     orderListLength,
     revealAnimating,
-    revealIndex,
-    roomId,
+    buildFlipPlan,
+    ensureRevealPrewarm,
+    runRealtimeEvaluation,
+    REVEAL_DEBUG_LOG_ENABLED,
   ]);
 
   useEffect(() => {
