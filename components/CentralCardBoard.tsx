@@ -373,6 +373,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
   const latestActiveProposalRef = useRef<(string | null)[]>([]);
   const pendingRef = useRef<(string | null)[]>([]);
+  const forceResyncTimerRef = useRef<number | null>(null);
+  const optimisticSessionRef = useRef(0);
 
   const magnetConfig = useMemo(() => {
     const isTouchLike =
@@ -544,6 +546,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       ) {
         window.clearTimeout(magnetResetTimeoutRef.current);
         magnetResetTimeoutRef.current = null;
+      }
+      if (
+        typeof window !== "undefined" &&
+        forceResyncTimerRef.current !== null
+      ) {
+        window.clearTimeout(forceResyncTimerRef.current);
+        forceResyncTimerRef.current = null;
       }
       if (typeof window !== "undefined" && timersRef.current.size > 0) {
         timersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -805,6 +814,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   useEffect(() => {
     pendingRef.current = pending;
   }, [pending]);
+
+  const pendingHasContent = useMemo(
+    () => pending.some((id) => typeof id === "string" && id.length > 0),
+    [pending]
+  );
 
   const playerReadyMap = useMemo(() => {
     const map = new Map<string, boolean>();
@@ -1179,18 +1193,76 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   >(null);
   const boardProposal = optimisticProposal ?? activeProposal;
 
-  const applyOptimisticReorder = useCallback(
-    (playerId: string, targetIndex: number) => {
-      setOptimisticProposal((prev) => {
-        const next = buildOptimisticProposalSnapshot(
-          prev ?? boardProposal,
-          playerId,
-          targetIndex
-        );
-        return next ?? prev ?? null;
+  const renderedProposalForSignature = useMemo<(string | null)[]>(() => {
+    const base = (optimisticProposal ?? activeProposal).slice();
+    const working = base.slice();
+
+    const pendingIndexById = new Map<string, number>();
+    pending.forEach((value, idx) => {
+      if (typeof value === "string" && value.length > 0) {
+        pendingIndexById.set(value, idx);
+      }
+    });
+
+    if (pendingIndexById.size > 0) {
+      let maxIndex = working.length - 1;
+      pendingIndexById.forEach((idx) => {
+        if (idx > maxIndex) maxIndex = idx;
       });
-    },
-    [boardProposal]
+      while (working.length <= maxIndex) {
+        working.push(null);
+      }
+      pendingIndexById.forEach((idx, cardId) => {
+        const existingIdx = working.findIndex((value) => value === cardId);
+        if (existingIdx >= 0 && existingIdx !== idx) {
+          working[existingIdx] = null;
+        }
+        working[idx] = cardId;
+      });
+    }
+
+    if (optimisticReturningIds.length > 0) {
+      const returning = new Set(optimisticReturningIds);
+      for (let i = 0; i < working.length; i += 1) {
+        const value = working[i];
+        if (typeof value === "string" && returning.has(value)) {
+          working[i] = null;
+        }
+      }
+    }
+
+    return prunePendingSlotsInPlace(working);
+  }, [activeProposal, optimisticProposal, pending, optimisticReturningIds]);
+
+  const renderedProposalSignature = useMemo(
+    () => buildProposalSignature(renderedProposalForSignature),
+    [renderedProposalForSignature]
+  );
+
+  const serverProposalSignature = useMemo(
+    () => buildProposalSignature(activeProposal),
+    [activeProposal]
+  );
+
+  const optimisticStateKey = useMemo(() => {
+    const pendingSnapshot = prunePendingSlotsInPlace([...pending]);
+    const pendingSignature = pendingHasContent
+      ? buildProposalSignature(pendingSnapshot)
+      : "";
+    const returningKey =
+      optimisticReturningIds.length > 0 ? optimisticReturningIds.join(",") : "";
+    const optimisticSignature = optimisticProposal
+      ? buildProposalSignature(optimisticProposal)
+      : "";
+    return [optimisticSignature, pendingSignature, returningKey].join("#");
+  }, [optimisticProposal, pending, pendingHasContent, optimisticReturningIds]);
+
+  const hasOptimisticState = useMemo(
+    () =>
+      Boolean(optimisticProposal) ||
+      pendingHasContent ||
+      optimisticReturningIds.length > 0,
+    [optimisticProposal, pendingHasContent, optimisticReturningIds.length]
   );
 
   const clearDropRollbackTimer = useCallback((playerId?: string) => {
@@ -1211,6 +1283,68 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     dropRollbackTimersRef.current.delete(playerId);
     dropRollbackSnapshotsRef.current.delete(playerId);
   }, []);
+
+  const clearForceResyncTimer = useCallback(() => {
+    if (forceResyncTimerRef.current) {
+      clearTimeout(forceResyncTimerRef.current);
+      forceResyncTimerRef.current = null;
+    }
+  }, []);
+
+  const resetOptimisticState = useCallback(
+    (reason: "hash-mismatch" | "forced-sync") => {
+      if (
+        !optimisticProposal &&
+        !pendingHasContent &&
+        optimisticReturningIds.length === 0
+      ) {
+        return;
+      }
+      clearForceResyncTimer();
+      clearDropRollbackTimer();
+      dropRollbackSnapshotsRef.current.clear();
+      const returningMap = returningTimeoutsRef.current;
+      returningMap.forEach((timeout) => clearTimeout(timeout));
+      returningMap.clear();
+      pendingRef.current = [];
+      unstable_batchedUpdates(() => {
+        setOptimisticProposal(null);
+        setPending(() => []);
+        setOptimisticReturningIds([]);
+      });
+      traceAction("proposal.resync", {
+        roomId,
+        reason,
+        serverSig: serverProposalSignature,
+        localSig: renderedProposalSignature,
+      });
+    },
+    [
+      clearDropRollbackTimer,
+      clearForceResyncTimer,
+      optimisticProposal,
+      pendingHasContent,
+      optimisticReturningIds.length,
+      roomId,
+      serverProposalSignature,
+      renderedProposalSignature,
+      setPending,
+    ]
+  );
+
+  const applyOptimisticReorder = useCallback(
+    (playerId: string, targetIndex: number) => {
+      setOptimisticProposal((prev) => {
+        const next = buildOptimisticProposalSnapshot(
+          prev ?? boardProposal,
+          playerId,
+          targetIndex
+        );
+        return next ?? prev ?? null;
+      });
+    },
+    [boardProposal]
+  );
 
   const scheduleDropRollback = useCallback(
     (playerId: string, snapshot: (string | null)[]) => {
@@ -1247,6 +1381,56 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       onOptimisticProposalChange,
     ]
   );
+
+  const lastServerSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!hasOptimisticState) {
+      lastServerSignatureRef.current = serverProposalSignature;
+      return undefined;
+    }
+    if (serverProposalSignature === lastServerSignatureRef.current) {
+      return undefined;
+    }
+    lastServerSignatureRef.current = serverProposalSignature;
+    if (renderedProposalSignature === serverProposalSignature) {
+      return undefined;
+    }
+    resetOptimisticState("hash-mismatch");
+    return undefined;
+  }, [
+    hasOptimisticState,
+    renderedProposalSignature,
+    resetOptimisticState,
+    serverProposalSignature,
+  ]);
+
+  // 強制同期: 楽観状態は最長 ~1.7–1.9s でサーバー値に揃える
+  useEffect(() => {
+    if (!hasOptimisticState) {
+      clearForceResyncTimer();
+      return undefined;
+    }
+    if (typeof window === "undefined") return undefined;
+    const sessionId = optimisticSessionRef.current + 1;
+    optimisticSessionRef.current = sessionId;
+    clearForceResyncTimer();
+    const timeoutMs = prefersReducedMotion ? 1900 : 1700;
+    forceResyncTimerRef.current = window.setTimeout(() => {
+      if (optimisticSessionRef.current !== sessionId) return;
+      resetOptimisticState("forced-sync");
+      forceResyncTimerRef.current = null;
+    }, timeoutMs);
+    return () => {
+      clearForceResyncTimer();
+    };
+  }, [
+    clearForceResyncTimer,
+    hasOptimisticState,
+    optimisticStateKey,
+    prefersReducedMotion,
+    resetOptimisticState,
+  ]);
 
   const proposalLength = boardProposal.length;
   const placeholderSet = useMemo(
@@ -1289,11 +1473,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   useEffect(() => {
     if (!optimisticProposal) return;
     const optimisticKey = buildProposalSignature(optimisticProposal);
-    const serverKey = buildProposalSignature(activeProposal);
-    if (optimisticKey === serverKey) {
+    if (optimisticKey === serverProposalSignature) {
       setOptimisticProposal(null);
     }
-  }, [optimisticProposal, activeProposal]);
+  }, [optimisticProposal, serverProposalSignature]);
 
   // サーバー側からカードが消えているのに、ローカルの楽観提案にだけ残ってしまうケースを補正する
   useEffect(() => {
