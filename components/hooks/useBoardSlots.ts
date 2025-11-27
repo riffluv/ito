@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 
 interface SlotDescriptorBase {
+  slotId: string;
   idx: number;
   totalSlots: number;
   droppableId: string;
@@ -66,6 +67,13 @@ export function useBoardSlots({
   playerMap,
   activeId,
 }: UseBoardSlotsParams) {
+  const slotIdSeedRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10)
+  );
+  const slotIdFor = (idx: number) => `slot-${idx}-${slotIdSeedRef.current}`;
+
   const optimisticReturningSet = useMemo(
     () => new Set(optimisticReturningIds),
     [optimisticReturningIds]
@@ -103,6 +111,7 @@ export function useBoardSlots({
         cardId !== null && cardId !== undefined && optimisticReturningSet.has(cardId);
       const showCard = !!cardId && ready && !isOptimistic;
       return {
+        slotId: slotIdFor(idx),
         idx,
         totalSlots: slotCountDragging,
         droppableId: `slot-${idx}`,
@@ -143,6 +152,7 @@ export function useBoardSlots({
       const forceVisible = roomStatus === "reveal" || roomStatus === "finished";
       const showCard = !!cardId && !isOptimistic && isGameActive && (ready || forceVisible);
       return {
+        slotId: slotIdFor(idx),
         idx,
         totalSlots: slotCountStatic,
         droppableId: `slot-${idx}`,

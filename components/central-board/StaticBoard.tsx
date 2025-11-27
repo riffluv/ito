@@ -45,60 +45,64 @@ function StaticBoardBase({
     <>
       <BoardFrame isActive={isOver && canDrop}>
         {slots.map((slot) => {
-          if (slot.showCard && slot.cardId) {
-            return (
-              <React.Fragment key={slot.cardId ?? `slot-${slot.idx}`}>
-                {renderCard(slot.cardId, slot.idx)}
-              </React.Fragment>
-            );
-          }
+          const showCard = slot.showCard && slot.cardId;
 
-          if (slot.allowDrop) {
-            return (
-              <EmptyCard
-                key={`drop-zone-${slot.idx}`}
-                slotNumber={slot.idx + 1}
-                totalSlots={slot.totalSlots}
-                isDroppable
-                alignSelf="flex-start"
-                onDragOver={() => onSlotEnter(slot.idx)}
-                onDragLeave={onSlotLeave}
-                onDrop={(event) => onDropAtPosition(event, slot.idx)}
-                _focusVisible={{
-                  outline: "2px solid",
-                  outlineColor: "focusRing",
-                  outlineOffset: 2,
-                }}
-                tabIndex={0}
-              />
-            );
-          }
+          const emptyCard = (
+            <EmptyCard
+              slotNumber={slot.idx + 1}
+              totalSlots={slot.totalSlots}
+              isDroppable={slot.allowDrop && !showCard}
+              alignSelf="flex-start"
+              id={slot.droppableId}
+              onDragOver={slot.allowDrop && !showCard ? () => onSlotEnter(slot.idx) : undefined}
+              onDragLeave={slot.allowDrop && !showCard ? onSlotLeave : undefined}
+              onDrop={slot.allowDrop && !showCard ? (event) => onDropAtPosition(event, slot.idx) : undefined}
+              _focusVisible={{
+                outline: "2px solid",
+                outlineColor: "focusRing",
+                outlineOffset: 2,
+              }}
+              tabIndex={0}
+            />
+          );
 
-          return (
-            <Tooltip
-              key={`drop-zone-${slot.idx}`}
-              content="このスロットはまだ使用できません"
-              openDelay={300}
-              showArrow
-            >
-              <Box display="inline-flex">
-                <EmptyCard
-                  slotNumber={slot.idx + 1}
-                  totalSlots={slot.totalSlots}
-                  isDroppable={false}
-                  alignSelf="flex-start"
-                  onDragOver={() => {}}
-                  onDragLeave={onSlotLeave}
-                  onDrop={() => {}}
-                  _focusVisible={{
-                    outline: "2px solid",
-                    outlineColor: "focusRing",
-                    outlineOffset: 2,
-                  }}
-                  tabIndex={0}
-                />
+          const renderedEmpty = !slot.allowDrop && !showCard ? (
+            <Tooltip content="このスロットはまだ使用できません" openDelay={300} showArrow>
+              <Box display="inline-flex" width="100%">
+                {emptyCard}
               </Box>
             </Tooltip>
+          ) : (
+            emptyCard
+          );
+
+          return (
+            <Box
+              key={slot.slotId}
+              position="relative"
+              display="grid"
+              gridTemplateColumns="1fr"
+              gridTemplateRows="1fr"
+            >
+              <Box gridColumn="1 / 2" gridRow="1 / 2">
+                {renderedEmpty}
+              </Box>
+
+              {showCard ? (
+                <Box
+                  gridColumn="1 / 2"
+                  gridRow="1 / 2"
+                  zIndex={1}
+                  display="flex"
+                  alignItems="stretch"
+                  justifyContent="center"
+                >
+                  <Box position="relative" width="100%">
+                    {renderCard(slot.cardId!, slot.idx)}
+                  </Box>
+                </Box>
+              ) : null}
+            </Box>
           );
         })}
       </BoardFrame>

@@ -5,6 +5,7 @@ import { Box } from "@chakra-ui/react";
 import {
   DndContext,
   DragOverlay,
+  MeasuringStrategy,
   type CollisionDetection,
   type DndContextProps,
   type DragEndEvent,
@@ -251,6 +252,15 @@ function InteractiveBoardBase({
     };
   }, [activeId, dragTilt, magnetState.strength, magnetEnterPulse, prefersReducedMotion]);
 
+  const measuring = useMemo<DndContextProps["measuring"]>(
+    () => ({
+      // レイアウト確定前にドラッグを始めても毎フレーム座標を再計測し、
+      // 初期フリッカーや左端への誤ヒットを防ぐ。
+      droppable: { strategy: MeasuringStrategy.Always },
+    }),
+    []
+  );
+
   return (
     <DndContext
       collisionDetection={collisionDetection}
@@ -260,6 +270,7 @@ function InteractiveBoardBase({
       onDragCancel={onDragCancel}
       sensors={sensors}
       modifiers={[restrictToFirstScrollableAncestor]}
+      measuring={measuring}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => {
@@ -287,35 +298,57 @@ function InteractiveBoardBase({
       <BoardFrame isActive={isOver && canDrop} containerRef={boardRef}>
         <SortableContext items={sortableItems}>
           {slots.map((slot) => {
-            if (slot.showCard && slot.cardId) {
-              if (slot.proposalCardId && slot.proposalCardId === slot.cardId) {
-                return (
-                  <SortableItem id={slot.cardId} key={slot.cardId}>
-                    {renderCard(slot.cardId, slot.idx)}
-                  </SortableItem>
-                );
-              }
-              return (
-                <React.Fragment key={`ghost-${slot.idx}-${slot.cardId}`}>
-                  {renderCard(slot.cardId, slot.idx)}
-                </React.Fragment>
-              );
-            }
-
             const isTarget = magnetSnapshot.targetId === slot.droppableId;
+            const showCard = slot.showCard && slot.cardId;
+
             return (
-              <EmptyCard
-                key={`slot-${slot.idx}`}
-                slotNumber={slot.idx + 1}
-                totalSlots={slot.totalSlots}
-                alignSelf="flex-start"
-                id={slot.droppableId}
-                isDroppable
-                isDragActive={!!activeId}
-                isMagnetTarget={isTarget}
-                magnetStrength={isTarget ? magnetSnapshot.strength : 0}
-                prefersReducedMotion={prefersReducedMotion}
-              />
+              <Box
+                key={slot.slotId}
+                position="relative"
+                display="grid"
+                gridTemplateColumns="1fr"
+                gridTemplateRows="1fr"
+              >
+                <Box gridColumn="1 / 2" gridRow="1 / 2">
+                  <EmptyCard
+                    slotNumber={slot.idx + 1}
+                    totalSlots={slot.totalSlots}
+                    alignSelf="flex-start"
+                    id={slot.droppableId}
+                    isDroppable={!showCard}
+                    isDragActive={!!activeId}
+                    isMagnetTarget={isTarget}
+                    magnetStrength={isTarget ? magnetSnapshot.strength : 0}
+                    prefersReducedMotion={prefersReducedMotion}
+                  />
+                </Box>
+
+                {showCard ? (
+                  <Box
+                    gridColumn="1 / 2"
+                    gridRow="1 / 2"
+                    zIndex={1}
+                    display="flex"
+                    alignItems="stretch"
+                    justifyContent="center"
+                  >
+                    {slot.proposalCardId && slot.proposalCardId === slot.cardId ? (
+                      <SortableItem id={slot.cardId!}>
+                        {renderCard(slot.cardId!, slot.idx)}
+                      </SortableItem>
+                    ) : (
+                      <Box
+                        position="relative"
+                        width="100%"
+                        pointerEvents="none"
+                        data-ghost-card="true"
+                      >
+                        {renderCard(slot.cardId!, slot.idx)}
+                      </Box>
+                    )}
+                  </Box>
+                ) : null}
+              </Box>
             );
           })}
         </SortableContext>
