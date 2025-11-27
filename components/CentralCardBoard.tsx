@@ -1430,50 +1430,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resetOptimisticState,
   ]);
 
-  const proposalSpan = useMemo(() => {
-    for (let i = boardProposal.length - 1; i >= 0; i -= 1) {
-      const value = boardProposal[i];
-      if (
-        typeof value === "string" &&
-        value.length > 0 &&
-        eligibleIdSet.has(value)
-      ) {
-        return i + 1;
-      }
-    }
-    return 0;
-  }, [boardProposal, eligibleIdSet]);
-
-  const pendingSpan = useMemo(() => {
-    for (let i = pending.length - 1; i >= 0; i -= 1) {
-      const value = pending[i];
-      if (typeof value === "string" && value.length > 0) {
-        return i + 1;
-      }
-    }
-    return 0;
-  }, [pending]);
-
-  const orderListSpan = useMemo(() => {
-    if (!Array.isArray(orderList) || orderList.length === 0) return 0;
-    for (let i = orderList.length - 1; i >= 0; i -= 1) {
-      const value = orderList[i];
-      if (
-        typeof value === "string" &&
-        value.length > 0 &&
-        eligibleIdSet.has(value)
-      ) {
-        return i + 1;
-      }
-    }
-    return 0;
-  }, [orderList, eligibleIdSet]);
-
   const slotCountTarget = useMemo(() => {
     const explicit = typeof slotCount === "number" && slotCount > 0 ? slotCount : 0;
-    const span = Math.max(proposalSpan, pendingSpan, orderListSpan);
-    return Math.max(explicit, availableEligibleCount, span);
-  }, [slotCount, proposalSpan, pendingSpan, orderListSpan, availableEligibleCount]);
+    // サーバー計算済みの slotCount を信頼し、在室人数で最低値を張る。pending やローカル提案では揺らさない。
+    return Math.max(explicit, availableEligibleCount);
+  }, [slotCount, availableEligibleCount]);
 
   const [resolvedSlotCount, setResolvedSlotCount] = useState(() =>
     Math.max(0, slotCountTarget)
@@ -1482,6 +1443,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const dropSessionFloorRef = useRef(0);
   const dropSessionActiveRef = useRef(false);
   const dropSessionClearTimerRef = useRef<number | null>(null);
+  const lowerHysteresisTimerRef = useRef<number | null>(null);
+  const lastLowerTargetRef = useRef<number | null>(null);
 
   const beginDropSession = useCallback(() => {
     if (dropSessionClearTimerRef.current !== null) {
@@ -1505,27 +1468,62 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [prefersReducedMotion]);
 
   useEffect(() => {
-    const target = dropSessionActiveRef.current
+    const effectiveTarget = dropSessionActiveRef.current
       ? Math.max(slotCountTarget, dropSessionFloorRef.current)
       : slotCountTarget;
 
-    if (target !== resolvedSlotCount) {
-      setResolvedSlotCount(target);
+    const clearLowerTimer = () => {
+      if (lowerHysteresisTimerRef.current !== null) {
+        clearTimeout(lowerHysteresisTimerRef.current);
+        lowerHysteresisTimerRef.current = null;
+      }
+    };
+
+    // 上振れ or 同値: 即時反映 + タイマーリセット
+    if (effectiveTarget >= resolvedSlotCount) {
+      clearLowerTimer();
+      lastLowerTargetRef.current = null;
+      if (effectiveTarget !== resolvedSlotCount) {
+        setResolvedSlotCount(effectiveTarget);
+      }
+      return;
     }
-  }, [slotCountTarget, resolvedSlotCount]);
+
+    // 下振れ: 一定時間（~700ms）安定したら縮める
+    if (lastLowerTargetRef.current !== effectiveTarget) {
+      clearLowerTimer();
+      lastLowerTargetRef.current = effectiveTarget;
+      const delay = prefersReducedMotion ? 500 : 700;
+      lowerHysteresisTimerRef.current = window.setTimeout(() => {
+        setResolvedSlotCount((prev) => {
+          // タイマー中に再度上振れしていないかチェック
+          const freshTarget = dropSessionActiveRef.current
+            ? Math.max(slotCountTarget, dropSessionFloorRef.current)
+            : slotCountTarget;
+          const finalTarget = Math.min(prev, freshTarget);
+          return finalTarget;
+        });
+        lowerHysteresisTimerRef.current = null;
+      }, delay);
+    }
+  }, [slotCountTarget, resolvedSlotCount, prefersReducedMotion]);
 
   useEffect(() => {
     return () => {
       if (dropSessionClearTimerRef.current !== null) {
         clearTimeout(dropSessionClearTimerRef.current);
       }
+      if (lowerHysteresisTimerRef.current !== null) {
+        clearTimeout(lowerHysteresisTimerRef.current);
+      }
     };
   }, []);
 
   const paddedBoardProposal = useMemo<(string | null)[]>(() => {
-    if (boardProposal.length >= resolvedSlotCount) return boardProposal;
+    const target = resolvedSlotCount;
+    if (boardProposal.length >= target) return boardProposal;
     const next = boardProposal.slice();
-    while (next.length < resolvedSlotCount) {
+    while (next.length < target) {
       next.push(null);
     }
     return next;
