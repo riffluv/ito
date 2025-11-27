@@ -1,3 +1,4 @@
+import { getGlobalSoundManager } from "@/lib/audio/global";
 import { playSound } from "@/lib/audio/playSound";
 import type { SoundId } from "@/lib/audio/types";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
@@ -86,15 +87,39 @@ const backgroundPointerGlow: ActionExecutor<ShowtimeContext, { active: boolean }
   }
 };
 
+declare global {
+  interface Window {
+    __ITO_LAST_RESULT_SOUND_AT__?: number;
+  }
+}
+
 const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (params) => {
-  if (!params?.id) {
+  const requestedId = params?.id;
+  if (!requestedId) {
     logWarn(SCOPE, "audio.play missing id");
     return;
   }
+
+  // 結果系だけはユーザー設定（ノーマル/エピック）に従って実音源へマッピングする。
+  let targetId: SoundId = requestedId;
+  if (requestedId === "result_victory") {
+    const mgr = getGlobalSoundManager();
+    const successMode = mgr?.getSettings().successMode ?? "normal";
+    targetId = successMode === "epic" ? "clear_success2" : "clear_success1";
+  } else if (requestedId === "result_failure") {
+    targetId = "clear_failure";
+  }
+
   try {
-    playSound(params.id);
+    playSound(targetId);
+    if (
+      (requestedId === "result_victory" || requestedId === "result_failure") &&
+      typeof window !== "undefined"
+    ) {
+      window.__ITO_LAST_RESULT_SOUND_AT__ = Date.now();
+    }
   } catch (error) {
-    logWarn(SCOPE, "audio.play failed", { error, id: params.id });
+    logWarn(SCOPE, "audio.play failed", { error, id: requestedId, targetId });
   }
 };
 

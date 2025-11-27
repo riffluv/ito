@@ -19,6 +19,12 @@ import {
   type MutableRefObject,
 } from "react";
 
+declare global {
+  interface Window {
+    __ITO_LAST_RESULT_SOUND_AT__?: number;
+  }
+}
+
 // 環境変数で切り替え（デフォルトは Pixi 版）
 const USE_PIXI_RAYS = process.env.NEXT_PUBLIC_USE_PIXI_RAYS !== "0";
 
@@ -460,6 +466,17 @@ export function GameResultOverlay({
     const now = Date.now();
     const isFreshReveal = timestamp === null || now - timestamp <= 6000;
     if (!isFreshReveal) {
+      return;
+    }
+
+    // SHOWTIME 側で直前に結果サウンドを鳴らしている場合は重複再生を避ける
+    const lastResultSoundAt =
+      typeof window !== "undefined"
+        ? window.__ITO_LAST_RESULT_SOUND_AT__ ?? null
+        : null;
+    const recentlyPlayed =
+      typeof lastResultSoundAt === "number" && now - lastResultSoundAt < 2500;
+    if (recentlyPlayed) {
       return;
     }
 
