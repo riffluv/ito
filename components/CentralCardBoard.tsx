@@ -1469,45 +1469,67 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return 0;
   }, [orderList, eligibleIdSet]);
 
-  const slotCountBase = useMemo(() => {
+  const slotCountTarget = useMemo(() => {
     const explicit = typeof slotCount === "number" && slotCount > 0 ? slotCount : 0;
     const span = Math.max(proposalSpan, pendingSpan, orderListSpan);
     return Math.max(explicit, availableEligibleCount, span);
   }, [slotCount, proposalSpan, pendingSpan, orderListSpan, availableEligibleCount]);
 
+  const [resolvedSlotCount, setResolvedSlotCount] = useState(() =>
+    Math.max(0, slotCountTarget)
+  );
+
+  const dropSessionFloorRef = useRef(0);
+  const dropSessionActiveRef = useRef(false);
+  const dropSessionClearTimerRef = useRef<number | null>(null);
+
+  const beginDropSession = useCallback(() => {
+    if (dropSessionClearTimerRef.current !== null) {
+      clearTimeout(dropSessionClearTimerRef.current);
+      dropSessionClearTimerRef.current = null;
+    }
+    dropSessionActiveRef.current = true;
+    dropSessionFloorRef.current = Math.max(dropSessionFloorRef.current, slotCountTarget, resolvedSlotCount);
+  }, [resolvedSlotCount, slotCountTarget]);
+
+  const endDropSession = useCallback(() => {
+    if (dropSessionClearTimerRef.current !== null) {
+      clearTimeout(dropSessionClearTimerRef.current);
+    }
+    const delay = prefersReducedMotion ? 160 : 260;
+    dropSessionClearTimerRef.current = window.setTimeout(() => {
+      dropSessionActiveRef.current = false;
+      dropSessionFloorRef.current = 0;
+      dropSessionClearTimerRef.current = null;
+    }, delay);
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    const target = dropSessionActiveRef.current
+      ? Math.max(slotCountTarget, dropSessionFloorRef.current)
+      : slotCountTarget;
+
+    if (target !== resolvedSlotCount) {
+      setResolvedSlotCount(target);
+    }
+  }, [slotCountTarget, resolvedSlotCount]);
+
+  useEffect(() => {
+    return () => {
+      if (dropSessionClearTimerRef.current !== null) {
+        clearTimeout(dropSessionClearTimerRef.current);
+      }
+    };
+  }, []);
+
   const paddedBoardProposal = useMemo<(string | null)[]>(() => {
-    if (boardProposal.length >= slotCountBase) return boardProposal;
+    if (boardProposal.length >= resolvedSlotCount) return boardProposal;
     const next = boardProposal.slice();
-    while (next.length < slotCountBase) {
+    while (next.length < resolvedSlotCount) {
       next.push(null);
     }
     return next;
-  }, [boardProposal, slotCountBase]);
-
-  const slotCountFloorRef = useRef(0);
-
-  const slotCountGuarded = useMemo(
-    () =>
-      Boolean(
-        activeId ||
-          pendingHasContent ||
-          optimisticProposal ||
-          optimisticReturningIds.length > 0 ||
-          isOver
-      ),
-    [activeId, pendingHasContent, optimisticProposal, optimisticReturningIds.length, isOver]
-  );
-
-  const resolvedSlotCount = useMemo(() => {
-    const base = slotCountBase;
-    if (slotCountGuarded) {
-      const floor = Math.max(slotCountFloorRef.current, base);
-      slotCountFloorRef.current = floor;
-      return floor;
-    }
-    slotCountFloorRef.current = base;
-    return base;
-  }, [slotCountBase, slotCountGuarded]);
+  }, [boardProposal, resolvedSlotCount]);
 
   const placeholderSet = useMemo(
     () => new Set(missingPlayerIds),
@@ -1767,6 +1789,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
+      beginDropSession();
       updateDropAnimationTarget(null);
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
@@ -1810,6 +1833,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     },
     [
+      beginDropSession,
       resetMagnet,
       playDragPickup,
       setCursorSnapOffset,
@@ -2149,6 +2173,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       } finally {
         enqueueMagnetUpdate({ state: magnetResult, immediate: true });
         clearActive({ delayMagnetReset: true });
+        endDropSession();
       }
     },
     [
@@ -2172,6 +2197,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       boardProposal,
       scheduleDropRollback,
       clearDropRollbackTimer,
+      endDropSession,
     ]
   );
 
@@ -2179,7 +2205,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     dragActivationStartRef.current = null;
     updateDropAnimationTarget(null);
     clearActive();
-  }, [clearActive, updateDropAnimationTarget]);
+    endDropSession();
+  }, [clearActive, updateDropAnimationTarget, endDropSession]);
 
   const activeBoard = resolveMode === "sort-submit" && roomStatus === "clue";
 

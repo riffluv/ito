@@ -3454,24 +3454,28 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     return next;
   }, [sanitizedServerProposal, optimisticProposalOverrides]);
 
-  const slotCount = useMemo(() => computeSlotCount({
-    status: room?.status || "waiting",
-    orderList: orderList ?? [],
-    dealPlayers: Array.isArray(roomDealPlayers) ? roomDealPlayers : [],
-    proposal: Array.isArray(orderProposal) ? orderProposal : [],
-    presenceReady,
-    onlineUids,
-    playersCount: playersWithOptimistic.length,
-    playerIds: playersWithOptimistic.map((p) => p.id),
-  }), [
-    room?.status,
-    orderList,
-    roomDealPlayers,
-    orderProposal,
-    presenceReady,
-    onlineUids,
-    playersWithOptimistic,
-  ]);
+  const slotCount = useMemo(
+    () =>
+      computeSlotCount({
+        status: room?.status || "waiting",
+        orderList: orderList ?? [],
+        dealPlayers: Array.isArray(roomDealPlayers) ? roomDealPlayers : [],
+        proposal: Array.isArray(orderProposal) ? orderProposal : [],
+        presenceReady,
+        onlineUids,
+        playersCount: playersWithOptimistic.length,
+        playerIds: playersWithOptimistic.map((p) => p.id),
+      }),
+    [
+      room?.status,
+      orderList,
+      roomDealPlayers,
+      orderProposal,
+      presenceReady,
+      onlineUids,
+      playersWithOptimistic,
+    ]
+  );
   
 
   const submittedPlayerIds = useMemo(() => {
