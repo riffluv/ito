@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
-import { act, render, waitFor } from "@testing-library/react";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
+import { act, render, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 
 const finalizeRevealMock = jest.fn().mockResolvedValue(undefined);
 
@@ -16,7 +16,8 @@ jest.mock("@/lib/game/resultPrefetch", () => ({
   touchSortedRevealCache: (...args: unknown[]) =>
     touchSortedRevealCache(...args),
   readSortedRevealCache: (...args: unknown[]) => readSortedRevealCache(...args),
-  clearSortedRevealCache: (...args: unknown[]) => clearSortedRevealCache(...args),
+  clearSortedRevealCache: (...args: unknown[]) =>
+    clearSortedRevealCache(...args),
 }));
 
 jest.mock("@/components/ui/ThreeBackground", () => ({}));
@@ -29,7 +30,9 @@ jest.mock("@/lib/audio/global", () => ({
 
 jest.mock("@/lib/ui/motion", () => ({
   REVEAL_FIRST_DELAY: 10,
-  REVEAL_STEP_DELAY: 10,
+  REVEAL_INITIAL_STEP_DELAY: 10,
+  REVEAL_MIN_STEP_DELAY: 10,
+  REVEAL_ACCELERATION_FACTOR: 1, // テスト用に加速なし
   FLIP_DURATION_MS: 5,
   RESULT_INTRO_DELAY: 5,
   RESULT_RECOGNITION_DELAY: 0,

@@ -18,7 +18,6 @@ import {
   REVEAL_FIRST_DELAY,
   REVEAL_INITIAL_STEP_DELAY,
   REVEAL_MIN_STEP_DELAY,
-  REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
 import { logWarn } from "@/lib/utils/log";
 import {
@@ -688,11 +687,14 @@ export function useRevealAnimation({
         // 現在進行中カードの終了時刻（未設定/過去なら「今+フリップ時間」に補正）
         const safeFlipEnd = flipEnd > now ? flipEnd : now + FLIP_DURATION_MS;
 
-        // これから先に必要な「めくり間隔」の合計を見積もる
+        // これから先に必要な「めくり間隔」の合計を見積もる（加速テンポの平均値で概算）
+        const avgStepDelay = Math.round(
+          (REVEAL_INITIAL_STEP_DELAY + REVEAL_MIN_STEP_DELAY) / 2
+        );
         const futureIntervals =
           remainingCards <= 0
             ? 0
-            : remainingCards * REVEAL_STEP_DELAY +
+            : remainingCards * avgStepDelay +
               Math.min(remainingCards, 2) * FINAL_TWO_BONUS_DELAY;
 
         // フリップ完了＋今後の間合い＋導入余韻
