@@ -30,6 +30,7 @@ interface UseDropHandlerProps {
   mePlaced: boolean;
   dealReady: boolean;
   dealGuardActive?: boolean;
+  presenceReady?: boolean;
 }
 
 export function useDropHandler({
@@ -43,11 +44,13 @@ export function useDropHandler({
   mePlaced: _mePlaced,
   dealReady,
   dealGuardActive = false,
+  presenceReady = true,
 }: UseDropHandlerProps) {
   const soundManager = useSoundManager();
   const { playSuccessSound, playInvalidSound } = useDropSounds(roomId);
   const { canDrop, ensureCanDrop } = useDropEligibility({
     roomStatus,
+    presenceReady,
     hasNumber,
     me,
     meId,
@@ -649,6 +652,7 @@ function useDropSounds(roomId: string) {
 type DropEligibilityOptions = {
   roomStatus?: string;
   hasNumber: boolean;
+  presenceReady: boolean;
   me: (PlayerDoc & { id: string }) | undefined;
   meId: string;
   roomId: string;
@@ -668,6 +672,7 @@ type DropValidationResult =
 function useDropEligibility({
   roomStatus,
   hasNumber,
+  presenceReady,
   me,
   meId,
   roomId,
@@ -682,12 +687,13 @@ function useDropEligibility({
 
   const canDrop = useMemo(() => {
     if (roomStatus !== "clue") return false;
+    if (!presenceReady) return false;
     if (!hasNumber) return false;
     if (!dealReady) return false;
     if (dealGuardActive) return false;
     if (!hasClueText) return false;
     return true;
-  }, [roomStatus, hasNumber, dealReady, hasClueText, dealGuardActive]);
+  }, [roomStatus, presenceReady, hasNumber, dealReady, hasClueText, dealGuardActive]);
 
   const ensureCanDrop = useCallback(
     (pid: string): DropValidationResult => {
@@ -706,6 +712,23 @@ function useDropEligibility({
           duration: 1800,
         });
         return { ok: false, outcome: "error", reason: "deal-guard" };
+      }
+
+      if (!presenceReady) {
+        traceAction("interaction.drop.blocked", {
+          roomId,
+          playerId: meId,
+          reason: "presence-sync",
+        });
+        playInvalidSound();
+        notify({
+          id: `${roomId}-presence-sync`,
+          title: "再接続中…",
+          description: "接続が安定してからカードを動かしてください。",
+          type: "info",
+          duration: 1400,
+        });
+        return { ok: false, outcome: "error", reason: "presence-sync" };
       }
 
       if (!dealReady) {
@@ -760,7 +783,7 @@ function useDropEligibility({
 
       return { ok: true };
     },
-    [canDrop, dealGuardActive, dealReady, me, meId, playInvalidSound, roomId]
+    [canDrop, dealGuardActive, dealReady, me, meId, playInvalidSound, roomId, presenceReady]
   );
 
   return { canDrop, ensureCanDrop };

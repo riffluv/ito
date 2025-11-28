@@ -11,7 +11,7 @@ export type ShowtimeContext = {
   status?: string | null;
   success?: boolean | null;
   round?: number | null;
-} & Record<string, unknown>;
+};
 
 export type ShowtimeEventType = "round:start" | "round:reveal";
 

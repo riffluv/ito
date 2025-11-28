@@ -50,6 +50,9 @@ export default function WaitingArea({
     },
     ['@media (max-width: 480px)']: {
       gap: "10px",
+      boxShadow: "none",
+      filter: "none",
+      backdropFilter: "none",
     },
     ['@media (max-width: 360px)']: {
       gap: "6px",
