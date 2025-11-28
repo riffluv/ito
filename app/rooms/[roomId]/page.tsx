@@ -63,6 +63,7 @@ import type {
   ShowtimeEventType,
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
+  ShowtimeContext,
 } from "@/lib/showtime/types";
 import { verifyPassword } from "@/lib/security/password";
 import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/services/roomService";
@@ -1106,7 +1107,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       if (event.type === "round:reveal" && typeof event.revealedMs === "number") {
         lastRevealTsRef.current = event.revealedMs;
       }
-      const context =
+      let context: ShowtimeContext =
         event.type === "round:start"
           ? { round: event.round ?? null, status: event.status ?? null }
           : { success: event.success ?? null };
@@ -1117,7 +1118,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       }
       // status をコンテキストに添える（シナリオ側の when 判定用）
       if (event.type === "round:reveal") {
-        (context as any).status = currentStatus;
+        context = { ...context, status: currentStatus };
       }
       recordShowtimePlayback(event.type, context, {
         origin: "subscription",
@@ -3617,6 +3618,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
           currentStreak={room.stats?.currentStreak ?? 0}
           onOptimisticProposalChange={updateOptimisticProposalOverride}
           sendRoomEvent={sendRoomEvent}
+          presenceReady={presenceReady}
         />
       </Box>
     </Box>

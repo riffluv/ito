@@ -94,6 +94,9 @@ declare global {
     __ITO_REVEAL_PLAN_LAST_END__?: number | null;
     __ITO_REVEAL_PLAN_LENGTH__?: number | null;
     __ITO_REVEAL_PLAN_BUILT_AT__?: number | null;
+    __ITO_RESULT_SOUND_PENDING__?: boolean;
+    __ITO_RESULT_SOUND_SCHEDULED_AT__?: number | null;
+    __ITO_RESULT_SOUND_TIMEOUT_ID__?: number | null;
   }
 }
 
@@ -143,6 +146,12 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (param
         typeof window !== "undefined"
       ) {
         window.__ITO_LAST_RESULT_SOUND_AT__ = Date.now();
+        window.__ITO_RESULT_SOUND_PENDING__ = false;
+        window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = null;
+        if (window.__ITO_RESULT_SOUND_TIMEOUT_ID__ !== null) {
+          window.clearTimeout(window.__ITO_RESULT_SOUND_TIMEOUT_ID__ as number);
+          window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = null;
+        }
       }
     };
 
@@ -158,8 +167,16 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (param
     }
 
     if (delayMs > 0 && typeof window !== "undefined") {
-      window.setTimeout(play, delayMs);
+      window.__ITO_RESULT_SOUND_PENDING__ = true;
+      window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = Date.now();
+      const id = window.setTimeout(play, delayMs);
+      window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = id;
     } else {
+      if (typeof window !== "undefined") {
+        window.__ITO_RESULT_SOUND_PENDING__ = false;
+        window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = null;
+        window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = null;
+      }
       play();
     }
   } catch (error) {

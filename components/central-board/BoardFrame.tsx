@@ -42,6 +42,10 @@ const BOARD_FRAME_STYLES = {
   [`@media ${UNIFIED_LAYOUT.BREAKPOINTS.MOBILE}`]: {
     gap: "10px",
     padding: "12px",
+    // 低速端末向け: 影と透過を切ってレイヤー数を減らす
+    boxShadow: "none",
+    filter: "none",
+    backdropFilter: "none",
   },
   "@container (max-width: 600px)": {
     gap: "6px",

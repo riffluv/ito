@@ -122,6 +122,7 @@ interface CentralCardBoardProps {
     state: "placed" | "removed" | null
   ) => void;
   sendRoomEvent?: (event: RoomMachineClientEvent) => void;
+  presenceReady?: boolean;
 }
 
 const shallowArrayEqual = (
@@ -257,6 +258,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   currentStreak = 0,
   onOptimisticProposalChange,
   sendRoomEvent,
+  presenceReady = true,
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(
     roomId,
@@ -1394,7 +1396,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     if (renderedProposalSignature === serverProposalSignature) {
       return undefined;
     }
-    resetOptimisticState("hash-mismatch");
+      resetOptimisticState("hash-mismatch");
     return undefined;
   }, [
     hasOptimisticState,
@@ -1402,6 +1404,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resetOptimisticState,
     serverProposalSignature,
   ]);
+
+  // オフライン/再接続中は楽観状態をクリアしてサーバー値に揃える
+  useEffect(() => {
+    if (!presenceReady) {
+      resetOptimisticState("forced-sync");
+    }
+  }, [presenceReady, resetOptimisticState]);
 
   // 強制同期: 楽観状態は最長 ~1.7–1.9s でサーバー値に揃える
   useEffect(() => {

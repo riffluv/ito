@@ -149,6 +149,7 @@ export function useRevealAnimation({
   const roomStatusRef = useRef(roomStatus);
   const orderListLengthRef = useRef(orderListLength);
   const revealIndexRef = useRef(revealIndex);
+  const orderDataRef = useRef(orderData);
   const startSignalRef = useRef<boolean>(false);
   const finalizePendingRef = useRef(false);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -248,14 +249,30 @@ export function useRevealAnimation({
     if (orderListLength === 1) {
       return reachedEndByRevealIndex;
     }
-    // 評価結果がまだなら「未評価」とみなし、finalize を遅らせる
+
+    // ここからリアルタイム評価結果を参照
     if (!realtimeResult) {
       return false;
     }
-    if (realtimeResult.success === false) {
-      return true;
+
+    const { success, failedAt, currentIndex } = realtimeResult;
+
+    // 失敗が確定している場合:
+    // ・昇順チェック時にどこかで降順が見つかった（failedAt が number）
+    //   → その時点の currentIndex まで評価済みとみなし、最後のカードまで
+    //      めくり切れば finalize してよい
+    // ・全員の数字が埋まっていないなどで success=false かつ failedAt=null の場合は
+    //   evaluateSorted の不整合扱いとし、「未評価」とみなして待つ
+    if (success === false) {
+      if (typeof failedAt === "number") {
+        return currentIndex >= orderListLength;
+      }
+      return false;
     }
-    return realtimeResult.currentIndex >= orderListLength;
+
+    // 成功継続中(success=true)は、currentIndex が最後に到達したときのみ
+    // 「最終カードまで評価済み」とみなす。
+    return currentIndex >= orderListLength;
   }, [orderData, orderListLength, realtimeResult, resolveMode, revealIndex]);
 
   const finalizeReady =
@@ -313,6 +330,10 @@ export function useRevealAnimation({
   }, [orderListLength]);
 
   useEffect(() => {
+    orderDataRef.current = orderData;
+  }, [orderData]);
+
+  useEffect(() => {
     revealIndexRef.current = revealIndex;
   }, [revealIndex]);
 
@@ -328,12 +349,22 @@ export function useRevealAnimation({
   const runRealtimeEvaluation = useCallback(
     (nextIndex: number) => {
       try {
-        if (nextIndex >= 2 && orderData?.list && orderData?.numbers) {
-          const currentList = orderData.list.slice(0, nextIndex);
+        const currentOrderData = orderDataRef.current;
+        if (
+          nextIndex >= 2 &&
+          currentOrderData?.list &&
+          currentOrderData?.numbers
+        ) {
+          const currentList = currentOrderData.list.slice(0, nextIndex);
           const cached = readSortedRevealCache(roomId, nextIndex);
-          const result = cached ?? evaluateSorted(currentList, orderData.numbers);
+          const result =
+            cached ?? evaluateSorted(currentList, currentOrderData.numbers);
           if (!cached) {
-            touchSortedRevealCache(roomId, orderData.list, orderData.numbers);
+            touchSortedRevealCache(
+              roomId,
+              currentOrderData.list,
+              currentOrderData.numbers
+            );
           }
           if (!result.success && result.failedAt !== null) {
             setRealtimeResult({
@@ -350,7 +381,7 @@ export function useRevealAnimation({
           }
 
           // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
-          if (result.success && nextIndex === orderListLength) {
+          if (result.success && nextIndex === orderListLengthRef.current) {
             scheduleRevealPersistenceTask(() => {
               void (async () => {
                 try {
@@ -383,7 +414,7 @@ export function useRevealAnimation({
         logWarn("reveal", "realtime-eval-error", e);
       }
     },
-    [orderData, orderListLength, roomId]
+    [roomId]
   );
 
   const REVEAL_DEBUG_LOG_ENABLED =

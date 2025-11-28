@@ -474,9 +474,22 @@ export function GameResultOverlay({
       typeof window !== "undefined"
         ? window.__ITO_LAST_RESULT_SOUND_AT__ ?? null
         : null;
+    const pendingResultSound =
+      typeof window !== "undefined"
+        ? window.__ITO_RESULT_SOUND_PENDING__ === true
+        : false;
+    const scheduledAt =
+      typeof window !== "undefined"
+        ? window.__ITO_RESULT_SOUND_SCHEDULED_AT__ ?? null
+        : null;
     const recentlyPlayed =
       typeof lastResultSoundAt === "number" && now - lastResultSoundAt < 2500;
+    const scheduledSoon =
+      pendingResultSound && typeof scheduledAt === "number" && now - scheduledAt < 4000;
     if (recentlyPlayed) {
+      return;
+    }
+    if (scheduledSoon) {
       return;
     }
 
