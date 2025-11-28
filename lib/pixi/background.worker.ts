@@ -44,7 +44,10 @@ type IncomingMessage =
         | "fireworks"
         | "meteors"
         | "infernoVolcano"
-        | "flashRed";
+        | "flashRed"
+        | "flashWhite";
+      count?: number;
+      duration?: number;
     }
   | { type: "terminate" }
   | { type: "setProfile"; profile: PixiBackgroundProfile };
@@ -55,6 +58,7 @@ type SceneEffects = {
   launchMeteors?: () => void;
   launchVolcanoEruption?: () => void;
   flashRed?: (count?: number, duration?: number) => void;
+  flashWhite?: (duration?: number) => void;
 };
 
 type SceneController = {
@@ -206,6 +210,7 @@ const createSimpleScene = (
   const meteors: Meteor[] = [];
   let sweepTime = 0;
   let flashTime = 0;
+  let flashTint = new Color(0xff3322);
 
   const launchFireworks = () => {
     const bursts = quality === "high" ? 3 : 1;
@@ -250,7 +255,13 @@ const createSimpleScene = (
     sweepTime = 800;
   };
   const flashRed = (count = 1, duration = 220) => {
+    flashTint = new Color(0xff3322);
     flashTime = Math.max(flashTime, count * duration);
+  };
+
+  const flashWhite = (duration = 140) => {
+    flashTint = new Color(0xffffff);
+    flashTime = Math.max(flashTime, Math.max(50, duration));
   };
 
   const ticker = (tickerInstance: Ticker) => {
@@ -303,7 +314,7 @@ const createSimpleScene = (
     if (flashTime > 0) {
       flashTime -= dt * 1000;
       overlay.alpha = Math.min(0.75, flashTime / 220);
-      overlay.tint = new Color(0xff3322);
+      overlay.tint = flashTint;
     } else {
       overlay.alpha *= 0.9;
     }
@@ -328,6 +339,7 @@ const createSimpleScene = (
       launchFireworks,
       launchMeteors,
       flashRed,
+      flashWhite,
     },
   };
 };
@@ -366,6 +378,9 @@ const createDragonQuestScene = async (
       lightSweep: () => controller.lightSweep(),
       launchFireworks: () => controller.launchFireworks(),
       launchMeteors: () => controller.launchMeteors(),
+      flashWhite: controller.flashWhite
+        ? (duration?: number) => controller.flashWhite?.(duration)
+        : undefined,
     },
   };
 };
@@ -404,6 +419,9 @@ const createInfernoScene = async (
       launchVolcanoEruption: () => controller.launchVolcanoEruption(),
       flashRed: controller.flashRed
         ? (count?: number, duration?: number) => controller.flashRed?.(count, duration)
+        : undefined,
+      flashWhite: controller.flashWhite
+        ? (duration?: number) => controller.flashWhite?.(duration)
         : undefined,
     },
   };
@@ -511,7 +529,21 @@ self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
         if (msg.effect === "infernoVolcano") {
           currentScene.effects.launchVolcanoEruption?.();
         }
-        if (msg.effect === "flashRed") currentScene.effects.flashRed?.();
+        if (msg.effect === "flashRed") {
+          debug("effect:flashRed", {
+            scene: currentScene.key,
+            count: msg.count,
+            duration: msg.duration,
+          });
+          currentScene.effects.flashRed?.(msg.count, msg.duration);
+        }
+        if (msg.effect === "flashWhite") {
+          debug("effect:flashWhite", {
+            scene: currentScene.key,
+            duration: msg.duration,
+          });
+          currentScene.effects.flashWhite?.(msg.duration);
+        }
         break;
       case "setProfile":
         currentProfile = msg.profile;
