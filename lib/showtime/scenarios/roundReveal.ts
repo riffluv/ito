@@ -10,6 +10,7 @@ import type { Scenario } from "@/lib/showtime/types";
 
 type RevealContext = {
   success?: boolean | null;
+  status?: string | null;
 };
 
 export const roundRevealScenario: Scenario<RevealContext> = [
@@ -21,12 +22,15 @@ export const roundRevealScenario: Scenario<RevealContext> = [
       data: { success: ctx.success },
     }),
     fireAndForget: true,
+    when: (ctx) => ctx.status === "reveal" || ctx.status === "finished",
   },
   {
     action: "background.lightSweep",
+    when: (ctx) => ctx.status === "reveal" || ctx.status === "finished",
   },
   {
     action: "audio.play",
+    when: (ctx) => ctx.status === "reveal" || ctx.status === "finished",
     params: (ctx) => ({
       id: ctx.success ? "result_victory" : "result_failure",
     }),

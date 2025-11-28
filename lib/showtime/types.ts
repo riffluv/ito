@@ -6,7 +6,12 @@ import type { FieldValue } from "firebase/firestore";
  * 既存のシナリオ実装（round:start / round:reveal）を緩く結び付ける。
  */
 
-export type ShowtimeContext = Record<string, unknown>;
+// 最低限、進行中の room ステータスを渡せるようにしておく
+export type ShowtimeContext = {
+  status?: string | null;
+  success?: boolean | null;
+  round?: number | null;
+} & Record<string, unknown>;
 
 export type ShowtimeEventType = "round:start" | "round:reveal";
 
