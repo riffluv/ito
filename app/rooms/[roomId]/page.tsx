@@ -3358,6 +3358,13 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     setDealRecoveryDismissed(true);
   }, []);
 
+  // 戦績モーダルは finished 専用。新ラウンド開始時（waiting/clue/reveal など）に自動で閉じる。
+  useEffect(() => {
+    if (room.status !== "finished" && isLedgerOpen) {
+      setIsLedgerOpen(false);
+    }
+  }, [room.status, isLedgerOpen]);
+
   // slotCount: 進行中は「オンライン在室数」を優先。presence未確定時は提出数/配札数にフォールバック。
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
