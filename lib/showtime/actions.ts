@@ -146,6 +146,17 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (param
       }
     };
 
+    // 観戦など無操作でも鳴らせるよう、再生前に解錠を試みる
+    const mgr = getGlobalSoundManager();
+    if (mgr) {
+      try {
+        mgr.markUserInteraction();
+        await mgr.prepareForInteraction();
+      } catch {
+        // 解錠失敗は握りつぶす
+      }
+    }
+
     if (delayMs > 0 && typeof window !== "undefined") {
       window.setTimeout(play, delayMs);
     } else {
