@@ -517,6 +517,7 @@ export function GameResultOverlay({
     soundManager,
   ]);
 
+
   useEffect(() => {
     if (mode !== "overlay" || typeof window === "undefined") {
       return undefined;
@@ -1227,6 +1228,7 @@ export function GameResultOverlay({
     pixiRaysReady,
     playFailure,
     playSuccessNormal,
+    playSuccessEpic,
     soundManager,
     timeline,
     useSvgRays,
