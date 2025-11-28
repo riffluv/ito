@@ -217,8 +217,13 @@ class WorkerBackgroundHost implements BackgroundHostLike {
         this.worker?.postMessage({ type: "effect", effect: "meteors" }),
       launchVolcanoEruption: () =>
         this.worker?.postMessage({ type: "effect", effect: "infernoVolcano" }),
-      flashRed: () =>
-        this.worker?.postMessage({ type: "effect", effect: "flashRed" }),
+      flashRed: (count?: number, duration?: number) =>
+        this.worker?.postMessage({
+          type: "effect",
+          effect: "flashRed",
+          count,
+          duration,
+        }),
       flashWhite: (duration?: number) =>
         this.worker?.postMessage({
           type: "effect",
