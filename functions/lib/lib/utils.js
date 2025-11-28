@@ -16,7 +16,7 @@ exports.AVATAR_LIST = [
     "/avatars/siifu.webp",
     "/avatars/arrow.webp",
     "/avatars/guitar.webp",
-    "/avatars/ankoku.webp"
+    "/avatars/ankoku.webp",
 ];
 // 参加順でアバターを取得（重複なし）
 function getAvatarByOrder(playerCount) {
@@ -33,20 +33,44 @@ function hashCode(s) {
         h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
     return h;
 }
-function range(n) { return Array.from({ length: n }, (_, i) => i); }
+function range(n) {
+    return Array.from({ length: n }, (_, i) => i);
+}
+const hasSeconds = (value) => typeof value === "object" && value !== null && typeof value.seconds === "number";
+const hasToMillis = (value) => typeof value === "object" &&
+    value !== null &&
+    typeof value.toMillis === "function";
+function toSeconds(value) {
+    if (value === null || value === undefined)
+        return null;
+    if (typeof value === "number")
+        return value;
+    if (hasSeconds(value) && typeof value.seconds === "number") {
+        return value.seconds;
+    }
+    if (hasToMillis(value) && typeof value.toMillis === "function") {
+        try {
+            return Math.floor((value.toMillis() ?? 0) / 1000);
+        }
+        catch {
+            return null;
+        }
+    }
+    return null;
+}
 // 入室順でプレイヤーIDをソートする関数
 function sortPlayersByJoinOrder(playerIds, players) {
     const playerMap = new Map(players.map((p) => [p.id, p]));
     return [...playerIds].sort((a, b) => {
         const playerA = playerMap.get(a);
         const playerB = playerMap.get(b);
-        const joinedA = playerA?.joinedAt?.seconds ?? null;
-        const joinedB = playerB?.joinedAt?.seconds ?? null;
+        const joinedA = toSeconds(playerA?.joinedAt);
+        const joinedB = toSeconds(playerB?.joinedAt);
         if (joinedA !== null && joinedB !== null && joinedA !== joinedB) {
             return joinedA - joinedB;
         }
-        const lastSeenA = playerA?.lastSeen?.seconds ?? null;
-        const lastSeenB = playerB?.lastSeen?.seconds ?? null;
+        const lastSeenA = toSeconds(playerA?.lastSeen);
+        const lastSeenB = toSeconds(playerB?.lastSeen);
         if (lastSeenA !== null && lastSeenB !== null && lastSeenA !== lastSeenB) {
             return lastSeenA - lastSeenB;
         }

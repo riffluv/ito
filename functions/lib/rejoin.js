@@ -231,7 +231,7 @@ async function finalizeAcceptedRequest(roomId, uid, desiredName) {
                     targetIndex = existingIndex;
                 }
             }
-            let nextPlayers = currentPlayers.filter((playerId) => playerId !== uid);
+            const nextPlayers = currentPlayers.filter((playerId) => playerId !== uid);
             if (targetIndex === null || targetIndex < 0 || targetIndex > nextPlayers.length) {
                 targetIndex = nextPlayers.length;
             }

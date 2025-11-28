@@ -7,6 +7,15 @@ exports.logError = logError;
 const LEVEL_ORDER = ["silent", "error", "warn", "info", "debug"];
 const LEVEL_RANK = new Map(LEVEL_ORDER.map((lvl, idx) => [lvl, idx]));
 const DEFAULT_LEVEL = "info";
+const silentConsole = {
+    debug: () => { },
+    info: () => { },
+    warn: () => { },
+    error: () => { },
+};
+function getConsole() {
+    return (typeof globalThis !== "undefined" && globalThis.console) || silentConsole;
+}
 const isProdBuild = process.env.NODE_ENV === "production";
 const isVercel = process.env.VERCEL === "1";
 function parseLevel(raw) {
@@ -41,37 +50,38 @@ function emit(level, scope, msg, data) {
     }
     const payload = data === undefined ? undefined : data;
     const prefix = `[${scope}] ${msg}`;
+    const target = getConsole();
     switch (level) {
         case "debug":
             if (payload === undefined) {
-                console.debug(prefix);
+                target.debug(prefix);
             }
             else {
-                console.debug(prefix, payload);
+                target.debug(prefix, payload);
             }
             break;
         case "info":
             if (payload === undefined) {
-                console.info(prefix);
+                target.info(prefix);
             }
             else {
-                console.info(prefix, payload);
+                target.info(prefix, payload);
             }
             break;
         case "warn":
             if (payload === undefined) {
-                console.warn(prefix);
+                target.warn(prefix);
             }
             else {
-                console.warn(prefix, payload);
+                target.warn(prefix, payload);
             }
             break;
         case "error":
             if (payload === undefined) {
-                console.error(prefix);
+                target.error(prefix);
             }
             else {
-                console.error(prefix, payload);
+                target.error(prefix, payload);
             }
             break;
     }

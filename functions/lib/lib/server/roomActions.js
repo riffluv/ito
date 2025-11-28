@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.composeWaitingResetPayload = composeWaitingResetPayload;
+exports.resetRoomToWaiting = resetRoomToWaiting;
 exports.ensureHostAssignedServer = ensureHostAssignedServer;
 exports.leaveRoomServer = leaveRoomServer;
 exports.transferHostServer = transferHostServer;
@@ -10,6 +11,8 @@ const firebaseAdmin_1 = require("@/lib/server/firebaseAdmin");
 const log_1 = require("@/lib/utils/log");
 const HostManager_1 = require("@/lib/host/HostManager");
 const systemMessages_1 = require("@/lib/server/systemMessages");
+const domain_1 = require("@/lib/game/domain");
+const MAX_RETAINED_ORDER_SNAPSHOTS = 32;
 function composeWaitingResetPayload(options) {
     const payload = {
         status: "waiting",
@@ -90,6 +93,7 @@ function applyCluePhaseAdjustments({ room, updates, filteredPlayers, filteredLis
             success: revealSuccess,
             revealedAt: serverNow,
         };
+        updates.stats = (0, domain_1.applyOutcomeToRoomStats)(room?.stats, revealSuccess ? "success" : "failure");
         updates["order.decidedAt"] = serverNow;
         if (!("order.total" in updates) && typeof nextTotal === "number") {
             updates["order.total"] = nextTotal;
@@ -113,11 +117,14 @@ function sanitizeServerText(input, maxLength = 500) {
     return normalized.slice(0, Math.max(maxLength, 0));
 }
 function isConnectionActive(conn, now) {
-    if (conn?.online === false)
+    if (!conn)
         return false;
-    if (conn?.online === true && typeof conn?.ts !== "number")
+    const record = conn;
+    if (record.online === false)
+        return false;
+    if (record.online === true && typeof record.ts !== "number")
         return true;
-    const ts = typeof conn?.ts === "number" ? conn.ts : 0;
+    const ts = typeof record.ts === "number" ? record.ts : 0;
     if (!ts)
         return false;
     if (ts - now > presence_1.MAX_CLOCK_SKEW_MS)
@@ -127,10 +134,10 @@ function isConnectionActive(conn, now) {
 async function fetchPresenceUids(roomId, db) {
     try {
         const snap = await db.ref(`presence/${roomId}`).get();
-        const val = (snap.val() || {});
+        const val = snap.val() ?? {};
         const now = Date.now();
         return Object.keys(val).filter((uid) => {
-            const conns = val[uid] || {};
+            const conns = val[uid] ?? {};
             return Object.values(conns).some((c) => isConnectionActive(c, now));
         });
     }
@@ -182,7 +189,7 @@ async function resetRoomToWaiting(roomId) {
         return;
     // NOTE: /api/rooms/[roomId]/reset が正規ルート。サーバーアクションのフォールバックでも同一ペイロードを適用する。
     const payload = composeWaitingResetPayload({
-        recallOpen: true,
+        recallOpen: false,
         resetRound: true,
         clearTopic: true,
         closedAt: null,
@@ -216,7 +223,8 @@ async function getPlayerName(roomId, playerId) {
             .collection("players")
             .doc(playerId)
             .get();
-        const name = snap.data()?.name;
+        const player = snap.data();
+        const name = player?.name;
         if (typeof name === "string" && name.trim())
             return name.trim();
     }
@@ -357,7 +365,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 return;
             seenIds.add(doc.id);
             const data = doc.data();
-            if (!removedPlayerData) {
+            if (data && !removedPlayerData) {
                 removedPlayerData = { ...data };
             }
             const value = data?.name;
@@ -397,7 +405,6 @@ async function leaveRoomServer(roomId, userId, displayName) {
     }
     let transferredTo = null;
     let transferredToName = null;
-    let hostCleared = false;
     let remainingCount = 0;
     try {
         const roomRef = db.collection("rooms").doc(roomId);
@@ -433,9 +440,28 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 filteredProposal,
                 remainingCount,
             });
-            if ((room?.status === "reveal" || room?.status === "finished") &&
+            let snapshotWorkingMap = room?.order?.snapshots && typeof room.order.snapshots === "object"
+                ? { ...room.order.snapshots }
+                : null;
+            const snapshotReferenceIds = new Set();
+            const registerSnapshotId = (value) => {
+                if (typeof value === "string") {
+                    const trimmed = value.trim();
+                    if (trimmed) {
+                        snapshotReferenceIds.add(trimmed);
+                    }
+                }
+            };
+            if (Array.isArray(room?.order?.list)) {
+                room.order.list.forEach(registerSnapshotId);
+            }
+            if (Array.isArray(room?.order?.proposal)) {
+                room.order.proposal.forEach(registerSnapshotId);
+            }
+            const shouldCaptureSnapshot = (room?.status === "reveal" || room?.status === "finished") &&
                 remainingCount > 0 &&
-                removedPlayerData) {
+                removedPlayerData;
+            if (shouldCaptureSnapshot) {
                 const snapshotPayload = {
                     name: typeof removedPlayerData?.name === "string" && removedPlayerData.name.trim()
                         ? removedPlayerData.name
@@ -448,7 +474,27 @@ async function leaveRoomServer(roomId, userId, displayName) {
                         ? removedPlayerData.number
                         : null,
                 };
-                updates[`order.snapshots.${userId}`] = snapshotPayload;
+                snapshotWorkingMap = snapshotWorkingMap ?? {};
+                snapshotWorkingMap[userId] = snapshotPayload;
+                registerSnapshotId(userId);
+            }
+            if (snapshotWorkingMap) {
+                const orderedEntries = [];
+                for (const [id, snapshot] of Object.entries(snapshotWorkingMap)) {
+                    if (!snapshotReferenceIds.has(id)) {
+                        continue;
+                    }
+                    orderedEntries.push([id, snapshot]);
+                }
+                if (orderedEntries.length > MAX_RETAINED_ORDER_SNAPSHOTS) {
+                    orderedEntries.splice(0, orderedEntries.length - MAX_RETAINED_ORDER_SNAPSHOTS);
+                }
+                if (orderedEntries.length > 0) {
+                    updates["order.snapshots"] = Object.fromEntries(orderedEntries);
+                }
+                else if (room?.order?.snapshots) {
+                    updates["order.snapshots"] = firestore_1.FieldValue.delete();
+                }
             }
             if (remainingCount === 0) {
                 const serverNow = firestore_1.FieldValue.serverTimestamp();
@@ -460,6 +506,7 @@ async function leaveRoomServer(roomId, userId, displayName) {
                 delete updates["order.failed"];
                 delete updates["order.failedAt"];
                 delete updates["order.decidedAt"];
+                delete updates["order.snapshots"];
                 Object.assign(updates, composeWaitingResetPayload({ recallOpen: true }));
                 updates.lastActiveAt = serverNow;
                 (0, log_1.logDebug)("rooms", "recall-open-reset", {
@@ -508,7 +555,6 @@ async function leaveRoomServer(roomId, userId, displayName) {
             else if (decision.action === "clear") {
                 updates.hostId = "";
                 updates.hostName = firestore_1.FieldValue.delete();
-                hostCleared = true;
             }
             if (Object.keys(updates).length > 0) {
                 tx.update(roomRef, updates);
@@ -582,8 +628,8 @@ async function leaveRoomServer(roomId, userId, displayName) {
         return;
     }
     // 自動リセット機能を削除: 全員がpruneされた時に勝手にリセットすると混乱を招く
-    // ホストが復帰すれば手動でリセットできる
-    // if (hostCleared && remainingCount === 0) {
+    // ホストが復帰すれば手動でリセットできる（以前は hostCleared && remainingCount === 0 で実行）
+    // if (remainingCount === 0) {
     //   try {
     //     await resetRoomToWaiting(roomId);
     //     logDebug("rooms", "host-leave fallback-reset", {
