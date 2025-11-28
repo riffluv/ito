@@ -1,6 +1,7 @@
 import { getGlobalSoundManager } from "@/lib/audio/global";
 import { playSound } from "@/lib/audio/playSound";
 import type { SoundId } from "@/lib/audio/types";
+import { RESULT_INTRO_DELAY } from "@/lib/ui/motion";
 import { logDebug, logInfo, logWarn } from "@/lib/utils/log";
 import type { ActionExecutor, ShowtimeContext } from "./types";
 
@@ -90,6 +91,9 @@ const backgroundPointerGlow: ActionExecutor<ShowtimeContext, { active: boolean }
 declare global {
   interface Window {
     __ITO_LAST_RESULT_SOUND_AT__?: number;
+    __ITO_REVEAL_PLAN_LAST_END__?: number | null;
+    __ITO_REVEAL_PLAN_LENGTH__?: number | null;
+    __ITO_REVEAL_PLAN_BUILT_AT__?: number | null;
   }
 }
 
@@ -102,6 +106,7 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (param
 
   // 結果系だけはユーザー設定（ノーマル/エピック）に従って実音源へマッピングする。
   let targetId: SoundId = requestedId;
+  let delayMs: number = 0;
   if (requestedId === "result_victory") {
     const mgr = getGlobalSoundManager();
     const successMode = mgr?.getSettings().successMode ?? "normal";
@@ -110,13 +115,41 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (param
     targetId = "clear_failure";
   }
 
+  // リビール中の早すぎる再生を防ぎ、最後のカードフリップ直後を狙って鳴らす
+  if (
+    (requestedId === "result_victory" || requestedId === "result_failure") &&
+    delayMs === 0 &&
+    typeof window !== "undefined"
+  ) {
+    const endAt = window.__ITO_REVEAL_PLAN_LAST_END__ ?? null;
+    if (typeof endAt === "number") {
+      const now = Date.now();
+      const computed = endAt - now + RESULT_INTRO_DELAY;
+      if (computed > 0) {
+        delayMs = Math.min(computed, 6000); // 上限キャップ（安全）
+      }
+    }
+    if (delayMs === 0) {
+      // プランが無い場合は保守的に遅らせる
+      delayMs = 1800;
+    }
+  }
+
   try {
-    playSound(targetId);
-    if (
-      (requestedId === "result_victory" || requestedId === "result_failure") &&
-      typeof window !== "undefined"
-    ) {
-      window.__ITO_LAST_RESULT_SOUND_AT__ = Date.now();
+    const play = () => {
+      playSound(targetId);
+      if (
+        (requestedId === "result_victory" || requestedId === "result_failure") &&
+        typeof window !== "undefined"
+      ) {
+        window.__ITO_LAST_RESULT_SOUND_AT__ = Date.now();
+      }
+    };
+
+    if (delayMs > 0 && typeof window !== "undefined") {
+      window.setTimeout(play, delayMs);
+    } else {
+      play();
     }
   } catch (error) {
     logWarn(SCOPE, "audio.play failed", { error, id: requestedId, targetId });

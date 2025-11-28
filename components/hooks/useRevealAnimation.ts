@@ -27,6 +27,14 @@ import {
   useState,
 } from "react";
 
+declare global {
+  interface Window {
+    __ITO_REVEAL_PLAN_LAST_END__?: number | null;
+    __ITO_REVEAL_PLAN_LENGTH__?: number | null;
+    __ITO_REVEAL_PLAN_BUILT_AT__?: number | null;
+  }
+}
+
 type FlipPlan = {
   index: number;
   startAt: number;
@@ -414,6 +422,11 @@ export function useRevealAnimation({
     if (!revealAnimating || finalizeReady) {
       clearScheduledTimers();
       flipPlanRef.current = [];
+      if (typeof window !== "undefined") {
+        window.__ITO_REVEAL_PLAN_LAST_END__ = null;
+        window.__ITO_REVEAL_PLAN_LENGTH__ = null;
+        window.__ITO_REVEAL_PLAN_BUILT_AT__ = null;
+      }
       return undefined;
     }
 
@@ -446,6 +459,13 @@ export function useRevealAnimation({
         const base = Date.now();
         const plan = buildFlipPlan(orderListLengthRef.current, base);
         flipPlanRef.current = plan;
+
+        if (typeof window !== "undefined") {
+          const last = plan[plan.length - 1] ?? null;
+          window.__ITO_REVEAL_PLAN_LAST_END__ = last ? last.endAt : null;
+          window.__ITO_REVEAL_PLAN_LENGTH__ = orderListLengthRef.current;
+          window.__ITO_REVEAL_PLAN_BUILT_AT__ = base;
+        }
 
         if (plan.length > 0) {
           const last = plan[plan.length - 1];
