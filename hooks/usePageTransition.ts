@@ -7,6 +7,15 @@ import type { TransitionLoadingStep, TransitionOptions } from "./transition/type
 import { notify } from "@/components/ui/notify";
 import { traceError } from "@/lib/utils/trace";
 
+const FAST_SECONDARY =
+  (process.env.NEXT_PUBLIC_TRANSITION_FAST_SECONDARY || "")
+    .toString()
+    .toLowerCase() === "1";
+const ROUTER_RATIO_BASE = 0.78; // was 0.8。速い回線で少しだけ短縮する。
+const ROUTER_RATIO_FAST = FAST_SECONDARY ? 0.72 : ROUTER_RATIO_BASE;
+const ROUTER_MIN_MS_BASE = 110;
+const ROUTER_MIN_MS_FAST = FAST_SECONDARY ? 90 : ROUTER_MIN_MS_BASE;
+
 export const DEFAULT_LOADING_STEPS: TransitionLoadingStep[] = [
   { id: "firebase", message: "せつぞく中です...", duration: 890, icon: "🔥" },
   {
@@ -120,11 +129,15 @@ export function usePageTransition() {
             (sum, step) => sum + Math.max(step.duration, 0),
             0
           );
+          // env が有効なときのみ、Firebase 処理付き遷移をわずかに短縮
+          const fastEnabled = FAST_SECONDARY && !!firebaseOperation;
+          const routerRatio = fastEnabled ? ROUTER_RATIO_FAST : ROUTER_RATIO_BASE;
+          const routerMin = fastEnabled ? ROUTER_MIN_MS_FAST : ROUTER_MIN_MS_BASE;
           const routerPushDelay =
             totalDuration > 0
               ? Math.max(
-                  Math.min(totalDuration - 300, totalDuration * 0.8),
-                  120
+                  Math.min(totalDuration - 260, totalDuration * routerRatio),
+                  routerMin
                 )
               : 0;
           clearScheduledNavigation();

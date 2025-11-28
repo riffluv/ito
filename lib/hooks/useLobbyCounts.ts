@@ -238,6 +238,7 @@ export function useLobbyCounts(
         if (!raw) return false; // default OFF
         return raw === "1" || raw === "true";
       })();
+      // presence が安定している環境では OFF のまま運用し、無駄な Firestore 読み取りを抑える想定。
       const excludeSet = excludeUidSet;
       // ロビー表示はゴースト抑制のため、presenceの鮮度しきい値をさらに短めに（既定8s）
       const ENV_STALE = Number(
@@ -757,6 +758,11 @@ export function useLobbyCounts(
     // フォールバック: Firestore 集計クエリで players 件数を軽量取得
     // 常時 onSnapshot は使用せず、一定間隔でポーリング
     if (disableFsFallback) {
+      if (typeof window !== "undefined") {
+        logInfo("useLobbyCounts", "firestore-fallback-disabled", {
+          reason: "NEXT_PUBLIC_DISABLE_FS_FALLBACK",
+        });
+      }
       // フラグ有効時は一切の読み取りを行わず、0固定にする
       setCounts(() => {
         const next: Record<string, number> = {};

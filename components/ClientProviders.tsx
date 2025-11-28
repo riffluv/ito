@@ -10,6 +10,7 @@ import { Box, ChakraProvider } from "@chakra-ui/react";
 import React, { useEffect } from "react";
 import { AnimationProvider } from "@/lib/animation/AnimationContext";
 import { SoundProvider } from "@/lib/audio/SoundProvider";
+import { usePathname } from "next/navigation";
 
 function DarkModeOnlyBridge() {
   useEffect(() => {
@@ -26,12 +27,18 @@ export default function ClientProviders({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  // HUD を使うのはルーム系画面のみ。ロビーなどでは Pixi を初期化しない。
+  const hudEnabled =
+    typeof pathname === "string" &&
+    (pathname.startsWith("/rooms/") || pathname.startsWith("/r/"));
+
   return (
     <ChakraProvider value={system}>
       <SoundProvider>
         <AnimationProvider>
           <TransitionProvider>
-            <PixiHudStage zIndex={105}>
+            <PixiHudStage zIndex={105} enabled={hudEnabled}>
               <Box bg="canvasBg" color="fgDefault" h="100dvh">
                 <DarkModeOnlyBridge />
                 <SafeUpdateBanner />

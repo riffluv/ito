@@ -108,9 +108,14 @@ const PixiHudContext = createContext<PixiHudContextValue | undefined>(undefined)
 export interface PixiHudStageProps {
   children?: React.ReactNode;
   zIndex?: number;
+  /**
+   * false の場合は Pixi Application を初期化せず、軽量なコンテキストだけを提供する。
+   * ルーム外（ロビー等）の初回ロード負荷を避けたいときに利用する。
+   */
+  enabled?: boolean;
 }
 
-export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
+export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const layersRef = useRef<Map<string, LayerRecord>>(new Map());
@@ -155,6 +160,9 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   }, []);
 
   const waitForHudReady = useCallback(() => {
+    if (!enabled) {
+      return Promise.resolve(null);
+    }
     if (!readyPromiseRef.current) {
       let resolveFn: (app: Application | null) => void = () => {};
       const promise = new Promise<Application | null>((resolve) => {
@@ -167,7 +175,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
       readyPromiseRef.current.resolve(appRef.current);
     }
     return readyPromiseRef.current.promise;
-  }, []);
+  }, [enabled]);
 
   const waitForRendererReady = useCallback(async () => {
     const pickGl = (r: Renderer | null | undefined) => {
@@ -302,6 +310,14 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
   }, [backgroundHoldCount]);
 
   useEffect(() => {
+    if (!enabled) {
+      setApp(null);
+      setHudRoot(null);
+      if (readyPromiseRef.current) {
+        readyPromiseRef.current.resolve(null);
+      }
+      return () => {};
+    }
     const host = hostRef.current;
     if (!host) {
       return () => {};
@@ -496,6 +512,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     restartKey,
     safeDestroyContainer,
     renderOnce,
+    enabled,
   ]);
 
   const registerLayer = useCallback((name: string, options?: LayerOptions) => {
@@ -562,7 +579,7 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     // Canvas全体のpointerEventsは常に"none"のまま
   }, [safeDestroyContainer]);
 
-  const contextValue = useMemo<PixiHudContextValue>(
+  const activeContextValue = useMemo<PixiHudContextValue>(
     () => ({
       app,
       registerLayer,
@@ -587,44 +604,63 @@ export function PixiHudStage({ children, zIndex = 20 }: PixiHudStageProps) {
     ]
   );
 
+  const disabledContextValue = useMemo<PixiHudContextValue>(
+    () => ({
+      app: null,
+      registerLayer: () => null,
+      unregisterLayer: () => {},
+      hudRoot: null,
+      markBackgroundReady: () => {},
+      holdBackground: () => undefined,
+      waitForRendererReady: async () => false,
+      renderOnce: async () => false,
+      waitForHudReady: async () => null,
+    }),
+    []
+  );
+
+  const contextValue = enabled ? activeContextValue : disabledContextValue;
+
   return (
     <PixiHudContext.Provider value={contextValue}>
       {children}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          width: "100vw",
-          height: "100vh",
-          zIndex,
-          pointerEvents: "none",
-        }}
-      >
+      {enabled ? (
         <div
-          aria-hidden
           style={{
-            position: "absolute",
+            position: "fixed",
             inset: 0,
-            zIndex: 0,
-            background:
-              "radial-gradient(circle at 25% 25%, rgba(34,44,84,0.45), transparent 60%), linear-gradient(180deg, #05060a 0%, #080a12 60%, #05060a 100%)",
-            transition: "opacity 280ms ease",
-            opacity: backgroundReady ? 0 : 1,
+            width: "100vw",
+            height: "100vh",
+            zIndex,
             pointerEvents: "none",
           }}
-        />
-        <div
-          ref={hostRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        />
-      </div>
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              background:
+                "radial-gradient(circle at 25% 25%, rgba(34,44,84,0.45), transparent 60%), linear-gradient(180deg, #05060a 0%, #080a12 60%, #05060a 100%)",
+              transition: "opacity 280ms ease",
+              opacity: backgroundReady ? 0 : 1,
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            ref={hostRef}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+        </div>
+      ) : null}
     </PixiHudContext.Provider>
   );
 }

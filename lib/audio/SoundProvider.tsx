@@ -36,6 +36,12 @@ const HEAVY_PREWARM_IDS = new Set<SoundId>([
   "ledger_close",
   "bgm1",
 ]);
+const HEAVY_PREWARM_ENABLED = (() => {
+  if (typeof process === "undefined") return false;
+  const raw = (process.env.NEXT_PUBLIC_AUDIO_PREWARM_HEAVY || "").toString().toLowerCase();
+  if (!raw) return false;
+  return raw === "1" || raw === "true";
+})();
 const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
   "ui_click",
   "card_flip",
@@ -297,12 +303,20 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         gapShort: 140,
         traceKey: "audio.prewarm.deferred",
       });
-      await processQueue(heavyStage, "prewarm.heavyMs", {
-        initialDelay: 1400,
-        gapLong: 520,
-        gapShort: 260,
-        traceKey: "audio.prewarm.heavy",
-      });
+      if (heavyStage.length && HEAVY_PREWARM_ENABLED) {
+        await processQueue(heavyStage, "prewarm.heavyMs", {
+          initialDelay: 1400,
+          gapLong: 520,
+          gapShort: 260,
+          traceKey: "audio.prewarm.heavy",
+        });
+      } else if (heavyStage.length) {
+        // 重い音源はオンデマンド再生に任せる（初回再生がわずかに遅れる可能性あり）
+        setMetric("audio", "prewarm.heavyMs", -1);
+        traceAction("audio.prewarm.heavy.skipped", {
+          reason: "env_disabled",
+        });
+      }
     })();
 
     if (critical.length === 0) {
