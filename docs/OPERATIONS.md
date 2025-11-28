@@ -62,6 +62,10 @@
 
 - **Sentry**: `lib/telemetry/` 経由で送信。Sentry DSN を設定した環境のみ有効。  
 
+### 5.1 Lobby / Presence 運用メモ
+- RTDB presence が安定している前提で `NEXT_PUBLIC_LOBBY_VERIFY_SINGLE` / `NEXT_PUBLIC_LOBBY_VERIFY_MULTI` は既定 OFF。必要なときだけ一時的に有効化する。  
+- Firestore へのフォールバック集計を完全停止したい場合は `NEXT_PUBLIC_DISABLE_FS_FALLBACK=1` を設定する（その間のロビー人数は 0 固定になる）。本番で presence が健全なときだけ使用する。  
+
 ---
 
 ## 6. Safe Update 運用手順

@@ -218,36 +218,37 @@ export default function MainMenu() {
 
   // タイトルアニメーション
   useEffect(() => {
-    if (!titleRef.current) return;
-
     let mounted = true;
 
-    const run = async () => {
-      try {
-        const mod = await import("gsap");
-        if (!mounted || !titleRef.current) return;
-        mod.gsap.fromTo(
-          titleRef.current,
-          {
-            opacity: 0,
-            y: 20,
-            scale: 0.95,
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.87,
-            ease: "back.out(1.17)",
-            delay: 0.23,
-          }
-        );
-      } catch {
-        // ignore animation failure in production; keeps main menu usable
-      }
-    };
+    const target = titleRef.current;
+    if (target) {
+      const run = async () => {
+        try {
+          const mod = await import("gsap");
+          if (!mounted) return;
+          mod.gsap.fromTo(
+            target,
+            {
+              opacity: 0,
+              y: 20,
+              scale: 0.95,
+            },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.87,
+              ease: "back.out(1.17)",
+              delay: 0.23,
+            }
+          );
+        } catch {
+          // ignore animation failure in production; keeps main menu usable
+        }
+      };
 
-    void run();
+      void run();
+    }
 
     return () => {
       mounted = false;

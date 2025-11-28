@@ -48,12 +48,14 @@ const ROOM_SNAPSHOT_DEFER_ENABLED =
   process.env.NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER === "1";
 
 const MAX_JOIN_RETRIES = Number(process.env.NEXT_PUBLIC_ROOM_JOIN_RETRIES ?? 5);
-const BASE_JOIN_RETRY_DELAY_MS = 500;
+// 連続 join での負荷を抑えるため既定値をやや長めに設定（env で上書き可能）
+const BASE_JOIN_RETRY_DELAY_MS = 700;
 const MAX_JOIN_RETRY_DELAY_MS = Number(
-  process.env.NEXT_PUBLIC_ROOM_JOIN_RETRY_MAX_DELAY_MS ?? 5000
+  process.env.NEXT_PUBLIC_ROOM_JOIN_RETRY_MAX_DELAY_MS ?? 7000
 );
 const JOIN_RETRY_BACKOFF_FACTOR = 2;
-const DEFAULT_ENSURE_MEMBER_INTERVAL_MS = 60_000;
+// presence が安定している前提で心拍間隔を緩める（必要なら env で短縮）
+const DEFAULT_ENSURE_MEMBER_INTERVAL_MS = 90_000;
 const parsedEnsureMemberInterval = Number(
   process.env.NEXT_PUBLIC_ENSURE_MEMBER_MIN_INTERVAL_MS ?? DEFAULT_ENSURE_MEMBER_INTERVAL_MS
 );
