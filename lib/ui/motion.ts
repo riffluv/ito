@@ -6,7 +6,6 @@ export const REVEAL_FIRST_DELAY = 450; // 「せーの！」直後のタメ（�
 export const REVEAL_INITIAL_STEP_DELAY = 850; // 1枚目→2枚目の間隔（長め＝認識時間確保）
 export const REVEAL_MIN_STEP_DELAY = 580; // 最速時の間隔（これ以下には縮まない）
 export const REVEAL_ACCELERATION_FACTOR = 0.88; // 1枚ごとに間隔を縮める係数
-export const REVEAL_STEP_DELAY = 650; // フォールバック用（旧互換）
 export const REVEAL_LINGER = 520; // リビール完了前に一拍置く待ち
 export const RESULT_VISIBLE_MS = 4200; // 結果画面を表示し続ける時間
 // 参考資料: Desktop 150-200ms / Mobile 250-350ms → 中間値に近いがやや長め 320ms
@@ -25,9 +24,11 @@ export const REVEAL_FLASH_DURATION = 100; // フラッシュ時間
 // フリップ完了から評価処理までの余白を +180ms に調整（視覚完了を確実に待つ）
 export const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 180);
 
-// シーケンシャルモード用（sort-submit のリビール間隔に準拠）。
+// シーケンシャルモード用（加速テンポの平均値を使用）
 export const SEQ_FIRST_CLUE_MS = 260;
-export const SEQ_FLIP_INTERVAL_MS = REVEAL_STEP_DELAY;
+export const SEQ_FLIP_INTERVAL_MS = Math.round(
+  (REVEAL_INITIAL_STEP_DELAY + REVEAL_MIN_STEP_DELAY) / 2
+);
 
 // 共有で使うイージング曲線。
 export const CARD_FLIP_EASING = "cubic-bezier(0.23, 1, 0.32, 1)";

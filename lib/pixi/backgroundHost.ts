@@ -219,6 +219,8 @@ class WorkerBackgroundHost implements BackgroundHostLike {
         this.worker?.postMessage({ type: "effect", effect: "infernoVolcano" }),
       flashRed: () =>
         this.worker?.postMessage({ type: "effect", effect: "flashRed" }),
+      flashWhite: () =>
+        this.worker?.postMessage({ type: "effect", effect: "flashWhite" }),
     };
   }
 
@@ -719,6 +721,9 @@ class PixiBackgroundHost {
         lightSweep: () => controller.lightSweep(),
         launchFireworks: () => controller.launchFireworks(),
         launchMeteors: () => controller.launchMeteors(),
+        flashWhite: controller.flashWhite
+          ? (duration?: number) => controller.flashWhite?.(duration)
+          : undefined,
       },
     };
   }
@@ -761,6 +766,9 @@ class PixiBackgroundHost {
         flashRed: controller.flashRed
           ? (count?: number, duration?: number) =>
               controller.flashRed?.(count, duration)
+          : undefined,
+        flashWhite: controller.flashWhite
+          ? (duration?: number) => controller.flashWhite?.(duration)
           : undefined,
       },
     };
