@@ -1,13 +1,16 @@
 import type * as PIXI from "pixi.js";
-import { safeDestroy } from "./safeDestroy";
 import { loadPixi } from "./loadPixi";
+import { safeDestroy } from "./safeDestroy";
 
 const isBlendMode = (value: unknown): value is PIXI.BLEND_MODES =>
   typeof value === "number";
 
 const nextFrame = () =>
   new Promise<void>((resolve) => {
-    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.requestAnimationFrame === "function"
+    ) {
       window.requestAnimationFrame(() => resolve());
     } else {
       setTimeout(resolve, 16);
@@ -32,6 +35,7 @@ export interface InfernoBackgroundController {
   launchVolcanoEruption(): void;
   launchMeteors(): void;
   flashRed?(count?: number, duration?: number): void;
+  flashWhite?(duration?: number): void;
 }
 
 type Particle = {
@@ -98,7 +102,10 @@ const createInfernoParticles = (
     const radius = Math.random() * 2.5 + 1;
     sprite.circle(0, 0, radius);
     sprite.fill({
-      color: INFERNO_PARTICLE_COLORS[Math.floor(Math.random() * INFERNO_PARTICLE_COLORS.length)],
+      color:
+        INFERNO_PARTICLE_COLORS[
+          Math.floor(Math.random() * INFERNO_PARTICLE_COLORS.length)
+        ],
       alpha: Math.random() * 0.7 + 0.3,
     });
     sprite.x = Math.random() * width;
@@ -118,9 +125,11 @@ export async function createInfernoBackground(
   options: InfernoBackgroundOptions
 ): Promise<InfernoBackgroundController> {
   const pixi = await loadPixi();
-  const BLEND_MODES = (pixi as typeof PIXI & {
-    BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
-  }).BLEND_MODES;
+  const BLEND_MODES = (
+    pixi as typeof PIXI & {
+      BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
+    }
+  ).BLEND_MODES;
   const ownsApp = !options.app;
   const app = options.app ?? new pixi.Application();
   if (ownsApp) {
@@ -229,7 +238,8 @@ export async function createInfernoBackground(
     const lavaBaseY = height * 0.88;
     foreground.moveTo(0, lavaBaseY);
     for (let x = 0; x <= width; x += 25) {
-      const wave = Math.sin(x * 0.01 + performance.now() * 0.001) * 8 + lavaBaseY;
+      const wave =
+        Math.sin(x * 0.01 + performance.now() * 0.001) * 8 + lavaBaseY;
       foreground.lineTo(x, wave);
     }
     foreground.lineTo(width, height);
@@ -320,6 +330,17 @@ export async function createInfernoBackground(
     sweepFlashInterval = sweepFlashDuration + 120;
   };
 
+  // ✨ 白フラッシュ（リビール開始時のインパクト演出）
+  let flashWhiteActive = false;
+  let flashWhiteStart = 0;
+  let flashWhiteDuration = 100;
+
+  const triggerFlashWhite = (duration: number = 100) => {
+    flashWhiteActive = true;
+    flashWhiteStart = performance.now();
+    flashWhiteDuration = Math.max(50, duration);
+  };
+
   const fireworks: Firework[] = [];
   const meteors: Meteor[] = [];
 
@@ -387,7 +408,13 @@ export async function createInfernoBackground(
     }
   };
 
-  const launchMeteor = (startX: number, startY: number, targetX: number, targetY: number, size: number) => {
+  const launchMeteor = (
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number,
+    size: number
+  ) => {
     // 🔥 火山弾（燃える岩）
     const meteor = getGraphicsFromPool();
     meteor.circle(0, 0, size);
@@ -455,14 +482,17 @@ export async function createInfernoBackground(
     // 🔥 上から火山弾が降ってくる（6〜8個に増加）
     const meteorCount = 6 + Math.floor(Math.random() * 3);
     for (let i = 0; i < meteorCount; i++) {
-      setTimeout(() => {
-        const startX = width * (0.2 + Math.random() * 0.6);
-        const startY = -80 - Math.random() * 120;
-        const targetX = width * (0.2 + Math.random() * 0.6);
-        const targetY = height + 100 + Math.random() * 100;
-        const size = 12 + Math.random() * 8; // 🔥 より大きく（12〜20）
-        launchMeteor(startX, startY, targetX, targetY, size);
-      }, i * 100 + Math.random() * 60); // より密集して降る
+      setTimeout(
+        () => {
+          const startX = width * (0.2 + Math.random() * 0.6);
+          const startY = -80 - Math.random() * 120;
+          const targetX = width * (0.2 + Math.random() * 0.6);
+          const targetY = height + 100 + Math.random() * 100;
+          const size = 12 + Math.random() * 8; // 🔥 より大きく（12〜20）
+          launchMeteor(startX, startY, targetX, targetY, size);
+        },
+        i * 100 + Math.random() * 60
+      ); // より密集して降る
     }
   };
 
@@ -474,22 +504,34 @@ export async function createInfernoBackground(
     // 🔥 複数箇所から溶岩噴出（下から上へ）- 画面全体に広がる
     const eruptions = 5; // 5箇所から噴出
     for (let i = 0; i < eruptions; i++) {
-      setTimeout(() => {
-        const x = width * (0.05 + Math.random() * 0.9); // 🔥 0.05〜0.95 でより広範囲
-        const y = height; // 🔥 画面最下部から
-        const color = INFERNO_EXPLOSION_COLORS[Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)];
-        launchLavaBall(x, y, color);
-      }, i * 80 + Math.random() * 50);
+      setTimeout(
+        () => {
+          const x = width * (0.05 + Math.random() * 0.9); // 🔥 0.05〜0.95 でより広範囲
+          const y = height; // 🔥 画面最下部から
+          const color =
+            INFERNO_EXPLOSION_COLORS[
+              Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)
+            ];
+          launchLavaBall(x, y, color);
+        },
+        i * 80 + Math.random() * 50
+      );
     }
 
     // 🔥 中央から大規模噴火
     for (let i = 0; i < 3; i++) {
-      setTimeout(() => {
-        const x = width * 0.5 + (Math.random() - 0.5) * width * 0.3; // 🔥 中央±15%→±15%でより広く
-        const y = height;
-        const color = INFERNO_EXPLOSION_COLORS[Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)];
-        launchLavaBall(x, y, color);
-      }, i * 120 + 300);
+      setTimeout(
+        () => {
+          const x = width * 0.5 + (Math.random() - 0.5) * width * 0.3; // 🔥 中央±15%→±15%でより広く
+          const y = height;
+          const color =
+            INFERNO_EXPLOSION_COLORS[
+              Math.floor(Math.random() * INFERNO_EXPLOSION_COLORS.length)
+            ];
+          launchLavaBall(x, y, color);
+        },
+        i * 120 + 300
+      );
     }
   };
 
@@ -567,7 +609,8 @@ export async function createInfernoBackground(
       const currentFlash = Math.floor(elapsed / sweepFlashInterval);
 
       if (currentFlash < sweepFlashes) {
-        const flashProgress = (elapsed % sweepFlashInterval) / sweepFlashDuration;
+        const flashProgress =
+          (elapsed % sweepFlashInterval) / sweepFlashDuration;
         if (flashProgress < 1) {
           // サイン波で急激に明るく→暗く
           sweepOverlay.alpha = Math.sin(Math.PI * flashProgress) * 0.6;
@@ -578,6 +621,22 @@ export async function createInfernoBackground(
         sweepActive = false;
         sweepOverlay.alpha = 0;
         pointerTargetY = 0;
+      }
+    }
+
+    // ✨ 白フラッシュ演出（リビール開始時）
+    if (flashWhiteActive) {
+      const elapsed = time - flashWhiteStart;
+      const t = Math.min(1, elapsed / flashWhiteDuration);
+      // 急速にピーク→緩やかに減衰（ease-out的）
+      const envelope =
+        t < 0.3
+          ? t / 0.3 // 0-30%: 急上昇
+          : 1 - ((t - 0.3) / 0.7) ** 0.5; // 30-100%: 緩やかに減衰
+      sweepOverlay.alpha = envelope * 0.55; // ピーク時55%の明るさ
+      if (elapsed >= flashWhiteDuration) {
+        flashWhiteActive = false;
+        sweepOverlay.alpha = 0;
       }
     }
 
@@ -666,7 +725,7 @@ export async function createInfernoBackground(
   frameId = requestAnimationFrame(animate);
 
   const controller: InfernoBackgroundController = {
-    canvas: ownsApp ? app.canvas ?? undefined : undefined,
+    canvas: ownsApp ? (app.canvas ?? undefined) : undefined,
     resize(width: number, height: number) {
       if (ownsApp) {
         app.renderer.resize(width, height);
@@ -692,6 +751,9 @@ export async function createInfernoBackground(
     flashRed(count?: number, duration?: number) {
       triggerFlashRed(count, duration);
     },
+    flashWhite(duration?: number) {
+      triggerFlashWhite(duration);
+    },
     destroy() {
       running = false;
       if (frameId !== null) {
@@ -699,7 +761,10 @@ export async function createInfernoBackground(
         frameId = null;
       }
       if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
       }
       particles.forEach((particle, index) => {
         safeDestroy(particle.sprite, `inferno.destroy.particle#${index}`);

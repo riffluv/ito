@@ -1,8 +1,8 @@
-import type * as PIXI from "pixi.js";
-import { safeDestroy } from "./safeDestroy";
-import { loadPixi } from "./loadPixi";
-import { waitForNextFrame } from "@/lib/utils/nextFrame";
 import type { PixiBackgroundProfile } from "@/lib/pixi/backgroundTypes";
+import { waitForNextFrame } from "@/lib/utils/nextFrame";
+import type * as PIXI from "pixi.js";
+import { loadPixi } from "./loadPixi";
+import { safeDestroy } from "./safeDestroy";
 
 export interface DragonQuestBackgroundOptions {
   width: number;
@@ -21,6 +21,7 @@ export interface DragonQuestBackgroundController {
   lightSweep(): void;
   launchFireworks(): void;
   launchMeteors(): void;
+  flashWhite?(duration?: number): void;
 }
 
 type Particle = {
@@ -56,12 +57,7 @@ type Meteor = {
 };
 
 const SAFE_COLORS = [
-  0xffd700,
-  0xffdc00,
-  0xffc700,
-  0xffed4a,
-  0xfff176,
-  0xffb300,
+  0xffd700, 0xffdc00, 0xffc700, 0xffed4a, 0xfff176, 0xffb300,
 ];
 
 const FIREWORK_COLORS = [
@@ -110,9 +106,11 @@ export async function createDragonQuestBackground(
   const pixi = await loadPixi();
   const profile = options.profile ?? "default";
   const isSoftwareProfile = profile === "software";
-  const BLEND_MODES = (pixi as typeof PIXI & {
-    BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
-  }).BLEND_MODES;
+  const BLEND_MODES = (
+    pixi as typeof PIXI & {
+      BLEND_MODES?: Partial<Record<string, PIXI.BLEND_MODES>>;
+    }
+  ).BLEND_MODES;
   const ownsApp = !options.app;
   const app = options.app ?? new pixi.Application();
   if (ownsApp) {
@@ -262,7 +260,8 @@ export async function createDragonQuestBackground(
     }
     const cores = navigator.hardwareConcurrency || 4;
     let base = 60;
-    if (cores <= 4) base = 30; // ローエンド
+    if (cores <= 4)
+      base = 30; // ローエンド
     else if (cores <= 8) base = 45; // ミドルレンジ
     return isSoftwareProfile ? Math.max(24, Math.min(base, 36)) : base;
   };
@@ -284,11 +283,24 @@ export async function createDragonQuestBackground(
   let sweepStart = 0;
   const SWEEP_DURATION = 900;
 
+  // ✨ 白フラッシュ演出用（リビール開始時のタメ）
+  let flashWhiteActive = false;
+  let flashWhiteStart = 0;
+  let flashWhiteDuration = 100;
+
   const triggerLightSweep = () => {
     sweepActive = true;
     sweepStart = performance.now();
     sweepOverlay.alpha = 0;
     pointerTargetY = -0.35;
+  };
+
+  // ✨ 白フラッシュ（リビール開始時のインパクト演出）
+  const triggerFlashWhite = (duration: number = 100) => {
+    flashWhiteActive = true;
+    flashWhiteStart = performance.now();
+    flashWhiteDuration = Math.max(50, duration);
+    sweepOverlay.alpha = 0;
   };
 
   const fireworks: Firework[] = [];
@@ -304,7 +316,8 @@ export async function createDragonQuestBackground(
     graphics.clear();
     graphics.alpha = 1;
     graphics.visible = true;
-    if (graphicsPool.length < graphicsPoolLimit) { // プールサイズ上限
+    if (graphicsPool.length < graphicsPoolLimit) {
+      // プールサイズ上限
       graphicsPool.push(graphics);
     } else {
       safeDestroy(graphics, "dragonQuest.graphicsPool");
@@ -338,7 +351,9 @@ export async function createDragonQuestBackground(
       : 60 + Math.floor(Math.random() * 40);
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = isSoftwareProfile ? 2 + Math.random() * 3 : 3 + Math.random() * 4;
+      const speed = isSoftwareProfile
+        ? 2 + Math.random() * 3
+        : 3 + Math.random() * 4;
       const particle = getGraphicsFromPool();
       particle.circle(0, 0, 2 + Math.random() * 2);
       particle.fill({ color: fw.color, alpha: 0.9 });
@@ -359,7 +374,13 @@ export async function createDragonQuestBackground(
     }
   };
 
-  const launchMeteor = (startX: number, startY: number, targetX: number, targetY: number, size: number) => {
+  const launchMeteor = (
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number,
+    size: number
+  ) => {
     // 隕石本体
     const meteor = getGraphicsFromPool();
     meteor.circle(0, 0, size);
@@ -403,14 +424,17 @@ export async function createDragonQuestBackground(
       ? 2 + Math.floor(Math.random() * 2)
       : 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < meteorCount; i++) {
-      setTimeout(() => {
-        const startX = width * (0.7 + Math.random() * 0.3); // 右上
-        const startY = -50 - Math.random() * 100;
-        const targetX = width * (0.1 + Math.random() * 0.2); // 左下
-        const targetY = height + 100 + Math.random() * 100;
-        const size = 8 + Math.random() * 8; // でかい隕石！
-        launchMeteor(startX, startY, targetX, targetY, size);
-      }, i * (isSoftwareProfile ? 200 : 150) + Math.random() * 120);
+      setTimeout(
+        () => {
+          const startX = width * (0.7 + Math.random() * 0.3); // 右上
+          const startY = -50 - Math.random() * 100;
+          const targetX = width * (0.1 + Math.random() * 0.2); // 左下
+          const targetY = height + 100 + Math.random() * 100;
+          const size = 8 + Math.random() * 8; // でかい隕石！
+          launchMeteor(startX, startY, targetX, targetY, size);
+        },
+        i * (isSoftwareProfile ? 200 : 150) + Math.random() * 120
+      );
     }
   };
 
@@ -424,7 +448,8 @@ export async function createDragonQuestBackground(
       setTimeout(() => {
         const x = width * 0.15 + Math.random() * width * 0.1;
         const y = height * 0.75;
-        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+        const color =
+          FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
         launchFirework(x, y, color);
       }, i * 120);
     }
@@ -432,27 +457,33 @@ export async function createDragonQuestBackground(
     // 右の山から複数発
     const rightBursts = isSoftwareProfile ? 2 : 3;
     for (let i = 0; i < rightBursts; i++) {
-      setTimeout(() => {
-        const x = width * 0.75 + Math.random() * width * 0.1;
-        const y = height * 0.75;
-        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
-        launchFirework(x, y, color);
-      }, i * 120 + 60);
+      setTimeout(
+        () => {
+          const x = width * 0.75 + Math.random() * width * 0.1;
+          const y = height * 0.75;
+          const color =
+            FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+          launchFirework(x, y, color);
+        },
+        i * 120 + 60
+      );
     }
 
     // 中央から大きめの発射
     const centerBursts = isSoftwareProfile ? 1 : 2;
     for (let i = 0; i < centerBursts; i++) {
-      setTimeout(() => {
-        const x = width * 0.45 + Math.random() * width * 0.1;
-        const y = height * 0.8;
-        const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
-        launchFirework(x, y, color);
-      }, i * 180 + 240);
+      setTimeout(
+        () => {
+          const x = width * 0.45 + Math.random() * width * 0.1;
+          const y = height * 0.8;
+          const color =
+            FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+          launchFirework(x, y, color);
+        },
+        i * 180 + 240
+      );
     }
   };
-
-
 
   let running = true;
   let frameId: number | null = null;
@@ -500,8 +531,7 @@ export async function createDragonQuestBackground(
       if (sprite.x < 0) sprite.x = app.screen.width;
       if (sprite.y > app.screen.height) sprite.y = 0;
       if (sprite.y < 0) sprite.y = app.screen.height;
-      sprite.alpha =
-        Math.sin(time * 0.001 * particle.life) * 0.3 + 0.4;
+      sprite.alpha = Math.sin(time * 0.001 * particle.life) * 0.3 + 0.4;
     });
 
     pointerCurrentX += (pointerTargetX - pointerCurrentX) * pointerLerpFactor;
@@ -524,6 +554,22 @@ export async function createDragonQuestBackground(
         sweepActive = false;
         sweepOverlay.alpha = 0;
         pointerTargetY = 0;
+      }
+    }
+
+    // ✨ 白フラッシュ演出（リビール開始時）
+    if (flashWhiteActive) {
+      const elapsed = time - flashWhiteStart;
+      const t = Math.min(1, elapsed / flashWhiteDuration);
+      // 急速にピーク→緩やかに減衰（ease-out的）
+      const envelope =
+        t < 0.3
+          ? t / 0.3 // 0-30%: 急上昇
+          : 1 - ((t - 0.3) / 0.7) ** 0.5; // 30-100%: 緩やかに減衰
+      sweepOverlay.alpha = envelope * 0.55; // ピーク時55%の明るさ
+      if (elapsed >= flashWhiteDuration) {
+        flashWhiteActive = false;
+        sweepOverlay.alpha = 0;
       }
     }
 
@@ -610,7 +656,7 @@ export async function createDragonQuestBackground(
   frameId = requestAnimationFrame(animate);
 
   const controller: DragonQuestBackgroundController = {
-    canvas: ownsApp ? app.canvas ?? undefined : undefined,
+    canvas: ownsApp ? (app.canvas ?? undefined) : undefined,
     resize(width: number, height: number) {
       if (ownsApp) {
         app.renderer.resize(width, height);
@@ -630,6 +676,9 @@ export async function createDragonQuestBackground(
     launchMeteors() {
       triggerMeteors();
     },
+    flashWhite(duration?: number) {
+      triggerFlashWhite(duration);
+    },
     destroy() {
       running = false;
       if (frameId !== null) {
@@ -637,13 +686,13 @@ export async function createDragonQuestBackground(
         frameId = null;
       }
       if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
       }
       particles.forEach((particle, index) => {
-        safeDestroy(
-          particle.sprite,
-          `dragonQuest.destroy.particle#${index}`
-        );
+        safeDestroy(particle.sprite, `dragonQuest.destroy.particle#${index}`);
       });
       fireworks.forEach((fw, index) => {
         safeDestroy(fw.sprite, `dragonQuest.destroy.firework#${index}`);
@@ -651,10 +700,7 @@ export async function createDragonQuestBackground(
       fireworks.length = 0;
       meteors.forEach((meteor, index) => {
         safeDestroy(meteor.sprite, `dragonQuest.destroy.meteor#${index}`);
-        safeDestroy(
-          meteor.trail,
-          `dragonQuest.destroy.meteorTrail#${index}`
-        );
+        safeDestroy(meteor.trail, `dragonQuest.destroy.meteorTrail#${index}`);
       });
       meteors.length = 0;
       if (typeof window !== "undefined") {
