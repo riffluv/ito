@@ -1,6 +1,7 @@
 import { showtime } from "./ShowtimeManager";
 import { roundRevealScenario } from "./scenarios/roundReveal";
 import { roundStartScenario } from "./scenarios/roundStart";
+import type { ShowtimeContext } from "./types";
 
 /**
  * SHOWTIME (Phase 0)
@@ -10,8 +11,9 @@ import { roundStartScenario } from "./scenarios/roundStart";
  * `"round:reveal"` が呼ばれる構成で、intent ベースの publish とはまだ連動していない。
  */
 
-showtime.register("round:start", roundStartScenario);
-showtime.register("round:reveal", roundRevealScenario);
+// ShowtimeManager は型パラメータを受け付けないため any で登録
+showtime.register("round:start", roundStartScenario as any);
+showtime.register("round:reveal", roundRevealScenario as any);
 
 export { showtime };
 export type { Scenario, ScenarioStep, ShowtimeContext } from "./types";
