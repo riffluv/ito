@@ -157,7 +157,21 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
   }
 
   try {
-    const play = () => {
+    const playWithRetry = (attempt = 0) => {
+      const manager = getGlobalSoundManager();
+      if (!manager) {
+        // SoundProvider がまだ初期化されていない場合は少し待ってリトライ
+        if (attempt < 4) {
+          setTimeout(() => playWithRetry(attempt + 1), 300);
+          return;
+        }
+        logWarn(SCOPE, "audio.play skipped (manager unavailable)", {
+          id: targetId,
+          attempt,
+        });
+        return;
+      }
+
       playSound(targetId);
       if (
         (requestedId === "result_victory" ||
@@ -188,7 +202,7 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
     if (delayMs > 0 && typeof window !== "undefined") {
       window.__ITO_RESULT_SOUND_PENDING__ = true;
       window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = Date.now();
-      const id = window.setTimeout(play, delayMs);
+      const id = window.setTimeout(() => playWithRetry(), delayMs);
       window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = id;
     } else {
       if (typeof window !== "undefined") {
@@ -196,7 +210,7 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
         window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = null;
         window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = null;
       }
-      play();
+      playWithRetry();
     }
   } catch (error) {
     logWarn(SCOPE, "audio.play failed", { error, id: requestedId, targetId });
