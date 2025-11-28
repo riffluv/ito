@@ -1,20 +1,14 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { logError, logInfo, logWarn } from "@/lib/utils/log";
-import { setMetric } from "@/lib/utils/metrics";
 import {
   pixiBackgroundHost,
   type SetSceneResult,
 } from "@/lib/pixi/backgroundHost";
 import { type PixiBackgroundProfile } from "@/lib/pixi/backgroundTypes";
+import { logError, logInfo, logWarn } from "@/lib/utils/log";
+import { setMetric } from "@/lib/utils/metrics";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
@@ -50,6 +44,7 @@ declare global {
       launchVolcanoEruption?: () => void;
       launchMeteors: () => void;
       flashRed?: (count?: number, duration?: number) => void;
+      flashWhite?: (duration?: number) => void;
       setQuality: (quality: BackgroundQuality) => void;
       getQuality: () => BackgroundQuality;
       getRenderer: () => "dom" | "pixi";
@@ -65,6 +60,7 @@ const ensureGlobalBackground = () => {
       lightSweep: () => {},
       launchFireworks: () => {},
       launchMeteors: () => {},
+      flashWhite: () => {},
       setQuality: () => {},
       getQuality: () => "low",
       getRenderer: () => "dom",
@@ -81,6 +77,7 @@ const updateGlobalBackground = (payload: {
   onLaunchMeteors?: () => void;
   onLaunchVolcanoEruption?: () => void;
   onFlashRed?: (count?: number, duration?: number) => void;
+  onFlashWhite?: (duration?: number) => void;
   onSetQuality?: (quality: BackgroundQuality) => void;
   onPointerGlow?: (active: boolean) => void;
 }) => {
@@ -94,6 +91,7 @@ const updateGlobalBackground = (payload: {
     launchMeteors: payload.onLaunchMeteors ?? noop,
     launchVolcanoEruption: payload.onLaunchVolcanoEruption ?? noop,
     flashRed: payload.onFlashRed ?? noop,
+    flashWhite: payload.onFlashWhite ?? noop,
     setQuality: payload.onSetQuality ?? noop,
     getQuality: () => payload.quality,
     getRenderer: () => payload.renderer,
@@ -107,7 +105,8 @@ export interface PixiBackgroundProps {
 
 export function PixiBackground({ className }: PixiBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const { supports3D, gpuCapability, softwareRenderer } = useAnimationSettings();
+  const { supports3D, gpuCapability, softwareRenderer } =
+    useAnimationSettings();
   const performanceProfile: PixiBackgroundProfile =
     softwareRenderer || gpuCapability === "low" ? "software" : "default";
   const shouldForceCssFallback = !supports3D || softwareRenderer;
@@ -123,13 +122,16 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     null
   );
 
-  const recordBackgroundMetric = useCallback((key: string, value: number | string) => {
-    try {
-      setMetric("background", key, value);
-    } catch {
-      // ignore metrics failures in dev
-    }
-  }, []);
+  const recordBackgroundMetric = useCallback(
+    (key: string, value: number | string) => {
+      try {
+        setMetric("background", key, value);
+      } catch {
+        // ignore metrics failures in dev
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     ensureGlobalBackground();
@@ -216,7 +218,10 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("pixiBackgroundContextLost", handleLost);
-        window.removeEventListener("pixiBackgroundContextRestored", handleRestored);
+        window.removeEventListener(
+          "pixiBackgroundContextRestored",
+          handleRestored
+        );
       }
     };
   }, []);
@@ -246,29 +251,27 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     return "low";
   }, [backgroundType]);
 
-  const applySceneResult = useCallback(
-    (result: SetSceneResult) => {
-      if (result.renderer === "pixi") {
-        updateGlobalBackground({
-          renderer: "pixi",
-          quality: result.quality,
-          onLightSweep: result.effects?.lightSweep,
-          onLaunchFireworks: result.effects?.launchFireworks,
-          onLaunchMeteors: result.effects?.launchMeteors,
-          onLaunchVolcanoEruption: result.effects?.launchVolcanoEruption,
-          onFlashRed: result.effects?.flashRed,
-          onSetQuality: result.effects?.setQuality,
-          onPointerGlow: result.effects?.updatePointerGlow,
-        });
-      } else {
-        updateGlobalBackground({
-          renderer: "dom",
-          quality: result.quality,
-        });
-      }
-    },
-    []
-  );
+  const applySceneResult = useCallback((result: SetSceneResult) => {
+    if (result.renderer === "pixi") {
+      updateGlobalBackground({
+        renderer: "pixi",
+        quality: result.quality,
+        onLightSweep: result.effects?.lightSweep,
+        onLaunchFireworks: result.effects?.launchFireworks,
+        onLaunchMeteors: result.effects?.launchMeteors,
+        onLaunchVolcanoEruption: result.effects?.launchVolcanoEruption,
+        onFlashRed: result.effects?.flashRed,
+        onFlashWhite: result.effects?.flashWhite,
+        onSetQuality: result.effects?.setQuality,
+        onPointerGlow: result.effects?.updatePointerGlow,
+      });
+    } else {
+      updateGlobalBackground({
+        renderer: "dom",
+        quality: result.quality,
+      });
+    }
+  }, []);
 
   const applyBackgroundScene = useCallback(async () => {
     const currentType = backgroundType;
@@ -293,7 +296,8 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
         key: pixiKey,
         quality: effectiveQuality,
         profile: performanceProfile,
-        onMetrics: (metrics) => logPixiBackground("info", "simple-metrics", metrics),
+        onMetrics: (metrics) =>
+          logPixiBackground("info", "simple-metrics", metrics),
       });
       applySceneResult(result);
       const initDuration = performance.now() - initStart;

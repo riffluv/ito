@@ -1,14 +1,7 @@
-import { Application, Container } from "@/lib/pixi/instance";
 import {
   DEFAULT_BACKGROUND_PROFILE,
   type PixiBackgroundProfile,
 } from "@/lib/pixi/backgroundTypes";
-import {
-  createSimpleBackground,
-  type BackgroundQuality,
-  type SimpleBackgroundController,
-  type SimpleBackgroundMetrics,
-} from "@/lib/pixi/simpleBackground";
 import {
   createDragonQuestBackground,
   type DragonQuestBackgroundController,
@@ -17,7 +10,14 @@ import {
   createInfernoBackground,
   type InfernoBackgroundController,
 } from "@/lib/pixi/infernoBackground";
-import { logInfo, logError } from "@/lib/utils/log";
+import { Application, Container } from "@/lib/pixi/instance";
+import {
+  createSimpleBackground,
+  type BackgroundQuality,
+  type SimpleBackgroundController,
+  type SimpleBackgroundMetrics,
+} from "@/lib/pixi/simpleBackground";
+import { logError, logInfo } from "@/lib/utils/log";
 
 type PixiSceneKey = "pixi-simple" | "pixi-dq" | "pixi-inferno";
 
@@ -27,6 +27,7 @@ type SceneEffects = {
   launchMeteors?: () => void;
   launchVolcanoEruption?: () => void;
   flashRed?: (count?: number, duration?: number) => void;
+  flashWhite?: (duration?: number) => void;
   updatePointerGlow?: (active: boolean) => void;
   setQuality?: (quality: BackgroundQuality) => void;
 };
@@ -54,9 +55,11 @@ const PIXI_WORKER_CACHE_BUST = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 
 const resolveWorkerAssetPrefix = () => {
   if (typeof window === "undefined") return "";
-  const nextData = (globalThis as typeof globalThis & {
-    __NEXT_DATA__?: NextDataWithAssetPrefix;
-  }).__NEXT_DATA__;
+  const nextData = (
+    globalThis as typeof globalThis & {
+      __NEXT_DATA__?: NextDataWithAssetPrefix;
+    }
+  ).__NEXT_DATA__;
   const fromNext = nextData?.assetPrefix ?? "";
   const fallback = process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "";
   return (fromNext || fallback || "").replace(/\/$/, "");
@@ -67,7 +70,9 @@ const buildWorkerAssetUrl = (): string | null => {
   const prefix = resolveWorkerAssetPrefix();
   const isAbsolute = /^https?:\/\//i.test(prefix);
   const base = isAbsolute ? prefix : `${window.location.origin}${prefix}`;
-  const cacheBust = PIXI_WORKER_CACHE_BUST ? `?v=${PIXI_WORKER_CACHE_BUST}` : "";
+  const cacheBust = PIXI_WORKER_CACHE_BUST
+    ? `?v=${PIXI_WORKER_CACHE_BUST}`
+    : "";
   return `${base}${PIXI_WORKER_PUBLIC_PATH}${cacheBust}`;
 };
 
@@ -204,13 +209,16 @@ class WorkerBackgroundHost implements BackgroundHostLike {
 
   private createEffectProxy(): SceneEffects {
     return {
-      lightSweep: () => this.worker?.postMessage({ type: "effect", effect: "lightSweep" }),
+      lightSweep: () =>
+        this.worker?.postMessage({ type: "effect", effect: "lightSweep" }),
       launchFireworks: () =>
         this.worker?.postMessage({ type: "effect", effect: "fireworks" }),
-      launchMeteors: () => this.worker?.postMessage({ type: "effect", effect: "meteors" }),
+      launchMeteors: () =>
+        this.worker?.postMessage({ type: "effect", effect: "meteors" }),
       launchVolcanoEruption: () =>
         this.worker?.postMessage({ type: "effect", effect: "infernoVolcano" }),
-      flashRed: () => this.worker?.postMessage({ type: "effect", effect: "flashRed" }),
+      flashRed: () =>
+        this.worker?.postMessage({ type: "effect", effect: "flashRed" }),
     };
   }
 
@@ -390,10 +398,12 @@ const computeWorkerSupport = (): WorkerSupportDiagnostics => {
     safariBlocked: isSafariBelow17(),
     supported: false,
   };
-  diag.supported = diag.flag && diag.offscreen && diag.crossOrigin && !diag.safariBlocked;
+  diag.supported =
+    diag.flag && diag.offscreen && diag.crossOrigin && !diag.safariBlocked;
   if (typeof window !== "undefined") {
-    (window as typeof window & { __pixiWorkerDiag?: WorkerSupportDiagnostics }).__pixiWorkerDiag =
-      diag;
+    (
+      window as typeof window & { __pixiWorkerDiag?: WorkerSupportDiagnostics }
+    ).__pixiWorkerDiag = diag;
   }
   return diag;
 };
@@ -470,7 +480,8 @@ class PixiBackgroundHost {
           width: window.innerWidth || 1920,
           height: window.innerHeight || 1080,
           preference: "webgl",
-          powerPreference: profile === "software" ? "low-power" : "high-performance",
+          powerPreference:
+            profile === "software" ? "low-power" : "high-performance",
           hello: false,
         });
       } catch (error) {
@@ -496,8 +507,14 @@ class PixiBackgroundHost {
       app.canvas.style.width = "100%";
       app.canvas.style.height = "100%";
       app.canvas.style.pointerEvents = "none";
-      app.canvas.addEventListener("webglcontextlost", this.handleContextLost as EventListener);
-      app.canvas.addEventListener("webglcontextrestored", this.handleContextRestored as EventListener);
+      app.canvas.addEventListener(
+        "webglcontextlost",
+        this.handleContextLost as EventListener
+      );
+      app.canvas.addEventListener(
+        "webglcontextrestored",
+        this.handleContextRestored as EventListener
+      );
       window.addEventListener("resize", this.handleResize, { passive: true });
       document.addEventListener("visibilitychange", this.handleVisibility);
       this.cancelDispose();
@@ -543,7 +560,12 @@ class PixiBackgroundHost {
 
   async attachCanvas(host: HTMLElement | null) {
     if (!host) return;
-    if (this.canvasHolder && this.canvasHolder !== host && this.app && this.app.canvas.parentElement === this.canvasHolder) {
+    if (
+      this.canvasHolder &&
+      this.canvasHolder !== host &&
+      this.app &&
+      this.app.canvas.parentElement === this.canvasHolder
+    ) {
       this.canvasHolder.removeChild(this.app.canvas);
     }
     this.canvasHolder = host;
@@ -563,7 +585,8 @@ class PixiBackgroundHost {
 
   private scheduleDispose() {
     if (this.disposeTimer) return;
-    const timeout = typeof window !== "undefined" ? window.setTimeout : setTimeout;
+    const timeout =
+      typeof window !== "undefined" ? window.setTimeout : setTimeout;
     this.disposeTimer = timeout(() => {
       this.disposeTimer = null;
       if (this.canvasHolder) {
@@ -575,7 +598,8 @@ class PixiBackgroundHost {
 
   private cancelDispose() {
     if (!this.disposeTimer) return;
-    const clear = typeof window !== "undefined" ? window.clearTimeout : clearTimeout;
+    const clear =
+      typeof window !== "undefined" ? window.clearTimeout : clearTimeout;
     clear(this.disposeTimer);
     this.disposeTimer = null;
   }
@@ -585,8 +609,14 @@ class PixiBackgroundHost {
     this.destroyCurrentScene();
     this.canvasVisible = true;
     const canvas = this.app.canvas;
-    canvas.removeEventListener("webglcontextlost", this.handleContextLost as EventListener);
-    canvas.removeEventListener("webglcontextrestored", this.handleContextRestored as EventListener);
+    canvas.removeEventListener(
+      "webglcontextlost",
+      this.handleContextLost as EventListener
+    );
+    canvas.removeEventListener(
+      "webglcontextrestored",
+      this.handleContextRestored as EventListener
+    );
     window.removeEventListener("resize", this.handleResize);
     document.removeEventListener("visibilitychange", this.handleVisibility);
     try {
@@ -614,23 +644,29 @@ class PixiBackgroundHost {
     this.current = null;
   }
 
-  private async createSimpleScene(options: SceneOptions): Promise<SceneInstance> {
-    if (!this.app || !this.sceneRoot) throw new Error("Pixi background host is not ready");
+  private async createSimpleScene(
+    options: SceneOptions
+  ): Promise<SceneInstance> {
+    if (!this.app || !this.sceneRoot)
+      throw new Error("Pixi background host is not ready");
     const container = new Container();
     container.sortableChildren = true;
     container.eventMode = "none";
     this.sceneRoot.addChild(container);
-    const isSoftwareProfile = (options.profile ?? this.requestedProfile) === "software";
-    const controller: SimpleBackgroundController = await createSimpleBackground({
-      width: this.app.renderer.width,
-      height: this.app.renderer.height,
-      quality: options.quality,
-      backgroundColor: 0x0a0a0a,
-      dprCap: isSoftwareProfile ? 1 : 2,
-      onMetrics: options.onMetrics,
-      app: this.app,
-      container,
-    });
+    const isSoftwareProfile =
+      (options.profile ?? this.requestedProfile) === "software";
+    const controller: SimpleBackgroundController = await createSimpleBackground(
+      {
+        width: this.app.renderer.width,
+        height: this.app.renderer.height,
+        quality: options.quality,
+        backgroundColor: 0x0a0a0a,
+        dprCap: isSoftwareProfile ? 1 : 2,
+        onMetrics: options.onMetrics,
+        app: this.app,
+        container,
+      }
+    );
     return {
       key: "pixi-simple",
       container,
@@ -641,28 +677,36 @@ class PixiBackgroundHost {
       },
       effects: {
         lightSweep: () => controller.lightSweep(),
-        updatePointerGlow: (active: boolean) => controller.updatePointerGlow(active),
-        setQuality: (quality: BackgroundQuality) => controller.setQuality(quality),
+        updatePointerGlow: (active: boolean) =>
+          controller.updatePointerGlow(active),
+        setQuality: (quality: BackgroundQuality) =>
+          controller.setQuality(quality),
       },
     };
   }
 
-  private async createDragonQuestScene(profile: PixiBackgroundProfile): Promise<SceneInstance> {
-    if (!this.app || !this.sceneRoot) throw new Error("Pixi background host is not ready");
+  private async createDragonQuestScene(
+    profile: PixiBackgroundProfile
+  ): Promise<SceneInstance> {
+    if (!this.app || !this.sceneRoot)
+      throw new Error("Pixi background host is not ready");
     const container = new Container();
     container.sortableChildren = true;
     container.eventMode = "none";
     this.sceneRoot.addChild(container);
-    const controller: DragonQuestBackgroundController = await createDragonQuestBackground({
-      width: this.app.renderer.width,
-      height: this.app.renderer.height,
-      antialias: profile !== "software",
-      resolution:
-        profile === "software" ? 1 : Math.min(1.3, window.devicePixelRatio || 1),
-      app: this.app,
-      container,
-      profile,
-    });
+    const controller: DragonQuestBackgroundController =
+      await createDragonQuestBackground({
+        width: this.app.renderer.width,
+        height: this.app.renderer.height,
+        antialias: profile !== "software",
+        resolution:
+          profile === "software"
+            ? 1
+            : Math.min(1.3, window.devicePixelRatio || 1),
+        app: this.app,
+        container,
+        profile,
+      });
     return {
       key: "pixi-dq",
       container,
@@ -679,21 +723,27 @@ class PixiBackgroundHost {
     };
   }
 
-  private async createInfernoScene(profile: PixiBackgroundProfile): Promise<SceneInstance> {
-    if (!this.app || !this.sceneRoot) throw new Error("Pixi background host is not ready");
+  private async createInfernoScene(
+    profile: PixiBackgroundProfile
+  ): Promise<SceneInstance> {
+    if (!this.app || !this.sceneRoot)
+      throw new Error("Pixi background host is not ready");
     const container = new Container();
     container.sortableChildren = true;
     container.eventMode = "none";
     this.sceneRoot.addChild(container);
-    const controller: InfernoBackgroundController = await createInfernoBackground({
-      width: this.app.renderer.width,
-      height: this.app.renderer.height,
-      antialias: profile !== "software",
-      resolution:
-        profile === "software" ? 1 : Math.min(1.3, window.devicePixelRatio || 1),
-      app: this.app,
-      container,
-    });
+    const controller: InfernoBackgroundController =
+      await createInfernoBackground({
+        width: this.app.renderer.width,
+        height: this.app.renderer.height,
+        antialias: profile !== "software",
+        resolution:
+          profile === "software"
+            ? 1
+            : Math.min(1.3, window.devicePixelRatio || 1),
+        app: this.app,
+        container,
+      });
     return {
       key: "pixi-inferno",
       container,
@@ -709,7 +759,8 @@ class PixiBackgroundHost {
           ? () => controller.launchVolcanoEruption?.()
           : undefined,
         flashRed: controller.flashRed
-          ? (count?: number, duration?: number) => controller.flashRed?.(count, duration)
+          ? (count?: number, duration?: number) =>
+              controller.flashRed?.(count, duration)
           : undefined,
       },
     };
@@ -727,7 +778,11 @@ class PixiBackgroundHost {
       return { renderer: "dom", quality: options.quality };
     }
     const sameScene = this.current?.key === options.key;
-    if (sameScene && options.key === "pixi-simple" && this.current?.effects.setQuality) {
+    if (
+      sameScene &&
+      options.key === "pixi-simple" &&
+      this.current?.effects.setQuality
+    ) {
       this.current.effects.setQuality(options.quality);
       return {
         renderer: "pixi",
@@ -798,8 +853,9 @@ class HybridPixiBackgroundHost implements BackgroundHostLike {
 
   private exposeMode() {
     if (typeof window !== "undefined") {
-      (window as typeof window & { __pixiBackgroundMode?: string }).__pixiBackgroundMode =
-        this.mode;
+      (
+        window as typeof window & { __pixiBackgroundMode?: string }
+      ).__pixiBackgroundMode = this.mode;
     }
   }
 
@@ -868,8 +924,9 @@ class HybridPixiBackgroundHost implements BackgroundHostLike {
       try {
         const result = await this.workerHost.setScene(options);
         if (typeof window !== "undefined") {
-          (window as typeof window & { __pixiLastSceneResult?: SetSceneResult }).__pixiLastSceneResult =
-            result;
+          (
+            window as typeof window & { __pixiLastSceneResult?: SetSceneResult }
+          ).__pixiLastSceneResult = result;
         }
 
         // If the worker failed to produce a Pixi renderer (e.g., WebGL unavailable
@@ -886,8 +943,9 @@ class HybridPixiBackgroundHost implements BackgroundHostLike {
     }
     const result = await this.mainHost.setScene(options);
     if (typeof window !== "undefined") {
-      (window as typeof window & { __pixiLastSceneResult?: SetSceneResult }).__pixiLastSceneResult =
-        result;
+      (
+        window as typeof window & { __pixiLastSceneResult?: SetSceneResult }
+      ).__pixiLastSceneResult = result;
     }
     return result;
   }

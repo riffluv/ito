@@ -1,3 +1,4 @@
+import type { SoundId } from "@/lib/audio/types";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import {
   clearSortedRevealCache,
@@ -6,7 +7,6 @@ import {
 } from "@/lib/game/resultPrefetch";
 import { finalizeReveal } from "@/lib/game/room";
 import { evaluateSorted } from "@/lib/game/rules";
-import type { SoundId } from "@/lib/audio/types";
 import type { RoomDoc } from "@/lib/types";
 import {
   FINAL_TWO_BONUS_DELAY,
@@ -14,7 +14,10 @@ import {
   FLIP_EVALUATION_DELAY,
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
+  REVEAL_ACCELERATION_FACTOR,
   REVEAL_FIRST_DELAY,
+  REVEAL_INITIAL_STEP_DELAY,
+  REVEAL_MIN_STEP_DELAY,
   REVEAL_STEP_DELAY,
 } from "@/lib/ui/motion";
 import { logWarn } from "@/lib/utils/log";
@@ -202,9 +205,7 @@ export function useRevealAnimation({
             .catch(() => {})
         );
         tasks.push(
-          import("@/lib/pixi/victoryRays")
-            .then(() => {})
-            .catch(() => {})
+          import("@/lib/pixi/victoryRays").then(() => {}).catch(() => {})
         );
         tasks.push(
           import("@/lib/audio/global")
@@ -316,6 +317,13 @@ export function useRevealAnimation({
         finalizeTimerRef.current = null;
       }
       lastFlipEndRef.current = 0;
+
+      // リビール開始時に背景フラッシュを発火（「せーの！」のインパクト演出）
+      try {
+        window.bg?.flashWhite?.();
+      } catch {
+        // フラッシュ失敗は握りつぶす
+      }
     }
     startSignalRef.current = startSignal;
     prevStatusRef.current = roomStatus;
@@ -423,24 +431,42 @@ export function useRevealAnimation({
 
   const PREWARM_GRACE_MS = 220; // コールドスタートを避けるための短い待機
 
+  /**
+   * 加速テンポ方式の buildFlipPlan
+   * - 最初は長め (REVEAL_INITIAL_STEP_DELAY) → 徐々に短く (REVEAL_MIN_STEP_DELAY)
+   * - 認識時間を確保しつつテンポ良く盛り上がる
+   */
   const buildFlipPlan = useCallback(
     (length: number, startAt: number): FlipPlan[] => {
       const plan: FlipPlan[] = [];
       let cursor = startAt + REVEAL_FIRST_DELAY;
+      let currentStepDelay = REVEAL_INITIAL_STEP_DELAY;
+
       for (let idx = 0; idx < length; idx += 1) {
         const nextIndex = idx + 1;
         const remainingAfterNext = length - nextIndex;
+
+        // 最後の2枚にはボーナス遅延を追加（ピークエンド効果）
         const bonus =
           remainingAfterNext > 0 && remainingAfterNext <= 2
             ? FINAL_TWO_BONUS_DELAY
             : 0;
+
         plan.push({
           index: nextIndex,
           startAt: cursor,
           endAt: cursor + FLIP_DURATION_MS,
           evalAt: cursor + FLIP_EVALUATION_DELAY,
         });
-        cursor += REVEAL_STEP_DELAY + bonus;
+
+        // 次のカードへの間隔を計算（加速係数を適用）
+        cursor += currentStepDelay + bonus;
+
+        // 間隔を徐々に短くする（最小値は下回らない）
+        currentStepDelay = Math.max(
+          REVEAL_MIN_STEP_DELAY,
+          Math.round(currentStepDelay * REVEAL_ACCELERATION_FACTOR)
+        );
       }
       return plan;
     },
@@ -513,9 +539,7 @@ export function useRevealAnimation({
               : Number.POSITIVE_INFINITY;
           const timeUntilStart = item.startAt - now;
           const guardDelay =
-            sinceLast < MIN_REVEAL_GAP_MS
-              ? MIN_REVEAL_GAP_MS - sinceLast
-              : 0;
+            sinceLast < MIN_REVEAL_GAP_MS ? MIN_REVEAL_GAP_MS - sinceLast : 0;
           const delay = Math.max(timeUntilStart, guardDelay, 0);
 
           const timer = window.setTimeout(() => {
