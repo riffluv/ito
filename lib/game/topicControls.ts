@@ -6,7 +6,7 @@ import {
   dealNumbers as dealNumbersRoom,
   type DealNumbersOptions,
 } from "@/lib/game/room";
-import { sendSystemMessage } from "@/lib/firebase/chat";
+import { sendMessage, sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
 import { emergencyResetPlayerStates, verifyPlayerStatesCleared } from "@/lib/utils/emergencyRecovery";
 import { logWarn } from "@/lib/utils/log";
@@ -17,7 +17,7 @@ import {
   topicTypeLabels,
   type TopicType,
 } from "@/lib/topics";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 type RoomStatus = "waiting" | "clue" | "reveal" | "finished" | string;
 
@@ -99,7 +99,12 @@ export const topicControls = {
     const value = (text || "").trim();
     if (!value) throw new Error("お題を入力してください");
     try {
-      await updateDoc(doc(db!, "rooms", roomId), {
+      const roomRef = doc(db!, "rooms", roomId);
+      const prevSnap = await getDoc(roomRef);
+      const prevTopic = (prevSnap.data() as RoomSnapshot | undefined)?.topic;
+      const isFirstTopic = !prevTopic || `${prevTopic}`.trim().length === 0;
+
+      await updateDoc(roomRef, {
         topic: value,
         topicBox: "カスタム",
         topicOptions: null,
@@ -107,13 +112,36 @@ export const topicControls = {
       await broadcastNotify(
         roomId,
         "success",
-        "お題を更新しました",
+        isFirstTopic ? "お題を設定しました" : "お題を更新しました",
         `新しいお題: ${value}`,
         `topic:custom:${value}`
       );
       try {
-        await sendSystemMessage(roomId, `📝 お題を変更: ${value}`);
-      } catch {}
+        // NOTE:
+        // - 「sender: system」はルールで host/admin 限定
+        // - 参加者がカスタムお題を設定しても確実に残るよう、必ず uid を確保して投稿
+        const { getAuth, signInAnonymously } = await import("firebase/auth");
+        const auth = getAuth();
+        if (!auth.currentUser) {
+          await signInAnonymously(auth).catch(() => void 0);
+        }
+        const currentUser = auth.currentUser;
+        const uid = currentUser?.uid;
+        const name = currentUser?.displayName?.trim() || "プレイヤー";
+        const chatText = `📝 お題: ${value}`;
+        if (uid) {
+          await sendMessage(roomId, uid, name, chatText);
+        } else {
+          await sendSystemMessage(roomId, chatText);
+        }
+      } catch (err) {
+        notify({
+          title: "チャット投稿に失敗しました",
+          description:
+            err instanceof Error ? err.message : "お題変更のメッセージを書き込めませんでした",
+          type: "error",
+        });
+      }
     } catch (error) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("カスタムお題設定");

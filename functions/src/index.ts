@@ -704,15 +704,68 @@ export const purgeChatOnRoundStart = regionFunctions.firestore
       after.status === "clue" && before.status !== "clue";
     const roundIncreased = afterRound > beforeRound;
     if (!(statusChangedToClue || roundIncreased)) return null;
+    const topicText =
+      typeof after.topic === "string" && after.topic.trim()
+        ? after.topic.trim()
+        : typeof before.topic === "string" && before.topic.trim()
+          ? before.topic.trim()
+          : null;
     try {
       const dbi = admin.firestore();
       const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
-      const chatRefs = await roomRef.collection("chat").listDocuments();
-      if (chatRefs.length === 0) return null;
-      const batch = dbi.batch();
-      for (const d of chatRefs) batch.delete(d);
-      await batch.commit();
-    } catch {}
+      const chatSnap = await roomRef.collection("chat").get();
+      const topicMessage = topicText ? `📝 お題: ${topicText}` : null;
+      const deletable = chatSnap.docs.filter((doc) => {
+        const data = doc.data() as { sender?: unknown; text?: unknown } | undefined;
+        const text = typeof data?.text === "string" ? data.text : "";
+        const isTopicMessage = text.startsWith("📝 お題");
+        // お題メッセージ（誰が送ったかに関わらず）と system 投稿は残す
+        if (isTopicMessage) return false;
+        return (data?.sender as string | undefined) !== "system";
+      });
+
+      if (deletable.length > 0) {
+        // Firestore のバッチ上限 500 件に合わせてチャンク処理
+        const CHUNK_SIZE = 450;
+        for (let i = 0; i < deletable.length; i += CHUNK_SIZE) {
+          const batch = dbi.batch();
+          deletable.slice(i, i + CHUNK_SIZE).forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      }
+
+      // ラウンド開始直後に現在のお題を再掲して、直前のクリアで消えないようにする
+      const topicAlreadyPresent =
+        !!topicMessage &&
+        chatSnap.docs.some((doc) => {
+          const data = doc.data() as { sender?: unknown; text?: unknown };
+          const text = typeof data?.text === "string" ? data.text : "";
+          return text === topicMessage;
+        });
+
+      if (topicMessage && !topicAlreadyPresent) {
+        await roomRef.collection("chat").add({
+          sender: "system",
+          uid: "system",
+          text: topicMessage,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      functions.logger.info("purgeChatOnRoundStart executed", {
+        roomId: ctx.params.roomId,
+        deletedCount: deletable.length,
+        topicReposted: !!(topicMessage && !topicAlreadyPresent),
+        topicIncluded: !!topicMessage,
+        statusChangedToClue,
+        roundIncreased,
+      });
+    } catch (err) {
+      functions.logger.error("purgeChatOnRoundStart failed", {
+        roomId: ctx.params.roomId,
+        error: err instanceof Error ? err.message : String(err ?? "unknown"),
+      });
+    }
     return null;
   });
 

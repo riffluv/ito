@@ -45,7 +45,9 @@ if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
-const rtdb = admin.database ? admin.database() : null;
+const rtdb = admin.database
+    ? admin.database()
+    : null;
 // 緊急停止フラグ（READ 増加時の一時対策）
 // 環境変数 EMERGENCY_READS_FREEZE=1 が有効のとき、
 // 以降の定期ジョブ/トリガは早期 return して何もしない
@@ -55,7 +57,7 @@ const REJOIN_GRACE_MS = Math.min(PRESENCE_STALE_THRESHOLD_MS, 20000);
 const FAST_REJOIN_GRACE_MS = Math.min(REJOIN_GRACE_MS, 2000);
 const DEBUG_LOGGING_ENABLED = process.env.ENABLE_FUNCTIONS_DEBUG_LOGS === "1" ||
     process.env.NODE_ENV !== "production";
-const logDebug = DEBUG_LOGGING_ENABLED ? (...args) => console.debug(...args) : () => { };
+const logDebug = DEBUG_LOGGING_ENABLED ? (...args) => functions.logger.debug(...args) : () => { };
 function toMillis(value) {
     if (!value)
         return 0;
@@ -65,7 +67,9 @@ function toMillis(value) {
     if (value instanceof Date) {
         return value.getTime();
     }
-    if (typeof value?.toMillis === "function") {
+    if (typeof value === "object" &&
+        value !== null &&
+        typeof value.toMillis === "function") {
         try {
             return value.toMillis();
         }
@@ -90,8 +94,10 @@ async function recalcRoomCounts(roomId) {
     snapshot.forEach((doc) => {
         count += 1;
         const data = doc.data();
-        if (data.lastSeen && data.lastSeen.toDate) {
-            const ts = data.lastSeen;
+        const lastSeenValue = data?.lastSeen;
+        if (lastSeenValue &&
+            typeof lastSeenValue.toMillis === "function") {
+            const ts = lastSeenValue;
             if (!lastSeen || ts.toMillis() > lastSeen.toMillis())
                 lastSeen = ts;
         }
@@ -131,11 +137,12 @@ exports.onPlayerUpdate = regionFunctions.firestore
 function isPresenceConnActive(conn, now) {
     if (!conn)
         return false;
-    if (conn.online === false)
+    const record = conn;
+    if (record.online === false)
         return false;
-    if (conn.online === true && typeof conn.ts !== "number")
+    if (record.online === true && typeof record.ts !== "number")
         return true;
-    const ts = typeof conn.ts === "number" ? conn.ts : 0;
+    const ts = typeof record.ts === "number" ? record.ts : 0;
     if (!ts)
         return false;
     if (ts - now > presence_1.MAX_CLOCK_SKEW_MS)
@@ -268,7 +275,7 @@ exports.onPresenceWrite = regionFunctions.database
 // 定期実行: expiresAt を過ぎた rooms を削除（players/chat も含めて）
 exports.cleanupExpiredRooms = regionFunctions.pubsub
     .schedule("every 10 minutes")
-    .onRun(async (context) => {
+    .onRun(async (_context) => {
     if (EMERGENCY_STOP)
         return null;
     const db = admin.firestore();
@@ -367,7 +374,7 @@ exports.cleanupGhostRooms = regionFunctions.pubsub
             // Skip actively playing rooms (clue/reveal), unless clearly stale
             const isInProgress = room?.status &&
                 room.status !== "waiting" &&
-                room.status !== "completed";
+                room.status !== "finished";
             // Presence count from RTDB
             let presenceCount = 0;
             try {
@@ -375,22 +382,25 @@ exports.cleanupGhostRooms = regionFunctions.pubsub
                 if (presSnap.exists()) {
                     const val = presSnap.val();
                     const nowLocal = Date.now();
-                    for (const uid of Object.keys(val)) {
-                        const conns = val[uid] || {};
-                        const online = Object.values(conns).some((c) => {
-                            if (c?.online === false)
-                                return false;
-                            if (c?.online === true && typeof c?.ts !== "number")
-                                return true;
-                            const ts = typeof c?.ts === "number" ? c.ts : 0;
-                            if (!ts)
-                                return false;
-                            if (ts - nowLocal > stalePresenceMs)
-                                return false;
-                            return nowLocal - ts <= stalePresenceMs;
-                        });
-                        if (online)
-                            presenceCount++;
+                    if (val) {
+                        for (const uid of Object.keys(val)) {
+                            const conns = val[uid] ?? {};
+                            const online = Object.values(conns).some((conn) => {
+                                if (conn?.online === false)
+                                    return false;
+                                if (conn?.online === true && typeof conn?.ts !== "number") {
+                                    return true;
+                                }
+                                const ts = typeof conn?.ts === "number" ? conn.ts : 0;
+                                if (!ts)
+                                    return false;
+                                if (ts - nowLocal > stalePresenceMs)
+                                    return false;
+                                return nowLocal - ts <= stalePresenceMs;
+                            });
+                            if (online)
+                                presenceCount++;
+                        }
                     }
                 }
             }
@@ -403,7 +413,8 @@ exports.cleanupGhostRooms = regionFunctions.pubsub
             const nowTs = Date.now();
             let recentPlayers = 0;
             for (const d of playersSnap.docs) {
-                const ls = d.data()?.lastSeen;
+                const playerData = d.data();
+                const ls = playerData?.lastSeen;
                 const ms = toMillis(ls);
                 if (ms && nowTs - ms <= STALE_LASTSEEN_MS)
                     recentPlayers++;
@@ -540,9 +551,10 @@ exports.pruneIdleRooms = regionFunctions.pubsub
     let prunedPlayers = 0;
     for (const roomDoc of roomQuery.docs) {
         const roomId = roomDoc.id;
-        const roomData = roomDoc.data();
+        const roomData = roomDoc.data() ??
+            null;
         const playersCount = Number.isFinite(roomData?.playersCount)
-            ? Math.max(0, Number(roomData.playersCount))
+            ? Math.max(0, Number(roomData?.playersCount ?? 0))
             : 0;
         if (!playersCount) {
             continue;
@@ -659,18 +671,64 @@ exports.purgeChatOnRoundStart = regionFunctions.firestore
     const roundIncreased = afterRound > beforeRound;
     if (!(statusChangedToClue || roundIncreased))
         return null;
+    const topicText = typeof after.topic === "string" && after.topic.trim()
+        ? after.topic.trim()
+        : typeof before.topic === "string" && before.topic.trim()
+            ? before.topic.trim()
+            : null;
     try {
         const dbi = admin.firestore();
         const roomRef = dbi.collection("rooms").doc(ctx.params.roomId);
-        const chatRefs = await roomRef.collection("chat").listDocuments();
-        if (chatRefs.length === 0)
-            return null;
-        const batch = dbi.batch();
-        for (const d of chatRefs)
-            batch.delete(d);
-        await batch.commit();
+        const chatSnap = await roomRef.collection("chat").get();
+        const topicMessage = topicText ? `📝 お題: ${topicText}` : null;
+        const deletable = chatSnap.docs.filter((doc) => {
+            const data = doc.data();
+            const text = typeof data?.text === "string" ? data.text : "";
+            const isTopicMessage = text.startsWith("📝 お題");
+            // お題メッセージ（誰が送ったかに関わらず）と system 投稿は残す
+            if (isTopicMessage)
+                return false;
+            return data?.sender !== "system";
+        });
+        if (deletable.length > 0) {
+            // Firestore のバッチ上限 500 件に合わせてチャンク処理
+            const CHUNK_SIZE = 450;
+            for (let i = 0; i < deletable.length; i += CHUNK_SIZE) {
+                const batch = dbi.batch();
+                deletable.slice(i, i + CHUNK_SIZE).forEach((doc) => batch.delete(doc.ref));
+                await batch.commit();
+            }
+        }
+        // ラウンド開始直後に現在のお題を再掲して、直前のクリアで消えないようにする
+        const topicAlreadyPresent = !!topicMessage &&
+            chatSnap.docs.some((doc) => {
+                const data = doc.data();
+                const text = typeof data?.text === "string" ? data.text : "";
+                return text === topicMessage;
+            });
+        if (topicMessage && !topicAlreadyPresent) {
+            await roomRef.collection("chat").add({
+                sender: "system",
+                uid: "system",
+                text: topicMessage,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+        functions.logger.info("purgeChatOnRoundStart executed", {
+            roomId: ctx.params.roomId,
+            deletedCount: deletable.length,
+            topicReposted: !!(topicMessage && !topicAlreadyPresent),
+            topicIncluded: !!topicMessage,
+            statusChangedToClue,
+            roundIncreased,
+        });
     }
-    catch { }
+    catch (err) {
+        functions.logger.error("purgeChatOnRoundStart failed", {
+            roomId: ctx.params.roomId,
+            error: err instanceof Error ? err.message : String(err ?? "unknown"),
+        });
+    }
     return null;
 });
 // players ドキュメント削除時: lastActiveAt を更新し、最後の1人が抜けた場合はルームを初期化＋クローズ
@@ -714,8 +772,8 @@ exports.onPlayerDeleted = regionFunctions.firestore
         else {
             // ホストが消えた場合のフォールバック: 先頭の参加者をホストに
             const roomSnap = await roomRef.get();
-            const room = roomSnap.data() || {};
-            const hostId = room.hostId;
+            const room = roomSnap.data();
+            const hostId = typeof room?.hostId === "string" ? room.hostId : undefined;
             if (!hostId) {
                 const next = await roomRef.collection("players").limit(1).get();
                 const nextId = next.empty ? null : next.docs[0].id;
