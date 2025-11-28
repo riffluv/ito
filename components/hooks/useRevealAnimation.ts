@@ -15,11 +15,13 @@ import {
   RESULT_INTRO_DELAY,
   RESULT_RECOGNITION_DELAY,
   REVEAL_ACCELERATION_FACTOR,
+  REVEAL_FLASH_DURATION,
   REVEAL_FIRST_DELAY,
   REVEAL_INITIAL_STEP_DELAY,
   REVEAL_MIN_STEP_DELAY,
 } from "@/lib/ui/motion";
 import { logWarn } from "@/lib/utils/log";
+import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   useCallback,
   useEffect,
@@ -318,10 +320,14 @@ export function useRevealAnimation({
       lastFlipEndRef.current = 0;
 
       // リビール開始時に背景フラッシュを発火（「せーの！」のインパクト演出）
+      traceAction("reveal.flashWhite.start", {
+        renderer: window.bg?.getRenderer?.() ?? "unknown",
+        durationMs: REVEAL_FLASH_DURATION,
+      });
       try {
-        window.bg?.flashWhite?.();
-      } catch {
-        // フラッシュ失敗は握りつぶす
+        window.bg?.flashWhite?.(REVEAL_FLASH_DURATION);
+      } catch (error) {
+        traceError("reveal.flashWhite.error", error);
       }
     }
     startSignalRef.current = startSignal;

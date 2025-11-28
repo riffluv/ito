@@ -20,7 +20,7 @@ export const FINAL_TWO_BONUS_DELAY = 320; // 最後の2枚だけ滞留を加算�
 export const REVEAL_DIM_DURATION = 180; // 暗転時間
 export const REVEAL_DIM_BRIGHTNESS = 0.6; // 暗転時の明るさ (0-1)
 export const REVEAL_FLASH_DELAY = 80; // 暗転後の静止時間
-export const REVEAL_FLASH_DURATION = 100; // フラッシュ時間
+export const REVEAL_FLASH_DURATION = 180; // フラッシュ時間（100→180msに延長して視認性を確保）
 // フリップ完了から評価処理までの余白を +180ms に調整（視覚完了を確実に待つ）
 export const FLIP_EVALUATION_DELAY = Math.round(FLIP_DURATION_MS + 180);
 
