@@ -1111,11 +1111,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         event.type === "round:start"
           ? { round: event.round ?? null, status: event.status ?? null }
           : { success: event.success ?? null };
-      // 安全: waiting/clue では再生させない
       const currentStatus = room?.status ?? null;
-      if (currentStatus === "waiting" || currentStatus === "clue") {
-        return;
-      }
       // status をコンテキストに添える（シナリオ側の when 判定用）
       if (event.type === "round:reveal") {
         context = { ...context, status: currentStatus };
