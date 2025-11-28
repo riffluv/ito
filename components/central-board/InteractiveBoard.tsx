@@ -252,13 +252,23 @@ function InteractiveBoardBase({
     };
   }, [activeId, dragTilt, magnetState.strength, magnetEnterPulse, prefersReducedMotion]);
 
+  // 初期のみ Always で計測し、その後は WhileDragging に切り替えて負荷を下げる
+  const [measuringStrategy, setMeasuringStrategy] = useState<MeasuringStrategy>(
+    MeasuringStrategy.Always
+  );
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setMeasuringStrategy(MeasuringStrategy.WhileDragging),
+      280
+    );
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const measuring = useMemo<DndContextProps["measuring"]>(
     () => ({
-      // レイアウト確定前にドラッグを始めても毎フレーム座標を再計測し、
-      // 初期フリッカーや左端への誤ヒットを防ぐ。
-      droppable: { strategy: MeasuringStrategy.Always },
+      droppable: { strategy: measuringStrategy },
     }),
-    []
+    [measuringStrategy]
   );
 
   return (
