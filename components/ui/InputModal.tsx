@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { Box, Input, HStack, Text } from "@chakra-ui/react";
@@ -109,53 +109,62 @@ export function InputModal({
   const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
 
   // 開閉アニメーション
-  useEffect(() => {
-    if (!modalRef.current) return;
+  useLayoutEffect(() => {
+    const modalEl = modalRef.current;
+    if (!modalEl) return undefined;
 
-    if (isOpen) {
-      // 開く演出
-      if (prefersReducedMotion) {
-        gsap.set(modalRef.current, { opacity: 1, scale: 1, display: "block" });
-      } else {
-        gsap.fromTo(
-          modalRef.current,
-          { opacity: 0, scale: 0.92, display: "block" },
-          {
-            opacity: 1,
-            scale: 1,
-            duration: 0.28,
-            ease: "power2.out",
-          }
+    const timers: number[] = [];
+    const ctx = gsap.context(() => {
+      if (isOpen) {
+        if (prefersReducedMotion) {
+          gsap.set(modalEl, { opacity: 1, scale: 1, display: "block" });
+        } else {
+          gsap.fromTo(
+            modalEl,
+            { opacity: 0, scale: 0.92, display: "block" },
+            {
+              opacity: 1,
+              scale: 1,
+              duration: 0.28,
+              ease: "power2.out",
+            }
+          );
+        }
+
+        timers.push(
+          window.setTimeout(() => {
+            inputRef.current?.focus();
+          }, 50)
         );
-      }
-
-      // 入力欄にフォーカス
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-    } else {
-      // 閉じる演出
-      if (prefersReducedMotion) {
-        gsap.set(modalRef.current, { opacity: 0, scale: 1, display: "none" });
       } else {
-        gsap.to(modalRef.current, {
-          opacity: 0,
-          scale: 0.92,
-          duration: 0.22,
-          ease: "power2.in",
-          onComplete: () => {
-            gsap.set(modalRef.current, { display: "none" });
-          },
-        });
-      }
+        if (prefersReducedMotion) {
+          gsap.set(modalEl, { opacity: 0, scale: 1, display: "none" });
+        } else {
+          gsap.to(modalEl, {
+            opacity: 0,
+            scale: 0.92,
+            duration: 0.22,
+            ease: "power2.in",
+            onComplete: () => {
+              gsap.set(modalEl, { display: "none" });
+            },
+          });
+        }
 
-      // 元のトリガーボタンにフォーカスを戻す
-      if (triggerRef.current) {
-        setTimeout(() => {
-          triggerRef.current?.focus();
-        }, 230);
+        if (triggerRef.current) {
+          timers.push(
+            window.setTimeout(() => {
+              triggerRef.current?.focus();
+            }, 230)
+          );
+        }
       }
-    }
+    }, modalRef);
+
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      ctx.revert();
+    };
   }, [isOpen, prefersReducedMotion]);
 
   // トリガー要素の記憶

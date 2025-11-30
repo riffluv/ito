@@ -5,7 +5,7 @@ import {
   Toast,
   createToaster,
 } from "@chakra-ui/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
 import type { Options as ToastOptions, StatusChangeDetails } from "@zag-js/toast";
 
@@ -26,10 +26,10 @@ type AnimatedToast = ToastOptions<ReactNode>;
 function ToastWithAnimation({ toast }: { toast: AnimatedToast }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = rootRef.current;
-    if (el) {
-      // HD-2D entrance: elegant slide + scale + fade
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      const el = rootRef.current;
+      if (!el) return;
       gsap.fromTo(
         el,
         {
@@ -45,34 +45,33 @@ function ToastWithAnimation({ toast }: { toast: AnimatedToast }) {
           ease: "power2.out",
         }
       );
-    }
+    }, rootRef);
 
-    return () => {
-      if (el) {
-        gsap.killTweensOf(el);
-      }
-    };
+    return () => ctx.revert();
   }, []);
 
   // HD-2D exit animation when toast is removed
   useEffect(() => {
     const originalCallback = toast.onStatusChange;
-    if (!originalCallback) {
-      return () => {};
-    }
+    const ctx = gsap.context(() => {}, rootRef);
+
     toast.onStatusChange = (details: StatusChangeDetails) => {
       if (details.status === "unmounted" && rootRef.current) {
-        gsap.to(rootRef.current, {
-          y: -20,
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.in",
+        ctx.add(() => {
+          gsap.to(rootRef.current, {
+            y: -20,
+            opacity: 0,
+            duration: 0.3,
+            ease: "power2.in",
+          });
         });
       }
       originalCallback?.(details);
     };
+
     return () => {
       toast.onStatusChange = originalCallback;
+      ctx.revert();
     };
   }, [toast]);
 

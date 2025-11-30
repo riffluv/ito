@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
+import { notify } from "@/components/ui/notify";
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -122,6 +123,10 @@ export class SoundManager {
   private pendingInputMetric: { timestamp: number; recorded: boolean } | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private workletSetupPromise: Promise<void> | null = null;
+  private workletRetryCount = 0;
+  private workletRetryTimer: number | null = null;
+  private resumeFailureStreak = 0;
+  private resumeFailureNotified = false;
 
   constructor() {
     if (!isBrowser()) return;
@@ -542,6 +547,11 @@ export class SoundManager {
           setMetric("audio", "worklet.outputLatencyMs", Math.round(outputLatency * 1000));
         }
         this.connectMasterGain();
+        this.workletRetryCount = 0;
+        if (this.workletRetryTimer !== null) {
+          window.clearTimeout(this.workletRetryTimer);
+          this.workletRetryTimer = null;
+        }
         traceAction("audio.worklet.ready", {
           baseLatency: context.baseLatency ?? null,
           outputLatency,
@@ -550,10 +560,26 @@ export class SoundManager {
         const err = error instanceof Error ? error : new Error(String(error));
         traceError("audio.worklet.initFailed", err);
         this.workletNode = null;
+        this.scheduleWorkletRetry();
       } finally {
         this.workletSetupPromise = null;
       }
     })();
+  }
+
+  private scheduleWorkletRetry() {
+    if (!isBrowser()) return;
+    if (!this.context) return;
+    if (this.workletRetryTimer !== null) return;
+    const attempt = this.workletRetryCount;
+    const delay = Math.min(20000, 1000 * 2 ** attempt);
+    this.workletRetryTimer = window.setTimeout(() => {
+      this.workletRetryTimer = null;
+      this.workletRetryCount += 1;
+      if (this.context) {
+        this.setupAudioWorklet(this.context);
+      }
+    }, delay);
   }
 
   private getCategoryGain(category: SoundCategory): GainNode {
@@ -569,15 +595,35 @@ export class SoundManager {
     return gain;
   }
 
-  private async resumeContext() {
-    if (!this.context) return;
+  private async resumeContext(): Promise<boolean> {
+    if (!this.context) return false;
     if (this.context.state === "suspended") {
       try {
         await this.context.resume();
+        this.resumeFailureStreak = 0;
+        this.resumeFailureNotified = false;
+        return true;
       } catch (error) {
-        console.warn("[SoundManager] Failed to resume audio context", error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.resumeFailureStreak += 1;
+        this.attachUnlockHandlers();
+        traceError("audio.resume.failed", err);
+        if (this.resumeFailureStreak >= 2 && !this.resumeFailureNotified) {
+          this.resumeFailureNotified = true;
+          notify({
+            id: "audio-resume-failed",
+            title: "音声の再開に失敗しました",
+            description: "画面をクリック / タップして音声を再開してください。",
+            type: "warning",
+            duration: 6000,
+          });
+        }
+        return false;
       }
     }
+    this.resumeFailureStreak = 0;
+    this.resumeFailureNotified = false;
+    return true;
   }
 
   private createOutputChain(
@@ -856,10 +902,11 @@ export class SoundManager {
       document.visibilityState === "visible" &&
       this.context.state === "suspended"
     ) {
-      this.context
-        .resume()
-        .then(() => this.flushPendingPlays())
-        .catch(() => undefined);
+      this.resumeContext().then((ok) => {
+        if (ok) {
+          void this.flushPendingPlays();
+        }
+      });
     }
   };
 
@@ -887,8 +934,8 @@ export class SoundManager {
     if (!this.context) {
       this.ensureContext();
     }
-    await this.resumeContext();
-    if (this.context && this.context.state === "running") {
+    const resumed = await this.resumeContext();
+    if (resumed && this.context && this.context.state === "running") {
       if (!this.firstUnlockRecorded) {
         const now =
           typeof performance !== "undefined" ? performance.now() : Date.now();

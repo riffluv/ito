@@ -115,6 +115,10 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     useState<BackgroundType>("pixi-dq");
   const [sceneNonce, setSceneNonce] = useState(0);
   const [backgroundReady, setBackgroundReady] = useState(false);
+  const [fallbackNotice, setFallbackNotice] = useState<{
+    reason: string;
+    retryAt: number;
+  } | null>(null);
   const retryRef = useRef(0);
   const suppressPersistCssRef = useRef(false);
   const fallbackPreviousTypeRef = useRef<BackgroundType | null>(null);
@@ -316,19 +320,26 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
         softwareRenderer,
       });
       retryRef.current = 0;
+      setFallbackNotice(null);
       setBackgroundReady(true);
     } catch (error) {
       logPixiBackground("error", "scene-init-failed", error);
       setBackgroundReady(false);
-      if (retryRef.current < 1) {
-        retryRef.current += 1;
-        setTimeout(() => setSceneNonce((value) => value + 1), 1200);
+      retryRef.current += 1;
+      const failureCount = retryRef.current;
+      const backoffMs = Math.min(45000, 4000 * failureCount);
+      if (failureCount <= 2) {
+        setTimeout(() => setSceneNonce((value) => value + 1), backoffMs);
       } else {
         if (!fallbackPreviousTypeRef.current) {
           fallbackPreviousTypeRef.current = currentType;
         }
         suppressPersistCssRef.current = true;
         setBackgroundType("css");
+        setFallbackNotice({
+          reason: "render-failed",
+          retryAt: Date.now() + backoffMs,
+        });
         if (!fallbackRestoreTimerRef.current) {
           fallbackRestoreTimerRef.current = setTimeout(() => {
             const prev = fallbackPreviousTypeRef.current;
@@ -336,8 +347,9 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
             fallbackRestoreTimerRef.current = null;
             if (prev) {
               setBackgroundType(prev);
+              setSceneNonce((value) => value + 1);
             }
-          }, 30000);
+          }, backoffMs);
         }
       }
     }
@@ -389,6 +401,61 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
           opacity: backgroundType === "css" || !backgroundReady ? 1 : 0,
         }}
       />
+      {fallbackNotice && (
+        <div
+          style={{
+            position: "fixed",
+            left: 12,
+            bottom: 12,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background:
+              "linear-gradient(135deg, rgba(15,18,30,0.92), rgba(6,8,13,0.92))",
+            color: "#e6e9f5",
+            fontSize: 13,
+            lineHeight: 1.5,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            pointerEvents: "auto",
+            border: "1px solid rgba(255,255,255,0.12)",
+            maxWidth: 280,
+            zIndex: 20,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            背景描画を一時停止しました
+          </div>
+          <div style={{ opacity: 0.8, marginBottom: 8 }}>
+            端末負荷か描画エラーを検知しました。再試行してもよい場合は下のボタンを押してください。
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFallbackNotice(null);
+              const prev = fallbackPreviousTypeRef.current;
+              if (prev) {
+                setBackgroundType(prev);
+              } else {
+                setBackgroundType("pixi-dq");
+              }
+              setSceneNonce((value) => value + 1);
+            }}
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              borderRadius: 8,
+              background:
+                "linear-gradient(90deg, #3e5bff 0%, #5bc0ff 100%)",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 700,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+            }}
+          >
+            再試行する
+          </button>
+        </div>
+      )}
     </div>
   );
 }
