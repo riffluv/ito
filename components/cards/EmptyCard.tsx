@@ -4,7 +4,7 @@
  */
 
 "use client";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { useDroppable } from "@dnd-kit/core";
 import { BaseCard } from "./BaseCard";
@@ -49,13 +49,10 @@ export function EmptyCard({
   });
 
   // 資料推奨: 吸着時のスケールバウンス効果 (1→1.05→1.0) + 音・触覚フィードバック
-  useEffect(() => {
+  useLayoutEffect(() => {
     const wasOver = wasOverRef.current;
 
-    // ドロップ完了検知: isOver が true→false に変化した瞬間
     if (wasOver && !isOver) {
-      // 触覚フィードバック（振動）のみ実行
-      // 音は CentralCardBoard で一元管理（２重音防止）
       if (!isDragActive && magnetStrength >= 0.85) {
         try {
           if (
@@ -68,8 +65,12 @@ export function EmptyCard({
           // ignore vibration errors
         }
       }
-      if (cardRef.current && !prefersReducedMotion) {
-        gsap.timeline()
+    }
+
+    const ctx = gsap.context(() => {
+      if (wasOver && !isOver && cardRef.current && !prefersReducedMotion) {
+        gsap
+          .timeline()
           .to(cardRef.current, {
             scale: 1.05,
             duration: 0.1,
@@ -78,12 +79,14 @@ export function EmptyCard({
           .to(cardRef.current, {
             scale: 1.0,
             duration: 0.1,
-            ease: "back.out(1.7)", // easeOutBack でバウンス感
+            ease: "back.out(1.7)",
           });
       }
-    }
+    }, cardRef);
 
     wasOverRef.current = isOver;
+
+    return () => ctx.revert();
   }, [
     isOver,
     prefersReducedMotion,

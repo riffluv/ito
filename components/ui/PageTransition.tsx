@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Text } from "@chakra-ui/react";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 
@@ -29,135 +29,139 @@ export function PageTransition({
   const overlayRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotionPreference();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const overlay = overlayRef.current;
-    const clearAll = () => {
-      if (!overlay) return;
-      gsap.set(overlay, { clearProps: "all" });
-    };
+    let ctx: gsap.Context | null = null;
 
-    if (!isTransitioning || !overlay) {
-      return clearAll;
-    }
+    if (overlay) {
+      ctx = gsap.context(() => {
+      const clearAll = () => {
+        gsap.set(overlay, { clearProps: "all" });
+      };
 
-    if (shouldReduceMotion) {
-      overlay.style.opacity = "0";
-      onComplete?.();
-      return clearAll;
-    }
+      if (!isTransitioning) {
+        clearAll();
+        return;
+      }
 
-    const baseDuration = Math.max(duration, 0.3);
-    const tl = gsap.timeline({
-      onComplete: () => {
+      if (shouldReduceMotion) {
+        overlay.style.opacity = "0";
         onComplete?.();
-      },
-    });
+        clearAll();
+        return;
+      }
 
-    switch (direction) {
-      case "slideRight": {
-        gsap.set(overlay, { xPercent: -100, opacity: 1 });
-        tl.to(overlay, {
-          xPercent: 0,
-          duration: baseDuration * 0.45,
-          ease: "power3.inOut",
-        })
-          .to({}, { duration: baseDuration * 0.15 })
-          .to(overlay, {
-            xPercent: 100,
-            duration: baseDuration * 0.4,
-            ease: "power2.in",
-            onComplete: clearAll,
-          });
-        break;
-      }
-      case "slideUp": {
-        gsap.set(overlay, { yPercent: 100, opacity: 1 });
-        tl.to(overlay, {
-          yPercent: 0,
-          duration: baseDuration * 0.45,
-          ease: "power3.inOut",
-        })
-          .to({}, { duration: baseDuration * 0.15 })
-          .to(overlay, {
-            yPercent: -100,
-            duration: baseDuration * 0.4,
-            ease: "power2.in",
-            onComplete: clearAll,
-          });
-        break;
-      }
-      case "slideDown": {
-        gsap.set(overlay, { yPercent: -100, opacity: 1 });
-        tl.to(overlay, {
-          yPercent: 0,
-          duration: baseDuration * 0.45,
-          ease: "power3.inOut",
-        })
-          .to({}, { duration: baseDuration * 0.15 })
-          .to(overlay, {
-            yPercent: 100,
-            duration: baseDuration * 0.4,
-            ease: "power2.in",
-            onComplete: clearAll,
-          });
-        break;
-      }
-      case "scale": {
-        gsap.set(overlay, { opacity: 0, scale: 0.92, transformOrigin: "50% 50%" });
-        tl.to(overlay, {
-          opacity: 1,
-          duration: baseDuration * 0.25,
-          ease: "power2.out",
-        })
-          .to(overlay, {
-            scale: 1.08,
+      const baseDuration = Math.max(duration, 0.3);
+      const tl = gsap.timeline({
+        onComplete: () => {
+          onComplete?.();
+        },
+      });
+
+      switch (direction) {
+        case "slideRight": {
+          gsap.set(overlay, { xPercent: -100, opacity: 1 });
+          tl.to(overlay, {
+            xPercent: 0,
             duration: baseDuration * 0.45,
-            ease: "back.inOut(1.4)",
+            ease: "power3.inOut",
           })
-          .to(overlay, {
-            opacity: 0,
-            duration: baseDuration * 0.3,
-            ease: "power1.out",
-            onComplete: clearAll,
-          });
-        break;
-      }
-      case "slideLeft": {
-        gsap.set(overlay, { xPercent: 100, opacity: 1 });
-        tl.to(overlay, {
-          xPercent: 0,
-          duration: baseDuration * 0.45,
-          ease: "power3.inOut",
-        })
-          .to({}, { duration: baseDuration * 0.15 })
-          .to(overlay, {
-            xPercent: -100,
-            duration: baseDuration * 0.4,
-            ease: "power2.in",
-            onComplete: clearAll,
-          });
-        break;
-      }
-      default: {
-        tl.fromTo(
-          overlay,
-          { opacity: 0 },
-          { opacity: 1, duration: baseDuration * 0.35, ease: "power1.out" }
-        )
-          .to({}, { duration: baseDuration * 0.2 })
-          .to(overlay, {
-            opacity: 0,
+            .to({}, { duration: baseDuration * 0.15 })
+            .to(overlay, {
+              xPercent: 100,
+              duration: baseDuration * 0.4,
+              ease: "power2.in",
+              onComplete: clearAll,
+            });
+          break;
+        }
+        case "slideUp": {
+          gsap.set(overlay, { yPercent: 100, opacity: 1 });
+          tl.to(overlay, {
+            yPercent: 0,
             duration: baseDuration * 0.45,
-            ease: "power1.out",
-            onComplete: clearAll,
-          });
+            ease: "power3.inOut",
+          })
+            .to({}, { duration: baseDuration * 0.15 })
+            .to(overlay, {
+              yPercent: -100,
+              duration: baseDuration * 0.4,
+              ease: "power2.in",
+              onComplete: clearAll,
+            });
+          break;
+        }
+        case "slideDown": {
+          gsap.set(overlay, { yPercent: -100, opacity: 1 });
+          tl.to(overlay, {
+            yPercent: 0,
+            duration: baseDuration * 0.45,
+            ease: "power3.inOut",
+          })
+            .to({}, { duration: baseDuration * 0.15 })
+            .to(overlay, {
+              yPercent: 100,
+              duration: baseDuration * 0.4,
+              ease: "power2.in",
+              onComplete: clearAll,
+            });
+          break;
+        }
+        case "scale": {
+          gsap.set(overlay, { opacity: 0, scale: 0.92, transformOrigin: "50% 50%" });
+          tl.to(overlay, {
+            opacity: 1,
+            duration: baseDuration * 0.25,
+            ease: "power2.out",
+          })
+            .to(overlay, {
+              scale: 1.08,
+              duration: baseDuration * 0.45,
+              ease: "back.inOut(1.4)",
+            })
+            .to(overlay, {
+              opacity: 0,
+              duration: baseDuration * 0.3,
+              ease: "power1.out",
+              onComplete: clearAll,
+            });
+          break;
+        }
+        case "slideLeft": {
+          gsap.set(overlay, { xPercent: 100, opacity: 1 });
+          tl.to(overlay, {
+            xPercent: 0,
+            duration: baseDuration * 0.45,
+            ease: "power3.inOut",
+          })
+            .to({}, { duration: baseDuration * 0.15 })
+            .to(overlay, {
+              xPercent: -100,
+              duration: baseDuration * 0.4,
+              ease: "power2.in",
+              onComplete: clearAll,
+            });
+          break;
+        }
+        default: {
+          tl.fromTo(
+            overlay,
+            { opacity: 0 },
+            { opacity: 1, duration: baseDuration * 0.35, ease: "power1.out" }
+          )
+            .to({}, { duration: baseDuration * 0.2 })
+            .to(overlay, {
+              opacity: 0,
+              duration: baseDuration * 0.45,
+              ease: "power1.out",
+              onComplete: clearAll,
+            });
+        }
       }
+      }, overlayRef);
     }
 
-    return () => {
-      tl.kill();
-      clearAll();
-    };
+    return () => ctx?.revert();
   }, [isTransitioning, direction, duration, onComplete, shouldReduceMotion]);
 
   if (!isTransitioning) return <>{children}</>;

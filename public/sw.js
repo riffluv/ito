@@ -13,6 +13,8 @@ const CORE_ASSETS = [
   "/",
   "/manifest.webmanifest",
   "/images/knight1.webp",
+  "/_next/static/chunks/main.js",
+  "/_next/static/chunks/webpack.js",
 ];
 
 const updateBroadcast =
@@ -84,6 +86,25 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(CACHE_NAME);
       await cache.addAll(CORE_ASSETS);
+      // Precache hashed static assets (best-effort). Ignore failures so install doesn't abort.
+      try {
+        const manifest = await fetch("/_next/static/manifest.json").then((res) =>
+          res.ok ? res.json() : null
+        );
+        if (manifest && manifest.pages) {
+          const pageAssets = Object.values(manifest.pages).flat().filter((v) => typeof v === "string");
+          const unique = Array.from(new Set(pageAssets));
+          await Promise.all(
+            unique.map((path) =>
+              cache.add(path).catch(() => {
+                /* ignore */
+              })
+            )
+          );
+        }
+      } catch {
+        /* ignore precache failure */
+      }
       if (self.registration?.active) {
         await notifyUpdateChannels("update-ready");
       }
@@ -173,11 +194,13 @@ self.addEventListener("fetch", (event) => {
               error: error?.message ?? "network",
             });
           }
-          const fallback = await caches.match(request);
-          if (fallback) {
-            return fallback;
-          }
-          return Response.error();
+          const cache = await caches.open(CACHE_NAME);
+          const shell =
+            (await cache.match(request)) ||
+            (await cache.match("/")) ||
+            (await cache.match("/_next/static/chunks/main.js"));
+          if (shell) return shell;
+          return new Response("", { status: 503, statusText: "offline" });
         }
       })()
     );

@@ -51,7 +51,8 @@ type IncomingMessage =
     }
   | { type: "terminate" }
   | { type: "setProfile"; profile: PixiBackgroundProfile }
-  | { type: "pageVisibility"; visible: boolean };
+  | { type: "pageVisibility"; visible: boolean }
+  | { type: "ping" };
 
 type SceneEffects = {
   lightSweep?: () => void;
@@ -76,7 +77,8 @@ type OutgoingMessage =
   | { type: "error"; requestId?: number; message: string }
   | { type: "fallback"; reason: string }
   | { type: "context-lost"; count: number }
-  | { type: "debug"; message: string; detail?: unknown };
+  | { type: "debug"; message: string; detail?: unknown }
+  | { type: "pong" };
 
 if (typeof globalThis.requestAnimationFrame === "undefined") {
   const rafIds = new Map<number, ReturnType<typeof setTimeout>>();
@@ -547,6 +549,9 @@ self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
   const msg = event.data;
   try {
     switch (msg.type) {
+      case "ping":
+        post({ type: "pong" });
+        return;
       case "init":
         debug("init:start", { width: msg.width, height: msg.height, profile: msg.profile });
         disposeApp();

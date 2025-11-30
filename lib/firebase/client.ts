@@ -10,6 +10,7 @@ import {
   setLogLevel,
   type Firestore,
 } from "firebase/firestore";
+import { notify } from "@/components/ui/notify";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -48,6 +49,16 @@ function hasValue(v: unknown): v is string {
 }
 
 const useEmulator = process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR === "true";
+
+let persistenceWarningShown = false;
+
+const isMultiTabPersistenceError = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  if (code === "failed-precondition") return true;
+  const message = String((error as { message?: unknown }).message || "").toLowerCase();
+  return message.includes("another tab") || message.includes("multiple tabs") || message.includes("persistence");
+};
 
 const FIRESTORE_EMULATOR_HOST = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST || "localhost";
 const FIRESTORE_EMULATOR_PORT = Number(process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT || 8080);
@@ -98,7 +109,17 @@ export const db: Firestore | null = ((): Firestore | null => {
       ignoreUndefinedProperties: true,
       experimentalAutoDetectLongPolling: true,
     });
-  } catch {
+  } catch (error) {
+    if (isMultiTabPersistenceError(error) && typeof window !== "undefined" && !persistenceWarningShown) {
+      persistenceWarningShown = true;
+      notify({
+        id: "firestore-single-tab",
+        title: "他のタブで序の紋章が開かれています",
+        description: "他のタブを閉じてからこの画面をリロードしてください。（オフラインキャッシュ無効化中）",
+        type: "warning",
+        duration: 5200,
+      });
+    }
     return getFirestore(app);
   }
 })();

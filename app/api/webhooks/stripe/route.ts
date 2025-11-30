@@ -8,6 +8,16 @@ import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 
+const MAX_WEBHOOK_BODY_BYTES = 2 * 1024 * 1024; // 2MB guard
+
+const reportStripeFailure = (message: string, extra?: Record<string, unknown>) => {
+  const err = new Error(message);
+  Sentry.captureException(err, {
+    tags: { scope: "stripe" },
+    extra,
+  });
+};
+
 function getWebhookSecret(): string {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret || secret.trim().length === 0) {
@@ -32,7 +42,22 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get("stripe-signature");
+  const declaredLengthHeader = request.headers.get("content-length");
+  const declaredLength = declaredLengthHeader ? Number.parseInt(declaredLengthHeader, 10) : null;
+
+  if (declaredLength !== null && Number.isFinite(declaredLength) && declaredLength > MAX_WEBHOOK_BODY_BYTES) {
+    reportStripeFailure("Stripe webhook payload too large (declared)", {
+      hasSignature: Boolean(signature),
+      contentLength: declaredLength,
+    });
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   if (!signature) {
+    reportStripeFailure("Missing stripe-signature header", {
+      hasSignature: false,
+      contentLength: declaredLength,
+    });
     return badRequest("Missing stripe-signature header");
   }
 
@@ -50,6 +75,14 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = Buffer.from(await request.arrayBuffer());
+
+  if (rawBody.byteLength > MAX_WEBHOOK_BODY_BYTES) {
+    reportStripeFailure("Stripe webhook payload too large", {
+      hasSignature: Boolean(signature),
+      contentLength: rawBody.byteLength,
+    });
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
 
   let client: Stripe;
   try {
@@ -72,6 +105,10 @@ export async function POST(request: NextRequest) {
   try {
     event = client.webhooks.constructEvent(rawBody, signature, secret);
   } catch (error) {
+    reportStripeFailure("Invalid stripe signature", {
+      hasSignature: true,
+      contentLength: rawBody.byteLength,
+    });
     return badRequest("Invalid signature", error);
   }
 

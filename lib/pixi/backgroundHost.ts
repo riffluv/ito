@@ -18,6 +18,7 @@ import {
   type SimpleBackgroundMetrics,
 } from "@/lib/pixi/simpleBackground";
 import { logError, logInfo } from "@/lib/utils/log";
+import { traceError } from "@/lib/utils/trace";
 
 type PixiSceneKey = "pixi-simple" | "pixi-dq" | "pixi-inferno";
 
@@ -101,6 +102,9 @@ class WorkerBackgroundHost implements BackgroundHostLike {
   private resolveReady: (() => void) | null = null;
   private rejectReady: ((reason?: unknown) => void) | null = null;
   private workerUrlCache: string | null = null;
+  private pingInterval: ReturnType<typeof setInterval> | null = null;
+  private pongTimer: ReturnType<typeof setTimeout> | null = null;
+  private fallbackLayer: HTMLDivElement | null = null;
 
   constructor(private onFatal?: (reason: string) => void) {}
 
@@ -170,6 +174,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       return;
     }
     if (data.type === "ready") {
+      this.startPingWatch();
       this.resolveReady?.();
       this.resolveReady = null;
       this.rejectReady = null;
@@ -189,21 +194,39 @@ class WorkerBackgroundHost implements BackgroundHostLike {
     }
     if (data.type === "error") {
       logError("pixi-background-host", "worker-error", data.message ?? data);
+      traceError(
+        "pixi.worker.error",
+        new Error(String(data.message ?? "worker-error")),
+        { requestId: data.requestId }
+      );
       const resolver = this.pending.get(data.requestId);
       this.pending.delete(data.requestId);
       if (resolver) {
         resolver({ renderer: "dom", quality: this.currentQuality });
       }
+      this.triggerFatal("worker-error");
       return;
     }
     if (data.type === "fallback") {
+      traceError(
+        "pixi.worker.fallback",
+        new Error(String(data.reason ?? "worker-fallback")),
+        { reason: data.reason ?? "unknown" }
+      );
       this.triggerFatal(data.reason ?? "worker-fallback");
       return;
     }
     if (data.type === "context-lost") {
+      traceError("pixi.worker.contextLost", new Error("context-lost"), {
+        count: data.count,
+      });
       if (data.count >= 3) {
         this.triggerFatal("context-lost-loop");
       }
+      return;
+    }
+    if (data.type === "pong") {
+      this.resetPongTimer();
       return;
     }
   };
@@ -235,6 +258,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
   }
 
   private triggerFatal(reason: string) {
+    traceError("pixi.background.fatal", new Error(reason), { reason });
     this.fatal = true;
     this.pending.forEach((resolve) =>
       resolve({ renderer: "dom", quality: this.currentQuality })
@@ -249,6 +273,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
         new CustomEvent("pixiBackgroundContextLost", { detail: { reason } })
       );
     }
+    this.ensureFallbackLayer();
     this.dispose();
     this.onFatal?.(reason);
   }
@@ -310,10 +335,12 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       document.removeEventListener("visibilitychange", this.visibilityListener);
       this.visibilityListener = null;
     }
+    this.removeFallbackLayer();
   }
 
   dispose() {
     this.pending.clear();
+    this.stopPingWatch();
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
@@ -334,6 +361,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
     }
     this.resizeListener = null;
     this.visibilityListener = null;
+    this.removeFallbackLayer();
   }
 
   setPerformanceProfile(profile: PixiBackgroundProfile) {
@@ -356,6 +384,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
     if (this.readyPromise) {
       await this.readyPromise;
     }
+    this.removeFallbackLayer();
     this.sceneRequestId += 1;
     const requestId = this.sceneRequestId;
     const promise = new Promise<SetSceneResult>((resolve) => {
@@ -368,6 +397,65 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       requestId,
     });
     return promise;
+  }
+
+  private startPingWatch() {
+    this.stopPingWatch();
+    if (!this.worker) return;
+    const sendPing = () => {
+      if (!this.worker) return;
+      try {
+        this.worker.postMessage({ type: "ping" });
+      } catch {
+        this.triggerFatal("worker-unreachable");
+        return;
+      }
+      this.pongTimer = setTimeout(() => {
+        this.triggerFatal("worker-unresponsive");
+      }, 1500);
+    };
+    sendPing();
+    this.pingInterval = setInterval(sendPing, 2500);
+  }
+
+  private stopPingWatch() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.pongTimer) {
+      clearTimeout(this.pongTimer);
+      this.pongTimer = null;
+    }
+  }
+
+  private resetPongTimer() {
+    if (this.pongTimer) {
+      clearTimeout(this.pongTimer);
+      this.pongTimer = null;
+    }
+  }
+
+  private ensureFallbackLayer() {
+    if (this.fallbackLayer || !this.canvasHolder) return;
+    const layer = document.createElement("div");
+    layer.style.position = "absolute";
+    layer.style.inset = "0";
+    layer.style.pointerEvents = "none";
+    layer.style.background =
+      "radial-gradient(120% 120% at 50% 50%, #1b2435 0%, #0b0d12 60%, #040507 100%)";
+    layer.style.transition = "opacity 180ms ease-out";
+    layer.style.opacity = "1";
+    this.canvasHolder.appendChild(layer);
+    this.fallbackLayer = layer;
+  }
+
+  private removeFallbackLayer() {
+    if (!this.fallbackLayer) return;
+    if (this.fallbackLayer.parentElement) {
+      this.fallbackLayer.parentElement.removeChild(this.fallbackLayer);
+    }
+    this.fallbackLayer = null;
   }
 }
 
