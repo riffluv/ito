@@ -96,6 +96,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
   private fatal = false;
   private canvasVisible = true;
   private resizeListener: (() => void) | null = null;
+  private visibilityListener: (() => void) | null = null;
   private readyPromise: Promise<void> | null = null;
   private resolveReady: (() => void) | null = null;
   private rejectReady: ((reason?: unknown) => void) | null = null;
@@ -289,6 +290,14 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       };
       window.addEventListener("resize", this.resizeListener, { passive: true });
     }
+
+    if (typeof document !== "undefined" && !this.visibilityListener) {
+      this.visibilityListener = () => {
+        this.worker?.postMessage({ type: "pageVisibility", visible: !document.hidden });
+      };
+      document.addEventListener("visibilitychange", this.visibilityListener);
+      this.worker?.postMessage({ type: "pageVisibility", visible: !document.hidden });
+    }
   }
 
   detachCanvas(host: HTMLElement | null) {
@@ -297,6 +306,10 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       host.removeChild(this.canvas);
     }
     this.canvasHolder = null;
+    if (!this.canvasHolder && typeof document !== "undefined" && this.visibilityListener) {
+      document.removeEventListener("visibilitychange", this.visibilityListener);
+      this.visibilityListener = null;
+    }
   }
 
   dispose() {
@@ -316,7 +329,11 @@ class WorkerBackgroundHost implements BackgroundHostLike {
     if (typeof window !== "undefined" && this.resizeListener) {
       window.removeEventListener("resize", this.resizeListener);
     }
+    if (typeof document !== "undefined" && this.visibilityListener) {
+      document.removeEventListener("visibilitychange", this.visibilityListener);
+    }
     this.resizeListener = null;
+    this.visibilityListener = null;
   }
 
   setPerformanceProfile(profile: PixiBackgroundProfile) {
@@ -431,6 +448,9 @@ class PixiBackgroundHost {
   private disposeTimer: ReturnType<typeof setTimeout> | null = null;
   private requestedProfile: PixiBackgroundProfile = DEFAULT_BACKGROUND_PROFILE;
   private activeProfile: PixiBackgroundProfile = DEFAULT_BACKGROUND_PROFILE;
+  private lastSceneOptions: SceneOptions | null = null;
+  private lossCount = 0;
+  private recovering = false;
 
   private handleResize = () => {
     if (!this.app) return;
@@ -451,14 +471,17 @@ class PixiBackgroundHost {
 
   private handleContextLost = (event: Event) => {
     event.preventDefault?.();
+    this.lossCount += 1;
     // Drop current scene so上位で再適用できるようにする
     this.destroyCurrentScene();
+    void this.recoverFromContextLoss();
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("pixiBackgroundContextLost"));
     }
   };
 
   private handleContextRestored = () => {
+    this.lossCount = 0;
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("pixiBackgroundContextRestored"));
     }
@@ -483,7 +506,7 @@ class PixiBackgroundHost {
         const resolution =
           profile === "software"
             ? 1
-            : Math.min(window.devicePixelRatio || 1, 2);
+            : Math.min(window.devicePixelRatio || 1, 1.4);
         await app.init({
           backgroundAlpha: 0,
           antialias: profile !== "software",
@@ -507,6 +530,9 @@ class PixiBackgroundHost {
       }
 
       app.stage.sortableChildren = true;
+      if (app.ticker) {
+        app.ticker.maxFPS = profile === "software" ? 48 : 60;
+      }
       if (profile === "software" && app.ticker) {
         app.ticker.maxFPS = 48;
       }
@@ -642,6 +668,24 @@ class PixiBackgroundHost {
     this.sceneRoot = null;
     this.app = null;
     this.activeProfile = DEFAULT_BACKGROUND_PROFILE;
+  }
+
+  private async recoverFromContextLoss() {
+    if (this.recovering) return;
+    this.recovering = true;
+    try {
+      const holder = this.canvasHolder;
+      this.disposeApp();
+      this.canvasHolder = holder;
+      await this.ensureApp();
+      if (this.lastSceneOptions) {
+        await this.setScene(this.lastSceneOptions);
+      }
+    } catch (error) {
+      logError("pixi-background-host", "recover-from-context-lost", error);
+    } finally {
+      this.recovering = false;
+    }
   }
 
   private destroyCurrentScene() {
@@ -784,6 +828,7 @@ class PixiBackgroundHost {
   }
 
   async setScene(options: SceneOptions): Promise<SetSceneResult> {
+    this.lastSceneOptions = options;
     if (options.profile) {
       this.setPerformanceProfile(options.profile);
     }
@@ -831,6 +876,7 @@ class PixiBackgroundHost {
 
   resetToDom(quality: BackgroundQuality): SetSceneResult {
     this.destroyCurrentScene();
+    this.lastSceneOptions = null;
     this.setCanvasVisible(false);
     this.scheduleDispose();
     return { renderer: "dom", quality };
