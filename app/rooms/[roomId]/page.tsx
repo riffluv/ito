@@ -216,6 +216,17 @@ type ShowtimePlaybackContext = Record<string, unknown> & {
   revealedMs?: number | null;
 };
 
+type LedgerSnapshot = {
+  players: (PlayerDoc & { id: string })[];
+  orderList: string[];
+  topic: string | null;
+  failed: boolean;
+  roomId: string;
+  myId: string;
+  mvpVotes: Record<string, string> | null;
+  stats: RoomDoc["stats"] | null;
+};
+
 type RoomPageContentInnerProps = RoomStateSnapshot & {
   roomId: string;
   router: ReturnType<typeof useRouter>;
@@ -1136,6 +1147,8 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
   );
 
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [lastLedgerSnapshot, setLastLedgerSnapshot] = useState<LedgerSnapshot | null>(null);
+  const previousRoomStatusRef = useRef<RoomDoc["status"] | null>(room.status ?? null);
   const [transitionMessage, setTransitionMessage] = useState<string | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
   const overlayStatusRef = useRef<string | null>(null);
@@ -1345,6 +1358,47 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
       setRequiredSwVersionHint(null);
     };
   }, []);
+  const orderList = room?.order?.list;
+  const roomDealPlayers = room?.deal?.players;
+  const orderProposal = room?.order?.proposal;
+  const roundPreparing = room?.ui?.roundPreparing === true;
+  const ledgerOrderList = useMemo(() => {
+    if (!Array.isArray(orderList)) return [];
+    return (orderList as (string | null | undefined)[])
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((value): value is string => value.length > 0);
+  }, [orderList]);
+  const buildLedgerSnapshot = useCallback(
+    (): LedgerSnapshot => ({
+      players: playersWithOptimistic,
+      orderList: ledgerOrderList,
+      topic: room.topic ?? null,
+      failed: !!room.order?.failed,
+      roomId,
+      myId: meId,
+      mvpVotes: room.mvpVotes ?? null,
+      stats: room.stats ?? null,
+    }),
+    [
+      ledgerOrderList,
+      meId,
+      playersWithOptimistic,
+      room.mvpVotes,
+      room.order?.failed,
+      room.stats,
+      room.topic,
+      roomId,
+    ]
+  );
+  useEffect(() => {
+    if (room.status !== "finished") return;
+    setLastLedgerSnapshot(buildLedgerSnapshot());
+  }, [room.status, buildLedgerSnapshot]);
+  useEffect(() => {
+    setLastLedgerSnapshot(null);
+    setIsLedgerOpen(false);
+    previousRoomStatusRef.current = null;
+  }, [roomId]);
   useEffect(() => {
     if (typeof window === "undefined") {
       return () => {};
@@ -3358,18 +3412,16 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     setDealRecoveryDismissed(true);
   }, []);
 
-  // 戦績モーダルは finished 専用。新ラウンド開始時（waiting/clue/reveal など）に自動で閉じる。
+  // 戦績モーダルは finished → その他 への遷移時に自動で閉じる（再オープンは手動で可）。
   useEffect(() => {
-    if (room.status !== "finished" && isLedgerOpen) {
+    const previousStatus = previousRoomStatusRef.current;
+    const currentStatus = room.status;
+    if (previousStatus === "finished" && currentStatus !== "finished" && isLedgerOpen) {
       setIsLedgerOpen(false);
     }
+    previousRoomStatusRef.current = currentStatus;
   }, [room.status, isLedgerOpen]);
 
-  // slotCount: 進行中は「オンライン在室数」を優先。presence未確定時は提出数/配札数にフォールバック。
-  const orderList = room?.order?.list;
-  const roomDealPlayers = room?.deal?.players;
-  const orderProposal = room?.order?.proposal;
-  const roundPreparing = room?.ui?.roundPreparing === true;
   const [optimisticProposalOverrides, setOptimisticProposalOverrides] = useState<
     Record<string, "placed" | "removed">
   >({});
@@ -3538,6 +3590,25 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
     }
   }
   const displayRoomName = stripMinimalTag(room?.name) || "";
+  const usingLedgerSnapshot = room.status !== "finished" && !!lastLedgerSnapshot;
+  const ledgerData = room.status === "finished" ? buildLedgerSnapshot() : lastLedgerSnapshot;
+  const effectiveLedgerData = ledgerData ?? buildLedgerSnapshot();
+  // 戦績ボタン制御（MinimalChat 側のみで使用）
+  const canOpenLedger = room.status === "finished" || !!lastLedgerSnapshot;
+  const ledgerButtonLabel = room.status === "finished" ? "戦績を見る" : "前の戦績を見る";
+  const ledgerContextLabel = usingLedgerSnapshot ? "前ラウンドの戦績を表示中" : null;
+  const handleOpenLedger = useCallback(() => {
+    if (room.status === "finished" || lastLedgerSnapshot) {
+      setIsLedgerOpen(true);
+      return;
+    }
+    notify({
+      id: "ledger-unavailable",
+      type: "info",
+      title: "まだ戦績がありません",
+      description: "ラウンドを1回終えると戦績を見返せます。",
+    });
+  }, [room.status, lastLedgerSnapshot]);
 
   // Layout nodes split to avoid JSX nesting pitfalls
   const headerNode = undefined;
@@ -4079,7 +4150,9 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         players: playersWithOptimistic,
         hostId: room.hostId ?? null,
         isFinished: room.status === "finished",
-        onOpenLedger: () => setIsLedgerOpen(true),
+        onOpenLedger: handleOpenLedger,
+        ledgerLabel: ledgerButtonLabel,
+        canOpenLedger,
       }}
       passwordDialog={{
         isOpen: passwordDialogOpen,
@@ -4097,16 +4170,18 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
         roomStatus: room.status || "waiting",
       }}
       ledger={{
-        isOpen: isLedgerOpen,
+        isOpen: isLedgerOpen && !!effectiveLedgerData,
         onClose: () => setIsLedgerOpen(false),
-        players: playersWithOptimistic,
-        orderList: room.order?.list || [],
-        topic: room.topic || null,
-        failed: !!room.order?.failed,
-        roomId,
-        myId: meId,
-        mvpVotes: room.mvpVotes ?? null,
-        stats: room.stats ?? null,
+        players: effectiveLedgerData?.players ?? [],
+        orderList: effectiveLedgerData?.orderList ?? [],
+        topic: effectiveLedgerData?.topic ?? null,
+        failed: effectiveLedgerData?.failed ?? false,
+        roomId: effectiveLedgerData?.roomId ?? roomId,
+        myId: effectiveLedgerData?.myId ?? meId,
+        mvpVotes: effectiveLedgerData?.mvpVotes ?? null,
+        stats: effectiveLedgerData?.stats ?? null,
+        readOnly: usingLedgerSnapshot,
+        contextLabel: ledgerContextLabel,
       }}
       me={me}
       isSpectatorMode={isSpectatorMode}

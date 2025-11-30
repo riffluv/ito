@@ -36,12 +36,26 @@ const ledgerGlint = keyframes`
   100% { transform: translateX(150%) rotate(9deg); opacity: 0; }
 `;
 
+// 戦績ボタン初回表示の軽いポップアップ
+const ledgerAppear = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
 interface MinimalChatProps {
   roomId: string;
   players?: (PlayerDoc & { id: string })[];
   hostId?: string | null;
   onOpenLedger?: () => void;
   isGameFinished?: boolean;
+  ledgerLabel?: string;
+  canOpenLedger?: boolean;
 }
 
 export default function MinimalChat({
@@ -50,6 +64,8 @@ export default function MinimalChat({
   hostId = null,
   onOpenLedger,
   isGameFinished = false,
+  ledgerLabel,
+  canOpenLedger,
 }: MinimalChatProps) {
   const [open, setOpen] = React.useState(false);
   const prefersReducedMotion = useReducedMotionPreference();
@@ -127,6 +143,27 @@ export default function MinimalChat({
       : "translateX(-24%) rotate(12deg)"
     : "translateX(-90%) rotate(12deg)";
 
+  const ledgerButtonLabel = ledgerLabel ?? "戦績を見る";
+  const ledgerEnabled = typeof canOpenLedger === "boolean" ? canOpenLedger : isGameFinished;
+  const hasShownLedgerButtonRef = React.useRef(false);
+  const shouldPlayAppear =
+    ledgerEnabled && !hasShownLedgerButtonRef.current && !prefersReducedMotion;
+  React.useEffect(() => {
+    if (ledgerEnabled && !hasShownLedgerButtonRef.current) {
+      hasShownLedgerButtonRef.current = true;
+    }
+  }, [ledgerEnabled]);
+
+  const handleLedgerClick = () => {
+    if (!onOpenLedger) return;
+    if (ledgerEnabled) {
+      playLedgerOpen();
+    }
+    onOpenLedger();
+  };
+
+  const showLedgerButton = Boolean(onOpenLedger) && ledgerEnabled;
+
   return (
     <>
       {/* チャットトグルボタン */}
@@ -158,7 +195,7 @@ export default function MinimalChat({
       </Box>
 
       {/* 戦績ボタン（チャットトグルの下） */}
-      {onOpenLedger && (
+      {showLedgerButton && (
         <Box
           position="fixed"
           // 16:9 安全領域内に配置（据え置きゲーム機風UI）
@@ -168,17 +205,21 @@ export default function MinimalChat({
             md: `calc(${CHAT_FAB_OFFSET_DESKTOP} - 62px)`,
           }}
           zIndex={20}
-          opacity={isGameFinished ? 1 : 0}
-          pointerEvents={isGameFinished ? "auto" : "none"}
-          transform={isGameFinished ? "translateY(0)" : "translateY(12px)"}
+          opacity={1}
+          pointerEvents="auto"
+          transform="translateY(0)"
           transition="all 320ms cubic-bezier(.2,1,.3,1)"
+          css={
+            shouldPlayAppear
+              ? {
+                  animation: `${ledgerAppear} 260ms cubic-bezier(.2,1,.3,1)`,
+                }
+              : undefined
+          }
         >
           <Box
             as="button"
-            onClick={() => {
-              playLedgerOpen();
-              onOpenLedger();
-            }}
+            onClick={handleLedgerClick}
             display="flex"
             alignItems="center"
             gap="8px"
@@ -200,12 +241,12 @@ export default function MinimalChat({
               0 8px 16px rgba(0,0,0,0.48)
             `}
             transition={`transform 0.15s ${UI_TOKENS.EASING.standard}, box-shadow 0.15s ${UI_TOKENS.EASING.standard}`}
-            cursor="pointer"
+            cursor={ledgerEnabled ? "pointer" : "not-allowed"}
             position="relative"
             overflow="hidden"
             _hover={{
               background: "linear-gradient(180deg, rgba(28,31,44,0.98) 0%, rgba(15,17,25,1) 100%)",
-              transform: "translateY(-0.5px)",
+              transform: ledgerEnabled ? "translateY(-0.5px)" : "translateY(0)",
               boxShadow: `
                 inset 0 1px 0 rgba(255,255,255,0.16),
                 inset 0 -1px 0 rgba(0,0,0,0.4),
@@ -262,7 +303,7 @@ export default function MinimalChat({
                 filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))",
               }}
             />
-            <Box as="span">戦績を見る</Box>
+            <Box as="span">{ledgerButtonLabel}</Box>
           </Box>
         </Box>
       )}
