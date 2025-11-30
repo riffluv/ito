@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { SoundManager } from "./SoundManager";
 import { SOUND_LIBRARY } from "./registry";
 import { DEFAULT_SOUND_SETTINGS, SoundId, SoundSettings } from "./types";
-import { setGlobalSoundManager } from "./global";
+import { markSoundReady, resetSoundReady, setGlobalSoundManager } from "./global";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 
@@ -48,6 +48,7 @@ const CONSTRAINED_PREWARM_IDS = new Set<SoundId>([
   "card_place",
   "drop_success",
 ]);
+const RESULT_PREWARM_IDS: SoundId[] = ["clear_success1", "clear_success2", "clear_failure"];
 const RESUME_ON_POINTER = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
 
 type NetworkInformationLike = {
@@ -94,6 +95,45 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     });
 
     return cleanup;
+  }, []);
+
+  // Audio ready gate: warmup + result fanfare pre-decode, then publish readiness
+  useEffect(() => {
+    const manager = managerRef.current;
+    let cancelled = false;
+    const clearReadyFlag = () => {
+      if (typeof window !== "undefined") {
+        delete (window as typeof window & { __AUDIO_READY__?: boolean }).__AUDIO_READY__;
+      }
+      resetSoundReady();
+    };
+
+    clearReadyFlag();
+
+    if (!manager) {
+      return clearReadyFlag;
+    }
+
+    const prepare = async () => {
+      try {
+        await manager.warmup();
+        await manager.prewarm(RESULT_PREWARM_IDS);
+      } catch (error) {
+        traceError("sound.ready.prepare", error);
+      }
+      if (cancelled) return;
+      if (typeof window !== "undefined") {
+        (window as typeof window & { __AUDIO_READY__?: boolean }).__AUDIO_READY__ = true;
+      }
+      markSoundReady(manager);
+    };
+
+    void prepare();
+
+    return () => {
+      cancelled = true;
+      clearReadyFlag();
+    };
   }, []);
 
   // 軽量ウォームアップ（フラグON時のみ、初回入力/可視化で一度だけ）
