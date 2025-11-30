@@ -3,8 +3,7 @@ import {
   usePixiHudLayer,
 } from "@/components/ui/pixi/PixiHudStage";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
-import { useSoundManager } from "@/lib/audio/SoundProvider";
-import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { playResultSound } from "@/lib/audio/resultSound";
 import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Text, chakra } from "@chakra-ui/react";
@@ -413,10 +412,6 @@ export function GameResultOverlay({
   // フォールバックを無効化（常に Pixi のみ使用）。SVG は残すが参照しない。
   const useSvgRays = false;
   const triggerBackgroundFx = useBackgroundFx(prefersReduced);
-  const playSuccessNormal = useSoundEffect("clear_success1");
-  const playSuccessEpic = useSoundEffect("clear_success2");
-  const playFailure = useSoundEffect("clear_failure");
-  const soundManager = useSoundManager();
 
   const resolveRevealTimestamp = useCallback((): number | null => {
     if (revealedAt === null || typeof revealedAt === "undefined") return null;
@@ -448,10 +443,8 @@ export function GameResultOverlay({
   const playbackKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const currentSettings = soundManager?.getSettings();
-    const successMode = currentSettings?.successMode ?? "normal";
     const timestamp = resolveRevealTimestamp();
-    const key = `${mode}:${failed ? "fail" : successMode}:${timestamp ?? "none"}`;
+    const key = `${mode}:${failed ? "fail" : "success"}:${timestamp ?? "none"}`;
 
     if (playbackKeyRef.current === key) {
       return;
@@ -469,52 +462,21 @@ export function GameResultOverlay({
       return;
     }
 
-    // SHOWTIME 側で直前に結果サウンドを鳴らしている場合は重複再生を避ける
-    const lastResultSoundAt =
-      typeof window !== "undefined"
-        ? window.__ITO_LAST_RESULT_SOUND_AT__ ?? null
-        : null;
-    const pendingResultSound =
-      typeof window !== "undefined"
-        ? window.__ITO_RESULT_SOUND_PENDING__ === true
-        : false;
-    const scheduledAt =
-      typeof window !== "undefined"
-        ? window.__ITO_RESULT_SOUND_SCHEDULED_AT__ ?? null
-        : null;
-    const recentlyPlayed =
-      typeof lastResultSoundAt === "number" && now - lastResultSoundAt < 2500;
-    const scheduledSoon =
-      pendingResultSound && typeof scheduledAt === "number" && now - scheduledAt < 4000;
-    if (recentlyPlayed) {
-      return;
-    }
-    if (scheduledSoon) {
-      return;
-    }
-
-    if (failed) {
+    if (failed && mode === "overlay") {
       // overlay の失敗はアニメーション中（Phase 1.5）で1回だけ鳴らす。ここでは再生しない。
-      if (mode !== "overlay") {
-        playFailure();
-      }
       return;
     }
 
-    if (successMode === "epic") {
-      playSuccessEpic();
-    } else {
-      playSuccessNormal();
-    }
+    void playResultSound({
+      outcome: failed ? "failure" : "victory",
+      reason: `overlay:${mode}`,
+      skipIfPending: true,
+    });
   }, [
     failed,
     mode,
-    playFailure,
-    playSuccessNormal,
-    playSuccessEpic,
     resolveRevealTimestamp,
     revealedAt,
-    soundManager,
   ]);
 
 
@@ -677,15 +639,19 @@ export function GameResultOverlay({
         {
           y: 6,
           duration: 0.05,
-          repeat: 6,
-          yoyo: true,
-          ease: "power2.inOut",
-          onStart: () => {
-            playFailure();
-          },
+        repeat: 6,
+        yoyo: true,
+        ease: "power2.inOut",
+        onStart: () => {
+            void playResultSound({
+              outcome: "failure",
+              reason: "overlay:shake",
+              skipIfPending: true,
+            });
         },
-        0.85 // 着地と同時
-      )
+      },
+      0.85 // 着地と同時
+    )
         // シェイク後、中央に戻す
         .to(container, {
           y: 0,
@@ -1037,11 +1003,11 @@ export function GameResultOverlay({
             duration: 0.37, // 0.45 → 0.35 → 0.37 に微調整！
             ease: "back.out(2.5)",
             onStart: () => {
-              const currentSettings = soundManager?.getSettings();
-              const successMode = currentSettings?.successMode ?? "normal";
-              if (successMode === "normal") {
-                playSuccessNormal();
-              }
+              void playResultSound({
+                outcome: "victory",
+                reason: "overlay:success-text",
+                skipIfPending: true,
+              });
             },
           },
           0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
@@ -1226,10 +1192,6 @@ export function GameResultOverlay({
     triggerBackgroundFx,
     pixiRaysController,
     pixiRaysReady,
-    playFailure,
-    playSuccessNormal,
-    playSuccessEpic,
-    soundManager,
     timeline,
     useSvgRays,
     linesRef,

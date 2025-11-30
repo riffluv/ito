@@ -66,6 +66,12 @@
 - RTDB presence が安定している前提で `NEXT_PUBLIC_LOBBY_VERIFY_SINGLE` / `NEXT_PUBLIC_LOBBY_VERIFY_MULTI` は既定 OFF。必要なときだけ一時的に有効化する。  
 - Firestore へのフォールバック集計を完全停止したい場合は `NEXT_PUBLIC_DISABLE_FS_FALLBACK=1` を設定する（その間のロビー人数は 0 固定になる）。本番で presence が健全なときだけ使用する。  
 
+### 5.2 Audio Ready / 結果サウンド再生（2025-11）
+- `SoundProvider` 起動時に Web Audio のウォームアップと「勝利/敗北」の prewarm を完了したら `window.__AUDIO_READY__` と内部 ready promise を解決する実装に更新。  
+- 結果サウンドは新 API `playResultSound({ outcome, delayMs?, reason? })` を経由させる。ready 待ち・一意制御・ユーザー設定（normal/epic）マッピング・タブ遅延での解錠までを内部で担当。  
+- SHOWTIME / GameResultOverlay は `audio.play(result_*)` / `playResultSound` で呼び出せば 2.6 秒以内の重複を自動抑止し、常に 1 回だけ鳴る。  
+- 調査時はコンソールで `__ITO_LAST_RESULT_SOUND_AT__`, `__ITO_RESULT_SOUND_PENDING__`, `__ITO_RESULT_SOUND_SCHEDULED_AT__` を確認すると状態が分かる。  
+
 ---
 
 ## 6. Safe Update 運用手順

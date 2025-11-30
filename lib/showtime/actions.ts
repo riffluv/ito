@@ -1,4 +1,5 @@
 import { getGlobalSoundManager } from "@/lib/audio/global";
+import { playResultSound } from "@/lib/audio/resultSound";
 import { playSound } from "@/lib/audio/playSound";
 import type { SoundId } from "@/lib/audio/types";
 import { RESULT_INTRO_DELAY } from "@/lib/ui/motion";
@@ -112,7 +113,6 @@ declare global {
     __ITO_REVEAL_PLAN_BUILT_AT__?: number | null;
     __ITO_RESULT_SOUND_PENDING__?: boolean;
     __ITO_RESULT_SOUND_SCHEDULED_AT__?: number | null;
-    __ITO_RESULT_SOUND_TIMEOUT_ID__?: number | null;
   }
 }
 
@@ -125,20 +125,13 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
     return;
   }
 
-  // 結果系だけはユーザー設定（ノーマル/エピック）に従って実音源へマッピングする。
-  let targetId: SoundId = requestedId;
   let delayMs: number = 0;
-  if (requestedId === "result_victory") {
-    const mgr = getGlobalSoundManager();
-    const successMode = mgr?.getSettings().successMode ?? "normal";
-    targetId = successMode === "epic" ? "clear_success2" : "clear_success1";
-  } else if (requestedId === "result_failure") {
-    targetId = "clear_failure";
-  }
+  const isResult =
+    requestedId === "result_victory" || requestedId === "result_failure";
 
   // リビール中の早すぎる再生を防ぎ、最後のカードフリップ直後を狙って鳴らす
   if (
-    (requestedId === "result_victory" || requestedId === "result_failure") &&
+    isResult &&
     delayMs === 0 &&
     typeof window !== "undefined"
   ) {
@@ -157,37 +150,6 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
   }
 
   try {
-    const playWithRetry = (attempt = 0) => {
-      const manager = getGlobalSoundManager();
-      if (!manager) {
-        // SoundProvider がまだ初期化されていない場合は少し待ってリトライ
-        if (attempt < 4) {
-          setTimeout(() => playWithRetry(attempt + 1), 300);
-          return;
-        }
-        logWarn(SCOPE, "audio.play skipped (manager unavailable)", {
-          id: targetId,
-          attempt,
-        });
-        return;
-      }
-
-      playSound(targetId);
-      if (
-        (requestedId === "result_victory" ||
-          requestedId === "result_failure") &&
-        typeof window !== "undefined"
-      ) {
-        window.__ITO_LAST_RESULT_SOUND_AT__ = Date.now();
-        window.__ITO_RESULT_SOUND_PENDING__ = false;
-        window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = null;
-        if (window.__ITO_RESULT_SOUND_TIMEOUT_ID__ !== null) {
-          window.clearTimeout(window.__ITO_RESULT_SOUND_TIMEOUT_ID__ as number);
-          window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = null;
-        }
-      }
-    };
-
     // 観戦など無操作でも鳴らせるよう、再生前に解錠を試みる
     const mgr = getGlobalSoundManager();
     if (mgr) {
@@ -199,21 +161,18 @@ const audioPlay: ActionExecutor<ShowtimeContext, { id: SoundId }> = async (
       }
     }
 
-    if (delayMs > 0 && typeof window !== "undefined") {
-      window.__ITO_RESULT_SOUND_PENDING__ = true;
-      window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = Date.now();
-      const id = window.setTimeout(() => playWithRetry(), delayMs);
-      window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = id;
-    } else {
-      if (typeof window !== "undefined") {
-        window.__ITO_RESULT_SOUND_PENDING__ = false;
-        window.__ITO_RESULT_SOUND_SCHEDULED_AT__ = null;
-        window.__ITO_RESULT_SOUND_TIMEOUT_ID__ = null;
-      }
-      playWithRetry();
+    if (isResult) {
+      await playResultSound({
+        outcome: requestedId === "result_victory" ? "victory" : "failure",
+        delayMs,
+        reason: "showtime",
+      });
+      return;
     }
+
+    playSound(requestedId);
   } catch (error) {
-    logWarn(SCOPE, "audio.play failed", { error, id: requestedId, targetId });
+    logWarn(SCOPE, "audio.play failed", { error, id: requestedId });
   }
 };
 
