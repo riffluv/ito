@@ -860,6 +860,7 @@ function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
   safeUpdateActor = createActor(safeUpdateMachine);
   safeUpdateActor.subscribe(handleStateChange);
   safeUpdateActor.start();
+  void resyncWaitingServiceWorker("actor-init");
   return safeUpdateActor;
 }
 

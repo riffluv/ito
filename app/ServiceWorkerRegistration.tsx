@@ -229,22 +229,35 @@ const bindControllerChangeListener = () => {
   });
 };
 
-const handleWaitingRegistration = (registration: ServiceWorkerRegistration) => {
-  const { waiting } = registration;
-  if (!waiting) {
-    return;
-  }
-  announceServiceWorkerUpdate(registration);
-  const stateChangeHandler = () => {
-    if (waiting.state === "activated") {
-      clearWaitingServiceWorker({ result: "activated" });
-      waiting.removeEventListener("statechange", stateChangeHandler);
-    } else if (waiting.state === "redundant") {
-      clearWaitingServiceWorker({ result: "redundant" });
-      waiting.removeEventListener("statechange", stateChangeHandler);
+type WaitingCleanup = () => void;
+
+const createWaitingObserver = () => {
+  const wiredWaitings = new WeakSet<ServiceWorker>();
+
+  return (registration: ServiceWorkerRegistration, _source: string): WaitingCleanup | null => {
+    const waiting = registration.waiting;
+    if (!waiting || !navigator.serviceWorker?.controller) {
+      return null;
     }
+    if (wiredWaitings.has(waiting)) {
+      return null;
+    }
+    wiredWaitings.add(waiting);
+    announceServiceWorkerUpdate(registration);
+
+    const stateChangeHandler = () => {
+      if (waiting.state === "activated") {
+        clearWaitingServiceWorker({ result: "activated" });
+        waiting.removeEventListener("statechange", stateChangeHandler);
+      } else if (waiting.state === "redundant") {
+        clearWaitingServiceWorker({ result: "redundant" });
+        waiting.removeEventListener("statechange", stateChangeHandler);
+      }
+    };
+
+    waiting.addEventListener("statechange", stateChangeHandler);
+    return () => waiting.removeEventListener("statechange", stateChangeHandler);
   };
-  waiting.addEventListener("statechange", stateChangeHandler);
 };
 
 const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
@@ -263,27 +276,6 @@ const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null
     });
 
     bindControllerChangeListener();
-
-    if (registration.waiting && navigator.serviceWorker.controller) {
-      handleWaitingRegistration(registration);
-    }
-
-    registration.addEventListener("updatefound", () => {
-      const installingWorker = registration.installing;
-      if (!installingWorker) {
-        return;
-      }
-      installingWorker.addEventListener("statechange", () => {
-        if (installingWorker.state !== "installed") {
-          return;
-        }
-        if (navigator.serviceWorker.controller) {
-          handleWaitingRegistration(registration);
-        } else {
-          registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
-        }
-      });
-    });
     return registration;
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
@@ -299,6 +291,47 @@ export default function ServiceWorkerRegistration() {
     let cancelled = false;
     let stopPeriodicChecks: (() => void) | null = null;
     let stopVisibilityChecks: (() => void) | null = null;
+    const cleanupFns: Array<() => void> = [];
+    const wiredRegistrations = new WeakSet<ServiceWorkerRegistration>();
+    const observeWaiting = createWaitingObserver();
+
+    const wireRegistration = (registration: ServiceWorkerRegistration, source: string) => {
+      if (!registration || wiredRegistrations.has(registration)) {
+        return;
+      }
+      wiredRegistrations.add(registration);
+
+      const waitingCleanup = observeWaiting(registration, `${source}:waiting`);
+      if (waitingCleanup) {
+        cleanupFns.push(waitingCleanup);
+      }
+
+      const handleUpdateFound = () => {
+        const installingWorker = registration.installing;
+        if (!installingWorker) {
+          return;
+        }
+        const onStateChange = () => {
+          if (installingWorker.state === "installed") {
+            if (navigator.serviceWorker.controller) {
+              const cleanup = observeWaiting(registration, `${source}:updatefound`);
+              if (cleanup) {
+                cleanupFns.push(cleanup);
+              }
+            } else {
+              registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
+            }
+          }
+          if (installingWorker.state === "activated" || installingWorker.state === "redundant") {
+            installingWorker.removeEventListener("statechange", onStateChange);
+          }
+        };
+        installingWorker.addEventListener("statechange", onStateChange);
+      };
+
+      registration.addEventListener("updatefound", handleUpdateFound);
+      cleanupFns.push(() => registration.removeEventListener("updatefound", handleUpdateFound));
+    };
 
     const cleanupVisibilityAutoApply = bindVisibilityHiddenAutoApply();
     const unbindMessageListener = bindServiceWorkerMessages();
@@ -317,11 +350,41 @@ export default function ServiceWorkerRegistration() {
       announceServiceWorkerUpdate(existing);
     }
 
+    const primeExistingRegistration = async (reason: string) => {
+      if (!("serviceWorker" in navigator)) {
+        return;
+      }
+      try {
+        const existingRegistration = await navigator.serviceWorker.getRegistration();
+        if (!existingRegistration || cancelled) {
+          return;
+        }
+        wireRegistration(existingRegistration, reason);
+      } catch {
+        /* noop */
+      }
+    };
+
+    void primeExistingRegistration("mount:getRegistration");
+
+    if (navigator.serviceWorker?.ready) {
+      navigator.serviceWorker.ready
+        .then((registration) => {
+          if (!cancelled) {
+            wireRegistration(registration, "ready");
+          }
+        })
+        .catch(() => {
+          /* noop */
+        });
+    }
+
     const setup = async () => {
       const registration = await registerServiceWorker();
       if (!registration || cancelled) {
         return;
       }
+      wireRegistration(registration, "register");
       stopPeriodicChecks = schedulePeriodicUpdateChecks(registration);
       stopVisibilityChecks = bindVisibilityDrivenUpdateChecks(registration);
       void performRegistrationUpdate(registration, "initial");
@@ -336,6 +399,7 @@ export default function ServiceWorkerRegistration() {
       unsubscribeSnapshot();
       stopPeriodicChecks?.();
       stopVisibilityChecks?.();
+      cleanupFns.forEach((fn) => fn());
       clearReloadFallbackTimer();
     };
   }, []);
