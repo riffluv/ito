@@ -22,9 +22,10 @@ import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 
 const SW_PATH = "/sw.js";
-const APP_VERSION =
-  process.env.NEXT_PUBLIC_APP_VERSION ??
+// 固定の APP_VERSION に縛られないよう、コミット SHA を最優先でクエリに付与する
+const SW_VERSION =
   process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+  process.env.NEXT_PUBLIC_APP_VERSION ??
   "dev";
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
@@ -267,7 +268,7 @@ const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null
 
   setMetric("sw", "loopGuard.tripped", 0);
   setMetric("sw", "applied.count", 0);
-  const versionedPath = `${SW_PATH}?v=${APP_VERSION}`;
+  const versionedPath = `${SW_PATH}?v=${SW_VERSION}`;
   clearAutoApplySuppression();
 
   try {
