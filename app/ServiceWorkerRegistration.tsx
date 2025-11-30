@@ -22,11 +22,26 @@ import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 
 const SW_PATH = "/sw.js";
-// 固定の APP_VERSION に縛られないよう、コミット SHA を最優先でクエリに付与する
-const SW_VERSION =
-  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
-  process.env.NEXT_PUBLIC_APP_VERSION ??
-  "dev";
+
+// デプロイごとに必ず変わるバージョン文字列を付与する。
+// VERCEL_GIT_COMMIT_SHA は NEXT_PUBLIC_* に自動で載らないことが多いため、
+// buildId（__NEXT_DATA__.buildId）や APP_VERSION もフォールバックに使う。
+const resolveSwVersion = (): string => {
+  const runtimeBuildId =
+    typeof window !== "undefined" && typeof window.__NEXT_DATA__ === "object"
+      ? window.__NEXT_DATA__.buildId ?? null
+      : null;
+
+  return (
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    runtimeBuildId ??
+    process.env.NEXT_PUBLIC_APP_VERSION ??
+    "dev"
+  );
+};
+
+const SW_VERSION = resolveSwVersion();
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
 const shouldRegister = () => {
