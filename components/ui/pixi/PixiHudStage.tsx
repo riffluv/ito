@@ -32,6 +32,7 @@ type PixiContextEventDetail = {
   status: "lost" | "restored" | "restarting";
 };
 
+const HUD_RESOLUTION_CAP = 1.75;
 const emitPixiContextEvent = (detail: PixiContextEventDetail) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PIXI_CONTEXT_EVENT, { detail }));
@@ -328,13 +329,18 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
     const pixiApp = new Application();
     const layerStore = layersRef.current;
     let detachCanvasContextHandlers: (() => void) | null = null;
+    const listenerAbort = typeof AbortController === "function" ? new AbortController() : null;
 
     const init = async () => {
+      const effectiveResolution = Math.min(
+        window.devicePixelRatio || 1,
+        HUD_RESOLUTION_CAP
+      );
       try {
         await pixiApp.init({
           backgroundAlpha: 0,
           antialias: true,
-          resolution: Math.min(window.devicePixelRatio || 1, 2),
+          resolution: effectiveResolution,
           width: host.clientWidth || window.innerWidth,
           height: host.clientHeight || window.innerHeight,
           preference: 'webgl',
@@ -359,6 +365,12 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
       if (!pixiApp.ticker.started) {
         pixiApp.ticker.start();
       }
+      // 高DPI 端末での GPU 負荷抑制（上限 1.75x）
+      pixiApp.renderer.resolution = effectiveResolution;
+      pixiApp.renderer.resize(
+        host.clientWidth || window.innerWidth,
+        host.clientHeight || window.innerHeight
+      );
 
       const hudRoot = new Container();
       hudRoot.sortableChildren = true;
@@ -413,19 +425,32 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
         };
         void finalize();
       };
-      canvas.addEventListener("webglcontextlost", handleContextLost as EventListener, false);
+      canvas.addEventListener("webglcontextlost", handleContextLost as EventListener, {
+        signal: listenerAbort?.signal,
+        passive: false,
+      });
       canvas.addEventListener(
         "webglcontextrestored",
         handleContextRestored as EventListener,
-        false
+        {
+          signal: listenerAbort?.signal,
+        }
       );
       detachCanvasContextHandlers = () => {
-        canvas.removeEventListener("webglcontextlost", handleContextLost as EventListener, false);
-        canvas.removeEventListener(
-          "webglcontextrestored",
-          handleContextRestored as EventListener,
-          false
-        );
+        if (listenerAbort) {
+          listenerAbort.abort();
+        } else {
+          canvas.removeEventListener(
+            "webglcontextlost",
+            handleContextLost as EventListener,
+            false
+          );
+          canvas.removeEventListener(
+            "webglcontextrestored",
+            handleContextRestored as EventListener,
+            false
+          );
+        }
       };
 
       resizeObserver = new ResizeObserver((entries) => {

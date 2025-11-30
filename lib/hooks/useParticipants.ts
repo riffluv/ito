@@ -22,6 +22,7 @@ import {
 } from "@/lib/utils/errorHandling";
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import { traceAction } from "@/lib/utils/trace";
 import {
   collection,
@@ -168,6 +169,7 @@ export function useParticipants(
       }
       stop();
       detachVisibilityListener();
+      cancelIdleStart?.();
     };
 
     if (!firebaseEnabled || !roomId) {
@@ -176,6 +178,8 @@ export function useParticipants(
 
     setLoading(true);
     setError(null);
+
+    let cancelIdleStart: (() => void) | null = null;
 
     const maybeStart = () => {
       if (unsubRef.current) return;
@@ -303,25 +307,15 @@ export function useParticipants(
       );
     };
 
-    // 初回のみ軽い遅延（フラグON時）
-    if (process.env.NEXT_PUBLIC_PERF_WARMUP === "1") {
-      try {
-        const start = () => {
-          try {
-            maybeStart();
-          } catch {}
-        };
-        // 1フレーム + 50ms の段階化
-        requestAnimationFrame(() => {
-          setTimeout(start, 50);
-        });
-      } catch {
-        setTimeout(() => maybeStart(), 50);
-      }
-    } else {
-      // 既定の即時購読
-      maybeStart();
-    }
+    const idleDelayMs = process.env.NEXT_PUBLIC_PERF_WARMUP === "1" ? 60 : 28;
+    cancelIdleStart = scheduleIdleTask(
+      () => {
+        try {
+          maybeStart();
+        } catch {}
+      },
+      { delayMs: idleDelayMs, timeoutMs: 180 }
+    );
 
     return cleanup;
   }, [roomId]);
@@ -367,24 +361,34 @@ export function useParticipants(
         Array.isArray(uids) ? uids.length : 0
       );
     };
-    unsubscribe = subscribePresence(roomId, (uids) => {
-      logDebug("presence", "update", { roomId, uids });
-      if (!presenceHydratedRef.current && uids.length === 0) {
-        if (!presenceHydrationTimerRef.current) {
-          presenceHydrationTimerRef.current = setTimeout(() => {
+    let cancelIdleSubscribe: (() => void) | null = null;
+    cancelIdleSubscribe = scheduleIdleTask(
+      () => {
+        unsubscribe = subscribePresence(roomId, (uids) => {
+          logDebug("presence", "update", { roomId, uids });
+          if (!presenceHydratedRef.current && uids.length === 0) {
+            if (!presenceHydrationTimerRef.current) {
+              presenceHydrationTimerRef.current = setTimeout(() => {
+                presenceHydrationTimerRef.current = null;
+                markReady([]);
+              }, PRESENCE_HEARTBEAT_MS);
+            }
+            return;
+          }
+          if (presenceHydrationTimerRef.current) {
+            clearTimeout(presenceHydrationTimerRef.current);
             presenceHydrationTimerRef.current = null;
-            markReady([]);
-          }, PRESENCE_HEARTBEAT_MS);
-        }
-        return;
-      }
-      if (presenceHydrationTimerRef.current) {
-        clearTimeout(presenceHydrationTimerRef.current);
-        presenceHydrationTimerRef.current = null;
-      }
-      markReady(uids);
-    });
-    return cleanup;
+          }
+          markReady(uids);
+        });
+      },
+      { delayMs: 36, timeoutMs: 200 }
+    );
+
+    return () => {
+      cancelIdleSubscribe?.();
+      cleanup();
+    };
   }, [roomId]);
 
   // 自分の presence アタッチ/デタッチ

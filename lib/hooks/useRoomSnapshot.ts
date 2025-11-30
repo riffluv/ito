@@ -11,6 +11,7 @@ import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/e
 import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceError } from "@/lib/utils/trace";
+import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import deepEqual from "fast-deep-equal/es6";
 import {
@@ -351,9 +352,19 @@ export function useRoomSnapshot(
       start().catch(() => scheduleRetry(2000));
     };
 
-    maybeStart();
+    const cancelIdleStart = scheduleIdleTask(
+      () => {
+        try {
+          maybeStart();
+        } catch {
+          scheduleRetry(2000);
+        }
+      },
+      { delayMs: 40, timeoutMs: 200 }
+    );
 
     return () => {
+      cancelIdleStart?.();
       stop();
       if (backoffTimer) {
         clearTimeout(backoffTimer);

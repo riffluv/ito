@@ -98,6 +98,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
   private canvasVisible = true;
   private resizeListener: (() => void) | null = null;
   private visibilityListener: (() => void) | null = null;
+  private listenerAbort: AbortController | null = null;
   private readyPromise: Promise<void> | null = null;
   private resolveReady: (() => void) | null = null;
   private rejectReady: ((reason?: unknown) => void) | null = null;
@@ -297,6 +298,9 @@ class WorkerBackgroundHost implements BackgroundHostLike {
 
   async attachCanvas(host: HTMLElement | null) {
     if (!host) return;
+    // refresh abort controller for listeners
+    this.listenerAbort?.abort();
+    this.listenerAbort = new AbortController();
     this.canvasHolder = host;
     this.createCanvasIfNeeded();
     if (!this.canvas) return;
@@ -313,14 +317,19 @@ class WorkerBackgroundHost implements BackgroundHostLike {
         const h = window.innerHeight || 1080;
         this.worker?.postMessage({ type: "resize", width: w, height: h });
       };
-      window.addEventListener("resize", this.resizeListener, { passive: true });
+      window.addEventListener("resize", this.resizeListener, {
+        passive: true,
+        signal: this.listenerAbort?.signal,
+      });
     }
 
     if (typeof document !== "undefined" && !this.visibilityListener) {
       this.visibilityListener = () => {
         this.worker?.postMessage({ type: "pageVisibility", visible: !document.hidden });
       };
-      document.addEventListener("visibilitychange", this.visibilityListener);
+      document.addEventListener("visibilitychange", this.visibilityListener, {
+        signal: this.listenerAbort?.signal,
+      });
       this.worker?.postMessage({ type: "pageVisibility", visible: !document.hidden });
     }
   }
@@ -331,9 +340,10 @@ class WorkerBackgroundHost implements BackgroundHostLike {
       host.removeChild(this.canvas);
     }
     this.canvasHolder = null;
-    if (!this.canvasHolder && typeof document !== "undefined" && this.visibilityListener) {
-      document.removeEventListener("visibilitychange", this.visibilityListener);
+    if (!this.canvasHolder && this.listenerAbort) {
+      this.listenerAbort.abort();
       this.visibilityListener = null;
+      this.resizeListener = null;
     }
     this.removeFallbackLayer();
   }
@@ -353,12 +363,7 @@ class WorkerBackgroundHost implements BackgroundHostLike {
     this.readyPromise = null;
     this.resolveReady = null;
     this.rejectReady = null;
-    if (typeof window !== "undefined" && this.resizeListener) {
-      window.removeEventListener("resize", this.resizeListener);
-    }
-    if (typeof document !== "undefined" && this.visibilityListener) {
-      document.removeEventListener("visibilitychange", this.visibilityListener);
-    }
+    this.listenerAbort?.abort();
     this.resizeListener = null;
     this.visibilityListener = null;
     this.removeFallbackLayer();
