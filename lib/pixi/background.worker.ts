@@ -50,7 +50,8 @@ type IncomingMessage =
       duration?: number;
     }
   | { type: "terminate" }
-  | { type: "setProfile"; profile: PixiBackgroundProfile };
+  | { type: "setProfile"; profile: PixiBackgroundProfile }
+  | { type: "pageVisibility"; visible: boolean };
 
 type SceneEffects = {
   lightSweep?: () => void;
@@ -103,8 +104,14 @@ DOMAdapter.set(WebWorkerAdapter);
 let app: Application | null = null;
 let stageRoot: Container | null = null;
 let currentScene: SceneController | null = null;
+let currentSceneMeta: { key: PixiSceneKey; quality: BackgroundQuality } | null = null;
+let canvasRef: OffscreenCanvas | null = null;
+let lastWidth = 0;
+let lastHeight = 0;
 let currentProfile: PixiBackgroundProfile = "default";
 let contextLostCount = 0;
+let pageVisible = true;
+let recovering = false;
 
 type WorkerGlobal = typeof globalThis & {
   postMessage: (message: OutgoingMessage, transfer?: Transferable[]) => void;
@@ -128,6 +135,7 @@ const disposeApp = () => {
   try {
     currentScene?.destroy();
     currentScene = null;
+    currentSceneMeta = null;
     stageRoot?.destroy({ children: true });
     stageRoot = null;
     app?.destroy(true);
@@ -135,6 +143,18 @@ const disposeApp = () => {
     // noop
   } finally {
     app = null;
+  }
+};
+
+const updateTickerForVisibility = () => {
+  if (!app) return;
+  if (pageVisible) {
+    app.ticker.maxFPS = currentProfile === "software" ? 50 : 60;
+    app.ticker.start();
+  } else {
+    // 負荷を抑えるために非表示時は完全停止
+    app.ticker.maxFPS = 12;
+    app.ticker.stop();
   }
 };
 
@@ -453,6 +473,7 @@ const setScene = async (
     currentScene.destroy();
   }
   currentScene = next;
+  currentSceneMeta = { key: next.key, quality };
   debug("setScene:attached", { sceneKey: next.key });
 };
 
@@ -462,6 +483,9 @@ const ensureApp = async (
   height: number,
   profile: PixiBackgroundProfile
 ) => {
+  canvasRef = canvas;
+  lastWidth = width;
+  lastHeight = height;
   currentProfile = profile;
   app = new Application();
   await app.init({
@@ -475,6 +499,7 @@ const ensureApp = async (
     powerPreference: profile === "software" ? "low-power" : "high-performance",
     hello: false,
   });
+  updateTickerForVisibility();
   stageRoot = new Container();
   stageRoot.sortableChildren = true;
   app.stage.addChild(stageRoot);
@@ -487,13 +512,36 @@ const ensureApp = async (
       post({ type: "context-lost", count: contextLostCount });
       if (contextLostCount >= 3) {
         post({ type: "fallback", reason: "context-lost-loop" });
+        return;
       }
+      // Try to再初期化して黒画面を避ける
+      setTimeout(() => {
+        void reinitializeApp("context-lost");
+      }, 80);
     });
     view.addEventListener("webglcontextrestored", () => {
       contextLostCount = 0;
     });
   }
 };
+
+async function reinitializeApp(reason?: string) {
+  if (recovering || !canvasRef) return;
+  recovering = true;
+  debug("reinit:start", { reason, profile: currentProfile });
+  try {
+    disposeApp();
+    await ensureApp(canvasRef, lastWidth, lastHeight, currentProfile);
+    if (currentSceneMeta) {
+      await setScene(currentSceneMeta.key, currentSceneMeta.quality);
+    }
+    debug("reinit:done", { reason });
+  } catch (error) {
+    post({ type: "error", message: error instanceof Error ? error.message : String(error) });
+  } finally {
+    recovering = false;
+  }
+}
 
 self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
   const msg = event.data;
@@ -517,6 +565,8 @@ self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
         break;
       case "resize":
         if (app) {
+          lastWidth = msg.width;
+          lastHeight = msg.height;
           app.renderer.resize(msg.width, msg.height);
           currentScene?.resize(msg.width, msg.height);
         }
@@ -547,6 +597,10 @@ self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
         break;
       case "setProfile":
         currentProfile = msg.profile;
+        break;
+      case "pageVisibility":
+        pageVisible = msg.visible;
+        updateTickerForVisibility();
         break;
       case "terminate":
         disposeApp();
