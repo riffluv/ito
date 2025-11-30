@@ -289,6 +289,9 @@ function InteractiveBoardBase({
           },
           onDragOver: ({ active, over }) => {
             if (over) {
+              if (over.id === RETURN_DROP_ZONE_ID) {
+                return `${String(active.id)}を待機エリアに戻す準備中`;
+              }
               const overIndex = activeProposal.indexOf(over.id as string);
               return `${String(active.id)}を${overIndex + 1}番スロットに移動中`;
             }
@@ -296,6 +299,9 @@ function InteractiveBoardBase({
           },
           onDragEnd: ({ active, over }) => {
             if (over) {
+              if (over.id === RETURN_DROP_ZONE_ID) {
+                return `${String(active.id)}を待機エリアに戻しました`;
+              }
               const overIndex = activeProposal.indexOf(over.id as string);
               return `${String(active.id)}を${overIndex + 1}番スロットに配置`;
             }

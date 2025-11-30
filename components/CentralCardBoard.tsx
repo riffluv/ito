@@ -1809,6 +1809,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
+      traceAction("drag.start", { activeId: String(event.active.id) });
       beginDropSession();
       updateDropAnimationTarget(null);
       resetMagnet({ immediate: true });
@@ -1893,6 +1894,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
+      traceAction("drag.end", {
+        activeId: String(active.id),
+        overId: over ? String(over.id) : null,
+      });
       const activeRect = getActiveRectWithDelta(active, event.delta);
       if (activeRect) {
         lastDragPositionRef.current = {
@@ -2222,6 +2227,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   const onDragCancel = useCallback(() => {
+    traceAction("drag.cancel");
     dragActivationStartRef.current = null;
     updateDropAnimationTarget(null);
     clearActive();
@@ -2242,7 +2248,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         background: "transparent",
         position: "relative",
         "@media (pointer: coarse)": {
-          touchAction: "none",
+          touchAction: "pan-y",
           WebkitTouchCallout: "none",
           userSelect: "none",
           overscrollBehavior: "contain",

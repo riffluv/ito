@@ -79,6 +79,8 @@ function WaitingAreaCardComponent({
       ref={setNodeRef}
       style={style}
       bg="transparent"
+      aria-grabbed={isDragging ? "true" : "false"}
+      aria-label={player.name ? `${player.name}のカード` : "カード"}
       data-dragging={isDragging ? "true" : undefined}
       {...(isDraggingEnabled && ready ? listeners : {})}
       {...(isDraggingEnabled && ready ? attributes : {})}
