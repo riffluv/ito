@@ -372,9 +372,15 @@ export function useDropHandler({
             session.markStage("client.drop.t2_addProposalResolvedMs", { result: "error" });
           }
           session.complete("error");
+          const errorType =
+            err instanceof Error
+              ? err.name
+              : err && typeof err === "object" && "code" in err
+                ? String((err as { code?: unknown }).code ?? "unknown")
+                : "unknown";
           traceError("interaction.drop.error", err, {
             roomId,
-            playerId: meId,
+            errorType,
           });
           if (inserted) {
             const snapshot = previousPending.slice();
@@ -548,9 +554,15 @@ const onDropAtPosition = useCallback(
             });
           }
           session.complete("error");
+          const errorType =
+            err instanceof Error
+              ? err.name
+              : err && typeof err === "object" && "code" in err
+                ? String((err as { code?: unknown }).code ?? "unknown")
+                : "unknown";
           traceError("interaction.drop.error", err, {
             roomId,
-            playerId: meId,
+            errorType,
             index: targetIndex,
           });
           if (inserted) {

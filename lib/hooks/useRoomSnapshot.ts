@@ -214,6 +214,8 @@ export function useRoomSnapshot(
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryAttempt = 0;
+    let permissionRetryAttempt = 0;
     let prevRoomSnapshot: { id: string | null; data: ReturnType<typeof sanitizeRoom> | null } = {
       id: null,
       data: null,
@@ -226,7 +228,16 @@ export function useRoomSnapshot(
       unsubRef.current = null;
     };
 
-    const scheduleRetry = (delayMs: number) => {
+    const resetAttempts = () => {
+      retryAttempt = 0;
+      permissionRetryAttempt = 0;
+      backoffUntilRef.current = 0;
+    };
+
+    const scheduleRetry = (reason: "permission" | "other") => {
+      const attempt = reason === "permission" ? ++permissionRetryAttempt : ++retryAttempt;
+      const baseDelay = reason === "permission" ? 5000 : 2000;
+      const delayMs = Math.min(30_000, Math.round(baseDelay * Math.pow(2, Math.max(attempt - 1, 0))));
       backoffUntilRef.current = Date.now() + delayMs;
       if (backoffTimer) {
         try {
@@ -291,7 +302,8 @@ export function useRoomSnapshot(
       const start = async () => {
         const hasAccess = await ensureRoomAccess();
         if (!hasAccess) {
-          scheduleRetry(5000);
+          const reason = roomAccessStateRef.current.state === "denied" ? "permission" : "other";
+          scheduleRetry(reason);
           return;
         }
         unsubRef.current = onSnapshot(
@@ -300,6 +312,7 @@ export function useRoomSnapshot(
             const receivedAt =
               typeof performance !== "undefined" ? performance.now() : null;
             if (!snap.exists()) {
+              resetAttempts();
               enqueueCommit(() => {
                 prevRoomSnapshot = { id: null, data: null };
                 setRoom(null);
@@ -312,6 +325,7 @@ export function useRoomSnapshot(
 
             const rawData = snap.data();
             const sanitized = sanitizeRoom(rawData);
+            resetAttempts();
             if (
               prevRoomSnapshot.data &&
               prevRoomSnapshot.id === snap.id &&
@@ -338,18 +352,18 @@ export function useRoomSnapshot(
             if (code === "permission-denied") {
               setRoomAccessError("permission-denied");
               ensureAuthSession("room-snapshot").catch(() => void 0);
-              scheduleRetry(5000);
+              scheduleRetry("permission");
               return;
             }
             if (isFirebaseQuotaExceeded(error)) {
               handleFirebaseQuotaError("ルーム情報の取得");
             }
             traceError("room.snapshot.listen", error, { roomId });
-            scheduleRetry(2000);
-          }
-        );
-      };
-      start().catch(() => scheduleRetry(2000));
+          scheduleRetry("other");
+        }
+      );
+    };
+    start().catch(() => scheduleRetry("other"));
     };
 
     const cancelIdleStart = scheduleIdleTask(
@@ -357,7 +371,7 @@ export function useRoomSnapshot(
         try {
           maybeStart();
         } catch {
-          scheduleRetry(2000);
+          scheduleRetry("other");
         }
       },
       { delayMs: 40, timeoutMs: 200 }

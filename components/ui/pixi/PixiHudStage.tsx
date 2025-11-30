@@ -26,6 +26,8 @@ type LayerRecord = {
 
 const PIXI_CONTEXT_EVENT = "ito:pixi-context";
 const TEXTURE_UPLOAD_CHUNK = 6;
+const MIN_TEXTURE_UPLOAD_CHUNK = 4;
+const MAX_TEXTURE_UPLOAD_CHUNK = 24;
 
 type PixiContextEventDetail = {
   source: "hud";
@@ -45,12 +47,68 @@ type ManagedTextureRenderer = Renderer & {
   };
 };
 
-const uploadTexturesInChunks = (renderer: Renderer, chunkSize = TEXTURE_UPLOAD_CHUNK) =>
+const computeTextureChunkSize = () => {
+  const base = TEXTURE_UPLOAD_CHUNK;
+  const cores =
+    typeof navigator !== "undefined" && typeof navigator.hardwareConcurrency === "number"
+      ? navigator.hardwareConcurrency
+      : null;
+  if (!cores || !Number.isFinite(cores)) return base;
+  const scaled = Math.round(
+    base *
+      (cores >= 12 ? 2.1 : cores >= 8 ? 1.6 : cores >= 6 ? 1.3 : cores >= 4 ? 1.05 : 0.8)
+  );
+  return Math.min(MAX_TEXTURE_UPLOAD_CHUNK, Math.max(MIN_TEXTURE_UPLOAD_CHUNK, scaled));
+};
+
+const classifyTexturePriority = (source: unknown) => {
+  const accessor = (key: string) => {
+    try {
+      const value = (source as Record<string, unknown> | null)?.[key];
+      return typeof value === "string" ? value.toLowerCase() : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const label = accessor("label") || accessor("name") || accessor("type");
+  const resourceSrc = (() => {
+    try {
+      const res = (source as { resource?: { src?: string } } | null)?.resource;
+      if (res && typeof res.src === "string") return res.src.toLowerCase();
+    } catch {}
+    return undefined;
+  })();
+  const text = [label, resourceSrc].filter(Boolean).join(" ");
+  if (text.length) {
+    const criticalKeywords = ["ui", "hud", "icon", "button", "btn", "card", "font", "atlas"];
+    const decorativeKeywords = ["bg", "background", "grad", "fx", "effect", "glow", "shadow"];
+    if (criticalKeywords.some((kw) => text.includes(kw))) return 0;
+    if (decorativeKeywords.some((kw) => text.includes(kw))) return 2;
+  }
+  return 1; // default priority
+};
+
+const sortTexturesForRecovery = (managed: unknown[]) => {
+  return managed
+    .map((tex, index) => ({ tex, index, priority: classifyTexturePriority(tex) }))
+    .sort((a, b) => a.priority - b.priority || a.index - b.index)
+    .map((entry) => entry.tex);
+};
+
+const uploadTexturesInChunks = (
+  renderer: Renderer,
+  options?: { chunkSize?: number; prioritize?: boolean }
+) =>
   new Promise<void>((resolve) => {
     const textureSystem = (renderer as ManagedTextureRenderer).texture;
-    const managed = Array.isArray(textureSystem?.managedTextures)
+    const rawManaged = Array.isArray(textureSystem?.managedTextures)
       ? textureSystem.managedTextures ?? []
       : [];
+    const managed = options?.prioritize === false ? rawManaged : sortTexturesForRecovery(rawManaged);
+    const chunkSize = Math.max(
+      MIN_TEXTURE_UPLOAD_CHUNK,
+      Math.min(MAX_TEXTURE_UPLOAD_CHUNK, options?.chunkSize ?? computeTextureChunkSize())
+    );
     if (!managed.length) {
       resolve();
       return;

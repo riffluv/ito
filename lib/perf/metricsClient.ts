@@ -13,6 +13,17 @@ type SentryGlobal = {
   captureMessage?: CaptureMessage;
 };
 
+type PendingMetric = {
+  name: string;
+  value: number;
+  tags?: Record<string, string>;
+};
+
+const METRIC_BATCH_SIZE = 10;
+const METRIC_FLUSH_TIMEOUT_MS = 400;
+const metricQueue: PendingMetric[] = [];
+let metricFlushScheduled = false;
+
 function getMetricsApi(): MetricsApi | null {
   const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
   const maybeMetrics = globalScope.Sentry?.metrics;
@@ -30,12 +41,61 @@ function sanitizeTags(tags: MetricTags): Record<string, string> | undefined {
   return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
+const flushMetricQueue = () => {
+  metricFlushScheduled = false;
+  if (metricQueue.length === 0) return;
+  let metricsApi: MetricsApi | null = null;
+  let capture: CaptureMessage | undefined;
+  const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
+  try {
+    metricsApi = getMetricsApi();
+    capture = globalScope.Sentry?.captureMessage;
+  } catch {
+    metricsApi = null;
+  }
+
+  while (metricQueue.length > 0) {
+    const batch = metricQueue.splice(0, METRIC_BATCH_SIZE);
+    for (const item of batch) {
+      try {
+        if (metricsApi?.distribution) {
+          metricsApi.distribution(item.name, item.value, { tags: item.tags });
+        } else {
+          capture?.(`metrics:${item.name}` as string, {
+            level: "info",
+            extra: { value: item.value, tags: item.tags },
+          });
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.warn("recordMetricDistribution flush failed", error);
+        }
+      }
+    }
+  }
+};
+
+const scheduleMetricFlush = () => {
+  if (metricFlushScheduled) return;
+  metricFlushScheduled = true;
+  const idle = globalThis as typeof globalThis & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  };
+  if (typeof idle.requestIdleCallback === "function") {
+    idle.requestIdleCallback(() => flushMetricQueue(), { timeout: METRIC_FLUSH_TIMEOUT_MS });
+    return;
+  }
+  setTimeout(flushMetricQueue, METRIC_FLUSH_TIMEOUT_MS);
+};
+
 export function recordMetricDistribution(
   name: string,
   value: number,
   tags?: MetricTags
 ): void {
   if (!Number.isFinite(value)) return;
+  const sanitizedTags = sanitizeTags(tags);
   try {
     const sample = Number(value.toFixed(2));
     if (Number.isFinite(sample)) {
@@ -51,28 +111,8 @@ export function recordMetricDistribution(
   } catch {
     // ignore local cache failures
   }
-  try {
-    const metrics = getMetricsApi();
-    const sanitizedTags = sanitizeTags(tags);
-    if (metrics?.distribution) {
-      metrics.distribution(name, value, {
-        tags: sanitizedTags,
-      });
-      return;
-    }
-
-    const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
-    const capture = globalScope.Sentry?.captureMessage;
-    capture?.(`metrics:${name}`, {
-      level: "info",
-      extra: { value, tags: sanitizedTags },
-    });
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.warn("recordMetricDistribution failed", error);
-    }
-  }
+  metricQueue.push({ name, value, tags: sanitizedTags });
+  scheduleMetricFlush();
 }
 
 export function shouldSendClientMetrics(): boolean {

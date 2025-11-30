@@ -20,7 +20,8 @@ import {
   type QueryDocumentSnapshot,
   type QuerySnapshot,
 } from "firebase/firestore";
-import useSWR from "swr";
+import useSWR, { Cache, State } from "swr";
+import { initCache, defaultConfigOptions } from "swr/_internal";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export const ROOMS_PER_PAGE = 6;
@@ -39,6 +40,29 @@ const MAX_RECENT_WINDOW_MS = 15 * 60 * 1000;
 const MIN_FETCH_COOLDOWN_MS = 30 * 1000;
 const MAX_FETCH_COOLDOWN_MS = 5 * 60 * 1000;
 const DEFAULT_FETCH_COOLDOWN_MS = 120 * 1000;
+const SWR_CACHE_LIMIT = 12;
+
+const createLruCache = (limit: number): Cache => {
+  const store = new Map<string, State<unknown, unknown>>();
+  const cache: Cache = {
+    get: (key: string) => store.get(key),
+    set: (key: string, value: State<unknown, unknown>) => {
+      if (store.has(key)) store.delete(key);
+      store.set(key, value);
+      if (store.size > limit) {
+        const oldest = store.keys().next().value;
+        if (oldest) {
+          store.delete(oldest);
+        }
+      }
+    },
+    delete: (key: string) => store.delete(key),
+    keys: () => store.keys(),
+  };
+  // Ensure SWR registers global state for this provider
+  initCache(cache, defaultConfigOptions);
+  return cache;
+};
 
 function recordRoomsMetric(
   name: string,
@@ -126,6 +150,7 @@ export function useOptimizedRooms({
       .toLowerCase() === "true" ||
       (process.env.NEXT_PUBLIC_LOBBY_FETCH_DEBUG || "").toString().trim() ===
         "1");
+  const swrCache = useMemo<Cache>(() => createLruCache(SWR_CACHE_LIMIT), []);
 
   const setLoadingIfNeeded = useCallback((next: boolean) => {
     setLoading((prev) => (prev === next ? prev : next));
@@ -356,9 +381,11 @@ export function useOptimizedRooms({
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
+      revalidateIfStale: false,
       dedupingInterval: 4000,
-      focusThrottleInterval: 1200,
+      focusThrottleInterval: 700,
       keepPreviousData: true,
+      cache: swrCache,
     }
   );
 

@@ -23,6 +23,8 @@ type ResultSoundState = {
   pendingScheduledAt: number | null;
   lastOutcome: ResultOutcome | null;
   lastPlayedAt: number | null;
+  inFlightOutcome: ResultOutcome | null;
+  inFlightStartedAt: number | null;
 };
 
 type PlayResultSoundOptions = {
@@ -39,6 +41,7 @@ const DEFAULT_DEDUPE_MS = 2600;
 
 let pendingPlayback: PendingPlayback | null = null;
 let lastPlayback: LastPlayback | null = null;
+let inFlight: { outcome: ResultOutcome; startedAt: number } | null = null;
 
 const mapOutcomeToSoundId = (
   outcome: ResultOutcome,
@@ -86,11 +89,14 @@ export const getResultSoundState = (): ResultSoundState => ({
   pendingScheduledAt: pendingPlayback?.scheduledAt ?? null,
   lastOutcome: lastPlayback?.outcome ?? null,
   lastPlayedAt: lastPlayback?.at ?? null,
+  inFlightOutcome: inFlight?.outcome ?? null,
+  inFlightStartedAt: inFlight?.startedAt ?? null,
 });
 
 export const resetResultSoundState = () => {
   clearPendingTimer();
   lastPlayback = null;
+  inFlight = null;
   if (typeof window !== "undefined") {
     const w = window as typeof window & {
       __ITO_LAST_RESULT_SOUND_AT__?: number;
@@ -113,6 +119,16 @@ export const playResultSound = async (options: PlayResultSoundOptions): Promise<
     reason,
   } = options;
   const now = Date.now();
+
+  if (inFlight && inFlight.outcome === outcome && now - inFlight.startedAt < dedupeWindowMs) {
+    traceAction("audio.result.skip", {
+      outcome,
+      reason,
+      mode: "inflight",
+      startedAt: inFlight.startedAt,
+    });
+    return;
+  }
 
   if (pendingPlayback && skipIfPending) {
     if (pendingPlayback.outcome === outcome) {
@@ -138,6 +154,12 @@ export const playResultSound = async (options: PlayResultSoundOptions): Promise<
   }
 
   const execute = async () => {
+    if (inFlight && inFlight.outcome === outcome && Date.now() - inFlight.startedAt < dedupeWindowMs) {
+      traceAction("audio.result.skip", { outcome, reason, mode: "inflight-late" });
+      return;
+    }
+    inFlight = { outcome, startedAt: Date.now() };
+
     clearPendingTimer();
 
     if (shouldDedupe(outcome, dedupeWindowMs)) {
@@ -145,42 +167,46 @@ export const playResultSound = async (options: PlayResultSoundOptions): Promise<
       return;
     }
 
-    const ready = await waitForSoundReady({ timeoutMs: readyTimeoutMs });
-    const manager = ready.manager ?? getGlobalSoundManager();
-    if (!manager) {
-      logWarn("audio.result", "SoundManager unavailable", { outcome, reason });
-      return;
-    }
-
-    const successMode = manager.getSettings().successMode ?? "normal";
-    const targetId = mapOutcomeToSoundId(outcome, successMode);
-
     try {
-      manager.markUserInteraction();
-    } catch {
-      // noop
-    }
-    try {
-      await manager.prepareForInteraction();
-    } catch {
-      // 解錠失敗は握りつぶす
-    }
+      const ready = await waitForSoundReady({ timeoutMs: readyTimeoutMs });
+      const manager = ready.manager ?? getGlobalSoundManager();
+      if (!manager) {
+        logWarn("audio.result", "SoundManager unavailable", { outcome, reason });
+        return;
+      }
 
-    try {
-      await manager.play(targetId);
-      const playedAt = Date.now();
-      lastPlayback = { outcome, at: playedAt, soundId: targetId };
-      setLastPlayedDebugFlag(playedAt);
-      traceAction("audio.result.play", {
-        outcome,
-        targetId,
-        delayMs,
-        ready: ready.ready,
-        timedOut: ready.timedOut,
-        reason,
-      });
-    } catch (error) {
-      traceError("audio.result.play", error, { outcome, targetId });
+      const successMode = manager.getSettings().successMode ?? "normal";
+      const targetId = mapOutcomeToSoundId(outcome, successMode);
+
+      try {
+        manager.markUserInteraction();
+      } catch {
+        // noop
+      }
+      try {
+        await manager.prepareForInteraction();
+      } catch {
+        // 解錠失敗は握りつぶす
+      }
+
+      try {
+        await manager.play(targetId);
+        const playedAt = Date.now();
+        lastPlayback = { outcome, at: playedAt, soundId: targetId };
+        setLastPlayedDebugFlag(playedAt);
+        traceAction("audio.result.play", {
+          outcome,
+          targetId,
+          delayMs,
+          ready: ready.ready,
+          timedOut: ready.timedOut,
+          reason,
+        });
+      } catch (error) {
+        traceError("audio.result.play", error, { outcome, targetId });
+      }
+    } finally {
+      inFlight = null;
     }
   };
 
