@@ -4,7 +4,7 @@ import WaitingAreaCard from "@/components/ui/WaitingAreaCard";
 import type { PlayerDoc } from "@/lib/types";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, Text, VStack } from "@chakra-ui/react";
-import { useId, useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 export interface WaitingAreaProps {
   players: (PlayerDoc & { id: string })[];
@@ -27,8 +27,10 @@ export default function WaitingArea({
   hideClues = false,
   gameStarted = false,
 }: WaitingAreaProps) {
-  const generatedDropId = useId();
-  const dropZoneId = returnDropZoneId ?? `waiting-area-${generatedDropId.replace(/:/g, "")}`;
+  const stableIdRef = useRef<string>(
+    `waiting-area-${Math.random().toString(36).slice(2, 8)}`
+  );
+  const dropZoneId = returnDropZoneId ?? stableIdRef.current;
   const dropZoneEnabled = Boolean(returnDropZoneId && isDraggingEnabled);
   const { setNodeRef: setReturnZoneRef } = useDroppable({
     id: dropZoneId,
@@ -101,6 +103,8 @@ export default function WaitingArea({
         overflowX="auto"
         overflowY="hidden"
         bg="transparent"
+        role={dropZoneEnabled ? "list" : undefined}
+        aria-label={dropZoneEnabled ? "カード待機ゾーン" : undefined}
         data-drop-enabled={dropZoneEnabled ? "true" : undefined}
         data-drop-over={dropZoneEnabled ? "true" : undefined}
         css={dropZoneCss}

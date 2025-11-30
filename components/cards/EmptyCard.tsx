@@ -136,6 +136,8 @@ export function EmptyCard({
       variant="empty"
       data-slot
       data-magnet-target={isMagnetTarget ? "true" : undefined}
+       aria-dropeffect={isDroppable ? "move" : undefined}
+       aria-label={`スロット ${slotNumber}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
