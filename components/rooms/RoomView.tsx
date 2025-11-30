@@ -144,6 +144,8 @@ export function RoomView({
         hostId={chat.hostId}
         onOpenLedger={chat.onOpenLedger}
         isGameFinished={chat.isFinished}
+        ledgerLabel={chat.ledgerLabel}
+        canOpenLedger={chat.canOpenLedger}
       />
 
       <RoomPasswordPrompt
@@ -178,6 +180,8 @@ export function RoomView({
           myId={ledger.myId}
           mvpVotes={ledger.mvpVotes}
           stats={ledger.stats}
+          readOnly={ledger.readOnly}
+          contextLabel={ledger.contextLabel}
         />
       </Suspense>
 

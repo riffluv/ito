@@ -39,6 +39,8 @@ interface MvpLedgerProps {
   myId: string;
   mvpVotes?: Record<string, string> | null;
   stats: RoomStats | null;
+  readOnly?: boolean;
+  contextLabel?: string | null;
 }
 
 export function MvpLedger({
@@ -52,6 +54,8 @@ export function MvpLedger({
   myId,
   mvpVotes = null,
   stats,
+  readOnly = false,
+  contextLabel = null,
 }: MvpLedgerProps) {
   const prefersReduced = useReducedMotionPreference();
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -158,6 +162,7 @@ export function MvpLedger({
 
   const handleVote = useCallback(
     async (votedPlayerId: string) => {
+      if (readOnly) return; // 閲覧専用モードでは投票不可
       if (!votedPlayerId || votedPlayerId === myId) return; // 自分には投票できない
       if (pendingTarget) return; // 多重送信ガード
       if (!validTargets.has(votedPlayerId)) return;
@@ -186,7 +191,7 @@ export function MvpLedger({
         setPendingTarget(null);
       }
     },
-    [myId, roomId, mvpStats.myVote, pendingTarget, validTargets, sortedPlayers]
+    [myId, roomId, mvpStats.myVote, pendingTarget, validTargets, sortedPlayers, readOnly]
   );
 
   const handleCloseClick = useCallback(() => {
@@ -589,6 +594,17 @@ export function MvpLedger({
                   {failed ? "［敗北］" : "［勝利］"}
                   {topic ? ` お題: ${topic}` : ""}
                 </Text>
+                {contextLabel ? (
+                  <Text
+                    fontSize={{ base: "11px", md: "12px" }}
+                    letterSpacing="0.05em"
+                    mt="3px"
+                    color="rgba(255,255,255,0.82)"
+                    textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                  >
+                    {contextLabel}
+                  </Text>
+                ) : null}
               </Box>
             </Flex>
             <Flex
@@ -874,73 +890,81 @@ export function MvpLedger({
                       ) : (
                         // 投票中: 投票ボタンまたは投票済み表示
                         <>
-                          {player.id !== myId ? (
-                            mvpStats.myVote ? (
-                              mvpStats.myVote === player.id ? (
-                                <Box
-                                  fontSize={{ base: "18px", md: "20px" }}
-                                  fontWeight={900}
-                                  display="inline-flex"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                  w={{ base: "28px", md: "32px" }}
-                                  h={{ base: "28px", md: "32px" }}
-                                  bg="rgba(255,215,0,0.22)"
-                                  border="2px solid rgba(255,215,0,0.75)"
-                                  borderRadius="0"
-                                  color="#FFD700"
-                                  textShadow="0 1px 2px rgba(0,0,0,0.7)"
-                                  boxShadow="inset 0 1px 0 rgba(255,255,255,0.12), 0 0 8px rgba(255,215,0,0.35)"
-                                >
-                                  ✓
-                                </Box>
-                              ) : (
-                                <Text
-                                  fontSize={{ base: "10px", md: "11px" }}
-                                  color="rgba(255,255,255,0.3)"
-                                  fontWeight={700}
-                                >
-                                  ―
-                                </Text>
-                              )
-                            ) : (
-                              <Button
-                                size="xs"
-                                variant="ghost"
-                                border="2px solid rgba(255,255,255,0.72)"
-                                borderRadius="0"
-                                px={{ base: "11px", md: "14px" }}
-                                py={{ base: "5px", md: "6px" }}
-                                minH={{ base: "28px", md: "32px" }}
-                                h="auto"
-                                w="auto"
-                                fontSize={{ base: "9px", md: "10px" }}
-                                letterSpacing="0.03em"
-                                fontWeight={700}
-                                color="rgba(255,255,255,0.95)"
-                                bg="transparent"
-                                textShadow="1px 1px 0 rgba(0,0,0,0.6)"
-                                onClick={() => handleVote(player.id)}
-                                loading={pendingTarget === player.id}
-                                transition="180ms cubic-bezier(.2,1,.3,1)"
-                                _hover={{
-                                  bg: "rgba(255,255,255,0.15)",
-                                  transform: "translateY(-1px)",
-                                  borderColor: "rgba(255,255,255,0.88)",
-                                  boxShadow: "inset 0 0 12px rgba(255,255,255,0.22), 0 0 8px rgba(255,255,255,0.18)",
-                                }}
-                                _active={{
-                                  bg: "rgba(255,255,255,0.25)",
-                                  transform: "translateY(1px)",
-                                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.35)",
-                                }}
-                              >
-                                投票
-                              </Button>
-                            )
+                      {player.id !== myId ? (
+                        mvpStats.myVote ? (
+                          mvpStats.myVote === player.id ? (
+                            <Box
+                              fontSize={{ base: "18px", md: "20px" }}
+                              fontWeight={900}
+                              display="inline-flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              w={{ base: "28px", md: "32px" }}
+                              h={{ base: "28px", md: "32px" }}
+                              bg="rgba(255,215,0,0.22)"
+                              border="2px solid rgba(255,215,0,0.75)"
+                              borderRadius="0"
+                              color="#FFD700"
+                              textShadow="0 1px 2px rgba(0,0,0,0.7)"
+                              boxShadow="inset 0 1px 0 rgba(255,255,255,0.12), 0 0 8px rgba(255,215,0,0.35)"
+                            >
+                              ✓
+                            </Box>
                           ) : (
-                            <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
-                          )}
+                            <Text
+                              fontSize={{ base: "10px", md: "11px" }}
+                              color="rgba(255,255,255,0.3)"
+                              fontWeight={700}
+                            >
+                              ―
+                            </Text>
+                          )
+                        ) : readOnly ? (
+                          <Text
+                            fontSize={{ base: "10px", md: "11px" }}
+                            color="rgba(255,255,255,0.45)"
+                            fontWeight={700}
+                          >
+                            閲覧のみ
+                          </Text>
+                        ) : (
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            border="2px solid rgba(255,255,255,0.72)"
+                            borderRadius="0"
+                            px={{ base: "11px", md: "14px" }}
+                            py={{ base: "5px", md: "6px" }}
+                            minH={{ base: "28px", md: "32px" }}
+                            h="auto"
+                            w="auto"
+                            fontSize={{ base: "9px", md: "10px" }}
+                            letterSpacing="0.03em"
+                            fontWeight={700}
+                            color="rgba(255,255,255,0.95)"
+                            bg="transparent"
+                            textShadow="1px 1px 0 rgba(0,0,0,0.6)"
+                            onClick={() => handleVote(player.id)}
+                            loading={pendingTarget === player.id}
+                            transition="180ms cubic-bezier(.2,1,.3,1)"
+                            _hover={{
+                              bg: "rgba(255,255,255,0.15)",
+                              transform: "translateY(-1px)",
+                              borderColor: "rgba(255,255,255,0.88)",
+                              boxShadow: "inset 0 0 12px rgba(255,255,255,0.22), 0 0 8px rgba(255,255,255,0.18)",
+                            }}
+                            _active={{
+                              bg: "rgba(255,255,255,0.25)",
+                              transform: "translateY(1px)",
+                              boxShadow: "inset 0 2px 6px rgba(0,0,0,0.35)",
+                            }}
+                          >
+                            投票
+                          </Button>
+                        )
+                      ) : (
+                        <Text fontSize={{ base: "10px", md: "11px" }} opacity={0.5}>―</Text>
+                      )}
                         </>
                       )}
                     </Flex>

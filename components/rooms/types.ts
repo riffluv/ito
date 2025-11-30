@@ -30,6 +30,8 @@ export type RoomViewProps = {
     hostId: string | null;
     isFinished: boolean;
     onOpenLedger: () => void;
+    ledgerLabel?: string;
+    canOpenLedger?: boolean;
   };
   passwordDialog: {
     isOpen: boolean;
@@ -57,6 +59,8 @@ export type RoomViewProps = {
     myId: string;
     mvpVotes: Record<string, string> | null;
     stats: RoomDoc["stats"] | null;
+    readOnly?: boolean;
+    contextLabel?: string | null;
   };
   me: (PlayerDoc & { id: string }) | null;
   isSpectatorMode: boolean;
