@@ -309,24 +309,37 @@ export default function ServiceWorkerRegistration() {
 
       const handleUpdateFound = () => {
         const installingWorker = registration.installing;
+
+        const evaluateWaiting = () => {
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            const cleanup = observeWaiting(registration, `${source}:updatefound`);
+            if (cleanup) {
+              cleanupFns.push(cleanup);
+            }
+          } else if (navigator.serviceWorker.controller) {
+            void resyncWaitingServiceWorker(`${source}:updatefound:installed`);
+          } else {
+            registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
+          }
+        };
+
         if (!installingWorker) {
+          evaluateWaiting();
+          void resyncWaitingServiceWorker(`${source}:updatefound:missing-installing`);
           return;
         }
+
         const onStateChange = () => {
           if (installingWorker.state === "installed") {
-            if (navigator.serviceWorker.controller) {
-              const cleanup = observeWaiting(registration, `${source}:updatefound`);
-              if (cleanup) {
-                cleanupFns.push(cleanup);
-              }
-            } else {
-              registration.active?.postMessage?.({ type: "CLIENTS_CLAIM" });
-            }
+            evaluateWaiting();
           }
           if (installingWorker.state === "activated" || installingWorker.state === "redundant") {
             installingWorker.removeEventListener("statechange", onStateChange);
           }
         };
+
+        // Run once in case the worker is already installed when we attach.
+        onStateChange();
         installingWorker.addEventListener("statechange", onStateChange);
       };
 
