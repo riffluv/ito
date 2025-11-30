@@ -3104,7 +3104,7 @@ function RoomPageContentInner(props: RoomPageContentInnerProps) {
               uid,
               token,
               displayName: displayName ?? null,
-            }),
+            } satisfies { uid: string; token: string; displayName: string | null }),
             keepalive: true,
           });
           viaApi = res.ok;

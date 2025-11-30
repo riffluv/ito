@@ -20,7 +20,8 @@ import {
   type QueryDocumentSnapshot,
   type QuerySnapshot,
 } from "firebase/firestore";
-import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR from "swr";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export const ROOMS_PER_PAGE = 6;
 const PREFETCH_PAGE_PAD = 1;
@@ -102,6 +103,7 @@ export function useOptimizedRooms({
   const [error, setError] = useState<Error | null>(null);
   const [recentWindowMs, setRecentWindowMs] = useState(RECENT_WINDOW_MS);
   const lastFetchRef = useRef(0);
+  const roomsRef = useRef<LobbyRoom[]>([]);
   const roomsSignatureRef = useRef<string>(createRoomsSignature([]));
   const fetchControlRef = useRef({
     cooldownMs: DEFAULT_FETCH_COOLDOWN_MS,
@@ -109,8 +111,14 @@ export function useOptimizedRooms({
     inFlight: false,
     lastDurationMs: 0,
   });
-  const pageIndex = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0;
-  const normalizedQuery = (searchQuery ?? "").trim().toLowerCase();
+  const pageIndex = useMemo(
+    () => (Number.isFinite(page) && page > 0 ? Math.floor(page) : 0),
+    [page]
+  );
+  const normalizedQuery = useMemo(
+    () => (searchQuery ?? "").trim().toLowerCase(),
+    [searchQuery]
+  );
   const DEBUG_FETCH =
     typeof process !== "undefined" &&
     ((process.env.NEXT_PUBLIC_LOBBY_FETCH_DEBUG || "")
@@ -125,8 +133,8 @@ export function useOptimizedRooms({
 
   // fetchActiveRooms を useEffect 外で定義して refresh で使えるように
   const fetchActiveRooms = useCallback(
-    async (options?: { force?: boolean }) => {
-      if (!enabled || !db) return;
+    async (options?: { force?: boolean }): Promise<LobbyRoom[]> => {
+      if (!enabled || !db) return roomsRef.current;
 
       const control = fetchControlRef.current;
       const force = options?.force ?? false;
@@ -137,7 +145,7 @@ export function useOptimizedRooms({
             force,
           });
         }
-        return;
+        return roomsRef.current;
       }
       if (!force) {
         if (now - lastFetchRef.current < control.cooldownMs) {
@@ -146,7 +154,7 @@ export function useOptimizedRooms({
               remainingMs: control.cooldownMs - (now - lastFetchRef.current),
             });
           }
-          return;
+          return roomsRef.current;
         }
       }
 
@@ -251,6 +259,7 @@ export function useOptimizedRooms({
           roomsSignatureRef.current = nextSignature;
           setRooms(combinedRooms);
         }
+        roomsRef.current = combinedRooms;
 
         const totalCount = combinedRooms.length;
         if (!normalizedQuery) {
@@ -308,6 +317,7 @@ export function useOptimizedRooms({
           roomsSignatureRef.current = "[]";
           setRooms([]); // フォールバック
         }
+        roomsRef.current = [];
       } finally {
         control.inFlight = false;
         setLoadingIfNeeded(false);
@@ -324,6 +334,7 @@ export function useOptimizedRooms({
         perf?.clearMarks("rooms_fetch_start");
         perf?.clearMeasures?.("rooms_fetch");
       }
+      return roomsRef.current;
     },
     [
       enabled,
@@ -336,41 +347,42 @@ export function useOptimizedRooms({
     ]
   );
 
+  const swrKey = enabled
+    ? ["optimizedRooms", pageIndex, normalizedQuery, recentWindowMs]
+    : null;
+  const { isValidating, mutate } = useSWR(
+    swrKey,
+    () => fetchActiveRooms({ force: true }),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 4000,
+      focusThrottleInterval: 1200,
+      keepPreviousData: true,
+    }
+  );
+
   useEffect(() => {
     if (!enabled) {
       roomsSignatureRef.current = "[]";
+      roomsRef.current = [];
       setRooms([]);
       setLoadingIfNeeded(false);
-      return undefined;
+      return;
     }
-
-    let mounted = true;
-
-    const wrappedFetch = async (force = false) => {
-      if (!mounted) return;
-      await fetchActiveRooms(force ? { force: true } : undefined);
-    };
-
-    // 初回取得
-    wrappedFetch(true);
-
-    // 読み取り削減: タブ非表示時は停止、表示時に単発fetchのみ（ポーリングなし）
-    const visibilityHandler = () => {
-      if (document.visibilityState !== "visible") return;
-      wrappedFetch();
-    };
-    document.addEventListener("visibilitychange", visibilityHandler);
-    visibilityHandler();
-
-    return () => {
-      mounted = false;
-      document.removeEventListener("visibilitychange", visibilityHandler);
-    };
-  }, [enabled, fetchActiveRooms, setLoadingIfNeeded]);
+    setLoadingIfNeeded(true);
+    void mutate();
+  }, [enabled, mutate, setLoadingIfNeeded]);
 
   const refresh = useCallback(() => {
-    fetchActiveRooms({ force: true });
-  }, [fetchActiveRooms]);
+    void mutate();
+  }, [mutate]);
 
-  return { rooms, loading, error, refresh, pageSize: ROOMS_PER_PAGE };
+  return {
+    rooms,
+    loading: loading || isValidating,
+    error,
+    refresh,
+    pageSize: ROOMS_PER_PAGE,
+  };
 }

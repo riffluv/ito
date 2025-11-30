@@ -264,11 +264,14 @@ export function PixiGuideButtons({
 
     // リサイズイベント
     const handleResize = () => requestPositionUpdate();
-    window.addEventListener("resize", handleResize);
+    const abortController = new AbortController();
+    window.addEventListener("resize", handleResize, {
+      signal: abortController.signal,
+    });
 
     // クリーンアップ
     return () => {
-      window.removeEventListener("resize", handleResize);
+      abortController.abort();
       if (mutationObserver) {
         mutationObserver.disconnect();
       }

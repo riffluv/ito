@@ -2,6 +2,7 @@ import { getAdminAuth } from "@/lib/server/firebaseAdmin";
 import { leaveRoomServer } from "@/lib/server/roomActions";
 import { logError } from "@/lib/utils/log";
 import { NextRequest, NextResponse } from "next/server";
+import { leaveRoomSchema } from "@/lib/schema/roomLeave";
 
 export const runtime = "nodejs";
 
@@ -21,19 +22,11 @@ export async function POST(
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const body =
-    payload && typeof payload === "object"
-      ? (payload as Record<string, unknown>)
-      : null;
-
-  const uid = typeof body?.uid === "string" ? (body.uid as string) : null;
-  const token = typeof body?.token === "string" ? (body.token as string) : null;
-  const displayName =
-    typeof body?.displayName === "string" ? (body.displayName as string) : null;
-
-  if (!uid || !token) {
-    return NextResponse.json({ error: "auth_required" }, { status: 401 });
+  const parsed = leaveRoomSchema.safeParse(payload);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
+  const { uid, token, displayName } = parsed.data;
 
   try {
     const decoded = await getAdminAuth().verifyIdToken(token);
