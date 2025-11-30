@@ -127,6 +127,7 @@ export class SoundManager {
   private workletRetryTimer: number | null = null;
   private resumeFailureStreak = 0;
   private resumeFailureNotified = false;
+  private lastPlayTimestamps = new Map<SoundId, number>();
 
   constructor() {
     if (!isBrowser()) return;
@@ -216,6 +217,20 @@ export class SoundManager {
 
     const nowTimestamp =
       typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    const lastPlayedAt = this.lastPlayTimestamps.get(soundId);
+    if (
+      definition.category === "fanfare" &&
+      typeof lastPlayedAt === "number" &&
+      nowTimestamp - lastPlayedAt < 500
+    ) {
+      traceAction("audio.play.skip.dedupe", {
+        soundId,
+        deltaMs: Math.round(nowTimestamp - lastPlayedAt),
+      });
+      return;
+    }
+    this.lastPlayTimestamps.set(soundId, nowTimestamp);
 
     if (!internal) {
       if (!this.firstPlayRecorded) {

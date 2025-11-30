@@ -85,6 +85,30 @@ describe("playResultSound", () => {
     expect(manager.play).toHaveBeenCalledTimes(1);
   });
 
+  test("dedupes in-flight calls when ready gate is still pending", async () => {
+    let resolveReady: ((value: { manager: MockManager; ready: boolean; timedOut: boolean }) => void) | null =
+      null;
+
+    mockedAudioGlobal.waitForSoundReady.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveReady = resolve;
+        })
+    );
+
+    const first = playResultSound({ outcome: "victory" });
+    // second call comes in before ready resolves
+    const second = playResultSound({ outcome: "victory" });
+
+    expect(mockedAudioGlobal.waitForSoundReady).toHaveBeenCalledTimes(1);
+
+    resolveReady?.({ manager, ready: true, timedOut: false });
+    await first;
+    await second;
+
+    expect(manager.play).toHaveBeenCalledTimes(1);
+  });
+
   test("falls back to global manager when ready waits out", async () => {
     mockedAudioGlobal.waitForSoundReady.mockResolvedValue({
       manager: null,

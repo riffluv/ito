@@ -68,9 +68,56 @@ const TRACE_BUFFER_KEY = "__ITO_TRACE_BUFFER__";
 const TRACE_BUFFER_LIMIT = 10;
 const HIGH_FREQUENCY_PREFIXES = ["drag."] as const;
 const HIGH_FREQUENCY_SAMPLE_RATE = 0.2; // 20% サンプリングでメインスレッド負荷を抑える
+const TRACE_DETAIL_ENTRY_LIMIT = 12;
+const TRACE_DETAIL_STRING_LIMIT = 180;
 
 const traceQueue: PendingTrace[] = [];
 let flushScheduled = false;
+
+const slimTraceDetail = (detail: TraceDetail): Record<string, unknown> | undefined => {
+  if (!detail) return undefined;
+  const sanitized: Record<string, unknown> = {};
+  let added = 0;
+  for (const [key, value] of Object.entries(detail)) {
+    if (added >= TRACE_DETAIL_ENTRY_LIMIT) break;
+    if (value === null || value === undefined) continue;
+
+    if (typeof value === "string") {
+      const text = value.length > TRACE_DETAIL_STRING_LIMIT
+        ? `${value.slice(0, TRACE_DETAIL_STRING_LIMIT)}…`
+        : value;
+      sanitized[key] = text;
+      added += 1;
+      continue;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      sanitized[key] = value;
+      added += 1;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      sanitized[key] = value
+        .slice(0, 3)
+        .map((item) => (typeof item === "string" || typeof item === "number" ? item : "[obj]"));
+      added += 1;
+      continue;
+    }
+
+    if (typeof value === "object") {
+      const maybeId =
+        (value as { id?: unknown }).id ??
+        (value as { uid?: unknown }).uid ??
+        (value as { type?: unknown }).type;
+      if (typeof maybeId === "string" || typeof maybeId === "number") {
+        sanitized[key] = maybeId;
+        added += 1;
+      }
+    }
+  }
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+};
 
 const getIdleApi = () =>
   globalThis as typeof globalThis & {
@@ -95,17 +142,18 @@ function pushTraceRecord(name: string, detail: TraceDetail) {
 }
 
 function emitTraceImmediately(name: string, detail?: Record<string, unknown>): void {
+  const slimDetail = slimTraceDetail(detail);
   try {
-    recordMetricDistribution(`trace.action.${name}`, 1, toTags(detail));
+    recordMetricDistribution(`trace.action.${name}`, 1, toTags(slimDetail));
     const sentry = getSentry();
     sentry?.captureMessage?.(`[trace] action:${name}`, {
       level: "info",
-      extra: detail,
+      extra: slimDetail,
     });
-    pushTraceRecord(name, detail);
+    pushTraceRecord(name, slimDetail);
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.debug(`[trace:action] ${name}`, detail ?? {});
+      console.debug(`[trace:action] ${name}`, slimDetail ?? {});
     }
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
@@ -158,7 +206,7 @@ function scheduleTraceFlush() {
 }
 
 function enqueueTrace(name: string, detail?: Record<string, unknown>) {
-  traceQueue.push({ name, detail });
+  traceQueue.push({ name, detail: slimTraceDetail(detail) });
   if (!flushScheduled) {
     scheduleTraceFlush();
   }
@@ -187,18 +235,19 @@ export function traceError(
   err: unknown,
   detail?: Record<string, unknown>
 ): void {
+  const slimDetail = slimTraceDetail(detail);
   try {
     const errorInfo = describeError(err);
-    recordMetricDistribution(`trace.error.${name}`, 1, toTags(detail));
+    recordMetricDistribution(`trace.error.${name}`, 1, toTags(slimDetail));
     const sentry = getSentry();
     sentry?.captureMessage?.(`[trace] error:${name}`, {
       level: "error",
-      extra: { ...detail, error: errorInfo },
+      extra: { ...slimDetail, error: errorInfo },
     });
-    pushTraceRecord(name, detail);
+    pushTraceRecord(name, slimDetail);
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.error(`[trace:error] ${name}`, { detail, error: errorInfo });
+      console.error(`[trace:error] ${name}`, { detail: slimDetail, error: errorInfo });
     }
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {

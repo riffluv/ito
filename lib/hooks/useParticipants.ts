@@ -26,6 +26,7 @@ import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import { traceAction } from "@/lib/utils/trace";
 import {
   collection,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -137,13 +138,14 @@ export function useParticipants(
   const playersSignatureRef = useRef<string>("");
   const presenceStallTimerRef = useRef<number | null>(null);
 
-  // Firestore: players 購読（タブ非表示時は停止、429時はバックオフ）
+  // Firestore: players 購読（タブ非表示時は遅延開始、429時はバックオフ）
   useEffect(() => {
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
     let backoffTimer: ReturnType<typeof setTimeout> | null = null;
 
     const visibilityCleanupRef = { current: null as null | (() => void) };
+    let startVisibilityCleanup: null | (() => void) = null;
 
     const detachVisibilityListener = () => {
       if (typeof document === "undefined") return;
@@ -151,6 +153,11 @@ export function useParticipants(
         visibilityCleanupRef.current();
         visibilityCleanupRef.current = null;
       }
+    };
+
+    const detachStartVisibility = () => {
+      startVisibilityCleanup?.();
+      startVisibilityCleanup = null;
     };
 
     const stop = () => {
@@ -169,6 +176,7 @@ export function useParticipants(
       }
       stop();
       detachVisibilityListener();
+      detachStartVisibility();
       cancelIdleStart?.();
     };
 
@@ -180,6 +188,25 @@ export function useParticipants(
     setError(null);
 
     let cancelIdleStart: (() => void) | null = null;
+
+    const applyPlayersSnapshot = (docs: Array<{ data: () => PlayerDoc; id: string }>) => {
+      const working = docs.map((doc) => ({ ...(doc.data() as PlayerDoc), id: doc.id }));
+      const signature = createPlayersSignature(working);
+      const previousSignature = playersSignatureRef.current;
+      const shouldUpdatePlayers = signature !== previousSignature;
+      if (shouldUpdatePlayers) {
+        playersRef.current = working;
+        playersSignatureRef.current = signature;
+      }
+      unstable_batchedUpdates(() => {
+        if (shouldUpdatePlayers) {
+          setPlayers(working);
+        }
+        setLoading(false);
+      });
+      setMetric("participants", "lastSnapshotTs", Date.now());
+      setMetric("participants", "playersCount", working.length);
+    };
 
     const maybeStart = () => {
       if (unsubRef.current) return;
@@ -198,7 +225,13 @@ export function useParticipants(
           let working =
             playersRef.current.length > 0 ? playersRef.current.slice() : [];
 
-          if (changes.length === 0 && !snap.metadata.hasPendingWrites) {
+          // 初回スナップショットなど、全件 added の場合は一度リストを作り直す
+          const fullReset =
+            !snap.metadata.hasPendingWrites &&
+            changes.length > 0 &&
+            changes.length === snap.size;
+
+          if (fullReset || (changes.length === 0 && !snap.metadata.hasPendingWrites)) {
             working = snap.docs.map((doc) => ({
               ...(doc.data() as PlayerDoc),
               id: doc.id,
@@ -307,11 +340,55 @@ export function useParticipants(
       );
     };
 
+    const startWithVisibilityGate = () => {
+      detachStartVisibility();
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        const handler = () => {
+          if (document.visibilityState === "visible") {
+            document.removeEventListener("visibilitychange", handler);
+            startVisibilityCleanup = null;
+            void (async () => {
+              try {
+                const snap = await getDocs(
+                  query(
+                    collection(db!, "rooms", roomId, "players").withConverter(
+                      playerConverter
+                    ),
+                    orderBy("uid", "asc")
+                  )
+                );
+                applyPlayersSnapshot(snap.docs as unknown as Array<{ data: () => PlayerDoc; id: string }>);
+              } catch {}
+              maybeStart();
+            })();
+          }
+        };
+        document.addEventListener("visibilitychange", handler);
+        startVisibilityCleanup = () => document.removeEventListener("visibilitychange", handler);
+        return;
+      }
+
+      void (async () => {
+        try {
+          const snap = await getDocs(
+            query(
+              collection(db!, "rooms", roomId, "players").withConverter(
+                playerConverter
+              ),
+              orderBy("uid", "asc")
+            )
+          );
+          applyPlayersSnapshot(snap.docs as unknown as Array<{ data: () => PlayerDoc; id: string }>);
+        } catch {}
+        maybeStart();
+      })();
+    };
+
     const idleDelayMs = process.env.NEXT_PUBLIC_PERF_WARMUP === "1" ? 60 : 28;
     cancelIdleStart = scheduleIdleTask(
       () => {
         try {
-          maybeStart();
+          startWithVisibilityGate();
         } catch {}
       },
       { delayMs: idleDelayMs, timeoutMs: 180 }
