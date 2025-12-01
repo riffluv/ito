@@ -22,6 +22,15 @@ if (
   process.env.NEXT_PUBLIC_APP_VERSION = fallbackVersion;
 }
 
+// Expose a per-build SW version to the client (App Routerでは __NEXT_DATA__ が無いので env 経由で渡す)
+process.env.NEXT_PUBLIC_SW_VERSION =
+  process.env.NEXT_PUBLIC_SW_VERSION ||
+  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.NEXT_BUILD_ID ||
+  process.env.NEXT_PUBLIC_APP_VERSION ||
+  fallbackVersion;
+
 /** @type {import('next').NextConfig} */
 const SECURITY_HEADERS = [
   {

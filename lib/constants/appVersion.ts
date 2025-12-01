@@ -1,10 +1,12 @@
 const env = (typeof process !== "undefined" ? process.env : {}) as {
   NEXT_PUBLIC_APP_VERSION?: string;
+  NEXT_PUBLIC_SW_VERSION?: string;
   NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?: string;
   VERCEL_GIT_COMMIT_SHA?: string;
+  NEXT_BUILD_ID?: string;
 };
 
-const rawVersion = env.NEXT_PUBLIC_APP_VERSION ?? null;
+const rawVersion = env.NEXT_PUBLIC_APP_VERSION ?? env.NEXT_PUBLIC_SW_VERSION ?? null;
 const commitSha =
   env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? env.VERCEL_GIT_COMMIT_SHA ?? null;
 
@@ -13,7 +15,9 @@ const commitSha =
 const runtimeBuildId =
   typeof window !== "undefined" && typeof window.__NEXT_DATA__ === "object"
     ? window.__NEXT_DATA__.buildId ?? null
-    : null;
+    : typeof window !== "undefined" && typeof (window as { __nextBuildId?: string }).__nextBuildId === "string"
+      ? (window as { __nextBuildId?: string }).__nextBuildId ?? null
+      : env.NEXT_BUILD_ID ?? null;
 
 const shortCommit = commitSha ? commitSha.slice(0, 7) : null;
 

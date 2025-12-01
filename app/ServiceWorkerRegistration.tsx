@@ -27,12 +27,17 @@ const SW_PATH = "/sw.js";
 // VERCEL_GIT_COMMIT_SHA は NEXT_PUBLIC_* に自動で載らないことが多いため、
 // buildId（__NEXT_DATA__.buildId）や APP_VERSION もフォールバックに使う。
 const resolveSwVersion = (): string => {
+  // App Router では __NEXT_DATA__ が無いので __nextBuildId を念のため見る
   const runtimeBuildId =
-    typeof window !== "undefined" && typeof window.__NEXT_DATA__ === "object"
-      ? window.__NEXT_DATA__.buildId ?? null
+    typeof window !== "undefined"
+      ? (window as typeof window & { __NEXT_DATA__?: { buildId?: string }; __nextBuildId?: string })
+          .__NEXT_DATA__?.buildId ??
+        (window as typeof window & { __nextBuildId?: string }).__nextBuildId ??
+        null
       : null;
 
   return (
+    process.env.NEXT_PUBLIC_SW_VERSION ??
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
     process.env.VERCEL_GIT_COMMIT_SHA ??
     runtimeBuildId ??
@@ -41,7 +46,6 @@ const resolveSwVersion = (): string => {
   );
 };
 
-const SW_VERSION = resolveSwVersion();
 const ENABLE_FLAG = process.env.NEXT_PUBLIC_ENABLE_PWA;
 
 const shouldRegister = () => {
@@ -283,7 +287,7 @@ const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null
 
   setMetric("sw", "loopGuard.tripped", 0);
   setMetric("sw", "applied.count", 0);
-  const versionedPath = `${SW_PATH}?v=${SW_VERSION}`;
+  const versionedPath = `${SW_PATH}?v=${resolveSwVersion()}`;
   clearAutoApplySuppression();
 
   try {
