@@ -158,6 +158,7 @@ const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const DEFAULT_TELEMETRY_APP_VERSION = APP_VERSION ?? "unknown";
 let requiredSwVersionHint: string | null = null;
 const FORCE_APPLY_HOLD_DEFAULT = "__default__";
+const IN_GAME_HOLD_KEY = "in-game";
 const AUTO_APPLY_REASON = "auto-timer";
 
 const updateListeners = new Set<UpdateListener>();
@@ -1104,6 +1105,15 @@ export function releaseForceApplyTimer(reason?: string) {
     key: normalizeHoldReason(reason),
     broadcast: true,
   });
+}
+
+// Convenience helpers for game-phase aware hold.
+export function holdInGameAutoApply() {
+  holdForceApplyTimer(IN_GAME_HOLD_KEY);
+}
+
+export function releaseInGameAutoApply() {
+  releaseForceApplyTimer(IN_GAME_HOLD_KEY);
 }
 
 type SafeUpdateFetchErrorPayload = {

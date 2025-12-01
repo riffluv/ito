@@ -20,6 +20,10 @@ import {
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { handleGameError } from "@/lib/utils/errorHandling";
+import {
+  holdInGameAutoApply,
+  releaseInGameAutoApply,
+} from "@/lib/serviceWorker/updateChannel";
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 type SanitizedPlayer = PlayerDoc & { id: string };
@@ -349,6 +353,7 @@ export function createRoomMachine(input: RoomMachineInput) {
           initial: resolveStatus(sanitizedRoom),
           states: {
             waiting: {
+              entry: "releaseInGameAutoApplyAction",
               on: {
                 START: {
                   guard: "canStart",
@@ -385,6 +390,7 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             clue: {
+              entry: "holdInGameAutoApplyAction",
               on: {
                 DEAL_READY: {
                   guard: "canDeal",
@@ -422,6 +428,7 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             reveal: {
+              entry: "holdInGameAutoApplyAction",
               on: {
                 REVEAL_DONE: {
                   target: "#roomMachine.phase.finished",
@@ -454,6 +461,7 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             finished: {
+              entry: "holdInGameAutoApplyAction",
               on: {
                 RESET: {
                   target: "#roomMachine.phase.waiting",
@@ -503,6 +511,20 @@ export function createRoomMachine(input: RoomMachineInput) {
     },
     {
       actions: {
+        holdInGameAutoApplyAction: () => {
+          try {
+            holdInGameAutoApply();
+          } catch {
+            /* noop */
+          }
+        },
+        releaseInGameAutoApplyAction: () => {
+          try {
+            releaseInGameAutoApply();
+          } catch {
+            /* noop */
+          }
+        },
         assignSnapshot: assign(({ context, event }) => {
           if (event.type !== "SYNC") {
             return context;
@@ -514,6 +536,19 @@ export function createRoomMachine(input: RoomMachineInput) {
             : undefined;
           const nextPresenceReady = event.presenceReady ?? context.presenceReady;
           recordRoomMetrics(nextRoom, nextPlayers, nextOnline, nextPresenceReady);
+          const prevStatus = resolveStatus(context.room);
+          const nextStatus = resolveStatus(nextRoom);
+          if (prevStatus !== nextStatus) {
+            try {
+              if (nextStatus === "waiting") {
+                releaseInGameAutoApply();
+              } else {
+                holdInGameAutoApply();
+              }
+            } catch {
+              /* best-effort */
+            }
+          }
           return {
             ...context,
             room: nextRoom,
@@ -588,6 +623,11 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markClue: assign(({ context }) => {
           if (!context.room) return context;
+          try {
+            holdInGameAutoApply();
+          } catch {
+            /* noop */
+          }
           return {
             ...context,
             room: { ...context.room, status: "clue" as const },
@@ -595,6 +635,11 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markReveal: assign(({ context }) => {
           if (!context.room) return context;
+          try {
+            holdInGameAutoApply();
+          } catch {
+            /* noop */
+          }
           return {
             ...context,
             room: { ...context.room, status: "reveal" as const },
@@ -602,6 +647,11 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markFinished: assign(({ context }) => {
           if (!context.room) return context;
+          try {
+            holdInGameAutoApply();
+          } catch {
+            /* noop */
+          }
           return {
             ...context,
             room: { ...context.room, status: "finished" as const },
@@ -609,6 +659,11 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markWaiting: assign(({ context }) => {
           if (!context.room) return context;
+          try {
+            releaseInGameAutoApply();
+          } catch {
+            /* noop */
+          }
           return {
             ...context,
             room: { ...context.room, status: "waiting" as const },

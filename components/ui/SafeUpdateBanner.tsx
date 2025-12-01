@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Box, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
+import { releaseInGameAutoApply } from "@/lib/serviceWorker/updateChannel";
 
 type SafeUpdateBannerProps = {
   offsetTop?: number;
@@ -92,7 +93,7 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
       }
     }
     if (phase === "suppressed" || autoApplySuppressed) {
-      return "ループガードのため自動適用を停止しています。手動で適用できます。";
+      return "プレイ中またはループガードで自動適用を停止中。安全なタイミングで適用できます。";
     }
     if (phase === "auto_pending") {
       return "進行中のゲームに影響がないタイミングで自動適用します。";
@@ -134,7 +135,15 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
           mt="10px"
           size="sm"
           palette="brand"
-          onClick={actionType === "retry" ? retryUpdate : applyUpdate}
+          onClick={() => {
+            // 明示的に押したら in-game hold を解除して適用を進める
+            releaseInGameAutoApply();
+            if (actionType === "retry") {
+              retryUpdate();
+            } else {
+              applyUpdate();
+            }
+          }}
           disabled={isApplying || phase === "applying"}
         >
           {actionType === "retry" ? "再試行する" : "今すぐ適用"}
