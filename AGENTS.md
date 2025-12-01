@@ -182,3 +182,16 @@ Pixi.js / GSAP を使用した重量級アニメーションプロジェクト�
 - 公開APIを増やしすぎない：似た責務の関数は既存ビルダー/validatorへ統合し、入口を整理する。
 - トレース/メトリクス維持：重要な分岐・失敗では既存の `traceAction` / `traceError` を使う。削除・無効化する場合は理由を残す。
 - ドキュメント更新：ドメインや状態機械に手を入れたら `docs/REFACTOR_PLAN_HOST_AND_ROOM.md` に差分メモを追記。
+
+---
+
+## 12. Codex / Context7 運用メモ
+
+- このリポジトリで Codex（GPT ベースの Coding CLI）が作業するときは、可能な限り Context7 で公式ドキュメントを参照してから変更を行う。
+- 特にゲーム体験に直結する主要ライブラリ（Next.js / React / XState / Firebase / Stripe / Pixi.js / GSAP / Chakra UI など）を触るときは、必ず Context7 で該当ライブラリのドキュメントを確認すること。
+- 破壊的変更や挙動差分が出やすい箇所（状態機械 `lib/state/roomMachine.ts`、Firestore/RTDB/Functions、Pixi 背景・HUD、決済まわり）は、Context7 で
+  - 現在の利用バージョン付近のドキュメント
+  - 可能なら最新安定版のベストプラクティス
+  を確認し、非推奨 API や古い書き方がないか一度チェックする。
+- Codex 側の挙動として、Next.js / XState / Firebase / Stripe / Pixi / Chakra UI などゲームのコアに関わる変更を提案・実装する前には、`resolve-library-id` → `get-library-docs` を通じて Context7 の情報を参照する前提とする。
+- 人間の開発者・他エージェントも、仕様が曖昧なときや挙動に不安があるときは「Context7 で Next.js（または XState/Firebase…）の該当箇所を確認してから実装して」と明示的に指示してよい。

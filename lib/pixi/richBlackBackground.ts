@@ -179,13 +179,14 @@ export async function createRichBlackBackground(
 
   const noiseTexture = createNoiseTexture(pixi);
   if (isWrapMode(WRAP_MODES?.REPEAT)) {
-    noiseTexture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
+    // v8+: wrapMode renamed to addressMode on TextureStyle
+    (noiseTexture.source as PIXI.TextureSource).addressMode = "repeat";
   }
-  const noise = new pixi.TilingSprite(
-    noiseTexture,
-    options.width,
-    options.height
-  );
+  const noise = new pixi.TilingSprite({
+    texture: noiseTexture,
+    width: options.width,
+    height: options.height,
+  });
   noise.alpha = options.noiseAlpha ?? 0.085;
   if (isBlendMode(BLEND_MODES?.OVERLAY)) {
     noise.blendMode = BLEND_MODES.OVERLAY;

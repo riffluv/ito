@@ -250,9 +250,9 @@ export async function createInfernoBackground(
     });
 
     sweepOverlay.clear();
-    sweepOverlay.beginFill(0xff0000, 0.5); // 🔥 強い赤いフラッシュ
-    sweepOverlay.drawRect(0, 0, width, height);
-    sweepOverlay.endFill();
+    sweepOverlay.clear();
+    sweepOverlay.rect(0, 0, width, height);
+    sweepOverlay.fill({ color: 0xff0000, alpha: 0.5 }); // 🔥 強い赤いフラッシュ
     sweepOverlay.alpha = 0;
     mountains.position.set(0, 0);
     particlesContainer.position.set(0, 0);

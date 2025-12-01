@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createActor } from "xstate";
+import { createActor, fromPromise } from "xstate";
 import {
   createRoomMachine,
   type RoomMachineActorRef,
@@ -11,6 +11,7 @@ import {
   type SpectatorRejoinSnapshot,
 } from "@/lib/state/roomMachine";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { GameService } from "@/lib/game/service";
 
 export type SpectatorState = {
   spectatorStatus: SpectatorStatus;
@@ -88,6 +89,77 @@ export function useRoomMachineController({
   const [machineSnapshot, setMachineSnapshot] = useState<RoomMachineSnapshot | null>(
     null
   );
+  const taskActorsRef = useRef<
+    {
+      actor: ReturnType<typeof createActor>;
+      resolve: (value?: unknown) => void;
+      reject: (reason: unknown) => void;
+    }[]
+  >([]);
+
+  const runAsyncTask = useCallback(
+    <T,>(label: string, work: (signal: AbortSignal) => Promise<T>) => {
+      let resolveTask!: (value: T | PromiseLike<T>) => void;
+      let rejectTask!: (reason: unknown) => void;
+      const promise = new Promise<T>((resolve, reject) => {
+        resolveTask = resolve;
+        rejectTask = reject;
+      });
+
+      const logic = fromPromise<T, void>(async ({ signal }) => {
+        return work(signal);
+      });
+
+      const actor = createActor(logic, { id: `${label}-${Date.now()}` });
+      const cleanup = () => {
+        taskActorsRef.current = taskActorsRef.current.filter(
+          (entry) => entry.actor !== actor
+        );
+      };
+
+      actor.subscribe({
+        complete: () => {
+          const output = actor.getSnapshot().output as T;
+          resolveTask(output);
+          cleanup();
+        },
+        error: (err) => {
+          rejectTask(err);
+          cleanup();
+        },
+      });
+
+      actor.start();
+      taskActorsRef.current.push({
+        actor,
+        resolve: resolveTask as (value?: unknown) => void,
+        reject: rejectTask,
+      });
+      return promise;
+    },
+    []
+  );
+
+  const machineDeps = useMemo(
+    () => ({
+      startGame: (targetRoomId: string) =>
+        runAsyncTask("startGame", () => GameService.startGame(targetRoomId)),
+      dealNumbers: (targetRoomId: string, options?: Parameters<typeof GameService.dealNumbers>[1]) =>
+        runAsyncTask("dealNumbers", () => GameService.dealNumbers(targetRoomId, options)),
+      submitSortedOrder: (targetRoomId: string, list: string[]) =>
+        runAsyncTask("submitSortedOrder", () => GameService.submitSortedOrder(targetRoomId, list)),
+      finalizeReveal: (targetRoomId: string) =>
+        runAsyncTask("finalizeReveal", () => GameService.finalizeReveal(targetRoomId)),
+      resetRoomWithPrune: (
+        targetRoomId: string,
+        keepIds: Parameters<typeof GameService.resetRoomWithPrune>[1],
+        opts?: Parameters<typeof GameService.resetRoomWithPrune>[2]
+      ) => runAsyncTask("resetRoomWithPrune", () => GameService.resetRoomWithPrune(targetRoomId, keepIds, opts)),
+      cancelSeatRequest: (targetRoomId: string, uid: string) =>
+        runAsyncTask("cancelSeatRequest", () => GameService.cancelSeatRequest(targetRoomId, uid)),
+    }),
+    [runAsyncTask]
+  );
 
   useEffect(() => {
     const actor = createActor(
@@ -99,7 +171,8 @@ export function useRoomMachineController({
         presenceReady,
         viewerUid: uid ?? null,
         deps: {
-          subscribeSpectatorRejoin,
+          ...machineDeps,
+          ...(subscribeSpectatorRejoin ? { subscribeSpectatorRejoin } : {}),
         },
       })
     );
@@ -130,6 +203,20 @@ export function useRoomMachineController({
     // Deliberately only recreate actor when identity changes; state sync is handled separately.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, uid, subscribeSpectatorRejoin]);
+
+  useEffect(() => {
+    return () => {
+      taskActorsRef.current.forEach(({ actor, resolve }) => {
+        try {
+          actor.stop();
+          resolve(undefined as never);
+        } catch {
+          // ignore
+        }
+      });
+      taskActorsRef.current = [];
+    };
+  }, []);
 
   // keep machine context in sync
   useEffect(() => {

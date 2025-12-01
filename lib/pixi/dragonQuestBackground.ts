@@ -224,9 +224,9 @@ export async function createDragonQuestBackground(
       alpha: 0.8,
     });
     sweepOverlay.clear();
-    sweepOverlay.beginFill(0xffffff, 0.25);
-    sweepOverlay.drawRect(0, 0, width, height);
-    sweepOverlay.endFill();
+    sweepOverlay.clear();
+    sweepOverlay.rect(0, 0, width, height);
+    sweepOverlay.fill({ color: 0xffffff, alpha: 0.25 });
     sweepOverlay.alpha = 0;
     mountains.position.set(0, 0);
     particlesContainer.position.set(0, 0);

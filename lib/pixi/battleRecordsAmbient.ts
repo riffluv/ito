@@ -90,9 +90,9 @@ export class BattleRecordsAmbient extends PIXI.Container {
       const alphaVariants = [0.3, 0.4, 0.5, 0.6];
       const alpha = alphaVariants[i % alphaVariants.length];
 
-      particle.beginFill(color, alpha);
-      particle.drawCircle(0, 0, size);
-      particle.endFill();
+      particle.clear();
+      particle.circle(0, 0, size);
+      particle.fill({ color, alpha });
 
       // ランダムな初期位置
       particle.x = Math.random() * width;
@@ -228,9 +228,8 @@ export class BattleRecordsAmbient extends PIXI.Container {
       const radius = maxRadius * (0.3 + i * 0.3);
       const alpha = failed ? 0.03 : 0.05;
 
-      this.glowLayer.beginFill(glowColor, alpha);
-      this.glowLayer.drawCircle(centerX, centerY, radius);
-      this.glowLayer.endFill();
+      this.glowLayer.circle(centerX, centerY, radius);
+      this.glowLayer.fill({ color: glowColor, alpha });
     }
 
     this.glowLayer.alpha = failed ? 0.05 : 0.08;

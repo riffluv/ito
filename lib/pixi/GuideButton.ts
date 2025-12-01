@@ -96,9 +96,12 @@ export class GuideButton extends PIXI.Container {
     this.bg = new PIXI.Graphics();
 
     // メイン背景（リッチブラック）
-    this.bg.beginFill(finalConfig.bgColor, 0.92);
-    this.bg.drawRect(0, 0, GuideButton.BOX_WIDTH, GuideButton.BOX_HEIGHT);
-    this.bg.endFill();
+    this.bg.clear();
+    this.bg.rect(0, 0, GuideButton.BOX_WIDTH, GuideButton.BOX_HEIGHT);
+    this.bg.fill({
+      color: finalConfig.bgColor,
+      alpha: 0.92,
+    });
 
     this.addChild(this.bg);
 
@@ -198,9 +201,9 @@ export class GuideButton extends PIXI.Container {
       const particleSizes = [2.8, 3.2, 2.5, 3.5, 2.6, 3.3, 2.9, 3.1];
       for (let i = 0; i < 8; i++) {
         const particle = new PIXI.Graphics();
-        particle.beginFill(finalConfig.particleColor, 0.88);
-        particle.drawCircle(0, 0, particleSizes[i]);
-        particle.endFill();
+        particle.clear();
+        particle.circle(0, 0, particleSizes[i]);
+        particle.fill({ color: finalConfig.particleColor, alpha: 0.88 });
         particle.alpha = 0;
         this.particles.push(particle);
         this.particleContainer.addChild(particle);
