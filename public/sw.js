@@ -1,5 +1,21 @@
 const SCRIPT_URL = typeof self !== "undefined" ? (self.registration?.scriptURL || self.location?.href || "") : "";
+
+// Pull a per-deploy build tag from a tiny dynamic script so update checks
+// detect new builds even when the page stays on an old version. The script
+// body changes on every deployment (see app/sw-meta.js/route.ts), which makes
+// the Service Worker update algorithm treat it as a new version.
+let SW_META_VERSION = null;
+try {
+  importScripts("/sw-meta.js");
+  SW_META_VERSION = typeof self !== "undefined" ? self.__SW_META_VERSION__ ?? null : null;
+} catch (error) {
+  // Ignore failures (offline, cold start). Fallback to the URL tag below.
+}
+
 const SW_VERSION = (() => {
+  if (typeof SW_META_VERSION === "string" && SW_META_VERSION.trim().length > 0) {
+    return SW_META_VERSION.trim();
+  }
   try {
     const url = new URL(SCRIPT_URL);
     return url.searchParams.get("v") || "default";

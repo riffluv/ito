@@ -132,12 +132,15 @@ const performRegistrationUpdate = async (
   registration: ServiceWorkerRegistration,
   reason: string
 ) => {
+  traceAction("sw.update.check", { reason });
   markUpdateCheckStart();
   try {
     await registration.update();
     markUpdateCheckEnd();
+    traceAction("sw.update.check.success", { reason });
   } catch {
     markUpdateCheckError(`update_failed:${reason}`);
+    traceAction("sw.update.check.error", { reason });
   } finally {
     void resyncWaitingServiceWorker(`update-check:${reason}`);
   }
@@ -282,6 +285,10 @@ const createWaitingObserver = () => {
     }
     wiredWaitings.add(waiting);
     announceServiceWorkerUpdate(registration);
+    traceAction("sw.waiting.detected", {
+      source: _source,
+      scriptURL: waiting.scriptURL,
+    });
 
     const stateChangeHandler = () => {
       if (waiting.state === "activated") {
@@ -348,6 +355,7 @@ export default function ServiceWorkerRegistration() {
 
       const handleUpdateFound = () => {
         const installingWorker = registration.installing;
+        traceAction("sw.updatefound", { source, hasInstalling: Boolean(installingWorker) });
 
         const evaluateWaiting = () => {
           if (registration.waiting && navigator.serviceWorker.controller) {
