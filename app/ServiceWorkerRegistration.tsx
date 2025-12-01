@@ -49,7 +49,8 @@ const shouldRegister = () => {
 const LOOP_GUARD_THRESHOLD = 3;
 let controllerChangeBound = false;
 let controllerChangeAutoCount = 0;
-const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+// Frequent checks so high-frequency deploys are detected even on long-lived, focused tabs.
+const UPDATE_CHECK_INTERVAL_MS = 2 * 60 * 1000;
 const RELOAD_FALLBACK_DELAY_MS = 4000;
 let reloadFallbackTimer: number | null = null;
 
@@ -173,6 +174,19 @@ const bindVisibilityDrivenUpdateChecks = (
   return () => {
     document.removeEventListener("visibilitychange", handler);
   };
+};
+
+const bindFocusUpdateChecks = (registration: ServiceWorkerRegistration) => {
+  if (typeof window === "undefined") {
+    return () => {
+      /* noop */
+    };
+  }
+  const handler = () => {
+    void performRegistrationUpdate(registration, "focus");
+  };
+  window.addEventListener("focus", handler);
+  return () => window.removeEventListener("focus", handler);
 };
 
 const bindOnlineUpdateChecks = (registration: ServiceWorkerRegistration) => {
@@ -316,6 +330,7 @@ export default function ServiceWorkerRegistration() {
     let stopPeriodicChecks: (() => void) | null = null;
     let stopVisibilityChecks: (() => void) | null = null;
     let stopOnlineChecks: (() => void) | null = null;
+    let stopFocusChecks: (() => void) | null = null;
     const cleanupFns: Array<() => void> = [];
     const wiredRegistrations = new WeakSet<ServiceWorkerRegistration>();
     const observeWaiting = createWaitingObserver();
@@ -426,6 +441,7 @@ export default function ServiceWorkerRegistration() {
       stopPeriodicChecks = schedulePeriodicUpdateChecks(registration);
       stopVisibilityChecks = bindVisibilityDrivenUpdateChecks(registration);
       stopOnlineChecks = bindOnlineUpdateChecks(registration);
+      stopFocusChecks = bindFocusUpdateChecks(registration);
       void performRegistrationUpdate(registration, "initial");
     };
 
@@ -439,6 +455,7 @@ export default function ServiceWorkerRegistration() {
       stopPeriodicChecks?.();
       stopVisibilityChecks?.();
       stopOnlineChecks?.();
+      stopFocusChecks?.();
       cleanupFns.forEach((fn) => fn());
       clearReloadFallbackTimer();
     };
