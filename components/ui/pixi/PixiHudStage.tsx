@@ -61,6 +61,22 @@ const computeTextureChunkSize = () => {
   return Math.min(MAX_TEXTURE_UPLOAD_CHUNK, Math.max(MIN_TEXTURE_UPLOAD_CHUNK, scaled));
 };
 
+const destroyPixiApp = (app: Application) => {
+  try {
+    const rendererOpts = { removeView: true };
+    const stageOpts = { children: true, texture: true, textureSource: true };
+    // v8 destroy signature accepts (rendererOptions, stageOptions)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app.destroy as any)(rendererOpts, stageOpts);
+  } catch {
+    try {
+      app.destroy(true);
+    } catch {
+      /* ignore */
+    }
+  }
+};
+
 const classifyTexturePriority = (source: unknown) => {
   const accessor = (key: string) => {
     try {
@@ -406,12 +422,12 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
         });
       } catch (error) {
         console.error("[PixiHudStage] init failed", error);
-        pixiApp.destroy(true);
+        destroyPixiApp(pixiApp);
         return;
       }
 
       if (disposed) {
-        pixiApp.destroy(true);
+        destroyPixiApp(pixiApp);
         return;
       }
 
@@ -577,7 +593,7 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
 
       if (appRef.current) {
         try {
-          appRef.current.destroy(true);
+          destroyPixiApp(appRef.current);
         } catch {
           // ignore
         }

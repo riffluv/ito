@@ -272,12 +272,12 @@ export async function createSimpleBackground(
   root.addChild(vignette);
 
   const grainTexture = createGrainTexture(pixi);
-  grainTexture.baseTexture.wrapMode = "repeat";
-  const grain = new pixi.TilingSprite(
-    grainTexture,
-    options.width,
-    options.height
-  );
+  (grainTexture.source as PIXI.TextureSource).addressMode = "repeat";
+  const grain = new pixi.TilingSprite({
+    texture: grainTexture,
+    width: options.width,
+    height: options.height,
+  });
   grain.alpha = 0.065;
   grain.blendMode = "screen";
   root.addChild(grain);

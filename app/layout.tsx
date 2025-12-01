@@ -40,7 +40,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" suppressHydrationWarning className={inter.className}>
+    <html
+      lang="ja"
+      suppressHydrationWarning
+      className={`${inter.className} dark`}
+      data-theme="dark"
+    >
       <head>
         <meta name="color-scheme" content="dark" />
         {AUDIO_PRELOAD_HREFS.map((href) => {
