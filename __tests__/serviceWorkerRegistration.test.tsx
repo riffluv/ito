@@ -160,4 +160,45 @@ describe("ServiceWorkerRegistration waiting detection", () => {
       expect(announceServiceWorkerUpdate).toHaveBeenCalledWith(registration);
     });
   });
+
+  it("uses NEXT_PUBLIC_SW_VERSION when buildId is not available", async () => {
+    const waiting = createMockWaiting();
+    const registration: MutableRegistration = {
+      waiting: null,
+      installing: null,
+      active: waiting,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      update: jest.fn(),
+      unregister: jest.fn(),
+      scope: "/",
+    };
+
+    // Ensure runtime buildId is absent so env is used.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).__NEXT_DATA__;
+    const prevSwVersion = process.env.NEXT_PUBLIC_SW_VERSION;
+    process.env.NEXT_PUBLIC_SW_VERSION = "jest-sw-version";
+
+    const listeners = buildNavigatorMock(registration);
+
+    render(<ServiceWorkerRegistration />);
+
+    // Simulate a waiting worker to trigger register() call path.
+    registration.installing = waiting;
+    registration.waiting = waiting;
+    listeners.updatefound?.forEach((fn) => {
+      act(() => {
+        fn();
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        (navigator.serviceWorker.register as jest.Mock).mock.calls[0][0]
+      ).toBe("/sw.js?v=jest-sw-version");
+    });
+
+    process.env.NEXT_PUBLIC_SW_VERSION = prevSwVersion;
+  });
 });
