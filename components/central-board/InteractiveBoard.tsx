@@ -152,6 +152,11 @@ function InteractiveBoardBase({
   isRevealing,
   cursorSnapOffset,
 }: InteractiveBoardProps) {
+  const renderSortableCard = React.useCallback(
+    (cardId: string, idx?: number) => renderCard(cardId, idx),
+    [renderCard]
+  );
+
   const magnetSnapshot = useMagnetSnapshot(magnetController);
   const magnetState = magnetController.getProjectedMagnetState();
   const sortableItems = useMemo(
@@ -350,7 +355,7 @@ function InteractiveBoardBase({
                   >
                     {slot.proposalCardId && slot.proposalCardId === slot.cardId ? (
                       <SortableItem id={slot.cardId!}>
-                        {renderCard(slot.cardId!, slot.idx)}
+                        {renderSortableCard(slot.cardId!, slot.idx)}
                       </SortableItem>
                     ) : (
                       <Box
@@ -359,7 +364,7 @@ function InteractiveBoardBase({
                         pointerEvents="none"
                         data-ghost-card="true"
                       >
-                        {renderCard(slot.cardId!, slot.idx)}
+                        {renderSortableCard(slot.cardId!, slot.idx)}
                       </Box>
                     )}
                   </Box>
@@ -381,7 +386,7 @@ function InteractiveBoardBase({
                     data-floating-card="true"
                     data-magnet-strength={magnetState.strength.toFixed(2)}
                   >
-                    <div style={overlayInnerStyle}>{renderCard(activeId, idx)}</div>
+                    <div style={overlayInnerStyle}>{renderSortableCard(activeId, idx)}</div>
                   </div>
                 );
               }
@@ -391,7 +396,7 @@ function InteractiveBoardBase({
                   data-floating-card="true"
                   data-magnet-strength={magnetState.strength.toFixed(2)}
                 >
-                  <div style={overlayInnerStyle}>{renderCard(activeId)}</div>
+                  <div style={overlayInnerStyle}>{renderSortableCard(activeId)}</div>
                 </div>
               );
             })()
