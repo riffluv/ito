@@ -9,7 +9,6 @@ import { Pagination } from "@/components/ui/Pagination";
 import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { useTransition } from "@/components/ui/TransitionProvider";
-import UpdateAvailableBadge from "@/components/ui/UpdateAvailableBadge";
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
@@ -1447,22 +1446,6 @@ export default function MainMenu() {
                   ローディングテスト
                 </AppButton>
 
-                <Box
-                  mt={3}
-                  pl={1}
-                  display="flex"
-                  flexDirection="column"
-                  gap={2}
-                >
-                  <Text
-                    fontSize="xs"
-                    color="rgba(255,255,255,0.7)"
-                    fontFamily="monospace"
-                  >
-                    ▼ バージョンアップ通知（プレビュー）
-                  </Text>
-                  <UpdateAvailableBadge preview />
-                </Box>
               </Box>
             </VStack>
           </GridItem>

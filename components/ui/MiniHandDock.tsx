@@ -33,8 +33,6 @@ import { SeinoButton } from "./SeinoButton";
 import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import { KEYBOARD_KEYS } from "./hints/constants";
 import Image from "next/image";
-import { UpdateAvailableBadgeControlled } from "@/components/ui/UpdateAvailableBadge";
-import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 
 type HostPanelIconProps = {
   src: string;
@@ -298,26 +296,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     updateOptimisticProposalOverride,
   } = props;
 
-  const serviceWorkerUpdateState = useServiceWorkerUpdate();
-  const updateBadgeVisible = React.useMemo(
-    () =>
-      serviceWorkerUpdateState.isUpdateReady ||
-      serviceWorkerUpdateState.isApplying ||
-      serviceWorkerUpdateState.hasError ||
-      serviceWorkerUpdateState.autoApplySuppressed,
-    [
-      serviceWorkerUpdateState.autoApplySuppressed,
-      serviceWorkerUpdateState.hasError,
-      serviceWorkerUpdateState.isApplying,
-      serviceWorkerUpdateState.isUpdateReady,
-    ]
-  );
   const phaseMessageBottom = React.useMemo(
-    () =>
-      updateBadgeVisible
-        ? { base: "calc(16px + 118px)", md: "calc(20px + 120px)" }
-        : { base: "calc(16px + 60px)", md: "calc(20px + 62px)" },
-    [updateBadgeVisible]
+    () => ({ base: "calc(16px + 60px)", md: "calc(20px + 62px)" }),
+    []
   );
 
   const hostClaimActive =
@@ -740,8 +721,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           },
         }}
       >
-        <UpdateAvailableBadgeControlled state={serviceWorkerUpdateState} />
-
         {/* 数字カード（大きく・モダン） */}
         <Box
           flexShrink={0}
