@@ -383,7 +383,7 @@ export function useOptimizedRooms({
       revalidateOnReconnect: true,
       revalidateIfStale: false,
       dedupingInterval: 4000,
-      focusThrottleInterval: 700,
+      focusThrottleInterval: 3500,
       keepPreviousData: true,
       cache: swrCache,
     }

@@ -4,6 +4,7 @@ import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { PlayerDoc } from "@/lib/types";
 import { createBoardCardViewModel } from "./cardViewModel";
 import { useRenderMetrics } from "@/lib/perf/useRenderMetrics";
+import { memo, useMemo } from "react";
 
 interface CardRendererProps {
   id: string;
@@ -29,7 +30,7 @@ interface CardRendererProps {
   };
 }
 
-export function CardRenderer(props: CardRendererProps) {
+function CardRendererBase(props: CardRendererProps) {
   const { id, player } = props;
   const state = computeCardState({
     player,
@@ -48,21 +49,40 @@ export function CardRenderer(props: CardRendererProps) {
 
   useRenderMetrics("CardRenderer", { thresholdMs: 4 });
 
-  const interactive = props.interactiveFlip;
+  const interactive = useMemo(() => {
+    if (!props.interactiveFlip) return undefined;
+    return props.interactiveFlip;
+  }, [props.interactiveFlip]);
+
   const variant = interactive ? "flip" : state.variant;
   const flipped = interactive ? interactive.flipped : state.flipped;
   const flipPreset = interactive?.preset ?? "reveal";
 
-  const cardViewModel = createBoardCardViewModel({
-    player,
-    index: typeof props.idx === "number" ? props.idx : null,
-    state,
-    variant,
-    flipped,
-    isInteractive: !!interactive,
-    flipPreset,
-    onClick: interactive ? interactive.onToggle : undefined,
-  });
+  const cardViewModel = useMemo(
+    () =>
+      createBoardCardViewModel({
+        player,
+        index: typeof props.idx === "number" ? props.idx : null,
+        state,
+        variant,
+        flipped,
+        isInteractive: !!interactive,
+        flipPreset,
+        onClick: interactive ? interactive.onToggle : undefined,
+      }),
+    [
+      player,
+      props.idx,
+      state,
+      variant,
+      flipped,
+      interactive,
+      flipPreset,
+    ]
+  );
 
   return <GameCard key={id} {...cardViewModel} />;
 }
+
+export const CardRenderer = memo(CardRendererBase);
+CardRenderer.displayName = "CardRenderer";

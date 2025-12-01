@@ -166,7 +166,7 @@ export function useRoomSnapshot(
     const startedAt = typeof performance !== "undefined" ? performance.now() : null;
     enqueueCommit(() => {
       unstable_batchedUpdates(() => {
-        setPlayers(fetchedPlayers);
+        setPlayers((prev) => (deepEqual(prev, fetchedPlayers) ? prev : fetchedPlayers));
       });
     }, startedAt, "participantsCommitMs");
   }, [fetchedPlayers, partLoading, enqueueCommit]);

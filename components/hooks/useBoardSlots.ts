@@ -67,6 +67,29 @@ export function useBoardSlots({
   playerMap,
   activeId,
 }: UseBoardSlotsParams) {
+  const eligibleIdsCacheRef = useRef<{ sig: string; value: string[] }>({
+    sig: "",
+    value: [],
+  });
+  const eligibleIdsSignature = useMemo(
+    () => (Array.isArray(eligibleIds) ? eligibleIds.join(",") : ""),
+    [eligibleIds]
+  );
+  const normalizedEligibleIds = useMemo(() => {
+    if (!Array.isArray(eligibleIds) || eligibleIds.length === 0) {
+      if (eligibleIdsCacheRef.current.sig !== "") {
+        eligibleIdsCacheRef.current = { sig: "", value: [] };
+      }
+      return eligibleIdsCacheRef.current.value;
+    }
+    if (eligibleIdsCacheRef.current.sig === eligibleIdsSignature) {
+      return eligibleIdsCacheRef.current.value;
+    }
+    const stableCopy = eligibleIds.slice();
+    eligibleIdsCacheRef.current = { sig: eligibleIdsSignature, value: stableCopy };
+    return stableCopy;
+  }, [eligibleIds, eligibleIdsSignature]);
+
   const slotIdSeedRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID().slice(0, 8)
@@ -200,11 +223,11 @@ export function useBoardSlots({
   }, [activeProposal, eligibleIdSet]);
 
   const waitingPlayers = useMemo(() => {
-    if (!Array.isArray(eligibleIds) || eligibleIds.length === 0) {
+    if (!Array.isArray(normalizedEligibleIds) || normalizedEligibleIds.length === 0) {
       return [];
     }
     const result: (PlayerDoc & { id: string })[] = [];
-    eligibleIds.forEach((id) => {
+    normalizedEligibleIds.forEach((id) => {
       const player = playerMap.get(id);
       if (!player) return;
       if (pendingLookup !== EMPTY_PLAYER_ID_SET && pendingLookup.has(player.id)) {
@@ -223,7 +246,14 @@ export function useBoardSlots({
       result.push(player);
     });
     return result;
-  }, [eligibleIds, playerMap, pendingLookup, placedLookup, optimisticReturningSet, activeId]);
+  }, [
+    normalizedEligibleIds,
+    playerMap,
+    pendingLookup,
+    placedLookup,
+    optimisticReturningSet,
+    activeId,
+  ]);
 
   const stableWaitingPlayers = useMemo(() => {
     const prev = waitingPlayersCacheRef.current;
