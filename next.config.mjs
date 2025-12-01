@@ -140,6 +140,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, must-revalidate",
+          },
+        ],
+      },
     ];
   },
   // Allow builds to succeed on CI while we iteratively fix lint warnings/errors

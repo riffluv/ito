@@ -13,6 +13,8 @@
 5. `navigator.serviceWorker.getRegistration().then(r => !!r?.waiting)` が `true` になることを確認。  
 6. 画面を非表示にする（別タブへ切り替える）か、DevTools で `Skip waiting` を押し、10 秒以内に自動リロードされることを確認。
 
+> memo: 2025-12-01 時点で precache リストを最小化（`/_next/static/chunks/main.js` を削除）し、`sw.js` に `Cache-Control: no-store, must-revalidate` を付与した。DevTools Network で `/_next/static/chunks/main.js` の 404 が出ないことを確認する。
+
 ## 3. 失敗パス（タイムアウト・エラー）の確認
 1. `navigator.serviceWorker.getRegistration()` で待機中の Service Worker を取得し、DevTools Network タブで「Offline」を有効にする。  
 2. ミニドックの「今すぐ更新」を押し、`safe_update.failure` が記録されて UI が「再試行」に変わることを確認（`phase` は `failed` / `retryCount` が増える）。  

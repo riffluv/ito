@@ -9,13 +9,13 @@ const SW_VERSION = (() => {
 })();
 const CACHE_PREFIX = "ito-app-cache";
 const CACHE_NAME = `${CACHE_PREFIX}-${SW_VERSION}`;
-const CORE_ASSETS = [
-  "/",
-  "/manifest.webmanifest",
-  "/images/knight1.webp",
-  "/_next/static/chunks/main.js",
-  "/_next/static/chunks/webpack.js",
-];
+
+// Precaches are intentionally minimal and limited to stable, un-hashed assets.
+// Next.js 14 App Router no longer emits /_next/static/chunks/main.js or webpack.js,
+// and precaching unknown hashed assets causes install to reject when a 404 occurs.
+// Keep this list small to guarantee install never fails while still providing
+// an offline shell.
+const CORE_ASSETS = ["/", "/manifest.webmanifest", "/images/knight1.webp"];
 
 const updateBroadcast =
   typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("ito-safe-update-v1") : null;
@@ -81,32 +81,69 @@ const reportFetchError = async (detail) => {
   }
 };
 
+const precacheCoreAssets = async () => {
+  const cache = await caches.open(CACHE_NAME);
+  const results = await Promise.allSettled(
+    CORE_ASSETS.map((path) =>
+      cache.add(path).catch((error) => {
+        // Surface but do not fail install; missing assets should not block SW activation.
+        void reportFetchError({
+          url: path,
+          status: null,
+          method: "GET",
+          scope: "precache",
+          error: error?.message ?? "precache",
+        });
+        return null;
+      })
+    )
+  );
+  // If every entry failed, still resolve to avoid install rejection.
+  const anyFulfilled = results.some((r) => r.status === "fulfilled");
+  if (!anyFulfilled) {
+    // Create a minimal offline shell so activation can proceed.
+    try {
+      await cache.put("/", new Response("", { status: 200 }));
+    } catch {
+      /* ignore */
+    }
+  }
+};
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.addAll(CORE_ASSETS);
-      // Precache hashed static assets (best-effort). Ignore failures so install doesn't abort.
       try {
-        const manifest = await fetch("/_next/static/manifest.json").then((res) =>
-          res.ok ? res.json() : null
-        );
-        if (manifest && manifest.pages) {
-          const pageAssets = Object.values(manifest.pages).flat().filter((v) => typeof v === "string");
-          const unique = Array.from(new Set(pageAssets));
-          await Promise.all(
-            unique.map((path) =>
-              cache.add(path).catch(() => {
-                /* ignore */
-              })
-            )
+        await precacheCoreAssets();
+
+        // Best-effort precache for hashed assets using Next manifest (may not exist in App Router).
+        try {
+          const manifest = await fetch("/_next/static/manifest.json").then((res) =>
+            res.ok ? res.json() : null
           );
+          if (manifest && manifest.pages) {
+            const pageAssets = Object.values(manifest.pages)
+              .flat()
+              .filter((v) => typeof v === "string");
+            const unique = Array.from(new Set(pageAssets));
+            await Promise.all(
+              unique.map((path) =>
+                caches.open(CACHE_NAME).then((cache) =>
+                  cache.add(path).catch(() => {
+                    /* ignore */
+                  })
+                )
+              )
+            );
+          }
+        } catch {
+          /* ignore precache failure */
         }
-      } catch {
-        /* ignore precache failure */
-      }
-      if (self.registration?.active) {
-        await notifyUpdateChannels("update-ready");
+      } finally {
+        // Even if precache partially fails, allow the SW to install so waiting/activate can proceed.
+        if (self.registration?.active) {
+          await notifyUpdateChannels("update-ready");
+        }
       }
     })()
   );
