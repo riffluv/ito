@@ -1053,13 +1053,22 @@ export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): b
   const automatic = reason !== "manual";
   const snapshot = actor.getSnapshot();
   const context = snapshot?.context;
-  if (automatic && context?.autoApplySuppressed) {
-    logSafeUpdateTelemetry(
-      "suppressed",
-      buildTelemetryOptions(context ?? createInitialContext(), { reason, safeMode })
-    );
-    traceAction("safeUpdate.apply.suppressed", { reason, safeMode });
-    return false;
+  const phase = resolvePhase(snapshot);
+  if (automatic && context) {
+    const held = context.autoApplySuppressed || hasForceHold(context.autoApplyHolds);
+    if (held || phase === "suppressed") {
+      logSafeUpdateTelemetry(
+        "suppressed",
+        buildTelemetryOptions(context ?? createInitialContext(), { reason, safeMode })
+      );
+      traceAction("safeUpdate.apply.suppressed", {
+        reason,
+        safeMode,
+        held,
+        phase,
+      });
+      return false;
+    }
   }
   actor.send({ type: "APPLY_REQUEST", reason, safeMode, automatic });
   const nextPhase = resolvePhase(actor.getSnapshot());
