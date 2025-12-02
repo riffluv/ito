@@ -602,7 +602,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         />
       )}
 
-      {/* ゲーム開始ボタン (フッターパネルとWaitingカードの間) */}
+      {/* ========================================
+          🌙 カード配布中インジケータ
+          ----------------------------------------
+          据え置きゲーム風：シンプルにスピナー＋テキスト
+          背景なし、テキストシャドウで可読性確保
+          ======================================== */}
       {showQuickStartProgress && (
         <Box
           position="fixed"
@@ -613,48 +618,42 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           left="50%"
           transform="translateX(-50%)"
           zIndex={56}
-          // HD-2D風: 石板/古文書風の背景（夜の儀式パネル）
-          bg="linear-gradient(178deg, rgba(28, 24, 20, 0.96) 0%, rgba(18, 15, 12, 0.94) 100%)"
-          border="3px solid rgba(255,255,255,0.88)"
-          borderRadius="0"
-          // v1: 余白は4の倍数だけでなく微差を許容
-          px="19px"
-          py="13px"
-          // HD-2D風: 多層シャドウ（石板の重み＋月光のほのかな反射）
-          boxShadow={`
-            0 1px 0 rgba(0,0,0,.08),
-            0 10px 20px -8px rgba(0,0,0,.55),
-            3px 4px 0 rgba(0,0,0,0.75),
-            5px 6px 0 rgba(0,0,0,0.5),
-            inset 1px 1px 0 rgba(255,240,200,0.08),
-            inset -1px -1px 0 rgba(0,0,0,0.3)
-          `}
           pointerEvents="none"
-          css={{
-            // 内側の金色装飾ライン（v2: 石板に細い黄金の装飾ライン）
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              inset: "4px",
-              border: "1px solid rgba(212, 175, 90, 0.38)",
-              pointerEvents: "none",
-            },
-          }}
+          // レイアウト: スピナーとテキストを縦に配置
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap="10px"
         >
-          <HStack gap="11px" align="center">
-            <HD2DLoadingSpinner size="32px" />
-            <Text
-              // v2: 黄金寄りの色＋軽いテキストシャドウで「儀式感」
-              fontSize="0.9rem"
-              fontWeight="bold"
-              color="rgba(255, 245, 215, 0.95)"
-              letterSpacing="0.035em"
-              fontFamily="monospace"
-              textShadow="0 1px 2px rgba(0,0,0,0.85), 0 0 8px rgba(255,230,180,0.15)"
-            >
-              カードを配布しています…
-            </Text>
-          </HStack>
+          {/* 🌕 満月スピナー */}
+          <HD2DLoadingSpinner size="38px" />
+
+          {/* 📜 テキスト: 儀式感のある黄金テキスト */}
+          <Text
+            // v2準拠: 黄金寄りの色
+            fontSize="0.85rem"
+            fontWeight="600"
+            color="rgba(255, 248, 225, 0.92)"
+            letterSpacing="0.06em"
+            fontFamily="monospace"
+            // 強めのシャドウ＋わずかなグローで可読性確保
+            textShadow={`
+              0 1px 3px rgba(0, 0, 0, 0.9),
+              0 2px 6px rgba(0, 0, 0, 0.7),
+              0 0 12px rgba(255, 240, 200, 0.12)
+            `}
+            // 微妙な上下アニメーション（息づき）
+            css={{
+              animation:
+                "subtleFloat 2.8s cubic-bezier(.4,.15,.6,.85) infinite",
+              "@keyframes subtleFloat": {
+                "0%, 100%": { transform: "translateY(0)" },
+                "50%": { transform: "translateY(-1.5px)" },
+              },
+            }}
+          >
+            カードを配布しています…
+          </Text>
         </Box>
       )}
 
