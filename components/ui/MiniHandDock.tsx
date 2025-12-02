@@ -4,18 +4,17 @@ import { AppButton } from "@/components/ui/AppButton";
 import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import { keyframes } from "@emotion/react";
 import { ResolveMode } from "@/lib/game/resolveMode";
 import { topicControls } from "@/lib/game/service";
-import { isTopicType, type TopicType } from "@/lib/topics";
-import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
+import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
-import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
+import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import { useRevealGate } from "@/lib/hooks/useRevealGate";
+import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
+import { isTopicType, type TopicType } from "@/lib/topics";
 import type { PlayerDoc } from "@/lib/types";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
-import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import {
   Box,
   Dialog,
@@ -26,13 +25,14 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
+import Image from "next/image";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
-import { SeinoButton } from "./SeinoButton";
 import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import { KEYBOARD_KEYS } from "./hints/constants";
-import Image from "next/image";
+import { SeinoButton } from "./SeinoButton";
 
 type HostPanelIconProps = {
   src: string;
@@ -123,7 +123,10 @@ const subtleTextPulse = keyframes`
 `;
 
 const noopCleanup = () => {};
-type RevealAnimatingEvent = CustomEvent<{ roomId?: string; animating?: boolean }>;
+type RevealAnimatingEvent = CustomEvent<{
+  roomId?: string;
+  animating?: boolean;
+}>;
 type DefaultTopicTypeChangeEvent = CustomEvent<{ defaultTopicType?: string }>;
 // ========================================
 // 🎨 Design System: Button Styles
@@ -156,7 +159,8 @@ const FOOTER_BUTTON_BASE_STYLES = {
   textShadow: "1px 1px 0 rgba(0,0,0,0.9)",
 
   // 立体感演出
-  boxShadow: "3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)",
+  boxShadow:
+    "3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)",
   transform: "translate(.5px,-.5px)",
 
   // レイアウト
@@ -171,18 +175,21 @@ const FOOTER_BUTTON_BASE_STYLES = {
   _hover: {
     bg: "rgba(38,42,52,0.98)",
     transform: "translate(0,-1px)",
-    boxShadow: "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
+    boxShadow:
+      "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
   },
   _active: {
     transform: "translate(1px,1px)",
-    boxShadow: "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
+    boxShadow:
+      "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
   },
   _disabled: {
     bg: "rgba(28,32,42,0.5)",
     color: "rgba(255,255,255,0.4)",
     filter: "grayscale(0.8)",
     cursor: "not-allowed",
-    boxShadow: "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
+    boxShadow:
+      "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
   },
 } as const;
 
@@ -208,7 +215,8 @@ const SEINO_BUTTON_STYLES = {
   fontSize: "26px",
   letterSpacing: "0.023em",
   textShadow: "2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)",
-  boxShadow: "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)",
+  boxShadow:
+    "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)",
   _before: {
     content: '""',
     position: "absolute" as const,
@@ -216,7 +224,8 @@ const SEINO_BUTTON_STYLES = {
     left: "4px",
     right: "3px",
     bottom: "3px",
-    background: "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
+    background:
+      "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
     pointerEvents: "none" as const,
   },
   _hover: {
@@ -225,12 +234,14 @@ const SEINO_BUTTON_STYLES = {
     textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
     borderColor: "rgba(255,255,255,0.95)",
     transform: "translateY(-3px)",
-    boxShadow: "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
+    boxShadow:
+      "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
   },
   _active: {
     bg: "rgba(235,110,30,0.95)",
     color: "rgba(255,255,255,0.91)",
-    boxShadow: "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
+    boxShadow:
+      "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
     transform: "translateY(1px)",
   },
 } as const;
@@ -279,14 +290,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isHost,
     roomStatus,
     defaultTopicType = "通常版",
-  allowContinueAfterFail,
-  topicBox = null,
-  onOpenSettings,
-  onLeaveRoom,
-  pop = false,
-  onlineUids,
-  playerCount,
-  roundIds,
+    allowContinueAfterFail,
+    topicBox = null,
+    onOpenSettings,
+    onLeaveRoom,
+    pop = false,
+    onlineUids,
+    playerCount,
+    roundIds,
     currentTopic,
     hostClaimStatus,
     presenceReady = true,
@@ -327,9 +338,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
     string | undefined
   >(defaultTopicType);
-  React.useEffect(() => setDefaultTopicOverride(defaultTopicType), [
-    defaultTopicType,
-  ]);
+  React.useEffect(
+    () => setDefaultTopicOverride(defaultTopicType),
+    [defaultTopicType]
+  );
   React.useEffect(() => {
     if (typeof window === "undefined") {
       return noopCleanup;
@@ -341,7 +353,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         setDefaultTopicOverride(nextType);
       }
     };
-    window.addEventListener("defaultTopicTypeChanged", handleDefaultTopicChange);
+    window.addEventListener(
+      "defaultTopicTypeChanged",
+      handleDefaultTopicChange
+    );
     try {
       const stored = window.localStorage.getItem("defaultTopicType");
       if (stored) setDefaultTopicOverride(stored);
@@ -349,7 +364,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       // ignore storage failure
     }
     return () => {
-      window.removeEventListener("defaultTopicTypeChanged", handleDefaultTopicChange);
+      window.removeEventListener(
+        "defaultTopicTypeChanged",
+        handleDefaultTopicChange
+      );
     };
   }, []);
 
@@ -545,7 +563,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           : !ready
             ? "「決定」を押すとカードを出せます"
             : "カードを場に出せません";
-  const submitTooltip = canClickProposalButton ? baseActionTooltip : submitDisabledReason;
+  const submitTooltip = canClickProposalButton
+    ? baseActionTooltip
+    : submitDisabledReason;
 
   const _playLedgerOpen = useSoundEffect("ledger_open"); // reserved (ledger button hidden)
   const playCardDeal = useSoundEffect("card_deal");
@@ -586,34 +606,51 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {showQuickStartProgress && (
         <Box
           position="fixed"
-          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
+          bottom={{
+            base: "clamp(120px, 18vh, 220px)",
+            md: "clamp(130px, 16vh, 240px)",
+          }}
           left="50%"
           transform="translateX(-50%)"
           zIndex={56}
-          bg="linear-gradient(180deg, rgba(8,9,15,0.94) 0%, rgba(9,11,18,0.9) 100%)"
-          border="3px solid rgba(255,255,255,0.92)"
+          // HD-2D風: 石板/古文書風の背景（夜の儀式パネル）
+          bg="linear-gradient(178deg, rgba(28, 24, 20, 0.96) 0%, rgba(18, 15, 12, 0.94) 100%)"
+          border="3px solid rgba(255,255,255,0.88)"
           borderRadius="0"
-          px={4}
-          py={3}
-          boxShadow="0 1px 0 rgba(0,0,0,.06), 0 12px 22px -10px rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,0.8), 6px 6px 0 rgba(0,0,0,0.6), inset 1px 1px 0 rgba(255,255,255,0.1)"
+          // v1: 余白は4の倍数だけでなく微差を許容
+          px="19px"
+          py="13px"
+          // HD-2D風: 多層シャドウ（石板の重み＋月光のほのかな反射）
+          boxShadow={`
+            0 1px 0 rgba(0,0,0,.08),
+            0 10px 20px -8px rgba(0,0,0,.55),
+            3px 4px 0 rgba(0,0,0,0.75),
+            5px 6px 0 rgba(0,0,0,0.5),
+            inset 1px 1px 0 rgba(255,240,200,0.08),
+            inset -1px -1px 0 rgba(0,0,0,0.3)
+          `}
           pointerEvents="none"
           css={{
+            // 内側の金色装飾ライン（v2: 石板に細い黄金の装飾ライン）
             "&::before": {
               content: '""',
               position: "absolute",
-              inset: "3px",
-              border: "1px solid rgba(255,215,0,0.35)",
+              inset: "4px",
+              border: "1px solid rgba(212, 175, 90, 0.38)",
               pointerEvents: "none",
             },
           }}
         >
-          <HStack gap="10px" align="center">
-            <HD2DLoadingSpinner size="28px" />
+          <HStack gap="11px" align="center">
+            <HD2DLoadingSpinner size="32px" />
             <Text
-              fontSize="sm"
+              // v2: 黄金寄りの色＋軽いテキストシャドウで「儀式感」
+              fontSize="0.9rem"
               fontWeight="bold"
-              color="rgba(255,255,255,0.92)"
-              letterSpacing="0.04em"
+              color="rgba(255, 245, 215, 0.95)"
+              letterSpacing="0.035em"
+              fontFamily="monospace"
+              textShadow="0 1px 2px rgba(0,0,0,0.85), 0 0 8px rgba(255,230,180,0.15)"
             >
               カードを配布しています…
             </Text>
@@ -621,300 +658,327 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Box>
       )}
 
-      {(roomStatus === "waiting" && !preparing && (isHost || hostClaimActive)) && (
-        <Box
-          position="fixed"
-          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={55}
-          css={{
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              bottom: "clamp(100px, 15vh, 180px)",
-            },
-          }}
-        >
-          {isHost ? (
+      {roomStatus === "waiting" &&
+        !preparing &&
+        (isHost || hostClaimActive) && (
+          <Box
+            position="fixed"
+            bottom={{
+              base: "clamp(120px, 18vh, 220px)",
+              md: "clamp(130px, 16vh, 240px)",
+            }}
+            left="50%"
+            transform="translateX(-50%)"
+            zIndex={55}
+            css={{
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                bottom: "clamp(100px, 15vh, 180px)",
+              },
+            }}
+          >
+            {isHost ? (
+              <AppButton
+                {...SEINO_BUTTON_STYLES}
+                size="lg"
+                visual="solid"
+                onClick={() => quickStart()}
+                disabled={!presenceReady || quickStartPending}
+                css={{
+                  animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
+                }}
+              >
+                ゲーム開始
+              </AppButton>
+            ) : (
+              <Text
+                fontSize="sm"
+                fontWeight="bold"
+                color="rgba(255,255,255,0.95)"
+                textAlign="left"
+                animation={`${subtleTextPulse} 1.6s ease-in-out infinite`}
+              >
+                {hostClaimMessage}
+              </Text>
+            )}
+            {isHost && !presenceReady ? (
+              <Text
+                mt={2}
+                fontSize="xs"
+                fontWeight="bold"
+                color="rgba(255,255,255,0.75)"
+                textAlign="center"
+              >
+                参加者の接続を待っています…
+              </Text>
+            ) : null}
+          </Box>
+        )}
+
+      {/* 次のゲームボタン (フッターパネルとカードの間) */}
+      {isHost &&
+        ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
+          roomStatus === "finished") &&
+        !autoStartLocked &&
+        !isRestarting &&
+        !(roomStatus === "reveal" && isRevealAnimating) && (
+          <Box
+            position="fixed"
+            bottom={{
+              base: "clamp(120px, 18vh, 220px)",
+              md: "clamp(130px, 16vh, 240px)",
+            }}
+            left="50%"
+            transform="translateX(-50%)"
+            zIndex={55}
+            css={{
+              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                bottom: "clamp(100px, 15vh, 180px)",
+              },
+            }}
+          >
             <AppButton
               {...SEINO_BUTTON_STYLES}
               size="lg"
               visual="solid"
-              onClick={() => quickStart()}
-              disabled={!presenceReady || quickStartPending}
+              onClick={handleNextGame}
               css={{
-                animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
+                animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
               }}
             >
-              ゲーム開始
+              次のゲーム
             </AppButton>
-          ) : (
-            <Text
-              fontSize="sm"
-              fontWeight="bold"
-              color="rgba(255,255,255,0.95)"
-              textAlign="left"
-              animation={`${subtleTextPulse} 1.6s ease-in-out infinite`}
-            >
-              {hostClaimMessage}
-            </Text>
-          )}
-          {isHost && !presenceReady ? (
-            <Text
-              mt={2}
-              fontSize="xs"
-              fontWeight="bold"
-              color="rgba(255,255,255,0.75)"
-              textAlign="center"
-            >
-              参加者の接続を待っています…
-            </Text>
-          ) : null}
-        </Box>
-      )}
-
-      {/* 次のゲームボタン (フッターパネルとカードの間) */}
-      {isHost && ((roomStatus === "reveal" && !!allowContinueAfterFail) || roomStatus === "finished") && !autoStartLocked && !isRestarting && !(roomStatus === "reveal" && isRevealAnimating) && (
-        <Box
-          position="fixed"
-          bottom={{ base: "clamp(120px, 18vh, 220px)", md: "clamp(130px, 16vh, 240px)" }}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={55}
-          css={{
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              bottom: "clamp(100px, 15vh, 180px)",
-            },
-          }}
-        >
-          <AppButton
-            {...SEINO_BUTTON_STYLES}
-            size="lg"
-            visual="solid"
-            onClick={handleNextGame}
-            css={{
-              animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
-            }}
-          >
-            次のゲーム
-          </AppButton>
-        </Box>
-      )}
+          </Box>
+        )}
 
       {/* 中央下部: シームレス浮遊ボタン群（revealゲート中はDOMごと非表示） */}
       {!hideHandUI && (
-      <Flex
-        position="fixed"
-        bottom={{ base: "20px", md: "24px" }}
-        left="50%"
-        transform="translateX(-50%)"
-        zIndex={50}
-        data-guide-target="mini-hand-dock"
-        gap={{ base: "10px", md: "14px" }}
-        align="center"
-        justify="center"
-        flexWrap="nowrap"
-        maxW="95vw"
-        css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            bottom: "16px",
-            gap: "8px",
-          },
-        }}
-      >
-        {/* 数字カード（大きく・モダン） */}
-        <Box
-          flexShrink={0}
-          transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
-          transformOrigin="left center"
-          mr={{ base: "14px", md: "20px" }}
+        <Flex
+          position="fixed"
+          bottom={{ base: "20px", md: "24px" }}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={50}
+          data-guide-target="mini-hand-dock"
+          gap={{ base: "10px", md: "14px" }}
+          align="center"
+          justify="center"
+          flexWrap="nowrap"
+          maxW="95vw"
           css={{
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              transform: "scale(1.0)",
-              marginRight: "12px",
+              bottom: "16px",
+              gap: "8px",
             },
           }}
         >
-          {/* revealゲート中は上位の条件でDOM未描画 */}
-          <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
-        </Box>
-
-        {/* 入力エリア（常時表示・シームレス） */}
-        <HStack gap={{ base: "8px", md: "10px" }} flexWrap="nowrap">
-          <Input
-            ref={inputRef}
-            aria-label="連想ワード"
-            placeholder="連想ワード..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            data-guide-target="association-input"
-            maxLength={50}
-            size="md"
-            bg="rgba(18,22,32,0.85)"
-            color="rgba(255,255,255,0.98)"
-            fontFamily="'Courier New', monospace"
-            fontSize={{ base: "14px", md: "16px" }}
-            fontWeight="700"
-            letterSpacing="0.02em"
-            border="none"
-            borderRadius="3px"
-            boxShadow="inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.25)"
-            minH={{ base: "44px", md: "48px" }}
-            w={{ base: "200px", md: "280px" }}
-            transition="box-shadow 150ms ease"
-            disabled={!clueEditable}
+          {/* 数字カード（大きく・モダン） */}
+          <Box
+            flexShrink={0}
+            transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
+            transformOrigin="left center"
+            mr={{ base: "14px", md: "20px" }}
             css={{
               [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                minHeight: "40px",
-                width: "220px",
-                fontSize: "14px",
+                transform: "scale(1.0)",
+                marginRight: "12px",
               },
             }}
-            _placeholder={{
-              color: "rgba(255,255,255,0.35)",
-            }}
-            _focus={{
-              boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.4)",
-              bg: "rgba(22,26,36,0.9)",
-              outline: "none",
-            }}
-            _disabled={{
-              opacity: 0.5,
-              cursor: "not-allowed",
-            }}
-          />
-          <Tooltip content={decideTooltip} showArrow openDelay={180}>
-            <AppButton
-              {...FOOTER_BUTTON_BASE_STYLES}
-              size="sm"
-              visual="solid"
-              palette="brand"
-              onClick={handleDecide}
-              disabled={!canDecide}
-              w="auto"
-              minW="60px"
-            >
-              決定
-            </AppButton>
-          </Tooltip>
-          <Tooltip content={clearTooltip} showArrow openDelay={180}>
-            <AppButton
-              {...FOOTER_BUTTON_BASE_STYLES}
-              size="sm"
-              visual="outline"
-              palette="gray"
-              onClick={handleClear}
-              disabled={clearButtonDisabled}
-              w="auto"
-              minW="60px"
-            >
-              クリア
-            </AppButton>
-          </Tooltip>
-          <Tooltip content={submitTooltip} showArrow openDelay={180}>
-            <AppButton
-              {...FOOTER_BUTTON_BASE_STYLES}
-              size="sm"
-              visual="solid"
-              palette="brand"
-              onClick={handleSubmit}
-              disabled={!canClickProposalButton}
-              w="auto"
-              minW="70px"
-            >
-              {actionLabel}
-            </AppButton>
-          </Tooltip>
-        </HStack>
+          >
+            {/* revealゲート中は上位の条件でDOM未描画 */}
+            <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
+          </Box>
 
-        {/* ホスト専用ボタン */}
-        {isHost ? (
-          <>
-            <Tooltip
-              content={
-                effectiveDefaultTopicType === "カスタム"
-                  ? "カスタムお題を設定"
-                  : "お題をシャッフル"
-              }
-              showArrow
-              openDelay={220}
-            >
-              <OctopathDockButton
-                compact
-                iconBoxSize={26}
-                icon={
-                  effectiveDefaultTopicType === "カスタム" ? (
-                    <FiEdit2 />
-                  ) : (
-                    <HostPanelIcon src="/images/ui/shuffle.webp" alt="Shuffle topic" />
-                  )
+          {/* 入力エリア（常時表示・シームレス） */}
+          <HStack gap={{ base: "8px", md: "10px" }} flexWrap="nowrap">
+            <Input
+              ref={inputRef}
+              aria-label="連想ワード"
+              placeholder="連想ワード..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              data-guide-target="association-input"
+              maxLength={50}
+              size="md"
+              bg="rgba(18,22,32,0.85)"
+              color="rgba(255,255,255,0.98)"
+              fontFamily="'Courier New', monospace"
+              fontSize={{ base: "14px", md: "16px" }}
+              fontWeight="700"
+              letterSpacing="0.02em"
+              border="none"
+              borderRadius="3px"
+              boxShadow="inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.25)"
+              minH={{ base: "44px", md: "48px" }}
+              w={{ base: "200px", md: "280px" }}
+              transition="box-shadow 150ms ease"
+              disabled={!clueEditable}
+              css={{
+                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
+                  minHeight: "40px",
+                  width: "220px",
+                  fontSize: "14px",
+                },
+              }}
+              _placeholder={{
+                color: "rgba(255,255,255,0.35)",
+              }}
+              _focus={{
+                boxShadow:
+                  "inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.4)",
+                bg: "rgba(22,26,36,0.9)",
+                outline: "none",
+              }}
+              _disabled={{
+                opacity: 0.5,
+                cursor: "not-allowed",
+              }}
+            />
+            <Tooltip content={decideTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="solid"
+                palette="brand"
+                onClick={handleDecide}
+                disabled={!canDecide}
+                w="auto"
+                minW="60px"
+              >
+                決定
+              </AppButton>
+            </Tooltip>
+            <Tooltip content={clearTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="outline"
+                palette="gray"
+                onClick={handleClear}
+                disabled={clearButtonDisabled}
+                w="auto"
+                minW="60px"
+              >
+                クリア
+              </AppButton>
+            </Tooltip>
+            <Tooltip content={submitTooltip} showArrow openDelay={180}>
+              <AppButton
+                {...FOOTER_BUTTON_BASE_STYLES}
+                size="sm"
+                visual="solid"
+                palette="brand"
+                onClick={handleSubmit}
+                disabled={!canClickProposalButton}
+                w="auto"
+                minW="70px"
+              >
+                {actionLabel}
+              </AppButton>
+            </Tooltip>
+          </HStack>
+
+          {/* ホスト専用ボタン */}
+          {isHost ? (
+            <>
+              <Tooltip
+                content={
+                  effectiveDefaultTopicType === "カスタム"
+                    ? "カスタムお題を設定"
+                    : "お題をシャッフル"
                 }
-                isLoading={topicActionLoading}
-                disabled={
-                  topicActionLoading ||
-                  (isGameFinished && effectiveDefaultTopicType !== "カスタム")
-                }
-                onClick={async () => {
-                  if (topicActionLoading) return;
-                  const mode: string | null = effectiveDefaultTopicType;
-
-                  if (mode === "カスタム") {
-                    setCustomText(currentTopic || "");
-                    setCustomOpen(true);
-                    return;
+                showArrow
+                openDelay={220}
+              >
+                <OctopathDockButton
+                  compact
+                  iconBoxSize={26}
+                  icon={
+                    effectiveDefaultTopicType === "カスタム" ? (
+                      <FiEdit2 />
+                    ) : (
+                      <HostPanelIcon
+                        src="/images/ui/shuffle.webp"
+                        alt="Shuffle topic"
+                      />
+                    )
                   }
-
-                  if (isGameFinished) return;
-                  setTopicActionLoading(true);
-                  try {
-                    playTopicShuffle();
-                    const topicMode: TopicType = isTopicType(mode)
-                      ? mode
-                      : "通常版";
-                    await topicControls.shuffleTopic(roomId, topicMode);
-                  } finally {
-                    setTopicActionLoading(false);
+                  isLoading={topicActionLoading}
+                  disabled={
+                    topicActionLoading ||
+                    (isGameFinished && effectiveDefaultTopicType !== "カスタム")
                   }
-                }}
-              />
-            </Tooltip>
+                  onClick={async () => {
+                    if (topicActionLoading) return;
+                    const mode: string | null = effectiveDefaultTopicType;
 
-            <Tooltip content="数字を配り直す" showArrow openDelay={220}>
-              <OctopathDockButton
-                compact
-                iconBoxSize={26}
-                icon={<HostPanelIcon src="/images/ui/deal.webp" alt="Deal numbers" />}
-                isLoading={dealActionLoading}
-                disabled={dealActionLoading || isGameFinished}
-                onClick={async () => {
-                  if (dealActionLoading || isGameFinished) return;
-                  setDealActionLoading(true);
-                  try {
-                    playCardDeal();
-                    await topicControls.dealNumbers(roomId);
-                  } finally {
-                    setDealActionLoading(false);
+                    if (mode === "カスタム") {
+                      setCustomText(currentTopic || "");
+                      setCustomOpen(true);
+                      return;
+                    }
+
+                    if (isGameFinished) return;
+                    setTopicActionLoading(true);
+                    try {
+                      playTopicShuffle();
+                      const topicMode: TopicType = isTopicType(mode)
+                        ? mode
+                        : "通常版";
+                      await topicControls.shuffleTopic(roomId, topicMode);
+                    } finally {
+                      setTopicActionLoading(false);
+                    }
+                  }}
+                />
+              </Tooltip>
+
+              <Tooltip content="数字を配り直す" showArrow openDelay={220}>
+                <OctopathDockButton
+                  compact
+                  iconBoxSize={26}
+                  icon={
+                    <HostPanelIcon
+                      src="/images/ui/deal.webp"
+                      alt="Deal numbers"
+                    />
                   }
-                }}
-              />
-            </Tooltip>
+                  isLoading={dealActionLoading}
+                  disabled={dealActionLoading || isGameFinished}
+                  onClick={async () => {
+                    if (dealActionLoading || isGameFinished) return;
+                    setDealActionLoading(true);
+                    try {
+                      playCardDeal();
+                      await topicControls.dealNumbers(roomId);
+                    } finally {
+                      setDealActionLoading(false);
+                    }
+                  }}
+                />
+              </Tooltip>
 
-            <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
-              <OctopathDockButton
-                compact
-                iconBoxSize={26}
-                icon={<HostPanelIcon src="/images/ui/reset.webp" alt="Reset game" />}
-                isLoading={isResetting}
-                disabled={isResetting}
-                onClick={async () => {
-                  if (isResetting) return;
-                  await resetGame({ playSound: true });
-                }}
-              />
-            </Tooltip>
-          </>
-        ) : null}
-      </Flex>
+              <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
+                <OctopathDockButton
+                  compact
+                  iconBoxSize={26}
+                  icon={
+                    <HostPanelIcon
+                      src="/images/ui/reset.webp"
+                      alt="Reset game"
+                    />
+                  }
+                  isLoading={isResetting}
+                  disabled={isResetting}
+                  onClick={async () => {
+                    if (isResetting) return;
+                    await resetGame({ playSound: true });
+                  }}
+                />
+              </Tooltip>
+            </>
+          ) : null}
+        </Flex>
       )}
 
       {/* 状況アナウンス */}
@@ -956,10 +1020,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           },
         }}
       >
-        <HStack
-          gap="10px"
-          align="center"
-        >
+        <HStack gap="10px" align="center">
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
           {!isHost &&
             isCustomModeSelectable &&
@@ -985,11 +1046,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     bg: "rgba(38,42,52,0.98)",
                     color: "rgba(255,255,255,1)",
                     transform: "translate(0,-1px)",
-                    boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
+                    boxShadow:
+                      "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
                   }}
                   _active={{
                     transform: "translate(1px,1px)",
-                    boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
+                    boxShadow:
+                      "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
                   }}
                   transition="176ms cubic-bezier(.2,1,.3,1)"
                 >
@@ -1017,11 +1080,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   bg: "rgba(38,42,52,0.98)",
                   color: "rgba(255,255,255,1)",
                   transform: "translate(0,-1px)",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
+                  boxShadow:
+                    "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
                 }}
                 _active={{
                   transform: "translate(1px,1px)",
-                  boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
+                  boxShadow:
+                    "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
                 }}
                 transition="175ms cubic-bezier(.2,1,.3,1)"
               >
@@ -1048,11 +1113,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   bg: "rgba(52,28,28,0.98)",
                   color: "rgba(255,220,220,1)",
                   transform: "translate(0,-1px)",
-                  boxShadow: "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,180,180,0.95)",
+                  boxShadow:
+                    "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,180,180,0.95)",
                 }}
                 _active={{
                   transform: "translate(1px,1px)",
-                  boxShadow: "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,180,180,0.82)",
+                  boxShadow:
+                    "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,180,180,0.82)",
                 }}
                 transition="173ms cubic-bezier(.2,1,.3,1)"
               >
@@ -1064,161 +1131,162 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       </Box>
 
       {/* カスタムお題入力モーダル（簡易版） */}
-        {/* このモーダルは外側クリック/ESCで閉じない（初心者が迷わないように明示ボタンのみ）*/}
-        <Dialog.Root
-          open={customOpen}
-          onOpenChange={() => {
-            /* no-op */
-          }}
+      {/* このモーダルは外側クリック/ESCで閉じない（初心者が迷わないように明示ボタンのみ）*/}
+      <Dialog.Root
+        open={customOpen}
+        onOpenChange={() => {
+          /* no-op */
+        }}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner
+          position="fixed"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          zIndex={9999}
         >
-          <Dialog.Backdrop />
-          <Dialog.Positioner
-            position="fixed"
-            top="50%"
-            left="50%"
-            transform="translate(-50%, -50%)"
-            zIndex={9999}
+          <Dialog.Content
+            css={{
+              background: UI_TOKENS.COLORS.panelBg,
+              border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
+              borderRadius: 0,
+              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
+              maxWidth: "480px",
+              width: "90vw",
+            }}
           >
-            <Dialog.Content
+            <Box
+              p={5}
               css={{
-                background: UI_TOKENS.COLORS.panelBg,
-                border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                borderRadius: 0,
-                boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-                maxWidth: "480px",
-                width: "90vw",
+                borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
               }}
             >
-              <Box
-                p={5}
-                css={{
-                  borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-                }}
-              >
-                <Dialog.Title>
-                  <Text
-                    fontSize="lg"
-                    fontWeight="bold"
-                    color="white"
-                    fontFamily="monospace"
-                  >
-                    お題を入力
-                  </Text>
-                </Dialog.Title>
-              </Box>
-              <Dialog.Body p={6}>
-                <VStack align="stretch" gap={4}>
-                  <Input
-                    placeholder="れい：この夏さいだいのなぞ"
-                    value={customText}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setCustomText(event.target.value)}
-                    onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-                      if (event.key === KEYBOARD_KEYS.ENTER) {
-                        event.preventDefault();
-                        if (customText.trim()) handleSubmitCustom(customText);
-                      }
-                    }}
-                    css={{
-                      height: "48px",
-                      background: "white",
-                      border: "borders.retrogameInput",
-                      borderRadius: 0,
-                      fontSize: "1rem",
-                      padding: "0 16px",
-                      color: "black",
-                      fontWeight: "normal",
+              <Dialog.Title>
+                <Text
+                  fontSize="lg"
+                  fontWeight="bold"
+                  color="white"
+                  fontFamily="monospace"
+                >
+                  お題を入力
+                </Text>
+              </Dialog.Title>
+            </Box>
+            <Dialog.Body p={6}>
+              <VStack align="stretch" gap={4}>
+                <Input
+                  placeholder="れい：この夏さいだいのなぞ"
+                  value={customText}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setCustomText(event.target.value)
+                  }
+                  onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (event.key === KEYBOARD_KEYS.ENTER) {
+                      event.preventDefault();
+                      if (customText.trim()) handleSubmitCustom(customText);
+                    }
+                  }}
+                  css={{
+                    height: "48px",
+                    background: "white",
+                    border: "borders.retrogameInput",
+                    borderRadius: 0,
+                    fontSize: "1rem",
+                    padding: "0 16px",
+                    color: "black",
+                    fontWeight: "normal",
+                    fontFamily: "monospace",
+                    transition: "none",
+                    _placeholder: {
+                      color: "#666",
                       fontFamily: "monospace",
-                      transition: "none",
-                      _placeholder: {
-                        color: "#666",
-                        fontFamily: "monospace",
-                      },
-                      _focus: {
-                        borderColor: "black",
-                        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                        background: "#f8f8f8",
-                        outline: "none",
-                      },
-                      _hover: {
-                        background: "#f8f8f8",
-                      },
+                    },
+                    _focus: {
+                      borderColor: "black",
+                      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
+                      background: "#f8f8f8",
+                      outline: "none",
+                    },
+                    _hover: {
+                      background: "#f8f8f8",
+                    },
+                  }}
+                />
+                <HStack justify="space-between" gap={3}>
+                  <button
+                    onClick={() => setCustomOpen(false)}
+                    style={{
+                      minWidth: "120px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: "transparent",
+                      color: "white",
+                      cursor: "pointer",
+                      textShadow: "1px 1px 0px #000",
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
                     }}
-                  />
-                  <HStack justify="space-between" gap={3}>
-                    <button
-                      onClick={() => setCustomOpen(false)}
-                      style={{
-                        minWidth: "120px",
-                        height: "40px",
-                        borderRadius: 0,
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        fontFamily: "monospace",
-                        border: "borders.retrogameThin",
-                        background: "transparent",
-                        color: "white",
-                        cursor: "pointer",
-                        textShadow: "1px 1px 0px #000",
-                        transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                      }}
-                      onMouseEnter={(e) => {
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.color =
+                        "var(--colors-richBlack-800)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "white";
+                    }}
+                  >
+                    やめる
+                  </button>
+                  <button
+                    onClick={() =>
+                      customText.trim() && handleSubmitCustom(customText)
+                    }
+                    disabled={!customText.trim()}
+                    style={{
+                      minWidth: "140px",
+                      height: "40px",
+                      borderRadius: 0,
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      fontFamily: "monospace",
+                      border: "borders.retrogameThin",
+                      background: !customText.trim()
+                        ? "#666"
+                        : "var(--colors-richBlack-600)",
+                      color: "white",
+                      cursor: !customText.trim() ? "not-allowed" : "pointer",
+                      textShadow: "1px 1px 0px #000",
+                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
+                      opacity: !customText.trim() ? 0.6 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (customText.trim()) {
                         e.currentTarget.style.background = "white";
                         e.currentTarget.style.color =
                           "var(--colors-richBlack-800)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "white";
-                      }}
-                    >
-                      やめる
-                    </button>
-                    <button
-                      onClick={() =>
-                        customText.trim() && handleSubmitCustom(customText)
                       }
-                      disabled={!customText.trim()}
-                      style={{
-                        minWidth: "140px",
-                        height: "40px",
-                        borderRadius: 0,
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        fontFamily: "monospace",
-                        border: "borders.retrogameThin",
-                        background: !customText.trim()
-                          ? "#666"
-                          : "var(--colors-richBlack-600)",
-                        color: "white",
-                        cursor: !customText.trim() ? "not-allowed" : "pointer",
-                        textShadow: "1px 1px 0px #000",
-                        transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                        opacity: !customText.trim() ? 0.6 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (customText.trim()) {
-                          e.currentTarget.style.background = "white";
-                          e.currentTarget.style.color =
-                            "var(--colors-richBlack-800)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (customText.trim()) {
-                          e.currentTarget.style.background =
-                            "var(--colors-richBlack-600)";
-                          e.currentTarget.style.color = "white";
-                        }
-                      }}
-                    >
-                      きめる
-                    </button>
-                  </HStack>
-                </VStack>
-              </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
-
+                    }}
+                    onMouseLeave={(e) => {
+                      if (customText.trim()) {
+                        e.currentTarget.style.background =
+                          "var(--colors-richBlack-600)";
+                        e.currentTarget.style.color = "white";
+                      }
+                    }}
+                  >
+                    きめる
+                  </button>
+                </HStack>
+              </VStack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </>
   );
 }
