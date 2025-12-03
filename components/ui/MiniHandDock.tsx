@@ -571,8 +571,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const playCardDeal = useSoundEffect("card_deal");
   const playTopicShuffle = useSoundEffect("topic_shuffle");
   const showQuickStartProgress =
-    (quickStartPending || autoStartLocked || roundPreparing) &&
-    (roomStatus === "waiting" || roomStatus === "clue");
+    quickStartPending || autoStartLocked || roundPreparing || isRestarting;
 
   const preparing = !!(
     autoStartLocked ||
